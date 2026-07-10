@@ -73,11 +73,6 @@ import Images
 			Self.logger.info("Is first run.")
 		}
 
-		if isFirstRun && !AccountManager.shared.anyAccountHasAtLeastOneFeed() {
-			let localAccount = AccountManager.shared.defaultAccount
-			DefaultFeedsImporter.importDefaultFeeds(account: localAccount)
-		}
-
 		registerBackgroundTasks()
 		CacheCleaner.purgeIfNecessary()
 		initializeDownloaders()
@@ -381,7 +376,7 @@ private extension AppDelegate {
 	/// Register all background tasks.
 	nonisolated func registerBackgroundTasks() {
 		// Register background feed refresh.
-		BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.ranchero.NetNewsWire.FeedRefresh", using: nil) { task in
+		BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.ambrosia.AmbrosiaReader.FeedRefresh", using: nil) { task in
 			self.performBackgroundFeedRefresh(with: task as! BGAppRefreshTask)
 		}
 	}
@@ -392,7 +387,7 @@ private extension AppDelegate {
 		// task scheduler can hang indefinitely.
 		backgroundTaskDispatchQueue.async {
 			do {
-				let request = BGAppRefreshTaskRequest(identifier: "com.ranchero.NetNewsWire.FeedRefresh")
+				let request = BGAppRefreshTaskRequest(identifier: "com.ambrosia.AmbrosiaReader.FeedRefresh")
 				request.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60)
 				try BGTaskScheduler.shared.submit(request)
 			} catch {

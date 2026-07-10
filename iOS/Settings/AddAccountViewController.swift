@@ -14,24 +14,21 @@ protocol AddAccountDismissDelegate: UIViewController {
 	func dismiss()
 }
 
+// Ambrosia Reader: local-only fork. Every non-local AccountType onboarding
+// path is stripped here; the enum cases themselves are left alone in
+// Account.swift since removing them would touch too much shared code for
+// no benefit. "Add Ambrosia Library" (paired local account, see Phase 4)
+// will be added here as an additional local.sectionContent entry once it
+// exists; for now this offers exactly one flow: a plain local account.
 final class AddAccountViewController: UITableViewController, AddAccountDismissDelegate {
 
 	private enum AddAccountSections: Int, CaseIterable {
 		case local = 0
-		case icloud
-		case web
-		case selfhosted
 
 		var sectionHeader: String {
 			switch self {
 			case .local:
 				return NSLocalizedString("Local", comment: "Local Account")
-			case .icloud:
-				return NSLocalizedString("iCloud", comment: "iCloud Account")
-			case .web:
-				return NSLocalizedString("Web", comment: "Web Account")
-			case .selfhosted:
-				return NSLocalizedString("Self-hosted", comment: "Self hosted Account")
 			}
 		}
 
@@ -39,12 +36,6 @@ final class AddAccountViewController: UITableViewController, AddAccountDismissDe
 			switch self {
 			case .local:
 				return NSLocalizedString("Local accounts do not sync your feeds across devices", comment: "Local Account")
-			case .icloud:
-				return NSLocalizedString("Your iCloud account syncs your feeds across your Mac and iOS devices", comment: "iCloud Account")
-			case .web:
-				return NSLocalizedString("Web accounts sync your feeds across all your devices", comment: "Web Account")
-			case .selfhosted:
-				return NSLocalizedString("Self-hosted accounts sync your feeds across all your devices", comment: "Self hosted Account")
 			}
 		}
 
@@ -52,16 +43,6 @@ final class AddAccountViewController: UITableViewController, AddAccountDismissDe
 			switch self {
 			case .local:
 				return [.onMyMac]
-			case .icloud:
-				return [.cloudKit]
-			case .web:
-				#if DEBUG
-				return [.bazQux, .feedbin, .feedly, .inoreader, .newsBlur, .theOldReader]
-				#else
-				return [.bazQux, .feedbin, .feedly, .inoreader, .newsBlur, .theOldReader]
-				#endif
-			case .selfhosted:
-				return [.freshRSS]
 			}
 		}
 	}
@@ -75,18 +56,6 @@ final class AddAccountViewController: UITableViewController, AddAccountDismissDe
 			return AddAccountSections.local.sectionContent.count
 		}
 
-		if section == AddAccountSections.icloud.rawValue {
-			return AddAccountSections.icloud.sectionContent.count
-		}
-
-		if section == AddAccountSections.web.rawValue {
-			return AddAccountSections.web.sectionContent.count
-		}
-
-		if section == AddAccountSections.selfhosted.rawValue {
-			return AddAccountSections.selfhosted.sectionContent.count
-		}
-
 		return 0
 	}
 
@@ -94,12 +63,6 @@ final class AddAccountViewController: UITableViewController, AddAccountDismissDe
 		switch section {
 		case AddAccountSections.local.rawValue:
 			return AddAccountSections.local.sectionHeader
-		case AddAccountSections.icloud.rawValue:
-			return AddAccountSections.icloud.sectionHeader
-		case AddAccountSections.web.rawValue:
-			return AddAccountSections.web.sectionHeader
-		case AddAccountSections.selfhosted.rawValue:
-			return AddAccountSections.selfhosted.sectionHeader
 		default:
 			return nil
 		}
@@ -109,12 +72,6 @@ final class AddAccountViewController: UITableViewController, AddAccountDismissDe
 		switch section {
 		case AddAccountSections.local.rawValue:
 			return AddAccountSections.local.sectionFooter
-		case AddAccountSections.icloud.rawValue:
-			return AddAccountSections.icloud.sectionFooter
-		case AddAccountSections.web.rawValue:
-			return AddAccountSections.web.sectionFooter
-		case AddAccountSections.selfhosted.rawValue:
-			return AddAccountSections.selfhosted.sectionFooter
 		default:
 			return nil
 		}
@@ -127,25 +84,6 @@ final class AddAccountViewController: UITableViewController, AddAccountDismissDe
 		case AddAccountSections.local.rawValue:
 			cell.comboNameLabel?.text = AddAccountSections.local.sectionContent[indexPath.row].displayName
 			cell.comboImage?.image = Assets.accountImage(.onMyMac)
-		case AddAccountSections.icloud.rawValue:
-			cell.comboNameLabel?.text = AddAccountSections.icloud.sectionContent[indexPath.row].displayName
-			cell.comboImage?.image = Assets.accountImage(AddAccountSections.icloud.sectionContent[indexPath.row])
-			if AppDefaults.shared.isDeveloperBuild || AccountManager.shared.hasiCloudAccount {
-				cell.isUserInteractionEnabled = false
-				cell.comboNameLabel?.isEnabled = false
-			}
-		case AddAccountSections.web.rawValue:
-			cell.comboNameLabel?.text = AddAccountSections.web.sectionContent[indexPath.row].displayName
-			cell.comboImage?.image = Assets.accountImage(AddAccountSections.web.sectionContent[indexPath.row])
-			let type = AddAccountSections.web.sectionContent[indexPath.row]
-			if (type == .feedly || type == .inoreader) && AppDefaults.shared.isDeveloperBuild {
-				cell.isUserInteractionEnabled = false
-				cell.comboNameLabel?.isEnabled = false
-			}
-		case AddAccountSections.selfhosted.rawValue:
-			cell.comboNameLabel?.text = AddAccountSections.selfhosted.sectionContent[indexPath.row].displayName
-			cell.comboImage?.image = Assets.accountImage(AddAccountSections.selfhosted.sectionContent[indexPath.row])
-
 		default:
 			return cell
 		}
@@ -157,15 +95,6 @@ final class AddAccountViewController: UITableViewController, AddAccountDismissDe
 		switch indexPath.section {
 		case AddAccountSections.local.rawValue:
 			let type = AddAccountSections.local.sectionContent[indexPath.row]
-			presentController(for: type)
-		case AddAccountSections.icloud.rawValue:
-			let type = AddAccountSections.icloud.sectionContent[indexPath.row]
-			presentController(for: type)
-		case AddAccountSections.web.rawValue:
-			let type = AddAccountSections.web.sectionContent[indexPath.row]
-			presentController(for: type)
-		case AddAccountSections.selfhosted.rawValue:
-			let type = AddAccountSections.selfhosted.sectionContent[indexPath.row]
 			presentController(for: type)
 		default:
 			return
@@ -180,36 +109,11 @@ final class AddAccountViewController: UITableViewController, AddAccountDismissDe
 			let addViewController = navController.topViewController as! LocalAccountViewController
 			addViewController.delegate = self
 			present(navController, animated: true)
-		case .cloudKit:
-			let navController = UIStoryboard.account.instantiateViewController(withIdentifier: "CloudKitAccountNavigationViewController") as! UINavigationController
-			navController.modalPresentationStyle = .currentContext
-			let addViewController = navController.topViewController as! CloudKitAccountViewController
-			addViewController.delegate = self
-			present(navController, animated: true)
-		case .feedbin:
-			let navController = UIStoryboard.account.instantiateViewController(withIdentifier: "FeedbinAccountNavigationViewController") as! UINavigationController
-			navController.modalPresentationStyle = .currentContext
-			let addViewController = navController.topViewController as! FeedbinAccountViewController
-			addViewController.delegate = self
-			present(navController, animated: true)
-		case .feedly:
-			let addAccount = OAuthAccountAuthorizationOperation(accountType: .feedly)
-			addAccount.delegate = self
-			addAccount.presentationAnchor = self.view.window!
-			MainThreadOperationQueue.shared.add(addAccount)
-		case .newsBlur:
-			let navController = UIStoryboard.account.instantiateViewController(withIdentifier: "NewsBlurAccountNavigationViewController") as! UINavigationController
-			navController.modalPresentationStyle = .currentContext
-			let addViewController = navController.topViewController as! NewsBlurAccountViewController
-			addViewController.delegate = self
-			present(navController, animated: true)
-		case .bazQux, .inoreader, .freshRSS, .theOldReader:
-			let navController = UIStoryboard.account.instantiateViewController(withIdentifier: "ReaderAPIAccountNavigationViewController") as! UINavigationController
-			navController.modalPresentationStyle = .currentContext
-			let addViewController = navController.topViewController as! ReaderAPIAccountViewController
-			addViewController.accountType = accountType
-			addViewController.delegate = self
-			present(navController, animated: true)
+		default:
+			// Ambrosia Reader is local-only; every other AccountType's
+			// onboarding path has been removed. This case is unreachable
+			// because sectionContent above only ever offers .onMyMac.
+			assertionFailure("Unsupported account type in Ambrosia Reader fork: \(accountType)")
 		}
 	}
 
@@ -217,16 +121,4 @@ final class AddAccountViewController: UITableViewController, AddAccountDismissDe
 		navigationController?.popViewController(animated: false)
 	}
 
-}
-
-extension AddAccountViewController: OAuthAccountAuthorizationOperationDelegate {
-
-	func oauthAccountAuthorizationOperation(_ operation: OAuthAccountAuthorizationOperation, didCreate account: Account) {
-		account.triggerRefreshAll()
-		dismiss()
-	}
-
-	func oauthAccountAuthorizationOperation(_ operation: OAuthAccountAuthorizationOperation, didFailWith error: Error) {
-		presentError(error)
-	}
 }

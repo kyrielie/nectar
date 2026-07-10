@@ -10,7 +10,7 @@
 	<false/>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.ranchero.NetNewsWire.FeedRefresh</string>
+		<string>com.ambrosia.AmbrosiaReader.FeedRefresh</string>
 	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
@@ -214,6 +214,24 @@
 			</array>
 			<key>LSTypeIsPackage</key>
 			<true/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>opml</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>OPML Document</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>org.opml.opml</string>
+			</array>
+			<key>LSTypeIsPackage</key>
+			<false/>
 		</dict>
 	</array>
 	<key>LSSupportsOpeningDocumentsInPlace</key>

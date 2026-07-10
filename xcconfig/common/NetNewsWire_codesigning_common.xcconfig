@@ -4,8 +4,11 @@ CODE_SIGN_IDENTITY[sdk=macosx*] = Mac Developer
 CODE_SIGN_IDENTITY[sdk=iphoneos*] = iPhone Developer
 CODE_SIGN_IDENTITY[sdk=iphonesimulator*] = iPhone Developer
 CODE_SIGN_STYLE = Automatic
-ORGANIZATION_IDENTIFIER = com.ranchero
-DEVELOPMENT_TEAM = M8L2WTLA8W
+// Ambrosia Reader is a fork of NetNewsWire; do not ship under Ranchero's
+// bundle ID or team. Set your own DEVELOPMENT_TEAM in a local
+// DeveloperSettings.xcconfig override (see below) before building for a device.
+ORGANIZATION_IDENTIFIER = com.ambrosia
+DEVELOPMENT_TEAM =
 PROVISIONING_PROFILE_SPECIFIER =
 DEVELOPER_ENTITLEMENTS =
 
