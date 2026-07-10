@@ -45,6 +45,26 @@ public struct JSONFeedParser {
 		static let sizeInBytes = "size_in_bytes"
 		static let durationInSeconds = "duration_in_seconds"
 		static let language = "language"
+
+		// Ambrosia extension (see LocalFeedServer.swift JSONFeedAmbrosiaExtension).
+		// No _ambrosia_schema_version key exists on the wire today — Ambrosia's
+		// feed server doesn't send one — so there is nothing to gate on yet.
+		static let ambrosia = "_ambrosia"
+		static let ambrosiaWordCount = "word_count"
+		static let ambrosiaChapterCurrent = "chapter_current"
+		static let ambrosiaChapterTotal = "chapter_total"
+		static let ambrosiaIsComplete = "is_complete"
+		static let ambrosiaFandoms = "fandoms"
+		static let ambrosiaRelationships = "relationships"
+		static let ambrosiaCharacters = "characters"
+		static let ambrosiaRatings = "ratings"
+		static let ambrosiaWarnings = "warnings"
+		static let ambrosiaCategories = "categories"
+		static let ambrosiaSeries = "series"
+		static let ambrosiaDateModified = "date_modified"
+		static let ambrosiaSeriesName = "name"
+		static let ambrosiaSeriesIndex = "index"
+		static let ambrosiaSeriesAO3ID = "ao3_id"
 	}
 
 	static let jsonFeedVersionMarker = "://jsonfeed.org/version/" // Allow for the mistake of not getting the scheme exactly correct.
@@ -157,7 +177,7 @@ private extension JSONFeedParser {
 		let bannerImageURL = itemDictionary[Key.bannerImage] as? String
 
 		let datePublished = parseDate(itemDictionary[Key.datePublished] as? String)
-		let dateModified = parseDate(itemDictionary[Key.dateModified] as? String)
+		var dateModified = parseDate(itemDictionary[Key.dateModified] as? String)
 
 		let authors = parseAuthors(itemDictionary)
 		var tags: Set<String>?
@@ -166,7 +186,27 @@ private extension JSONFeedParser {
 		}
 		let attachments = parseAttachments(itemDictionary)
 
-		return ParsedItem(syncServiceID: nil, uniqueID: uniqueID, feedURL: feedURL, url: url, externalURL: externalURL, title: title, language: language, contentHTML: contentHTML, contentText: contentText, markdown: nil, summary: summary, imageURL: imageURL, bannerImageURL: bannerImageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, tags: tags, attachments: attachments)
+		let ambrosia = itemDictionary[Key.ambrosia] as? JSONDictionary
+		if dateModified == nil, let ambrosiaDateModified = ambrosia?[Key.ambrosiaDateModified] as? String {
+			dateModified = parseDate(ambrosiaDateModified)
+		}
+
+		return ParsedItem(syncServiceID: nil, uniqueID: uniqueID, feedURL: feedURL, url: url, externalURL: externalURL, title: title, language: language, contentHTML: contentHTML, contentText: contentText, markdown: nil, summary: summary, imageURL: imageURL, bannerImageURL: bannerImageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, tags: tags, attachments: attachments, wordCount: ambrosia?[Key.ambrosiaWordCount] as? Int, chapterCurrent: ambrosia?[Key.ambrosiaChapterCurrent] as? Int, chapterTotal: ambrosia?[Key.ambrosiaChapterTotal] as? Int, isComplete: ambrosia?[Key.ambrosiaIsComplete] as? Bool, fandoms: ambrosia?[Key.ambrosiaFandoms] as? [String], relationships: ambrosia?[Key.ambrosiaRelationships] as? [String], characters: ambrosia?[Key.ambrosiaCharacters] as? [String], ratings: ambrosia?[Key.ambrosiaRatings] as? [String], warnings: ambrosia?[Key.ambrosiaWarnings] as? [String], categories: ambrosia?[Key.ambrosiaCategories] as? [String], series: parseAmbrosiaSeries(ambrosia))
+	}
+
+	static func parseAmbrosiaSeries(_ ambrosia: JSONDictionary?) -> [ParsedSeriesEntry]? {
+		guard let seriesArray = ambrosia?[Key.ambrosiaSeries] as? JSONArray else {
+			return nil
+		}
+		let entries = seriesArray.compactMap { entry -> ParsedSeriesEntry? in
+			guard let name = entry[Key.ambrosiaSeriesName] as? String,
+				  let index = entry[Key.ambrosiaSeriesIndex] as? Int else {
+				return nil
+			}
+			let ao3ID = entry[Key.ambrosiaSeriesAO3ID] as? String
+			return ParsedSeriesEntry(name: name, index: index, ao3ID: ao3ID)
+		}
+		return entries.isEmpty ? nil : entries
 	}
 
 	static func parseTitle(_ itemDictionary: JSONDictionary, _ feedURL: String) -> String? {
