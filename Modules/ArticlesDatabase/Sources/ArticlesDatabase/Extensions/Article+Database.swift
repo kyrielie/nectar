@@ -40,7 +40,19 @@ extension Article {
 		let dateModified = row.date(forColumn: DatabaseKey.dateModified)
 		let authors = Self.authorsFromRow(row)
 
-		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, status: status)
+		let wordCount = row.columnIsNull(DatabaseKey.wordCount) ? nil : Int(row.longLongInt(forColumn: DatabaseKey.wordCount))
+		let chapterCurrent = row.columnIsNull(DatabaseKey.chapterCurrent) ? nil : Int(row.longLongInt(forColumn: DatabaseKey.chapterCurrent))
+		let chapterTotal = row.columnIsNull(DatabaseKey.chapterTotal) ? nil : Int(row.longLongInt(forColumn: DatabaseKey.chapterTotal))
+		let isComplete = row.columnIsNull(DatabaseKey.isComplete) ? nil : row.bool(forColumn: DatabaseKey.isComplete)
+		let fandoms = Self.stringArrayFromRow(row, DatabaseKey.fandoms)
+		let relationships = Self.stringArrayFromRow(row, DatabaseKey.relationships)
+		let characters = Self.stringArrayFromRow(row, DatabaseKey.characters)
+		let ratings = Self.stringArrayFromRow(row, DatabaseKey.ratings)
+		let warnings = Self.stringArrayFromRow(row, DatabaseKey.warnings)
+		let categories = Self.stringArrayFromRow(row, DatabaseKey.categories)
+		let series = Self.seriesFromRow(row)
+
+		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, series: series, status: status)
 	}
 
 	private static func authorsFromRow(_ row: FMResultSet) -> Set<Author>? {
@@ -48,6 +60,32 @@ extension Article {
 			return nil
 		}
 		return Author.authorsWithJSON(data)
+	}
+
+	// MARK: - Ambrosia extension (de)serialization
+	//
+	// String-array and series fields are stored as JSON-encoded TEXT columns,
+	// mirroring the existing `authors` column's JSON-in-TEXT approach.
+
+	private static func stringArrayFromRow(_ row: FMResultSet, _ key: String) -> [String]? {
+		guard let json = row.swiftString(forColumn: key), !json.isEmpty, let data = json.data(using: .utf8) else {
+			return nil
+		}
+		return try? JSONDecoder().decode([String].self, from: data)
+	}
+
+	private static func seriesFromRow(_ row: FMResultSet) -> [ArticleSeriesEntry]? {
+		guard let json = row.swiftString(forColumn: DatabaseKey.series), !json.isEmpty, let data = json.data(using: .utf8) else {
+			return nil
+		}
+		return try? JSONDecoder().decode([ArticleSeriesEntry].self, from: data)
+	}
+
+	private static func jsonString<T: Encodable>(_ value: T) -> String? {
+		guard let data = try? JSONEncoder().encode(value) else {
+			return nil
+		}
+		return String(data: data, encoding: .utf8)
 	}
 
 	convenience init(parsedItem: ParsedItem, maximumDateAllowed: Date, accountID: String, feedID: String, status: ArticleStatus) {
@@ -67,7 +105,9 @@ extension Article {
 			dateModified = nil
 		}
 
-		self.init(accountID: accountID, articleID: parsedItem.syncServiceID, feedID: feedID, uniqueID: parsedItem.uniqueID, title: parsedItem.title, contentHTML: parsedItem.contentHTML, contentText: parsedItem.contentText, markdown: parsedItem.markdown, url: parsedItem.url, externalURL: parsedItem.externalURL, summary: parsedItem.summary, imageURL: parsedItem.imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, status: status)
+		let series = parsedItem.series?.map { ArticleSeriesEntry(name: $0.name, index: $0.index, ao3ID: $0.ao3ID) }
+
+		self.init(accountID: accountID, articleID: parsedItem.syncServiceID, feedID: feedID, uniqueID: parsedItem.uniqueID, title: parsedItem.title, contentHTML: parsedItem.contentHTML, contentText: parsedItem.contentText, markdown: parsedItem.markdown, url: parsedItem.url, externalURL: parsedItem.externalURL, summary: parsedItem.summary, imageURL: parsedItem.imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: parsedItem.wordCount, chapterCurrent: parsedItem.chapterCurrent, chapterTotal: parsedItem.chapterTotal, isComplete: parsedItem.isComplete, fandoms: parsedItem.fandoms, relationships: parsedItem.relationships, characters: parsedItem.characters, ratings: parsedItem.ratings, warnings: parsedItem.warnings, categories: parsedItem.categories, series: series, status: status)
 	}
 
 	private func addPossibleStringChangeWithKeyPath(_ comparisonKeyPath: KeyPath<Article, String?>, _ otherArticle: Article, _ key: String, _ dictionary: inout DatabaseDictionary) {
@@ -113,6 +153,45 @@ extension Article {
 			if let updatedDateModified = dateModified {
 				d[DatabaseKey.dateModified] = updatedDateModified
 			}
+		}
+
+		// Ambrosia extension. Word count/chapter/completion follow the same
+		// "only write when a new non-nil value shows up" rule as the dates
+		// above — a feed that stops sending `_ambrosia` shouldn't blank out
+		// data we already have.
+		if wordCount != existingArticle.wordCount, let wordCount {
+			d[DatabaseKey.wordCount] = wordCount
+		}
+		if chapterCurrent != existingArticle.chapterCurrent, let chapterCurrent {
+			d[DatabaseKey.chapterCurrent] = chapterCurrent
+		}
+		if chapterTotal != existingArticle.chapterTotal, let chapterTotal {
+			d[DatabaseKey.chapterTotal] = chapterTotal
+		}
+		if isComplete != existingArticle.isComplete, let isComplete {
+			d[DatabaseKey.isComplete] = isComplete
+		}
+
+		if fandoms != existingArticle.fandoms, let fandoms, !fandoms.isEmpty, let json = Self.jsonString(fandoms) {
+			d[DatabaseKey.fandoms] = json
+		}
+		if relationships != existingArticle.relationships, let relationships, !relationships.isEmpty, let json = Self.jsonString(relationships) {
+			d[DatabaseKey.relationships] = json
+		}
+		if characters != existingArticle.characters, let characters, !characters.isEmpty, let json = Self.jsonString(characters) {
+			d[DatabaseKey.characters] = json
+		}
+		if ratings != existingArticle.ratings, let ratings, !ratings.isEmpty, let json = Self.jsonString(ratings) {
+			d[DatabaseKey.ratings] = json
+		}
+		if warnings != existingArticle.warnings, let warnings, !warnings.isEmpty, let json = Self.jsonString(warnings) {
+			d[DatabaseKey.warnings] = json
+		}
+		if categories != existingArticle.categories, let categories, !categories.isEmpty, let json = Self.jsonString(categories) {
+			d[DatabaseKey.categories] = json
+		}
+		if series != existingArticle.series, let series, !series.isEmpty, let json = Self.jsonString(series) {
+			d[DatabaseKey.series] = json
 		}
 
 		return d.count < 1 ? nil : d
@@ -187,6 +266,40 @@ extension Article {
 		}
 		if let authors, !authors.isEmpty, let json = authors.json() {
 			d[DatabaseKey.authors] = json
+		}
+
+		if let wordCount {
+			d[DatabaseKey.wordCount] = wordCount
+		}
+		if let chapterCurrent {
+			d[DatabaseKey.chapterCurrent] = chapterCurrent
+		}
+		if let chapterTotal {
+			d[DatabaseKey.chapterTotal] = chapterTotal
+		}
+		if let isComplete {
+			d[DatabaseKey.isComplete] = isComplete
+		}
+		if let fandoms, !fandoms.isEmpty, let json = Self.jsonString(fandoms) {
+			d[DatabaseKey.fandoms] = json
+		}
+		if let relationships, !relationships.isEmpty, let json = Self.jsonString(relationships) {
+			d[DatabaseKey.relationships] = json
+		}
+		if let characters, !characters.isEmpty, let json = Self.jsonString(characters) {
+			d[DatabaseKey.characters] = json
+		}
+		if let ratings, !ratings.isEmpty, let json = Self.jsonString(ratings) {
+			d[DatabaseKey.ratings] = json
+		}
+		if let warnings, !warnings.isEmpty, let json = Self.jsonString(warnings) {
+			d[DatabaseKey.warnings] = json
+		}
+		if let categories, !categories.isEmpty, let json = Self.jsonString(categories) {
+			d[DatabaseKey.categories] = json
+		}
+		if let series, !series.isEmpty, let json = Self.jsonString(series) {
+			d[DatabaseKey.series] = json
 		}
 		return d
 	}

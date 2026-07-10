@@ -35,6 +35,19 @@ struct DatabaseKey {
 	static let authors = "authors"
 	static let searchRowID = "searchRowID"
 
+	// Ambrosia extension
+	static let wordCount = "wordCount"
+	static let chapterCurrent = "chapterCurrent"
+	static let chapterTotal = "chapterTotal"
+	static let isComplete = "isComplete"
+	static let fandoms = "fandoms"
+	static let relationships = "relationships"
+	static let characters = "characters"
+	static let ratings = "ratings"
+	static let warnings = "warnings"
+	static let categories = "categories"
+	static let series = "series"
+
 	// ArticleStatus
 	static let read = "read"
 	static let starred = "starred"
