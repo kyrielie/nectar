@@ -29,6 +29,28 @@ public struct ParsedItem: Hashable, Sendable {
 	public let tags: Set<String>?
 	public let attachments: Set<ParsedAttachment>?
 
+	// MARK: - Ambrosia extension (`_ambrosia` in JSON Feed 1.1 items)
+	//
+	// Ambrosia's LocalFeedServer sends no `_ambrosia_schema_version` field
+	// (confirmed by reading LocalFeedServer.swift directly) so there is
+	// nothing to gate parsing on yet; these fields are simply nil for any
+	// feed that doesn't include `_ambrosia`. `_ambrosia.date_modified` is
+	// folded into the top-level `dateModified` above rather than kept as a
+	// separate property, since JSON Feed 1.1 already has a `date_modified`
+	// concept and Ambrosia only puts it under `_ambrosia` because nothing
+	// else in the item is populating it.
+	public let wordCount: Int?
+	public let chapterCurrent: Int?
+	public let chapterTotal: Int?
+	public let isComplete: Bool?
+	public let fandoms: [String]?
+	public let relationships: [String]?
+	public let characters: [String]?
+	public let ratings: [String]?
+	public let warnings: [String]?
+	public let categories: [String]?
+	public let series: [ParsedSeriesEntry]?
+
 	public init(syncServiceID: String?,
 	            uniqueID: String,
 	            feedURL: String,
@@ -46,7 +68,18 @@ public struct ParsedItem: Hashable, Sendable {
 	            dateModified: Date?,
 	            authors: Set<ParsedAuthor>?,
 	            tags: Set<String>?,
-	            attachments: Set<ParsedAttachment>?) {
+	            attachments: Set<ParsedAttachment>?,
+	            wordCount: Int? = nil,
+	            chapterCurrent: Int? = nil,
+	            chapterTotal: Int? = nil,
+	            isComplete: Bool? = nil,
+	            fandoms: [String]? = nil,
+	            relationships: [String]? = nil,
+	            characters: [String]? = nil,
+	            ratings: [String]? = nil,
+	            warnings: [String]? = nil,
+	            categories: [String]? = nil,
+	            series: [ParsedSeriesEntry]? = nil) {
 		self.syncServiceID = syncServiceID
 		self.uniqueID = uniqueID
 		self.feedURL = feedURL
@@ -64,6 +97,17 @@ public struct ParsedItem: Hashable, Sendable {
 		self.authors = authors
 		self.tags = tags
 		self.attachments = attachments
+		self.wordCount = wordCount
+		self.chapterCurrent = chapterCurrent
+		self.chapterTotal = chapterTotal
+		self.isComplete = isComplete
+		self.fandoms = fandoms
+		self.relationships = relationships
+		self.characters = characters
+		self.ratings = ratings
+		self.warnings = warnings
+		self.categories = categories
+		self.series = series
 
 		// Render Markdown when present, else use contentHTML
 		if let markdown {

@@ -1,0 +1,42 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "Ambrosia — Current Search",
+  "description": "Ambrosia local library feed.",
+  "feed_url": "http://ambrosia.local:8420/feed/search.xml",
+  "items": [
+    {
+      "id": "ambrosia-book-42",
+      "url": "https://archiveofourown.org/works/123456",
+      "title": "A Long Way From Home",
+      "content_html": "<p>Merged chapter HTML goes here.</p>",
+      "summary": "A found-family fic about the long way home.",
+      "date_published": "2024-03-01T12:00:00Z",
+      "authors": [
+        { "name": "some_author", "url": "https://archiveofourown.org/users/some_author" }
+      ],
+      "tags": ["fix-it", "slow burn"],
+      "_ambrosia": {
+        "word_count": 84213,
+        "chapter_current": 12,
+        "chapter_total": 15,
+        "is_complete": false,
+        "fandoms": ["Example Fandom"],
+        "relationships": ["Character A/Character B"],
+        "characters": ["Character A", "Character B"],
+        "ratings": ["Teen And Up Audiences"],
+        "warnings": ["No Archive Warnings Apply"],
+        "categories": ["M/M"],
+        "series": [
+          { "name": "The Long Way Home Series", "index": 2, "ao3_id": "987654" }
+        ],
+        "date_modified": "2024-06-15T08:30:00Z"
+      }
+    },
+    {
+      "id": "ambrosia-book-43",
+      "title": "Item Without Ambrosia Extension",
+      "content_html": "<p>Plain item, no _ambrosia object at all — must parse fine with nil extension fields.</p>",
+      "date_published": "2024-01-01T00:00:00Z"
+    }
+  ]
+}

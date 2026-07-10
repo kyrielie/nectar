@@ -98,4 +98,37 @@ import RSParser
 		let bothAuthorsItem = try #require(parsedFeed.items.first { $0.uniqueID == "Item with both" })
 		#expect(bothAuthorsItem.authors == itemAuthors)
 	}
+
+	@Test func ambrosiaExtension() throws {
+		let d = parserData("ambrosia", "json", "http://ambrosia.local:8420/feed/search.xml")
+		let parsedFeed = try #require(try FeedParser.parse(d))
+		#expect(parsedFeed.items.count == 2)
+
+		let withExtension = try #require(parsedFeed.items.first { $0.uniqueID == "ambrosia-book-42" })
+		#expect(withExtension.wordCount == 84213)
+		#expect(withExtension.chapterCurrent == 12)
+		#expect(withExtension.chapterTotal == 15)
+		#expect(withExtension.isComplete == false)
+		#expect(withExtension.fandoms == ["Example Fandom"])
+		#expect(withExtension.relationships == ["Character A/Character B"])
+		#expect(withExtension.characters == ["Character A", "Character B"])
+		#expect(withExtension.ratings == ["Teen And Up Audiences"])
+		#expect(withExtension.warnings == ["No Archive Warnings Apply"])
+		#expect(withExtension.categories == ["M/M"])
+		#expect(withExtension.series?.count == 1)
+		#expect(withExtension.series?.first?.name == "The Long Way Home Series")
+		#expect(withExtension.series?.first?.index == 2)
+		#expect(withExtension.series?.first?.ao3ID == "987654")
+		// _ambrosia.date_modified fills the standard dateModified field since
+		// Ambrosia's JSONFeedItem has no top-level date_modified of its own.
+		#expect(withExtension.dateModified != nil)
+
+		let withoutExtension = try #require(parsedFeed.items.first { $0.uniqueID == "ambrosia-book-43" })
+		#expect(withoutExtension.wordCount == nil)
+		#expect(withoutExtension.chapterCurrent == nil)
+		#expect(withoutExtension.isComplete == nil)
+		#expect(withoutExtension.fandoms == nil)
+		#expect(withoutExtension.series == nil)
+		#expect(withoutExtension.dateModified == nil)
+	}
 }
