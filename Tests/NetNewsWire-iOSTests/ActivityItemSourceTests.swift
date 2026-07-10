@@ -7,7 +7,7 @@
 
 import Testing
 import UIKit
-@testable import NetNewsWire
+@testable import AmbrosiaReader
 
 @MainActor @Suite struct ActivityItemSourceTests {
 
