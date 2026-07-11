@@ -1,9 +1,0 @@
-diff a/NetNewsWire.xcodeproj/project.pbxproj b/NetNewsWire.xcodeproj/project.pbxproj	(rejected hunks)
-@@ -113964,6 +113964,7 @@
- 		84A6D0402D1B4EC500F23315 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
- 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
- 			membershipExceptions = (
- 				/Localized/ShareExtension/MainInterface.storyboard,
- 				AppDefaults.swift,
- 				Resources/Assets.xcassets,
-+				ShareExtension/Info.plist,
