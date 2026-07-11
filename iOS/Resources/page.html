@@ -10,6 +10,19 @@
 				window.scrollTo(0, [[windowScrollY]]);
 				processPage();
 			})
+			// DOMContentLoaded fires before images, web fonts, and any late layout
+			// settle. If those shift document height afterward, the scrollTo above
+			// gets clamped to the shorter pre-reflow height and never reapplied,
+			// which reads as "scroll position resets on reopen." Reapply once the
+			// page is fully loaded, and again once fonts are ready, to cover both.
+			window.addEventListener("load", function(event) {
+				window.scrollTo(0, [[windowScrollY]]);
+			})
+			if (document.fonts && document.fonts.ready) {
+				document.fonts.ready.then(function() {
+					window.scrollTo(0, [[windowScrollY]]);
+				});
+			}
 		</script>
 		<base href="[[baseURL]]">
 	</head>

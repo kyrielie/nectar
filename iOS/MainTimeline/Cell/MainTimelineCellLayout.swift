@@ -72,7 +72,13 @@ extension MainTimelineCellLayout {
 	// 0 (never actually scrolled), and fully read (showing "100%" is noise, not signal).
 	static func rectForProgress(_ cellData: MainTimelineCellData, _ point: CGPoint, _ textAreaWidth: CGFloat) -> CGRect {
 		var r = CGRect.zero
-		guard let progress = cellData.readingProgress, progress > 0, !cellData.read else {
+		// Deliberately not gated on !cellData.read: read-marking fires at the same
+		// 99% scroll threshold used to compute progress (see
+		// WebViewController.scrollPositionDidChange), so excluding read articles
+		// meant the bar was suppressed the same instant it would have appeared.
+		// Only progress <= 0 (never scrolled) and progress >= 1 (fully read, not
+		// informative) are hidden.
+		guard let progress = cellData.readingProgress, progress > 0, progress < 1 else {
 			return r
 		}
 		r.origin = point
