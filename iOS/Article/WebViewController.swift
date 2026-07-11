@@ -46,6 +46,14 @@ final class WebViewController: UIViewController {
 	private(set) var article: Article?
 
 	let scrollPositionQueue = CoalescingQueue(name: "Article Scroll Position", interval: 0.3, maxInterval: 0.3)
+
+	// Mirrors of the last scroll position / reading progress actually confirmed via the
+	// JS bridge in scrollPositionDidChange(). Kept as plain properties (not re-derived
+	// via a fresh evaluateJavaScript call) so viewWillDisappear can flush a final save
+	// synchronously without an async JS round trip racing the view's teardown -- see
+	// viewWillDisappear for why that race was a real, reproducible bug.
+	private var lastKnownReadingProgress: Double?
+
 	var windowScrollY = 0 {
 		didSet {
 			if windowScrollY != AppDefaults.shared.articleWindowScrollY {
@@ -88,12 +96,25 @@ final class WebViewController: UIViewController {
 
 	override func viewWillDisappear(_ animated: Bool) {
 		super.viewWillDisappear(animated)
-		// Force any coalesced-but-not-yet-fired scroll position update to run now, before the
-		// view (and its webView) goes away. scrollPositionQueue debounces at up to 0.3s, and
-		// scrollPositionDidChange itself does an async JS round trip on top of that -- without
-		// this, exiting shortly after the last scroll drops that update and reopening the
-		// article resumes from an earlier position than where the user actually left off.
-		scrollPositionQueue.performCallsImmediately()
+		// Flush the final scroll position/reading progress before the view (and its
+		// webView) goes away.
+		//
+		// This used to call scrollPositionQueue.performCallsImmediately() to force any
+		// coalesced-but-not-yet-fired update to run early. That only fires the *timer*
+		// early -- the selector it invokes, scrollPositionDidChange(), still does an
+		// async evaluateJavaScript round trip to the WebContent process before it reads
+		// window.scrollY and saves anything. viewWillDisappear returned immediately
+		// after kicking that off, so if the article was popped quickly (or `webView`,
+		// a pooled PreloadedWebView, got dequeued for the next article before the
+		// completion handler ran), the save could be dropped or land on the wrong
+		// article -- reproducing "exit fast, come back, not at your last position."
+		//
+		// Fix: don't re-enter the JS bridge here at all. windowScrollY and
+		// lastKnownReadingProgress already hold the last values confirmed by the JS
+		// bridge in scrollPositionDidChange(), so save those synchronously (no JS call,
+		// nothing to race) and drop whatever's still pending in the coalescing queue.
+		scrollPositionQueue.cancelPendingCalls()
+		flushLastKnownScrollState()
 		// Pause in-flight media before the view goes away. Leaving a video playing during
 		// dismissal lets WebKit's full-screen entry continuation fire on a stale view
 		// hierarchy and trip a RELEASE_ASSERT in WebFullScreenManagerProxy on iOS 26.
@@ -469,6 +490,7 @@ extension WebViewController: UIScrollViewDelegate {
 				if let article = self.article, let account = article.account {
 					let articleID = article.articleID
 					let readingProgress = min(max(percentScrolled, 0), 1)
+					self.lastKnownReadingProgress = readingProgress
 					Task {
 						await account.saveReadingProgress(readingProgress, forArticleID: articleID)
 					}
@@ -492,6 +514,22 @@ private struct ImageClickMessage: Codable {
 // MARK: Private
 
 private extension WebViewController {
+
+	/// Synchronously persists the last scroll position / reading progress values this
+	/// controller already has in hand -- no JS evaluation, so nothing to race against
+	/// the view tearing down. See viewWillDisappear.
+	func flushLastKnownScrollState() {
+		guard let article, let account = article.account else { return }
+		let articleID = article.articleID
+		let scrollY = windowScrollY
+		let readingProgress = lastKnownReadingProgress
+		Task {
+			await account.saveScrollPosition(Double(scrollY), forArticleID: articleID)
+			if let readingProgress {
+				await account.saveReadingProgress(readingProgress, forArticleID: articleID)
+			}
+		}
+	}
 
 	func loadWebView(replaceExistingWebView: Bool = false) {
 		guard isViewLoaded else { return }

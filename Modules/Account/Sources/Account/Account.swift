@@ -32,6 +32,12 @@ public extension Notification.Name {
 	static let AccountDidDownloadArticles = Notification.Name(rawValue: "AccountDidDownloadArticles")
 	static let AccountStateDidChange = Notification.Name(rawValue: "AccountStateDidChange")
 	static let StatusesDidChange = Notification.Name(rawValue: "StatusesDidChange")
+	/// Posted when an article's reading-progress percentage is saved. Deliberately
+	/// separate from `StatusesDidChange` -- readingProgress isn't a syncable
+	/// ArticleStatus.Key, and it's saved on every scroll tick, so folding it into
+	/// StatusesDidChange would also trigger unrelated observers (e.g. unread-count
+	/// recalculation in SceneCoordinator) far more often than necessary.
+	static let ReadingProgressDidChange = Notification.Name(rawValue: "ReadingProgressDidChange")
 	/// Posted when a delegate enqueues one or more status changes for upstream send.
 	/// Distinct from `StatusesDidChange`, which also fires for remote-sourced changes.
 	static let AccountDidQueueArticleStatuses = Notification.Name(rawValue: "AccountDidQueueArticleStatuses")
@@ -102,7 +108,7 @@ public enum FetchType {
 		public static let updatedArticles = "updatedArticles" // AccountDidDownloadArticles
 		public static let statuses = "statuses" // StatusesDidChange
 		public static let articles = "articles" // StatusesDidChange
-		public static let articleIDs = "articleIDs" // StatusesDidChange
+		public static let articleIDs = "articleIDs" // StatusesDidChange, ReadingProgressDidChange
 		public static let statusKey = "statusKey" // StatusesDidChange
 		public static let statusFlag = "statusFlag" // StatusesDidChange
 		public static let feeds = "feeds" // AccountDidDownloadArticles, StatusesDidChange
@@ -1020,12 +1026,18 @@ public enum FetchType {
 	// MARK: - Reading Progress (Phase A1)
 
 	/// Fraction (0...1) of the article read. Local UI state, same treatment as scroll
-	/// position -- not part of the syncable ArticleStatus.Key set, no .StatusesDidChange
-	/// notification. Unlike scroll position, this is also mirrored onto the cached
-	/// ArticleStatus for the article (see StatusesTable.saveReadingProgress), so the
-	/// timeline can read it synchronously via `article.status.readingProgress`.
+	/// position -- not part of the syncable ArticleStatus.Key set, so it does not send
+	/// a .StatusesDidChange notification (that would also fire unrelated observers, like
+	/// SceneCoordinator's unread-count recompute, on every scroll tick). It's mirrored
+	/// onto the cached ArticleStatus for the article (see StatusesTable.saveReadingProgress),
+	/// so the timeline can read it synchronously via `article.status.readingProgress` --
+	/// but reading it synchronously into the model isn't enough on its own, since the
+	/// timeline's collection view only redraws a cell when told to. Post a dedicated,
+	/// lighter-weight .ReadingProgressDidChange notification so the timeline knows to
+	/// refresh the affected row.
 	public func saveReadingProgress(_ readingProgress: Double, forArticleID articleID: String) async {
 		await database.saveReadingProgressAsync(readingProgress, articleID: articleID)
+		NotificationCenter.default.post(name: .ReadingProgressDidChange, object: self, userInfo: [UserInfoKey.articleIDs: Set([articleID])])
 	}
 
 	/// Mark articleIDs as unread.

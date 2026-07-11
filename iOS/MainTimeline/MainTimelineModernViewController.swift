@@ -630,6 +630,7 @@ private extension MainTimelineModernViewController {
 	func addNotificationObservers() {
 		NotificationCenter.default.addObserver(self, selector: #selector(unreadCountDidChange(_:)), name: .UnreadCountDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(statusesDidChange(_:)), name: .StatusesDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(readingProgressDidChange(_:)), name: .ReadingProgressDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(feedIconDidBecomeAvailable(_:)), name: .feedIconDidBecomeAvailable, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(avatarDidBecomeAvailable(_:)), name: .AvatarDidBecomeAvailable, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(faviconDidBecomeAvailable(_:)), name: .FaviconDidBecomeAvailable, object: nil)
@@ -990,6 +991,31 @@ private extension MainTimelineModernViewController {
 		let visibleArticles = indexPaths.compactMap { dataSource.itemIdentifier(for: $0) }
 		let visibleUpdatedArticles = visibleArticles.filter { articleIDs.contains($0.articleID) }
 		reloadCells(visibleUpdatedArticles)
+	}
+
+	// Reading progress is saved on every scroll tick (throttled upstream in
+	// WebViewController), so this goes through the coalescing updateQueue rather than
+	// reloading synchronously the way statusesDidChange does for infrequent read/starred
+	// changes -- reloading a cell on every tick while the user is actively scrolling the
+	// currently-open article would be wasteful.
+	@objc func readingProgressDidChange(_ note: Notification) {
+		Self.logger.debug("MainTimelineModernViewController: readingProgressDidChange")
+
+		guard isViewLoaded, let dataSource, let collectionView else {
+			return
+		}
+		guard let articleIDs = note.userInfo?[Account.UserInfoKey.articleIDs] as? Set<String>, !articleIDs.isEmpty else {
+			return
+		}
+		let indexPaths = collectionView.indexPathsForVisibleItems
+		guard !indexPaths.isEmpty else {
+			return
+		}
+		let visibleArticles = indexPaths.compactMap { dataSource.itemIdentifier(for: $0) }
+		guard visibleArticles.contains(where: { articleIDs.contains($0.articleID) }) else {
+			return
+		}
+		queueReloadAvailableCells()
 	}
 
 	@objc func feedIconDidBecomeAvailable(_ note: Notification) {

@@ -61,6 +61,16 @@ struct QueueCall: Equatable {
 		}
 	}
 
+	/// Drop any pending coalesced calls without performing them. Unlike
+	/// `performCallsImmediately()`, this does not invoke the queued selectors at all --
+	/// use this when the caller is about to do its own synchronous flush of whatever
+	/// those calls would have done, and firing the queued (possibly async) call as well
+	/// would be redundant or race with teardown.
+	public func cancelPendingCalls() {
+		invalidateTimer()
+		resetCalls()
+	}
+
 	@objc func timerDidFire(_ sender: Any?) {
 		lastCallTime = Date()
 		performCallsImmediately()
