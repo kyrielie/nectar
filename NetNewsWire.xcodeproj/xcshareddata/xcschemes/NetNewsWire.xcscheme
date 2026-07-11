@@ -15,7 +15,7 @@
                   <BuildableReference
                      BuildableIdentifier = "primary"
                      BlueprintIdentifier = "849C645F1ED37A5D003D8FC0"
-                     BuildableName = "NetNewsWire.app"
+                     BuildableName = ".app"
                      BlueprintName = "NetNewsWire"
                      ReferencedContainer = "container:NetNewsWire.xcodeproj">
                   </BuildableReference>
@@ -33,7 +33,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "849C645F1ED37A5D003D8FC0"
-               BuildableName = "NetNewsWire.app"
+               BuildableName = ".app"
                BlueprintName = "NetNewsWire"
                ReferencedContainer = "container:NetNewsWire.xcodeproj">
             </BuildableReference>
@@ -60,7 +60,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "849C64701ED37A5D003D8FC0"
-               BuildableName = "NetNewsWireTests.xctest"
+               BuildableName = ".xctest"
                BlueprintName = "NetNewsWireTests"
                ReferencedContainer = "container:NetNewsWire.xcodeproj">
             </BuildableReference>
@@ -122,7 +122,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "849C645F1ED37A5D003D8FC0"
-            BuildableName = "NetNewsWire.app"
+            BuildableName = ".app"
             BlueprintName = "NetNewsWire"
             ReferencedContainer = "container:NetNewsWire.xcodeproj">
          </BuildableReference>
@@ -139,7 +139,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "849C645F1ED37A5D003D8FC0"
-            BuildableName = "NetNewsWire.app"
+            BuildableName = ".app"
             BlueprintName = "NetNewsWire"
             ReferencedContainer = "container:NetNewsWire.xcodeproj">
          </BuildableReference>
