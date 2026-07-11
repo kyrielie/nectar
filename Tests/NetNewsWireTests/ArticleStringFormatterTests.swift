@@ -10,7 +10,7 @@ import Articles
 import Foundation
 import Testing
 
-@testable import NetNewsWire
+@testable import AmbrosiaReader
 
 @MainActor @Suite struct ArticleStringFormatterTests {
 

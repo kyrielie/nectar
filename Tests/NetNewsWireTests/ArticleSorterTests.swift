@@ -10,7 +10,7 @@ import Articles
 import Foundation
 import XCTest
 
-@testable import NetNewsWire
+@testable import AmbrosiaReader
 
 @MainActor final class ArticleSorterTests: XCTestCase {
 

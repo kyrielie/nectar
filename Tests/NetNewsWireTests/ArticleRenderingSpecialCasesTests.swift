@@ -8,7 +8,7 @@
 import Foundation
 import Testing
 
-@testable import NetNewsWire
+@testable import AmbrosiaReader
 
 @Suite struct ArticleRenderingSpecialCasesTests {
 

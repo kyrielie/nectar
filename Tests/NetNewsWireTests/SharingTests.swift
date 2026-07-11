@@ -9,7 +9,7 @@
 import Articles
 import XCTest
 
-@testable import NetNewsWire
+@testable import AmbrosiaReader
 
 @MainActor final class SharingTests: XCTestCase {
 
