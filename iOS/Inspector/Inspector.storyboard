@@ -277,36 +277,6 @@
                                             </constraints>
                                         </tableViewCellContentView>
                                     </tableViewCell>
-                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="glX-68-wCa">
-                                        <rect key="frame" x="20" y="120" width="374" height="51"/>
-                                        <autoresizingMask key="autoresizingMask"/>
-                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="glX-68-wCa" id="FQk-5f-EtL">
-                                            <rect key="frame" x="0.0" y="0.0" width="374" height="51"/>
-                                            <autoresizingMask key="autoresizingMask"/>
-                                            <subviews>
-                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Always Use Reader View" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Bf4-3X-Rfr">
-                                                    <rect key="frame" x="24" y="15.5" width="187" height="20.5"/>
-                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
-                                                    <nil key="textColor"/>
-                                                    <nil key="highlightedColor"/>
-                                                </label>
-                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="YES" translatesAutoresizingMaskIntoConstraints="NO" id="fUd-JB-UMK">
-                                                    <rect key="frame" x="293" y="11.5" width="63" height="28"/>
-                                                    <color key="onTintColor" name="primaryAccentColor"/>
-                                                    <connections>
-                                                        <action selector="readerViewAlwaysEnabledChanged:" destination="lEH-bG-pQW" eventType="valueChanged" id="grg-EM-T3u"/>
-                                                    </connections>
-                                                </switch>
-                                            </subviews>
-                                            <constraints>
-                                                <constraint firstAttribute="trailing" secondItem="fUd-JB-UMK" secondAttribute="trailing" constant="20" symbolic="YES" id="4vJ-pa-iCa"/>
-                                                <constraint firstItem="fUd-JB-UMK" firstAttribute="centerY" secondItem="FQk-5f-EtL" secondAttribute="centerY" id="BT1-8x-hrj"/>
-                                                <constraint firstItem="Bf4-3X-Rfr" firstAttribute="leading" secondItem="FQk-5f-EtL" secondAttribute="leadingMargin" constant="4" id="vqc-MM-8vz"/>
-                                                <constraint firstItem="Bf4-3X-Rfr" firstAttribute="centerY" secondItem="FQk-5f-EtL" secondAttribute="centerY" id="wyr-Kk-g5H"/>
-                                                <constraint firstItem="fUd-JB-UMK" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Bf4-3X-Rfr" secondAttribute="trailing" constant="8" id="ywd-qz-cAd"/>
-                                            </constraints>
-                                        </tableViewCellContentView>
-                                    </tableViewCell>
                                 </cells>
                             </tableViewSection>
                             <tableViewSection headerTitle="Home Page" id="dTd-6q-SZd">
@@ -397,7 +367,6 @@
                         <outlet property="homePageLabel" destination="HUP-Cu-FGT" id="EDm-vt-2r0"/>
                         <outlet property="nameTextField" destination="ZdA-rl-9eP" id="GzR-uc-fpV"/>
                         <outlet property="newArticleNotificationsEnabledSwitch" destination="g39-wK-xUs" id="ahS-ZK-6xN"/>
-                        <outlet property="readerViewAlwaysEnabledSwitch" destination="fUd-JB-UMK" id="kUh-ob-Ego"/>
                     </connections>
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="qKF-0N-vfa" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
