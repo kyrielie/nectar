@@ -25,6 +25,8 @@ final class MainTimelineCell: UICollectionViewCell {
 	private lazy var iconView = IconView()
 	private lazy var indicatorView = IconView()
 	private let topSeparator = UIView()
+	private let progressTrackView = UIView()
+	private let progressFillView = UIView()
 
 	var cellData: MainTimelineCellData! {
 		didSet {
@@ -59,6 +61,7 @@ final class MainTimelineCell: UICollectionViewCell {
 		let layout = updatedLayout(width: contentView.bounds.width)
 
 		setFrame(for: titleView, rect: layout.titleRect)
+		setFrame(for: progressTrackView, rect: layout.progressRect)
 		setFrame(for: summaryView, rect: layout.summaryRect)
 		setFrame(for: metadataView, rect: layout.metadataRect)
 		feedNameView.setFrameIfNotEqual(layout.feedNameRect)
@@ -66,6 +69,7 @@ final class MainTimelineCell: UICollectionViewCell {
 		iconView.setFrameIfNotEqual(layout.iconImageRect)
 		indicatorView.setFrameIfNotEqual(cellData.starred ? layout.starRect : layout.unreadIndicatorRect)
 		topSeparator.frame = CGRect(x: layout.separatorRect.minX, y: 0, width: layout.separatorRect.width, height: 1.0 / traitCollection.displayScale)
+		layoutProgressFill()
 	}
 
 	override func updateConfiguration(using state: UICellConfigurationState) {
@@ -151,6 +155,15 @@ private extension MainTimelineCell {
 			view.isAccessibilityElement = false
 		}
 		indicatorView.isHidden = true
+
+		progressTrackView.backgroundColor = .tertiarySystemFill
+		progressTrackView.layer.cornerRadius = MainTimelineDefaultCellLayout.progressBarHeight / 2
+		progressTrackView.clipsToBounds = true
+		progressTrackView.isAccessibilityElement = false
+		contentView.addSubview(progressTrackView)
+		progressTrackView.addSubview(progressFillView)
+		progressFillView.backgroundColor = Assets.Colors.secondaryAccent
+		progressFillView.layer.cornerRadius = MainTimelineDefaultCellLayout.progressBarHeight / 2
 	}
 
 	func updatedLayout(width: CGFloat) -> MainTimelineCellLayout {
@@ -163,13 +176,26 @@ private extension MainTimelineCell {
 		return MainTimelineDefaultCellLayout(width: width, insets: .zero, cellData: cellData)
 	}
 
-	func setFrame(for label: UILabel, rect: CGRect) {
+	func setFrame(for view: UIView, rect: CGRect) {
 		if Int(floor(rect.height)) == 0 || Int(floor(rect.width)) == 0 {
-			label.isHidden = true
+			view.isHidden = true
 		} else {
-			label.isHidden = false
-			label.setFrameIfNotEqual(rect)
+			view.isHidden = false
+			view.setFrameIfNotEqual(rect)
 		}
+	}
+
+	/// The track (progressTrackView) is a plain UIView, not a UILabel, so it's framed
+	/// directly rather than through setFrame(for:rect:) -- same hidden-when-zero rule,
+	/// applied by hand since there's no label to hide.
+	func layoutProgressFill() {
+		guard !progressTrackView.isHidden, cellData != nil else {
+			progressFillView.frame = .zero
+			return
+		}
+		let progress = min(max(cellData.readingProgress ?? 0, 0), 1)
+		let trackBounds = progressTrackView.bounds
+		progressFillView.frame = CGRect(x: 0, y: 0, width: trackBounds.width * CGFloat(progress), height: trackBounds.height)
 	}
 
 	func updateSubviews() {

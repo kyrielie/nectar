@@ -30,6 +30,11 @@ import Images
 	let numberOfLines: Int
 	let iconSize: IconSize
 
+	/// Fraction (0...1) of the article read, or nil if never opened. The card hides its
+	/// progress bar for nil, for 0 (never actually scrolled), and when `read` is true --
+	/// showing "100%" on something already marked read is noise, not information.
+	let readingProgress: Double?
+
 	// MARK: - Ambrosia extension
 
 	/// "" when the article has no word count (not yet extracted from
@@ -104,6 +109,7 @@ import Images
 		self.starred = article.status.starred
 		self.numberOfLines = numberOfLines
 		self.iconSize = iconSize
+		self.readingProgress = article.status.readingProgress
 
 		if let wordCount = article.wordCount {
 			self.wordCountString = Self.wordCountFormatter.string(from: NSNumber(value: wordCount)) ?? String(wordCount)
@@ -141,6 +147,7 @@ import Images
 		self.starred = false
 		self.numberOfLines = 0
 		self.iconSize = .medium
+		self.readingProgress = nil
 		self.wordCountString = ""
 		self.fandomString = ""
 		self.isComplete = nil

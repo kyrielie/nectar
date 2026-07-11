@@ -25,6 +25,7 @@ public final class ArticleStatus: Hashable, Sendable {
 	private struct State: Sendable {
 		var read: Bool
 		var starred: Bool
+		var readingProgress: Double?
 	}
 
 	private let state: OSAllocatedUnfairLock<State>
@@ -47,9 +48,23 @@ public final class ArticleStatus: Hashable, Sendable {
 		}
 	}
 
-	public init(articleID: String, read: Bool, starred: Bool, dateArrived: Date) {
+	/// Fraction (0...1) of the article read, derived from scroll position. nil means
+	/// never computed (article never opened, or opened before this feature existed) --
+	/// distinct from 0, which means computed and confirmed at the very top. Unlike
+	/// `read`/`starred`, this isn't part of the `ArticleStatus.Key` mark/sync system --
+	/// it's local UI state, same treatment as scroll position (Phase 2).
+	public var readingProgress: Double? {
+		get {
+			state.withLock { $0.readingProgress }
+		}
+		set {
+			state.withLock { $0.readingProgress = newValue }
+		}
+	}
+
+	public init(articleID: String, read: Bool, starred: Bool, dateArrived: Date, readingProgress: Double? = nil) {
 		self.articleID = articleID
-		self.state = OSAllocatedUnfairLock(initialState: State(read: read, starred: starred))
+		self.state = OSAllocatedUnfairLock(initialState: State(read: read, starred: starred, readingProgress: readingProgress))
 		self.dateArrived = dateArrived
 	}
 
@@ -84,7 +99,7 @@ public final class ArticleStatus: Hashable, Sendable {
 	// MARK: - Equatable
 
 	public static func ==(lhs: ArticleStatus, rhs: ArticleStatus) -> Bool {
-		return lhs.articleID == rhs.articleID && lhs.dateArrived == rhs.dateArrived && lhs.read == rhs.read && lhs.starred == rhs.starred
+		return lhs.articleID == rhs.articleID && lhs.dateArrived == rhs.dateArrived && lhs.read == rhs.read && lhs.starred == rhs.starred && lhs.readingProgress == rhs.readingProgress
 	}
 }
 

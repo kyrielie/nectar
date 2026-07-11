@@ -16,8 +16,9 @@ extension ArticleStatus {
 	convenience init(articleID: String, dateArrived: Date, row: FMResultSet) {
 		let read = row.bool(forColumn: DatabaseKey.read)
 		let starred = row.bool(forColumn: DatabaseKey.starred)
+		let readingProgress = row.columnIsNull(DatabaseKey.readingProgress) ? nil : row.double(forColumn: DatabaseKey.readingProgress)
 
-		self.init(articleID: articleID, read: read, starred: starred, dateArrived: dateArrived)
+		self.init(articleID: articleID, read: read, starred: starred, dateArrived: dateArrived, readingProgress: readingProgress)
 	}
 
 	func databaseDictionary() -> DatabaseDictionary {

@@ -117,6 +117,15 @@ public struct ArticleCounts: Sendable {
 				database.executeStatements("ALTER TABLE statuses add column scrollPosition REAL NOT NULL DEFAULT 0;")
 			}
 
+			// Phase A1 (visible reading progress): fraction (0...1) of the article read.
+			// Nullable with no default -- nil/NULL means "never computed," distinct from
+			// 0 ("computed, at the very top"), so this can't use the NOT NULL DEFAULT 0
+			// pattern the scrollPosition column above uses.
+			if !self.statusesTableContainsReadingProgressColumn(database) {
+				Self.logger.debug("ArticlesDatabase: adding readingProgress column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE statuses add column readingProgress REAL;")
+			}
+
 			database.executeStatements("CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);")
 			database.executeStatements("DROP TABLE if EXISTS tags;DROP INDEX if EXISTS tags_tagName_index;DROP INDEX if EXISTS articles_feedID_index;DROP INDEX if EXISTS statuses_read_index;DROP TABLE if EXISTS attachments;DROP TABLE if EXISTS attachmentsLookup;")
 		}
@@ -443,6 +452,17 @@ public struct ArticleCounts: Sendable {
 		}
 	}
 
+	/// Fraction (0...1) of the article read (Phase A1). No fetch counterpart is needed:
+	/// readingProgress is loaded in bulk as part of ArticleStatus (see StatusesTable),
+	/// the same path `read`/`starred` already use, rather than a per-article async fetch.
+	public func saveReadingProgressAsync(_ readingProgress: Double, articleID: String) async {
+		await withCheckedContinuation { continuation in
+			_saveReadingProgress(readingProgress, articleID: articleID) {
+				continuation.resume()
+			}
+		}
+	}
+
 	// MARK: - Caches
 
 	/// Call to free up some memory. Should be done when the app is backgrounded, for instance.
@@ -476,7 +496,7 @@ private extension ArticlesDatabase {
 	static let tableCreationStatements = """
 	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, series TEXT);
 
-	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0);
+	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL);
 
 	CREATE INDEX if not EXISTS articles_feedID_datePublished_articleID on articles (feedID, datePublished, articleID);
 
@@ -502,6 +522,15 @@ private extension ArticlesDatabase {
 			return false
 		}
 		return columnMap["scrollposition"] != nil
+	}
+
+	/// Same approach as `statusesTableContainsScrollPositionColumn` above.
+	nonisolated func statusesTableContainsReadingProgressColumn(_ database: FMDatabase) -> Bool {
+		guard let resultSet = database.executeQuery("select * from statuses limit 1;", withArgumentsIn: nil),
+			  let columnMap = resultSet.columnNameToIndexMap else {
+			return false
+		}
+		return columnMap["readingprogress"] != nil
 	}
 
 	// MARK: - Operations
@@ -576,6 +605,11 @@ private extension ArticlesDatabase {
 
 	func _fetchScrollPosition(articleID: String, completion: @escaping @Sendable (Double) -> Void) {
 		articlesTable.fetchScrollPosition(articleID: articleID, completion)
+	}
+
+	func _saveReadingProgress(_ readingProgress: Double, articleID: String, completion: @escaping DatabaseCompletionBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.saveReadingProgress(readingProgress, articleID: articleID, completion)
 	}
 
 	func _fetchArticlesAsync(feedID: String, _ completion: @escaping ArticleSetResultBlock) {

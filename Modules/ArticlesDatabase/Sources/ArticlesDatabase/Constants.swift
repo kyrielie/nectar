@@ -56,6 +56,10 @@ struct DatabaseKey {
 	// Reading behavior (Phase 2 fork addition)
 	static let scrollPosition = "scrollPosition"
 
+	// Reading progress, 0...1 fraction (Phase A1 fork addition). Nullable: nil means
+	// never computed, distinct from 0 (computed, at the very top).
+	static let readingProgress = "readingProgress"
+
 	// Author
 	static let authorID = "authorID"
 	static let name = "name"

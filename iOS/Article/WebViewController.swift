@@ -462,6 +462,17 @@ extension WebViewController: UIScrollViewDelegate {
 				if percentScrolled >= 0.99 {
 					self.coordinator.markCurrentArticleAsReadFromScrollCompletion()
 				}
+
+				// Visible reading progress (Phase A1). Reuses this same JS bridge payload
+				// rather than adding a second round trip -- percentScrolled is already the
+				// 0...1 fraction the card wants, just clamped to a valid range.
+				if let article = self.article, let account = article.account {
+					let articleID = article.articleID
+					let readingProgress = min(max(percentScrolled, 0), 1)
+					Task {
+						await account.saveReadingProgress(readingProgress, forArticleID: articleID)
+					}
+				}
 			}
 		}
 	}

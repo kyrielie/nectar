@@ -16,6 +16,7 @@ import Images
 	var starRect: CGRect { get }
 	var iconImageRect: CGRect { get }
 	var titleRect: CGRect { get }
+	var progressRect: CGRect { get }
 	var summaryRect: CGRect { get }
 	var metadataRect: CGRect { get }
 	var feedNameRect: CGRect { get }
@@ -63,6 +64,21 @@ extension MainTimelineCellLayout {
 			r.size.height = 0
 		}
 		return (r, sizeInfo.numberOfLinesUsed)
+	}
+
+	// Thin bar under the title, showing how far into the article the user has read.
+	// Zero rect (hidden) when there's no progress to show, same "hidden when zero, not
+	// confirmed-none" shape as rectForTitle/rectForSummary -- covers nil (never opened),
+	// 0 (never actually scrolled), and fully read (showing "100%" is noise, not signal).
+	static func rectForProgress(_ cellData: MainTimelineCellData, _ point: CGPoint, _ textAreaWidth: CGFloat) -> CGRect {
+		var r = CGRect.zero
+		guard let progress = cellData.readingProgress, progress > 0, !cellData.read else {
+			return r
+		}
+		r.origin = point
+		r.size.width = textAreaWidth
+		r.size.height = MainTimelineDefaultCellLayout.progressBarHeight
+		return r
 	}
 
 	static func rectForSummary(_ cellData: MainTimelineCellData, _ point: CGPoint, _ textAreaWidth: CGFloat, _ linesUsed: Int) -> CGRect {
@@ -129,6 +145,10 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 	static var titleFont: UIFont { UIFont.preferredFont(forTextStyle: .headline) }
 	static let titleBottomMargin = CGFloat(1)
 
+	static let progressBarHeight = CGFloat(2)
+	static let progressBarTopMargin = CGFloat(4)
+	static let progressBarBottomMargin = CGFloat(4)
+
 	static var feedNameFont: UIFont { UIFont.preferredFont(forTextStyle: .footnote) }
 	static let feedRightMargin = CGFloat(8)
 
@@ -145,6 +165,7 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 	let starRect: CGRect
 	let iconImageRect: CGRect
 	let titleRect: CGRect
+	let progressRect: CGRect
 	let summaryRect: CGRect
 	let feedNameRect: CGRect
 	let dateRect: CGRect
@@ -178,9 +199,16 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 		if self.titleRect != CGRect.zero {
 			currentPoint.y = self.titleRect.maxY + Self.titleBottomMargin
 		}
+
+		let progressPoint = CGPoint(x: currentPoint.x, y: currentPoint.y + Self.progressBarTopMargin)
+		self.progressRect = Self.rectForProgress(cellData, progressPoint, textAreaWidth)
+		if self.progressRect != CGRect.zero {
+			currentPoint.y = self.progressRect.maxY + Self.progressBarBottomMargin
+		}
+
 		self.summaryRect = Self.rectForSummary(cellData, currentPoint, textAreaWidth, numberOfLinesForTitle)
 
-		var y = [self.titleRect, self.summaryRect].maxY()
+		var y = [self.titleRect, self.progressRect, self.summaryRect].maxY()
 		if y == 0 {
 			y = iconImageRect.origin.y + iconImageRect.height
 			let tmp = Self.rectForDate(cellData, currentPoint, textAreaWidth)
@@ -220,6 +248,7 @@ struct MainTimelineAccessibilityCellLayout: MainTimelineCellLayout {
 	let starRect: CGRect
 	let iconImageRect: CGRect
 	let titleRect: CGRect
+	let progressRect: CGRect
 	let summaryRect: CGRect
 	let feedNameRect: CGRect
 	let dateRect: CGRect
@@ -253,9 +282,16 @@ struct MainTimelineAccessibilityCellLayout: MainTimelineCellLayout {
 		if self.titleRect != CGRect.zero {
 			currentPoint.y = self.titleRect.maxY + MainTimelineDefaultCellLayout.titleBottomMargin
 		}
+
+		let progressPoint = CGPoint(x: currentPoint.x, y: currentPoint.y + MainTimelineDefaultCellLayout.progressBarTopMargin)
+		self.progressRect = Self.rectForProgress(cellData, progressPoint, textAreaWidth)
+		if self.progressRect != CGRect.zero {
+			currentPoint.y = self.progressRect.maxY + MainTimelineDefaultCellLayout.progressBarBottomMargin
+		}
+
 		self.summaryRect = Self.rectForSummary(cellData, currentPoint, textAreaWidth, numberOfLinesForTitle)
 
-		currentPoint.y = [self.titleRect, self.summaryRect].maxY()
+		currentPoint.y = [self.titleRect, self.progressRect, self.summaryRect].maxY()
 
 		self.metadataRect = Self.rectForMetadata(cellData, currentPoint, textAreaWidth)
 		if self.metadataRect != CGRect.zero {
