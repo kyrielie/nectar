@@ -684,18 +684,18 @@ private extension MainTimelineModernViewController {
 			guard let article = dataSource.itemIdentifier(for: indexPath) else { return nil }
 			var actions = [UIContextualAction]()
 
-			// Set up the star action
+			// Set up the read-later action
 			let starTitle = article.status.starred ?
-				NSLocalizedString("Unstar", comment: "Unstar") :
-				NSLocalizedString("Star", comment: "Star")
+				NSLocalizedString("Remove", comment: "Remove from Read Later") :
+				NSLocalizedString("Read Later", comment: "Read Later")
 
 			let starAction = UIContextualAction(style: .normal, title: starTitle) { [weak self] _, _, completion in
 
 				// Post the accessibility announcement immediately so VoiceOver
 				// doesn't lag behind user actions.
 				let announcement = article.status.starred ?
-					NSLocalizedString("Unstarred", comment: "Accessibility announcement") :
-					NSLocalizedString("Starred", comment: "Starred")
+					NSLocalizedString("Removed from Read Later", comment: "Accessibility announcement") :
+					NSLocalizedString("Added to Read Later", comment: "Read Later")
 				UIAccessibility.post(notification: .announcement, argument: announcement)
 
 				/// The call to `toggleStar` is delayed in order to allow
@@ -1143,16 +1143,16 @@ extension MainTimelineModernViewController {
 	func toggleArticleStarStatusAction(_ article: Article) -> UIAction {
 
 		let title = article.status.starred ?
-			NSLocalizedString("Mark as Unstarred", comment: "Command") :
-			NSLocalizedString("Mark as Starred", comment: "Command")
+			NSLocalizedString("Remove from Read Later", comment: "Command") :
+			NSLocalizedString("Add to Read Later", comment: "Command")
 		let image = article.status.starred ? Assets.Images.starOpen : Assets.Images.starClosed
 
 		let action = UIAction(title: title, image: image) { [weak self] _ in
 			// Post the accessibility announcement immediately so VoiceOver
 			// doesn't lag behind user actions.
 			let announcement = article.status.starred ?
-				NSLocalizedString("Unstarred", comment: "Accessibility announcement") :
-				NSLocalizedString("Starred", comment: "Starred")
+				NSLocalizedString("Removed from Read Later", comment: "Accessibility announcement") :
+				NSLocalizedString("Added to Read Later", comment: "Read Later")
 			UIAccessibility.post(notification: .announcement, argument: announcement)
 
 			DispatchQueue.main.asyncAfter(wallDeadline: .now() + 1.0) {

@@ -19,7 +19,9 @@ import Images
 		return SidebarItemIdentifier.smartFeed(String(describing: StarredFeedDelegate.self))
 	}
 
-	let nameForDisplay = NSLocalizedString("Starred", comment: "Starred")
+	// Label reads "Read Later" (Phase 3) — internal type name, delegate, and
+	// underlying ArticleStatus.Key.starred are unchanged deliberately.
+	let nameForDisplay = NSLocalizedString("Read Later", comment: "Read Later")
 	let fetchType: FetchType = .starred(nil)
 	var smallIcon: IconImage? {
 		Assets.Images.starredFeed

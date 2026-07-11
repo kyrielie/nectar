@@ -249,10 +249,10 @@ final class ArticleViewController: UIViewController {
 
 		if article.status.starred {
 			starBarButtonItem.image = Assets.Images.starClosed
-			starBarButtonItem.accLabelText = NSLocalizedString("Selected - Star Article", comment: "Selected - Star Article")
+			starBarButtonItem.accLabelText = NSLocalizedString("Selected - Read Later", comment: "Selected - Read Later")
 		} else {
 			starBarButtonItem.image = Assets.Images.starOpen
-			starBarButtonItem.accLabelText = NSLocalizedString("Star Article", comment: "Star Article")
+			starBarButtonItem.accLabelText = NSLocalizedString("Read Later", comment: "Read Later")
 		}
 	}
 

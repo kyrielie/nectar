@@ -142,7 +142,7 @@ private extension AccountStatsView {
 			StatItem(label: NSLocalizedString("Articles", comment: "Articles"), value: Self.formattedNumber(articleCount)),
 			StatItem(label: NSLocalizedString("Statuses", comment: "Statuses"), value: Self.formattedNumber(statusesCount)),
 			StatItem(label: NSLocalizedString("Unread", comment: "Unread"), value: Self.formattedNumber(unreadCount)),
-			StatItem(label: NSLocalizedString("Starred", comment: "Starred"), value: Self.formattedNumber(starredCount))
+			StatItem(label: NSLocalizedString("Read Later", comment: "Read Later"), value: Self.formattedNumber(starredCount))
 		]
 	}
 
