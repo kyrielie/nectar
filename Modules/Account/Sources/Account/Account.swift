@@ -1004,6 +1004,19 @@ public enum FetchType {
 		await markAndFetchNewAsync(articleIDs: articleIDs, statusKey: .read, flag: true)
 	}
 
+	// MARK: - Scroll Position (Phase 2)
+
+	/// Per-article scroll position (raw window.scrollY pixel value, same convention as
+	/// windowScrollY). Local UI state only -- unlike read/starred, it isn't part of the
+	/// syncable ArticleStatus.Key set and doesn't send a .StatusesDidChange notification.
+	public func saveScrollPosition(_ scrollPosition: Double, forArticleID articleID: String) async {
+		await database.saveScrollPositionAsync(scrollPosition, articleID: articleID)
+	}
+
+	public func fetchScrollPosition(forArticleID articleID: String) async -> Double {
+		await database.fetchScrollPositionAsync(articleID: articleID)
+	}
+
 	/// Mark articleIDs as unread.
 	/// - Returns: Set of new article statuses.
 	/// Will create statuses in the database and in memory as needed. Sends a .StatusesDidChange notification.

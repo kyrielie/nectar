@@ -525,6 +525,26 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
+	// MARK: - Scroll position (Phase 2)
+
+	func saveScrollPosition(_ scrollPosition: Double, articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
+		queue.runInTransaction { database in
+			self.statusesTable.saveScrollPosition(scrollPosition, articleID: articleID, database)
+			DispatchQueue.main.async {
+				completion()
+			}
+		}
+	}
+
+	func fetchScrollPosition(articleID: String, _ completion: @escaping (Double) -> Void) {
+		queue.runInDatabase { database in
+			let scrollPosition = self.statusesTable.fetchScrollPosition(articleID: articleID, database)
+			DispatchQueue.main.async {
+				completion(scrollPosition)
+			}
+		}
+	}
+
 	// MARK: - Indexing
 
 	func indexUnindexedArticles() {

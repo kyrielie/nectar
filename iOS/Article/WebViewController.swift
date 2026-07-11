@@ -51,6 +51,16 @@ final class WebViewController: UIViewController {
 			if windowScrollY != AppDefaults.shared.articleWindowScrollY {
 				AppDefaults.shared.articleWindowScrollY = windowScrollY
 			}
+			// Per-article persistence (Phase 2), alongside the existing single-global
+			// AppDefaults write above, which still backs relaunch state restoration
+			// (SceneCoordinator's stateInfo.articleWindowScrollY path) and is left as-is.
+			if let article = article, let account = article.account {
+				let articleID = article.articleID
+				let scrollY = windowScrollY
+				Task {
+					await account.saveScrollPosition(Double(scrollY), forArticleID: articleID)
+				}
+			}
 		}
 	}
 	override func viewDidLoad() {
@@ -123,8 +133,22 @@ final class WebViewController: UIViewController {
 		if article != self.article {
 			self.article = article
 			if updateView {
-				windowScrollY = 0
-				loadWebView()
+				guard let article = article, let account = article.account else {
+					windowScrollY = 0
+					loadWebView()
+					return
+				}
+				// Real per-article scroll position (Phase 2), replacing the old
+				// unconditional reset to 0 on every article switch.
+				let articleID = article.articleID
+				Task {
+					let scrollPosition = await account.fetchScrollPosition(forArticleID: articleID)
+					// The user may have already navigated elsewhere by the time this
+					// resolves; only apply it if we're still showing the same article.
+					guard self.article?.articleID == articleID else { return }
+					self.windowScrollY = Int(scrollPosition)
+					self.loadWebView()
+				}
 			}
 		}
 	}
@@ -416,12 +440,23 @@ extension WebViewController: UIScrollViewDelegate {
 	}
 
 	@objc func scrollPositionDidChange() {
-		webView?.evaluateJavaScript("window.scrollY") { (scrollY, error) in
-			guard error == nil else { return }
-			let javascriptScrollY = scrollY as? Int ?? 0
+		webView?.evaluateJavaScript("({ scrollY: window.scrollY, scrollHeight: document.body.scrollHeight, innerHeight: window.innerHeight })") { (result, error) in
+			guard error == nil, let result = result as? [String: Any] else { return }
+			let javascriptScrollY = result["scrollY"] as? Int ?? 0
 			// I don't know why this value gets returned sometimes, but it is in error
 			guard javascriptScrollY != 33554432 else { return }
 			self.windowScrollY = javascriptScrollY
+
+			// Scroll-percentage-gated read marking (Phase 2). scrollHeight includes the
+			// full document; innerHeight is the viewport. Once the bottom of the viewport
+			// has reached 99% of the document height, treat the article as read.
+			if let scrollHeight = result["scrollHeight"] as? Double, scrollHeight > 0,
+			   let innerHeight = result["innerHeight"] as? Double {
+				let percentScrolled = (Double(javascriptScrollY) + innerHeight) / scrollHeight
+				if percentScrolled >= 0.99 {
+					self.coordinator.markCurrentArticleAsReadFromScrollCompletion()
+				}
+			}
 		}
 	}
 }

@@ -1064,8 +1064,9 @@ struct SidebarItemNode: Hashable, Sendable {
 		rootSplitViewController.show(.secondary)
 		mainTimelineViewController?.didPushArticleViewController = true
 
-		// Mark article as read before navigating to it, so the read status does not flash unread/read on display
-		markArticles(Set([article!]), statusKey: .read, flag: true)
+		// Read status is no longer set here on selection -- WebViewController marks it
+		// read once scroll position crosses the completion threshold. See
+		// markCurrentArticleAsReadFromScrollCompletion().
 
 		mainTimelineViewController?.updateArticleSelection(animations: animations)
 		articleViewController?.article = article
@@ -1279,6 +1280,19 @@ struct SidebarItemNode: Hashable, Sendable {
 		if let article = currentArticle {
 			markArticlesWithUndo([article], statusKey: .read, flag: true)
 		}
+	}
+
+	/// Called by WebViewController once the article's scroll position crosses the
+	/// completion threshold (99%). Replaces the old mark-on-open behavior from
+	/// selectArticle(_:animations:articleWindowScrollY:) -- read status now reflects
+	/// actually having scrolled through the article, not just having opened it.
+	/// Deliberately not the WithUndo variant: this fires silently as a side effect of
+	/// scrolling, not as an explicit user action, so it shouldn't create an undo step.
+	func markCurrentArticleAsReadFromScrollCompletion() {
+		guard let article = currentArticle, !article.status.read else {
+			return
+		}
+		markArticles(Set([article]), statusKey: .read, flag: true)
 	}
 
 	func markAsUnreadForCurrentArticle() {

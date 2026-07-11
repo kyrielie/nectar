@@ -200,6 +200,24 @@ final class StatusesTable: DatabaseTable, Sendable {
 	func removeStatuses(_ articleIDs: Set<String>, _ database: FMDatabase) {
 		deleteRowsWhere(key: DatabaseKey.articleID, equalsAnyValue: Array(articleIDs), in: database)
 	}
+
+	// MARK: - Scroll position (Phase 2)
+
+	/// Per-article scroll position (raw window.scrollY pixel value, same convention as
+	/// windowScrollY). Deliberately not part of the boolean ArticleStatus.Key/mark system
+	/// above -- it's a Double, and it's local UI state rather than something that needs
+	/// the read/starred cache-and-sync path.
+	func saveScrollPosition(_ scrollPosition: Double, articleID: String, _ database: FMDatabase) {
+		updateRowsWithValue(NSNumber(value: scrollPosition), valueKey: DatabaseKey.scrollPosition, whereKey: DatabaseKey.articleID, matches: [articleID], database: database)
+	}
+
+	func fetchScrollPosition(articleID: String, _ database: FMDatabase) -> Double {
+		guard let resultSet = self.selectRowsWhere(key: DatabaseKey.articleID, equals: articleID, in: database),
+			  resultSet.next() else {
+			return 0
+		}
+		return resultSet.double(forColumn: DatabaseKey.scrollPosition)
+	}
 }
 
 // MARK: - Private
