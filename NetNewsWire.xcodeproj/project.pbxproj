@@ -929,6 +929,7 @@
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPER_ENTITLEMENTS = "-dev";
 				DEVELOPMENT_TEAM = S35M3D45Z9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kyrielie.nectar;
 				PROVISIONING_PROFILE_SPECIFIER = "";
