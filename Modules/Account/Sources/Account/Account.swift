@@ -1017,6 +1017,17 @@ public enum FetchType {
 		await database.fetchScrollPositionAsync(articleID: articleID)
 	}
 
+	// MARK: - Reading Progress (Phase A1)
+
+	/// Fraction (0...1) of the article read. Local UI state, same treatment as scroll
+	/// position -- not part of the syncable ArticleStatus.Key set, no .StatusesDidChange
+	/// notification. Unlike scroll position, this is also mirrored onto the cached
+	/// ArticleStatus for the article (see StatusesTable.saveReadingProgress), so the
+	/// timeline can read it synchronously via `article.status.readingProgress`.
+	public func saveReadingProgress(_ readingProgress: Double, forArticleID articleID: String) async {
+		await database.saveReadingProgressAsync(readingProgress, articleID: articleID)
+	}
+
 	/// Mark articleIDs as unread.
 	/// - Returns: Set of new article statuses.
 	/// Will create statuses in the database and in memory as needed. Sends a .StatusesDidChange notification.

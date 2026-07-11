@@ -218,6 +218,20 @@ final class StatusesTable: DatabaseTable, Sendable {
 		}
 		return resultSet.double(forColumn: DatabaseKey.scrollPosition)
 	}
+
+	// MARK: - Reading progress (Phase A1)
+
+	/// Fraction (0...1) of the article read. Like scroll position, this is local UI
+	/// state rather than a synced ArticleStatus.Key -- but unlike scroll position, the
+	/// timeline needs it synchronously for every visible row, so it's also mirrored
+	/// onto the cached ArticleStatus instance (if any) so readers of `article.status.
+	/// readingProgress` see the update immediately without a second DB round trip.
+	func saveReadingProgress(_ readingProgress: Double, articleID: String, _ database: FMDatabase) {
+		if let status = cache[articleID] {
+			status.readingProgress = readingProgress
+		}
+		updateRowsWithValue(NSNumber(value: readingProgress), valueKey: DatabaseKey.readingProgress, whereKey: DatabaseKey.articleID, matches: [articleID], database: database)
+	}
 }
 
 // MARK: - Private

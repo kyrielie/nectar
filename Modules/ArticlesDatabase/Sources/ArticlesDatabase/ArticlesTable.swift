@@ -545,6 +545,17 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
+	// MARK: - Reading progress (Phase A1)
+
+	func saveReadingProgress(_ readingProgress: Double, articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
+		queue.runInTransaction { database in
+			self.statusesTable.saveReadingProgress(readingProgress, articleID: articleID, database)
+			DispatchQueue.main.async {
+				completion()
+			}
+		}
+	}
+
 	// MARK: - Indexing
 
 	func indexUnindexedArticles() {
