@@ -58,6 +58,16 @@ typealias ArticleArray = [Article]
 		return ArticleSorter.sortedByDate(articles: self, sortDirection: sortDirection, groupByFeed: groupByFeed)
 	}
 
+	/// Sort by an arbitrary field. `groupByFeed` only applies to `.date` —
+	/// grouping by feed is a secondary key under a date sort in the existing
+	/// UI, and doesn't have a defined meaning under, say, a title sort.
+	func sorted(by field: ArticleSorter.SortField, sortDirection: ComparisonResult, groupByFeed: Bool = false) -> ArticleArray {
+		if field == .date {
+			return sortedByDate(sortDirection, groupByFeed: groupByFeed)
+		}
+		return ArticleSorter.sorted(articles: self, by: field, sortDirection: sortDirection)
+	}
+
 	func canMarkAllAsRead() -> Bool {
 		return anyArticleIsUnread()
 	}

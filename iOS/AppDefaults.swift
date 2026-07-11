@@ -57,6 +57,7 @@ final class AppDefaults: Sendable {
 		static let timelineNumberOfLines = "timelineNumberOfLines"
 		static let timelineIconDimension = "timelineIconSize"
 		static let timelineSortDirection = "timelineSortDirection"
+		static let timelineSortField = "timelineSortField"
 		static let articleFullscreenAvailable = "articleFullscreenAvailable"
 		static let articleFullscreenEnabled = "articleFullscreenEnabled"
 		static let confirmMarkAllAsRead = "confirmMarkAllAsRead"
@@ -177,6 +178,16 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			AppDefaults.setSortDirection(for: Key.timelineSortDirection, newValue)
+		}
+	}
+
+	var timelineSortField: ArticleSorter.SortField {
+		get {
+			let rawValue = AppDefaults.int(for: Key.timelineSortField)
+			return ArticleSorter.SortField(rawValue: rawValue) ?? .date
+		}
+		set {
+			AppDefaults.setInt(for: Key.timelineSortField, newValue.rawValue)
 		}
 	}
 
@@ -395,6 +406,7 @@ final class AppDefaults: Sendable {
 										Key.timelineNumberOfLines: 2,
 										Key.timelineIconDimension: IconSize.medium.rawValue,
 										Key.timelineSortDirection: ComparisonResult.orderedDescending.rawValue,
+								Key.timelineSortField: ArticleSorter.SortField.date.rawValue,
 										Key.articleFullscreenAvailable: false,
 										Key.articleFullscreenEnabled: false,
 										Key.confirmMarkAllAsRead: true,
