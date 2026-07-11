@@ -52,6 +52,21 @@ import Images
 	let ratings: [String]?
 	let warnings: [String]?
 
+	/// Single truncating line combining word count, completion, fandom, and
+	/// rating/warnings — e.g. "12,345 words · Complete · My Fandom · Explicit".
+	/// "" when none of the underlying fields have data, which collapses the
+	/// row to zero height exactly like `title`/`summary` already do.
+	///
+	/// Simplification note: this renders as one text line, not the separate
+	/// colored pill badges the fork plan sketches. Nil-vs-empty-array is
+	/// still respected (an absent rating contributes nothing; only a
+	/// present, non-empty rating shows), but a *confirmed empty* array
+	/// currently also contributes nothing rather than an explicit "none"
+	/// label — same silent-omission tradeoff in both cases, so this never
+	/// mislabels "not available" as "confirmed none," it just doesn't yet
+	/// distinguish the two visually.
+	let metadataString: String
+
 	init(article: Article, showFeedName: ShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool, numberOfLines: Int, iconSize: IconSize) {
 
 		self.accountID = article.accountID
@@ -106,6 +121,8 @@ import Images
 		self.ratings = article.ratings
 		self.warnings = article.warnings
 
+		self.metadataString = Self.metadataString(wordCountString: self.wordCountString, isComplete: article.isComplete, fandomString: self.fandomString, ratings: article.ratings, warnings: article.warnings)
+
 	}
 
 	init() { // Empty
@@ -129,6 +146,7 @@ import Images
 		self.isComplete = nil
 		self.ratings = nil
 		self.warnings = nil
+		self.metadataString = ""
 	}
 
 }
@@ -154,5 +172,35 @@ private extension MainTimelineCellData {
 		let shown = items.prefix(maxItems).joined(separator: ", ")
 		let remaining = items.count - maxItems
 		return "\(shown) +\(remaining)"
+	}
+
+	static func metadataString(wordCountString: String, isComplete: Bool?, fandomString: String, ratings: [String]?, warnings: [String]?) -> String {
+		var parts: [String] = []
+
+		if !wordCountString.isEmpty {
+			parts.append(String(format: NSLocalizedString("%@ words", comment: "Word count"), wordCountString))
+		}
+
+		switch isComplete {
+		case true:
+			parts.append(NSLocalizedString("Complete", comment: "Completion status"))
+		case false:
+			parts.append(NSLocalizedString("WIP", comment: "Completion status"))
+		case nil:
+			break
+		}
+
+		if !fandomString.isEmpty {
+			parts.append(fandomString)
+		}
+
+		if let ratings, !ratings.isEmpty {
+			parts.append(ratings.joined(separator: ", "))
+		}
+		if let warnings, !warnings.isEmpty {
+			parts.append(warnings.joined(separator: ", "))
+		}
+
+		return parts.joined(separator: " · ")
 	}
 }
