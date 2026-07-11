@@ -119,8 +119,22 @@ import RSParser
 		return attributed
 	}
 
+	/// Prefers the feed's own summary/description (JSON Feed `summary`, populated
+	/// separately from `contentHTML`/`contentText`/`markdown`) over a body-text
+	/// preview. `article.body` currently falls back to `summary` only when there's
+	/// no content at all (see `Article.body` in ArticleUtilities.swift) -- so an
+	/// article with both real content and a feed-provided summary was always
+	/// showing a body snippet here, never the summary the feed actually intended
+	/// as the card-level description. Falls back to the current body-truncation
+	/// behavior when the feed has no `summary`, so feeds without one (or any
+	/// non-Ambrosia feed) don't regress to a blank card.
 	func truncatedSummary(_ article: Article) -> String {
-		guard let body = article.body else {
+		let source: String
+		if let summary = article.summary, !summary.isEmpty {
+			source = summary
+		} else if let body = article.body {
+			source = body
+		} else {
 			return ""
 		}
 
@@ -134,7 +148,7 @@ import RSParser
 		// preserves author intent for entity-encoded tags like
 		// `&lt;i&gt;` (decode-then-strip would misread those as
 		// real `<i>` tags and drop the text).
-		var s = body.strippingHTML(maxCharacters: 300)
+		var s = source.strippingHTML(maxCharacters: 300)
 		s = s.decodingHTMLEntities()
 		if s == "Comments" { // Hacker News.
 			s = ""
