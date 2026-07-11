@@ -88,6 +88,12 @@ final class WebViewController: UIViewController {
 
 	override func viewWillDisappear(_ animated: Bool) {
 		super.viewWillDisappear(animated)
+		// Force any coalesced-but-not-yet-fired scroll position update to run now, before the
+		// view (and its webView) goes away. scrollPositionQueue debounces at up to 0.3s, and
+		// scrollPositionDidChange itself does an async JS round trip on top of that -- without
+		// this, exiting shortly after the last scroll drops that update and reopening the
+		// article resumes from an earlier position than where the user actually left off.
+		scrollPositionQueue.performCallsImmediately()
 		// Pause in-flight media before the view goes away. Leaving a video playing during
 		// dismissal lets WebKit's full-screen entry continuation fire on a stale view
 		// hierarchy and trip a RELEASE_ASSERT in WebFullScreenManagerProxy on iOS 26.

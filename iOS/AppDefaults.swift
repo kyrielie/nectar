@@ -287,6 +287,14 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	/// Write-only as of Phase A0 (nectar-plan-v3.md): WebViewController still writes this on
+	/// every scroll change, but nothing reads it back to restore a position anymore -- it was a
+	/// single value shared across every article, so using it to restore whichever article the
+	/// user returns to on relaunch/Handoff meant restoring the *last-scrolled* article's offset
+	/// onto a possibly different article. Per-article restoration now goes entirely through
+	/// Account.fetchScrollPosition(forArticleID:). Left in place (rather than deleted outright)
+	/// because StateRestorationInfo's shape/migration still carries it; worth removing properly
+	/// in a follow-up once nothing depends on that shape.
 	var articleWindowScrollY: Int {
 		get {
 			UserDefaults.standard.integer(forKey: Key.articleWindowScrollY)

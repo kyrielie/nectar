@@ -430,8 +430,11 @@ struct SidebarItemNode: Hashable, Sendable {
 
 		if let article {
 			// Disable animation since this function runs only during state restoration on launch.
+			// Scroll position restoration comes from the article's own saved position (see
+			// selectArticle), not from stateInfo.articleWindowScrollY -- that field is a single
+			// value shared across every article and is no longer used as a restore source.
 			UIView.performWithoutAnimation {
-				selectArticle(article, articleWindowScrollY: stateInfo.articleWindowScrollY)
+				selectArticle(article)
 			}
 		}
 	}
@@ -1046,7 +1049,7 @@ struct SidebarItemNode: Hashable, Sendable {
 		}
 	}
 
-	func selectArticle(_ article: Article?, animations: Animations = [], articleWindowScrollY: Int? = nil) {
+	func selectArticle(_ article: Article?, animations: Animations = []) {
 		guard article != currentArticle else {
 			return
 		}
@@ -1069,10 +1072,14 @@ struct SidebarItemNode: Hashable, Sendable {
 		// markCurrentArticleAsReadFromScrollCompletion().
 
 		mainTimelineViewController?.updateArticleSelection(animations: animations)
+		// Scroll position restoration is handled entirely by ArticleViewController.article's
+		// didSet -> WebViewController.setArticle, which fetches this article's own saved
+		// position from the database. Do not pass a scroll position in here -- an earlier
+		// version threaded AppDefaults.shared.articleWindowScrollY (a single value shared by
+		// every article) through to ArticleViewController.restoreScrollPosition, which forced
+		// whichever article was scrolled last, anywhere in the app, onto whatever article was
+		// being restored here. See Phase A0 in nectar-plan-v3.md.
 		articleViewController?.article = article
-		if let articleWindowScrollY = articleWindowScrollY {
-			articleViewController?.restoreScrollPosition = articleWindowScrollY
-		}
 	}
 
 	func beginSearching() {
@@ -1284,8 +1291,8 @@ struct SidebarItemNode: Hashable, Sendable {
 
 	/// Called by WebViewController once the article's scroll position crosses the
 	/// completion threshold (99%). Replaces the old mark-on-open behavior from
-	/// selectArticle(_:animations:articleWindowScrollY:) -- read status now reflects
-	/// actually having scrolled through the article, not just having opened it.
+	/// selectArticle(_:animations:) -- read status now reflects actually having
+	/// scrolled through the article, not just having opened it.
 	/// Deliberately not the WithUndo variant: this fires silently as a side effect of
 	/// scrolling, not as an explicit user action, so it shouldn't create an undo step.
 	func markCurrentArticleAsReadFromScrollCompletion() {
@@ -1525,9 +1532,9 @@ struct SidebarItemNode: Hashable, Sendable {
 		articleViewController?.focus()
 	}
 
-	func selectArticleInCurrentFeed(_ articleID: String, articleWindowScrollY: Int? = nil) {
+	func selectArticleInCurrentFeed(_ articleID: String) {
 		if let article = self.articles.first(where: { $0.articleID == articleID }) {
-			self.selectArticle(article, articleWindowScrollY: articleWindowScrollY)
+			self.selectArticle(article)
 		}
 	}
 
@@ -2399,20 +2406,17 @@ private extension SceneCoordinator {
 			return false
 		}
 
-		// Read value from UserDefaults (migration happens in restoreWindowState)
-		let articleWindowScrollY = AppDefaults.shared.articleWindowScrollY
-
 		switch sidebarItemID {
 
 		case .smartFeed, .folder:
-			let found = selectSidebarItemAndArticle(sidebarItemID: sidebarItemID, articleID: articleID, articleWindowScrollY: articleWindowScrollY)
+			let found = selectSidebarItemAndArticle(sidebarItemID: sidebarItemID, articleID: articleID)
 			if found {
 				treeControllerDelegate.addFilterException(sidebarItemID)
 			}
 			return found
 
 		case .feed:
-			let found = selectSidebarItemAndArticle(sidebarItemID: sidebarItemID, articleID: articleID, articleWindowScrollY: articleWindowScrollY)
+			let found = selectSidebarItemAndArticle(sidebarItemID: sidebarItemID, articleID: articleID)
 			if found {
 				treeControllerDelegate.addFilterException(sidebarItemID)
 				if let sidebarItemNode = nodeFor(sidebarItemID: sidebarItemID), let folder = sidebarItemNode.parent?.representedObject as? Folder, let folderSidebarItemID = folder.sidebarItemID {
@@ -2450,13 +2454,13 @@ private extension SceneCoordinator {
 		return nil
 	}
 
-	func selectSidebarItemAndArticle(sidebarItemID: SidebarItemIdentifier, articleID: String, articleWindowScrollY: Int) -> Bool {
+	func selectSidebarItemAndArticle(sidebarItemID: SidebarItemIdentifier, articleID: String) -> Bool {
 		guard let sidebarItemNode = nodeFor(sidebarItemID: sidebarItemID), let sidebarItemIndexPath = indexPathFor(sidebarItemNode) else {
 			return false
 		}
 
 		selectSidebarItem(indexPath: sidebarItemIndexPath) {
-			self.selectArticleInCurrentFeed(articleID, articleWindowScrollY: articleWindowScrollY)
+			self.selectArticleInCurrentFeed(articleID)
 		}
 
 		return true
