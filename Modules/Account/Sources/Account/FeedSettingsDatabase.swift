@@ -21,7 +21,6 @@ final class FeedSettingsDatabase: Sendable {
 		case editedName
 		case contentHash
 		case newArticleNotificationsEnabled
-		case readerViewAlwaysEnabled
 		case authors
 		case conditionalGetInfoLastModified
 		case conditionalGetInfoEtag
@@ -42,7 +41,6 @@ final class FeedSettingsDatabase: Sendable {
 		let editedName: String?
 		let contentHash: String?
 		let newArticleNotificationsEnabled: Bool
-		let readerViewAlwaysEnabled: Bool
 		let authors: Set<Author>?
 		let conditionalGetInfo: HTTPConditionalGetInfo?
 		let conditionalGetInfoDate: Date?
@@ -271,7 +269,7 @@ final class FeedSettingsDatabase: Sendable {
 private extension FeedSettingsDatabase {
 
 	static let tableCreationStatements = """
-	CREATE TABLE IF NOT EXISTS feedSettings (feedURL TEXT PRIMARY KEY, feedID TEXT NOT NULL DEFAULT '', homePageURL TEXT, iconURL TEXT, faviconURL TEXT, editedName TEXT, contentHash TEXT, newArticleNotificationsEnabled INTEGER NOT NULL DEFAULT 0, readerViewAlwaysEnabled INTEGER NOT NULL DEFAULT 0, authors TEXT, conditionalGetInfoLastModified TEXT, conditionalGetInfoEtag TEXT, conditionalGetInfoDate REAL, cacheControlInfoDateCreated REAL, cacheControlInfoMaxAge REAL, externalID TEXT, folderRelationship TEXT, lastCheckDate REAL, lastResponseCode INTEGER);
+	CREATE TABLE IF NOT EXISTS feedSettings (feedURL TEXT PRIMARY KEY, feedID TEXT NOT NULL DEFAULT '', homePageURL TEXT, iconURL TEXT, faviconURL TEXT, editedName TEXT, contentHash TEXT, newArticleNotificationsEnabled INTEGER NOT NULL DEFAULT 0, authors TEXT, conditionalGetInfoLastModified TEXT, conditionalGetInfoEtag TEXT, conditionalGetInfoDate REAL, cacheControlInfoDateCreated REAL, cacheControlInfoMaxAge REAL, externalID TEXT, folderRelationship TEXT, lastCheckDate REAL, lastResponseCode INTEGER);
 	"""
 
 	func row(from resultSet: FMResultSet) -> Row {
@@ -318,7 +316,6 @@ private extension FeedSettingsDatabase {
 			editedName: resultSet.swiftString(forColumn: Column.editedName.rawValue),
 			contentHash: resultSet.swiftString(forColumn: Column.contentHash.rawValue),
 			newArticleNotificationsEnabled: resultSet.bool(forColumn: Column.newArticleNotificationsEnabled.rawValue),
-			readerViewAlwaysEnabled: resultSet.bool(forColumn: Column.readerViewAlwaysEnabled.rawValue),
 			authors: authors,
 			conditionalGetInfo: HTTPConditionalGetInfo(lastModified: lastModified, etag: etag),
 			conditionalGetInfoDate: conditionalGetInfoDate,

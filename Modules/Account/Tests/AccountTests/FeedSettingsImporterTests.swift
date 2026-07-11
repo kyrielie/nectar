@@ -100,7 +100,6 @@ import Articles
 		XCTAssertNil(row?.homePageURL)
 		XCTAssertNil(row?.editedName)
 		XCTAssertEqual(row?.newArticleNotificationsEnabled, false)
-		XCTAssertEqual(row?.readerViewAlwaysEnabled, false)
 		XCTAssertNil(row?.conditionalGetInfo)
 		XCTAssertNil(row?.conditionalGetInfoDate)
 		XCTAssertNil(row?.cacheControlInfo)
@@ -139,8 +138,7 @@ import Articles
 	func testBoolFields() {
 		writePlist([
 			"https://example.com/feed": [
-				"isNotifyAboutNewArticles": true,
-				"isArticleExtractorAlwaysOn": true
+				"isNotifyAboutNewArticles": true
 			] as [String: Any]
 		])
 
@@ -149,7 +147,6 @@ import Articles
 		let row = database.allRows()["https://example.com/feed"]
 		XCTAssertNotNil(row)
 		XCTAssertTrue(row?.newArticleNotificationsEnabled ?? false)
-		XCTAssertTrue(row?.readerViewAlwaysEnabled ?? false)
 	}
 
 	func testConditionalGetInfo() {
