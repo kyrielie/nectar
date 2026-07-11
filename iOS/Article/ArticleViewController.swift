@@ -73,14 +73,6 @@ final class ArticleViewController: UIViewController {
 		}
 	}
 
-	var restoreScrollPosition: Int? {
-		didSet {
-			if let articleWindowScrollY = restoreScrollPosition {
-				currentWebViewController?.setScrollPosition(articleWindowScrollY: articleWindowScrollY)
-			}
-		}
-	}
-
 	var currentState: State? {
 		guard let controller = currentWebViewController else { return nil}
 		return State(windowScrollY: controller.windowScrollY)
@@ -155,10 +147,6 @@ final class ArticleViewController: UIViewController {
 			controller.windowScrollY = state.windowScrollY
 		} else {
 			controller = createWebViewController(article, updateView: true)
-		}
-
-		if let articleWindowScrollY = restoreScrollPosition {
-			controller.setScrollPosition(articleWindowScrollY: articleWindowScrollY)
 		}
 
 		self.pageViewController.setViewControllers([controller], direction: .forward, animated: false, completion: nil)
