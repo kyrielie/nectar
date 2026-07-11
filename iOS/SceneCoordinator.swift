@@ -107,6 +107,14 @@ struct SidebarItemNode: Hashable, Sendable {
 		}
 	}
 
+	private(set) var sortField = AppDefaults.shared.timelineSortField {
+		didSet {
+			if sortField != oldValue {
+				sortParametersDidChange()
+			}
+		}
+	}
+
 	var prefersStatusBarHidden = false
 
 	private let treeControllerDelegate = SidebarTreeControllerDelegate()
@@ -590,6 +598,7 @@ struct SidebarItemNode: Hashable, Sendable {
 	func userDefaultsDidChange() {
 		sortDirection = AppDefaults.shared.timelineSortDirection
 		groupByFeed = AppDefaults.shared.timelineGroupByFeed
+		sortField = AppDefaults.shared.timelineSortField
 	}
 
 	@objc func accountDidDownloadArticles(_ note: Notification) {
@@ -2118,7 +2127,7 @@ private extension SceneCoordinator {
 	}
 
 	func replaceArticles(with unsortedArticles: Set<Article>, animated: Bool) {
-		let sortedArticles = Array(unsortedArticles).sortedByDate(sortDirection, groupByFeed: groupByFeed)
+		let sortedArticles = Array(unsortedArticles).sorted(by: sortField, sortDirection: sortDirection, groupByFeed: groupByFeed)
 		replaceArticles(with: sortedArticles, animated: animated)
 	}
 

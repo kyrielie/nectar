@@ -257,6 +257,12 @@ final class SettingsViewController: UITableViewController {
 			}
 		case .timeline:
 			switch TimelineRow(rawValue: indexPath.row) {
+			case .sortOrder:
+				if let sourceView = tableView.cellForRow(at: indexPath) {
+					let sourceRect = tableView.rectForRow(at: indexPath)
+					presentSortFieldPicker(sourceView: sourceView, sourceRect: sourceRect)
+				}
+				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
 			case .timelineLayout:
 				let timeline = UIStoryboard.settings.instantiateController(ofType: TimelineCustomizerCollectionViewController.self)
 				self.navigationController?.pushViewController(timeline, animated: true)
@@ -573,6 +579,35 @@ private extension SettingsViewController {
 		let docPicker = UIDocumentPickerViewController(forExporting: [tempFile])
 		docPicker.modalPresentationStyle = .formSheet
 		self.present(docPicker, animated: true)
+	}
+
+	// Reuses the existing .sortOrder row (which already carries the
+	// ascending/descending switch) as the tap target for field selection too,
+	// rather than adding a new storyboard row for it.
+	func presentSortFieldPicker(sourceView: UIView, sourceRect: CGRect) {
+		let title = NSLocalizedString("Sort Timeline By", comment: "Sort field picker title")
+		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+
+		if let popoverController = alert.popoverPresentationController {
+			popoverController.sourceView = view
+			popoverController.sourceRect = sourceRect
+		}
+
+		for field in ArticleSorter.SortField.allCases {
+			var actionTitle = field.displayName
+			if field == AppDefaults.shared.timelineSortField {
+				actionTitle = "✓ " + actionTitle
+			}
+			let action = UIAlertAction(title: actionTitle, style: .default) { _ in
+				AppDefaults.shared.timelineSortField = field
+			}
+			alert.addAction(action)
+		}
+
+		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
+		alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
+
+		self.present(alert, animated: true)
 	}
 
 	func openURL(_ urlString: String) {

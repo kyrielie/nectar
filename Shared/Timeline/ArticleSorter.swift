@@ -14,11 +14,24 @@ import Articles
 	/// Which field the timeline is sorted by. `.date` is the only field NNW
 	/// supported before this; `.wordCount`, `.title`, and `.author` are the
 	/// Ambrosia-fork additions from the fork plan's Phase 1 step 4.
-	enum SortField: Sendable {
-		case date
-		case wordCount
-		case title
-		case author
+	enum SortField: Int, Sendable, CaseIterable {
+		case date = 0
+		case wordCount = 1
+		case title = 2
+		case author = 3
+
+		var displayName: String {
+			switch self {
+			case .date:
+				NSLocalizedString("Date", comment: "Sort field")
+			case .wordCount:
+				NSLocalizedString("Word Count", comment: "Sort field")
+			case .title:
+				NSLocalizedString("Title", comment: "Sort field")
+			case .author:
+				NSLocalizedString("Author", comment: "Sort field")
+			}
+		}
 	}
 
 	static func sortedByDate(articles: [Article], sortDirection: ComparisonResult, groupByFeed: Bool, feedNameFor: (Article) -> String = { $0.sortableFeedName }) -> [Article] {
