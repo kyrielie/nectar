@@ -9,7 +9,7 @@
 import Foundation
 import Testing
 
-@testable import NetNewsWire
+@testable import AmbrosiaReader
 
 /// Tests for `ArticleStringFormatter.sanitizedTitle(_:forHTML:)`.
 @Suite struct SanitizedTitleTests {

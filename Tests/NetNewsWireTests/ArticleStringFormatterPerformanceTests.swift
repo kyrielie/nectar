@@ -12,7 +12,7 @@ import RSCore
 import RSParser
 import XCTest
 
-@testable import NetNewsWire
+@testable import AmbrosiaReader
 
 /// Each test uses a fresh formatter per pass so every call hits the
 /// code path (not the cache).

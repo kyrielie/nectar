@@ -14,7 +14,7 @@ import AppKit
 import UIKit
 #endif
 
-@testable import NetNewsWire
+@testable import AmbrosiaReader
 
 @MainActor final class NSAttributedStringHTMLTests: XCTestCase {
 

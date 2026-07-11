@@ -9,7 +9,7 @@
 import Foundation
 import XCTest
 
-@testable import NetNewsWire
+@testable import AmbrosiaReader
 
 /// Performance baseline for `NSAttributedString(simpleHTML:)`.
 ///
