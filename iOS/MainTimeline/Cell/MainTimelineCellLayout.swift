@@ -17,6 +17,7 @@ import Images
 	var iconImageRect: CGRect { get }
 	var titleRect: CGRect { get }
 	var summaryRect: CGRect { get }
+	var metadataRect: CGRect { get }
 	var feedNameRect: CGRect { get }
 	var dateRect: CGRect { get }
 	var separatorRect: CGRect { get }
@@ -91,6 +92,23 @@ extension MainTimelineCellLayout {
 		}
 		return r
 	}
+
+	// Single truncating line — same shape as rectForFeedName, collapses to
+	// zero when there's nothing to show, same as rectForTitle/rectForSummary
+	// do when their strings are empty.
+	static func rectForMetadata(_ cellData: MainTimelineCellData, _ point: CGPoint, _ textAreaWidth: CGFloat) -> CGRect {
+		var r = CGRect.zero
+		if cellData.metadataString.isEmpty {
+			return r
+		}
+		r.origin = point
+		let size = SingleLineUILabelSizer.size(for: cellData.metadataString, font: MainTimelineDefaultCellLayout.metadataFont)
+		r.size = size
+		if r.size.width > textAreaWidth {
+			r.size.width = textAreaWidth
+		}
+		return r
+	}
 }
 
 // MARK: - Default
@@ -119,6 +137,9 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 
 	static var summaryFont: UIFont { UIFont.preferredFont(forTextStyle: .body) }
 
+	static var metadataFont: UIFont { UIFont.preferredFont(forTextStyle: .caption1) }
+	static let metadataBottomMargin = CGFloat(1)
+
 	let height: CGFloat
 	let unreadIndicatorRect: CGRect
 	let starRect: CGRect
@@ -128,6 +149,7 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 	let feedNameRect: CGRect
 	let dateRect: CGRect
 	let separatorRect: CGRect
+	let metadataRect: CGRect
 
 	init(width: CGFloat, insets: UIEdgeInsets, cellData: MainTimelineCellData) {
 
@@ -166,6 +188,11 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 		}
 		currentPoint.y = y
 
+		self.metadataRect = Self.rectForMetadata(cellData, currentPoint, textAreaWidth)
+		if self.metadataRect != CGRect.zero {
+			currentPoint.y = self.metadataRect.maxY + Self.metadataBottomMargin
+		}
+
 		self.dateRect = Self.rectForDate(cellData, currentPoint, textAreaWidth)
 
 		let feedNameWidth = textAreaWidth - (Self.feedRightMargin + self.dateRect.size.width)
@@ -197,6 +224,7 @@ struct MainTimelineAccessibilityCellLayout: MainTimelineCellLayout {
 	let feedNameRect: CGRect
 	let dateRect: CGRect
 	let separatorRect: CGRect
+	let metadataRect: CGRect
 
 	init(width: CGFloat, insets: UIEdgeInsets, cellData: MainTimelineCellData) {
 
@@ -228,6 +256,11 @@ struct MainTimelineAccessibilityCellLayout: MainTimelineCellLayout {
 		self.summaryRect = Self.rectForSummary(cellData, currentPoint, textAreaWidth, numberOfLinesForTitle)
 
 		currentPoint.y = [self.titleRect, self.summaryRect].maxY()
+
+		self.metadataRect = Self.rectForMetadata(cellData, currentPoint, textAreaWidth)
+		if self.metadataRect != CGRect.zero {
+			currentPoint.y = self.metadataRect.maxY + MainTimelineDefaultCellLayout.metadataBottomMargin
+		}
 
 		if cellData.showFeedName != .none {
 			self.feedNameRect = Self.rectForFeedName(cellData, currentPoint, textAreaWidth)

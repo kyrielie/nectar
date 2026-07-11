@@ -19,6 +19,7 @@ final class MainTimelineCell: UICollectionViewCell {
 
 	private let titleView = MainTimelineCell.multiLineLabel()
 	private let summaryView = MainTimelineCell.multiLineLabel()
+	private let metadataView = MainTimelineCell.singleLineLabel()
 	private let dateView = MainTimelineCell.singleLineLabel()
 	private let feedNameView = MainTimelineCell.singleLineLabel()
 	private lazy var iconView = IconView()
@@ -59,6 +60,7 @@ final class MainTimelineCell: UICollectionViewCell {
 
 		setFrame(for: titleView, rect: layout.titleRect)
 		setFrame(for: summaryView, rect: layout.summaryRect)
+		setFrame(for: metadataView, rect: layout.metadataRect)
 		feedNameView.setFrameIfNotEqual(layout.feedNameRect)
 		dateView.setFrameIfNotEqual(layout.dateRect)
 		iconView.setFrameIfNotEqual(layout.iconImageRect)
@@ -144,7 +146,7 @@ private extension MainTimelineCell {
 	func commonInit() {
 		isAccessibilityElement = true
 		topSeparator.backgroundColor = .separator.withAlphaComponent(0.1)
-		for view in [titleView, summaryView, dateView, feedNameView, iconView, indicatorView, topSeparator] {
+		for view in [titleView, summaryView, metadataView, dateView, feedNameView, iconView, indicatorView, topSeparator] {
 			contentView.addSubview(view)
 			view.isAccessibilityElement = false
 		}
@@ -176,6 +178,9 @@ private extension MainTimelineCell {
 
 		summaryView.font = MainTimelineDefaultCellLayout.summaryFont
 		summaryView.text = cellData.summary
+
+		metadataView.font = MainTimelineDefaultCellLayout.metadataFont
+		metadataView.text = cellData.metadataString
 
 		dateView.font = MainTimelineDefaultCellLayout.dateFont
 		dateView.text = cellData.dateString
@@ -210,6 +215,7 @@ private extension MainTimelineCell {
 	func updateColors() {
 		titleView.textColor = .label
 		summaryView.textColor = cellData.title.isEmpty ? .label : .secondaryLabel
+		metadataView.textColor = .secondaryLabel
 		dateView.textColor = .secondaryLabel
 		feedNameView.textColor = .secondaryLabel
 	}
