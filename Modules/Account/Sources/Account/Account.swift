@@ -35,6 +35,9 @@ public extension Notification.Name {
 	/// Posted when a delegate enqueues one or more status changes for upstream send.
 	/// Distinct from `StatusesDidChange`, which also fires for remote-sourced changes.
 	static let AccountDidQueueArticleStatuses = Notification.Name(rawValue: "AccountDidQueueArticleStatuses")
+	/// Posted when `Account.isLibraryReachable` changes — i.e. a paired local server
+	/// (non-nil `endpointURL`) went from reachable to unreachable, or vice versa.
+	static let AccountLibraryReachabilityDidChange = Notification.Name(rawValue: "AccountLibraryReachabilityDidChange")
 }
 
 nonisolated public enum AccountType: Int, Codable, Sendable {
@@ -233,6 +236,30 @@ public enum FetchType {
 		set {
 			if newValue != settings.endpointURL {
 				settings.endpointURL = newValue
+			}
+		}
+	}
+
+	/// Whether this account's paired local server (`endpointURL`) was reachable as of
+	/// the most recent refresh attempt. Only meaningful when `endpointURL` is non-nil —
+	/// a plain local ".onMyMac" account with no server has nothing to be unreachable
+	/// from, so this is always `true` in that case. Distinct from a feed-level HTTP
+	/// error: this specifically tracks connection-level failures (host asleep, closed,
+	/// or otherwise unreachable on the network) versus the server responding at all.
+	public var isLibraryReachable: Bool {
+		get {
+			guard endpointURL != nil else {
+				return true
+			}
+			return settings.isLibraryReachable
+		}
+		set {
+			guard endpointURL != nil else {
+				return
+			}
+			if newValue != settings.isLibraryReachable {
+				settings.isLibraryReachable = newValue
+				NotificationCenter.default.post(name: .AccountLibraryReachabilityDidChange, object: self)
 			}
 		}
 	}
