@@ -140,9 +140,16 @@ import ActivityLog
 
 		readAccountsFromDisk()
 
-		NotificationCenter.default.addObserver(self, selector: #selector(handleUbiquitousKeyValueStoreDidChangeExternally(_:)), name: NSUbiquitousKeyValueStore.didChangeExternallyNotification, object: NSUbiquitousKeyValueStore.default)
-		if Platform.deviceHasiCloudAccount {
-			NSUbiquitousKeyValueStore.default.synchronize()
+		// This fork restricts account creation to `.onMyMac` (see Phase 0), so there's
+		// no cloudKit account to sync — and no KVS entitlement to back it. Only touch
+		// NSUbiquitousKeyValueStore if a cloudKit account genuinely exists (e.g. one
+		// read from disk from a pre-fork installation); otherwise referencing `.default`
+		// at all produces spurious "BUG IN CLIENT OF KVS" warnings at every launch.
+		if hasiCloudAccount {
+			NotificationCenter.default.addObserver(self, selector: #selector(handleUbiquitousKeyValueStoreDidChangeExternally(_:)), name: NSUbiquitousKeyValueStore.didChangeExternallyNotification, object: NSUbiquitousKeyValueStore.default)
+			if Platform.deviceHasiCloudAccount {
+				NSUbiquitousKeyValueStore.default.synchronize()
+			}
 		}
 
 		migrateSyncArticleContentForUnreadArticlesSetting(hasiCloudAccount: hasiCloudAccount)
@@ -561,7 +568,7 @@ private extension AccountManager {
 			return
 		}
 
-		guard Platform.deviceHasiCloudAccount else {
+		guard hasiCloudAccount else {
 			syncArticleContentForUnreadArticles = false
 			return
 		}
@@ -581,7 +588,7 @@ private extension AccountManager {
 		guard !Platform.isRunningUnitTests else {
 			return
 		}
-		guard Platform.deviceHasiCloudAccount else {
+		guard hasiCloudAccount else {
 			return
 		}
 		guard NSUbiquitousKeyValueStore.default.object(forKey: Self.syncArticleContentForUnreadArticlesKey) == nil else {

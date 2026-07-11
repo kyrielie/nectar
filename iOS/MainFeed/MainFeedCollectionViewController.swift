@@ -531,7 +531,83 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		}
 		addNewItemButton?.isEnabled = !AccountManager.shared.activeAccounts.isEmpty
 
+		updateEmptyStateVisibility()
 		configureContextMenu()
+	}
+
+	/// Shows a placeholder view instead of the (otherwise blank) timeline/feed list
+	/// when no account exists yet — e.g. on a genuinely fresh install. Once any
+	/// account exists, this has no effect and the normal collection view content
+	/// is shown as usual.
+	func updateEmptyStateVisibility() {
+		if AccountManager.shared.accounts.isEmpty {
+			collectionView.backgroundView = noLibraryEmptyStateView
+		} else {
+			collectionView.backgroundView = nil
+		}
+	}
+
+	private lazy var noLibraryEmptyStateView: UIView = {
+		let container = UIView()
+
+		let messageLabel = UILabel()
+		messageLabel.text = NSLocalizedString("No library connected yet.", comment: "Empty state message")
+		messageLabel.textAlignment = .center
+		messageLabel.numberOfLines = 0
+		messageLabel.font = .preferredFont(forTextStyle: .headline)
+		messageLabel.textColor = .secondaryLabel
+
+		let importButton = UIButton(type: .system)
+		importButton.setTitle(NSLocalizedString("Import OPML…", comment: "Import OPML button"), for: .normal)
+		importButton.addTarget(self, action: #selector(importOPMLFromEmptyState(_:)), for: .touchUpInside)
+
+		// Placeholder for Phase 4's pairing flow — not yet functional.
+		let serverURLButton = UIButton(type: .system)
+		serverURLButton.setTitle(NSLocalizedString("Enter Server URL…", comment: "Enter server URL button"), for: .normal)
+		serverURLButton.isEnabled = false
+
+		let stack = UIStackView(arrangedSubviews: [messageLabel, importButton, serverURLButton])
+		stack.axis = .vertical
+		stack.spacing = 16
+		stack.alignment = .center
+		stack.translatesAutoresizingMaskIntoConstraints = false
+		container.addSubview(stack)
+
+		NSLayoutConstraint.activate([
+			stack.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+			stack.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 32),
+			stack.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -32),
+			stack.centerXAnchor.constraint(equalTo: container.centerXAnchor)
+		])
+
+		return container
+	}()
+
+	/// Reuses the existing OPML document-picker import flow (see `SettingsViewController`).
+	/// If no account exists yet, a local-only account is created first so the import has
+	/// somewhere to go — this fork restricts account creation to `.onMyMac` regardless.
+	@objc func importOPMLFromEmptyState(_ sender: Any) {
+		if AccountManager.shared.accounts.isEmpty {
+			_ = AccountManager.shared.createAccount(type: .onMyMac)
+			updateEmptyStateVisibility()
+		}
+		presentOPMLDocumentPickerForEmptyState()
+	}
+
+	private func presentOPMLDocumentPickerForEmptyState() {
+		var contentTypes: [UTType] = []
+		if let opmlByExtension = UTType(filenameExtension: "opml") {
+			contentTypes.append(opmlByExtension)
+		}
+		if let registeredOPML = UTType("org.opml.opml") {
+			contentTypes.append(registeredOPML)
+		}
+		contentTypes.append(.xml)
+
+		let documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: contentTypes, asCopy: true)
+		documentPicker.delegate = self
+		documentPicker.modalPresentationStyle = .formSheet
+		present(documentPicker, animated: true)
 	}
 
 	func updateFeedSelection(animations: Animations) {
@@ -1369,4 +1445,28 @@ extension MainFeedCollectionViewController {
 		pushUndoableCommand(deleteCommand)
 		deleteCommand.perform()
 	}
+}
+
+// MARK: - UIDocumentPickerDelegate
+
+extension MainFeedCollectionViewController: UIDocumentPickerDelegate {
+
+	func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+		guard let account = AccountManager.shared.accounts.first else {
+			return
+		}
+		for url in urls {
+			account.importOPML(url) { [weak self] result in
+				switch result {
+				case .success:
+					break
+				case .failure:
+					let title = NSLocalizedString("Import Failed", comment: "Import Failed")
+					let message = NSLocalizedString("We were unable to process the selected file.  Please ensure that it is a properly formatted OPML file.", comment: "Import Failed Message")
+					self?.presentError(title: title, message: message)
+				}
+			}
+		}
+	}
+
 }
