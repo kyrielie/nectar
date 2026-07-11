@@ -21,6 +21,7 @@ import RSWeb
 		case lastArticleFetchStartTime
 		case lastRefreshCompletedDate
 		case endpointURL
+		case isLibraryReachable
 		case externalID
 		case imported
 	}
@@ -127,6 +128,22 @@ import RSWeb
 				return
 			}
 			UserDefaults.standard.set(trimmed, forKey: defaultsKey(.endpointURL))
+		}
+	}
+
+	/// Whether the account's `endpointURL` (a paired local server, e.g. Ambrosia) was
+	/// reachable as of the most recent refresh attempt. Meaningless when `endpointURL`
+	/// is nil. Defaults to `true` (reachable) so a never-yet-refreshed account isn't
+	/// shown as unreachable before its first attempt.
+	var isLibraryReachable: Bool {
+		get {
+			if UserDefaults.standard.object(forKey: defaultsKey(.isLibraryReachable)) == nil {
+				return true
+			}
+			return UserDefaults.standard.bool(forKey: defaultsKey(.isLibraryReachable))
+		}
+		set {
+			UserDefaults.standard.set(newValue, forKey: defaultsKey(.isLibraryReachable))
 		}
 	}
 

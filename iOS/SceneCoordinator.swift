@@ -356,6 +356,7 @@ struct SidebarItemNode: Hashable, Sendable {
 		NotificationCenter.default.addObserver(self, selector: #selector(importDownloadedTheme(_:)), name: .didEndDownloadingTheme, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(themeDownloadDidFail(_:)), name: .didFailToImportThemeWithError, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(updateNavigationBarSubtitles(_:)), name: .progressInfoDidChange, object: CombinedRefreshProgress.shared)
+		NotificationCenter.default.addObserver(self, selector: #selector(updateNavigationBarSubtitles(_:)), name: .AccountLibraryReachabilityDidChange, object: nil)
 
 		NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
 			Task { @MainActor in
@@ -660,6 +661,17 @@ struct SidebarItemNode: Hashable, Sendable {
 	///
 	/// - Parameter note: Optional `Notification`
 	@objc func updateNavigationBarSubtitles(_ note: Notification?) {
+		if let unreachableAccount = AccountManager.shared.accounts.first(where: { $0.endpointURL != nil && !$0.isLibraryReachable }) {
+			let localizedFormat = NSLocalizedString("Can't reach %@ right now", comment: "Can't reach library right now")
+			let message = NSString.localizedStringWithFormat(localizedFormat as NSString, unreachableAccount.nameForDisplay) as String
+			if #available(iOS 26, *) {
+				self.mainFeedCollectionViewController?.navigationItem.subtitle = message
+			}
+			self.mainTimelineViewController?.updateNavigationBarSubtitle(UIDevice.current.userInterfaceIdiom == .phone ? message : "")
+			scheduleNavigationBarSubtitleUpdate()
+			return
+		}
+
 		let progressInfo = CombinedRefreshProgress.shared.progressInfo
 
 		if progressInfo.isComplete {

@@ -239,6 +239,18 @@ import os
 		let activityKind = ActivityKind.refreshFeedContent(feedURL: feed.url)
 
 		if let error {
+			// A connection-level failure (host asleep, closed, or otherwise unreachable
+			// on the network) for a feed belonging to a paired-library account is treated
+			// as "can't reach your library right now," not a per-feed error dialog — the
+			// Mac's feed server has no auto-restart by default, so this is an expected,
+			// recoverable state rather than a genuine feed problem.
+			if Self.isConnectionLevelError(error), let account = feed.account, account.endpointURL != nil {
+				account.isLibraryReachable = false
+				if let activityOwner {
+					ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "Library unreachable", durationIsSignificant: false)
+				}
+				return
+			}
 			reportFeedRefreshError(feed: feed, error: error, activityKind: activityKind)
 			return
 		}
@@ -247,6 +259,10 @@ import os
 			reportFeedRefreshError(feed: feed, error: error, activityKind: activityKind)
 			return
 		}
+
+		// Any real HTTP response means the server itself was reachable, even if this
+		// particular request then errored at the HTTP level (handled below).
+		feed.account?.isLibraryReachable = true
 
 		feed.lastResponseCode = httpResponse.statusCode
 
@@ -598,6 +614,24 @@ private extension LocalAccountRefresher {
 
 	static func url(for feed: Feed) -> URL? {
 		URL(string: feed.url)
+	}
+
+	/// Whether `error` represents a connection-level failure (couldn't reach the host
+	/// at all) as opposed to the host responding with an HTTP-level error. Used to
+	/// distinguish "your library's Mac is asleep/off" from an actual feed problem.
+	static func isConnectionLevelError(_ error: NSError) -> Bool {
+		guard error.domain == NSURLErrorDomain else {
+			return false
+		}
+		let connectionLevelCodes: Set<Int> = [
+			NSURLErrorTimedOut,
+			NSURLErrorCannotFindHost,
+			NSURLErrorCannotConnectToHost,
+			NSURLErrorNetworkConnectionLost,
+			NSURLErrorNotConnectedToInternet,
+			NSURLErrorDNSLookupFailed,
+		]
+		return connectionLevelCodes.contains(error.code)
 	}
 }
 

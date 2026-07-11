@@ -561,10 +561,12 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		importButton.setTitle(NSLocalizedString("Import OPML…", comment: "Import OPML button"), for: .normal)
 		importButton.addTarget(self, action: #selector(importOPMLFromEmptyState(_:)), for: .touchUpInside)
 
-		// Placeholder for Phase 4's pairing flow — not yet functional.
+		// Manual pairing entry point: type a paired server's URL directly (e.g.
+		// http://192.168.1.5:8765). There's no token or credential involved — the
+		// server has no auth — so this just needs to reach the account's endpointURL.
 		let serverURLButton = UIButton(type: .system)
 		serverURLButton.setTitle(NSLocalizedString("Enter Server URL…", comment: "Enter server URL button"), for: .normal)
-		serverURLButton.isEnabled = false
+		serverURLButton.addTarget(self, action: #selector(enterServerURLFromEmptyState(_:)), for: .touchUpInside)
 
 		let stack = UIStackView(arrangedSubviews: [messageLabel, importButton, serverURLButton])
 		stack.axis = .vertical
@@ -608,6 +610,80 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		documentPicker.delegate = self
 		documentPicker.modalPresentationStyle = .formSheet
 		present(documentPicker, animated: true)
+	}
+
+	/// Manual pairing entry point. There's no token or credential to enter — the
+	/// paired server (e.g. Ambrosia) has no auth by design — so this just needs
+	/// the server's current LAN address. We fetch `/feeds.opml` from it (the same
+	/// endpoint the OPML-file import flow reads, just fetched over the network
+	/// instead of picked from disk) to import the library's feeds right away.
+	@objc func enterServerURLFromEmptyState(_ sender: Any) {
+		let alert = UIAlertController(
+			title: NSLocalizedString("Enter Server URL", comment: "Enter Server URL"),
+			message: NSLocalizedString("Enter the address shown in your library app's preferences, e.g. http://192.168.1.5:8765", comment: "Enter Server URL message"),
+			preferredStyle: .alert)
+
+		alert.addTextField { textField in
+			textField.placeholder = "http://192.168.1.5:8765"
+			textField.keyboardType = .URL
+			textField.autocapitalizationType = .none
+			textField.autocorrectionType = .no
+		}
+
+		let connectAction = UIAlertAction(title: NSLocalizedString("Connect", comment: "Connect"), style: .default) { [weak self, weak alert] _ in
+			guard let self, let rawText = alert?.textFields?.first?.text else { return }
+			self.connectToServer(urlString: rawText)
+		}
+		alert.addAction(connectAction)
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel"), style: .cancel))
+
+		present(alert, animated: true)
+	}
+
+	private func connectToServer(urlString: String) {
+		let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+		guard !trimmed.isEmpty, let baseURL = URL(string: trimmed), let scheme = baseURL.scheme, scheme == "http" || scheme == "https" else {
+			presentError(title: NSLocalizedString("Invalid Address", comment: "Invalid Address"), message: NSLocalizedString("Please enter a valid http:// or https:// address.", comment: "Invalid address message"))
+			return
+		}
+
+		if AccountManager.shared.accounts.isEmpty {
+			_ = AccountManager.shared.createAccount(type: .onMyMac)
+		}
+		guard let account = AccountManager.shared.accounts.first else {
+			return
+		}
+		account.endpointURL = baseURL
+		updateEmptyStateVisibility()
+
+		let opmlURL = baseURL.lastPathComponent.hasSuffix(".opml") ? baseURL : baseURL.appendingPathComponent("feeds.opml")
+
+		Task { @MainActor in
+			do {
+				let (data, response) = try await URLSession.shared.data(from: opmlURL)
+				guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusIsOK else {
+					account.isLibraryReachable = false
+					return
+				}
+				account.isLibraryReachable = true
+
+				let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("opml")
+				try data.write(to: tempURL)
+				account.importOPML(tempURL) { [weak self] result in
+					try? FileManager.default.removeItem(at: tempURL)
+					if case .failure = result {
+						let title = NSLocalizedString("Import Failed", comment: "Import Failed")
+						let message = NSLocalizedString("We reached the server, but couldn't process its feed list.", comment: "OPML fetch import failed message")
+						self?.presentError(title: title, message: message)
+					}
+				}
+			} catch {
+				// Connection-level failure (e.g. the Mac is asleep). We've already saved
+				// the endpointURL, so the normal refresh cycle will keep trying — this
+				// isn't treated as a hard failure of the pairing itself.
+				account.isLibraryReachable = false
+			}
+		}
 	}
 
 	func updateFeedSelection(animations: Animations) {
