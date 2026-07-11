@@ -122,12 +122,21 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
+            BlueprintIdentifier = "840D617B2029031C009BC708"
+            BuildableName = "Ambrosia Reader.app"
+            BlueprintName = "NetNewsWire-iOS"
+            ReferencedContainer = "container:NetNewsWire.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
             BlueprintIdentifier = "849C645F1ED37A5D003D8FC0"
             BuildableName = ".app"
             BlueprintName = "NetNewsWire"
             ReferencedContainer = "container:NetNewsWire.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
+      </MacroExpansion>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -145,6 +154,15 @@
             ReferencedContainer = "container:NetNewsWire.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "849C645F1ED37A5D003D8FC0"
+            BuildableName = ".app"
+            BlueprintName = "NetNewsWire"
+            ReferencedContainer = "container:NetNewsWire.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

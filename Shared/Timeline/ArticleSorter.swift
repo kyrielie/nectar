@@ -120,7 +120,7 @@ private extension ArticleSorter {
 		articles.sorted { article1, article2 in
 			let title1 = article1.title ?? ""
 			let title2 = article2.title ?? ""
-			switch title1.localizedCaseInsensitiveCompare(title2) {
+			return switch title1.localizedCaseInsensitiveCompare(title2) {
 			case .orderedSame:
 				article1.articleID < article2.articleID
 			case .orderedAscending:
@@ -135,7 +135,7 @@ private extension ArticleSorter {
 		articles.sorted { article1, article2 in
 			let name1 = article1.sortableAuthorName
 			let name2 = article2.sortableAuthorName
-			switch name1.localizedCaseInsensitiveCompare(name2) {
+			return switch name1.localizedCaseInsensitiveCompare(name2) {
 			case .orderedSame:
 				article1.articleID < article2.articleID
 			case .orderedAscending:
