@@ -574,7 +574,7 @@ private extension ArticlesDatabase {
 		articlesTable.saveScrollPosition(scrollPosition, articleID: articleID, completion)
 	}
 
-	func _fetchScrollPosition(articleID: String, completion: @escaping (Double) -> Void) {
+	func _fetchScrollPosition(articleID: String, completion: @escaping @Sendable (Double) -> Void) {
 		articlesTable.fetchScrollPosition(articleID: articleID, completion)
 	}
 

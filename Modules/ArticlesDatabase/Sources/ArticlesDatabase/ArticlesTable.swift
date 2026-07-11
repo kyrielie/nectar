@@ -536,7 +536,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
-	func fetchScrollPosition(articleID: String, _ completion: @escaping (Double) -> Void) {
+	func fetchScrollPosition(articleID: String, _ completion: @escaping @Sendable (Double) -> Void) {
 		queue.runInDatabase { database in
 			let scrollPosition = self.statusesTable.fetchScrollPosition(articleID: articleID, database)
 			DispatchQueue.main.async {
