@@ -33,8 +33,12 @@ struct Assets {
 		static var accountNewsBlur: RSImage { RSImage(named: "accountNewsBlur")! }
 		static var accountTheOldReader: RSImage { RSImage(named: "accountTheOldReader")! }
 
-		static let starOpen = RSImage(symbol: "star")!
-		static let starClosed = RSImage(symbol: "star.fill")!
+		// Named starOpen/starClosed for historical reasons — these back the "Read
+		// Later" action (Phase 3), not literal starring; the internal ArticleStatus.Key
+		// is still `.starred` deliberately (see Phase 3 in the fork plan: UI-copy/icon
+		// only, no internal rename, to keep the diff small and behavior unchanged).
+		static let starOpen = RSImage(symbol: "bookmark")!
+		static let starClosed = RSImage(symbol: "bookmark.fill")!
 		static let copy = RSImage(symbol: "document.on.document")
 		static var markAllAsRead: RSImage { RSImage(named: "markAllAsRead")! }
 		static let nextUnread = RSImage(symbol: "chevron.down.circle")!

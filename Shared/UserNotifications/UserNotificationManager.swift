@@ -99,7 +99,7 @@ private extension UserNotificationManager {
 
 	func registerCategoriesAndActions() {
 		let readAction = UNNotificationAction(identifier: ActionIdentifier.markAsRead, title: NSLocalizedString("Mark as Read", comment: "Command"), options: [])
-		let starredAction = UNNotificationAction(identifier: ActionIdentifier.markAsStarred, title: NSLocalizedString("Mark as Starred", comment: "Command"), options: [])
+		let starredAction = UNNotificationAction(identifier: ActionIdentifier.markAsStarred, title: NSLocalizedString("Read Later", comment: "Command"), options: [])
 		let openAction = UNNotificationAction(identifier: ActionIdentifier.openArticle, title: NSLocalizedString("Open", comment: "Open"), options: [.foreground])
 
 		let newArticleCategory = UNNotificationCategory(identifier: Self.notificationCategory,

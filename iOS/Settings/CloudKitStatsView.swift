@@ -141,7 +141,7 @@ struct CloudKitStatsView: View {
 	private var statusRecordsSection: some View {
 		Section {
 			statsRow(NSLocalizedString("Status Records", comment: "Status records section header"), model.stats.statusCount, isHeader: true)
-			iconStatsRow(NSLocalizedString("Starred", comment: "Starred"), systemImage: "star.fill", iconColor: .yellow, model.stats.starredStatusCount, iconBaselineOffset: 1)
+			iconStatsRow(NSLocalizedString("Read Later", comment: "Read Later"), systemImage: "bookmark.fill", iconColor: .yellow, model.stats.starredStatusCount, iconBaselineOffset: 1)
 			iconStatsRow(NSLocalizedString("Unread", comment: "Unread"), systemImage: "circle.fill", iconColor: .accentColor, model.stats.unreadStatusCount)
 			statsRow(NSLocalizedString("Read", comment: "Read row label"), model.stats.readStatusCount)
 		}
@@ -159,7 +159,7 @@ struct CloudKitStatsView: View {
 	private var contentRecordsSection: some View {
 		Section {
 			statsRow(NSLocalizedString("Article Content Records", comment: "Article content records header"), model.stats.articleCount, isHeader: true)
-			iconStatsRow(NSLocalizedString("Starred", comment: "Starred"), systemImage: "star.fill", iconColor: .yellow, model.stats.starredArticleCount, iconBaselineOffset: 1)
+			iconStatsRow(NSLocalizedString("Read Later", comment: "Read Later"), systemImage: "bookmark.fill", iconColor: .yellow, model.stats.starredArticleCount, iconBaselineOffset: 1)
 			iconStatsRow(NSLocalizedString("Unread", comment: "Unread"), systemImage: "circle.fill", iconColor: .accentColor, model.stats.unreadArticleCount, isWarning: !syncUnreadContent)
 			statsRow(NSLocalizedString("Read", comment: "Read row label"), model.stats.readArticleCount, isWarning: true)
 		}
