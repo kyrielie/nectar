@@ -53,6 +53,9 @@ struct DatabaseKey {
 	static let starred = "starred"
 	static let dateArrived = "dateArrived"
 
+	// Reading behavior (Phase 2 fork addition)
+	static let scrollPosition = "scrollPosition"
+
 	// Author
 	static let authorID = "authorID"
 	static let name = "name"

@@ -10,6 +10,7 @@ import Foundation
 import os
 import RSCore
 import RSDatabase
+import RSDatabaseObjC
 import RSParser
 import Articles
 
@@ -105,6 +106,15 @@ public struct ArticleCounts: Sendable {
 					Self.logger.debug("ArticlesDatabase: adding \(column, privacy: .public) column \(accountID, privacy: .public)")
 					database.executeStatements("ALTER TABLE articles add column \(column) TEXT;")
 				}
+			}
+
+			// Phase 2 (reading behavior): per-article scroll position, replacing the old
+			// single-global AppDefaults.shared.articleWindowScrollY. Additive/nullable-with-
+			// default, so the same containsColumn-guarded ALTER TABLE pattern as the columns
+			// above applies here, just against the statuses table instead of articles.
+			if !self.statusesTableContainsScrollPositionColumn(database) {
+				Self.logger.debug("ArticlesDatabase: adding scrollPosition column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE statuses add column scrollPosition REAL NOT NULL DEFAULT 0;")
 			}
 
 			database.executeStatements("CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);")
@@ -414,6 +424,25 @@ public struct ArticleCounts: Sendable {
 		}
 	}
 
+	/// Per-article scroll position (raw window.scrollY pixel value, same convention as
+	/// windowScrollY). Replaces the old single-global AppDefaults.shared.articleWindowScrollY
+	/// for cross-article persistence (Phase 2, reading behavior).
+	public func saveScrollPositionAsync(_ scrollPosition: Double, articleID: String) async {
+		await withCheckedContinuation { continuation in
+			_saveScrollPosition(scrollPosition, articleID: articleID) {
+				continuation.resume()
+			}
+		}
+	}
+
+	public func fetchScrollPositionAsync(articleID: String) async -> Double {
+		await withCheckedContinuation { continuation in
+			_fetchScrollPosition(articleID: articleID) { scrollPosition in
+				continuation.resume(returning: scrollPosition)
+			}
+		}
+	}
+
 	// MARK: - Caches
 
 	/// Call to free up some memory. Should be done when the app is backgrounded, for instance.
@@ -447,7 +476,7 @@ private extension ArticlesDatabase {
 	static let tableCreationStatements = """
 	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, series TEXT);
 
-	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0);
+	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0);
 
 	CREATE INDEX if not EXISTS articles_feedID_datePublished_articleID on articles (feedID, datePublished, articleID);
 
@@ -461,6 +490,18 @@ private extension ArticlesDatabase {
 	func todayCutoffDate() -> Date {
 		// 24 hours previous. This is used by the Today smart feed, which should not actually empty out at midnight.
 		return Date(timeIntervalSinceNow: -(60 * 60 * 24)) // This does not need to be more precise.
+	}
+
+	/// Mirrors DatabaseTable.containsColumn's logic (see RSDatabase), but against the
+	/// statuses table specifically. ArticlesDatabase only holds a reference to
+	/// articlesTable (whose containsColumn is hardwired to the "articles" table via its
+	/// own `name`), not statusesTable, so it's duplicated here rather than plumbed through.
+	func statusesTableContainsScrollPositionColumn(_ database: FMDatabase) -> Bool {
+		guard let resultSet = database.executeQuery("select * from statuses limit 1;", withArgumentsIn: nil),
+			  let columnMap = resultSet.columnNameToIndexMap else {
+			return false
+		}
+		return columnMap["scrollposition"] != nil
 	}
 
 	// MARK: - Operations
@@ -526,6 +567,15 @@ private extension ArticlesDatabase {
 	func _createStatusesIfNeeded(articleIDs: Set<String>, completion: @escaping DatabaseCompletionBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.createStatusesIfNeeded(articleIDs, completion)
+	}
+
+	func _saveScrollPosition(_ scrollPosition: Double, articleID: String, completion: @escaping DatabaseCompletionBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.saveScrollPosition(scrollPosition, articleID: articleID, completion)
+	}
+
+	func _fetchScrollPosition(articleID: String, completion: @escaping (Double) -> Void) {
+		articlesTable.fetchScrollPosition(articleID: articleID, completion)
 	}
 
 	func _fetchArticlesAsync(feedID: String, _ completion: @escaping ArticleSetResultBlock) {
