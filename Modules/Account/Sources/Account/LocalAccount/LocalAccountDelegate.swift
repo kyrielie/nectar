@@ -81,10 +81,56 @@ import Secrets
 				return
 			}
 
+			Self.rewriteAmbrosiaJSONFeedURLs(in: children)
+
 			BatchUpdate.shared.perform {
 				account.loadOPMLItems(children)
 			}
 		}
+	}
+
+	/// Ambrosia's exported OPML points `xmlUrl` at the hand-rolled RSS 2.0
+	/// route (`/feed/collection/<id>.xml`, `/feed/search.xml`,
+	/// `/feed/random-daily.xml`), which carries none of the `_ambrosia`
+	/// metadata (word count, fandoms, series, etc.) — that only comes through
+	/// the sibling JSON Feed route (same path, `.json` instead of `.xml`).
+	/// Importing the OPML as-is would silently subscribe to feeds with no
+	/// book-card data. Rewrite matching URLs in place before subscribing.
+	private static func rewriteAmbrosiaJSONFeedURLs(in items: [OPMLItem]) {
+		for item in items {
+			if var attributes = item.attributes,
+			   let xmlURLKey = attributes.keys.first(where: { $0.caseInsensitiveCompare("xmlUrl") == .orderedSame }),
+			   let xmlURLString = attributes[xmlURLKey],
+			   let rewritten = ambrosiaJSONFeedURLString(for: xmlURLString) {
+				attributes[xmlURLKey] = rewritten
+				item.attributes = attributes
+			}
+			if let children = item.children {
+				rewriteAmbrosiaJSONFeedURLs(in: children)
+			}
+		}
+	}
+
+	/// Returns the JSON Feed equivalent of an Ambrosia RSS route URL, or nil
+	/// if `xmlURLString` doesn't match one of Ambrosia's known `.xml` routes.
+	private static func ambrosiaJSONFeedURLString(for xmlURLString: String) -> String? {
+		guard let url = URL(string: xmlURLString), url.pathExtension.lowercased() == "xml" else {
+			return nil
+		}
+
+		let path = url.path
+		let isAmbrosiaRoute = path.hasSuffix("/feed/search.xml")
+			|| path.hasSuffix("/feed/random-daily.xml")
+			|| (path.contains("/feed/collection/") && path.hasSuffix(".xml"))
+		guard isAmbrosiaRoute else {
+			return nil
+		}
+
+		guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+			return nil
+		}
+		components.path = String(path.dropLast(4)) + ".json"
+		return components.url?.absoluteString
 	}
 
 	@MainActor func createFeed(url urlString: String, name: String?, container: Container, validateFeed: Bool) async throws -> Feed {
