@@ -30,7 +30,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "840D617B2029031C009BC708"
-               BuildableName = "NetNewsWire.app"
+               BuildableName = "Ambrosia Reader.app"
                BlueprintName = "NetNewsWire-iOS"
                ReferencedContainer = "container:NetNewsWire.xcodeproj">
             </BuildableReference>
@@ -72,7 +72,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "840D617B2029031C009BC708"
-            BuildableName = "NetNewsWire.app"
+            BuildableName = "Ambrosia Reader.app"
             BlueprintName = "NetNewsWire-iOS"
             ReferencedContainer = "container:NetNewsWire.xcodeproj">
          </BuildableReference>
@@ -91,7 +91,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "840D617B2029031C009BC708"
-            BuildableName = "NetNewsWire.app"
+            BuildableName = "Ambrosia Reader.app"
             BlueprintName = "NetNewsWire-iOS"
             ReferencedContainer = "container:NetNewsWire.xcodeproj">
          </BuildableReference>
