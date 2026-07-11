@@ -144,15 +144,6 @@ import Articles
 		}
 	}
 
-	public var readerViewAlwaysEnabled: Bool {
-		get {
-			settings.readerViewAlwaysEnabled
-		}
-		set {
-			settings.readerViewAlwaysEnabled = newValue
-		}
-	}
-
 	public var externalID: String? {
 		get {
 			settings.externalID

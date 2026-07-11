@@ -65,9 +65,6 @@ import Articles
 		if let isNotify = feedDict["isNotifyAboutNewArticles"] as? Bool {
 			row[.newArticleNotificationsEnabled] = isNotify
 		}
-		if let isExtractor = feedDict["isArticleExtractorAlwaysOn"] as? Bool {
-			row[.readerViewAlwaysEnabled] = isExtractor
-		}
 
 		// conditionalGetInfo is Codable-encoded as a dictionary with lastModified and etag
 		if let conditionalGetDict = feedDict["conditionalGetInfo"] as? [String: String] {

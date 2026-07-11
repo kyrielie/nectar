@@ -16,10 +16,6 @@ import SafariServices
 import MessageUI
 import Images
 
-@MainActor protocol WebViewControllerDelegate: AnyObject {
-	func webViewController(_: WebViewController, articleExtractorButtonStateDidUpdate: ArticleExtractorButtonState)
-}
-
 final class WebViewController: UIViewController {
 
 	private struct MessageName {
@@ -45,28 +41,7 @@ final class WebViewController: UIViewController {
 	private lazy var transition = ImageTransition(controller: self)
 	private var clickedImageCompletion: (() -> Void)?
 
-	private var articleExtractor: ArticleExtractor?
-	var extractedArticle: ExtractedArticle? {
-		didSet {
-			windowScrollY = 0
-		}
-	}
-	var isShowingExtractedArticle = false {
-		didSet {
-			if AppDefaults.shared.isShowingExtractedArticle != isShowingExtractedArticle {
-				AppDefaults.shared.isShowingExtractedArticle = isShowingExtractedArticle
-			}
-		}
-	}
-
-	var articleExtractorButtonState: ArticleExtractorButtonState = .off {
-		didSet {
-			delegate?.webViewController(self, articleExtractorButtonStateDidUpdate: articleExtractorButtonState)
-		}
-	}
-
 	weak var coordinator: SceneCoordinator!
-	weak var delegate: WebViewControllerDelegate?
 
 	private(set) var article: Article?
 
@@ -78,8 +53,6 @@ final class WebViewController: UIViewController {
 			}
 		}
 	}
-	private var restoreWindowScrollY: Int?
-
 	override func viewDidLoad() {
 		super.viewDidLoad()
 
@@ -147,39 +120,18 @@ final class WebViewController: UIViewController {
 	// MARK: API
 
 	func setArticle(_ article: Article?, updateView: Bool = true) {
-		stopArticleExtractor()
-
 		if article != self.article {
 			self.article = article
 			if updateView {
-				if article?.feed?.readerViewAlwaysEnabled == true {
-					startArticleExtractor()
-				}
 				windowScrollY = 0
 				loadWebView()
 			}
 		}
 	}
 
-	func setScrollPosition(isShowingExtractedArticle: Bool, articleWindowScrollY: Int) {
-		if isShowingExtractedArticle {
-			switch articleExtractor?.state {
-			case .ready:
-				restoreWindowScrollY = articleWindowScrollY
-				startArticleExtractor()
-			case .complete:
-				windowScrollY = articleWindowScrollY
-				loadWebView()
-			case .processing:
-				restoreWindowScrollY = articleWindowScrollY
-			default:
-				restoreWindowScrollY = articleWindowScrollY
-				startArticleExtractor()
-			}
-		} else {
-			windowScrollY = articleWindowScrollY
-			loadWebView()
-		}
+	func setScrollPosition(articleWindowScrollY: Int) {
+		windowScrollY = articleWindowScrollY
+		loadWebView()
 	}
 
 	func focus() {
@@ -260,43 +212,6 @@ final class WebViewController: UIViewController {
 		}
 	}
 
-	func toggleArticleExtractor() {
-
-		guard let article = article else {
-			return
-		}
-
-		guard articleExtractor?.state != .processing else {
-			stopArticleExtractor()
-			loadWebView()
-			return
-		}
-
-		guard !isShowingExtractedArticle else {
-			isShowingExtractedArticle = false
-			loadWebView()
-			articleExtractorButtonState = .off
-			return
-		}
-
-		if let articleExtractor = articleExtractor {
-			if article.preferredLink == articleExtractor.articleLink {
-				isShowingExtractedArticle = true
-				loadWebView()
-				articleExtractorButtonState = .on
-			}
-		} else {
-			startArticleExtractor()
-		}
-
-	}
-
-	func stopArticleExtractorIfProcessing() {
-		if articleExtractor?.state == .processing {
-			stopArticleExtractor()
-		}
-	}
-
 	func stopWebViewActivity() {
 		if let webView = webView {
 			stopMediaPlayback(webView)
@@ -319,30 +234,6 @@ final class WebViewController: UIViewController {
 			openURLInSafariViewController(url)
 		}
 	}
-}
-
-// MARK: ArticleExtractorDelegate
-
-extension WebViewController: ArticleExtractorDelegate {
-
-	func articleExtractionDidFail(with: Error) {
-		stopArticleExtractor()
-		articleExtractorButtonState = .error
-		loadWebView()
-	}
-
-	func articleExtractionDidComplete(extractedArticle: ExtractedArticle) {
-		if articleExtractor?.state != .cancelled {
-			self.extractedArticle = extractedArticle
-			if let restoreWindowScrollY = restoreWindowScrollY {
-				windowScrollY = restoreWindowScrollY
-			}
-			isShowingExtractedArticle = true
-			loadWebView()
-			articleExtractorButtonState = .on
-		}
-	}
-
 }
 
 // MARK: UIContextMenuInteractionDelegate
@@ -377,7 +268,6 @@ extension WebViewController: UIContextMenuInteractionDelegate {
 				menus.append(UIMenu(title: "", options: .displayInline, children: [action]))
 			}
 
-			menus.append(UIMenu(title: "", options: .displayInline, children: [self.toggleArticleExtractorAction()]))
 			menus.append(UIMenu(title: "", options: .displayInline, children: [self.shareAction()]))
 
 			return UIMenu(title: "", children: menus)
@@ -610,17 +500,7 @@ private extension WebViewController {
 		let theme = ArticleThemesManager.shared.currentTheme
 		let rendering: ArticleRenderer.Rendering
 
-		if let articleExtractor = articleExtractor, articleExtractor.state == .processing {
-			rendering = ArticleRenderer.loadingHTML(theme: theme)
-		} else if let articleExtractor = articleExtractor, articleExtractor.state == .failedToParse, let article = article {
-			rendering = ArticleRenderer.articleHTML(article: article, theme: theme)
-		} else if let article = article, let extractedArticle = extractedArticle {
-			if isShowingExtractedArticle {
-				rendering = ArticleRenderer.articleHTML(article: article, extractedArticle: extractedArticle, theme: theme)
-			} else {
-				rendering = ArticleRenderer.articleHTML(article: article, theme: theme)
-			}
-		} else if let article = article {
+		if let article = article {
 			rendering = ArticleRenderer.articleHTML(article: article, theme: theme)
 		} else {
 			rendering = ArticleRenderer.noSelectionHTML(theme: theme)
@@ -656,22 +536,6 @@ private extension WebViewController {
 		} else {
 			return webView.scrollView.contentSize.height - webView.scrollView.bounds.height + webView.scrollView.safeAreaInsets.bottom
 		}
-	}
-
-	func startArticleExtractor() {
-		guard articleExtractor == nil else { return }
-		if let link = article?.preferredLink, let extractor = ArticleExtractor(link, delegate: self) {
-			extractor.process()
-			articleExtractor = extractor
-			articleExtractorButtonState = .animated
-		}
-	}
-
-	func stopArticleExtractor() {
-		articleExtractor?.cancel()
-		articleExtractor = nil
-		isShowingExtractedArticle = false
-		articleExtractorButtonState = .off
 	}
 
 	func reloadArticleImage() {
@@ -847,15 +711,6 @@ private extension WebViewController {
 		let title = NSLocalizedString("Next Unread Article", comment: "Next Unread Article")
 		return UIAction(title: title, image: Assets.Images.nextUnread) { [weak self] _ in
 			self?.coordinator.selectNextUnread()
-		}
-	}
-
-	func toggleArticleExtractorAction() -> UIAction {
-		let extracted = articleExtractorButtonState == .on
-		let title = extracted ? NSLocalizedString("Show Feed Article", comment: "Show Feed Article") : NSLocalizedString("Show Reader View", comment: "Show Reader View")
-		let extractorImage = extracted ? Assets.Images.articleExtractorOff : Assets.Images.articleExtractorOn
-		return UIAction(title: title, image: extractorImage) { [weak self] _ in
-			self?.toggleArticleExtractor()
 		}
 	}
 

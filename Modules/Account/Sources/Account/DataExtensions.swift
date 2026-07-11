@@ -26,7 +26,6 @@ public extension Feed {
 		case authors
 		case contentHash
 		case newArticleNotificationsEnabled
-		case readerViewAlwaysEnabled
 		case conditionalGetInfo
 		case conditionalGetInfoDate
 		case cacheControlInfo

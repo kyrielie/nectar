@@ -69,15 +69,6 @@ import Articles
 		}
 	}
 
-	var readerViewAlwaysEnabled = false {
-		didSet {
-			if readerViewAlwaysEnabled != oldValue {
-				database.setBool(readerViewAlwaysEnabled, for: feedURL, column: .readerViewAlwaysEnabled)
-				postSettingDidChange(.readerViewAlwaysEnabled)
-			}
-		}
-	}
-
 	var authors: Set<Author>? {
 		didSet {
 			if authors != oldValue {
@@ -170,7 +161,6 @@ import Articles
 		self.editedName = row.editedName
 		self.contentHash = row.contentHash
 		self.newArticleNotificationsEnabled = row.newArticleNotificationsEnabled
-		self.readerViewAlwaysEnabled = row.readerViewAlwaysEnabled
 		self.authors = row.authors
 		self.conditionalGetInfo = row.conditionalGetInfo
 		self.conditionalGetInfoDate = row.conditionalGetInfoDate

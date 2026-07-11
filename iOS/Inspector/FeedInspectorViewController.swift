@@ -21,7 +21,6 @@ final class FeedInspectorViewController: UITableViewController {
 
 	@IBOutlet var nameTextField: UITextField!
 	@IBOutlet var newArticleNotificationsEnabledSwitch: UISwitch!
-	@IBOutlet var readerViewAlwaysEnabledSwitch: UISwitch!
 	@IBOutlet var homePageLabel: UILabel!
 	@IBOutlet var feedURLLabel: UILabel!
 
@@ -46,8 +45,6 @@ final class FeedInspectorViewController: UITableViewController {
 		nameTextField.text = feed.nameForDisplay
 
 		newArticleNotificationsEnabledSwitch.setOn(feed.newArticleNotificationsEnabled, animated: false)
-
-		readerViewAlwaysEnabledSwitch.setOn(feed.readerViewAlwaysEnabled, animated: false)
 
 		homePageLabel.text = feed.homePageURL
 		feedURLLabel.text = feed.url
@@ -98,10 +95,6 @@ final class FeedInspectorViewController: UITableViewController {
 				}
 			}
 		}
-	}
-
-	@IBAction func readerViewAlwaysEnabledChanged(_ sender: Any) {
-		feed.readerViewAlwaysEnabled = readerViewAlwaysEnabledSwitch.isOn
 	}
 
 	@IBAction func done(_ sender: Any) {

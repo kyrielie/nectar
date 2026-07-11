@@ -430,7 +430,7 @@ struct SidebarItemNode: Hashable, Sendable {
 		if let article {
 			// Disable animation since this function runs only during state restoration on launch.
 			UIView.performWithoutAnimation {
-				selectArticle(article, isShowingExtractedArticle: stateInfo.isShowingExtractedArticle, articleWindowScrollY: stateInfo.articleWindowScrollY)
+				selectArticle(article, articleWindowScrollY: stateInfo.articleWindowScrollY)
 			}
 		}
 	}
@@ -1034,7 +1034,7 @@ struct SidebarItemNode: Hashable, Sendable {
 		}
 	}
 
-	func selectArticle(_ article: Article?, animations: Animations = [], isShowingExtractedArticle: Bool? = nil, articleWindowScrollY: Int? = nil) {
+	func selectArticle(_ article: Article?, animations: Animations = [], articleWindowScrollY: Int? = nil) {
 		guard article != currentArticle else {
 			return
 		}
@@ -1057,8 +1057,8 @@ struct SidebarItemNode: Hashable, Sendable {
 
 		mainTimelineViewController?.updateArticleSelection(animations: animations)
 		articleViewController?.article = article
-		if let isShowingExtractedArticle = isShowingExtractedArticle, let articleWindowScrollY = articleWindowScrollY {
-			articleViewController?.restoreScrollPosition = (isShowingExtractedArticle, articleWindowScrollY)
+		if let articleWindowScrollY = articleWindowScrollY {
+			articleViewController?.restoreScrollPosition = articleWindowScrollY
 		}
 	}
 
@@ -1499,9 +1499,9 @@ struct SidebarItemNode: Hashable, Sendable {
 		articleViewController?.focus()
 	}
 
-	func selectArticleInCurrentFeed(_ articleID: String, isShowingExtractedArticle: Bool? = nil, articleWindowScrollY: Int? = nil) {
+	func selectArticleInCurrentFeed(_ articleID: String, articleWindowScrollY: Int? = nil) {
 		if let article = self.articles.first(where: { $0.articleID == articleID }) {
-			self.selectArticle(article, isShowingExtractedArticle: isShowingExtractedArticle, articleWindowScrollY: articleWindowScrollY)
+			self.selectArticle(article, articleWindowScrollY: articleWindowScrollY)
 		}
 	}
 
@@ -2373,21 +2373,20 @@ private extension SceneCoordinator {
 			return false
 		}
 
-		// Read values from UserDefaults (migration happens in restoreWindowState)
-		let isShowingExtractedArticle = AppDefaults.shared.isShowingExtractedArticle
+		// Read value from UserDefaults (migration happens in restoreWindowState)
 		let articleWindowScrollY = AppDefaults.shared.articleWindowScrollY
 
 		switch sidebarItemID {
 
 		case .smartFeed, .folder:
-			let found = selectSidebarItemAndArticle(sidebarItemID: sidebarItemID, articleID: articleID, isShowingExtractedArticle: isShowingExtractedArticle, articleWindowScrollY: articleWindowScrollY)
+			let found = selectSidebarItemAndArticle(sidebarItemID: sidebarItemID, articleID: articleID, articleWindowScrollY: articleWindowScrollY)
 			if found {
 				treeControllerDelegate.addFilterException(sidebarItemID)
 			}
 			return found
 
 		case .feed:
-			let found = selectSidebarItemAndArticle(sidebarItemID: sidebarItemID, articleID: articleID, isShowingExtractedArticle: isShowingExtractedArticle, articleWindowScrollY: articleWindowScrollY)
+			let found = selectSidebarItemAndArticle(sidebarItemID: sidebarItemID, articleID: articleID, articleWindowScrollY: articleWindowScrollY)
 			if found {
 				treeControllerDelegate.addFilterException(sidebarItemID)
 				if let sidebarItemNode = nodeFor(sidebarItemID: sidebarItemID), let folder = sidebarItemNode.parent?.representedObject as? Folder, let folderSidebarItemID = folder.sidebarItemID {
@@ -2425,13 +2424,13 @@ private extension SceneCoordinator {
 		return nil
 	}
 
-	func selectSidebarItemAndArticle(sidebarItemID: SidebarItemIdentifier, articleID: String, isShowingExtractedArticle: Bool, articleWindowScrollY: Int) -> Bool {
+	func selectSidebarItemAndArticle(sidebarItemID: SidebarItemIdentifier, articleID: String, articleWindowScrollY: Int) -> Bool {
 		guard let sidebarItemNode = nodeFor(sidebarItemID: sidebarItemID), let sidebarItemIndexPath = indexPathFor(sidebarItemNode) else {
 			return false
 		}
 
 		selectSidebarItem(indexPath: sidebarItemIndexPath) {
-			self.selectArticleInCurrentFeed(articleID, isShowingExtractedArticle: isShowingExtractedArticle, articleWindowScrollY: articleWindowScrollY)
+			self.selectArticleInCurrentFeed(articleID, articleWindowScrollY: articleWindowScrollY)
 		}
 
 		return true
