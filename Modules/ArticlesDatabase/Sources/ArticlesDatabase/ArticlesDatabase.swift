@@ -496,7 +496,7 @@ private extension ArticlesDatabase {
 	/// statuses table specifically. ArticlesDatabase only holds a reference to
 	/// articlesTable (whose containsColumn is hardwired to the "articles" table via its
 	/// own `name`), not statusesTable, so it's duplicated here rather than plumbed through.
-	func statusesTableContainsScrollPositionColumn(_ database: FMDatabase) -> Bool {
+	nonisolated func statusesTableContainsScrollPositionColumn(_ database: FMDatabase) -> Bool {
 		guard let resultSet = database.executeQuery("select * from statuses limit 1;", withArgumentsIn: nil),
 			  let columnMap = resultSet.columnNameToIndexMap else {
 			return false
