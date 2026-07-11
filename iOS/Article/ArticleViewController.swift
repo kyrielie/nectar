@@ -16,7 +16,9 @@ import Articles
 
 final class ArticleViewController: UIViewController {
 
-	typealias State = (windowScrollY: Int)
+	struct State {
+		let windowScrollY: Int
+	}
 
 	@IBOutlet private weak var nextUnreadBarButtonItem: UIBarButtonItem!
 	@IBOutlet private weak var prevArticleBarButtonItem: UIBarButtonItem!

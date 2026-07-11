@@ -257,9 +257,6 @@
     "Error" : {
       "comment" : "Error"
     },
-    "Error - Reader View" : {
-      "comment" : "Error - Reader View"
-    },
     "Error Log" : {
       "comment" : "Error Log window title"
     },
@@ -588,9 +585,6 @@
     "Previous Article" : {
       "comment" : "Previous Article"
     },
-    "Processing - Reader View" : {
-      "comment" : "Processing - Reader View"
-    },
     "Read" : {
       "comment" : "Read row label"
     },
@@ -602,9 +596,6 @@
     },
     "read content records" : {
       "comment" : "Plural label for read content records"
-    },
-    "Reader View" : {
-      "comment" : "Reader View"
     },
     "Refresh" : {
       "comment" : "Refresh"
@@ -669,9 +660,6 @@
     "Selected - Mark Article Unread" : {
       "comment" : "Selected - Mark Article Unread"
     },
-    "Selected - Reader View" : {
-      "comment" : "Selected - Reader View"
-    },
     "Selected - Star Article" : {
       "comment" : "Selected - Star Article"
     },
@@ -681,14 +669,8 @@
     "Share Stats" : {
       "comment" : "Share stats menu item"
     },
-    "Show Feed Article" : {
-      "comment" : "Show Feed Article"
-    },
     "Show feeds that haven’t updated in…" : {
       "comment" : "Show stale feeds text"
-    },
-    "Show Reader View" : {
-      "comment" : "Show Reader View"
     },
     "Show Website" : {
       "comment" : "Show Website"
@@ -810,9 +792,6 @@
     },
     "Toggle Read Status" : {
       "comment" : "Toggle Read Status"
-    },
-    "Toggle Reader View" : {
-      "comment" : "Toggle Reader View"
     },
     "Toggle Sidebar" : {
       "comment" : "Toggle Sidebar"
