@@ -72,6 +72,8 @@ import Articles
 	static private let markUnreadActionName = NSLocalizedString("Mark Unread", comment: "command")
 	static private let markStarredActionName = NSLocalizedString("Mark Starred", comment: "command")
 	static private let markUnstarredActionName = NSLocalizedString("Mark Unstarred", comment: "command")
+	static private let markLovedActionName = NSLocalizedString("Mark Loved", comment: "command")
+	static private let markUnlovedActionName = NSLocalizedString("Mark Unloved", comment: "command")
 
 	static func actionName(_ statusKey: ArticleStatus.Key, _ flag: Bool) -> String {
 
@@ -80,6 +82,8 @@ import Articles
 			return flag ? markReadActionName : markUnreadActionName
 		case .starred:
 			return flag ? markStarredActionName : markUnstarredActionName
+		case .loved:
+			return flag ? markLovedActionName : markUnlovedActionName
 		}
 	}
 

@@ -48,6 +48,18 @@ extension Article {
 		return url ?? externalURL
 	}
 
+	/// Phase 7 fork addition: the AO3 series URL for this article's series, if
+	/// it belongs to one. Built from the first entry in `series` -- per Phase 1's
+	/// actual (not originally planned) shape, series data lives directly on
+	/// `Article.series: [ArticleSeriesEntry]?`, not behind an `ambrosiaMetadata`
+	/// accessor.
+	var ao3SeriesURL: URL? {
+		guard let ao3ID = series?.first?.ao3ID else {
+			return nil
+		}
+		return URL(string: "https://archiveofourown.org/series/\(ao3ID)")
+	}
+
 	var imageURL: URL? {
 		return URL.encodeSpacesIfNeeded(rawImageLink)
 	}

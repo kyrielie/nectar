@@ -126,6 +126,13 @@ public struct ArticleCounts: Sendable {
 				database.executeStatements("ALTER TABLE statuses add column readingProgress REAL;")
 			}
 
+			// Phase 5 (loved status): a second, independent boolean status, same tier
+			// as starred -- same containsColumn-guarded ALTER TABLE pattern.
+			if !self.statusesTableContainsLovedColumn(database) {
+				Self.logger.debug("ArticlesDatabase: adding loved column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE statuses add column loved BOOLEAN NOT NULL DEFAULT 0;")
+			}
+
 			database.executeStatements("CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);")
 			database.executeStatements("DROP TABLE if EXISTS tags;DROP INDEX if EXISTS tags_tagName_index;DROP INDEX if EXISTS articles_feedID_index;DROP INDEX if EXISTS statuses_read_index;DROP TABLE if EXISTS attachments;DROP TABLE if EXISTS attachmentsLookup;")
 		}
@@ -183,6 +190,16 @@ public struct ArticleCounts: Sendable {
 	public func fetchStarredArticlesCount(feedIDs: Set<String>) -> Int {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		return articlesTable.fetchStarredArticlesCount(feedIDs)
+	}
+
+	public func fetchLovedArticles(feedIDs: Set<String>, limit: Int? = nil) -> Set<Article> {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		return articlesTable.fetchLovedArticles(feedIDs, limit)
+	}
+
+	public func fetchLovedArticlesCount(feedIDs: Set<String>) -> Int {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		return articlesTable.fetchLovedArticlesCount(feedIDs)
 	}
 
 	/// Returns aggregate article counts (total, unread, starred, statuses) for the given feeds.
@@ -265,6 +282,14 @@ public struct ArticleCounts: Sendable {
 		}
 	}
 
+	public func fetchedLovedArticlesAsync(feedIDs: Set<String>, limit: Int? = nil) async -> Set<Article> {
+		await withCheckedContinuation { continuation in
+			_fetchedLovedArticlesAsync(feedIDs: feedIDs, limit: limit) { articles in
+				continuation.resume(returning: articles)
+			}
+		}
+	}
+
 	public func fetchArticlesMatchingAsync(searchString: String, feedIDs: Set<String>) async -> Set<Article> {
 		await withCheckedContinuation { continuation in
 			_fetchArticlesMatchingAsync(searchString: searchString, feedIDs: feedIDs) { articles in
@@ -331,6 +356,14 @@ public struct ArticleCounts: Sendable {
 		}
 	}
 
+	public func fetchUnreadCountForLovedArticlesAsync(feedIDs: Set<String>) async -> Int {
+		await withCheckedContinuation { continuation in
+			_fetchLovedAndUnreadCount(feedIDs: feedIDs) { unreadCount in
+				continuation.resume(returning: unreadCount)
+			}
+		}
+	}
+
 	public func fetchTodayArticlesCountAsync(feedIDs: Set<String>) async -> Int {
 		await withCheckedContinuation { continuation in
 			articlesTable.fetchArticlesCountSince(feedIDs, todayCutoffDate()) { count in
@@ -342,6 +375,14 @@ public struct ArticleCounts: Sendable {
 	public func fetchStarredArticlesCountAsync(feedIDs: Set<String>) async -> Int {
 		await withCheckedContinuation { continuation in
 			articlesTable.fetchStarredArticlesCountAsync(feedIDs) { count in
+				continuation.resume(returning: count)
+			}
+		}
+	}
+
+	public func fetchLovedArticlesCountAsync(feedIDs: Set<String>) async -> Int {
+		await withCheckedContinuation { continuation in
+			articlesTable.fetchLovedArticlesCountAsync(feedIDs) { count in
 				continuation.resume(returning: count)
 			}
 		}
@@ -390,6 +431,14 @@ public struct ArticleCounts: Sendable {
 	public func fetchStarredArticleIDsAsync() async -> Set<String> {
 		await withCheckedContinuation { continuation in
 			_fetchStarredArticleIDsAsync { articleIDs in
+				continuation.resume(returning: articleIDs)
+			}
+		}
+	}
+
+	public func fetchLovedArticleIDsAsync() async -> Set<String> {
+		await withCheckedContinuation { continuation in
+			_fetchLovedArticleIDsAsync { articleIDs in
 				continuation.resume(returning: articleIDs)
 			}
 		}
@@ -496,7 +545,7 @@ private extension ArticlesDatabase {
 	static let tableCreationStatements = """
 	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, series TEXT);
 
-	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL);
+	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOLEAN NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL);
 
 	CREATE INDEX if not EXISTS articles_feedID_datePublished_articleID on articles (feedID, datePublished, articleID);
 
@@ -531,6 +580,15 @@ private extension ArticlesDatabase {
 			return false
 		}
 		return columnMap["readingprogress"] != nil
+	}
+
+	/// Same approach as `statusesTableContainsScrollPositionColumn` above.
+	nonisolated func statusesTableContainsLovedColumn(_ database: FMDatabase) -> Bool {
+		guard let resultSet = database.executeQuery("select * from statuses limit 1;", withArgumentsIn: nil),
+			  let columnMap = resultSet.columnNameToIndexMap else {
+			return false
+		}
+		return columnMap["loved"] != nil
 	}
 
 	// MARK: - Operations
@@ -581,6 +639,11 @@ private extension ArticlesDatabase {
 	func _fetchStarredAndUnreadCount(feedIDs: Set<String>, completion: @escaping SingleUnreadCountCompletionBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.fetchStarredAndUnreadCount(feedIDs, completion)
+	}
+
+	func _fetchLovedAndUnreadCount(feedIDs: Set<String>, completion: @escaping SingleUnreadCountCompletionBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.fetchLovedAndUnreadCount(feedIDs, completion)
 	}
 
 	func _mark(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool, completion: @escaping ArticleIDsCompletionBlock) {
@@ -642,6 +705,11 @@ private extension ArticlesDatabase {
 		articlesTable.fetchStarredArticlesAsync(feedIDs, limit, completion)
 	}
 
+	func _fetchedLovedArticlesAsync(feedIDs: Set<String>, limit: Int? = nil, _ completion: @escaping ArticleSetResultBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.fetchLovedArticlesAsync(feedIDs, limit, completion)
+	}
+
 	func _fetchArticlesMatchingAsync(searchString: String, feedIDs: Set<String>, _ completion: @escaping ArticleSetResultBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.fetchArticlesMatchingAsync(searchString, feedIDs, completion)
@@ -677,6 +745,11 @@ private extension ArticlesDatabase {
 	func _fetchStarredArticleIDsAsync(completion: @escaping ArticleIDsCompletionBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.fetchStarredArticleIDsAsync(completion)
+	}
+
+	func _fetchLovedArticleIDsAsync(completion: @escaping ArticleIDsCompletionBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.fetchLovedArticleIDsAsync(completion)
 	}
 
 	func _fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDate(_ completion: @escaping ArticleIDsCompletionBlock) {

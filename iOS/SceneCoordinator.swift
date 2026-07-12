@@ -1331,6 +1331,16 @@ struct SidebarItemNode: Hashable, Sendable {
 		markArticlesWithUndo([article], statusKey: .starred, flag: !article.status.starred)
 	}
 
+	func toggleLovedForCurrentArticle() {
+		if let article = currentArticle {
+			toggleLoved(article)
+		}
+	}
+
+	func toggleLoved(_ article: Article) {
+		markArticlesWithUndo([article], statusKey: .loved, flag: !article.status.loved)
+	}
+
 	func timelineFeedIsEqualTo(_ feed: Feed) -> Bool {
 		guard let timelineFeed = timelineFeed as? Feed else {
 			return false

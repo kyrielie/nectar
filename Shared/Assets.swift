@@ -102,6 +102,13 @@ struct Assets {
 		static let smartFeed = RSImage(symbol: "gear")!
 		static let trash = RSImage(symbol: "trash")!
 
+		// Phase 5/6 fork additions: Loved toolbar/action icons and the Theme
+		// nav-bar icon. Symbol-backed like the rest of this section pending a
+		// dedicated asset catalog entry (not part of this text-only patch series).
+		static let heartOpen = RSImage(symbol: "heart")!
+		static let heartClosed = RSImage(symbol: "heart.fill")!
+		static let theme = RSImage(symbol: "doc.richtext")!
+
 		static let searchFeed = IconImage(RSImage(symbol: "magnifyingglass")!, isSymbol: true)
 		static let mainFolder = IconImage(folder, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent)
 		static let todayFeed = IconImage(RSImage(symbol: "sun.max.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: UIColor.systemOrange)

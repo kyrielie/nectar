@@ -60,6 +60,10 @@ struct DatabaseKey {
 	// never computed, distinct from 0 (computed, at the very top).
 	static let readingProgress = "readingProgress"
 
+	// Loved status (Phase 5 fork addition). Joins starred in the "never
+	// auto-delete" set.
+	static let loved = "loved"
+
 	// Author
 	static let authorID = "authorID"
 	static let name = "name"

@@ -89,6 +89,7 @@ nonisolated public enum AccountType: Int, Codable, Sendable {
 
 public enum FetchType {
     case starred(_: Int? = nil)
+	case loved(_: Int? = nil)
 	case unread(_: Int? = nil)
 	case today(_: Int? = nil)
 	case folder(Folder, Bool)
@@ -815,6 +816,8 @@ public enum FetchType {
 		switch fetchType {
 		case .starred(let limit):
 			return _fetchStarredArticles(limit: limit)
+		case .loved(let limit):
+			return _fetchLovedArticles(limit: limit)
 		case .unread(let limit):
 			return _fetchUnreadArticles(limit: limit)
 		case .today(let limit):
@@ -840,6 +843,8 @@ public enum FetchType {
 		switch fetchType {
 		case .starred(let limit):
 			return await _fetchStarredArticlesAsync(limit: limit)
+		case .loved(let limit):
+			return await _fetchLovedArticlesAsync(limit: limit)
 		case .unread(let limit):
 			return await _fetchUnreadArticlesAsync(limit: limit)
 		case .today(let limit):
@@ -865,8 +870,16 @@ public enum FetchType {
 		await database.fetchUnreadCountForStarredArticlesAsync(feedIDs: flattenedFeedsIDs)
 	}
 
+	public func fetchUnreadCountForLovedArticlesAsync() async -> Int {
+		await database.fetchUnreadCountForLovedArticlesAsync(feedIDs: flattenedFeedsIDs)
+	}
+
 	public func fetchCountForStarredArticles() -> Int {
 		database.fetchStarredArticlesCount(feedIDs: flattenedFeedsIDs)
+	}
+
+	public func fetchCountForLovedArticles() -> Int {
+		database.fetchLovedArticlesCount(feedIDs: flattenedFeedsIDs)
 	}
 
 	public func fetchArticleCountsAsync() async -> ArticleCounts {
@@ -890,12 +903,20 @@ public enum FetchType {
 		await database.fetchStarredArticlesCountAsync(feedIDs: flattenedFeedsIDs)
 	}
 
+	public func fetchCountForLovedArticlesAsync() async -> Int {
+		await database.fetchLovedArticlesCountAsync(feedIDs: flattenedFeedsIDs)
+	}
+
 	public func fetchUnreadArticleIDsAsync() async -> Set<String> {
 		await database.fetchUnreadArticleIDsAsync()
 	}
 
 	public func fetchStarredArticleIDsAsync() async -> Set<String> {
 		await database.fetchStarredArticleIDsAsync()
+	}
+
+	public func fetchLovedArticleIDsAsync() async -> Set<String> {
+		await database.fetchLovedArticleIDsAsync()
 	}
 
 	/// Fetch articleIDs for articles that we should have, but don’t. These articles are either (starred) or (newer than the article cutoff date).
@@ -1247,6 +1268,16 @@ private extension Account {
 
 	func _fetchStarredArticlesAsync(limit: Int? = nil) async -> Set<Article> {
 		await database.fetchedStarredArticlesAsync(feedIDs: flattenedFeedsIDs, limit: limit)
+	}
+
+	// MARK: - Loved Articles
+
+	func _fetchLovedArticles(limit: Int? = nil) -> Set<Article> {
+		database.fetchLovedArticles(feedIDs: flattenedFeedsIDs, limit: limit)
+	}
+
+	func _fetchLovedArticlesAsync(limit: Int? = nil) async -> Set<Article> {
+		await database.fetchedLovedArticlesAsync(feedIDs: flattenedFeedsIDs, limit: limit)
 	}
 
 	// MARK: - Account Unread Articles

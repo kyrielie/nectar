@@ -23,6 +23,15 @@ final class ArticleViewController: UIViewController {
 	@IBOutlet private weak var starBarButtonItem: UIBarButtonItem!
 	@IBOutlet private weak var actionBarButtonItem: UIBarButtonItem!
 
+	// Phase 5/6 fork additions. Code-constructed rather than @IBOutlet like the
+	// items above -- toolbarItems/navigationItem are already fully assembled in
+	// code in viewDidLoad, so there's no need to touch the storyboard for these.
+	// TODO: Assets.Images.heartOpen/heartClosed and Assets.Images.theme need
+	// actual asset catalog entries; not part of this patch series since asset
+	// catalogs aren't diffable as text.
+	private lazy var heartBarButtonItem = UIBarButtonItem(image: Assets.Images.heartOpen, style: .plain, target: self, action: #selector(toggleLoved(_:)))
+	private lazy var themeBarButtonItem = UIBarButtonItem(image: Assets.Images.theme, style: .plain, target: self, action: #selector(showThemePicker(_:)))
+
 	@IBOutlet private var searchBar: ArticleSearchBar!
 	@IBOutlet private var searchBarBottomConstraint: NSLayoutConstraint!
 	private var defaultControls: [UIBarButtonItem]?
@@ -95,6 +104,7 @@ final class ArticleViewController: UIViewController {
 		])
 		fullScreenTapZone.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapNavigationBar)))
 		navigationItem.titleView = fullScreenTapZone
+		navigationItem.rightBarButtonItem = themeBarButtonItem
 
 		if #unavailable(iOS 26) {
 			let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
@@ -102,6 +112,8 @@ final class ArticleViewController: UIViewController {
 				readBarButtonItem,
 				flex(),
 				starBarButtonItem,
+				flex(),
+				heartBarButtonItem,
 				flex(),
 				nextUnreadBarButtonItem,
 				flex(),
@@ -195,6 +207,7 @@ final class ArticleViewController: UIViewController {
 			nextArticleBarButtonItem.isEnabled = false
 			readBarButtonItem.isEnabled = false
 			starBarButtonItem.isEnabled = false
+			heartBarButtonItem.isEnabled = false
 			actionBarButtonItem.isEnabled = false
 			return
 		}
@@ -204,6 +217,7 @@ final class ArticleViewController: UIViewController {
 		nextArticleBarButtonItem.isEnabled = coordinator.isNextArticleAvailable
 		readBarButtonItem.isEnabled = true
 		starBarButtonItem.isEnabled = true
+		heartBarButtonItem.isEnabled = true
 
 		let permalinkPresent = article.preferredLink != nil
 		actionBarButtonItem.isEnabled = permalinkPresent
@@ -224,6 +238,14 @@ final class ArticleViewController: UIViewController {
 		} else {
 			starBarButtonItem.image = Assets.Images.starOpen
 			starBarButtonItem.accLabelText = NSLocalizedString("Read Later", comment: "Read Later")
+		}
+
+		if article.status.loved {
+			heartBarButtonItem.image = Assets.Images.heartClosed
+			heartBarButtonItem.accLabelText = NSLocalizedString("Selected - Loved", comment: "Selected - Loved")
+		} else {
+			heartBarButtonItem.image = Assets.Images.heartOpen
+			heartBarButtonItem.accLabelText = NSLocalizedString("Loved", comment: "Loved")
 		}
 	}
 
@@ -284,6 +306,15 @@ final class ArticleViewController: UIViewController {
 
 	@IBAction func toggleStar(_ sender: Any) {
 		coordinator.toggleStarredForCurrentArticle()
+	}
+
+	@objc func toggleLoved(_ sender: Any) {
+		coordinator.toggleLovedForCurrentArticle()
+	}
+
+	@objc func showThemePicker(_ sender: Any) {
+		let articleThemes = UIStoryboard.settings.instantiateController(ofType: ArticleThemesTableViewController.self)
+		navigationController?.pushViewController(articleThemes, animated: true)
 	}
 
 	@IBAction func showActivityDialog(_ sender: Any) {
