@@ -20,6 +20,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	private let accountID: String
 	private let queue: DatabaseQueue
 	private let statusesTable: StatusesTable
+	private let bookReadStateTable: BookReadStateTable
 	private let searchTable: SearchTable
 	private let retentionStyle: ArticlesDatabase.RetentionStyle
 	private let articlesCache = OSAllocatedUnfairLock(initialState: [String: Article]())
@@ -38,6 +39,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		self.accountID = accountID
 		self.queue = queue
 		self.statusesTable = StatusesTable(queue: queue)
+		self.bookReadStateTable = BookReadStateTable(queue: queue)
 		self.retentionStyle = retentionStyle
 
 		self.searchTable = SearchTable(queue: queue)
@@ -241,14 +243,41 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 			let articleIDs = parsedItems.articleIDs()
 
-			// Split by age: articles older than ~6 months default to read.
+			// Phase 6: for any incoming article whose bookKey already has a
+			// BookReadState row -- a re-subscribe, or the same book turning up in
+			// a second collection feed -- seed the new article's status from that
+			// row instead of the age-based default below. This also covers a case
+			// the age-based split alone gets wrong: an old book explicitly marked
+			// unread would otherwise re-import as read purely from staleness.
+			var bookKeysByArticleID = [String: String]()
+			for parsedItem in parsedItems {
+				bookKeysByArticleID[parsedItem.articleID] = parsedItem.bookKey
+			}
+			let bookReadStateByBookKey = self.bookReadStateTable.state(for: Set(bookKeysByArticleID.values), database)
+			let overrideArticleIDs = Set(bookKeysByArticleID.compactMap { articleID, bookKey in
+				bookReadStateByBookKey[bookKey] != nil ? articleID : nil
+			})
+
+			// Split the remainder by age: articles older than ~6 months default to read.
 			let cutoffDate = Date(timeIntervalSinceNow: -ArticleStatus.staleIntervalInSeconds)
-			let oldArticleIDs = Set(parsedItems.filter { ($0.datePublished ?? .distantFuture) < cutoffDate }.map { $0.articleID })
-			let recentArticleIDs = articleIDs.subtracting(oldArticleIDs)
+			let remainingArticleIDs = articleIDs.subtracting(overrideArticleIDs)
+			let oldArticleIDs = Set(parsedItems.filter { remainingArticleIDs.contains($0.articleID) && ($0.datePublished ?? .distantFuture) < cutoffDate }.map { $0.articleID })
+			let recentArticleIDs = remainingArticleIDs.subtracting(oldArticleIDs)
 
 			let (recentStatusesDictionary, _) = self.statusesTable.ensureStatusesForArticleIDs(recentArticleIDs, false, database) // 1a
 			let (oldStatusesDictionary, _) = self.statusesTable.ensureStatusesForArticleIDs(oldArticleIDs, true, database) // 1b
-			let statusesDictionary = recentStatusesDictionary.merging(oldStatusesDictionary) { current, _ in current }
+			var statusesDictionary = recentStatusesDictionary.merging(oldStatusesDictionary) { current, _ in current }
+
+			// Override group: one ensureStatusesForArticleIDs call per distinct
+			// read/unread value present, since that function takes a single flag
+			// for the whole set passed in.
+			let readOverrideIDs = Set(overrideArticleIDs.filter { bookReadStateByBookKey[bookKeysByArticleID[$0] ?? ""] == true })
+			let unreadOverrideIDs = overrideArticleIDs.subtracting(readOverrideIDs)
+			let (readOverrideStatuses, _) = self.statusesTable.ensureStatusesForArticleIDs(readOverrideIDs, true, database)
+			let (unreadOverrideStatuses, _) = self.statusesTable.ensureStatusesForArticleIDs(unreadOverrideIDs, false, database)
+			statusesDictionary.merge(readOverrideStatuses) { current, _ in current }
+			statusesDictionary.merge(unreadOverrideStatuses) { current, _ in current }
+
 			assert(statusesDictionary.count == articleIDs.count)
 
 			let incomingArticles = Article.articlesWithParsedItems(parsedItems, feedID, self.accountID, statusesDictionary) // 2
@@ -556,10 +585,41 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	func mark(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ completion: @escaping ArticleIDsCompletionBlock) {
 		queue.runInTransaction { database in
 			let changedArticleIDs = self.statusesTable.mark(articleIDs, statusKey, flag, database)
+
+			// Phase 6: write through to BookReadState on every read/unread toggle,
+			// so the book-level store stays in sync with whatever the user just
+			// did, regardless of which (feed, guid) pair they did it through.
+			if statusKey == .read, !changedArticleIDs.isEmpty {
+				let bookKeys = self.bookKeysForArticleIDs(changedArticleIDs, database)
+				if !bookKeys.isEmpty {
+					self.bookReadStateTable.setState(flag, bookKeys: bookKeys, database)
+				}
+			}
+
 			DispatchQueue.main.async {
 				completion(changedArticleIDs)
 			}
 		}
+	}
+
+	/// bookKey values for a set of articleIDs. Small helper for the write-through
+	/// in `mark(_:_:_:_:)` above -- StatusesTable has no access to `bookKey`,
+	/// since that column lives on `articles`, not `statuses`.
+	private func bookKeysForArticleIDs(_ articleIDs: Set<String>, _ database: FMDatabase) -> Set<String> {
+		guard let resultSet = self.selectRowsWhere(key: DatabaseKey.articleID, inValues: Array(articleIDs), in: database) else {
+			return []
+		}
+		var bookKeys = Set<String>()
+		while resultSet.next() {
+			if let bookKey = resultSet.swiftString(forColumn: DatabaseKey.bookKey), !bookKey.isEmpty {
+				bookKeys.insert(bookKey)
+			} else if let uniqueID = resultSet.swiftString(forColumn: DatabaseKey.uniqueID) {
+				// Pre-migration row with no bookKey persisted yet -- same fallback
+				// Article.init uses (bookKey ?? uniqueID).
+				bookKeys.insert(uniqueID)
+			}
+		}
+		return bookKeys
 	}
 
 	func markAndFetchNew(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ completion: @escaping ArticleIDsCompletionBlock) {

@@ -51,6 +51,43 @@ public struct ParsedItem: Hashable, Sendable {
 	public let categories: [String]?
 	public let series: [ParsedSeriesEntry]?
 
+	// Read-state identity fields (see LocalFeedServer's JSONFeedAmbrosiaExtension
+	// on the Ambrosia side). Deliberately separate from `uniqueID`, which stays
+	// "ambrosia-book-<calibre_id>" forever -- ao3WorkID may only become known
+	// after a later re-extraction.
+	public let ao3WorkID: String?
+	// True only when this Calibre book's own description is a merge-plugin
+	// "Anthology containing:" comment -- this book IS an entire compiled
+	// series, not a normal work that happens to belong to one.
+	public let isAnthology: Bool?
+	// Populated only when isAnthology is true. ao3SeriesID is preferred;
+	// seriesName is the Calibre-derived fallback when no AO3 series id exists.
+	public let ao3SeriesID: String?
+	public let seriesName: String?
+
+	/// Book-level identity key for read-state dedup across feeds/re-subscriptions.
+	/// Precedence: anthology series id/name, then AO3 work id, then the bare
+	/// stable `uniqueID` ("ambrosia-book-<calibre_id>") as last resort. Mirrors
+	/// the client-side `book_key()` precedence finalized against Ambrosia's
+	/// LocalFeedServer output -- do not reorder without re-checking that
+	/// source, since the precedence exists specifically to survive Calibre
+	/// re-imports and late AO3 extraction without treating either as a new
+	/// article.
+	public var bookKey: String {
+		if isAnthology == true {
+			if let sid = ao3SeriesID, !sid.isEmpty {
+				return "ao3-series:\(sid)"
+			}
+			if let name = seriesName {
+				return "calibre-series:\(name)"
+			}
+		}
+		if let wid = ao3WorkID, !wid.isEmpty {
+			return "ao3-work:\(wid)"
+		}
+		return uniqueID
+	}
+
 	public init(syncServiceID: String?,
 	            uniqueID: String,
 	            feedURL: String,
@@ -79,7 +116,11 @@ public struct ParsedItem: Hashable, Sendable {
 	            ratings: [String]? = nil,
 	            warnings: [String]? = nil,
 	            categories: [String]? = nil,
-	            series: [ParsedSeriesEntry]? = nil) {
+	            series: [ParsedSeriesEntry]? = nil,
+	            ao3WorkID: String? = nil,
+	            isAnthology: Bool? = nil,
+	            ao3SeriesID: String? = nil,
+	            seriesName: String? = nil) {
 		self.syncServiceID = syncServiceID
 		self.uniqueID = uniqueID
 		self.feedURL = feedURL
@@ -108,6 +149,10 @@ public struct ParsedItem: Hashable, Sendable {
 		self.warnings = warnings
 		self.categories = categories
 		self.series = series
+		self.ao3WorkID = ao3WorkID
+		self.isAnthology = isAnthology
+		self.ao3SeriesID = ao3SeriesID
+		self.seriesName = seriesName
 
 		// Render Markdown when present, else use contentHTML
 		if let markdown {
