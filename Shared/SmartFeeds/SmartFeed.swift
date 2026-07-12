@@ -52,6 +52,7 @@ import Images
 	init(delegate: SmartFeedDelegate) {
 		self.delegate = delegate
 		NotificationCenter.default.addObserver(self, selector: #selector(unreadCountDidChange(_:)), name: .UnreadCountDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(statusesDidChange(_:)), name: .StatusesDidChange, object: nil)
 		queueFetchUnreadCounts() // Fetch unread count at startup
 	}
 
@@ -59,6 +60,13 @@ import Images
 		if note.object is AppDelegate {
 			queueFetchUnreadCounts()
 		}
+	}
+
+	// Starred/loved status changes don't affect true unread counts, but
+	// Read Later/Loved/All Read repurpose this badge as a total count, so
+	// it needs to be recomputed whenever any status changes too.
+	@objc func statusesDidChange(_ note: Notification) {
+		queueFetchUnreadCounts()
 	}
 
 	@objc func fetchUnreadCounts() {
