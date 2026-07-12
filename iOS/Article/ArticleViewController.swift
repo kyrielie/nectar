@@ -104,15 +104,11 @@ final class ArticleViewController: UIViewController {
 		])
 		fullScreenTapZone.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapNavigationBar)))
 		navigationItem.titleView = fullScreenTapZone
-		navigationItem.rightBarButtonItem = themeBarButtonItem
+		navigationItem.rightBarButtonItems = [themeBarButtonItem, nextArticleBarButtonItem, prevArticleBarButtonItem]
 
 		if #unavailable(iOS 26) {
 			let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
 			toolbarItems = [
-				prevArticleBarButtonItem,
-				flex(),
-				nextArticleBarButtonItem,
-				flex(),
 				readBarButtonItem,
 				flex(),
 				starBarButtonItem,
