@@ -13,8 +13,11 @@ import UIKit
 import RSCore
 import Articles
 import Account
+import os
 
 @MainActor struct ArticleRenderer {
+
+	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticleRenderer")
 
 	typealias Rendering = (style: String, html: String, title: String, baseURL: String)
 
@@ -110,6 +113,23 @@ import Account
 		self.title = ArticleStringFormatter.sanitizedTitle(article?.title, forHTML: true) ?? ""
 		self.body = article?.body ?? ""
 		self.baseURL = article?.baseURL?.absoluteString
+		if let article {
+			// article.body is contentHTML ?? contentText ?? summary. Logging which
+			// one won tells us directly whether a "missing images, plain text"
+			// report is contentHTML actually being nil for that item (server/
+			// parser issue) versus something else further down the pipeline.
+			let source: String
+			if article.contentHTML != nil {
+				source = "contentHTML"
+			} else if article.contentText != nil {
+				source = "contentText"
+			} else if article.summary != nil {
+				source = "summary"
+			} else {
+				source = "none"
+			}
+			Self.logger.debug("ArticleRenderer: articleID=\(article.articleID, privacy: .public) bodySource=\(source, privacy: .public) contentHTMLLength=\(article.contentHTML?.count ?? -1, privacy: .public) contentTextLength=\(article.contentText?.count ?? -1, privacy: .public)")
+		}
 	}
 
 	// MARK: - API
