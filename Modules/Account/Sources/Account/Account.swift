@@ -91,6 +91,7 @@ public enum FetchType {
     case starred(_: Int? = nil)
 	case loved(_: Int? = nil)
 	case unread(_: Int? = nil)
+	case read(_: Int? = nil)
 	case today(_: Int? = nil)
 	case folder(Folder, Bool)
 	case feed(Feed)
@@ -820,6 +821,8 @@ public enum FetchType {
 			return _fetchLovedArticles(limit: limit)
 		case .unread(let limit):
 			return _fetchUnreadArticles(limit: limit)
+		case .read(let limit):
+			return _fetchReadArticles(limit: limit)
 		case .today(let limit):
 			return _fetchTodayArticles(limit: limit)
 		case .folder(let folder, let readFilter):
@@ -847,6 +850,8 @@ public enum FetchType {
 			return await _fetchLovedArticlesAsync(limit: limit)
 		case .unread(let limit):
 			return await _fetchUnreadArticlesAsync(limit: limit)
+		case .read(let limit):
+			return await _fetchReadArticlesAsync(limit: limit)
 		case .today(let limit):
 			return await _fetchTodayArticlesAsync(limit: limit)
 		case .folder(let folder, let readFilter):
@@ -1278,6 +1283,16 @@ private extension Account {
 
 	func _fetchLovedArticlesAsync(limit: Int? = nil) async -> Set<Article> {
 		await database.fetchedLovedArticlesAsync(feedIDs: flattenedFeedsIDs, limit: limit)
+	}
+
+	// MARK: - Read Articles
+
+	func _fetchReadArticles(limit: Int? = nil) -> Set<Article> {
+		database.fetchReadArticles(feedIDs: flattenedFeedsIDs, limit: limit)
+	}
+
+	func _fetchReadArticlesAsync(limit: Int? = nil) async -> Set<Article> {
+		await database.fetchedReadArticlesAsync(feedIDs: flattenedFeedsIDs, limit: limit)
 	}
 
 	// MARK: - Account Unread Articles

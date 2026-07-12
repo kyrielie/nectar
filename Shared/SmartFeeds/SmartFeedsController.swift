@@ -21,9 +21,10 @@ import Account
 	let unreadFeed = UnreadFeed()
 	let starredFeed = SmartFeed(delegate: StarredFeedDelegate())
 	let lovedFeed = SmartFeed(delegate: LovedFeedDelegate())
+	let readFeed = SmartFeed(delegate: ReadFeedDelegate())
 
 	private init() {
-		self.smartFeeds = [todayFeed, unreadFeed, starredFeed, lovedFeed]
+		self.smartFeeds = [todayFeed, unreadFeed, starredFeed, lovedFeed, readFeed]
 	}
 
 	func find(by identifier: SidebarItemIdentifier) -> PseudoFeed? {
@@ -38,6 +39,8 @@ import Account
 				return starredFeed
 			case String(describing: LovedFeedDelegate.self):
 				return lovedFeed
+			case String(describing: ReadFeedDelegate.self):
+				return readFeed
 			default:
 				return nil
 			}

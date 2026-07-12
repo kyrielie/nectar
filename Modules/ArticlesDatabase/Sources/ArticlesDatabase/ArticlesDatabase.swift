@@ -186,6 +186,11 @@ public struct ArticleCounts: Sendable {
 		return articlesTable.fetchUnreadArticles(feedIDs, limit)
 	}
 
+	public func fetchReadArticles(feedIDs: Set<String>, limit: Int? = nil) -> Set<Article> {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		return articlesTable.fetchReadArticles(feedIDs, limit)
+	}
+
 	public func fetchTodayArticles(feedIDs: Set<String>, limit: Int? = nil) -> Set<Article> {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		return articlesTable.fetchArticlesSince(feedIDs, todayCutoffDate(), limit)
@@ -294,6 +299,14 @@ public struct ArticleCounts: Sendable {
 	public func fetchedLovedArticlesAsync(feedIDs: Set<String>, limit: Int? = nil) async -> Set<Article> {
 		await withCheckedContinuation { continuation in
 			_fetchedLovedArticlesAsync(feedIDs: feedIDs, limit: limit) { articles in
+				continuation.resume(returning: articles)
+			}
+		}
+	}
+
+	public func fetchedReadArticlesAsync(feedIDs: Set<String>, limit: Int? = nil) async -> Set<Article> {
+		await withCheckedContinuation { continuation in
+			_fetchedReadArticlesAsync(feedIDs: feedIDs, limit: limit) { articles in
 				continuation.resume(returning: articles)
 			}
 		}
@@ -724,6 +737,11 @@ private extension ArticlesDatabase {
 	func _fetchedLovedArticlesAsync(feedIDs: Set<String>, limit: Int? = nil, _ completion: @escaping ArticleSetResultBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.fetchLovedArticlesAsync(feedIDs, limit, completion)
+	}
+
+	func _fetchedReadArticlesAsync(feedIDs: Set<String>, limit: Int? = nil, _ completion: @escaping ArticleSetResultBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.fetchReadArticlesAsync(feedIDs, limit, completion)
 	}
 
 	func _fetchArticlesMatchingAsync(searchString: String, feedIDs: Set<String>, _ completion: @escaping ArticleSetResultBlock) {
