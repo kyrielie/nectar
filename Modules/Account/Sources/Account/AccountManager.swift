@@ -382,10 +382,6 @@ import ActivityLog
 		return false
 	}
 
-	public func anyAccountHasNetNewsWireNewsSubscription() -> Bool {
-		anyAccountHasFeedWithURL(Self.netNewsWireNewsURL) || anyAccountHasFeedWithURL(Self.jsonNetNewsWireNewsURL)
-	}
-
 	public func anyAccountHasFeedWithURL(_ urlString: String) -> Bool {
 		for account in activeAccounts {
 			if account.existingFeed(withURL: urlString) != nil {
