@@ -8,7 +8,7 @@
 	<string>$(AppIdentifierPrefix)</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.ambrosia.AmbrosiaReader.FeedRefresh</string>
+		<string>com.ambrosia.Nectar.FeedRefresh</string>
 	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
@@ -239,8 +239,8 @@
 		</dict>
 	</array>
 	<key>UserAgent</key>
-	<string>NetNewsWire (RSS Reader; https://netnewswire.com/)</string>
+	<string>Nectar (Ambrosia Reader; https://netnewswire.com/)</string>
 	<key>UserAgentExtended</key>
-	<string>NetNewsWire (RSS Reader; https://netnewswire.com/; [platform]; [version] ([build]))</string>
+	<string>Nectar (Ambrosia Reader; https://netnewswire.com/; [platform]; [version] ([build]))</string>
 </dict>
 </plist>
