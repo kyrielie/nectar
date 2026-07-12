@@ -29,6 +29,13 @@ public struct ParsedItem: Hashable, Sendable {
 	public let tags: Set<String>?
 	public let attachments: Set<ParsedAttachment>?
 
+	// True when the item carries an `_ambrosia` extension object on the wire
+	// (a book), regardless of whether any field inside it is populated --
+	// a book with zero AO3 metadata is still a book, not a blog post.
+	// Not persisted; consulted only by ArticlesTable.update for the
+	// unread-on-import default.
+	public let isAmbrosiaItem: Bool
+
 	// MARK: - Ambrosia extension (`_ambrosia` in JSON Feed 1.1 items)
 	//
 	// Ambrosia's LocalFeedServer sends no `_ambrosia_schema_version` field
@@ -106,6 +113,7 @@ public struct ParsedItem: Hashable, Sendable {
 	            authors: Set<ParsedAuthor>?,
 	            tags: Set<String>?,
 	            attachments: Set<ParsedAttachment>?,
+	            isAmbrosiaItem: Bool = false,
 	            wordCount: Int? = nil,
 	            chapterCurrent: Int? = nil,
 	            chapterTotal: Int? = nil,
@@ -138,6 +146,7 @@ public struct ParsedItem: Hashable, Sendable {
 		self.authors = authors
 		self.tags = tags
 		self.attachments = attachments
+		self.isAmbrosiaItem = isAmbrosiaItem
 		self.wordCount = wordCount
 		self.chapterCurrent = chapterCurrent
 		self.chapterTotal = chapterTotal
