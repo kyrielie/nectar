@@ -86,14 +86,13 @@ import os
 	}
 
 	@MainActor private func refreshFeeds(_ feeds: Set<Feed>, completion: (() -> Void)? = nil) {
-		let specialCaseCutoffDate = Date().bySubtracting(hours: 25)
 		let redditURLToRefresh = Self.redditURLToRefresh(in: feeds)
 
 		var filteredFeeds = Set<Feed>()
 		var skippedFeeds = [(Feed, String)]() // feed and skip reason
 
 		for feed in feeds {
-			let (shouldSkip, reason) = Self.feedShouldBeSkipped(feed, specialCaseCutoffDate, redditURLToRefresh)
+			let (shouldSkip, reason) = Self.feedShouldBeSkipped(feed, redditURLToRefresh)
 			if shouldSkip, let reason {
 				skippedFeeds.append((feed, reason))
 			} else {
@@ -532,40 +531,16 @@ private extension LocalAccountRefresher {
 	/// use of the Twitter API. (Which Twitter took away.)
 	static let badHosts = ["twitter.com", "www.twitter.com", "x.com", "www.x.com"]
 
-	/// Hosts that are exempt from the minimum time between refreshes
-	/// even when they don’t send a Cache-Control header.
-	///
-	/// Feeds that send Cache-Control are already exempt (see
-	/// `feedShouldBeSkippedForTimingReasons`); this list is a safety
-	/// net for some domains that may or may not send Cache-Control.
-	/// The 5-hour Cache-Control cap in
-	/// `feedShouldBeSkippedForCacheControlReasons` still applies.
-	///
-	/// We have permissions from the feed owners for each of these.
-	static let domainsWithNoMinimumTime: Set<String> = [
-		"inessential.com", "ranchero.com", "netnewswire.blog",
-		"daringfireball.net", "redsweater.com", "indiestack.com",
-		"blog.plunkitup.com", "bitsplitting.org", "allenpike.com",
-		"hypercritical.co", "micro.inessential.com", "discourse.netnewswire.com",
-		"onefoottsunami.com", "manton.org", "randsinrepose.com",
-		"micro.blog", "shapeof.com", "flyingmeat.com"
-	]
-
 	/// Returns whether this feed should be skipped and the reason if so.
-	static func feedShouldBeSkipped(_ feed: Feed, _ specialCaseCutoffDate: Date, _ redditURLToRefresh: String?) -> (Bool, String?) {
-		// Paired-library (Ambrosia) feeds point at a server the user runs and
-		// controls on their own network, not a public site we need to be
-		// polite to -- so the Cache-Control and minimum-time-between-checks
-		// throttles below don't apply, and refreshing on demand (e.g. right
-		// after triggering a re-scan on the Mac) needs to always go through.
-		let isPairedLibraryFeed = feed.account?.endpointURL != nil
-
-		if !isPairedLibraryFeed {
-			let (skipForCacheControl, cacheControlReason) = feedShouldBeSkippedForCacheControlReasons(feed)
-			if skipForCacheControl {
-				return (true, cacheControlReason)
-			}
-		}
+	///
+	/// Nectar only ever refreshes feeds from the user's own local Ambrosia
+	/// server (this fork restricts account creation to `.onMyMac`, and every
+	/// feed URL is a route on that account's paired server) -- never a public
+	/// site the app needs to be polite to. There is deliberately no minimum
+	/// time between checks and no Cache-Control throttle here: refreshing on
+	/// demand (pull-to-refresh, or right after a re-scan on the Mac) must
+	/// always go through.
+	static func feedShouldBeSkipped(_ feed: Feed, _ redditURLToRefresh: String?) -> (Bool, String?) {
 		let (skipForDisallowedHost, disallowedHostReason) = feedShouldBeSkippedForDisallowedHostReasons(feed)
 		if skipForDisallowedHost {
 			return (true, disallowedHostReason)
@@ -573,12 +548,6 @@ private extension LocalAccountRefresher {
 		let (skipForReddit, redditReason) = feedShouldBeSkippedForRedditReasons(feed, redditURLToRefresh)
 		if skipForReddit {
 			return (true, redditReason)
-		}
-		if !isPairedLibraryFeed {
-			let (skipForTiming, timingReason) = feedShouldBeSkippedForTimingReasons(feed, specialCaseCutoffDate)
-			if skipForTiming {
-				return (true, timingReason)
-			}
 		}
 		return (false, nil)
 	}
@@ -618,81 +587,6 @@ private extension LocalAccountRefresher {
 				Self.logger.info("LocalAccountRefresher: Dropping request because it’s X/Twitter, which doesn’t provide feeds: \(feed.url)")
 				return (true, "Skipped — host does not provide feeds")
 			}
-		}
-
-		return (false, nil)
-	}
-
-	static let minimumTimeBetweenChecks: TimeInterval = 9 * 60 // 9 minutes
-
-	static func feedShouldBeSkippedForTimingReasons(_ feed: Feed, _ specialCaseCutoffDate: Date) -> (Bool, String?) {
-		guard let lastCheckDate = feed.lastCheckDate else {
-			return (false, nil)
-		}
-
-		// Feeds that send a Cache-Control header are handled elsewhere.
-		if feed.cacheControlInfo != nil {
-			return (false, nil)
-		}
-
-		// Hosts exempt from the minimum time between refreshes.
-		if SpecialCase.urlStringMatchesDomain(feed.url, Array(domainsWithNoMinimumTime)) {
-			return (false, nil)
-		}
-
-		let minutesAgo = Int(Date().timeIntervalSince(lastCheckDate) / 60)
-		let minutesAgoText = "\(minutesAgo) minute\(minutesAgo == 1 ? "" : "s") ago"
-
-		if SpecialCase.urlStringContainSpecialCase(feed.url, [SpecialCase.rachelByTheBayHostName, SpecialCase.openRSSOrgHostName]) {
-			if lastCheckDate > specialCaseCutoffDate {
-				let minimumHours = Int(-specialCaseCutoffDate.timeIntervalSinceNow / 3600)
-				let minimumHoursText = "\(minimumHours) hour\(minimumHours == 1 ? "" : "s")"
-				Self.logger.info("LocalAccountRefresher: Dropping request for special case timing reasons: \(feed.url)")
-				return (true, "Skipped — previous check was \(minutesAgoText) — minimum is \(minimumHoursText)")
-			}
-		}
-
-		if Date().timeIntervalSince(lastCheckDate) < minimumTimeBetweenChecks {
-			let minimumMinutes = Int(minimumTimeBetweenChecks / 60)
-			let minimumMinutesText = "\(minimumMinutes) minute\(minimumMinutes == 1 ? "" : "s")"
-			Self.logger.info("LocalAccountRefresher: Dropping request — previous check was \(minutesAgoText): \(feed.url)")
-			return (true, "Skipped — previous check was \(minutesAgoText) — minimum is \(minimumMinutesText)")
-		}
-
-		return (false, nil)
-	}
-
-	static let cacheControlMaxMaxAge: TimeInterval = 5 * 60 * 60 // 5 hours
-
-	static let cacheControlTimeFormatter: DateFormatter = {
-		let formatter = DateFormatter()
-		formatter.dateStyle = .none
-		formatter.timeStyle = .short
-		return formatter
-	}()
-
-	static func feedShouldBeSkippedForCacheControlReasons(_ feed: Feed) -> (Bool, String?) {
-		guard let cacheControlInfo = feed.cacheControlInfo, !cacheControlInfo.canResume else {
-			return (false, nil)
-		}
-
-		// openrss.org gets unclamped Cache-Control — they configure it correctly.
-		if SpecialCase.urlStringContainSpecialCase(feed.url, [SpecialCase.openRSSOrgHostName]) {
-			let resumeDate = cacheControlInfo.dateCreated + cacheControlInfo.maxAge
-			let readyTime = cacheControlTimeFormatter.string(from: resumeDate)
-			Self.logger.info("LocalAccountRefresher: Dropping request for Cache-Control reasons (openrss.org): \(feed.url)")
-			return (true, "Skipped — Cache-Control, ready at \(readyTime)")
-		}
-
-		// All other feeds: honor Cache-Control with a max max-age
-		// because many sites misconfigure it. We’ve seen max-age as
-		// long as 16 years (for a feed that updates frequently).
-		if !cacheControlInfo.canResume(maxMaxAge: cacheControlMaxMaxAge) {
-			let clampedMaxAge = min(cacheControlMaxMaxAge, cacheControlInfo.maxAge)
-			let resumeDate = cacheControlInfo.dateCreated + clampedMaxAge
-			let readyTime = cacheControlTimeFormatter.string(from: resumeDate)
-			Self.logger.info("LocalAccountRefresher: Dropping request for Cache-Control reasons: \(feed.url)")
-			return (true, "Skipped — Cache-Control, ready at \(readyTime)")
 		}
 
 		return (false, nil)
