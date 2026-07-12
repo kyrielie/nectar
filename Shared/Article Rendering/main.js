@@ -158,6 +158,19 @@ function removeWpSmiley() {
 	}
 }
 
+// The feed icon/avatar (#nnwImageIcon) is just the generic fallback icon rendered
+// as a raster image via the nnwImageIcon:// URL scheme (see ArticleRenderer.swift
+// and ArticleIconSchemeHandler.swift) — it never shows a real per-feed icon.
+// Every bundled and third-party theme's template.html renders this element, so it
+// is removed here in the shared rendering pipeline rather than in each template,
+// which lets user-installed NetNewsWire themes keep working unmodified.
+function removeArticleIconAvatar() {
+	var icon = document.getElementById("nnwImageIcon");
+	if (icon) {
+		icon.remove();
+	}
+}
+
 function processPage() {
 	wrapFrames();
 	wrapTables();
@@ -168,6 +181,7 @@ function processPage() {
 	flattenPreElements();
 	styleLocalFootnotes();
 	removeWpSmiley()
+	removeArticleIconAvatar();
 	postRenderProcessing();
 }
 
