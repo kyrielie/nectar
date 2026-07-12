@@ -128,15 +128,8 @@ function showClickedImage() {
 	window.webkit.messageHandlers.imageWasShown.postMessage("");
 }
 
-function showFeedInspectorSetup() {
-	document.getElementById("nnwImageIcon").onclick = function(event) {
-		window.webkit.messageHandlers.showFeedInspector.postMessage("");
-	}
-}
-
 function postRenderProcessing() {
 	ImageViewer.init();
-	showFeedInspectorSetup();
 }
 
 function onResize() {
