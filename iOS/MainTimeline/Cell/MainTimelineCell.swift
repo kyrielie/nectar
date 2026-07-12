@@ -332,7 +332,7 @@ private extension MainTimelineCell {
 			indicatorView.tintColor = Assets.Colors.star
 			indicatorView.isHidden = false
 		} else if cellData.loved {
-			indicatorView.iconImage = Assets.Images.heartClosed
+			indicatorView.iconImage = Assets.Images.lovedFeed
 			indicatorView.tintColor = RSColor.systemRed
 			indicatorView.isHidden = false
 		} else if !cellData.read {
