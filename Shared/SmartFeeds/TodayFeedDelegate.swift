@@ -18,7 +18,12 @@ struct TodayFeedDelegate: SmartFeedDelegate {
 		return SidebarItemIdentifier.smartFeed(String(describing: TodayFeedDelegate.self))
 	}
 
-	let nameForDisplay = NSLocalizedString("Today", comment: "Today pseudo-feed title")
+	// Kept as "TodayFeedDelegate" (sidebarItemID is derived from the type
+	// name and is effectively persisted via sidebar expansion/selection
+	// state) even though this now means "recently added," not "today" --
+	// renaming the type would make this look like a new, unrelated smart
+	// feed to anything that already has this one expanded or selected.
+	let nameForDisplay = NSLocalizedString("Recently Added", comment: "Recently Added pseudo-feed title")
 	let fetchType = FetchType.today(nil)
 	var smallIcon: IconImage? {
 		Assets.Images.todayFeed
