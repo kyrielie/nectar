@@ -98,7 +98,7 @@ private extension WebViewConfiguration {
 		assert(Thread.isMainThread)
 
 		let preferences = WKWebpagePreferences()
-		preferences.allowsContentJavaScript = AppDefaults.shared.isArticleContentJavascriptEnabled
+		preferences.allowsContentJavaScript = false
 		return preferences
 	}
 
