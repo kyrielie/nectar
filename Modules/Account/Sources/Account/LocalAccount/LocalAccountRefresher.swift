@@ -371,7 +371,7 @@ import os
 		let webserviceError = WebserviceError.httpError(status: statusCode)
 		let statusDescription = webserviceError.localizedDescription
 		let errorMessage = "HTTP \(statusCode) \(statusDescription): \(url.absoluteString)"
-		let error = NSError(domain: "NetNewsWire", code: statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+		let error = NSError(domain: "Nectar", code: statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
 
 		reportFeedRefreshError(feed: feed, error: error, activityKind: .refreshFeedContent(feedURL: feed.url))
 	}

@@ -17,11 +17,12 @@ extension ArticleStatus {
 		let read = row.bool(forColumn: DatabaseKey.read)
 		let starred = row.bool(forColumn: DatabaseKey.starred)
 		let readingProgress = row.columnIsNull(DatabaseKey.readingProgress) ? nil : row.double(forColumn: DatabaseKey.readingProgress)
+		let loved = row.bool(forColumn: DatabaseKey.loved)
 
-		self.init(articleID: articleID, read: read, starred: starred, dateArrived: dateArrived, readingProgress: readingProgress)
+		self.init(articleID: articleID, read: read, starred: starred, dateArrived: dateArrived, readingProgress: readingProgress, loved: loved)
 	}
 
 	func databaseDictionary() -> DatabaseDictionary {
-		return [DatabaseKey.articleID: articleID, DatabaseKey.read: read, DatabaseKey.starred: starred, DatabaseKey.dateArrived: dateArrived]
+		return [DatabaseKey.articleID: articleID, DatabaseKey.read: read, DatabaseKey.starred: starred, DatabaseKey.dateArrived: dateArrived, DatabaseKey.loved: loved]
 	}
 }

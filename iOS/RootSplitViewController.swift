@@ -163,4 +163,8 @@ final class RootSplitViewController: UISplitViewController {
 	@objc func toggleStarred(_ sender: Any?) {
 		coordinator.toggleStarredForCurrentArticle()
 	}
+
+	@objc func toggleLoved(_ sender: Any?) {
+		coordinator.toggleLovedForCurrentArticle()
+	}
 }

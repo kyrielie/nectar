@@ -143,7 +143,7 @@ nonisolated private extension HTMLMetadataDownloader {
 				await returnStaleCacheIfAvailable(url)
 
 				let userInfo = [NSLocalizedDescriptionKey: "HTTP \(statusCode)"]
-				let statusError = NSError(domain: "NetNewsWire", code: statusCode, userInfo: userInfo)
+				let statusError = NSError(domain: "Nectar", code: statusCode, userInfo: userInfo)
 				activityLog.didFail(.htmlMetadataDownloader, kind: kind, error: statusError)
 
 			} catch {

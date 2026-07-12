@@ -108,6 +108,20 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		fetchArticlesCount { self.fetchStarredArticlesCount(feedIDs, $0) }
 	}
 
+	// MARK: - Fetching Loved Articles (Phase 5)
+
+	func fetchLovedArticles(_ feedIDs: Set<String>, _ limit: Int?) -> Set<Article> {
+		fetchArticles { self.fetchLovedArticles(feedIDs, limit, $0) }
+	}
+
+	func fetchLovedArticlesAsync(_ feedIDs: Set<String>, _ limit: Int?, _ completion: @escaping ArticleSetResultBlock) {
+		fetchArticlesAsync({ self.fetchLovedArticles(feedIDs, limit, $0) }, completion)
+	}
+
+	func fetchLovedArticlesCount(_ feedIDs: Set<String>) -> Int {
+		fetchArticlesCount { self.fetchLovedArticlesCount(feedIDs, $0) }
+	}
+
 	// MARK: - Fetching Counts Async
 
 	func fetchArticleCountsAsync(_ feedIDs: Set<String>, _ completion: @escaping @Sendable (ArticleCounts) -> Void) {
@@ -249,12 +263,12 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			let newArticles = self.findAndSaveNewArticles(incomingArticles, fetchedArticlesDictionary, database) // 5
 			let updatedArticles = self.findAndSaveUpdatedArticles(incomingArticles, fetchedArticlesDictionary, database) // 6
 
-			// Articles to delete are 1) not starred and 2) older than 30 days and 3) no longer in feed.
+			// Articles to delete are 1) not starred, not loved, and 2) older than 30 days and 3) no longer in feed.
 			let articlesToDelete: Set<Article>
 			if deleteOlder {
 				let cutoffDate = Date().bySubtracting(days: 30)
 				articlesToDelete = fetchedArticles.filter { (article) -> Bool in
-					return !article.status.starred && article.status.dateArrived < cutoffDate && !articleIDs.contains(article.articleID)
+					return !article.status.starred && !article.status.loved && article.status.dateArrived < cutoffDate && !articleIDs.contains(article.articleID)
 				}
 			} else {
 				articlesToDelete = Set<Article>()
@@ -432,6 +446,25 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
+	func fetchLovedAndUnreadCount(_ feedIDs: Set<String>, _ completion: @escaping SingleUnreadCountCompletionBlock) {
+		if feedIDs.isEmpty {
+			completion(0)
+			return
+		}
+
+		queue.runInDatabase { database in
+			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
+			let sql = "select count(*) from articles natural join statuses where feedID in \(placeholders) and read=0 and loved=1;"
+			let parameters = Array(feedIDs) as [Any]
+
+			let unreadCount = self.numberWithSQLAndParameters(sql, parameters, in: database)
+
+			DispatchQueue.main.async {
+				completion(unreadCount)
+			}
+		}
+	}
+
 	func fetchArticlesCountSince(_ feedIDs: Set<String>, _ cutoffDate: Date, _ completion: @escaping SingleUnreadCountCompletionBlock) {
 		// Total count (read and unread) since a cutoff date — today's count, for instance.
 		if feedIDs.isEmpty {
@@ -475,6 +508,25 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
+	func fetchLovedArticlesCountAsync(_ feedIDs: Set<String>, _ completion: @escaping SingleUnreadCountCompletionBlock) {
+		if feedIDs.isEmpty {
+			completion(0)
+			return
+		}
+
+		queue.runInDatabase { database in
+			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
+			let sql = "select count(*) from articles natural join statuses where feedID in \(placeholders) and loved=1;"
+			let parameters = Array(feedIDs) as [Any]
+
+			let count = self.numberWithSQLAndParameters(sql, parameters, in: database)
+
+			DispatchQueue.main.async {
+				completion(count)
+			}
+		}
+	}
+
 	// MARK: - Statuses
 
 	func fetchUnreadArticleIDsAsync(_ completion: @escaping ArticleIDsCompletionBlock) {
@@ -485,8 +537,16 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		statusesTable.fetchArticleIDsAsync(.starred, true, completion)
 	}
 
+	func fetchLovedArticleIDsAsync(_ completion: @escaping ArticleIDsCompletionBlock) {
+		statusesTable.fetchArticleIDsAsync(.loved, true, completion)
+	}
+
 	func fetchStarredArticleIDs() -> Set<String> {
 		statusesTable.fetchStarredArticleIDs()
+	}
+
+	func fetchLovedArticleIDs() -> Set<String> {
+		statusesTable.fetchLovedArticleIDs()
 	}
 
 	func fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDate(_ completion: @escaping ArticleIDsCompletionBlock) {
@@ -605,7 +665,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 		queue.runInTransaction { database in
 			func deleteOldArticles(cutoffDate: Date) {
-				let sql = "delete from articles where articleID in (select articleID from articles natural join statuses where dateArrived<? and read=1 and starred=0);"
+				let sql = "delete from articles where articleID in (select articleID from articles natural join statuses where dateArrived<? and read=1 and starred=0 and loved=0);"
 				let parameters = [cutoffDate] as [Any]
 				database.executeUpdate(sql, withArgumentsIn: parameters)
 			}
@@ -635,10 +695,10 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 			switch self.retentionStyle {
 			case .syncSystem:
-				sql = "delete from statuses where dateArrived<? and read=1 and starred=0 and articleID not in (select articleID from articles);"
+				sql = "delete from statuses where dateArrived<? and read=1 and starred=0 and loved=0 and articleID not in (select articleID from articles);"
 				cutoffDate = Date().bySubtracting(days: 180)
 			case .feedBased:
-				sql = "delete from statuses where dateArrived<? and starred=0 and articleID not in (select articleID from articles);"
+				sql = "delete from statuses where dateArrived<? and starred=0 and loved=0 and articleID not in (select articleID from articles);"
 				cutoffDate = Date().bySubtracting(days: 30)
 			}
 
@@ -882,6 +942,31 @@ nonisolated private extension ArticlesTable {
 		let parameters = feedIDs.map { $0 as AnyObject }
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
 		let whereClause = "feedID in \(placeholders) and starred=1"
+		return fetchArticleCountsWithWhereClause(database, whereClause: whereClause, parameters: parameters)
+	}
+
+	func fetchLovedArticles(_ feedIDs: Set<String>, _ limit: Int?, _ database: FMDatabase) -> Set<Article> {
+		// select * from articles natural join statuses where feedID in ('http://ranchero.com/xml/rss.xml') and loved=1;
+		if feedIDs.isEmpty {
+			return Set<Article>()
+		}
+		let parameters = feedIDs.map { $0 as AnyObject }
+		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
+		var whereClause = "feedID in \(placeholders) and loved=1"
+		if let limit = limit {
+			whereClause.append(" order by coalesce(datePublished, dateModified, dateArrived) desc limit \(limit)")
+		}
+		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
+	}
+
+	func fetchLovedArticlesCount(_ feedIDs: Set<String>, _ database: FMDatabase) -> Int {
+		// select count from articles natural join statuses where feedID in ('http://ranchero.com/xml/rss.xml') and loved=1;
+		if feedIDs.isEmpty {
+			return 0
+		}
+		let parameters = feedIDs.map { $0 as AnyObject }
+		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
+		let whereClause = "feedID in \(placeholders) and loved=1"
 		return fetchArticleCountsWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
 

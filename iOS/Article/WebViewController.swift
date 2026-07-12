@@ -319,7 +319,7 @@ final class WebViewController: UIViewController {
 
 	func showActivityDialog(popOverBarButtonItem: UIBarButtonItem? = nil) {
 		guard let url = article?.preferredURL else { return }
-		let activityViewController = UIActivityViewController(url: url, title: article?.title, applicationActivities: [FindInArticleActivity(), OpenInBrowserActivity()])
+		let activityViewController = UIActivityViewController(url: url, title: article?.title, applicationActivities: [FindInArticleActivity(), OpenInBrowserActivity(), ShareAO3SeriesLinkActivity(seriesURL: article?.ao3SeriesURL)])
 		activityViewController.popoverPresentationController?.barButtonItem = popOverBarButtonItem
 		present(activityViewController, animated: true)
 	}
@@ -360,6 +360,7 @@ extension WebViewController: UIContextMenuInteractionDelegate {
 				toggleActions.append(action)
 			}
 			toggleActions.append(self.toggleStarredAction())
+			toggleActions.append(self.toggleLovedAction())
 			menus.append(UIMenu(title: "", options: .displayInline, children: toggleActions))
 
 			if let action = self.nextUnreadArticleAction() {
@@ -908,6 +909,15 @@ private extension WebViewController {
 		let starredImage = starred ? Assets.Images.starOpen : Assets.Images.starClosed
 		return UIAction(title: title, image: starredImage) { [weak self] _ in
 			self?.coordinator.toggleStarredForCurrentArticle()
+		}
+	}
+
+	func toggleLovedAction() -> UIAction {
+		let loved = article?.status.loved ?? false
+		let title = loved ? NSLocalizedString("Remove from Loved", comment: "Command") : NSLocalizedString("Add to Loved", comment: "Command")
+		let lovedImage = loved ? Assets.Images.heartOpen : Assets.Images.heartClosed
+		return UIAction(title: title, image: lovedImage) { [weak self] _ in
+			self?.coordinator.toggleLovedForCurrentArticle()
 		}
 	}
 

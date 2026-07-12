@@ -110,6 +110,10 @@ final class StatusesTable: DatabaseTable, Sendable {
 		fetchArticleIDs("select articleID from statuses where starred=1;")
 	}
 
+	func fetchLovedArticleIDs() -> Set<String> {
+		fetchArticleIDs("select articleID from statuses where loved=1;")
+	}
+
 	func fetchArticleIDsAsync(_ statusKey: ArticleStatus.Key, _ value: Bool, _ completion: @escaping ArticleIDsCompletionBlock) {
 		queue.runInDatabase { database in
 			var sql = "select articleID from statuses where \(statusKey.rawValue)="

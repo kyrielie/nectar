@@ -17,6 +17,7 @@ public final class ArticleStatus: Hashable, Sendable {
 	public enum Key: String, Sendable {
 		case read
 		case starred
+		case loved
 	}
 
 	public let articleID: String
@@ -26,6 +27,7 @@ public final class ArticleStatus: Hashable, Sendable {
 		var read: Bool
 		var starred: Bool
 		var readingProgress: Double?
+		var loved: Bool
 	}
 
 	private let state: OSAllocatedUnfairLock<State>
@@ -62,9 +64,18 @@ public final class ArticleStatus: Hashable, Sendable {
 		}
 	}
 
-	public init(articleID: String, read: Bool, starred: Bool, dateArrived: Date, readingProgress: Double? = nil) {
+	public var loved: Bool {
+		get {
+			state.withLock { $0.loved }
+		}
+		set {
+			state.withLock { $0.loved = newValue }
+		}
+	}
+
+	public init(articleID: String, read: Bool, starred: Bool, dateArrived: Date, readingProgress: Double? = nil, loved: Bool = false) {
 		self.articleID = articleID
-		self.state = OSAllocatedUnfairLock(initialState: State(read: read, starred: starred, readingProgress: readingProgress))
+		self.state = OSAllocatedUnfairLock(initialState: State(read: read, starred: starred, readingProgress: readingProgress, loved: loved))
 		self.dateArrived = dateArrived
 	}
 
@@ -78,6 +89,8 @@ public final class ArticleStatus: Hashable, Sendable {
 			return read
 		case .starred:
 			return starred
+		case .loved:
+			return loved
 		}
 	}
 
@@ -87,6 +100,8 @@ public final class ArticleStatus: Hashable, Sendable {
 			read = status
 		case .starred:
 			starred = status
+		case .loved:
+			loved = status
 		}
 	}
 
@@ -99,7 +114,7 @@ public final class ArticleStatus: Hashable, Sendable {
 	// MARK: - Equatable
 
 	public static func ==(lhs: ArticleStatus, rhs: ArticleStatus) -> Bool {
-		return lhs.articleID == rhs.articleID && lhs.dateArrived == rhs.dateArrived && lhs.read == rhs.read && lhs.starred == rhs.starred && lhs.readingProgress == rhs.readingProgress
+		return lhs.articleID == rhs.articleID && lhs.dateArrived == rhs.dateArrived && lhs.read == rhs.read && lhs.starred == rhs.starred && lhs.readingProgress == rhs.readingProgress && lhs.loved == rhs.loved
 	}
 }
 

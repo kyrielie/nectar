@@ -204,6 +204,9 @@ private extension KeyboardManager {
 		let toggleStarredTitle = NSLocalizedString("Toggle Read Later Status", comment: "Toggle Read Later Status")
 		keys.append(KeyboardManager.createKeyCommand(title: toggleStarredTitle, action: "toggleStarred:", input: "l", modifiers: [.command, .shift]))
 
+		let toggleLovedTitle = NSLocalizedString("Toggle Loved Status", comment: "Toggle Loved Status")
+		keys.append(KeyboardManager.createKeyCommand(title: toggleLovedTitle, action: "toggleLoved:", input: "v", modifiers: [.command, .shift]))
+
 		let findInArticleTitle = NSLocalizedString("Find in Article", comment: "Find in Article")
 		keys.append(KeyboardManager.createKeyCommand(title: findInArticleTitle, action: "beginFind:", input: "f", modifiers: [.command]))
 

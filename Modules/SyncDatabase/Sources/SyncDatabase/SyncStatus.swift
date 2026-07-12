@@ -14,6 +14,7 @@ public struct SyncStatus: Hashable, Equatable, Sendable {
 	public enum Key: String, Sendable {
 		case read
 		case starred
+		case loved
 		case deleted
 		case new
 
@@ -23,6 +24,8 @@ public struct SyncStatus: Hashable, Equatable, Sendable {
 				self = Self.read
 			case .starred:
 				self = Self.starred
+			case .loved:
+				self = Self.loved
 			}
 		}
 	}

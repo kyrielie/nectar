@@ -53,7 +53,7 @@
 			containerPortal = 849C64581ED37A5D003D8FC0 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 840D617B2029031C009BC708;
-			remoteInfo = "NetNewsWire-iOS";
+			remoteInfo = "Nectar-iOS";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -124,7 +124,7 @@
 			membershipExceptions = (
 				Resources/Info.plist,
 			);
-			target = 840D617B2029031C009BC708 /* NetNewsWire-iOS */;
+			target = 840D617B2029031C009BC708 /* Nectar-iOS */;
 		};
 		84D35E0B2DB9F32D004AA60E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -135,7 +135,7 @@
 				SmartFeeds/SmartFeedPasteboardWriter.swift,
 				Timer/AccountRefreshTimer.swift,
 			);
-			target = 840D617B2029031C009BC708 /* NetNewsWire-iOS */;
+			target = 840D617B2029031C009BC708 /* Nectar-iOS */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -249,9 +249,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		518B2ED12351B3DD00400001 /* NetNewsWire-iOSTests */ = {
+		518B2ED12351B3DD00400001 /* Nectar-iOSTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 518B2EE72351B3DD00400001 /* Build configuration list for PBXNativeTarget "NetNewsWire-iOSTests" */;
+			buildConfigurationList = 518B2EE72351B3DD00400001 /* Build configuration list for PBXNativeTarget "Nectar-iOSTests" */;
 			buildPhases = (
 				518B2ECE2351B3DD00400001 /* Sources */,
 				518B2ECF2351B3DD00400001 /* Frameworks */,
@@ -262,14 +262,14 @@
 			dependencies = (
 				518B2ED82351B3DD00400001 /* PBXTargetDependency */,
 			);
-			name = "NetNewsWire-iOSTests";
-			productName = "NetNewsWire-iOSTests";
+			name = "Nectar-iOSTests";
+			productName = "Nectar-iOSTests";
 			productReference = 518B2ED22351B3DD00400001 /* NetNewsWire-iOSTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		840D617B2029031C009BC708 /* NetNewsWire-iOS */ = {
+		840D617B2029031C009BC708 /* Nectar-iOS */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 840D61A32029031E009BC708 /* Build configuration list for PBXNativeTarget "NetNewsWire-iOS" */;
+			buildConfigurationList = 840D61A32029031E009BC708 /* Build configuration list for PBXNativeTarget "Nectar-iOS" */;
 			buildPhases = (
 				840D61782029031C009BC708 /* Sources */,
 				840D61792029031C009BC708 /* Frameworks */,
@@ -286,7 +286,7 @@
 				84A6CFB52D1B4EC500F23315 /* iOS */,
 				84D35D422DB9F32D004AA60E /* Shared */,
 			);
-			name = "NetNewsWire-iOS";
+			name = "Nectar-iOS";
 			packageProductDependencies = (
 				516B695E24D2F33B00B5702F /* Account */,
 				8C00352722FF4540BF3E5072 /* ErrorLog */,
@@ -304,7 +304,7 @@
 				84EE3F142DB8A0A0009D3A8D /* RSTree */,
 				84EE434A2DB8A44C009D3A8D /* RSDatabase */,
 			);
-			productName = "NetNewsWire-iOS";
+			productName = "Nectar-iOS";
 			productReference = 840D617C2029031C009BC708 /* Ambrosia Reader.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -353,8 +353,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				840D617B2029031C009BC708 /* NetNewsWire-iOS */,
-				518B2ED12351B3DD00400001 /* NetNewsWire-iOSTests */,
+				840D617B2029031C009BC708 /* Nectar-iOS */,
+				518B2ED12351B3DD00400001 /* Nectar-iOSTests */,
 			);
 		};
 /* End PBXProject section */
@@ -427,7 +427,7 @@
 /* Begin PBXTargetDependency section */
 		518B2ED82351B3DD00400001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 840D617B2029031C009BC708 /* NetNewsWire-iOS */;
+			target = 840D617B2029031C009BC708 /* Nectar-iOS */;
 			targetProxy = 518B2ED72351B3DD00400001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -451,7 +451,7 @@
 			baseConfigurationReferenceRelativePath = NetNewsWire_iOSTests_target.xcconfig;
 			buildSettings = {
 				DEVELOPMENT_TEAM = S35M3D45Z9;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kyrielie.nectar.AmbrosiaReaderTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kyrielie.nectar.NectarTests;
 			};
 			name = Debug;
 		};
@@ -461,7 +461,7 @@
 			baseConfigurationReferenceRelativePath = NetNewsWire_iOSTests_target.xcconfig;
 			buildSettings = {
 				DEVELOPMENT_TEAM = S35M3D45Z9;
-				PRODUCT_BUNDLE_IDENTIFIER = com.kyrielie.nectar.AmbrosiaReaderTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kyrielie.nectar.NectarTests;
 			};
 			name = Release;
 		};
@@ -511,7 +511,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		518B2EE72351B3DD00400001 /* Build configuration list for PBXNativeTarget "NetNewsWire-iOSTests" */ = {
+		518B2EE72351B3DD00400001 /* Build configuration list for PBXNativeTarget "Nectar-iOSTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				518B2ED92351B3DD00400001 /* Debug */,
@@ -520,7 +520,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		840D61A32029031E009BC708 /* Build configuration list for PBXNativeTarget "NetNewsWire-iOS" */ = {
+		840D61A32029031E009BC708 /* Build configuration list for PBXNativeTarget "Nectar-iOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				840D61A42029031E009BC708 /* Debug */,
