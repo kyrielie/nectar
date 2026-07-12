@@ -18,7 +18,14 @@ import Images
 	var titleRect: CGRect { get }
 	var progressRect: CGRect { get }
 	var summaryRect: CGRect { get }
-	var metadataRect: CGRect { get }
+	/// One rect per plain-text metadata line -- see `MainTimelineCellData.metadataLines`.
+	/// `.compact` yields at most one; `.expanded` yields one per non-nil field;
+	/// `.badges` yields at most one (the word-count/completion line, with
+	/// fandom/rating/warnings in `metadataBadgeRects` instead).
+	var metadataLineRects: [CGRect] { get }
+	/// Wrapping pill-badge rects for fandom/rating/warnings, non-empty only in
+	/// `.badges` mode -- see `MainTimelineCellData.metadataBadges`.
+	var metadataBadgeRects: [CGRect] { get }
 	var feedNameRect: CGRect { get }
 	var dateRect: CGRect { get }
 	var separatorRect: CGRect { get }
@@ -115,21 +122,61 @@ extension MainTimelineCellLayout {
 		return r
 	}
 
-	// Single truncating line — same shape as rectForFeedName, collapses to
-	// zero when there's nothing to show, same as rectForTitle/rectForSummary
-	// do when their strings are empty.
-	static func rectForMetadata(_ cellData: MainTimelineCellData, _ point: CGPoint, _ textAreaWidth: CGFloat) -> CGRect {
-		var r = CGRect.zero
-		if cellData.metadataString.isEmpty {
-			return r
+	// One rect per line in cellData.metadataLines, stacked vertically -- same
+	// "hidden when zero, not confirmed-none" collapse as rectForTitle/
+	// rectForSummary when the line list is empty. `.compact` and `.badges`
+	// produce at most one rect here (single truncating line, same shape the
+	// old single-mode rectForMetadata always had); `.expanded` can produce
+	// several.
+	static func rectsForMetadataLines(_ cellData: MainTimelineCellData, _ point: CGPoint, _ textAreaWidth: CGFloat) -> [CGRect] {
+		var rects: [CGRect] = []
+		var y = point.y
+		for line in cellData.metadataLines {
+			guard !line.isEmpty else { continue }
+			var r = CGRect.zero
+			r.origin = CGPoint(x: point.x, y: y)
+			let size = SingleLineUILabelSizer.size(for: line, font: MainTimelineDefaultCellLayout.metadataFont)
+			r.size = size
+			if r.size.width > textAreaWidth {
+				r.size.width = textAreaWidth
+			}
+			rects.append(r)
+			y = r.maxY + MainTimelineDefaultCellLayout.metadataLineSpacing
 		}
-		r.origin = point
-		let size = SingleLineUILabelSizer.size(for: cellData.metadataString, font: MainTimelineDefaultCellLayout.metadataFont)
-		r.size = size
-		if r.size.width > textAreaWidth {
-			r.size.width = textAreaWidth
+		return rects
+	}
+
+	// Flow-wrapping pill rects for cellData.metadataBadges -- unlike the stacked
+	// line rects above, badge count and per-badge width both vary, so badges
+	// wrap to a new row (rather than each getting a fixed-height rect) whenever
+	// the next pill would overflow textAreaWidth. Empty array (not `.badges`
+	// mode, or no fandom/rating/warnings data) collapses to no rects, same
+	// hidden-when-empty rule as everywhere else in this layout.
+	static func rectsForMetadataBadges(_ cellData: MainTimelineCellData, _ point: CGPoint, _ textAreaWidth: CGFloat) -> [CGRect] {
+		var rects: [CGRect] = []
+		var x = point.x
+		var y = point.y
+		var isFirstOnRow = true
+
+		for badge in cellData.metadataBadges {
+			guard !badge.isEmpty else { continue }
+			let textSize = SingleLineUILabelSizer.size(for: badge, font: MainTimelineDefaultCellLayout.badgeFont)
+			let cappedTextWidth = min(textSize.width, textAreaWidth - MainTimelineDefaultCellLayout.badgeHorizontalPadding * 2)
+			let badgeWidth = cappedTextWidth + MainTimelineDefaultCellLayout.badgeHorizontalPadding * 2
+			let badgeHeight = textSize.height + MainTimelineDefaultCellLayout.badgeVerticalPadding * 2
+
+			if !isFirstOnRow, (x - point.x) + badgeWidth > textAreaWidth {
+				x = point.x
+				y += badgeHeight + MainTimelineDefaultCellLayout.badgeLineSpacing
+				isFirstOnRow = true
+			}
+
+			rects.append(CGRect(x: x, y: y, width: badgeWidth, height: badgeHeight))
+			x += badgeWidth + MainTimelineDefaultCellLayout.badgeSpacing
+			isFirstOnRow = false
 		}
-		return r
+
+		return rects
 	}
 }
 
@@ -165,6 +212,15 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 
 	static var metadataFont: UIFont { UIFont.preferredFont(forTextStyle: .caption1) }
 	static let metadataBottomMargin = CGFloat(1)
+	// Vertical gap between stacked .expanded metadata lines.
+	static let metadataLineSpacing = CGFloat(2)
+
+	// .badges pill styling.
+	static var badgeFont: UIFont { UIFont.preferredFont(forTextStyle: .caption2) }
+	static let badgeHorizontalPadding = CGFloat(8)
+	static let badgeVerticalPadding = CGFloat(3)
+	static let badgeSpacing = CGFloat(6)
+	static let badgeLineSpacing = CGFloat(6)
 
 	let height: CGFloat
 	let unreadIndicatorRect: CGRect
@@ -176,7 +232,8 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 	let feedNameRect: CGRect
 	let dateRect: CGRect
 	let separatorRect: CGRect
-	let metadataRect: CGRect
+	let metadataLineRects: [CGRect]
+	let metadataBadgeRects: [CGRect]
 
 	init(width: CGFloat, insets: UIEdgeInsets, cellData: MainTimelineCellData) {
 
@@ -222,9 +279,14 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 		}
 		currentPoint.y = y
 
-		self.metadataRect = Self.rectForMetadata(cellData, currentPoint, textAreaWidth)
-		if self.metadataRect != CGRect.zero {
-			currentPoint.y = self.metadataRect.maxY + Self.metadataBottomMargin
+		self.metadataLineRects = Self.rectsForMetadataLines(cellData, currentPoint, textAreaWidth)
+		if !self.metadataLineRects.isEmpty {
+			currentPoint.y = self.metadataLineRects.maxY() + Self.metadataBottomMargin
+		}
+
+		self.metadataBadgeRects = Self.rectsForMetadataBadges(cellData, currentPoint, textAreaWidth)
+		if !self.metadataBadgeRects.isEmpty {
+			currentPoint.y = self.metadataBadgeRects.maxY() + Self.metadataBottomMargin
 		}
 
 		self.dateRect = Self.rectForDate(cellData, currentPoint, textAreaWidth)
@@ -259,7 +321,8 @@ struct MainTimelineAccessibilityCellLayout: MainTimelineCellLayout {
 	let feedNameRect: CGRect
 	let dateRect: CGRect
 	let separatorRect: CGRect
-	let metadataRect: CGRect
+	let metadataLineRects: [CGRect]
+	let metadataBadgeRects: [CGRect]
 
 	init(width: CGFloat, insets: UIEdgeInsets, cellData: MainTimelineCellData) {
 
@@ -299,9 +362,14 @@ struct MainTimelineAccessibilityCellLayout: MainTimelineCellLayout {
 
 		currentPoint.y = [self.titleRect, self.progressRect, self.summaryRect].maxY()
 
-		self.metadataRect = Self.rectForMetadata(cellData, currentPoint, textAreaWidth)
-		if self.metadataRect != CGRect.zero {
-			currentPoint.y = self.metadataRect.maxY + MainTimelineDefaultCellLayout.metadataBottomMargin
+		self.metadataLineRects = Self.rectsForMetadataLines(cellData, currentPoint, textAreaWidth)
+		if !self.metadataLineRects.isEmpty {
+			currentPoint.y = self.metadataLineRects.maxY() + MainTimelineDefaultCellLayout.metadataBottomMargin
+		}
+
+		self.metadataBadgeRects = Self.rectsForMetadataBadges(cellData, currentPoint, textAreaWidth)
+		if !self.metadataBadgeRects.isEmpty {
+			currentPoint.y = self.metadataBadgeRects.maxY() + MainTimelineDefaultCellLayout.metadataBottomMargin
 		}
 
 		if cellData.showFeedName != .none {

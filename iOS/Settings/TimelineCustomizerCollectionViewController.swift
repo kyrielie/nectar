@@ -40,6 +40,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 
 	private var cachedTimelineLines: Int = AppDefaults.shared.timelineNumberOfLines
 	private var cachedIconSize: IconSize = AppDefaults.shared.timelineIconSize
+	private var cachedTagDisplayMode: TagDisplayMode = AppDefaults.shared.timelineTagDisplayMode
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -56,6 +57,11 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 
 				if AppDefaults.shared.timelineIconSize != self.cachedIconSize {
 					self.cachedIconSize = AppDefaults.shared.timelineIconSize
+					self.userDefaultsDidChange()
+				}
+
+				if AppDefaults.shared.timelineTagDisplayMode != self.cachedTagDisplayMode {
+					self.cachedTagDisplayMode = AppDefaults.shared.timelineTagDisplayMode
 					self.userDefaultsDidChange()
 				}
 			}
@@ -85,7 +91,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
     // MARK: UICollectionViewDataSource
 
     override func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return 4
+        return 5
     }
 
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -108,16 +114,8 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 		}
 
 		if indexPath.section == 2 {
-			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath) as! MainTimelineCell
-			cell.cellData = MainTimelineCellData(article: previewArticle,
-												 showFeedName: .byline,
-												 feedName: "The Fellowship of the Ring",
-												 byline: "J. R. R. Tolkien",
-												 iconImage: IconImage(Assets.Images.nnwFeedIcon),
-												 showIcon: false,
-												 numberOfLines: AppDefaults.shared.timelineNumberOfLines,
-												 iconSize: AppDefaults.shared.timelineIconSize)
-			cell.isPreview = true
+			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "TagDisplayModeSelector", for: indexPath) as! TimelineCustomizerCell
+			cell.sliderConfiguration = .tagDisplayMode
 			return cell
 		}
 
@@ -128,9 +126,25 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 												 feedName: "The Fellowship of the Ring",
 												 byline: "J. R. R. Tolkien",
 												 iconImage: IconImage(Assets.Images.nnwFeedIcon),
+												 showIcon: false,
+												 numberOfLines: AppDefaults.shared.timelineNumberOfLines,
+												 iconSize: AppDefaults.shared.timelineIconSize,
+												 tagDisplayMode: AppDefaults.shared.timelineTagDisplayMode)
+			cell.isPreview = true
+			return cell
+		}
+
+		if indexPath.section == 4 {
+			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath) as! MainTimelineCell
+			cell.cellData = MainTimelineCellData(article: previewArticle,
+												 showFeedName: .byline,
+												 feedName: "The Fellowship of the Ring",
+												 byline: "J. R. R. Tolkien",
+												 iconImage: IconImage(Assets.Images.nnwFeedIcon),
 												 showIcon: true,
 												 numberOfLines: AppDefaults.shared.timelineNumberOfLines,
-												 iconSize: AppDefaults.shared.timelineIconSize)
+												 iconSize: AppDefaults.shared.timelineIconSize,
+												 tagDisplayMode: AppDefaults.shared.timelineTagDisplayMode)
 			cell.isPreview = true
 			return cell
 		}
@@ -160,8 +174,10 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 		case 1:
 			header.label.text = NSLocalizedString("Number of Lines", comment: "Number of Lines")
 		case 2:
-			header.label.text = NSLocalizedString("No Icon Preview", comment: "No Icon Preview")
+			header.label.text = NSLocalizedString("Tag Display", comment: "Tag Display")
 		case 3:
+			header.label.text = NSLocalizedString("No Icon Preview", comment: "No Icon Preview")
+		case 4:
 			header.label.text = NSLocalizedString("Icon Preview", comment: "Icon Preview")
 		default:
 			header.label.text = NSLocalizedString("", comment: "")
@@ -175,7 +191,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 	}
 
 	override func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
-		if indexPath.section > 1 {
+		if indexPath.section > 2 {
 			return false
 		}
 		return true
@@ -184,7 +200,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 	// MARK: Notifications
 
 	func userDefaultsDidChange() {
-		collectionView.reloadSections([2, 3])
+		collectionView.reloadSections([3, 4])
 	}
 
 }

@@ -29,10 +29,37 @@ enum UserInterfaceColorPalette: Int, CustomStringConvertible, CaseIterable {
 	}
 }
 
+/// How the timeline card renders word count / completion / fandom / rating /
+/// warnings. `.compact` is the default (today's single truncating line);
+/// `.expanded` and `.badges` are alternative modes chosen via Settings →
+/// Timeline Layout, independent of the number-of-lines slider, which continues
+/// to govern the summary/description text.
+enum TagDisplayMode: Int, CaseIterable, Sendable {
+	/// Today's single truncating `metadataString`-style line.
+	case compact = 1
+	/// Word count / completion / fandom / rating / warnings, each on its own row.
+	case expanded = 2
+	/// Word count / completion stays on one line; fandom + rating + warnings
+	/// wrap as small pill badges below it.
+	case badges = 3
+
+	var description: String {
+		switch self {
+		case .compact:
+			return NSLocalizedString("Compact", comment: "Compact tag display mode")
+		case .expanded:
+			return NSLocalizedString("Expanded", comment: "Expanded tag display mode")
+		case .badges:
+			return NSLocalizedString("Badges", comment: "Badges tag display mode")
+		}
+	}
+}
+
 extension Notification.Name {
 	public static let userInterfaceColorPaletteDidUpdate = Notification.Name("UserInterfaceColorPaletteDidUpdateNotification")
 	public static let timelineIconSizeDidChange = Notification.Name("TimelineIconSizeDidChangeNotification")
 	public static let timelineNumberOfLinesDidChange = Notification.Name("TimelineNumberOfLinesDidChangeNotification")
+	public static let timelineTagDisplayModeDidChange = Notification.Name("TimelineTagDisplayModeDidChangeNotification")
 }
 
 final class AppDefaults: Sendable {
@@ -56,6 +83,7 @@ final class AppDefaults: Sendable {
 		static let refreshClearsReadArticles = "refreshClearsReadArticles"
 		static let timelineNumberOfLines = "timelineNumberOfLines"
 		static let timelineIconDimension = "timelineIconSize"
+		static let timelineTagDisplayMode = "timelineTagDisplayMode"
 		static let timelineSortDirection = "timelineSortDirection"
 		static let timelineSortField = "timelineSortField"
 		static let articleFullscreenAvailable = "articleFullscreenAvailable"
@@ -269,6 +297,17 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	var timelineTagDisplayMode: TagDisplayMode {
+		get {
+			let rawValue = AppDefaults.store.integer(forKey: Key.timelineTagDisplayMode)
+			return TagDisplayMode(rawValue: rawValue) ?? .compact
+		}
+		set {
+			AppDefaults.store.set(newValue.rawValue, forKey: Key.timelineTagDisplayMode)
+			NotificationCenter.default.post(name: .timelineTagDisplayModeDidChange, object: nil)
+		}
+	}
+
 	var currentThemeName: String? {
 		get {
 			return AppDefaults.string(for: Key.currentThemeName)
@@ -403,6 +442,7 @@ final class AppDefaults: Sendable {
 										Key.refreshClearsReadArticles: false,
 										Key.timelineNumberOfLines: 2,
 										Key.timelineIconDimension: IconSize.medium.rawValue,
+										Key.timelineTagDisplayMode: TagDisplayMode.compact.rawValue,
 										Key.timelineSortDirection: ComparisonResult.orderedDescending.rawValue,
 								Key.timelineSortField: ArticleSorter.SortField.date.rawValue,
 										Key.articleFullscreenAvailable: false,

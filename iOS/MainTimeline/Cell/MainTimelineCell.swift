@@ -19,7 +19,13 @@ final class MainTimelineCell: UICollectionViewCell {
 
 	private let titleView = MainTimelineCell.multiLineLabel()
 	private let summaryView = MainTimelineCell.multiLineLabel()
-	private let metadataView = MainTimelineCell.singleLineLabel()
+	// Pools rather than a single label: the number of metadata lines/badges
+	// varies with TagDisplayMode (and, for badges, with how many fandom/
+	// rating/warning values an article has), so these grow to the largest
+	// count seen and hide any views beyond the current count -- see
+	// ensureLabelCount.
+	private var metadataLineViews: [UILabel] = []
+	private var metadataBadgeViews: [UILabel] = []
 	private let dateView = MainTimelineCell.singleLineLabel()
 	private let feedNameView = MainTimelineCell.singleLineLabel()
 	private lazy var iconView = IconView()
@@ -63,7 +69,16 @@ final class MainTimelineCell: UICollectionViewCell {
 		setFrame(for: titleView, rect: layout.titleRect)
 		setFrame(for: progressTrackView, rect: layout.progressRect)
 		setFrame(for: summaryView, rect: layout.summaryRect)
-		setFrame(for: metadataView, rect: layout.metadataRect)
+
+		for (index, rect) in layout.metadataLineRects.enumerated() where index < metadataLineViews.count {
+			setFrame(for: metadataLineViews[index], rect: rect)
+		}
+		for (index, rect) in layout.metadataBadgeRects.enumerated() where index < metadataBadgeViews.count {
+			let badgeView = metadataBadgeViews[index]
+			setFrame(for: badgeView, rect: rect)
+			badgeView.layer.cornerRadius = rect.height / 2
+		}
+
 		feedNameView.setFrameIfNotEqual(layout.feedNameRect)
 		dateView.setFrameIfNotEqual(layout.dateRect)
 		iconView.setFrameIfNotEqual(layout.iconImageRect)
@@ -147,10 +162,28 @@ private extension MainTimelineCell {
 		return label
 	}
 
+	// A pill-styled label for .badges mode: centered text over a rounded,
+	// tinted background. The rect from rectsForMetadataBadges already bakes
+	// in horizontal/vertical padding around the text, so centering the text
+	// within that (wider) frame reads as padding without a separate
+	// container view. cornerRadius is set per-rect in layoutSubviews, since
+	// it depends on the rect's (dynamic-type-dependent) height.
+	static func badgeLabel() -> UILabel {
+		let label = NonIntrinsicLabel()
+		label.font = MainTimelineDefaultCellLayout.badgeFont
+		label.textAlignment = .center
+		label.lineBreakMode = .byTruncatingTail
+		label.allowsDefaultTighteningForTruncation = false
+		label.adjustsFontForContentSizeCategory = true
+		label.backgroundColor = .tertiarySystemFill
+		label.clipsToBounds = true
+		return label
+	}
+
 	func commonInit() {
 		isAccessibilityElement = true
 		topSeparator.backgroundColor = .separator.withAlphaComponent(0.1)
-		for view in [titleView, summaryView, metadataView, dateView, feedNameView, iconView, indicatorView, topSeparator] {
+		for view in [titleView, summaryView, dateView, feedNameView, iconView, indicatorView, topSeparator] {
 			contentView.addSubview(view)
 			view.isAccessibilityElement = false
 		}
@@ -164,6 +197,23 @@ private extension MainTimelineCell {
 		progressTrackView.addSubview(progressFillView)
 		progressFillView.backgroundColor = Assets.Colors.secondaryAccent
 		progressFillView.layer.cornerRadius = MainTimelineDefaultCellLayout.progressBarHeight / 2
+	}
+
+	/// Grows `views` to `count` (adding new views made by `makeView`, inserted
+	/// into the content view) and hides -- without removing, so they're ready
+	/// to reuse if the count grows again -- any existing views beyond `count`.
+	func ensureViewCount(_ count: Int, in views: inout [UILabel], makeView: () -> UILabel) {
+		while views.count < count {
+			let view = makeView()
+			view.isAccessibilityElement = false
+			contentView.addSubview(view)
+			views.append(view)
+		}
+		if views.count > count {
+			for index in count..<views.count {
+				views[index].isHidden = true
+			}
+		}
 	}
 
 	func updatedLayout(width: CGFloat) -> MainTimelineCellLayout {
@@ -205,8 +255,8 @@ private extension MainTimelineCell {
 		summaryView.font = MainTimelineDefaultCellLayout.summaryFont
 		summaryView.text = cellData.summary
 
-		metadataView.font = MainTimelineDefaultCellLayout.metadataFont
-		metadataView.text = cellData.metadataString
+		updateMetadataLines()
+		updateMetadataBadges()
 
 		dateView.font = MainTimelineDefaultCellLayout.dateFont
 		dateView.text = cellData.dateString
@@ -238,10 +288,33 @@ private extension MainTimelineCell {
 		setNeedsLayout()
 	}
 
+	func updateMetadataLines() {
+		let lines = cellData.metadataLines
+		ensureViewCount(lines.count, in: &metadataLineViews, makeView: MainTimelineCell.singleLineLabel)
+		for (index, line) in lines.enumerated() {
+			let label = metadataLineViews[index]
+			label.font = MainTimelineDefaultCellLayout.metadataFont
+			label.textColor = .secondaryLabel
+			label.text = line
+		}
+	}
+
+	func updateMetadataBadges() {
+		let badges = cellData.metadataBadges
+		ensureViewCount(badges.count, in: &metadataBadgeViews, makeView: MainTimelineCell.badgeLabel)
+		for (index, badge) in badges.enumerated() {
+			let label = metadataBadgeViews[index]
+			label.textColor = .secondaryLabel
+			label.text = badge
+		}
+	}
+
 	func updateColors() {
 		titleView.textColor = .label
 		summaryView.textColor = cellData.title.isEmpty ? .label : .secondaryLabel
-		metadataView.textColor = .secondaryLabel
+		for label in metadataLineViews {
+			label.textColor = .secondaryLabel
+		}
 		dateView.textColor = .secondaryLabel
 		feedNameView.textColor = .secondaryLabel
 	}
