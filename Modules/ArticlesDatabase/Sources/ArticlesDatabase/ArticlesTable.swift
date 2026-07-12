@@ -258,11 +258,22 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				bookReadStateByBookKey[bookKey] != nil ? articleID : nil
 			})
 
+			let remainingArticleIDs = articleIDs.subtracting(overrideArticleIDs)
+
+			// Ambrosia items ignore datePublished for the unread-on-import default --
+			// a book's publish/added date has no bearing on whether it's been read,
+			// unlike a blog post's age. Signal: presence of the _ambrosia extension
+			// object on the wire, not any specific field inside it (a book with zero
+			// AO3 metadata is still a book, not a blog post).
+			let ambrosiaArticleIDs = Set(parsedItems.filter {
+				remainingArticleIDs.contains($0.articleID) && $0.isAmbrosiaItem
+			}.map { $0.articleID })
+			let nonAmbrosiaRemainingIDs = remainingArticleIDs.subtracting(ambrosiaArticleIDs)
+
 			// Split the remainder by age: articles older than ~6 months default to read.
 			let cutoffDate = Date(timeIntervalSinceNow: -ArticleStatus.staleIntervalInSeconds)
-			let remainingArticleIDs = articleIDs.subtracting(overrideArticleIDs)
-			let oldArticleIDs = Set(parsedItems.filter { remainingArticleIDs.contains($0.articleID) && ($0.datePublished ?? .distantFuture) < cutoffDate }.map { $0.articleID })
-			let recentArticleIDs = remainingArticleIDs.subtracting(oldArticleIDs)
+			let oldArticleIDs = Set(parsedItems.filter { nonAmbrosiaRemainingIDs.contains($0.articleID) && ($0.datePublished ?? .distantFuture) < cutoffDate }.map { $0.articleID })
+			let recentArticleIDs = nonAmbrosiaRemainingIDs.subtracting(oldArticleIDs).union(ambrosiaArticleIDs)
 
 			let (recentStatusesDictionary, _) = self.statusesTable.ensureStatusesForArticleIDs(recentArticleIDs, false, database) // 1a
 			let (oldStatusesDictionary, _) = self.statusesTable.ensureStatusesForArticleIDs(oldArticleIDs, true, database) // 1b
