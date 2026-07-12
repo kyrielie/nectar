@@ -201,6 +201,10 @@ final class ArticleViewController: UIViewController {
 
 	func updateUI() {
 
+		guard isViewLoaded else {
+			return
+		}
+
 		guard let article = article else {
 			nextUnreadBarButtonItem.isEnabled = false
 			prevArticleBarButtonItem.isEnabled = false
