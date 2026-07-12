@@ -1,6 +1,6 @@
 # nectar
 
-nectar is not a feed reader. it is a json feed reciever for json feeds produced by [ambrosia](github.com/kyrielie/ambrosia)
+nectar is not a feed reader. it is a json feed reciever for json feeds produced by [ambrosia](https://github.com/kyrielie/ambrosia)
 
 it supports nothing else. you should use netnewswire if you don't have ambrosia. or if you do have ambrosia you can read its rssfeeds through 
 
