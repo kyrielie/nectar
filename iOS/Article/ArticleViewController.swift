@@ -109,6 +109,10 @@ final class ArticleViewController: UIViewController {
 		if #unavailable(iOS 26) {
 			let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
 			toolbarItems = [
+				prevArticleBarButtonItem,
+				flex(),
+				nextArticleBarButtonItem,
+				flex(),
 				readBarButtonItem,
 				flex(),
 				starBarButtonItem,
