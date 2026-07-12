@@ -46,7 +46,16 @@ struct Assets {
 		nonisolated static var nnwFeedIcon: RSImage { RSImage(named: "nnwFeedIcon")! }
 		// Default per-feed placeholder, colorized per-feed by FaviconGenerator.
 		// A book, not a globe -- Nectar feeds are books, not blogs.
-		static let faviconTemplate: RSImage = RSImage(symbol: "book.closed.fill")!
+		//
+		// FaviconGenerator masks this via a raw CGImage (RSImage.maskWithColor),
+		// not the live SwiftUI symbol-rendering path the sidebar's other SF
+		// Symbol icons (todayFeed, unreadFeed, etc.) use -- so unlike those,
+		// this one gets rasterized to a fixed pixel size exactly once and
+		// reused for every feed. RSImage(symbol:)'s default point size (~17pt,
+		// the system font size) is too small a source to upscale to
+		// IconSize.large (48pt) without blurring, so request it explicitly
+		// large instead of relying on the default.
+		static let faviconTemplate: RSImage = RSImage.symbolImage("book.closed.fill", pointSize: 120)!
 
 		static let share = RSImage(symbol: "square.and.arrow.up")!
 		static let folder = RSImage(symbol: "folder")!
@@ -187,6 +196,23 @@ extension RSImage {
 		self.init(systemSymbolName: symbol, accessibilityDescription: nil)
 #else // iOS
 		self.init(systemName: symbol)
+#endif
+	}
+
+	/// Same as `init?(symbol:)`, but rendered at an explicit point size rather
+	/// than the SF Symbol default (~17pt, the system font size). Needed for
+	/// any symbol that gets rasterized once and reused at a larger fixed
+	/// size (e.g. masked into a colored placeholder via `maskWithColor`)
+	/// instead of rendered live through SwiftUI/UIKit's vector
+	/// symbol-rendering path, which scales for free at any size.
+	static func symbolImage(_ symbol: String, pointSize: CGFloat) -> RSImage? {
+#if os(macOS)
+		guard let image = RSImage(systemSymbolName: symbol, accessibilityDescription: nil) else { return nil }
+		let config = NSImage.SymbolConfiguration(pointSize: pointSize, weight: .regular)
+		return image.withSymbolConfiguration(config)
+#else // iOS
+		let config = UIImage.SymbolConfiguration(pointSize: pointSize, weight: .regular)
+		return UIImage(systemName: symbol, withConfiguration: config)
 #endif
 	}
 }
