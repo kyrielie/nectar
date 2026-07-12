@@ -82,7 +82,7 @@ final class MainTimelineCell: UICollectionViewCell {
 		feedNameView.setFrameIfNotEqual(layout.feedNameRect)
 		dateView.setFrameIfNotEqual(layout.dateRect)
 		iconView.setFrameIfNotEqual(layout.iconImageRect)
-		indicatorView.setFrameIfNotEqual(cellData.starred ? layout.starRect : layout.unreadIndicatorRect)
+		indicatorView.setFrameIfNotEqual((cellData.starred || cellData.loved) ? layout.starRect : layout.unreadIndicatorRect)
 		topSeparator.frame = CGRect(x: layout.separatorRect.minX, y: 0, width: layout.separatorRect.width, height: 1.0 / traitCollection.displayScale)
 		layoutProgressFill()
 	}
@@ -324,9 +324,16 @@ private extension MainTimelineCell {
 			indicatorView.isHidden = true
 			return
 		}
+		// Priority when an article has more than one of these at once:
+		// Read Later (starred) beats Loved beats Unread. Only one glyph is
+		// ever shown -- this is a single indicator slot, not a stack.
 		if cellData.starred {
 			indicatorView.iconImage = Assets.Images.starredFeed
 			indicatorView.tintColor = Assets.Colors.star
+			indicatorView.isHidden = false
+		} else if cellData.loved {
+			indicatorView.iconImage = Assets.Images.heartClosed
+			indicatorView.tintColor = RSColor.systemRed
 			indicatorView.isHidden = false
 		} else if !cellData.read {
 			indicatorView.iconImage = Assets.Images.unreadCellIndicator
@@ -339,7 +346,8 @@ private extension MainTimelineCell {
 
 	func updateAccessibilityLabel() {
 		let starredStatus = cellData.starred ? "\(NSLocalizedString("Read Later", comment: "Read Later")), " : ""
+		let lovedStatus = cellData.loved ? "\(NSLocalizedString("Loved", comment: "Loved")), " : ""
 		let unreadStatus = cellData.read ? "" : "\(NSLocalizedString("Unread", comment: "Unread")), "
-		accessibilityLabel = starredStatus + unreadStatus + "\(cellData.feedName), \(cellData.title), \(cellData.summary), \(cellData.dateString)"
+		accessibilityLabel = starredStatus + lovedStatus + unreadStatus + "\(cellData.feedName), \(cellData.title), \(cellData.summary), \(cellData.dateString)"
 	}
 }
