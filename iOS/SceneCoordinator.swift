@@ -1870,27 +1870,7 @@ private extension SceneCoordinator {
 			showFeedNames = .feed
 		}
 
-		if showFeedNames == .feed {
-			self.showIcons = true
-			return
-		}
-
-		if showFeedNames == .none {
-			self.showIcons = false
-			return
-		}
-
-		for article in articles {
-			if let authors = article.authors {
-				for author in authors {
-					if author.avatarURL != nil {
-						self.showIcons = true
-						return
-					}
-				}
-			}
-		}
-
+		// Icons are never shown in article lists, regardless of feed name display mode.
 		self.showIcons = false
 	}
 
