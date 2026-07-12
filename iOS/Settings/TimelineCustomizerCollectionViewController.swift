@@ -85,7 +85,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
     // MARK: UICollectionViewDataSource
 
     override func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return 4
+        return 3
     }
 
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -122,21 +122,6 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 			return cell
 		}
 
-		if indexPath.section == 3 {
-			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath) as! MainTimelineCell
-			cell.cellData = MainTimelineCellData(article: previewArticle,
-												 showFeedName: .byline,
-												 feedName: "The Fellowship of the Ring",
-												 byline: "J. R. R. Tolkien",
-												 iconImage: IconImage(Assets.Images.nnwFeedIcon),
-												 showIcon: true,
-												 numberOfLines: AppDefaults.shared.timelineNumberOfLines,
-												 iconSize: AppDefaults.shared.timelineIconSize,
-												 tagDisplayMode: AppDefaults.shared.timelineTagDisplayMode)
-			cell.isPreview = true
-			return cell
-		}
-
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath)
         return cell
     }
@@ -162,9 +147,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 		case 1:
 			header.label.text = NSLocalizedString("Tag Display", comment: "Tag Display")
 		case 2:
-			header.label.text = NSLocalizedString("No Icon Preview", comment: "No Icon Preview")
-		case 3:
-			header.label.text = NSLocalizedString("Icon Preview", comment: "Icon Preview")
+			header.label.text = NSLocalizedString("Preview", comment: "Preview")
 		default:
 			header.label.text = NSLocalizedString("", comment: "")
 		}
@@ -186,7 +169,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 	// MARK: Notifications
 
 	func userDefaultsDidChange() {
-		collectionView.reloadSections([2, 3])
+		collectionView.reloadSections([2])
 	}
 
 }
