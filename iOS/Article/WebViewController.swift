@@ -15,13 +15,17 @@ import Articles
 import SafariServices
 import MessageUI
 import Images
+import os
 
 final class WebViewController: UIViewController {
+
+	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "WebViewController")
 
 	private struct MessageName {
 		static let imageWasClicked = "imageWasClicked"
 		static let imageWasShown = "imageWasShown"
 		static let showFeedInspector = "showFeedInspector"
+		static let debugLog = "debugLog"
 	}
 
 	private var topShowBarsView: UIView!
@@ -170,9 +174,13 @@ final class WebViewController: UIViewController {
 				let articleID = article.articleID
 				Task {
 					let scrollPosition = await account.fetchScrollPosition(forArticleID: articleID)
+					Self.logger.debug("setArticle: fetched scrollPosition=\(scrollPosition, privacy: .public) for articleID=\(articleID, privacy: .public)")
 					// The user may have already navigated elsewhere by the time this
 					// resolves; only apply it if we're still showing the same article.
-					guard self.article?.articleID == articleID else { return }
+					guard self.article?.articleID == articleID else {
+						Self.logger.debug("setArticle: article changed before scrollPosition fetch resolved, discarding for articleID=\(articleID, privacy: .public)")
+						return
+					}
 					self.windowScrollY = Int(scrollPosition)
 					self.loadWebView()
 				}
@@ -336,11 +344,20 @@ extension WebViewController: UIContextMenuInteractionDelegate {
 extension WebViewController: WKNavigationDelegate {
 
 	func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+		Self.logger.debug("webView didFinish navigation for articleID=\(self.article?.articleID ?? "nil", privacy: .public)")
 		for (index, view) in view.subviews.enumerated() {
 			if index != 0, let oldWebView = view as? PreloadedWebView {
 				oldWebView.removeFromSuperview()
 			}
 		}
+	}
+
+	func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+		Self.logger.debug("webView didFail navigation for articleID=\(self.article?.articleID ?? "nil", privacy: .public) error=\(error.localizedDescription, privacy: .public)")
+	}
+
+	func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+		Self.logger.debug("webView didFailProvisionalNavigation for articleID=\(self.article?.articleID ?? "nil", privacy: .public) error=\(error.localizedDescription, privacy: .public)")
 	}
 
 	func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
@@ -436,6 +453,11 @@ extension WebViewController: WKScriptMessageHandler {
 			if let feed = article?.feed {
 				coordinator.showFeedInspector(for: feed)
 			}
+		case MessageName.debugLog:
+			// Bridges page.html's scroll-restoration console output to the same
+			// os.Logger stream as the rest of the app's debug logging, since raw
+			// console.log in WKWebView doesn't show up there on its own.
+			Self.logger.debug("page.html: \(message.body as? String ?? "", privacy: .public)")
 		default:
 			return
 		}
@@ -468,11 +490,18 @@ extension WebViewController: UIScrollViewDelegate {
 
 	@objc func scrollPositionDidChange() {
 		webView?.evaluateJavaScript("({ scrollY: window.scrollY, scrollHeight: document.body.scrollHeight, innerHeight: window.innerHeight })") { (result, error) in
-			guard error == nil, let result = result as? [String: Any] else { return }
+			guard error == nil, let result = result as? [String: Any] else {
+				Self.logger.debug("scrollPositionDidChange: evaluateJavaScript failed, error=\(String(describing: error), privacy: .public)")
+				return
+			}
 			let javascriptScrollY = result["scrollY"] as? Int ?? 0
 			// I don't know why this value gets returned sometimes, but it is in error
-			guard javascriptScrollY != 33554432 else { return }
+			guard javascriptScrollY != 33554432 else {
+				Self.logger.debug("scrollPositionDidChange: discarding known-bad sentinel scrollY value")
+				return
+			}
 			self.windowScrollY = javascriptScrollY
+			Self.logger.debug("scrollPositionDidChange: articleID=\(self.article?.articleID ?? "nil", privacy: .public) scrollY=\(javascriptScrollY, privacy: .public)")
 
 			// Scroll-percentage-gated read marking (Phase 2). scrollHeight includes the
 			// full document; innerHeight is the viewport. Once the bottom of the viewport
@@ -573,11 +602,13 @@ private extension WebViewController {
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.imageWasClicked)
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.imageWasShown)
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.showFeedInspector)
+				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.debugLog)
 
 				// Add handlers
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.imageWasClicked)
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.imageWasShown)
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.showFeedInspector)
+				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.debugLog)
 
 				self.renderPage(webView)
 			}
@@ -603,6 +634,7 @@ private extension WebViewController {
 			"body": rendering.html,
 			"windowScrollY": String(windowScrollY)
 		]
+		Self.logger.debug("renderPage: articleID=\(self.article?.articleID ?? "nil", privacy: .public) windowScrollY=\(self.windowScrollY, privacy: .public) bodyLength=\(rendering.html.count, privacy: .public)")
 
 		var html = try! MacroProcessor.renderedText(withTemplate: ArticleRenderer.page.html, substitutions: substitutions)
 		html = ArticleRenderingSpecialCases.filterHTMLIfNeeded(baseURL: rendering.baseURL, html: html)

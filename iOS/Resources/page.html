@@ -6,23 +6,76 @@
 			[[style]]
 		</style>
 		<script type="text/javascript">
+			// Bridges to WebViewController's debugLog message handler, which routes
+			// into the same os.Logger stream as the rest of the app's debug output.
+			// Raw console.log doesn't show up there on its own.
+			function debugLog(message) {
+				try {
+					window.webkit.messageHandlers.debugLog.postMessage(message);
+				} catch (e) {
+					// messageHandler not installed (e.g. print preview) -- ignore.
+				}
+			}
+
+			function scrollState(label) {
+				return label + ": target=[[windowScrollY]] actualScrollY=" + window.scrollY +
+					" scrollHeight=" + document.body.scrollHeight +
+					" innerHeight=" + window.innerHeight +
+					" bodyLength=" + (document.body.innerHTML ? document.body.innerHTML.length : 0) +
+					" readyState=" + document.readyState;
+			}
+
+			// DOMContentLoaded fires before images, web fonts, and any late layout
+			// settle. If those shift document height afterward, the scrollTo below
+			// gets clamped to the shorter pre-reflow height and never reapplied,
+			// which reads as "scroll position resets on reopen." Reapply at load
+			// and fonts.ready to cover both, and log all three so a persisting
+			// reset shows up as a height change between events rather than a guess.
 			document.addEventListener("DOMContentLoaded", function(event) {
+				debugLog(scrollState("before DOMContentLoaded restore"));
 				window.scrollTo(0, [[windowScrollY]]);
+				debugLog(scrollState("after DOMContentLoaded restore"));
 				processPage();
 			})
-			// DOMContentLoaded fires before images, web fonts, and any late layout
-			// settle. If those shift document height afterward, the scrollTo above
-			// gets clamped to the shorter pre-reflow height and never reapplied,
-			// which reads as "scroll position resets on reopen." Reapply once the
-			// page is fully loaded, and again once fonts are ready, to cover both.
+
 			window.addEventListener("load", function(event) {
+				debugLog(scrollState("before load restore"));
 				window.scrollTo(0, [[windowScrollY]]);
+				debugLog(scrollState("after load restore"));
 			})
+
 			if (document.fonts && document.fonts.ready) {
 				document.fonts.ready.then(function() {
+					debugLog(scrollState("before fonts.ready restore"));
 					window.scrollTo(0, [[windowScrollY]]);
+					debugLog(scrollState("after fonts.ready restore"));
 				});
 			}
+
+			// Catches reflows that happen after every restore point above (lazy
+			// images, late-inserted content). If this still doesn't match
+			// [[windowScrollY]], the content itself is still growing after fonts
+			// finish, and needs its own hook (e.g. a MutationObserver or per-image
+			// onload) rather than another fixed event.
+			window.addEventListener("load", function(event) {
+				setTimeout(function() {
+					debugLog(scrollState("settle check (+1.5s after load)"));
+				}, 1500);
+			})
+
+			// Feed-content diagnostic: catches images that fail to load, which is
+			// one plausible way a single large document silently comes up short
+			// or blank without a WebKit navigation error.
+			window.addEventListener("load", function(event) {
+				var images = document.querySelectorAll("img");
+				var failed = 0;
+				images.forEach(function(img) {
+					if (!img.complete || img.naturalWidth === 0) {
+						failed += 1;
+					}
+				});
+				debugLog("image check: total=" + images.length + " failedOrIncomplete=" + failed);
+			})
 		</script>
 		<base href="[[baseURL]]">
 	</head>
