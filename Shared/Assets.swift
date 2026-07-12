@@ -44,7 +44,9 @@ struct Assets {
 		static let nextUnread = RSImage(symbol: "chevron.down.circle")!
 
 		nonisolated static var nnwFeedIcon: RSImage { RSImage(named: "nnwFeedIcon")! }
-		static var faviconTemplate: RSImage { RSImage(named: "faviconTemplateImage")! }
+		// Default per-feed placeholder, colorized per-feed by FaviconGenerator.
+		// A book, not a globe -- Nectar feeds are books, not blogs.
+		static let faviconTemplate: RSImage = RSImage(symbol: "book.closed.fill")!
 
 		static let share = RSImage(symbol: "square.and.arrow.up")!
 		static let folder = RSImage(symbol: "folder")!
