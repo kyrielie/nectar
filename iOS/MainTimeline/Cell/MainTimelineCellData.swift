@@ -29,6 +29,7 @@ import Images
 	let starred: Bool
 	let numberOfLines: Int
 	let iconSize: IconSize
+	let tagDisplayMode: TagDisplayMode
 
 	/// Fraction (0...1) of the article read, or nil if never opened. The card hides its
 	/// progress bar for nil, for 0 (never actually scrolled), and when `read` is true --
@@ -57,22 +58,74 @@ import Images
 	let ratings: [String]?
 	let warnings: [String]?
 
-	/// Single truncating line combining word count, completion, fandom, and
-	/// rating/warnings — e.g. "12,345 words · Complete · My Fandom · Explicit".
-	/// "" when none of the underlying fields have data, which collapses the
-	/// row to zero height exactly like `title`/`summary` already do.
+	/// Plain-text metadata line(s) to render, depending on `tagDisplayMode`.
+	/// `.compact` yields at most one combined line (word count, completion,
+	/// fandom, rating/warnings — e.g. "12,345 words · Complete · My Fandom ·
+	/// Explicit"). `.expanded` yields one line per non-nil field. `.badges`
+	/// yields a single word-count/completion line; fandom/rating/warnings
+	/// render separately as pills, via `metadataBadges`, instead of here.
 	///
-	/// Simplification note: this renders as one text line, not the separate
-	/// colored pill badges the fork plan sketches. Nil-vs-empty-array is
-	/// still respected (an absent rating contributes nothing; only a
-	/// present, non-empty rating shows), but a *confirmed empty* array
-	/// currently also contributes nothing rather than an explicit "none"
-	/// label — same silent-omission tradeoff in both cases, so this never
-	/// mislabels "not available" as "confirmed none," it just doesn't yet
-	/// distinguish the two visually.
-	let metadataString: String
+	/// Empty lines are never included — an empty array collapses the row to
+	/// zero height exactly like `title`/`summary` already do. Nil-vs-empty-
+	/// array is respected for `ratings`/`warnings` (an absent field
+	/// contributes nothing; only a present, non-empty field shows), but a
+	/// *confirmed empty* array currently also contributes nothing rather than
+	/// an explicit "none" label — same silent-omission tradeoff for all three
+	/// modes, so this never mislabels "not available" as "confirmed none," it
+	/// just doesn't yet distinguish the two visually.
+	var metadataLines: [String] {
+		switch tagDisplayMode {
+		case .compact:
+			let line = Self.compactMetadataLine(wordCountString: wordCountString, isComplete: isComplete, fandomString: fandomString, ratings: ratings, warnings: warnings)
+			return line.isEmpty ? [] : [line]
+		case .expanded:
+			var rows: [String] = []
+			if !wordCountString.isEmpty {
+				rows.append(String(format: NSLocalizedString("%@ words", comment: "Word count"), wordCountString))
+			}
+			switch isComplete {
+			case true:
+				rows.append(NSLocalizedString("Complete", comment: "Completion status"))
+			case false:
+				rows.append(NSLocalizedString("WIP", comment: "Completion status"))
+			case nil:
+				break
+			}
+			if !fandomString.isEmpty {
+				rows.append(fandomString)
+			}
+			if let ratings, !ratings.isEmpty {
+				rows.append(ratings.joined(separator: ", "))
+			}
+			if let warnings, !warnings.isEmpty {
+				rows.append(warnings.joined(separator: ", "))
+			}
+			return rows
+		case .badges:
+			let line = Self.wordCountCompletionLine(wordCountString: wordCountString, isComplete: isComplete)
+			return line.isEmpty ? [] : [line]
+		}
+	}
 
-	init(article: Article, showFeedName: ShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool, numberOfLines: Int, iconSize: IconSize) {
+	/// Fandom/rating/warnings as individual pill badges. Non-empty only in
+	/// `.badges` mode -- `.compact` and `.expanded` fold this same data into
+	/// `metadataLines` instead.
+	var metadataBadges: [String] {
+		guard tagDisplayMode == .badges else { return [] }
+		var badges: [String] = []
+		if !fandomString.isEmpty {
+			badges.append(fandomString)
+		}
+		if let ratings {
+			badges.append(contentsOf: ratings)
+		}
+		if let warnings {
+			badges.append(contentsOf: warnings)
+		}
+		return badges
+	}
+
+	init(article: Article, showFeedName: ShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool, numberOfLines: Int, iconSize: IconSize, tagDisplayMode: TagDisplayMode) {
 
 		self.accountID = article.accountID
 		self.articleID = article.articleID
@@ -109,6 +162,7 @@ import Images
 		self.starred = article.status.starred
 		self.numberOfLines = numberOfLines
 		self.iconSize = iconSize
+		self.tagDisplayMode = tagDisplayMode
 		self.readingProgress = article.status.readingProgress
 
 		if let wordCount = article.wordCount {
@@ -126,8 +180,6 @@ import Images
 		self.isComplete = article.isComplete
 		self.ratings = article.ratings
 		self.warnings = article.warnings
-
-		self.metadataString = Self.metadataString(wordCountString: self.wordCountString, isComplete: article.isComplete, fandomString: self.fandomString, ratings: article.ratings, warnings: article.warnings)
 
 	}
 
@@ -147,13 +199,13 @@ import Images
 		self.starred = false
 		self.numberOfLines = 0
 		self.iconSize = .medium
+		self.tagDisplayMode = .compact
 		self.readingProgress = nil
 		self.wordCountString = ""
 		self.fandomString = ""
 		self.isComplete = nil
 		self.ratings = nil
 		self.warnings = nil
-		self.metadataString = ""
 	}
 
 }
@@ -181,13 +233,11 @@ private extension MainTimelineCellData {
 		return "\(shown) +\(remaining)"
 	}
 
-	static func metadataString(wordCountString: String, isComplete: Bool?, fandomString: String, ratings: [String]?, warnings: [String]?) -> String {
+	static func metadataLineComponents(wordCountString: String, isComplete: Bool?) -> [String] {
 		var parts: [String] = []
-
 		if !wordCountString.isEmpty {
 			parts.append(String(format: NSLocalizedString("%@ words", comment: "Word count"), wordCountString))
 		}
-
 		switch isComplete {
 		case true:
 			parts.append(NSLocalizedString("Complete", comment: "Completion status"))
@@ -196,6 +246,19 @@ private extension MainTimelineCellData {
 		case nil:
 			break
 		}
+		return parts
+	}
+
+	/// Word count + completion only — the `.badges` mode's top line, with
+	/// fandom/rating/warnings rendered separately as pills instead.
+	static func wordCountCompletionLine(wordCountString: String, isComplete: Bool?) -> String {
+		metadataLineComponents(wordCountString: wordCountString, isComplete: isComplete).joined(separator: " · ")
+	}
+
+	/// The `.compact` mode's single truncating line combining word count,
+	/// completion, fandom, and rating/warnings.
+	static func compactMetadataLine(wordCountString: String, isComplete: Bool?, fandomString: String, ratings: [String]?, warnings: [String]?) -> String {
+		var parts = metadataLineComponents(wordCountString: wordCountString, isComplete: isComplete)
 
 		if !fandomString.isEmpty {
 			parts.append(fandomString)

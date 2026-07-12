@@ -21,6 +21,7 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 	// MARK: Private Variables
 	private var numberOfTextLines = 0
 	private var iconSize = IconSize.medium
+	private var tagDisplayMode = TagDisplayMode.compact
 	private lazy var feedTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(showFeedInspector(_:)))
 	private lazy var filterButton = UIBarButtonItem(image: Assets.Images.filter, style: .plain, target: self, action: #selector(toggleFilter(_:)))
 	private lazy var nextUnreadButton = UIBarButtonItem(image: Assets.Images.nextUnread, style: .plain, target: self, action: #selector(nextUnread(_:)))
@@ -176,6 +177,7 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 
 		numberOfTextLines = AppDefaults.shared.timelineNumberOfLines
 		iconSize = AppDefaults.shared.timelineIconSize
+		tagDisplayMode = AppDefaults.shared.timelineTagDisplayMode
 
 		assert(collectionView?.refreshControl != nil)
 		collectionView?.refreshControl = UIRefreshControl()
@@ -643,6 +645,7 @@ private extension MainTimelineModernViewController {
 
 		NotificationCenter.default.addObserver(self, selector: #selector(timelineIconSizeDidChange(_:)), name: .timelineIconSizeDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(timelineNumberOfLinesDidChange(_:)), name: .timelineNumberOfLinesDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(timelineTagDisplayModeDidChange(_:)), name: .timelineTagDisplayModeDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(contentSizeCategoryDidChange), name: UIContentSizeCategory.didChangeNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(displayNameDidChange), name: .DisplayNameDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground(_:)), name: UIApplication.willEnterForegroundNotification, object: nil)
@@ -857,7 +860,7 @@ private extension MainTimelineModernViewController {
 		let iconImage = iconImageFor(article)
 		let showFeedNames = coordinator?.showFeedNames ?? ShowFeedName.none
 		let showIcon = showIcons && iconImage != nil
-		let cellData = MainTimelineCellData(article: article, showFeedName: showFeedNames, feedName: article.feed?.nameForDisplay, byline: article.byline(), iconImage: iconImage, showIcon: showIcon, numberOfLines: numberOfTextLines, iconSize: iconSize)
+		let cellData = MainTimelineCellData(article: article, showFeedName: showFeedNames, feedName: article.feed?.nameForDisplay, byline: article.byline(), iconImage: iconImage, showIcon: showIcon, numberOfLines: numberOfTextLines, iconSize: iconSize, tagDisplayMode: tagDisplayMode)
 		return cellData
 	}
 
@@ -1057,6 +1060,14 @@ private extension MainTimelineModernViewController {
 		Self.logger.debug("MainTimelineModernViewController: timelineNumberOfLinesDidChange")
 		if numberOfTextLines != AppDefaults.shared.timelineNumberOfLines {
 			numberOfTextLines = AppDefaults.shared.timelineNumberOfLines
+			reloadVisibleCells()
+		}
+	}
+
+	@objc func timelineTagDisplayModeDidChange(_ note: Notification) {
+		Self.logger.debug("MainTimelineModernViewController: timelineTagDisplayModeDidChange")
+		if tagDisplayMode != AppDefaults.shared.timelineTagDisplayMode {
+			tagDisplayMode = AppDefaults.shared.timelineTagDisplayMode
 			reloadVisibleCells()
 		}
 	}
