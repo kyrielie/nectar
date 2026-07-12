@@ -68,6 +68,9 @@
     "Add Folder" : {
       "comment" : "Add Folder"
     },
+    "Add to Loved" : {
+      "comment" : "Command"
+    },
     "Add to Read Later" : {
       "comment" : "Command"
     },
@@ -119,6 +122,9 @@
     "Automatic" : {
       "comment" : "Automatic"
     },
+    "Badges" : {
+      "comment" : "Badges tag display mode"
+    },
     "Can’t Add iCloud Account" : {
       "comment" : "CloudKit account setup failure description — iCloud Drive not enabled."
     },
@@ -163,6 +169,9 @@
     },
     "Collapsed" : {
       "comment" : "Collapsed"
+    },
+    "Compact" : {
+      "comment" : "Compact tag display mode"
     },
     "Complete" : {
       "comment" : "Completion status"
@@ -306,7 +315,7 @@
       "comment" : "Expand"
     },
     "Expanded" : {
-      "comment" : "Expanded"
+      "comment" : "Expanded\nExpanded tag display mode"
     },
     "Extra Extra Large" : {
       "comment" : "XX-Large"
@@ -386,9 +395,6 @@
     "Icon Preview" : {
       "comment" : "Icon Preview"
     },
-    "Icon Size" : {
-      "comment" : "Icon Size"
-    },
     "Import Failed" : {
       "comment" : "Import Failed"
     },
@@ -451,6 +457,9 @@
     "Local accounts do not sync your feeds across devices." : {
       "comment" : "Local"
     },
+    "Loved" : {
+      "comment" : "Loved"
+    },
     "Manually" : {
       "comment" : "Manually"
     },
@@ -478,10 +487,16 @@
     "Mark Below as Read" : {
       "comment" : "Command"
     },
+    "Mark Loved" : {
+      "comment" : "command"
+    },
     "Mark Read" : {
       "comment" : "command"
     },
     "Mark Starred" : {
+      "comment" : "command"
+    },
+    "Mark Unloved" : {
       "comment" : "command"
     },
     "Mark Unread" : {
@@ -639,6 +654,9 @@
     "Remove Account" : {
       "comment" : "Remove Account"
     },
+    "Remove from Loved" : {
+      "comment" : "Command"
+    },
     "Remove from Read Later" : {
       "comment" : "Command"
     },
@@ -693,6 +711,9 @@
     "Selected - Filter Read Feeds" : {
       "comment" : "Selected - Filter Read Feeds"
     },
+    "Selected - Loved" : {
+      "comment" : "Selected - Loved"
+    },
     "Selected - Mark Article Unread" : {
       "comment" : "Selected - Mark Article Unread"
     },
@@ -701,6 +722,9 @@
     },
     "Share" : {
       "comment" : "Share button"
+    },
+    "Share AO3 Series Link" : {
+      "comment" : "Command"
     },
     "Share Stats" : {
       "comment" : "Share stats menu item"
@@ -752,6 +776,9 @@
     },
     "Swipe a feed to show the action menu and delete button." : {
       "comment" : "Dinosaurs swipe hint."
+    },
+    "Tag Display" : {
+      "comment" : "Tag Display"
     },
     "Thanks to Sheila and my family; thanks to my friends in Seattle and around the globe; thanks to the ever-patient and ever-awesome NetNewsWire beta testers.\n\nThanks to [Gus Mueller](https://shapeof.com/) for [FMDB](https://github.com/ccgus/fmdb) by [Flying Meat Software](http://flyingmeat.com/). Thanks to [GitHub](https://github.com) and [Discourse](https://discourse.com) for making open source collaboration easy and fun. Thanks to [Ben Ubois](https://benubois.com/) at [Feedbin](https://feedbin.com) for all the extra help with syncing and article rendering — and [for hosting the server for the Reader view](https://feedbin.com/blog/2019/03/11/the-future-of-full-content/)." : {
       "comment" : "A list of credits for the app.",
@@ -810,6 +837,9 @@
     },
     "Today" : {
       "comment" : "Today pseudo-feed title"
+    },
+    "Toggle Loved Status" : {
+      "comment" : "Toggle Loved Status"
     },
     "Toggle Read Articles Filter" : {
       "comment" : "Toggle Read Articles Filter"

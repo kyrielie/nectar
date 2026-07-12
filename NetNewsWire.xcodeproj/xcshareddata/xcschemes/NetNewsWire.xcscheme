@@ -123,8 +123,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "840D617B2029031C009BC708"
-            BuildableName = "Ambrosia Reader.app"
-            BlueprintName = "NetNewsWire-iOS"
+            BuildableName = "Nectar.app"
+            BlueprintName = "Nectar-iOS"
             ReferencedContainer = "container:NetNewsWire.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

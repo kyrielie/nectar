@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>Ambrosia Library Feeds</title>
+    <dateCreated>2026-07-12T02:38:31Z</dateCreated>
+    <docs>Feed URLs are tied to this Mac's current local network address and may break if the address changes or the server restarts. Re-export from Ambrosia to get updated URLs.</docs>
+  </head>
+  <body>
+    <outline type="rss"
+         text="Read Later"
+         title="Read Later"
+         xmlUrl="http://192.168.1.7:8765/feed/collection/00000000-0000-0000-0000-000000000001.xml"/>
+    <outline type="rss"
+         text="Liked"
+         title="Liked"
+         xmlUrl="http://192.168.1.7:8765/feed/collection/00000000-0000-0000-0000-000000000002.xml"/>
+    <outline type="rss"
+         text="mitchell's in this one"
+         title="mitchell's in this one"
+         xmlUrl="http://192.168.1.7:8765/feed/collection/564D76D6-3278-4645-A40F-256A79483727.xml"/>
+    <outline type="rss"
+         text="cute"
+         title="cute"
+         xmlUrl="http://192.168.1.7:8765/feed/collection/1B16E2B3-BBCE-4A50-B761-F1BDC9A6B9F6.xml"/>
+  </body>
+</opml>
