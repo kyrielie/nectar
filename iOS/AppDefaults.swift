@@ -95,7 +95,6 @@ final class AppDefaults: Sendable {
 		static let addFolderAccountID = "addFolderAccountID"
 		static let useSystemBrowser = "useSystemBrowser"
 		static let currentThemeName = "currentThemeName"
-		static let articleContentJavascriptEnabled = "articleContentJavascriptEnabled"
 		static let hideReadFeeds = "hideReadFeeds"
 		static let articleWindowScrollY = "articleWindowScrollY"
 		static let expandedContainers = "expandedContainers"
@@ -246,15 +245,6 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			AppDefaults.setBool(for: Key.confirmMarkAllAsRead, newValue)
-		}
-	}
-
-	var isArticleContentJavascriptEnabled: Bool {
-		get {
-			return AppDefaults.bool(for: Key.articleContentJavascriptEnabled)
-		}
-		set {
-			AppDefaults.setBool(for: Key.articleContentJavascriptEnabled, newValue)
 		}
 	}
 
@@ -448,7 +438,6 @@ final class AppDefaults: Sendable {
 										Key.articleFullscreenAvailable: false,
 										Key.articleFullscreenEnabled: false,
 										Key.confirmMarkAllAsRead: true,
-										Key.articleContentJavascriptEnabled: true,
 										Key.currentThemeName: Self.defaultThemeName,
 									   Key.splitViewPreferredDisplayMode: UISplitViewController.DisplayMode.oneBesideSecondary.rawValue]
 		AppDefaults.store.register(defaults: defaults)
