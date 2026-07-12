@@ -25,10 +25,10 @@ import Images
 		Assets.Images.readFeed
 	}
 
-	// By definition every article in this feed is read, so there's never
-	// anything unread to badge -- unlike Starred/Loved, which can contain a
-	// mix of read and unread articles.
+	// By definition every article in this feed is read, so a true unread
+	// count would always be zero. Repurposed as a general badge count
+	// instead, showing the total number of read articles.
 	func fetchUnreadCount(account: Account) async -> Int {
-		return 0
+		await account.fetchCountForReadArticlesAsync()
 	}
 }

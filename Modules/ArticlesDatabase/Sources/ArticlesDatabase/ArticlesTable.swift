@@ -96,6 +96,10 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		fetchArticlesAsync({ self.fetchReadArticles(feedIDs, limit, $0) }, completion)
 	}
 
+	func fetchReadArticlesCount(_ feedIDs: Set<String>) -> Int {
+		fetchArticlesCount { self.fetchReadArticlesCount(feedIDs, $0) }
+	}
+
 	// MARK: - Fetching Today Articles
 
 	func fetchArticlesSince(_ feedIDs: Set<String>, _ cutoffDate: Date, _ limit: Int?) -> Set<Article> {
@@ -579,6 +583,25 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
+	func fetchReadArticlesCountAsync(_ feedIDs: Set<String>, _ completion: @escaping SingleUnreadCountCompletionBlock) {
+		if feedIDs.isEmpty {
+			completion(0)
+			return
+		}
+
+		queue.runInDatabase { database in
+			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
+			let sql = "select count(*) from articles natural join statuses where feedID in \(placeholders) and read=1;"
+			let parameters = Array(feedIDs) as [Any]
+
+			let count = self.numberWithSQLAndParameters(sql, parameters, in: database)
+
+			DispatchQueue.main.async {
+				completion(count)
+			}
+		}
+	}
+
 	// MARK: - Statuses
 
 	func fetchUnreadArticleIDsAsync(_ completion: @escaping ArticleIDsCompletionBlock) {
@@ -989,6 +1012,17 @@ nonisolated private extension ArticlesTable {
 			whereClause.append(" order by coalesce(datePublished, dateModified, dateArrived) desc limit \(limit)")
 		}
 		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
+	}
+
+	func fetchReadArticlesCount(_ feedIDs: Set<String>, _ database: FMDatabase) -> Int {
+		// select count from articles natural join statuses where feedID in ('http://ranchero.com/xml/rss.xml') and read=1;
+		if feedIDs.isEmpty {
+			return 0
+		}
+		let parameters = feedIDs.map { $0 as AnyObject }
+		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
+		let whereClause = "feedID in \(placeholders) and read=1"
+		return fetchArticleCountsWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
 
 	func fetchArticles(articleIDs: Set<String>, _ database: FMDatabase) -> Set<Article> {
