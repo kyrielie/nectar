@@ -8,7 +8,6 @@
 
 import UIKit
 import CoreServices
-import SafariServices
 import SwiftUI
 import UniformTypeIdentifiers
 import RSCore
@@ -18,14 +17,12 @@ import ActivityLog
 final class SettingsViewController: UITableViewController {
 
 	private enum Section: Int {
-		case notifications = 0
-		case accounts = 1
-		case feeds = 2
-		case timeline = 3
-		case articles = 4
-		case appearance = 5
-		case troubleshooting = 6
-		case help = 7
+		case feeds = 0
+		case timeline = 1
+		case articles = 2
+		case appearance = 3
+		case troubleshooting = 4
+		case help = 5
 	}
 
 	private enum TroubleshootingRow: Int {
@@ -39,7 +36,6 @@ final class SettingsViewController: UITableViewController {
 	private enum FeedsRow: Int {
 		case importSubscriptions = 0
 		case exportSubscriptions = 1
-		case addNetNewsWireNewsFeed = 2
 	}
 
 	private enum TimelineRow: Int {
@@ -57,11 +53,7 @@ final class SettingsViewController: UITableViewController {
 	}
 
 	private enum HelpRow: Int {
-		case help = 0
-		case forum = 1
-		case releaseNotes = 2
-		case bugTracker = 3
-		case about = 4
+		case about = 0
 	}
 
 	private weak var opmlAccount: Account?
@@ -163,14 +155,6 @@ final class SettingsViewController: UITableViewController {
 	override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
 
 		switch Section(rawValue: section) {
-		case .accounts:
-			return AccountManager.shared.accounts.count + 1
-		case .feeds:
-			let defaultNumberOfRows = super.tableView(tableView, numberOfRowsInSection: section)
-			if AccountManager.shared.activeAccounts.isEmpty || AccountManager.shared.anyAccountHasNetNewsWireNewsSubscription() {
-				return defaultNumberOfRows - 1
-			}
-			return defaultNumberOfRows
 		case .articles:
 			// The Full Screen Articles row is iPhone-only.
 			return traitCollection.userInterfaceIdiom == .phone ? ArticlesRow.allCases.count : ArticlesRow.allCases.count - 1
@@ -186,47 +170,12 @@ final class SettingsViewController: UITableViewController {
 	}
 
 	override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-
-		let cell: UITableViewCell
-		switch Section(rawValue: indexPath.section) {
-		case .accounts:
-
-			let sortedAccounts = AccountManager.shared.sortedAccounts
-			if indexPath.row == sortedAccounts.count {
-				cell = tableView.dequeueReusableCell(withIdentifier: "SettingsTableViewCell", for: indexPath)
-				cell.textLabel?.text = NSLocalizedString("Add Account", comment: "Add Account")
-			} else {
-				let acctCell = tableView.dequeueReusableCell(withIdentifier: "SettingsComboTableViewCell", for: indexPath) as! SettingsComboTableViewCell
-				acctCell.applyThemeProperties()
-				let account = sortedAccounts[indexPath.row]
-				acctCell.comboImage?.image = Assets.accountImage(account.type)
-				acctCell.comboNameLabel?.text = account.nameForDisplay
-				cell = acctCell
-			}
-		default:
-			cell = super.tableView(tableView, cellForRowAt: indexPath)
-
-		}
-
-		return cell
+		return super.tableView(tableView, cellForRowAt: indexPath)
 	}
 
 	override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 
 		switch Section(rawValue: indexPath.section) {
-		case .notifications:
-			UIApplication.shared.open(URL(string: "\(UIApplication.openSettingsURLString)")!)
-			tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
-		case .accounts:
-			let sortedAccounts = AccountManager.shared.sortedAccounts
-			if indexPath.row == sortedAccounts.count {
-				let controller = UIStoryboard.settings.instantiateController(ofType: AddAccountViewController.self)
-				self.navigationController?.pushViewController(controller, animated: true)
-			} else {
-				let controller = UIStoryboard.inspector.instantiateController(ofType: AccountInspectorViewController.self)
-				controller.account = sortedAccounts[indexPath.row]
-				self.navigationController?.pushViewController(controller, animated: true)
-			}
 		case .feeds:
 			switch FeedsRow(rawValue: indexPath.row) {
 			case .importSubscriptions:
@@ -241,9 +190,6 @@ final class SettingsViewController: UITableViewController {
 					let sourceRect = tableView.rectForRow(at: indexPath)
 					exportOPML(sourceView: sourceView, sourceRect: sourceRect)
 				}
-			case .addNetNewsWireNewsFeed:
-				addFeed()
-				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
 			default:
 				break
 			}
@@ -303,18 +249,6 @@ final class SettingsViewController: UITableViewController {
 			}
 		case .help:
 			switch HelpRow(rawValue: indexPath.row) {
-			case .help:
-				openURL(HelpURL.helpHome.rawValue)
-				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
-			case .forum:
-				openURL(HelpURL.discourse.rawValue)
-				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
-			case .releaseNotes:
-				openURL(HelpURL.releaseNotes.rawValue)
-				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
-			case .bugTracker:
-				openURL(HelpURL.bugTracker.rawValue)
-				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
 			case .about:
 				let hosting = UIHostingController(rootView: AboutView())
 				self.navigationController?.pushViewController(hosting, animated: true)
@@ -343,7 +277,15 @@ final class SettingsViewController: UITableViewController {
 	}
 
 	override func tableView(_ tableView: UITableView, indentationLevelForRowAt indexPath: IndexPath) -> Int {
-		return super.tableView(tableView, indentationLevelForRowAt: IndexPath(row: 0, section: Section.accounts.rawValue))
+		// This hack works around a bug in static tables with dynamic type (see
+		// viewDidLoad's comment above) -- it's not accounts-specific logic, just a
+		// reference-point row. Repointed to .feeds (now the first section) since
+		// .accounts was removed; picked because it's the first still-live section,
+		// same rationale the original hack likely used when .accounts was section 0.
+		// NOTE: couldn't verify the original NetNewsWire commit/blame that introduced
+		// this hack in this environment -- confirm this doesn't reintroduce the
+		// dynamic-type bug it was working around before merging.
+		return super.tableView(tableView, indentationLevelForRowAt: IndexPath(row: 0, section: Section.feeds.rawValue))
 	}
 
 	// MARK: Actions
@@ -598,27 +540,4 @@ private extension SettingsViewController {
 		self.present(alert, animated: true)
 	}
 
-	func openURL(_ urlString: String) {
-		guard let url = URL(string: urlString) else {
-			return
-		}
-
-		// Open GitHub links in the GitHub app when installed.
-		if let host = url.host, host == "github.com" || host.hasSuffix(".github.com") {
-			UIApplication.shared.open(url, options: [.universalLinksOnly: true]) { [weak self] openedInApp in
-				if !openedInApp {
-					self?.presentSafariViewController(for: url)
-				}
-			}
-			return
-		}
-
-		presentSafariViewController(for: url)
-	}
-
-	private func presentSafariViewController(for url: URL) {
-		let vc = SFSafariViewController(url: url)
-		vc.modalPresentationStyle = .pageSheet
-		present(vc, animated: true)
-	}
 }
