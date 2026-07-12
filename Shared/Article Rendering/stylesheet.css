@@ -85,16 +85,8 @@ body > .systemMessage {
 	color: var(--feedlink-color);
 }
 
-.avatar img {
-	border-radius: 4px;
-}
-
 .feedIcon {
 	border-radius: 4px;
-}
-
-.rightAlign {
-	text-align: end;
 }
 
 .leftAlign {

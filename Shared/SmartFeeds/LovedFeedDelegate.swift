@@ -22,10 +22,7 @@ import Images
 	let nameForDisplay = NSLocalizedString("Loved", comment: "Loved")
 	let fetchType: FetchType = .loved(nil)
 	var smallIcon: IconImage? {
-		// TODO: add a heart-icon asset catalog entry (e.g. Assets.Images.lovedFeed)
-		// and point this at it. Asset catalog contents aren't part of this patch
-		// series since they're not diffable as text.
-		Assets.Images.starredFeed
+		Assets.Images.lovedFeed
 	}
 	func fetchUnreadCount(account: Account) async -> Int {
 		await account.fetchUnreadCountForLovedArticlesAsync()

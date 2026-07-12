@@ -109,6 +109,10 @@ struct Assets {
 		static let heartClosed = RSImage(symbol: "heart.fill")!
 		static let theme = RSImage(symbol: "doc.richtext")!
 
+		// Loved smart feed icon: filled heart, system red -- replaces the
+		// starredFeed-borrowed placeholder in LovedFeedDelegate.swift.
+		static let lovedFeed = IconImage(heartClosed, isSymbol: true, isBackgroundSuppressed: true, preferredColor: RSColor.systemRed)
+
 		static let searchFeed = IconImage(RSImage(symbol: "magnifyingglass")!, isSymbol: true)
 		static let mainFolder = IconImage(folder, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent)
 		static let todayFeed = IconImage(RSImage(symbol: "sun.max.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: UIColor.systemOrange)
