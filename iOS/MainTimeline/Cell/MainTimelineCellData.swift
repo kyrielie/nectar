@@ -27,6 +27,7 @@ import Images
 	let showIcon: Bool // Make space even when icon is nil
 	let read: Bool
 	let starred: Bool
+	let loved: Bool
 	let numberOfLines: Int
 	let iconSize: IconSize
 	let tagDisplayMode: TagDisplayMode
@@ -160,6 +161,7 @@ import Images
 
 		self.read = article.status.read
 		self.starred = article.status.starred
+		self.loved = article.status.loved
 		self.numberOfLines = numberOfLines
 		self.iconSize = iconSize
 		self.tagDisplayMode = tagDisplayMode
@@ -197,6 +199,7 @@ import Images
 		self.iconImage = nil
 		self.read = true
 		self.starred = false
+		self.loved = false
 		self.numberOfLines = 0
 		self.iconSize = .medium
 		self.tagDisplayMode = .compact
