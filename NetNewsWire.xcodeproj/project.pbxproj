@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 76;
+	objectVersion = 71;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -98,9 +98,9 @@
 		513146B1235A81A400387FDC /* AddWebFeedIntentHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWebFeedIntentHandler.swift; sourceTree = "<group>"; };
 		51314706235C41FC00387FDC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.intentdefinition; name = Base; path = Base.lproj/Intents.intentdefinition; sourceTree = "<group>"; };
 		51314714235C420900387FDC /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Intents.strings; sourceTree = "<group>"; };
-		518B2ED22351B3DD00400001 /* NetNewsWire-iOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "NetNewsWire-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		518B2ED22351B3DD00400001 /* Nectar-iOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Nectar-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		840A1F0A2E4133F400CFCCFC /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
-		840D617C2029031C009BC708 /* Ambrosia Reader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ambrosia Reader.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		840D617C2029031C009BC708 /* Nectar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nectar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		844E47DC2E7DC72A0061A51A /* CODE_OF_CONDUCT.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CODE_OF_CONDUCT.md; sourceTree = "<group>"; };
 		845B14A51FC2299E0013CF92 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		84719F4B2EE01A1100EEF332 /* Tests/NetNewsWire-iOSTests/ActivityItemSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/NetNewsWire-iOSTests/ActivityItemSourceTests.swift"; sourceTree = SOURCE_ROOT; };
@@ -142,7 +142,7 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		840A1F092E41337800CFCCFC /* Technotes */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Technotes; sourceTree = "<group>"; };
 		84719F0E2DB9C52B00EEF332 /* Tests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Tests; sourceTree = "<group>"; };
-		84719F372DB9C60400EEF332 /* xcconfig */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (); explicitFileTypes = {}; explicitFolders = (common, ); path = xcconfig; sourceTree = "<group>"; };
+		84719F372DB9C60400EEF332 /* xcconfig */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (common, ); path = xcconfig; sourceTree = "<group>"; };
 		84A6CFB52D1B4EC500F23315 /* iOS */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (84A6D03F2D1B4EC500F23315 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = iOS; sourceTree = "<group>"; };
 		84CB35042DB9B5E2002AC251 /* Modules */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Modules; sourceTree = "<group>"; };
 		84D35D422DB9F32D004AA60E /* Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (84D35E0B2DB9F32D004AA60E /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Shared; sourceTree = "<group>"; };
@@ -240,8 +240,8 @@
 		849C64611ED37A5D003D8FC0 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				840D617C2029031C009BC708 /* Ambrosia Reader.app */,
-				518B2ED22351B3DD00400001 /* NetNewsWire-iOSTests.xctest */,
+				840D617C2029031C009BC708 /* Nectar.app */,
+				518B2ED22351B3DD00400001 /* Nectar-iOSTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -264,7 +264,7 @@
 			);
 			name = "Nectar-iOSTests";
 			productName = "Nectar-iOSTests";
-			productReference = 518B2ED22351B3DD00400001 /* NetNewsWire-iOSTests.xctest */;
+			productReference = 518B2ED22351B3DD00400001 /* Nectar-iOSTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		840D617B2029031C009BC708 /* Nectar-iOS */ = {
@@ -305,7 +305,7 @@
 				84EE434A2DB8A44C009D3A8D /* RSDatabase */,
 			);
 			productName = "Nectar-iOS";
-			productReference = 840D617C2029031C009BC708 /* Ambrosia Reader.app */;
+			productReference = 840D617C2029031C009BC708 /* Nectar.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -335,6 +335,7 @@
 				};
 			};
 			buildConfigurationList = 849C645B1ED37A5D003D8FC0 /* Build configuration list for PBXProject "NetNewsWire" */;
+			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -348,7 +349,6 @@
 				519CA8E325841DB700EB079A /* XCRemoteSwiftPackageReference "plcrashreporter" */,
 				179D280926F6F93D003B2E0A /* XCRemoteSwiftPackageReference "Zip" */,
 			);
-			preferredProjectObjectVersion = 46;
 			productRefGroup = 849C64611ED37A5D003D8FC0 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
