@@ -77,9 +77,21 @@ final class WebViewController: UIViewController {
 	// used for any behavior decision. (loadWebViewGeneration, below webView, is
 	// the counter that actually gates behavior.)
 	private var loadWebViewCallCount = 0
-	// See renderPage: true immediately after a fresh loadHTMLString, consumed
-	// (and cleared) by the next scrollPositionDidChange call.
-	private var suppressNextScrollSave = false
+	// Incremented once per renderPage call, decremented by the next N calls to
+	// scrollPositionDidChange -- see renderPage and scrollPositionDidChange.
+	// N overlapping renderPage calls correctly suppress N post-load reset
+	// events this way, instead of a single boolean only catching the first.
+	private var pendingLoadResets = 0
+
+	// Set by setArticle just before it kicks off its async scroll-position fetch,
+	// and cleared right before that Task calls loadWebView (both on the success
+	// path and the "article changed, discard" early-return path). While true,
+	// viewDidLoad's unconditional loadWebView(reason: "viewDidLoad") is skipped
+	// so the first render to actually happen is the one with the correct
+	// windowScrollY, instead of a render-at-0 followed by a second corrective
+	// render whose reset-suppression could race and let 0 get saved over the
+	// real position.
+	private var isAwaitingInitialScrollFetch = false
 
 	var windowScrollY = 0 {
 		didSet {
@@ -111,7 +123,9 @@ final class WebViewController: UIViewController {
 		configureTopShowBarsView()
 		configureBottomShowBarsView()
 
-		loadWebView(reason: "viewDidLoad")
+		if !isAwaitingInitialScrollFetch {
+			loadWebView(reason: "viewDidLoad")
+		}
 		super.viewSafeAreaInsetsDidChange()
 		if isFullScreenAvailable && AppDefaults.shared.logicalArticleFullscreenEnabled {
 			updateBottomSafeAreaForFullScreen()
@@ -192,6 +206,9 @@ final class WebViewController: UIViewController {
 				// Real per-article scroll position (Phase 2), replacing the old
 				// unconditional reset to 0 on every article switch.
 				let articleID = article.articleID
+				// Tell viewDidLoad not to render at windowScrollY == 0 while this
+				// fetch is in flight -- see isAwaitingInitialScrollFetch.
+				isAwaitingInitialScrollFetch = true
 				Task {
 					let scrollPosition = await account.fetchScrollPosition(forArticleID: articleID)
 					Self.logger.debug("setArticle: fetched scrollPosition=\(scrollPosition, privacy: .public) for articleID=\(articleID, privacy: .public)")
@@ -199,9 +216,11 @@ final class WebViewController: UIViewController {
 					// resolves; only apply it if we're still showing the same article.
 					guard self.article?.articleID == articleID else {
 						Self.logger.debug("setArticle: article changed before scrollPosition fetch resolved, discarding for articleID=\(articleID, privacy: .public)")
+						self.isAwaitingInitialScrollFetch = false
 						return
 					}
 					self.windowScrollY = Int(scrollPosition)
+					self.isAwaitingInitialScrollFetch = false
 					self.loadWebView(reason: "setArticle(\(articleID)) after scroll fetch")
 				}
 			}
@@ -520,9 +539,9 @@ extension WebViewController: UIScrollViewDelegate {
 				Self.logger.debug("scrollPositionDidChange: discarding known-bad sentinel scrollY value")
 				return
 			}
-			if self.suppressNextScrollSave {
-				self.suppressNextScrollSave = false
-				Self.logger.debug("scrollPositionDidChange: suppressing first post-load event (scrollY=\(javascriptScrollY, privacy: .public), expected windowScrollY=\(self.windowScrollY, privacy: .public)) -- treating as WKWebView's own post-load reset, not a real scroll or save")
+			if self.pendingLoadResets > 0 {
+				self.pendingLoadResets -= 1
+				Self.logger.debug("scrollPositionDidChange: suppressing post-load event (scrollY=\(javascriptScrollY, privacy: .public), expected windowScrollY=\(self.windowScrollY, privacy: .public), remainingPendingLoadResets=\(self.pendingLoadResets, privacy: .public)) -- treating as WKWebView's own post-load reset, not a real scroll or save")
 				return
 			}
 			self.windowScrollY = javascriptScrollY
@@ -694,8 +713,11 @@ private extension WebViewController {
 		// position with 0 -- confirmed in device logs as the actual mechanism
 		// behind "reopening resets to the top." Suppress exactly the next
 		// scrollPositionDidChange call following this load; anything after that
-		// is the page's own restore or genuine user scrolling.
-		suppressNextScrollSave = true
+		// is the page's own restore or genuine user scrolling. Incrementing
+		// (rather than setting a single flag) means N overlapping loads correctly
+		// suppress N reset events instead of only the first one, regardless of
+		// the order their completions arrive in.
+		pendingLoadResets += 1
 
 		var html = try! MacroProcessor.renderedText(withTemplate: ArticleRenderer.page.html, substitutions: substitutions)
 		html = ArticleRenderingSpecialCases.filterHTMLIfNeeded(baseURL: rendering.baseURL, html: html)

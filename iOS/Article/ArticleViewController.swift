@@ -16,10 +16,6 @@ import Articles
 
 final class ArticleViewController: UIViewController {
 
-	struct State {
-		let windowScrollY: Int
-	}
-
 	@IBOutlet private weak var nextUnreadBarButtonItem: UIBarButtonItem!
 	@IBOutlet private weak var prevArticleBarButtonItem: UIBarButtonItem!
 	@IBOutlet private weak var nextArticleBarButtonItem: UIBarButtonItem!
@@ -72,13 +68,6 @@ final class ArticleViewController: UIViewController {
 			updateUI()
 		}
 	}
-
-	var currentState: State? {
-		guard let controller = currentWebViewController else { return nil}
-		return State(windowScrollY: controller.windowScrollY)
-	}
-
-	var restoreState: State?
 
 	private let keyboardManager = KeyboardManager(type: .detail)
 	override var keyCommands: [UIKeyCommand]? {
@@ -141,13 +130,7 @@ final class ArticleViewController: UIViewController {
 			view.bottomAnchor.constraint(equalTo: pageViewController.view.bottomAnchor)
 		])
 
-		let controller: WebViewController
-		if let state = restoreState {
-			controller = createWebViewController(article, updateView: false)
-			controller.windowScrollY = state.windowScrollY
-		} else {
-			controller = createWebViewController(article, updateView: true)
-		}
+		let controller = createWebViewController(article, updateView: true)
 
 		self.pageViewController.setViewControllers([controller], direction: .forward, animated: false, completion: nil)
 		if AppDefaults.shared.logicalArticleFullscreenEnabled {
