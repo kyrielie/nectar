@@ -13,6 +13,7 @@ import Foundation
 struct DatabaseTableName {
 	static let articles = "articles"
 	static let statuses = "statuses"
+	static let bookReadState = "bookReadState"
 }
 
 struct DatabaseKey {
@@ -47,6 +48,7 @@ struct DatabaseKey {
 	static let warnings = "warnings"
 	static let categories = "categories"
 	static let series = "series"
+	static let bookKey = "bookKey"
 
 	// ArticleStatus
 	static let read = "read"
@@ -63,6 +65,10 @@ struct DatabaseKey {
 	// Loved status (Phase 5 fork addition). Joins starred in the "never
 	// auto-delete" set.
 	static let loved = "loved"
+
+	// BookReadState (Phase 6 fork addition)
+	static let state = "state"
+	static let updatedAt = "updatedAt"
 
 	// Author
 	static let authorID = "authorID"

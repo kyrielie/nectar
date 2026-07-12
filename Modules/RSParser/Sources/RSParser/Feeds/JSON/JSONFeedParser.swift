@@ -71,6 +71,12 @@ public struct JSONFeedParser {
 		static let ambrosiaSeriesName = "name"
 		static let ambrosiaSeriesIndex = "index"
 		static let ambrosiaSeriesAO3ID = "ao3_id"
+
+		// Read-state identity fields (see LocalFeedServer's JSONFeedAmbrosiaExtension).
+		static let ambrosiaAO3WorkID = "ao3_work_id"
+		static let ambrosiaIsAnthology = "is_anthology"
+		static let ambrosiaAO3SeriesID = "ao3_series_id"
+		static let ambrosiaBookSeriesName = "series_name"
 	}
 
 	static let jsonFeedVersionMarker = "://jsonfeed.org/version/" // Allow for the mistake of not getting the scheme exactly correct.
@@ -221,7 +227,7 @@ private extension JSONFeedParser {
 			dateModified = parseDate(ambrosiaDateModified)
 		}
 
-		return ParsedItem(syncServiceID: nil, uniqueID: uniqueID, feedURL: feedURL, url: url, externalURL: externalURL, title: title, language: language, contentHTML: contentHTML, contentText: contentText, markdown: nil, summary: summary, imageURL: imageURL, bannerImageURL: bannerImageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, tags: tags, attachments: attachments, wordCount: ambrosia?[Key.ambrosiaWordCount] as? Int, chapterCurrent: ambrosia?[Key.ambrosiaChapterCurrent] as? Int, chapterTotal: ambrosia?[Key.ambrosiaChapterTotal] as? Int, isComplete: ambrosia?[Key.ambrosiaIsComplete] as? Bool, fandoms: ambrosia?[Key.ambrosiaFandoms] as? [String], relationships: ambrosia?[Key.ambrosiaRelationships] as? [String], characters: ambrosia?[Key.ambrosiaCharacters] as? [String], ratings: ambrosia?[Key.ambrosiaRatings] as? [String], warnings: ambrosia?[Key.ambrosiaWarnings] as? [String], categories: ambrosia?[Key.ambrosiaCategories] as? [String], series: parseAmbrosiaSeries(ambrosia))
+		return ParsedItem(syncServiceID: nil, uniqueID: uniqueID, feedURL: feedURL, url: url, externalURL: externalURL, title: title, language: language, contentHTML: contentHTML, contentText: contentText, markdown: nil, summary: summary, imageURL: imageURL, bannerImageURL: bannerImageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, tags: tags, attachments: attachments, wordCount: ambrosia?[Key.ambrosiaWordCount] as? Int, chapterCurrent: ambrosia?[Key.ambrosiaChapterCurrent] as? Int, chapterTotal: ambrosia?[Key.ambrosiaChapterTotal] as? Int, isComplete: ambrosia?[Key.ambrosiaIsComplete] as? Bool, fandoms: ambrosia?[Key.ambrosiaFandoms] as? [String], relationships: ambrosia?[Key.ambrosiaRelationships] as? [String], characters: ambrosia?[Key.ambrosiaCharacters] as? [String], ratings: ambrosia?[Key.ambrosiaRatings] as? [String], warnings: ambrosia?[Key.ambrosiaWarnings] as? [String], categories: ambrosia?[Key.ambrosiaCategories] as? [String], series: parseAmbrosiaSeries(ambrosia), ao3WorkID: ambrosia?[Key.ambrosiaAO3WorkID] as? String, isAnthology: ambrosia?[Key.ambrosiaIsAnthology] as? Bool, ao3SeriesID: ambrosia?[Key.ambrosiaAO3SeriesID] as? String, seriesName: ambrosia?[Key.ambrosiaBookSeriesName] as? String)
 	}
 
 	static func parseAmbrosiaSeries(_ ambrosia: JSONDictionary?) -> [ParsedSeriesEntry]? {
