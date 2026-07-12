@@ -106,20 +106,18 @@ final class ArticleViewController: UIViewController {
 		navigationItem.titleView = fullScreenTapZone
 		navigationItem.rightBarButtonItems = [themeBarButtonItem, nextArticleBarButtonItem, prevArticleBarButtonItem]
 
-		if #unavailable(iOS 26) {
-			let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
-			toolbarItems = [
-				readBarButtonItem,
-				flex(),
-				starBarButtonItem,
-				flex(),
-				heartBarButtonItem,
-				flex(),
-				nextUnreadBarButtonItem,
-				flex(),
-				actionBarButtonItem
-			]
-		}
+		let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
+		toolbarItems = [
+			readBarButtonItem,
+			flex(),
+			starBarButtonItem,
+			flex(),
+			heartBarButtonItem,
+			flex(),
+			nextUnreadBarButtonItem,
+			flex(),
+			actionBarButtonItem
+		]
 
 		pageViewController = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal, options: [:])
 		pageViewController.delegate = self
