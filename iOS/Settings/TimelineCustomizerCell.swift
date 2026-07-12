@@ -7,11 +7,9 @@
 //
 
 import UIKit
-import Images
 
 enum SliderConfiguration {
 	case numberOfLines
-	case iconSize
 	case tagDisplayMode
 }
 
@@ -28,14 +26,6 @@ final class TimelineCustomizerCell: UICollectionViewCell {
 					slider.trackConfiguration = .init(allowsTickValuesOnly: true, numberOfTicks: 6)
 				}
 				slider.value = Float(AppDefaults.shared.timelineNumberOfLines)
-				slider.addTickMarks()
-			case .iconSize:
-				slider.minimumValue = 1
-				slider.maximumValue = 3
-				if #available(iOS 26, *) {
-					slider.trackConfiguration = .init(allowsTickValuesOnly: true, numberOfTicks: 3)
-				}
-				slider.value = Float(AppDefaults.shared.timelineIconSize.rawValue)
 				slider.addTickMarks()
 			case .tagDisplayMode:
 				slider.minimumValue = 1
@@ -55,9 +45,6 @@ final class TimelineCustomizerCell: UICollectionViewCell {
 		switch sliderConfiguration {
 		case .numberOfLines:
 			AppDefaults.shared.timelineNumberOfLines = Int(slider.value.rounded())
-		case .iconSize:
-			guard let iconSize = IconSize(rawValue: Int(slider.value.rounded())) else { return }
-			AppDefaults.shared.timelineIconSize = iconSize
 		case .tagDisplayMode:
 			guard let tagDisplayMode = TagDisplayMode(rawValue: Int(slider.value.rounded())) else { return }
 			AppDefaults.shared.timelineTagDisplayMode = tagDisplayMode

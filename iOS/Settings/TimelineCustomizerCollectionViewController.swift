@@ -39,7 +39,6 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 	}
 
 	private var cachedTimelineLines: Int = AppDefaults.shared.timelineNumberOfLines
-	private var cachedIconSize: IconSize = AppDefaults.shared.timelineIconSize
 	private var cachedTagDisplayMode: TagDisplayMode = AppDefaults.shared.timelineTagDisplayMode
 
     override func viewDidLoad() {
@@ -52,11 +51,6 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 
 				if AppDefaults.shared.timelineNumberOfLines != self.cachedTimelineLines {
 					self.cachedTimelineLines = AppDefaults.shared.timelineNumberOfLines
-					self.userDefaultsDidChange()
-				}
-
-				if AppDefaults.shared.timelineIconSize != self.cachedIconSize {
-					self.cachedIconSize = AppDefaults.shared.timelineIconSize
 					self.userDefaultsDidChange()
 				}
 
@@ -91,7 +85,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
     // MARK: UICollectionViewDataSource
 
     override func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return 5
+        return 4
     }
 
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -102,24 +96,18 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
 
 		if indexPath.section == 0 {
-			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "IconSizeSelector", for: indexPath) as! TimelineCustomizerCell
-			cell.sliderConfiguration = .iconSize
-			return cell
-		}
-
-		if indexPath.section == 1 {
 			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "NumberOfLinesSelector", for: indexPath) as! TimelineCustomizerCell
 			cell.sliderConfiguration = .numberOfLines
 			return cell
 		}
 
-		if indexPath.section == 2 {
+		if indexPath.section == 1 {
 			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "TagDisplayModeSelector", for: indexPath) as! TimelineCustomizerCell
 			cell.sliderConfiguration = .tagDisplayMode
 			return cell
 		}
 
-		if indexPath.section == 3 {
+		if indexPath.section == 2 {
 			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath) as! MainTimelineCell
 			cell.cellData = MainTimelineCellData(article: previewArticle,
 												 showFeedName: .byline,
@@ -134,7 +122,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 			return cell
 		}
 
-		if indexPath.section == 4 {
+		if indexPath.section == 3 {
 			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath) as! MainTimelineCell
 			cell.cellData = MainTimelineCellData(article: previewArticle,
 												 showFeedName: .byline,
@@ -170,14 +158,12 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 
 		switch indexPath.section {
 		case 0:
-			header.label.text = NSLocalizedString("Icon Size", comment: "Icon Size")
-		case 1:
 			header.label.text = NSLocalizedString("Number of Lines", comment: "Number of Lines")
-		case 2:
+		case 1:
 			header.label.text = NSLocalizedString("Tag Display", comment: "Tag Display")
-		case 3:
+		case 2:
 			header.label.text = NSLocalizedString("No Icon Preview", comment: "No Icon Preview")
-		case 4:
+		case 3:
 			header.label.text = NSLocalizedString("Icon Preview", comment: "Icon Preview")
 		default:
 			header.label.text = NSLocalizedString("", comment: "")
@@ -191,7 +177,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 	}
 
 	override func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
-		if indexPath.section > 2 {
+		if indexPath.section > 1 {
 			return false
 		}
 		return true
@@ -200,7 +186,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 	// MARK: Notifications
 
 	func userDefaultsDidChange() {
-		collectionView.reloadSections([3, 4])
+		collectionView.reloadSections([2, 3])
 	}
 
 }
