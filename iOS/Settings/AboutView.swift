@@ -25,6 +25,14 @@ struct AboutView: View {
 				Text("[netnewswire.com](https://netnewswire.com/)")
 
 				VStack(spacing: 6) {
+					Text(verbatim: "Nectar")
+						.bold()
+						.foregroundStyle(.secondary)
+						.padding(.top, 16)
+					Text(verbatim: "Nectar is a private fork of NetNewsWire for reading Ambrosia JSON feeds.")
+				}
+
+				VStack(spacing: 6) {
 					Text(verbatim: "Credits")
 						.bold()
 						.foregroundStyle(.secondary)
@@ -64,7 +72,7 @@ struct AboutView: View {
 		}
 		.multilineTextAlignment(.center)
 		.background(Color(uiColor: .systemBackground))
-		.navigationTitle(Text(verbatim: "About NetNewsWire"))
+		.navigationTitle(Text(verbatim: "About Nectar"))
     }
 }
 
