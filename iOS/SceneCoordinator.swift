@@ -514,6 +514,19 @@ struct SidebarItemNode: Hashable, Sendable {
 
 	@objc func statusesDidChange(_ note: Notification) {
 		updateUnreadCount()
+
+		// Read-status changes can make articles disappear from (or reappear in) the
+		// current timeline -- e.g. marking read while viewing All Unread, or while
+		// Hide Read Articles is on for this feed. Neither case is caught by cell
+		// reloads alone, since a cell reload can't remove/insert rows; only a
+		// refetch reapplies the read filter. Other status changes (starred, loved)
+		// never change filtered membership, so they're deliberately excluded.
+		guard let statusKey = note.userInfo?[Account.UserInfoKey.statusKey] as? ArticleStatus.Key,
+			  statusKey == .read,
+			  timelineDefaultReadFilterType == .alwaysRead || isReadArticlesFiltered else {
+			return
+		}
+		refreshTimeline(resetScroll: false)
 	}
 
 	@objc func containerChildrenDidChange(_ note: Notification) {
