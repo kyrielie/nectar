@@ -24,7 +24,10 @@ import Images
 	var smallIcon: IconImage? {
 		Assets.Images.lovedFeed
 	}
+	// Repurposed as a general badge count rather than a true unread count --
+	// mirrors the total-count badge shown for Unread and Recently Added, so
+	// Loved shows a count even when every article in it has been read.
 	func fetchUnreadCount(account: Account) async -> Int {
-		await account.fetchUnreadCountForLovedArticlesAsync()
+		await account.fetchCountForLovedArticlesAsync()
 	}
 }
