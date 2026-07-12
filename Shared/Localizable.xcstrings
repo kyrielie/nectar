@@ -80,6 +80,9 @@
     "All Articles" : {
       "comment" : "All Articles"
     },
+    "All Read" : {
+      "comment" : "All Read pseudo-feed title"
+    },
     "All Unread" : {
       "comment" : "All Unread pseudo-feed title"
     },
@@ -392,9 +395,6 @@
     "iCloud Storage Stats" : {
       "comment" : "iCloud Storage Stats window title"
     },
-    "Icon Preview" : {
-      "comment" : "Icon Preview"
-    },
     "Import Failed" : {
       "comment" : "Import Failed"
     },
@@ -566,9 +566,6 @@
     "No Errors Logged" : {
       "comment" : "Error log empty state"
     },
-    "No Icon Preview" : {
-      "comment" : "No Icon Preview"
-    },
     "No library connected yet." : {
       "comment" : "Empty state message"
     },
@@ -624,6 +621,9 @@
     "Please enter a valid http:// or https:// address." : {
       "comment" : "Invalid address message"
     },
+    "Preview" : {
+      "comment" : "Preview"
+    },
     "Previous Article" : {
       "comment" : "Previous Article"
     },
@@ -641,6 +641,9 @@
     },
     "Read Later" : {
       "comment" : "Command\nRead Later"
+    },
+    "Recently Added" : {
+      "comment" : "Recently Added pseudo-feed title"
     },
     "Refresh" : {
       "comment" : "Refresh"
@@ -834,9 +837,6 @@
     },
     "Title" : {
       "comment" : "Sort field"
-    },
-    "Today" : {
-      "comment" : "Today pseudo-feed title"
     },
     "Toggle Loved Status" : {
       "comment" : "Toggle Loved Status"
