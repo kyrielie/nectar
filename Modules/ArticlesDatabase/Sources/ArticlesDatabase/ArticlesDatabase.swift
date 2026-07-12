@@ -568,7 +568,12 @@ private extension ArticlesDatabase {
 	"""
 
 	func todayCutoffDate() -> Date {
-		// 24 hours previous. This is used by the Today smart feed, which should not actually empty out at midnight.
+		// 24 hours previous. Function/property names in this call chain
+		// (todayCutoffDate, fetchTodayArticles, fetchUnreadCountForTodayAsync,
+		// FetchType.today) still say "today" -- left as-is to keep this change
+		// small -- but this now backs the Recently Added smart feed: a rolling
+		// 24-hour window of dateArrived (when something entered the library),
+		// not datePublished. Should not actually empty out at midnight.
 		return Date(timeIntervalSinceNow: -(60 * 60 * 24)) // This does not need to be more precise.
 	}
 

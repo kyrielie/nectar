@@ -444,7 +444,10 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	}
 
 	func fetchUnreadCount(_ feedIDs: Set<String>, _ since: Date, _ completion: @escaping SingleUnreadCountCompletionBlock) {
-		// Get unread count for today, for instance.
+		// Get unread count for Recently Added, for instance. Uses dateArrived
+		// specifically (not datePublished) -- this answers "added to the
+		// library since," not "published since," which is what the old
+		// Today smart feed asked and doesn't apply to a book collection.
 		if feedIDs.isEmpty {
 			completion(0)
 			return
@@ -452,11 +455,10 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 		queue.runInDatabase { database in
 			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
-			let sql = "select count(*) from articles natural join statuses where feedID in \(placeholders) and (datePublished > ? or (datePublished is null and dateArrived > ?)) and read=0;"
+			let sql = "select count(*) from articles natural join statuses where feedID in \(placeholders) and dateArrived > ? and read=0;"
 
 			var parameters = [Any]()
 			parameters += Array(feedIDs) as [Any]
-			parameters += [since] as [Any]
 			parameters += [since] as [Any]
 
 			let unreadCount = self.numberWithSQLAndParameters(sql, parameters, in: database)
@@ -506,7 +508,8 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	}
 
 	func fetchArticlesCountSince(_ feedIDs: Set<String>, _ cutoffDate: Date, _ completion: @escaping SingleUnreadCountCompletionBlock) {
-		// Total count (read and unread) since a cutoff date — today's count, for instance.
+		// Total count (read and unread) added to the library since a cutoff
+		// date -- Recently Added's count, for instance.
 		if feedIDs.isEmpty {
 			completion(0)
 			return
@@ -514,11 +517,10 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 		queue.runInDatabase { database in
 			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
-			let sql = "select count(*) from articles natural join statuses where feedID in \(placeholders) and (datePublished > ? or (datePublished is null and dateArrived > ?));"
+			let sql = "select count(*) from articles natural join statuses where feedID in \(placeholders) and dateArrived > ?;"
 
 			var parameters = [Any]()
 			parameters += Array(feedIDs) as [Any]
-			parameters += [cutoffDate] as [Any]
 			parameters += [cutoffDate] as [Any]
 
 			let count = self.numberWithSQLAndParameters(sql, parameters, in: database)
@@ -976,17 +978,22 @@ nonisolated private extension ArticlesTable {
 	}
 
 	func fetchArticlesSince(_ feedIDs: Set<String>, _ cutoffDate: Date, _ limit: Int?, _ database: FMDatabase) -> Set<Article> {
-		// select * from articles natural join statuses where feedID in ('http://ranchero.com/xml/rss.xml') and (datePublished > ? || (datePublished is null and dateArrived > ?)
+		// select * from articles natural join statuses where feedID in ('http://ranchero.com/xml/rss.xml') and dateArrived > ?
 		//
-		// datePublished may be nil, so we fall back to dateArrived.
+		// Used by the Recently Added smart feed: dateArrived is when the
+		// article/book entered the library, which is what "recently added"
+		// means. Deliberately not datePublished -- a book's publish/added
+		// date on the wire (Calibre's metadata) has no bearing on when you
+		// actually got it, unlike a blog post where "published" and
+		// "arrived" are close to the same moment.
 		if feedIDs.isEmpty {
 			return Set<Article>()
 		}
-		let parameters = feedIDs.map { $0 as AnyObject } + [cutoffDate as AnyObject, cutoffDate as AnyObject]
+		let parameters = feedIDs.map { $0 as AnyObject } + [cutoffDate as AnyObject]
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
-		var whereClause = "feedID in \(placeholders) and (datePublished > ? or (datePublished is null and dateArrived > ?))"
+		var whereClause = "feedID in \(placeholders) and dateArrived > ?"
 		if let limit = limit {
-			whereClause.append(" order by coalesce(datePublished, dateModified, dateArrived) desc limit \(limit)")
+			whereClause.append(" order by dateArrived desc limit \(limit)")
 		}
 		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
