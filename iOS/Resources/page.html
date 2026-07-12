@@ -17,6 +17,15 @@
 				}
 			}
 
+			// Unconditional, runs immediately at parse time (before DOMContentLoaded,
+			// before document.body exists) with no dependency on any later event
+			// firing correctly. If this line alone doesn't show up in the device
+			// log, the debugLog bridge itself isn't wired up (handler not
+			// registered on this particular webView instance, or messages are
+			// being dropped) and none of the event-based logging below can be
+			// trusted until that's fixed first.
+			debugLog("page.html script parsed, readyState=" + document.readyState);
+
 			function scrollState(label) {
 				return label + ": target=[[windowScrollY]] actualScrollY=" + window.scrollY +
 					" scrollHeight=" + document.body.scrollHeight +
