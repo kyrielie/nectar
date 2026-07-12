@@ -33,9 +33,25 @@ final class WebViewController: UIViewController {
 	private var topShowBarsViewConstraint: NSLayoutConstraint!
 	private var bottomShowBarsViewConstraint: NSLayoutConstraint!
 
-	private var webView: PreloadedWebView? {
-		return view.subviews[0] as? PreloadedWebView
-	}
+	// The only authoritative reference to "the" current webview. Previously this was
+	// a computed property returning view.subviews[0], which silently returned whichever
+	// PreloadedWebView happened to be backmost if more than one was ever inserted --
+	// see loadWebViewGeneration below for why that could happen, and why subviews[0]
+	// is not a safe way to identify it.
+	private var webView: PreloadedWebView?
+
+	// Bumped at the top of every loadWebView() call. Captured by value into each
+	// dequeueWebView/ready completion so that a completion arriving after a newer
+	// loadWebView() call has started can recognize it's stale and bail out instead
+	// of inserting a second, competing PreloadedWebView into the view hierarchy.
+	// This closes the race where viewDidLoad's unconditional loadWebView(reason:
+	// "viewDidLoad") (windowScrollY still 0, since setArticle's async scroll-position
+	// fetch hasn't resolved yet) and setArticle's own loadWebView(reason: "setArticle
+	// ... after scroll fetch") (windowScrollY now the restored value) each see
+	// webView == nil and each independently dequeue+insert their own webview --
+	// whichever of the two ends up on top of the view stack is timing-dependent,
+	// and it is not necessarily the one that captured the correct scroll position.
+	private var loadWebViewGeneration = 0
 
 	private lazy var contextMenuInteraction = UIContextMenuInteraction(delegate: self)
 	private var isFullScreenAvailable: Bool {
@@ -58,7 +74,8 @@ final class WebViewController: UIViewController {
 	// viewWillDisappear for why that race was a real, reproducible bug.
 	private var lastKnownReadingProgress: Double?
 	// Diagnostic only, for tracing the duplicate-renderPage-call reports -- not
-	// used for any behavior decision.
+	// used for any behavior decision. (loadWebViewGeneration, below webView, is
+	// the counter that actually gates behavior.)
 	private var loadWebViewCallCount = 0
 	// See renderPage: true immediately after a fresh loadHTMLString, consumed
 	// (and cleared) by the next scrollPositionDidChange call.
@@ -575,7 +592,9 @@ private extension WebViewController {
 		}
 
 		loadWebViewCallCount += 1
-		Self.logger.debug("loadWebView: call #\(self.loadWebViewCallCount, privacy: .public) reason=\(reason, privacy: .public) articleID=\(self.article?.articleID ?? "nil", privacy: .public) windowScrollY=\(self.windowScrollY, privacy: .public) reusingExistingWebView=\(!replaceExistingWebView && self.webView != nil, privacy: .public)")
+		loadWebViewGeneration += 1
+		let generation = loadWebViewGeneration
+		Self.logger.debug("loadWebView: call #\(self.loadWebViewCallCount, privacy: .public) generation=\(generation, privacy: .public) reason=\(reason, privacy: .public) articleID=\(self.article?.articleID ?? "nil", privacy: .public) windowScrollY=\(self.windowScrollY, privacy: .public) reusingExistingWebView=\(!replaceExistingWebView && self.webView != nil, privacy: .public)")
 
 		if !replaceExistingWebView, let webView = webView {
 			self.renderPage(webView)
@@ -586,8 +605,26 @@ private extension WebViewController {
 
 			webView.ready {
 
+				// A newer loadWebView() call has started since this one was issued --
+				// most commonly viewDidLoad's initial call losing the race against
+				// setArticle's post-scroll-fetch call, or vice versa. Discard this
+				// webview rather than inserting a second one into the view hierarchy;
+				// the winning generation's own completion will render the page.
+				guard generation == self.loadWebViewGeneration else {
+					Self.logger.debug("loadWebView: discarding stale completion, generation=\(generation, privacy: .public) currentGeneration=\(self.loadWebViewGeneration, privacy: .public) reason=\(reason, privacy: .public)")
+					return
+				}
+
+				// If an older webview is still around (e.g. this is a replaceExistingWebView
+				// reload), remove it now so we never have more than one PreloadedWebView
+				// in the view hierarchy at a time.
+				if let previousWebView = self.webView, previousWebView !== webView {
+					previousWebView.removeFromSuperview()
+				}
+
 				// Add the webview
 				webView.translatesAutoresizingMaskIntoConstraints = false
+				self.webView = webView
 				self.view.insertSubview(webView, at: 0)
 				NSLayoutConstraint.activate([
 					self.view.leadingAnchor.constraint(equalTo: webView.leadingAnchor),

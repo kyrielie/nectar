@@ -7,10 +7,16 @@
 //
 
 import Foundation
+import os
 
 // See https://jsonfeed.org/version/1.1
 
 public struct JSONFeedParser {
+
+	// Diagnostic only, for tracking down items that go missing between the raw
+	// feed JSON and what ends up in the app (e.g. "the feed has N items but only
+	// N-1 show up"). Not used for any parsing decision.
+	private static let logger = Logger(subsystem: "com.ranchero.NetNewsWire.RSParser", category: "JSONFeedParser")
 
 	struct Key {
 		static let version = "version"
@@ -98,6 +104,10 @@ public struct JSONFeedParser {
 
 		let items = parseItems(itemsArray, parserData.url)
 
+		if items.count != itemsArray.count {
+			logger.notice("parse: feedURL=\(feedURL, privacy: .public) rawItemCount=\(itemsArray.count, privacy: .public) parsedItemCount=\(items.count, privacy: .public) -- \(itemsArray.count - items.count, privacy: .public) item(s) dropped, see preceding parseItem logs for reasons")
+		}
+
 		return ParsedFeed(type: .jsonFeed, title: title, homePageURL: homePageURL, feedURL: feedURL, language: language, feedDescription: feedDescription, nextURL: nextURL, iconURL: iconURL, faviconURL: faviconURL, authors: authors, expired: expired, hubs: hubs, items: items)
 	}
 }
@@ -151,20 +161,40 @@ private extension JSONFeedParser {
 
 	static func parseItems(_ itemsArray: JSONArray, _ feedURL: String) -> Set<ParsedItem> {
 
-		return Set(itemsArray.compactMap { (oneItemDictionary) -> ParsedItem? in
-			return parseItem(oneItemDictionary, feedURL)
-		})
+		var seenUniqueIDs = Set<String>()
+
+		let parsedItems = itemsArray.enumerated().compactMap { (index, oneItemDictionary) -> ParsedItem? in
+			guard let item = parseItem(oneItemDictionary, feedURL) else {
+				let title = oneItemDictionary[Key.title] as? String
+				let url = oneItemDictionary[Key.url] as? String
+				logger.notice("parseItem: feedURL=\(feedURL, privacy: .public) itemIndex=\(index, privacy: .public) dropped -- title=\(title ?? "nil", privacy: .public) url=\(url ?? "nil", privacy: .public)")
+				return nil
+			}
+			// A same-id collision here won't shrink the Set below (ParsedItem equality
+			// is over every field, not just uniqueID), but a downstream by-uniqueID
+			// merge/upsert against the article store can still treat these as the same
+			// article and keep only one -- log it here, at the source, rather than
+			// leaving it to be inferred from a missing article later.
+			if !seenUniqueIDs.insert(item.uniqueID).inserted {
+				logger.notice("parseItem: feedURL=\(feedURL, privacy: .public) itemIndex=\(index, privacy: .public) duplicate uniqueID=\(item.uniqueID, privacy: .public) title=\(item.title ?? "nil", privacy: .public)")
+			}
+			return item
+		}
+
+		return Set(parsedItems)
 	}
 
 	static func parseItem(_ itemDictionary: JSONDictionary, _ feedURL: String) -> ParsedItem? {
 
 		guard let uniqueID = parseUniqueID(itemDictionary) else {
+			logger.notice("parseItem: feedURL=\(feedURL, privacy: .public) dropped -- no usable \"\(Key.uniqueID, privacy: .public)\" field")
 			return nil
 		}
 
 		let contentHTML = itemDictionary[Key.contentHTML] as? String
 		let contentText = itemDictionary[Key.contentText] as? String
 		if contentHTML == nil && contentText == nil {
+			logger.notice("parseItem: feedURL=\(feedURL, privacy: .public) uniqueID=\(uniqueID, privacy: .public) dropped -- neither \(Key.contentHTML, privacy: .public) nor \(Key.contentText, privacy: .public) present")
 			return nil
 		}
 
