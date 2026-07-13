@@ -467,14 +467,17 @@ import os
 	///
 	/// Stops when `next_url` is absent, a page fails to fetch or parse, or
 	/// `maxPaginationPages` is hit -- a safety net against a misbehaving
-	/// server whose `next_url` never terminates.
+	/// server whose `next_url` never terminates. This is a page-count cap,
+	/// not an item-count cap: Ambrosia's per-page item count varies with
+	/// series/collection grouping, so raise this if libraries grow past
+	/// what 200 pages covers at the page sizes seen in practice.
 	///
 	/// A page that fails to fetch or parse makes the merged result partial:
 	/// the caller must not run `deleteOlder` pruning against a feed that
 	/// wasn't fetched in full, since the items on the failed page would
 	/// look like they'd disappeared from the feed and get deleted from
 	/// the local database.
-	private static let maxPaginationPages = 20
+	private static let maxPaginationPages = 200
 
 	private func mergedParsedFeed(startingWith parsedFeed: ParsedFeed, originalURL: URL, owner: ActivityOwner?, activityKind: ActivityKind) async -> (feed: ParsedFeed, isPartial: Bool) {
 		var mergedItems = parsedFeed.items
