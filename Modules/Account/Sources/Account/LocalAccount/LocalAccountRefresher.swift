@@ -553,9 +553,18 @@ private extension LocalAccountRefresher {
 
 	/// Returns whether this feed should be skipped and the reason if so.
 	static func feedShouldBeSkipped(_ feed: Feed, _ specialCaseCutoffDate: Date, _ redditURLToRefresh: String?) -> (Bool, String?) {
-		let (skipForCacheControl, cacheControlReason) = feedShouldBeSkippedForCacheControlReasons(feed)
-		if skipForCacheControl {
-			return (true, cacheControlReason)
+		// Paired-library (Ambrosia) feeds point at a server the user runs and
+		// controls on their own network, not a public site we need to be
+		// polite to -- so the Cache-Control and minimum-time-between-checks
+		// throttles below don't apply, and refreshing on demand (e.g. right
+		// after triggering a re-scan on the Mac) needs to always go through.
+		let isPairedLibraryFeed = feed.account?.endpointURL != nil
+
+		if !isPairedLibraryFeed {
+			let (skipForCacheControl, cacheControlReason) = feedShouldBeSkippedForCacheControlReasons(feed)
+			if skipForCacheControl {
+				return (true, cacheControlReason)
+			}
 		}
 		let (skipForDisallowedHost, disallowedHostReason) = feedShouldBeSkippedForDisallowedHostReasons(feed)
 		if skipForDisallowedHost {
@@ -565,9 +574,11 @@ private extension LocalAccountRefresher {
 		if skipForReddit {
 			return (true, redditReason)
 		}
-		let (skipForTiming, timingReason) = feedShouldBeSkippedForTimingReasons(feed, specialCaseCutoffDate)
-		if skipForTiming {
-			return (true, timingReason)
+		if !isPairedLibraryFeed {
+			let (skipForTiming, timingReason) = feedShouldBeSkippedForTimingReasons(feed, specialCaseCutoffDate)
+			if skipForTiming {
+				return (true, timingReason)
+			}
 		}
 		return (false, nil)
 	}
