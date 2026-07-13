@@ -217,6 +217,16 @@ import os
 			Self.logger.debug("LocalAccountRefresher: expected feed for \(url)")
 			return nil
 		}
+
+		// A nil contentHash means we've never confirmed this feed is single-page
+		// (see LocalAccountRefresher's downloadDidComplete: contentHash is only set
+		// after a non-partial, non-paginated refresh). Sending conditional GET
+		// headers here risks a 304 that skips page-1 parsing -- and therefore
+		// pagination -- entirely, for a feed we don't yet know is safe to shortcut.
+		guard feed.contentHash != nil else {
+			Self.logger.notice("LocalAccountRefresher: skipping conditional GET for \(url) -- feed not confirmed single-page")
+			return nil
+		}
 		guard let conditionalGetInfo = feed.conditionalGetInfo else {
 			Self.logger.debug("LocalAccountRefresher: no conditional GET info for \(url)")
 			return nil
