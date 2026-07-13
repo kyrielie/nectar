@@ -105,6 +105,17 @@ final class FeedSettingsDatabase: Sendable {
 		}
 	}
 
+	/// Renames a row's primary key (`feedURL`) in place, preserving every other
+	/// column (editedName, cacheControlInfo, lastCheckDate, notification
+	/// preference, etc.) -- used by `Account.repointFeed(_:to:)` so a feed whose
+	/// address changes doesn't silently lose its settings, the way an unguarded
+	/// `deleteSettingsForFeedsNotIn` cleanup would.
+	func repointFeedURL(from oldFeedURL: String, to newFeedURL: String) {
+		serialDispatchQueue.async {
+			self.database.executeUpdate("UPDATE feedSettings SET feedURL = ? WHERE feedURL = ?;", withArgumentsIn: [newFeedURL, oldFeedURL])
+		}
+	}
+
 	// MARK: - Insert Row
 
 	func insertRow(_ feedURL: String, _ columnValues: [Column: Any]) {

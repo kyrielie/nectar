@@ -14,7 +14,7 @@ import Articles
 @MainActor public final class Feed: SidebarItem, Renamable, Hashable {
 	nonisolated public let feedID: String
 	nonisolated public let accountID: String
-	nonisolated public let url: String
+	nonisolated(unsafe) public private(set) var url: String
 	nonisolated public let sidebarItemID: SidebarItemIdentifier?
 
 	public weak var account: Account?
@@ -262,6 +262,17 @@ import Articles
 	}
 
 	// MARK: - API
+
+	/// Changes this feed's fetch address without changing its identity (`feedID`).
+	/// Used when the same Ambrosia collection becomes reachable at a new URL (e.g.
+	/// after a LAN IP change): `articleID` is derived from `feedID`, not `url`, so
+	/// existing articles, statuses (starred/loved/readingProgress/scrollPosition),
+	/// and bookReadState rows all remain correctly associated with no merge step
+	/// needed. Callers are responsible for updating `settings`/`feedSettings` to
+	/// match (see `Account.repointFeed(_:to:)`), since that's keyed by URL today.
+	func repoint(to newURL: String) {
+		url = newURL
+	}
 
 	public func dropConditionalGetInfo() {
 		conditionalGetInfo = nil

@@ -127,12 +127,14 @@ import Secrets
 
 	/// After an OPML import, finds any newly created feed that shares an Ambrosia
 	/// collection identity with a feed that already existed under a different URL
-	/// (the LAN-IP-changed re-pair case), merges the stale feed's starred/loved/
-	/// reading-progress/scroll-position state into the new feed's matching
-	/// articles (matched by `bookKey`, so the merge is correct regardless of the
-	/// old and new articleIDs differing), and removes the stale feed from the
-	/// sidebar. Read state doesn't need merging here: it's already tracked by
-	/// bookKey in `BookReadStateTable`, independent of feedID.
+	/// (the LAN-IP-changed re-pair case) and repoints the existing feed to the new
+	/// address instead of leaving the just-created duplicate in the sidebar.
+	///
+	/// This supersedes the earlier merge-by-bookKey approach: since `repointFeed`
+	/// leaves `feedID` unchanged, `staleFeed`'s articles, statuses (starred/loved/
+	/// readingProgress/scrollPosition), and bookReadState rows are already correctly
+	/// associated with no copying needed -- `articleID` is derived from `feedID`,
+	/// not `url`.
 	private func reconcileRepairedFeeds(incomingItems: [OPMLItem], preexistingFeedsByCollectionKey: [String: Feed]) async {
 		guard let account, !preexistingFeedsByCollectionKey.isEmpty else {
 			return
@@ -143,66 +145,35 @@ import Secrets
 			return
 		}
 
-		let candidateNewFeeds = account.flattenedFeeds().filter { incomingURLs.contains($0.url) }
+		let duplicateFeeds = account.flattenedFeeds().filter { incomingURLs.contains($0.url) }
 
-		for newFeed in candidateNewFeeds {
-			guard let collectionKey = AmbrosiaFeedIdentity.collectionKey(for: newFeed.url) else {
+		for duplicateFeed in duplicateFeeds {
+			guard let collectionKey = AmbrosiaFeedIdentity.collectionKey(for: duplicateFeed.url) else {
 				continue
 			}
-			guard let staleFeed = preexistingFeedsByCollectionKey[collectionKey], staleFeed.feedID != newFeed.feedID else {
+			guard let staleFeed = preexistingFeedsByCollectionKey[collectionKey], staleFeed.feedID != duplicateFeed.feedID else {
 				continue
 			}
-			await repair(staleFeed: staleFeed, newFeed: newFeed, account: account)
+			await repointAndRefresh(staleFeed: staleFeed, replacing: duplicateFeed, account: account)
 		}
 	}
 
-	/// Merges status from `staleFeed`'s articles into `newFeed`'s matching articles
-	/// (by `bookKey`), then removes `staleFeed` from the sidebar. `newFeed` must
-	/// already have been added to the tree by `loadOPMLItems` before this runs.
-	private func repair(staleFeed: Feed, newFeed: Feed, account: Account) async {
+	/// Repoints `staleFeed` to `duplicateFeed`'s (new) URL, removes `duplicateFeed`
+	/// from the sidebar (it was only ever a byproduct of `loadOPMLItems` creating a
+	/// fresh `Feed` for every OPML entry, with no identity check), and refreshes
+	/// `staleFeed` so it starts fetching from the new address.
+	private func repointAndRefresh(staleFeed: Feed, replacing duplicateFeed: Feed, account: Account) async {
+		account.repointFeed(staleFeed, to: duplicateFeed.url)
+		removeFromSidebar(duplicateFeed, account: account)
+
 		refresher.accountID = account.accountID
-		await refresher.refreshFeeds([newFeed])
-
-		let staleArticles = await account.fetchArticlesAsync(.feed(staleFeed))
-		guard !staleArticles.isEmpty else {
-			removeFromSidebar(staleFeed, account: account)
-			return
-		}
-
-		let freshArticles = await account.fetchArticlesAsync(.feed(newFeed))
-		var freshArticlesByBookKey = [String: Article]()
-		for article in freshArticles {
-			freshArticlesByBookKey[article.bookKey] = article
-		}
-
-		for staleArticle in staleArticles {
-			guard let freshArticle = freshArticlesByBookKey[staleArticle.bookKey] else {
-				continue
-			}
-
-			if staleArticle.status.starred {
-				try? await account.markArticles(articleIDs: [freshArticle.articleID], statusKey: .starred, flag: true)
-			}
-			if staleArticle.status.loved {
-				try? await account.markArticles(articleIDs: [freshArticle.articleID], statusKey: .loved, flag: true)
-			}
-			if let readingProgress = staleArticle.status.readingProgress, readingProgress > 0 {
-				await account.saveReadingProgress(readingProgress, forArticleID: freshArticle.articleID)
-			}
-
-			let scrollPosition = await account.fetchScrollPosition(forArticleID: staleArticle.articleID)
-			if scrollPosition > 0 {
-				await account.saveScrollPosition(scrollPosition, forArticleID: freshArticle.articleID)
-			}
-		}
-
-		removeFromSidebar(staleFeed, account: account)
+		await refresher.refreshFeeds([staleFeed])
 	}
 
 	/// Removes `feed` from every container it's in. Deliberately leaves its
 	/// articles and feedSettings row alone -- Phase 1 already stopped the
-	/// unconditional cleanup that used to hard-delete these, and a merged-away
-	/// stale feed's leftovers are exactly the harmless orphan case that guard
+	/// unconditional cleanup that used to hard-delete these, and a discarded
+	/// duplicate's leftovers are exactly the harmless orphan case that guard
 	/// was meant to tolerate.
 	private func removeFromSidebar(_ feed: Feed, account: Account) {
 		for container in account.existingContainers(withFeed: feed) {
@@ -372,6 +343,12 @@ private extension LocalAccountDelegate {
 			throw AccountError.createErrorAlreadySubscribed
 		}
 
+		if let repairedFeed = repointIfAmbrosiaRepair(urlString: bestFeedSpecifier.urlString, account: account, container: container) {
+			refresher.accountID = account.accountID
+			await refresher.refreshFeeds([repairedFeed])
+			return repairedFeed
+		}
+
 		let (parsedFeed, response) = try await InitialFeedDownloader.download(url)
 		guard let parsedFeed else {
 			throw AccountError.createErrorNotFound
@@ -394,5 +371,24 @@ private extension LocalAccountDelegate {
 		}
 
 		return feed
+	}
+
+	/// If `urlString` is an Ambrosia route whose collection matches an existing
+	/// feed under a different URL (the LAN-IP-changed re-pair case), repoints that
+	/// existing feed to `urlString` and adds it to `container`, returning it.
+	/// Returns nil when this isn't a repair -- either `urlString` isn't a
+	/// recognized Ambrosia route, or no existing feed matches its collection --
+	/// in which case the caller should proceed with a normal create.
+	@MainActor func repointIfAmbrosiaRepair(urlString: String, account: Account, container: Container) -> Feed? {
+		guard let collectionKey = AmbrosiaFeedIdentity.collectionKey(for: urlString) else {
+			return nil
+		}
+		guard let staleFeed = LocalAccountDelegate.collectionKeyIndex(for: account.flattenedFeeds())[collectionKey], staleFeed.url != urlString else {
+			return nil
+		}
+
+		account.repointFeed(staleFeed, to: urlString)
+		container.addFeedToTreeAtTopLevel(staleFeed)
+		return staleFeed
 	}
 }

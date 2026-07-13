@@ -737,6 +737,23 @@ public enum FetchType {
 		feedSettingsDatabase.deleteSettings(for: feed.url)
 	}
 
+	/// Repoints `feed`'s fetch address to `newURLString`, keeping its `feedID`
+	/// (and therefore its articles, statuses, and bookReadState rows) unchanged.
+	/// Used to fix the LAN-IP-changed Ambrosia re-pair case in place instead of
+	/// creating a duplicate feed and merging into it.
+	func repointFeed(_ feed: Feed, to newURLString: String) {
+		let oldURLString = feed.url
+		guard oldURLString != newURLString else {
+			return
+		}
+
+		feedSettingsDatabase.repointFeedURL(from: oldURLString, to: newURLString)
+		feedSettingsCache[oldURLString] = nil
+
+		feed.repoint(to: newURLString)
+		feed.settings = feedSettings(feedURL: newURLString, feedID: feed.feedID)
+	}
+
 	public func removeFeed(_ feed: Feed, from container: Container, completion: @escaping (Result<Void, Error>) -> Void) {
 		Task { @MainActor in
 			do {
