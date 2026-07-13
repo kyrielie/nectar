@@ -308,7 +308,7 @@ import os
 		Task { @MainActor in
 			defer {
 				self.outstandingParseTasks -= 1
-				self.completeRefreshActivityIfReady()
+				self.completeRefreshIfReady()
 			}
 
 			Self.logger.debug("LocalAccountRefresher: parsing feed for \(url.absoluteString)")
@@ -406,12 +406,7 @@ import os
 		}
 
 		downloadSessionIsComplete = true
-		completeRefreshActivityIfReady()
-
-		Task { @MainActor in
-			completion?()
-			completion = nil
-		}
+		completeRefreshIfReady()
 	}
 
 	/// JSON Feed pagination: if the first page has a `next_url`, fetch and
@@ -500,6 +495,27 @@ import os
 
 		ActivityLog.shared.didComplete(id: refreshActivityID, message: refreshStatsMessage)
 		self.refreshActivityID = nil
+	}
+
+	/// Fires the stored `completion` closure -- and thus resumes the
+	/// `await refreshFeeds(_:)` caller -- only once every initial DownloadSession
+	/// request *and* every next_url pagination/parse Task it spawned has
+	/// finished. Previously `downloadSessionDidComplete` called `completion?()`
+	/// directly as soon as the initial batch of requests came back, which meant
+	/// callers (e.g. `LocalAccountDelegate.refreshAll()`, which sets
+	/// `lastRefreshCompletedDate` right after awaiting this) believed the
+	/// refresh had finished while next_url pagination was still silently
+	/// running in the background -- the actual mechanism behind items never
+	/// arriving even though the individual page fetches were succeeding.
+	func completeRefreshIfReady() {
+		completeRefreshActivityIfReady()
+		guard downloadSessionIsComplete, outstandingParseTasks == 0 else {
+			return
+		}
+		Task { @MainActor in
+			completion?()
+			completion = nil
+		}
 	}
 
 	/// Cleans up any leftover per-feed activities at the end of a refresh.
