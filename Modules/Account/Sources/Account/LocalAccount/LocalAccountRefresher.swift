@@ -62,8 +62,24 @@ import os
 	private var outstandingParseTasks = 0
 	private var downloadSessionIsComplete = false
 
-	private var completion: (() -> Void)?
+	private var completions: [() -> Void] = []
 	private var isSuspended = false
+
+	/// Guards against a second refreshFeeds pass starting while one is still
+	/// in flight. Previously, a call to refreshFeeds while a prior call's
+	/// DownloadSession tasks and next_url pagination were still running would
+	/// reset outstandingParseTasks/downloadSessionIsComplete/paginationProgress
+	/// out from under the in-flight pass and overwrite the stored completion
+	/// closure -- silently hanging the first caller's await forever and
+	/// causing a second DownloadSession batch to fire against the same feed
+	/// URLs the first pass was still fetching (observed as broken-pipe socket
+	/// errors on the server side). Feeds requested while a pass is running are
+	/// queued in pendingFeeds/pendingCompletions and folded into a follow-up
+	/// pass started the moment the current one finishes, instead of colliding
+	/// with it.
+	private var isRefreshing = false
+	private var pendingFeeds: Set<Feed> = []
+	private var pendingCompletions: [() -> Void] = []
 
 	private lazy var downloadSession: DownloadSession = {
 		let session = DownloadSession(delegate: self)
@@ -97,6 +113,18 @@ import os
 	}
 
 	@MainActor private func refreshFeeds(_ feeds: Set<Feed>, completion: (() -> Void)? = nil) {
+		guard !isRefreshing else {
+			pendingFeeds.formUnion(feeds)
+			if let completion {
+				pendingCompletions.append(completion)
+			}
+			return
+		}
+		isRefreshing = true
+		if let completion {
+			completions.append(completion)
+		}
+
 		let redditURLToRefresh = Self.redditURLToRefresh(in: feeds)
 
 		var filteredFeeds = Set<Feed>()
@@ -140,10 +168,7 @@ import os
 		guard !filteredFeeds.isEmpty else {
 			// All feeds were skipped. Still need to complete the parent activity.
 			downloadSessionIsComplete = true
-			completeRefreshActivityIfReady()
-			Task { @MainActor in
-				completion?()
-			}
+			completeRefreshIfReady()
 			return
 		}
 
@@ -154,7 +179,6 @@ import os
 
 		let urls = filteredFeeds.compactMap { Self.url(for: $0) }
 
-		self.completion = completion
 		downloadSession.download(Set(urls))
 	}
 
@@ -511,24 +535,57 @@ import os
 		self.refreshActivityID = nil
 	}
 
-	/// Fires the stored `completion` closure -- and thus resumes the
-	/// `await refreshFeeds(_:)` caller -- only once every initial DownloadSession
-	/// request *and* every next_url pagination/parse Task it spawned has
-	/// finished. Previously `downloadSessionDidComplete` called `completion?()`
-	/// directly as soon as the initial batch of requests came back, which meant
-	/// callers (e.g. `LocalAccountDelegate.refreshAll()`, which sets
+	/// Fires every completion queued for the pass that just finished --
+	/// resuming their `await refreshFeeds(_:)` callers -- only once every
+	/// initial DownloadSession request *and* every next_url pagination/parse
+	/// Task it spawned has finished. Previously `downloadSessionDidComplete`
+	/// called `completion?()` directly as soon as the initial batch of
+	/// requests came back, which meant callers (e.g.
+	/// `LocalAccountDelegate.refreshAll()`, which sets
 	/// `lastRefreshCompletedDate` right after awaiting this) believed the
 	/// refresh had finished while next_url pagination was still silently
 	/// running in the background -- the actual mechanism behind items never
 	/// arriving even though the individual page fetches were succeeding.
+	///
+	/// If feeds were queued in `pendingFeeds` while this pass was running
+	/// (see the re-entrancy guard in `refreshFeeds`), start a follow-up pass
+	/// for them now instead of leaving `isRefreshing` set or dropping the
+	/// request.
 	func completeRefreshIfReady() {
 		completeRefreshActivityIfReady()
 		guard downloadSessionIsComplete, outstandingParseTasks == 0 else {
 			return
 		}
+
+		let finishedCompletions = completions
+		completions = []
+
+		if !pendingFeeds.isEmpty {
+			// Feeds were requested (e.g. a manual refresh, or a single-feed
+			// repair) while this pass was still running. Start a follow-up
+			// pass for them now that this one has actually finished, rather
+			// than dropping the request or letting it collide with the
+			// still-finishing pass -- the latter is what previously caused a
+			// second DownloadSession batch to fire against feed URLs the
+			// first pass was still fetching.
+			let nextFeeds = pendingFeeds
+			pendingFeeds = []
+			let queuedCompletions = pendingCompletions
+			pendingCompletions = []
+			isRefreshing = false
+			refreshFeeds(nextFeeds) {
+				for queuedCompletion in queuedCompletions {
+					queuedCompletion()
+				}
+			}
+		} else {
+			isRefreshing = false
+		}
+
 		Task { @MainActor in
-			completion?()
-			completion = nil
+			for finishedCompletion in finishedCompletions {
+				finishedCompletion()
+			}
 		}
 	}
 
