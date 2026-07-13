@@ -71,6 +71,17 @@ import os
 		return session
 	}()
 
+	/// Tracks next_url pagination fetches, which happen outside DownloadSession
+	/// (via a bare URLSession.shared.data(from:) in mergedParsedFeed) and so
+	/// were previously invisible to progressInfo entirely: the refresh progress
+	/// bar reflected only the initial per-feed requests and disappeared while
+	/// pagination kept fetching and parsing pages in the background.
+	private lazy var paginationProgress: RSProgress = {
+		let progress = RSProgress()
+		NotificationCenter.default.addObserver(self, selector: #selector(progressInfoDidChange(_:)), name: .progressInfoDidChange, object: progress)
+		return progress
+	}()
+
 	private var urlToFeedDictionary = [String: Feed]()
 
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "LocalAccountRefresher")
@@ -107,6 +118,7 @@ import os
 		updatedArticlesCount = 0
 		outstandingParseTasks = 0
 		downloadSessionIsComplete = false
+		paginationProgress.reset()
 
 		// Create a pending activity for each feed that will be fetched,
 		// to be completed later by the DownloadSessionDelegate callbacks.
@@ -166,7 +178,7 @@ import os
 	// MARK: - Notifications
 
 	@objc func progressInfoDidChange(_ notification: Notification) {
-		progressInfo = downloadSession.progressInfo
+		progressInfo = ProgressInfo.combined([downloadSession.progressInfo, paginationProgress.progressInfo])
 	}
 }
 
@@ -440,6 +452,8 @@ import os
 			if let owner {
 				ActivityLog.shared.updateProgress(owner, kind: activityKind, message: "Fetching page \(pageNumber)… (\(mergedItems.count) so far)")
 			}
+			paginationProgress.addTask()
+			defer { paginationProgress.completeTask() }
 			do {
 				let (pageData, response) = try await URLSession.shared.data(from: nextURL)
 				guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusIsOK else {
