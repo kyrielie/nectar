@@ -956,8 +956,13 @@ public enum FetchType {
 
 	// MARK: - Updating Feeds
 
+	/// - Parameter isPartial: true if `parsedFeed` is known to be an incomplete
+	///   fetch (for example, one page of a paginated JSON Feed failed to load).
+	///   When true, `deleteOlder` pruning is skipped for this refresh -- an
+	///   item missing only because its page failed to fetch must not be
+	///   mistaken for an item the server actually removed from the feed.
 	@discardableResult
-	func updateAsync(feed: Feed, parsedFeed: ParsedFeed) async -> ArticleChanges {
+	func updateAsync(feed: Feed, parsedFeed: ParsedFeed, isPartial: Bool = false) async -> ArticleChanges {
 		precondition(Thread.isMainThread)
 		precondition(type == .onMyMac || type == .cloudKit)
 
@@ -967,7 +972,7 @@ public enum FetchType {
 			return ArticleChanges()
 		}
 
-		return await updateAsync(feedID: feed.feedID, parsedItems: parsedItems)
+		return await updateAsync(feedID: feed.feedID, parsedItems: parsedItems, deleteOlder: !isPartial)
 	}
 
 	func updateAsync(feedID: String, parsedItems: Set<ParsedItem>, deleteOlder: Bool = true) async -> ArticleChanges {

@@ -22,6 +22,12 @@ import Foundation
 	public private(set) var completionMessage: String?
 	public private(set) var returnedFromCache = false
 
+	/// Transient progress text for a still-running activity, e.g. "Fetching
+	/// page 6…". Distinct from `completionMessage`, which is only set once
+	/// the activity finishes. Cleared implicitly once the activity completes
+	/// or fails, since `completionMessage`/`error` take over at that point.
+	public private(set) var progressMessage: String?
+
 	/// Hide or show the duration in the UI.
 	public var durationIsSignificant = true
 
@@ -45,17 +51,23 @@ import Foundation
 		state = .running
 	}
 
+	func updateProgress(_ message: String) {
+		progressMessage = message
+	}
+
 	func didComplete(_ message: String? = nil, returnedFromCache: Bool = false) {
 		state = .completed
 		endDate = Date()
 		completionMessage = message
 		self.returnedFromCache = returnedFromCache
+		progressMessage = nil
 	}
 
 	func didFail(_ error: any Error) {
 		state = .failed
 		endDate = Date()
 		self.error = error
+		progressMessage = nil
 	}
 
 	/// The elapsed time from start to end, formatted for display — for example

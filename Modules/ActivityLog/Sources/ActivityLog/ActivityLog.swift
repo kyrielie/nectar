@@ -177,6 +177,22 @@ public extension Notification.Name {
 		postDidChangeNotification()
 	}
 
+	/// Sets transient progress text on the running activity matching
+	/// `(owner, kind)` -- for example, per-page fetch progress on a long
+	/// paginated download. Does nothing if no running activity matches;
+	/// unlike `didComplete`/`didFail`, this does not promote a pending
+	/// activity, since progress only makes sense once work has visibly
+	/// started.
+	public func updateProgress(_ owner: ActivityOwner, kind: ActivityKind, message: String) {
+
+		guard let activity = findRunningActivity(owner: owner, kind: kind) else {
+			return
+		}
+
+		activity.updateProgress(message)
+		postDidChangeNotification()
+	}
+
 	// MARK: - Lifecycle by ID
 
 	public func didStart(id: Int) {

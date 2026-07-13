@@ -316,6 +316,7 @@ import os
 
 			let parserData = ParserData(url: feed.url, data: data)
 			let parsedFeed: ParsedFeed
+			let feedIsPartial: Bool
 			do {
 				guard let result = try await FeedParser.parse(parserData) else {
 					if let activityOwner {
@@ -323,7 +324,7 @@ import os
 					}
 					return
 				}
-				parsedFeed = await self.mergedParsedFeed(startingWith: result, originalURL: url)
+				(parsedFeed, feedIsPartial) = await self.mergedParsedFeed(startingWith: result, originalURL: url, owner: activityOwner, activityKind: activityKind)
 			} catch {
 				Self.logger.error("LocalAccountRefresher: feed parse error for \(url.absoluteString): \(error.localizedDescription)")
 				if let activityOwner {
@@ -344,7 +345,10 @@ import os
 			}
 
 			assert(Thread.isMainThread)
-			let articleChanges = await account.updateAsync(feed: feed, parsedFeed: parsedFeed)
+			if feedIsPartial {
+				Self.logger.error("LocalAccountRefresher: \(url.absoluteString) fetched partially -- skipping deleteOlder for this refresh")
+			}
+			let articleChanges = await account.updateAsync(feed: feed, parsedFeed: parsedFeed, isPartial: feedIsPartial)
 
 			self.newArticlesCount += articleChanges.new?.count ?? 0
 			self.updatedArticlesCount += articleChanges.updated?.count ?? 0
@@ -420,43 +424,66 @@ import os
 	/// Stops when `next_url` is absent, a page fails to fetch or parse, or
 	/// `maxPaginationPages` is hit -- a safety net against a misbehaving
 	/// server whose `next_url` never terminates.
+	///
+	/// A page that fails to fetch or parse makes the merged result partial:
+	/// the caller must not run `deleteOlder` pruning against a feed that
+	/// wasn't fetched in full, since the items on the failed page would
+	/// look like they'd disappeared from the feed and get deleted from
+	/// the local database.
 	private static let maxPaginationPages = 20
 
-	private func mergedParsedFeed(startingWith parsedFeed: ParsedFeed, originalURL: URL) async -> ParsedFeed {
+	private func mergedParsedFeed(startingWith parsedFeed: ParsedFeed, originalURL: URL, owner: ActivityOwner?, activityKind: ActivityKind) async -> (feed: ParsedFeed, isPartial: Bool) {
 		var mergedItems = parsedFeed.items
 		var currentNextURLString = parsedFeed.nextURL
 		var pageCount = 1
+		var isPartial = false
 
 		while let nextURLString = currentNextURLString,
 			  let nextURL = URL(string: nextURLString),
 			  pageCount < Self.maxPaginationPages {
-			Self.logger.debug("LocalAccountRefresher: following next_url page \(pageCount + 1) for \(originalURL.absoluteString): \(nextURL.absoluteString)")
+			let pageNumber = pageCount + 1
+			Self.logger.debug("LocalAccountRefresher: following next_url page \(pageNumber) for \(originalURL.absoluteString): \(nextURL.absoluteString)")
+			if let owner {
+				ActivityLog.shared.updateProgress(owner, kind: activityKind, message: "Fetching page \(pageNumber)… (\(mergedItems.count) so far)")
+			}
 			do {
 				let (pageData, response) = try await URLSession.shared.data(from: nextURL)
 				guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusIsOK else {
-					Self.logger.error("LocalAccountRefresher: next_url page fetch failed (bad status) for \(nextURL.absoluteString)")
+					let statusCode = (response as? HTTPURLResponse)?.statusCode
+					let bodyPreview = String(data: pageData.prefix(500), encoding: .utf8) ?? "<non-UTF8 body, \(pageData.count) bytes>"
+					Self.logger.error("LocalAccountRefresher: next_url page \(pageNumber) fetch failed for \(nextURL.absoluteString) -- status: \(statusCode.map(String.init) ?? "none"), body: \(bodyPreview)")
+					isPartial = true
 					break
 				}
 				let pageParserData = ParserData(url: nextURL.absoluteString, data: pageData)
 				guard let pageParsedFeed = try await FeedParser.parse(pageParserData) else {
+					Self.logger.error("LocalAccountRefresher: next_url page \(pageNumber) parse returned nil for \(nextURL.absoluteString)")
+					isPartial = true
 					break
 				}
 				mergedItems.formUnion(pageParsedFeed.items)
 				currentNextURLString = pageParsedFeed.nextURL
 				pageCount += 1
 			} catch {
-				Self.logger.error("LocalAccountRefresher: next_url page fetch error for \(nextURL.absoluteString): \(error.localizedDescription)")
+				Self.logger.error("LocalAccountRefresher: next_url page \(pageNumber) fetch error for \(nextURL.absoluteString): \(error.localizedDescription)")
+				isPartial = true
 				break
 			}
 		}
 
-		guard pageCount > 1 else {
-			return parsedFeed
+		if pageCount >= Self.maxPaginationPages && currentNextURLString != nil {
+			Self.logger.error("LocalAccountRefresher: hit maxPaginationPages (\(Self.maxPaginationPages)) for \(originalURL.absoluteString) with more pages remaining -- treating as partial")
+			isPartial = true
 		}
 
-		Self.logger.debug("LocalAccountRefresher: merged \(pageCount) next_url pages for \(originalURL.absoluteString), \(mergedItems.count) total items")
+		guard pageCount > 1 else {
+			return (parsedFeed, isPartial)
+		}
 
-		return ParsedFeed(type: parsedFeed.type, title: parsedFeed.title, homePageURL: parsedFeed.homePageURL, feedURL: parsedFeed.feedURL, language: parsedFeed.language, feedDescription: parsedFeed.feedDescription, nextURL: nil, iconURL: parsedFeed.iconURL, faviconURL: parsedFeed.faviconURL, authors: parsedFeed.authors, expired: parsedFeed.expired, hubs: parsedFeed.hubs, items: mergedItems)
+		Self.logger.debug("LocalAccountRefresher: merged \(pageCount) next_url pages for \(originalURL.absoluteString), \(mergedItems.count) total items, isPartial: \(isPartial)")
+
+		let mergedFeed = ParsedFeed(type: parsedFeed.type, title: parsedFeed.title, homePageURL: parsedFeed.homePageURL, feedURL: parsedFeed.feedURL, language: parsedFeed.language, feedDescription: parsedFeed.feedDescription, nextURL: nil, iconURL: parsedFeed.iconURL, faviconURL: parsedFeed.faviconURL, authors: parsedFeed.authors, expired: parsedFeed.expired, hubs: parsedFeed.hubs, items: mergedItems)
+		return (mergedFeed, isPartial)
 	}
 }
 
