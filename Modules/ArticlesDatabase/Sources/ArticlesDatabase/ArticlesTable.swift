@@ -816,13 +816,23 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	/// Delete articles from feeds that are no longer in the current set of subscribed-to feeds.
 	/// This deletes from the articles and articleStatuses tables,
 	/// and, via a trigger, it also deletes from the search index.
+	///
+	/// Only articles with no user-generated state are eligible: this must never
+	/// delete anything the person has read, starred, loved, or made reading
+	/// progress on. A feed going missing from the subscribed set isn't
+	/// necessarily "the person doesn't want this anymore" -- for a paired
+	/// local-server account (Ambrosia), it can simply mean the server's
+	/// address changed and the old feed entry hasn't been cleaned up yet.
+	/// Treating that the same as an intentional unsubscribe would silently
+	/// delete books out from under the person. Only fully untouched articles
+	/// (never opened, not starred, not loved) are reaped here.
 	func deleteArticlesNotInSubscribedToFeedIDs(_ feedIDs: Set<String>) {
 		if feedIDs.isEmpty {
 			return
 		}
 		queue.runInDatabase { database in
 			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
-			let sql = "select articleID from articles where feedID not in \(placeholders);"
+			let sql = "select articleID from articles natural join statuses where feedID not in \(placeholders) and read=0 and starred=0 and loved=0 and (readingProgress is null or readingProgress<=0);"
 			let parameters = Array(feedIDs) as [Any]
 			guard let resultSet = database.executeQuery(sql, withArgumentsIn: parameters) else {
 				return

@@ -204,10 +204,6 @@ public enum FetchType {
 		return _externalIDToFeedDictionary
 	}
 
-	var flattenedFeedURLs: Set<String> {
-		Set(flattenedFeeds().map({ $0.url }))
-	}
-
 	var username: String? {
 		get {
 			settings.username
@@ -376,7 +372,15 @@ public enum FetchType {
 		populateFeedSettingsCache()
 
 		opmlFile.load()
-		feedSettingsDatabase.deleteSettingsForFeedsNotIn(flattenedFeedURLs)
+		// Not calling feedSettingsDatabase.deleteSettingsForFeedsNotIn(flattenedFeedURLs)
+		// here: feedSettings is keyed by feedURL, and for a paired local-server
+		// account (Ambrosia) the URL changes whenever the server's LAN address
+		// changes. Purging settings for "currently unsubscribed" URLs on every
+		// launch silently discards editedName, cacheControlInfo, lastCheckDate,
+		// etc. for feeds that are really just mid-re-pair, not abandoned. The
+		// cost of not garbage-collecting stale rows here is a handful of small,
+		// harmless leftover settings rows -- not worth the risk of discarding
+		// live settings. See nectar-architecture.md notes on feed identity.
 
 		DispatchQueue.main.async {
 			self.database.cleanupDatabaseAtStartup(subscribedToFeedIDs: self.flattenedFeedsIDs)
