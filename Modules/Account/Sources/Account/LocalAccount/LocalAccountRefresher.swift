@@ -341,7 +341,7 @@ import os
 				self.completeRefreshIfReady()
 			}
 
-			Self.logger.debug("LocalAccountRefresher: parsing feed for \(url.absoluteString)")
+			Self.logger.notice("LocalAccountRefresher: parsing feed for \(url.absoluteString)")
 
 			let parserData = ParserData(url: feed.url, data: data)
 			let firstPageParsedFeed: ParsedFeed
@@ -370,6 +370,8 @@ import os
 			// feed's page-1 body is a stable slice of a much larger feed, so hashing it
 			// alone would short-circuit every subsequent refresh before pagination ever runs.
 			let isPaginated = firstPageParsedFeed.nextURL != nil
+			let hashMatch = dataHash == feed.contentHash
+			Self.logger.notice("LocalAccountRefresher: page 1 decision for \(url.absoluteString) -- items=\(firstPageParsedFeed.items.count) nextURL=\(firstPageParsedFeed.nextURL ?? "nil") isPaginated=\(isPaginated) hashMatch=\(hashMatch) storedHash=\(feed.contentHash ?? "nil")")
 			if !isPaginated, dataHash == feed.contentHash {
 				if let activityOwner {
 					ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "\(dataSizeMessage), content unchanged")
@@ -392,6 +394,8 @@ import os
 			}
 			let articleChanges = await account.updateAsync(feed: feed, parsedFeed: parsedFeed, isPartial: feedIsPartial)
 
+			Self.logger.notice("LocalAccountRefresher: update complete for \(url.absoluteString) -- mergedItems=\(parsedFeed.items.count) new=\(articleChanges.new?.count ?? 0) updated=\(articleChanges.updated?.count ?? 0) isPartial=\(feedIsPartial)")
+
 			self.newArticlesCount += articleChanges.new?.count ?? 0
 			self.updatedArticlesCount += articleChanges.updated?.count ?? 0
 
@@ -399,7 +403,7 @@ import os
 			// feed has no single "page body" to compare against on the next refresh, and
 			// storing one here would silently re-trigger the pagination short-circuit bug.
 			if !feedIsPartial, !isPaginated {
-				Self.logger.debug("LocalAccountRefresher: setting contentHash for \(url.absoluteString)")
+				Self.logger.notice("LocalAccountRefresher: setting contentHash for \(url.absoluteString)")
 				feed.contentHash = dataHash
 			} else {
 				feed.contentHash = nil
@@ -489,7 +493,7 @@ import os
 			  let nextURL = URL(string: nextURLString),
 			  pageCount < Self.maxPaginationPages {
 			let pageNumber = pageCount + 1
-			Self.logger.debug("LocalAccountRefresher: following next_url page \(pageNumber) for \(originalURL.absoluteString): \(nextURL.absoluteString)")
+			Self.logger.notice("LocalAccountRefresher: following next_url page \(pageNumber) for \(originalURL.absoluteString): \(nextURL.absoluteString)")
 			if let owner {
 				ActivityLog.shared.updateProgress(owner, kind: activityKind, message: "Fetching page \(pageNumber)… (\(mergedItems.count) so far)")
 			}
@@ -529,7 +533,7 @@ import os
 			return (parsedFeed, isPartial)
 		}
 
-		Self.logger.debug("LocalAccountRefresher: merged \(pageCount) next_url pages for \(originalURL.absoluteString), \(mergedItems.count) total items, isPartial: \(isPartial)")
+		Self.logger.notice("LocalAccountRefresher: merged \(pageCount) next_url pages for \(originalURL.absoluteString), \(mergedItems.count) total items, isPartial: \(isPartial)")
 
 		let mergedFeed = ParsedFeed(type: parsedFeed.type, title: parsedFeed.title, homePageURL: parsedFeed.homePageURL, feedURL: parsedFeed.feedURL, language: parsedFeed.language, feedDescription: parsedFeed.feedDescription, nextURL: nil, iconURL: parsedFeed.iconURL, faviconURL: parsedFeed.faviconURL, authors: parsedFeed.authors, expired: parsedFeed.expired, hubs: parsedFeed.hubs, items: mergedItems)
 		return (mergedFeed, isPartial)
