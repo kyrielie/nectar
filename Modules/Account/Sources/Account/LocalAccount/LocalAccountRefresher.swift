@@ -333,12 +333,6 @@ import os
 
 		let dataHash = data.md5String
 		let dataSizeMessage = ActivityLog.dataSizeMessage(data)
-		if dataHash == feed.contentHash {
-			if let activityOwner {
-				ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "\(dataSizeMessage), content unchanged")
-			}
-			return
-		}
 
 		outstandingParseTasks += 1
 		Task { @MainActor in
@@ -350,8 +344,7 @@ import os
 			Self.logger.debug("LocalAccountRefresher: parsing feed for \(url.absoluteString)")
 
 			let parserData = ParserData(url: feed.url, data: data)
-			let parsedFeed: ParsedFeed
-			let feedIsPartial: Bool
+			let firstPageParsedFeed: ParsedFeed
 			do {
 				guard let result = try await FeedParser.parse(parserData) else {
 					if let activityOwner {
@@ -359,7 +352,7 @@ import os
 					}
 					return
 				}
-				(parsedFeed, feedIsPartial) = await self.mergedParsedFeed(startingWith: result, originalURL: url, owner: activityOwner, activityKind: activityKind)
+				firstPageParsedFeed = result
 			} catch {
 				Self.logger.error("LocalAccountRefresher: feed parse error for \(url.absoluteString): \(error.localizedDescription)")
 				if let activityOwner {
@@ -372,6 +365,20 @@ import os
 				}
 				return
 			}
+
+			// Only single-page feeds can safely use the "unchanged" shortcut: a paginated
+			// feed's page-1 body is a stable slice of a much larger feed, so hashing it
+			// alone would short-circuit every subsequent refresh before pagination ever runs.
+			let isPaginated = firstPageParsedFeed.nextURL != nil
+			if !isPaginated, dataHash == feed.contentHash {
+				if let activityOwner {
+					ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "\(dataSizeMessage), content unchanged")
+				}
+				return
+			}
+
+			let (parsedFeed, feedIsPartial) = await self.mergedParsedFeed(startingWith: firstPageParsedFeed, originalURL: url, owner: activityOwner, activityKind: activityKind)
+
 			guard let account = feed.account else {
 				if let activityOwner {
 					ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: dataSizeMessage)
@@ -388,8 +395,15 @@ import os
 			self.newArticlesCount += articleChanges.new?.count ?? 0
 			self.updatedArticlesCount += articleChanges.updated?.count ?? 0
 
-			Self.logger.debug("LocalAccountRefresher: setting contentHash for \(url.absoluteString)")
-			feed.contentHash = dataHash
+			// contentHash is only meaningful for single-page feeds: a merged multi-page
+			// feed has no single "page body" to compare against on the next refresh, and
+			// storing one here would silently re-trigger the pagination short-circuit bug.
+			if !feedIsPartial, !isPaginated {
+				Self.logger.debug("LocalAccountRefresher: setting contentHash for \(url.absoluteString)")
+				feed.contentHash = dataHash
+			} else {
+				feed.contentHash = nil
+			}
 
 			if let activityOwner {
 				ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: dataSizeMessage)
