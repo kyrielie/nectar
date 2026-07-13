@@ -323,7 +323,7 @@ import os
 					}
 					return
 				}
-				parsedFeed = result
+				parsedFeed = await self.mergedParsedFeed(startingWith: result, originalURL: url)
 			} catch {
 				Self.logger.error("LocalAccountRefresher: feed parse error for \(url.absoluteString): \(error.localizedDescription)")
 				if let activityOwner {
@@ -409,6 +409,54 @@ import os
 			completion?()
 			completion = nil
 		}
+	}
+
+	/// JSON Feed pagination: if the first page has a `next_url`, fetch and
+	/// parse each subsequent page directly, merging items into a single
+	/// ParsedFeed. Most JSON Feed servers (including Ambrosia's) paginate by
+	/// default, and nothing before this consumed `next_url`, so any feed
+	/// with more items than one page's worth was silently truncated.
+	///
+	/// Stops when `next_url` is absent, a page fails to fetch or parse, or
+	/// `maxPaginationPages` is hit -- a safety net against a misbehaving
+	/// server whose `next_url` never terminates.
+	private static let maxPaginationPages = 20
+
+	private func mergedParsedFeed(startingWith parsedFeed: ParsedFeed, originalURL: URL) async -> ParsedFeed {
+		var mergedItems = parsedFeed.items
+		var currentNextURLString = parsedFeed.nextURL
+		var pageCount = 1
+
+		while let nextURLString = currentNextURLString,
+			  let nextURL = URL(string: nextURLString),
+			  pageCount < Self.maxPaginationPages {
+			Self.logger.debug("LocalAccountRefresher: following next_url page \(pageCount + 1) for \(originalURL.absoluteString): \(nextURL.absoluteString)")
+			do {
+				let (pageData, response) = try await URLSession.shared.data(from: nextURL)
+				guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusIsOK else {
+					Self.logger.error("LocalAccountRefresher: next_url page fetch failed (bad status) for \(nextURL.absoluteString)")
+					break
+				}
+				let pageParserData = ParserData(url: nextURL.absoluteString, data: pageData)
+				guard let pageParsedFeed = try await FeedParser.parse(pageParserData) else {
+					break
+				}
+				mergedItems.formUnion(pageParsedFeed.items)
+				currentNextURLString = pageParsedFeed.nextURL
+				pageCount += 1
+			} catch {
+				Self.logger.error("LocalAccountRefresher: next_url page fetch error for \(nextURL.absoluteString): \(error.localizedDescription)")
+				break
+			}
+		}
+
+		guard pageCount > 1 else {
+			return parsedFeed
+		}
+
+		Self.logger.debug("LocalAccountRefresher: merged \(pageCount) next_url pages for \(originalURL.absoluteString), \(mergedItems.count) total items")
+
+		return ParsedFeed(type: parsedFeed.type, title: parsedFeed.title, homePageURL: parsedFeed.homePageURL, feedURL: parsedFeed.feedURL, language: parsedFeed.language, feedDescription: parsedFeed.feedDescription, nextURL: nil, iconURL: parsedFeed.iconURL, faviconURL: parsedFeed.faviconURL, authors: parsedFeed.authors, expired: parsedFeed.expired, hubs: parsedFeed.hubs, items: mergedItems)
 	}
 }
 
