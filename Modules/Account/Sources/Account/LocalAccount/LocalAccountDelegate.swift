@@ -71,7 +71,7 @@ import Secrets
 		guard let account else {
 			return
 		}
-		try account.logActivity(kind: .importOPML, detail: opmlFile.lastPathComponent) {
+		try await account.logActivity(kind: .importOPML, detail: opmlFile.lastPathComponent) {
 			let opmlData = try Data(contentsOf: opmlFile)
 			let parserData = ParserData(url: opmlFile.absoluteString, data: opmlData)
 			let opmlDocument = try OPMLParser.parseOPML(with: parserData)
@@ -83,9 +83,130 @@ import Secrets
 
 			Self.rewriteAmbrosiaJSONFeedURLs(in: children)
 
+			// Snapshot existing feeds by Ambrosia collection identity *before* import,
+			// so we can tell a re-pair (same collection, new host) apart from a
+			// genuinely new subscription once the import has created its Feed objects.
+			let preexistingFeedsByCollectionKey = Self.collectionKeyIndex(for: account.flattenedFeeds())
+
 			BatchUpdate.shared.perform {
 				account.loadOPMLItems(children)
 			}
+
+			await reconcileRepairedFeeds(incomingItems: children, preexistingFeedsByCollectionKey: preexistingFeedsByCollectionKey)
+		}
+	}
+
+	/// Maps Ambrosia collection key -> Feed for every feed in `feeds` that is a
+	/// recognized Ambrosia route. Feeds that aren't Ambrosia routes are omitted.
+	private static func collectionKeyIndex(for feeds: Set<Feed>) -> [String: Feed] {
+		var index = [String: Feed]()
+		for feed in feeds {
+			guard let key = AmbrosiaFeedIdentity.collectionKey(for: feed.url) else {
+				continue
+			}
+			index[key] = feed
+		}
+		return index
+	}
+
+	/// Recursively collects every `feedURL` referenced by `items`, matching the
+	/// traversal `addOPMLItems` uses so we can find the Feed objects this import
+	/// just created.
+	private static func flattenedFeedURLs(in items: [OPMLItem]) -> Set<String> {
+		var urls = Set<String>()
+		for item in items {
+			if let feedSpecifier = item.feedSpecifier {
+				urls.insert(feedSpecifier.feedURL)
+			}
+			if let children = item.children {
+				urls.formUnion(flattenedFeedURLs(in: children))
+			}
+		}
+		return urls
+	}
+
+	/// After an OPML import, finds any newly created feed that shares an Ambrosia
+	/// collection identity with a feed that already existed under a different URL
+	/// (the LAN-IP-changed re-pair case), merges the stale feed's starred/loved/
+	/// reading-progress/scroll-position state into the new feed's matching
+	/// articles (matched by `bookKey`, so the merge is correct regardless of the
+	/// old and new articleIDs differing), and removes the stale feed from the
+	/// sidebar. Read state doesn't need merging here: it's already tracked by
+	/// bookKey in `BookReadStateTable`, independent of feedID.
+	private func reconcileRepairedFeeds(incomingItems: [OPMLItem], preexistingFeedsByCollectionKey: [String: Feed]) async {
+		guard let account, !preexistingFeedsByCollectionKey.isEmpty else {
+			return
+		}
+
+		let incomingURLs = Self.flattenedFeedURLs(in: incomingItems)
+		guard !incomingURLs.isEmpty else {
+			return
+		}
+
+		let candidateNewFeeds = account.flattenedFeeds().filter { incomingURLs.contains($0.url) }
+
+		for newFeed in candidateNewFeeds {
+			guard let collectionKey = AmbrosiaFeedIdentity.collectionKey(for: newFeed.url) else {
+				continue
+			}
+			guard let staleFeed = preexistingFeedsByCollectionKey[collectionKey], staleFeed.feedID != newFeed.feedID else {
+				continue
+			}
+			await repair(staleFeed: staleFeed, newFeed: newFeed, account: account)
+		}
+	}
+
+	/// Merges status from `staleFeed`'s articles into `newFeed`'s matching articles
+	/// (by `bookKey`), then removes `staleFeed` from the sidebar. `newFeed` must
+	/// already have been added to the tree by `loadOPMLItems` before this runs.
+	private func repair(staleFeed: Feed, newFeed: Feed, account: Account) async {
+		refresher.accountID = account.accountID
+		await refresher.refreshFeeds([newFeed])
+
+		let staleArticles = await account.fetchArticlesAsync(.feed(staleFeed))
+		guard !staleArticles.isEmpty else {
+			removeFromSidebar(staleFeed, account: account)
+			return
+		}
+
+		let freshArticles = await account.fetchArticlesAsync(.feed(newFeed))
+		var freshArticlesByBookKey = [String: Article]()
+		for article in freshArticles {
+			freshArticlesByBookKey[article.bookKey] = article
+		}
+
+		for staleArticle in staleArticles {
+			guard let freshArticle = freshArticlesByBookKey[staleArticle.bookKey] else {
+				continue
+			}
+
+			if staleArticle.status.starred {
+				try? await account.markArticles(articleIDs: [freshArticle.articleID], statusKey: .starred, flag: true)
+			}
+			if staleArticle.status.loved {
+				try? await account.markArticles(articleIDs: [freshArticle.articleID], statusKey: .loved, flag: true)
+			}
+			if let readingProgress = staleArticle.status.readingProgress, readingProgress > 0 {
+				await account.saveReadingProgress(readingProgress, forArticleID: freshArticle.articleID)
+			}
+
+			let scrollPosition = await account.fetchScrollPosition(forArticleID: staleArticle.articleID)
+			if scrollPosition > 0 {
+				await account.saveScrollPosition(scrollPosition, forArticleID: freshArticle.articleID)
+			}
+		}
+
+		removeFromSidebar(staleFeed, account: account)
+	}
+
+	/// Removes `feed` from every container it's in. Deliberately leaves its
+	/// articles and feedSettings row alone -- Phase 1 already stopped the
+	/// unconditional cleanup that used to hard-delete these, and a merged-away
+	/// stale feed's leftovers are exactly the harmless orphan case that guard
+	/// was meant to tolerate.
+	private func removeFromSidebar(_ feed: Feed, account: Account) {
+		for container in account.existingContainers(withFeed: feed) {
+			container.removeFeedFromTreeAtTopLevel(feed)
 		}
 	}
 
