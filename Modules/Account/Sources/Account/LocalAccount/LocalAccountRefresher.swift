@@ -181,14 +181,93 @@ import os
 			return
 		}
 
-		urlToFeedDictionary.removeAll()
+		// Feeds resolved to an Ambrosia `.sqlite` transfer route (per
+		// AmbrosiaTransferFormatPreference + Self.url(for:)) never go through
+		// DownloadSession at all: DownloadSession's default 15s
+		// timeoutIntervalForRequest would kill a multi-minute whole-database
+		// transfer outright (plan section 2d), which is exactly why
+		// AmbrosiaSQLiteTransferFetcher uses its own dedicated URLSession with a
+		// 300s timeout instead. Route those feeds to it directly here and only
+		// hand the rest to DownloadSession.
+		var downloadFeeds = Set<Feed>()
+		var sqliteFeeds = Set<Feed>()
 		for feed in filteredFeeds {
+			guard let url = Self.url(for: feed) else {
+				continue
+			}
+			if url.pathExtension.lowercased() == "sqlite" {
+				sqliteFeeds.insert(feed)
+			} else {
+				downloadFeeds.insert(feed)
+			}
+		}
+
+		urlToFeedDictionary.removeAll()
+		for feed in downloadFeeds {
 			urlToFeedDictionary[feed.url] = feed
 		}
 
-		let urls = filteredFeeds.compactMap { Self.url(for: $0) }
+		for feed in sqliteFeeds {
+			fetchAndImportAmbrosiaSQLiteTransfer(feed: feed)
+		}
+
+		guard !downloadFeeds.isEmpty else {
+			downloadSessionIsComplete = true
+			completeRefreshIfReady()
+			return
+		}
+
+		let urls = downloadFeeds.compactMap { Self.url(for: $0) }
 
 		downloadSession.download(Set(urls))
+	}
+
+	/// Fetches and imports an Ambrosia `.sqlite` transfer for `feed`, bypassing
+	/// DownloadSession entirely (see the routing comment in refreshFeeds).
+	/// Tracked the same way a JSON parse Task is (outstandingParseTasks +
+	/// completeRefreshIfReady), so the refresh pass doesn't report itself done
+	/// while an import is still in flight.
+	///
+	/// NOT YET RESOLVED: on success this only calls updateUnreadCounts(feeds:)
+	/// as a best-effort UI nudge. The JSON path's account.updateAsync(feed:parsedFeed:)
+	/// produces an ArticleChanges (new/updated Article objects) that
+	/// sendNotificationAbout(_:) uses to post .AccountDidDownloadArticles --
+	/// the notification the timeline view actually observes to insert new
+	/// articles. The SQLite importer writes straight into ArticlesTable/
+	/// StatusesTable via ArticlesDatabase.importAmbrosiaSQLiteTransfer and never
+	/// constructs Article/ArticleChanges values, so that notification does not
+	/// fire here. Whether the timeline needs it (vs. picking up imported rows
+	/// on its next fetch) needs a closer read of the timeline's data source
+	/// before deciding how to fix -- flagged rather than guessed.
+	@MainActor private func fetchAndImportAmbrosiaSQLiteTransfer(feed: Feed) {
+		guard let url = Self.url(for: feed), let account = feed.account else {
+			return
+		}
+
+		let activityKind = ActivityKind.refreshFeedContent(feedURL: feed.url)
+		let activityOwner = self.activityOwner
+		let dataSizeMessage = "SQLite transfer"
+
+		outstandingParseTasks += 1
+		Task { @MainActor in
+			defer {
+				self.outstandingParseTasks -= 1
+				self.completeRefreshIfReady()
+			}
+
+			feed.lastCheckDate = Date()
+
+			do {
+				try await AmbrosiaSQLiteTransferFetcher.fetchAndImport(url: url, into: account.database, feedID: feed.feedID)
+				account.updateUnreadCounts(feeds: [feed])
+				if let activityOwner {
+					ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: dataSizeMessage)
+				}
+			} catch {
+				Self.logger.error("LocalAccountRefresher: Ambrosia SQLite transfer failed for \(url.absoluteString): \(error.localizedDescription)")
+				self.reportFeedRefreshError(feed: feed, error: error, activityKind: activityKind)
+			}
+		}
 	}
 
 	private var activityOwner: ActivityOwner? {
