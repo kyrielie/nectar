@@ -86,7 +86,11 @@ enum AmbrosiaSQLiteImportTable {
 			throw AmbrosiaSQLiteImportError.wireFormatVersionMismatch(found: foundVersion, expected: expectedWireFormatVersion)
 		}
 
-		var importError: Error?
+		// DatabaseBlock is declared `@Sendable`, so the compiler treats this
+		// closure as potentially concurrent even though runInTransactionSync
+		// is a synchronous, single-threaded call -- this var is never touched
+		// from more than one thread at a time in practice.
+		nonisolated(unsafe) var importError: Error?
 
 		queue.runInTransactionSync { database in
 			guard database.executeUpdate("ATTACH DATABASE ? AS \(attachedSchemaName);", withArgumentsIn: [temporaryFilePath]) else {
