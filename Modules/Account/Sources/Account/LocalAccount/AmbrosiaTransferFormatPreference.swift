@@ -25,7 +25,10 @@ public enum AmbrosiaTransferFormatPreference {
 
 	private static let key = "ambrosiaTransferFormat"
 
-	private static let store: UserDefaults = {
+	// UserDefaults is internally thread-safe but isn't marked Sendable, so a
+	// global `let` of it still trips the concurrency checker; nonisolated(unsafe)
+	// reflects the actual (safe) runtime behavior here.
+	private nonisolated(unsafe) static let store: UserDefaults = {
 		if let appIdentifierPrefix = Bundle.main.object(forInfoDictionaryKey: "AppIdentifierPrefix") as? String,
 		   let bundleIdentifier = Bundle.main.bundleIdentifier,
 		   let suiteDefaults = UserDefaults(suiteName: "\(appIdentifierPrefix)group.\(bundleIdentifier)") {
