@@ -634,7 +634,19 @@ import os
 					isPartial = true
 					break
 				}
-				let pageParserData = ParserData(url: nextURL.absoluteString, data: pageData)
+				// Use originalURL (the feed's base URL), not nextURL (this page's
+				// URL), as the ParserData url. ParsedItem.feedURL feeds directly
+				// into calculatedArticleID(feedID:uniqueID:) for any item without
+				// a syncServiceID (all Ambrosia items), while ArticlesTable.update
+				// computes the persisted Article's articleID from the constant
+				// feedID argument (the base URL) instead. Using nextURL here made
+				// every item merged in from page 2 onward hash to a different
+				// articleID than its own articles-table row, so the statuses
+				// table wrote real rows under an articleID the natural join in
+				// fetchArticlesWithWhereClause could never match -- silently
+				// dropping every article past page 1 from every fetch with no
+				// error anywhere.
+				let pageParserData = ParserData(url: originalURL.absoluteString, data: pageData)
 				guard let pageParsedFeed = try await FeedParser.parse(pageParserData) else {
 					Self.logger.error("LocalAccountRefresher: next_url page \(pageNumber) parse returned nil for \(nextURL.absoluteString)")
 					isPartial = true
