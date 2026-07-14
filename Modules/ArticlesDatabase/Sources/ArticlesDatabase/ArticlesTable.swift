@@ -322,6 +322,19 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 			assert(statusesDictionary.count == articleIDs.count)
 
+			// Diagnostic: the assert above is compiled out in Release builds, so
+			// a partition bug that drops an articleID before it reaches
+			// ensureStatusesForArticleIDs would otherwise vanish silently --
+			// the row still lands in `articles` but never gets a matching
+			// `statuses` row, and the natural join in fetchArticlesWithWhereClause
+			// then join-away that row from every fetch with no error anywhere.
+			// Log the exact missing articleIDs so a production refresh of an
+			// affected feed points straight back to the partition logic.
+			if statusesDictionary.count != articleIDs.count {
+				let missing = articleIDs.subtracting(statusesDictionary.keys)
+				Self.logger.warning("ArticlesTable: update(feedID:\(feedID, privacy: .public)) missing statuses for \(missing.count, privacy: .public) articleIDs: \(missing.sorted().joined(separator: ","), privacy: .public)")
+			}
+
 			let incomingArticles = Article.articlesWithParsedItems(parsedItems, feedID, self.accountID, statusesDictionary) // 2
 			if incomingArticles.isEmpty {
 				self.callUpdateArticlesCompletionBlock(nil, nil, nil, completion)
