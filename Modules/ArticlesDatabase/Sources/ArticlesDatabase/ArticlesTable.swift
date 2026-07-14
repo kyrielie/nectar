@@ -1314,7 +1314,7 @@ nonisolated private extension ArticlesTable {
 		for dictionary in articles.databaseDictionaries() {
 			let didSucceed = database.rs_insertRow(with: dictionary, insertType: .orReplace, tableName: self.name)
 			if didSucceed {
-				totalChanges += Int(database.changes)
+				totalChanges += Int(database.changes())
 			} else {
 				let articleID = dictionary[DatabaseKey.articleID] as? String ?? "?"
 				failedArticleIDs.append(articleID)
