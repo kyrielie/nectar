@@ -50,7 +50,7 @@ enum AmbrosiaSQLiteTransferFetcher {
 	/// regardless of anything else in this plan," so this errs long.
 	private static let timeoutIntervalForRequest: TimeInterval = 300
 
-	private static var session: URLSession = {
+	private static let session: URLSession = {
 		let configuration = URLSessionConfiguration.ephemeral
 		configuration.timeoutIntervalForRequest = timeoutIntervalForRequest
 		configuration.timeoutIntervalForResource = timeoutIntervalForRequest
@@ -87,6 +87,6 @@ enum AmbrosiaSQLiteTransferFetcher {
 			try? FileManager.default.removeItem(atPath: temporaryFilePath)
 		}
 
-		try articlesDatabase.importAmbrosiaSQLiteTransfer(temporaryFilePath: temporaryFilePath, feedID: feedID, wireFormatVersion: AmbrosiaSQLiteWireFormat.version)
+		try await articlesDatabase.importAmbrosiaSQLiteTransfer(temporaryFilePath: temporaryFilePath, feedID: feedID, wireFormatVersion: AmbrosiaSQLiteWireFormat.version)
 	}
 }
