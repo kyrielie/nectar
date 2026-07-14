@@ -203,7 +203,10 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			return resultSet.mapToSet { (row) -> ArticleSearchInfo? in
 				let articleID = row.swiftString(forColumn: DatabaseKey.articleID)!
 				let title = row.swiftString(forColumn: DatabaseKey.title)
-				let contentHTML = row.swiftString(forColumn: DatabaseKey.contentHTML)
+				// contentHTML is stored compressed (Phase 3) -- this query reads the
+				// raw articles table directly rather than going through Article, so
+				// it needs its own decompress call rather than inheriting Article's.
+				let contentHTML = ContentHTMLCompression.decompress(row.swiftString(forColumn: DatabaseKey.contentHTML))
 				let contentText = row.swiftString(forColumn: DatabaseKey.contentText)
 				let summary = row.swiftString(forColumn: DatabaseKey.summary)
 				let authorsNames = Self.authorsNames(from: row)
@@ -256,6 +259,20 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		self.queue.runInTransaction { database in
 
 			let articleIDs = parsedItems.articleIDs()
+
+			// Diagnostic: `articleIDs` is a Set<String> built from parsedItems'
+			// computed `articleID` (calculatedArticleID(feedID:uniqueID:)). If two
+			// different incoming items hash to the same articleID -- e.g. an
+			// upstream feed emitting one shared guid for what should be several
+			// distinct items -- they silently collapse into one entry right here,
+			// before anything else in this function has a chance to notice. Once
+			// that happens, nothing downstream can tell one work was dropped: it
+			// never reaches `incomingArticles`, so it's not "not new" or "not
+			// updated," it's just absent. Logging the raw-vs-distinct count at the
+			// point of collapse is the only place that catches it.
+			if parsedItems.count != articleIDs.count {
+				Self.logger.warning("ArticlesTable: update(feedID:\(feedID, privacy: .public)) articleID collision -- \(parsedItems.count, privacy: .public) incoming parsedItems collapsed to \(articleIDs.count, privacy: .public) distinct articleIDs (\(parsedItems.count - articleIDs.count, privacy: .public) lost here)")
+			}
 
 			// Phase 6: for any incoming article whose bookKey already has a
 			// BookReadState row -- a re-subscribe, or the same book turning up in
@@ -311,6 +328,17 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				return
 			}
 
+			// Diagnostic: `articlesWithParsedItems` maps each parsedItem to an
+			// Article keyed by the same articleID computed above -- if it builds a
+			// Dictionary/Set internally, a second collision point exists here even
+			// when `articleIDs.count` above matched `parsedItems.count`, e.g. two
+			// items with distinct articleIDs that both resolve to the same
+			// Article.articleID via a different code path. Comparing against
+			// `articleIDs.count` (not `parsedItems.count`) isolates this stage.
+            if incomingArticles.count != articleIDs.count {
+                Self.logger.warning("ArticlesTable: update(feedID:\(feedID, privacy: .public)) incomingArticles.count (\(incomingArticles.count, privacy: .public)) != distinct articleIDs.count (\(articleIDs.count, privacy: .public)) -- \(articleIDs.count - incomingArticles.count, privacy: .public) lost building Article values")
+            }
+
 			let fetchedArticles = self.fetchArticlesForFeedID(feedID, database) // 4
 			let fetchedArticlesDictionary = fetchedArticles.dictionary()
 
@@ -328,6 +356,23 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				articlesToDelete = Set<Article>()
 			}
 
+			// Diagnostic: full reconciliation for this feed's update, logged once
+			// per call regardless of outcome, so a "some works missing" report can
+			// be checked against exact numbers instead of reconstructed from
+			// separate log lines scattered across the transaction. `unchanged`
+			// is incoming articles that matched an existing row with no detected
+			// diff (neither new nor updated) -- previously invisible; now counted
+			// explicitly so it can't be mistaken for "lost."
+			let newCount = newArticles?.count ?? 0
+			let updatedCount = updatedArticles?.count ?? 0
+			let matchedExistingCount = incomingArticles.filter { fetchedArticlesDictionary[$0.articleID] != nil }.count
+			let unchangedCount = matchedExistingCount - updatedCount
+			let unaccountedCount = incomingArticles.count - newCount - matchedExistingCount
+			Self.logger.info("ArticlesTable: update(feedID:\(feedID, privacy: .public)) incoming=\(incomingArticles.count, privacy: .public) existingBeforeUpdate=\(fetchedArticles.count, privacy: .public) new=\(newCount, privacy: .public) updated=\(updatedCount, privacy: .public) unchanged=\(unchangedCount, privacy: .public) toDelete=\(articlesToDelete.count, privacy: .public) unaccounted=\(unaccountedCount, privacy: .public)")
+			if unaccountedCount != 0 {
+				Self.logger.warning("ArticlesTable: update(feedID:\(feedID, privacy: .public)) unaccounted != 0 -- \(unaccountedCount, privacy: .public) incoming articles were neither classified as new nor matched to an existing row")
+			}
+
 			self.callUpdateArticlesCompletionBlock(newArticles, updatedArticles, articlesToDelete, completion) // 7
 
 			self.addArticlesToCache(newArticles)
@@ -336,6 +381,11 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			// 8. Delete articles no longer in feed.
 			let articleIDsToDelete = articlesToDelete.articleIDs()
 			if !articleIDsToDelete.isEmpty {
+				// Diagnostic: previously silent -- a `deleteOlder` pass wide enough
+				// to explain "missing" articles (e.g. every pre-pagination article
+				// that predates the cutoff and isn't in this incoming batch) should
+				// be visible, not just its count.
+				Self.logger.info("ArticlesTable: update(feedID:\(feedID, privacy: .public)) deleting \(articleIDsToDelete.count, privacy: .public) articles: \(articleIDsToDelete.sorted().joined(separator: ","), privacy: .public)")
 				self.removeArticles(articleIDsToDelete, database)
 				self.removeArticleIDsFromCache(articleIDsToDelete)
 			}
@@ -346,6 +396,19 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			}
 			if let updatedArticles = updatedArticles {
 				self.searchTable.indexUpdatedArticles(updatedArticles, database)
+			}
+
+			// Diagnostic: authoritative persisted count for this feed, read back
+			// from the database after every write in this transaction has been
+			// issued -- the one number that can't drift from what actually landed
+			// on disk, to compare directly against the feed's own `mergedItems`
+			// total logged by LocalAccountRefresher.
+			if let countResultSet = database.executeQuery("SELECT COUNT(*) FROM articles WHERE feedID = ?", withArgumentsIn: [feedID]) {
+				if countResultSet.next() {
+					let persistedCount = countResultSet.long(forColumnIndex: 0)
+					Self.logger.info("ArticlesTable: update(feedID:\(feedID, privacy: .public)) persistedCountAfterUpdate=\(persistedCount, privacy: .public)")
+				}
+				countResultSet.close()
 			}
 		}
 	}
