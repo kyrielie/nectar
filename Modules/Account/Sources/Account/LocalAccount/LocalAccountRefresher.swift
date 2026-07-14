@@ -38,6 +38,14 @@ import os
 	/// When false, refreshFeeds does not create its own `.refreshAll` activity.
 	var publishesRefreshActivity = true
 
+	/// Feed URLs whose refresh was cut short this pass, either because the
+	/// background deadline (`AccountManager.shared.backgroundRefreshDeadline`)
+	/// was hit or because `suspend()` cancelled the request out from under it.
+	/// The caller (`LocalAccountDelegate.refreshAll()`) uses this to make sure
+	/// those specific feeds get flagged for a prompt retry instead of silently
+	/// staying exactly as stale as they were before this refresh.
+	private(set) var interruptedFeedURLs = Set<String>()
+
 	/// Human-readable stats summary for the most recent (or in-progress) refresh.
 	var refreshStatsMessage: String {
 		var parts = [String]()
@@ -146,6 +154,7 @@ import os
 		updatedArticlesCount = 0
 		outstandingParseTasks = 0
 		downloadSessionIsComplete = false
+		interruptedFeedURLs.removeAll()
 		paginationProgress.reset()
 
 		// Create a pending activity for each feed that will be fetched,
@@ -296,6 +305,16 @@ import os
 				}
 				return
 			}
+			if Self.isCancellationError(error) {
+				// Either `suspend()` cancelled this request (app backgrounded /
+				// low on background time) or the caller cancelled it directly.
+				// This is not a feed problem -- don't count it as an error or
+				// surface an error dialog -- but the feed still needs retrying,
+				// since it silently ended up with none of this pass's data.
+				Self.logger.notice("LocalAccountRefresher: \(url.absoluteString) cancelled mid-refresh -- will retry next pass")
+				interruptedFeedURLs.insert(url.absoluteString)
+				return
+			}
 			reportFeedRefreshError(feed: feed, error: error, activityKind: activityKind)
 			return
 		}
@@ -444,6 +463,7 @@ import os
 	}
 
 	private func reportFeedRefreshError(feed: Feed, error: Error, activityKind: ActivityKind) {
+		Self.logger.error("LocalAccountRefresher: error refreshing \(feed.url): \(error.localizedDescription)")
 		if let activityOwner {
 			ActivityLog.shared.didFail(activityOwner, kind: activityKind, error: error)
 		}
@@ -502,6 +522,23 @@ import os
 		while let nextURLString = currentNextURLString,
 			  let nextURL = URL(string: nextURLString),
 			  pageCount < Self.maxPaginationPages {
+
+			if let deadline = AccountManager.shared.backgroundRefreshDeadline, Date() >= deadline {
+				// Running out of background execution time. Stop fetching more
+				// pages now, on our own terms, rather than letting `suspend()`
+				// cancel the in-flight request later and lose this page's data
+				// with no explanation in the log. What's merged so far is kept
+				// and reported as partial so `deleteOlder` pruning is skipped.
+				// Read live (not copied at refresh start) so this also takes
+				// effect for a refresh that began in the foreground and got
+				// backgrounded mid-pagination -- exactly the case that produced
+				// the two silently-dropped feeds this fix addresses.
+				Self.logger.notice("LocalAccountRefresher: page fetch deadline reached for \(originalURL.absoluteString) after \(pageCount) page(s) -- stopping early")
+				interruptedFeedURLs.insert(originalURL.absoluteString)
+				isPartial = true
+				break
+			}
+
 			let pageNumber = pageCount + 1
 			Self.logger.notice("LocalAccountRefresher: following next_url page \(pageNumber) for \(originalURL.absoluteString): \(nextURL.absoluteString)")
 			if let owner {
@@ -730,6 +767,15 @@ private extension LocalAccountRefresher {
 			NSURLErrorDNSLookupFailed,
 		]
 		return connectionLevelCodes.contains(error.code)
+	}
+
+	/// Whether `error` is a plain `NSURLErrorCancelled` -- i.e. something (our own
+	/// `suspend()`, or the system) cancelled the request rather than the request
+	/// failing on its own. Cancellation is not a feed error: it means the feed
+	/// simply wasn't fetched this pass and needs retrying, not that anything is
+	/// wrong with it.
+	static func isCancellationError(_ error: NSError) -> Bool {
+		error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled
 	}
 }
 
