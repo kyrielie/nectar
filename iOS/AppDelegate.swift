@@ -38,6 +38,11 @@ import Images
 
 	nonisolated private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "Application")
 
+	/// How far ahead of the actual background-time expiry to set the pagination
+	/// deadline, so there's time left to finish the current page's parse/DB
+	/// write and unwind cleanly instead of racing the OS's own cutoff.
+	private static let backgroundDeadlineSafetyMargin: TimeInterval = 5
+
 	var unreadCount = 0 {
 		didSet {
 			if unreadCount != oldValue {
@@ -50,6 +55,15 @@ import Images
 	var isSyncArticleStatusRunning = false
 	var isWaitingForSyncTasks = false
 
+	/// Set when `LocalAccountDelegate` reports feeds left interrupted by a
+	/// background deadline or a mid-refresh `suspend()` cancellation (see
+	/// `LocalAccountDelegate.refreshDidCompleteWithInterruptedFeeds`). Consulted
+	/// by `prepareAccountsForForeground()` so those feeds get retried as soon as
+	/// the app is foregrounded, rather than waiting out the normal 15-minute
+	/// staleness window -- an interrupted feed is exactly as stale as before the
+	/// attempt, so the normal window is the wrong yardstick for it.
+	private var hasInterruptedFeeds = false
+
 	override init() {
 		super.init()
 		appDelegate = self
@@ -58,6 +72,7 @@ import Images
 
 		NotificationCenter.default.addObserver(self, selector: #selector(unreadCountDidChange(_:)), name: .UnreadCountDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(accountRefreshDidFinish(_:)), name: .AccountRefreshDidFinish, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(refreshDidCompleteWithInterruptedFeeds(_:)), name: .refreshDidCompleteWithInterruptedFeeds, object: nil)
 	}
 
 	func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
@@ -167,6 +182,10 @@ import Images
 		}
 	}
 
+	@objc func refreshDidCompleteWithInterruptedFeeds(_ note: Notification) {
+		hasInterruptedFeeds = true
+	}
+
 	func prepareAccountsForBackground() {
 		updateBadge()
 
@@ -188,7 +207,17 @@ import Images
 #endif
 		ArticleStatusSyncTimer.shared.update()
 
-		if let lastRefresh = AppDefaults.shared.lastRefresh {
+		let shouldForceRefresh = hasInterruptedFeeds
+		hasInterruptedFeeds = false
+
+		if shouldForceRefresh {
+			// A previous refresh (this session or the last background attempt)
+			// left one or more feeds interrupted -- they're exactly as stale as
+			// they were before that attempt, so the normal 15-minute staleness
+			// window doesn't apply here. Retry now instead of waiting it out.
+			Self.logger.info("Retrying feeds left interrupted by a previous refresh.")
+			AccountManager.shared.refreshAllWithoutWaiting(errorHandler: ErrorHandler.log)
+		} else if let lastRefresh = AppDefaults.shared.lastRefresh {
 			if Date() > lastRefresh.addingTimeInterval(15 * 60) {
 				AccountManager.shared.refreshAllWithoutWaiting(errorHandler: ErrorHandler.log)
 			} else {
@@ -272,6 +301,16 @@ private extension AppDelegate {
 
 		isWaitingForSyncTasks = true
 
+		// Give any in-flight (or about-to-be-scheduled) `next_url` pagination a
+		// deadline to cooperatively stop by, well ahead of the background task's
+		// own expiration handler forcibly cancelling every in-flight request via
+		// `suspendNetworkAll()`. That forcible cancellation is what previously
+		// dropped feeds mid-pagination with zero new items and no log entry.
+		let remaining = UIApplication.shared.backgroundTimeRemaining
+		if remaining.isFinite {
+			AccountManager.shared.backgroundRefreshDeadline = Date().addingTimeInterval(max(0, remaining - Self.backgroundDeadlineSafetyMargin))
+		}
+
 		self.waitBackgroundUpdateTask = UIApplication.shared.beginBackgroundTask { [weak self] in
 			guard let self = self else { return }
 			Task { @MainActor in
@@ -312,6 +351,11 @@ private extension AppDelegate {
 		UIApplication.shared.endBackgroundTask(self.waitBackgroundUpdateTask)
 		self.waitBackgroundUpdateTask = UIBackgroundTaskIdentifier.invalid
 		isWaitingForSyncTasks = false
+		// AccountManager.refreshAll() clears this itself when a refresh pass
+		// completes, but if no refresh was in flight when we set it, nothing
+		// else will -- don't leave a stale deadline for the next foreground
+		// refresh.
+		AccountManager.shared.backgroundRefreshDeadline = nil
 	}
 
 	func syncArticleStatus() {
@@ -405,6 +449,10 @@ private extension AppDelegate {
 		Task { @MainActor in
 			if AccountManager.shared.isSuspended {
 				AccountManager.shared.resumeAll()
+			}
+			let remaining = UIApplication.shared.backgroundTimeRemaining
+			if remaining.isFinite {
+				AccountManager.shared.backgroundRefreshDeadline = Date().addingTimeInterval(max(0, remaining - Self.backgroundDeadlineSafetyMargin))
 			}
 			await AccountManager.shared.refreshAll(errorHandler: ErrorHandler.log)
 			if !AccountManager.shared.isSuspended {
