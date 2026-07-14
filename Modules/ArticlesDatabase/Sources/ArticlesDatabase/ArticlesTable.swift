@@ -423,6 +423,20 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				}
 				countResultSet.close()
 			}
+
+			// Diagnostic: cross-check the COUNT(*) above against a rowid scan of
+			// the same table/predicate. If these two numbers ever disagree, the
+			// COUNT(*) query itself is suspect (e.g. stale index, wrong filter)
+			// rather than the insert step -- narrowing the gap to a query bug
+			// instead of a data bug.
+			if let rowIDResultSet = database.executeQuery("SELECT rowid FROM articles WHERE feedID = ?", withArgumentsIn: [feedID]) {
+				var rowIDScanCount = 0
+				while rowIDResultSet.next() {
+					rowIDScanCount += 1
+				}
+				rowIDResultSet.close()
+				Self.logger.info("ArticlesTable: update(feedID:\(feedID, privacy: .public)) rowIDScanCountAfterUpdate=\(rowIDScanCount, privacy: .public)")
+			}
 		}
 	}
 
@@ -1287,7 +1301,27 @@ nonisolated private extension ArticlesTable {
 	}
 
 	func saveNewArticles(_ articles: Set<Article>, _ database: FMDatabase) {
-		insertRows(articles.databaseDictionaries(), insertType: .orReplace, in: database)
+		// Diagnostic: insertRows(_:insertType:in:) discards FMDB's per-row
+		// success/failure result, so a silently-failing INSERT (constraint
+		// violation, type mismatch, etc.) would previously vanish without a
+		// trace -- the row would never land in `articles`, but nothing here
+		// would say so. Insert row-by-row instead so each failure is logged
+		// with FMDB's own error message, and log SQLite's actual changes()
+		// count so it can be compared against `articles.count` to see
+		// whether every row that should have landed on disk actually did.
+		var failedArticleIDs = [String]()
+		var totalChanges = 0
+		for dictionary in articles.databaseDictionaries() {
+			let didSucceed = database.rs_insertRow(with: dictionary, insertType: .orReplace, tableName: self.name)
+			if didSucceed {
+				totalChanges += Int(database.changes)
+			} else {
+				let articleID = dictionary[DatabaseKey.articleID] as? String ?? "?"
+				failedArticleIDs.append(articleID)
+				Self.logger.warning("ArticlesTable: saveNewArticles insert failed for articleID \(articleID, privacy: .public) -- \(database.lastErrorMessage(), privacy: .public)")
+			}
+		}
+		Self.logger.info("ArticlesTable: saveNewArticles attempted=\(articles.count, privacy: .public) totalChanges=\(totalChanges, privacy: .public) failed=\(failedArticleIDs.count, privacy: .public)")
 	}
 
 	// MARK: - Updating Existing Articles
