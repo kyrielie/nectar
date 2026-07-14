@@ -14,12 +14,26 @@ import ArticlesDatabase
 import FeedFinder
 import RSWeb
 import Secrets
+import os
+
+/// Posted after a refresh pass completes with one or more feeds left
+/// interrupted (cancelled by `suspend()` or cut off by the background
+/// pagination deadline). `userInfo["feedURLs"]` is the `Set<String>` of
+/// affected feed URLs. The platform layer (`iOS/AppDelegate`) observes this
+/// to retry promptly on next foreground rather than waiting out the normal
+/// refresh interval, since an interrupted feed is exactly as stale as it
+/// was before the attempt.
+public extension Notification.Name {
+	static let refreshDidCompleteWithInterruptedFeeds = Notification.Name("LocalAccountDelegate.refreshDidCompleteWithInterruptedFeeds")
+}
 
 @MainActor final class LocalAccountDelegate: AccountDelegate {
 	weak var account: Account?
 
 	let behaviors: AccountBehaviors = []
 	let isOPMLImportInProgress = false
+
+	private static let logger = Logger(subsystem: "com.ambrosia.Nectar", category: "LocalAccountDelegate")
 
 	var progressInfo = ProgressInfo() {
 		didSet {
@@ -55,6 +69,11 @@ import Secrets
 		refresher.accountID = account.accountID
 		await refresher.refreshFeeds(feeds)
 		account.lastRefreshCompletedDate = Date()
+
+		if !refresher.interruptedFeedURLs.isEmpty {
+			Self.logger.notice("LocalAccountDelegate: refresh completed with \(self.refresher.interruptedFeedURLs.count) feed(s) interrupted -- will need retrying")
+			NotificationCenter.default.post(name: .refreshDidCompleteWithInterruptedFeeds, object: account, userInfo: ["feedURLs": refresher.interruptedFeedURLs])
+		}
 	}
 
 	@MainActor func syncArticleStatus() async throws -> Bool {

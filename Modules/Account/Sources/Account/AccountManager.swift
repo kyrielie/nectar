@@ -33,6 +33,16 @@ import ActivityLog
 
 	public var isSuspended = false
 
+	/// Set by the platform layer (e.g. `iOS/AppDelegate`, from
+	/// `UIApplication.shared.backgroundTimeRemaining`) whenever the app is
+	/// running on borrowed background time -- including partway through a
+	/// refresh that began while still in the foreground. `LocalAccountRefresher`
+	/// reads this live before fetching each `next_url` pagination page and stops
+	/// cooperatively once it's passed, instead of being cut off mid-fetch by
+	/// `suspendNetworkAll()` when the background task's expiration handler fires.
+	/// `nil` means "no deadline" (plenty of foreground time available).
+	public var backgroundRefreshDeadline: Date?
+
 	nonisolated static let syncArticleContentForUnreadArticlesKey = "iCloudSyncArticleContentForUnreadArticles"
 
 	public var syncArticleContentForUnreadArticles: Bool {
@@ -314,6 +324,7 @@ import ActivityLog
 		CombinedRefreshProgress.shared.start()
 		defer {
 			CombinedRefreshProgress.shared.stop()
+			backgroundRefreshDeadline = nil
 		}
 
 		await withTaskGroup(of: Void.self, isolation: MainActor.shared) { group in
