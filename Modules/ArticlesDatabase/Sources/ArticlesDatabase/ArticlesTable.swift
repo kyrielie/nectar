@@ -973,10 +973,27 @@ nonisolated private extension ArticlesTable {
 	func articlesWithResultSet(_ resultSet: FMResultSet, _ database: FMDatabase) -> Set<Article> {
 		var articles = Set<Article>()
 
+		// Diagnostic: previously this loop discarded a row with a bare
+		// `continue` whenever articleID/status lookup or the failable
+		// Article(row:) initializer returned nil -- in a Release build
+		// (where assertionFailure is a no-op) that's a completely silent
+		// drop. Since the write path has already been confirmed correct
+		// (saveNewArticles reports totalChanges matching attempted, and
+		// persistedCountAfterUpdate/rowIDScanCountAfterUpdate agree), if
+		// fetched count is still short, this loop is where to look: count
+		// every row scanned vs. every Article actually produced, and log
+		// the specific reason and articleID for each row that's dropped.
+		var rowsScanned = 0
+		var droppedNoArticleID = 0
+		var droppedNoStatus = 0
+		var droppedInitFailed = [String]()
+
 		while resultSet.next() {
+			rowsScanned += 1
 
 			guard let articleID = resultSet.swiftString(forColumn: DatabaseKey.articleID) else {
 				assertionFailure("Expected articleID.")
+				droppedNoArticleID += 1
 				continue
 			}
 
@@ -989,14 +1006,20 @@ nonisolated private extension ArticlesTable {
 			// so we can get the statuses at the same time and avoid additional database lookups.
 			guard let status = statusesTable.statusWithRow(resultSet, articleID: articleID) else {
 				assertionFailure("Expected status.")
+				droppedNoStatus += 1
 				continue
 			}
 
 			guard let article = Article(accountID: accountID, row: resultSet, status: status) else {
+				droppedInitFailed.append(articleID)
 				continue
 			}
 			articlesCache.withLock { $0[articleID] = article }
 			articles.insert(article)
+		}
+
+		if droppedNoArticleID > 0 || droppedNoStatus > 0 || !droppedInitFailed.isEmpty {
+			Self.logger.warning("ArticlesTable: articlesWithResultSet rowsScanned=\(rowsScanned, privacy: .public) produced=\(articles.count, privacy: .public) droppedNoArticleID=\(droppedNoArticleID, privacy: .public) droppedNoStatus=\(droppedNoStatus, privacy: .public) droppedInitFailed=\(droppedInitFailed.count, privacy: .public) initFailedArticleIDs=\(droppedInitFailed.joined(separator: ","), privacy: .public)")
 		}
 
 		resultSet.close()
