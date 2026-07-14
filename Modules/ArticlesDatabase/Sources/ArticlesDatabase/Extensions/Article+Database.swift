@@ -29,7 +29,10 @@ extension Article {
 		}
 
 		let title = row.swiftString(forColumn: DatabaseKey.title)
-		let contentHTML = row.swiftString(forColumn: DatabaseKey.contentHTML)
+		// contentHTML is stored LZFSE-compressed + base64-encoded (Phase 3, see
+		// ContentHTMLCompression) -- decompress here, the single choke point
+		// every reader of this column goes through via Article.
+		let contentHTML = ContentHTMLCompression.decompress(row.swiftString(forColumn: DatabaseKey.contentHTML))
 		let contentText = row.swiftString(forColumn: DatabaseKey.contentText)
 		let markdown = row.swiftString(forColumn: DatabaseKey.markdown)
 		let url = row.swiftString(forColumn: DatabaseKey.url)
@@ -128,7 +131,12 @@ extension Article {
 		}
 
 		addPossibleStringChangeWithKeyPath(\Article.title, existingArticle, DatabaseKey.title, &d)
-		addPossibleStringChangeWithKeyPath(\Article.contentHTML, existingArticle, DatabaseKey.contentHTML, &d)
+		// contentHTML needs compressing before it lands in the update dictionary --
+		// addPossibleStringChangeWithKeyPath would otherwise write the decompressed
+		// in-memory string straight to the TEXT column (Phase 3).
+		if contentHTML != existingArticle.contentHTML {
+			d[DatabaseKey.contentHTML] = ContentHTMLCompression.compress(contentHTML) ?? ""
+		}
 		addPossibleStringChangeWithKeyPath(\Article.contentText, existingArticle, DatabaseKey.contentText, &d)
 		addPossibleStringChangeWithKeyPath(\Article.rawLink, existingArticle, DatabaseKey.url, &d)
 		addPossibleStringChangeWithKeyPath(\Article.rawExternalLink, existingArticle, DatabaseKey.externalURL, &d)
@@ -241,7 +249,7 @@ extension Article {
 		if let title = title {
 			d[DatabaseKey.title] = title
 		}
-		if let contentHTML = contentHTML {
+		if let contentHTML = ContentHTMLCompression.compress(contentHTML) {
 			d[DatabaseKey.contentHTML] = contentHTML
 		}
 		if let contentText = contentText {

@@ -19,6 +19,7 @@
 
 import Foundation
 import os
+import RSDatabase
 import RSDatabaseObjC
 
 enum AmbrosiaSQLiteImportError: Error, CustomStringConvertible {
@@ -135,16 +136,21 @@ enum AmbrosiaSQLiteImportTable {
 		// globally stable per the Wire Contract, so it's used directly as both
 		// articleID and uniqueID here -- there is no per-feed guid to combine it
 		// with the way JSONFeedParser does for ordinary feed items.
+		// contentHTML is deliberately left out of this bulk INSERT...SELECT and
+		// filled in afterward, one row at a time (below) -- SQL has no LZFSE
+		// primitive, so compression (Phase 3, "on both ingestion paths") has to
+		// happen in Swift, and ContentHTMLCompression is the same choke point
+		// the JSONFeedParser path's Article+Database.swift uses.
 		let insertArticlesSQL = """
 		INSERT OR REPLACE INTO articles (
-		  articleID, feedID, uniqueID, title, contentHTML, url, externalURL, summary,
+		  articleID, feedID, uniqueID, title, url, externalURL, summary,
 		  datePublished, dateModified, authors, tags,
 		  wordCount, chapterCurrent, chapterTotal, isComplete,
 		  fandoms, relationships, characters, ratings, warnings, categories, series,
 		  bookKey
 		)
 		SELECT
-		  t.id, ?, t.id, t.title, t.content_html, t.url, t.url, t.summary,
+		  t.id, ?, t.id, t.title, t.url, t.url, t.summary,
 		  t.date_published, t.date_modified, t.authors_json, t.tags_json,
 		  t.word_count, t.chapter_current, t.chapter_total, t.is_complete,
 		  t.fandoms_json, t.relationships_json, t.characters_json, t.ratings_json,
@@ -155,6 +161,8 @@ enum AmbrosiaSQLiteImportTable {
 		guard database.executeUpdate(insertArticlesSQL, withArgumentsIn: [feedID]) else {
 			throw AmbrosiaSQLiteImportError.importFailed("articles insert: \(database.lastErrorMessage() ?? "unknown error")")
 		}
+
+		try Self.copyCompressedContentHTML(database: database)
 
 		// Status field mapping, from the Wire Contract:
 		//   is_read_later    -> starred
@@ -176,5 +184,29 @@ enum AmbrosiaSQLiteImportTable {
 		guard database.executeUpdate(insertStatusesSQL, withArgumentsIn: [Date().timeIntervalSince1970]) else {
 			throw AmbrosiaSQLiteImportError.importFailed("statuses insert: \(database.lastErrorMessage() ?? "unknown error")")
 		}
+	}
+
+	/// Reads `content_html` off the attached transfer file one row at a time,
+	/// LZFSE-compresses + base64-encodes it (ContentHTMLCompression, matching
+	/// the JSONFeedParser path), and writes it into the just-inserted
+	/// articles row. Runs inside the same transaction as copyItems's other
+	/// two statements, so a failure partway through still rolls back cleanly.
+	private static func copyCompressedContentHTML(database: FMDatabase) throws {
+		guard let resultSet = database.executeQuery("SELECT id, content_html FROM \(attachedSchemaName).items;", withArgumentsIn: []) else {
+			throw AmbrosiaSQLiteImportError.importFailed("content_html read: \(database.lastErrorMessage() ?? "unknown error")")
+		}
+
+		while resultSet.next() {
+			guard let id = resultSet.swiftString(forColumn: "id") else {
+				continue
+			}
+			let contentHTML = resultSet.swiftString(forColumn: "content_html")
+			let compressed = ContentHTMLCompression.compress(contentHTML)
+			guard database.executeUpdate("UPDATE articles SET contentHTML = ? WHERE articleID = ?;", withArgumentsIn: [compressed as Any, id]) else {
+				resultSet.close()
+				throw AmbrosiaSQLiteImportError.importFailed("contentHTML update: \(database.lastErrorMessage() ?? "unknown error")")
+			}
+		}
+		resultSet.close()
 	}
 }
