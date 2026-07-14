@@ -54,7 +54,13 @@ public struct ArticleCounts: Sendable {
 	public nonisolated let databasePath: String
 
 	private let articlesTable: ArticlesTable
-	private let queue: DatabaseQueue
+	// Internal, not private: AmbrosiaSQLiteImportTable (Phase 2 SQLite transfer
+	// import) needs direct queue access to ATTACH DATABASE the downloaded
+	// transfer file and bulk-copy into articles/statuses on the same
+	// connection. Every other reader/writer of this database still goes
+	// through articlesTable/queue.runInDatabase* below -- this does not
+	// widen the public API surface outside the module.
+	let queue: DatabaseQueue
 	private let operationQueue = MainThreadOperationQueue()
 	private let retentionStyle: RetentionStyle
 	private let accountID: String
@@ -165,6 +171,19 @@ public struct ArticleCounts: Sendable {
 	}
 
 	// MARK: - Fetching Articles
+
+	/// Phase 2 (Nectar SQLite transfer): imports a decompressed, version-checked
+	/// `.sqlite` transfer file downloaded from Ambrosia's `/feed/collection/<id>.sqlite`,
+	/// `/feed/search.sqlite`, or `/feed/random-daily.sqlite` routes. `temporaryFilePath`
+	/// must already be the decompressed (LZFSE-decoded) file on disk; this method does
+	/// not touch compression. Per the Wire Contract's explicit non-goals, this does not
+	/// reindex search or write BookReadStateTable rows -- confirmed accepted trade-off.
+	/// Throws on any failure (I/O, version mismatch, or SQL error) with no partial writes:
+	/// the whole import runs inside one transaction and is rolled back on error.
+	public func importAmbrosiaSQLiteTransfer(temporaryFilePath: String, feedID: String, wireFormatVersion: Int32) throws {
+		Self.logger.debug("ArticlesDatabase: importAmbrosiaSQLiteTransfer \(self.accountID, privacy: .public) feedID: \(feedID, privacy: .public)")
+		try AmbrosiaSQLiteImportTable.importTransfer(temporaryFilePath: temporaryFilePath, feedID: feedID, expectedWireFormatVersion: wireFormatVersion, queue: queue)
+	}
 
 	public func fetchArticles(feedID: String) -> Set<Article> {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
