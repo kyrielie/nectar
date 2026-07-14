@@ -54,6 +54,39 @@
                                             </subviews>
                                         </tableViewCellContentView>
                                     </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="amB-r0-51a" customClass="VibrantTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="371.5" width="374" height="51.5"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="amB-r0-51a" id="amB-c1-51a">
+                                            <rect key="frame" x="0.0" y="0.0" width="374" height="51.5"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="250" text="Use SQLite Feed Transfer" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="amB-lb-51a" customClass="VibrantLabel" customModule="NetNewsWire" customModuleProvider="target">
+                                                    <rect key="frame" x="20" y="15" width="167.5" height="21.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="amB-sw-51a">
+                                                    <rect key="frame" x="293" y="12" width="63" height="28"/>
+                                                    <color key="onTintColor" name="primaryAccentColor"/>
+                                                    <connections>
+                                                        <action selector="switchAmbrosiaTransferFormat:" destination="a0p-rk-skQ" eventType="valueChanged" id="amB-ac-51a"/>
+                                                    </connections>
+                                                </switch>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="amB-sw-51a" firstAttribute="top" relation="greaterThanOrEqual" secondItem="amB-c1-51a" secondAttribute="top" constant="6" id="amB-k1-51a"/>
+                                                <constraint firstItem="amB-sw-51a" firstAttribute="centerY" secondItem="amB-c1-51a" secondAttribute="centerY" id="amB-k2-51a"/>
+                                                <constraint firstItem="amB-lb-51a" firstAttribute="top" secondItem="amB-c1-51a" secondAttribute="topMargin" id="amB-k3-51a"/>
+                                                <constraint firstAttribute="bottomMargin" secondItem="amB-lb-51a" secondAttribute="bottom" id="amB-k4-51a"/>
+                                                <constraint firstAttribute="trailingMargin" secondItem="amB-sw-51a" secondAttribute="trailing" id="amB-k5-51a"/>
+                                                <constraint firstItem="amB-sw-51a" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="amB-lb-51a" secondAttribute="trailing" constant="8" id="amB-k6-51a"/>
+                                                <constraint firstItem="amB-lb-51a" firstAttribute="leading" secondItem="amB-c1-51a" secondAttribute="leadingMargin" id="amB-k7-51a"/>
+                                                <constraint firstAttribute="bottom" relation="greaterThanOrEqual" secondItem="amB-sw-51a" secondAttribute="bottom" constant="6" id="amB-k8-51a"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                    </tableViewCell>
                                 </cells>
                             </tableViewSection>
                             <tableViewSection headerTitle="Timeline" id="9Pk-Y8-JVJ">
@@ -487,6 +520,7 @@
                         </barButtonItem>
                     </navigationItem>
                     <connections>
+                        <outlet property="ambrosiaSQLiteTransferSwitch" destination="amB-sw-51a" id="amB-ot-51a"/>
                         <outlet property="articleThemeDetailLabel" destination="DUf-DZ-3Nm" id="QHN-Le-zyw"/>
                         <outlet property="colorPaletteDetailLabel" destination="16m-Ns-Y8V" id="zdj-Ag-ZUw"/>
                         <outlet property="confirmMarkAllAsReadSwitch" destination="UOo-9z-IuL" id="yLZ-Kf-wDt"/>
