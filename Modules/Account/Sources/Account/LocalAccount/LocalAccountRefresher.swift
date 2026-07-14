@@ -747,8 +747,26 @@ private extension LocalAccountRefresher {
 		return (false, nil)
 	}
 
+	/// Resolves the URL actually fetched for `feed`. When the Ambrosia
+	/// transfer-format preference is set to `.sqlite` and `feed.url` is a
+	/// recognized Ambrosia JSON route (per `AmbrosiaFeedIdentity`), swaps the
+	/// `.json` suffix for `.sqlite` -- applies uniformly to every
+	/// Ambrosia-paired feed, no per-feed override (plan 2f). Note: this only
+	/// affects which URL DownloadSession is asked to fetch; DownloadSession
+	/// itself still treats the result as an ordinary feed request; the actual
+	/// `.sqlite`-vs-`.json` handling (decompression, import) happens where
+	/// callers act on the fetched feed URL for Ambrosia-identified accounts,
+	/// not inside DownloadSession.
 	static func url(for feed: Feed) -> URL? {
-		URL(string: feed.url)
+		guard let url = URL(string: feed.url) else {
+			return nil
+		}
+		guard AmbrosiaTransferFormatPreference.current == .sqlite,
+		      AmbrosiaFeedIdentity.collectionKey(for: feed.url) != nil else {
+			return url
+		}
+		let sqliteURLString = String(feed.url.dropLast(".json".count)) + ".sqlite"
+		return URL(string: sqliteURLString) ?? url
 	}
 
 	/// Whether `error` represents a connection-level failure (couldn't reach the host
