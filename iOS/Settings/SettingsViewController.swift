@@ -60,6 +60,7 @@ final class SettingsViewController: UITableViewController {
 
 	@IBOutlet var timelineSortOrderSwitch: UISwitch!
 	@IBOutlet var groupByFeedSwitch: UISwitch!
+	@IBOutlet var ambrosiaSQLiteTransferSwitch: UISwitch!
 	@IBOutlet var refreshClearsReadArticlesSwitch: UISwitch!
 	@IBOutlet var articleThemeDetailLabel: UILabel!
 	@IBOutlet var confirmMarkAllAsReadSwitch: UISwitch!
@@ -100,6 +101,8 @@ final class SettingsViewController: UITableViewController {
 		} else {
 			groupByFeedSwitch.isOn = false
 		}
+
+		ambrosiaSQLiteTransferSwitch.isOn = (AmbrosiaTransferFormatPreference.current == .sqlite)
 
 		if AppDefaults.shared.refreshClearsReadArticles {
 			refreshClearsReadArticlesSwitch.isOn = true
@@ -308,6 +311,15 @@ final class SettingsViewController: UITableViewController {
 		} else {
 			AppDefaults.shared.timelineGroupByFeed = false
 		}
+	}
+
+	/// Phase 2f's settings toggle: "Ambrosia transfer format: JSON / SQLite,"
+	/// applied uniformly to every Ambrosia-paired feed via
+	/// AmbrosiaTransferFormatPreference (read by LocalAccountRefresher.url(for:)
+	/// on each refresh) -- no per-feed override, no automatic size-based
+	/// switching, per the plan.
+	@IBAction func switchAmbrosiaTransferFormat(_ sender: Any) {
+		AmbrosiaTransferFormatPreference.current = ambrosiaSQLiteTransferSwitch.isOn ? .sqlite : .json
 	}
 
 	@IBAction func switchClearsReadArticles(_ sender: Any) {
