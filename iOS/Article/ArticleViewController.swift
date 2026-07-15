@@ -14,6 +14,29 @@ import RSCore
 import Account
 import Articles
 
+/// Lets the fullscreen-toggle tap gesture cover the entire navigation bar
+/// (see the fix in ArticleViewController.viewDidLoad) without swallowing taps
+/// on the bar's own buttons. Matching bar button item views by type name is
+/// a little fragile against future UIKit internals changes, but avoids
+/// reaching for the private "view" KVC key on UIBarButtonItem, which is the
+/// only other way to hit-test against them precisely.
+private final class FullBarTapGestureDelegate: NSObject, UIGestureRecognizerDelegate {
+	weak var navigationBar: UINavigationBar?
+
+	func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+		guard let navigationBar else { return true }
+		let location = touch.location(in: navigationBar)
+		for subview in navigationBar.subviews {
+			guard subview !== navigationBar, subview.isUserInteractionEnabled, !subview.isHidden else { continue }
+			let typeName = String(describing: type(of: subview))
+			if (subview is UIControl || typeName.contains("BarButton")), subview.frame.contains(location) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
 final class ArticleViewController: UIViewController {
 
 	@IBOutlet private weak var nextUnreadBarButtonItem: UIBarButtonItem!
@@ -47,6 +70,7 @@ final class ArticleViewController: UIViewController {
 	weak var coordinator: SceneCoordinator!
 
 	private let poppableDelegate = PoppableGestureRecognizerDelegate()
+	private let fullBarTapDelegate = FullBarTapGestureDelegate()
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticleViewController")
 
 	var article: Article? {
@@ -97,13 +121,20 @@ final class ArticleViewController: UIViewController {
 		navigationItem.scrollEdgeAppearance = appearance
 		navigationItem.compactAppearance = appearance
 
-		let fullScreenTapZone = UIView()
-		NSLayoutConstraint.activate([
-			fullScreenTapZone.widthAnchor.constraint(equalToConstant: 150),
-			fullScreenTapZone.heightAnchor.constraint(equalToConstant: 44)
-		])
-		fullScreenTapZone.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapNavigationBar)))
-		navigationItem.titleView = fullScreenTapZone
+		// Fix for tapping-the-bar-to-hide not registering on smaller devices /
+		// larger Dynamic Type sizes: UINavigationBar compresses/repositions a
+		// fixed-size titleView to make room for rightBarButtonItems when space
+		// is tight (3 buttons now, since the Phase 5/6 heart/theme additions
+		// above), so this titleView's actual rendered frame can end up much
+		// smaller than its 150x44 constraint implies -- most of what visually
+		// reads as "the top bar" then has no gesture recognizer behind it.
+		// Attach the tap gesture to the navigation bar itself instead, so its
+		// hit area always matches what's visually the bar, regardless of how
+		// many bar buttons currently fit.
+		fullBarTapDelegate.navigationBar = navigationController?.navigationBar
+		let fullBarTapGesture = UITapGestureRecognizer(target: self, action: #selector(didTapNavigationBar))
+		fullBarTapGesture.delegate = fullBarTapDelegate
+		navigationController?.navigationBar.addGestureRecognizer(fullBarTapGesture)
 		navigationItem.rightBarButtonItems = [themeBarButtonItem, nextArticleBarButtonItem, prevArticleBarButtonItem]
 
 		let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
@@ -180,6 +211,7 @@ final class ArticleViewController: UIViewController {
 			poppableDelegate.isAdditionallyBlocked = { AppDefaults.shared.articleFullscreenEnabled }
 			parentNavController.interactivePopGestureRecognizer?.delegate = poppableDelegate
 		}
+		fullBarTapDelegate.navigationBar = navigationController?.navigationBar
 	}
 
 	override func viewWillDisappear(_ animated: Bool) {
