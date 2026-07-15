@@ -90,6 +90,18 @@
 					__ro.observe(document.body);
 				}
 				__scheduleSettleCheck();
+
+				// Hard cap, scheduled from DOMContentLoaded rather than "load": on a
+				// large/image-heavy article, "load" can be delayed well past our
+				// intended cap (or effectively never fire promptly if a single image
+				// request stalls), which would leave nothing to force completion
+				// except the native failsafe -- by then the document may still be
+				// short, and native could pick up and persist an unsettled scrollY.
+				// DOMContentLoaded fires reliably and early, so anchoring the cap
+				// here guarantees completion well before that native failsafe.
+				__scrollRestoreHardCapTimer = setTimeout(function() {
+					__finalizeScrollRestore("hard-cap");
+				}, 3000);
 			})
 
 			window.addEventListener("load", function(event) {
@@ -97,10 +109,6 @@
 				__applyScrollRestore();
 				debugLog(scrollState("after load restore"));
 				__scheduleSettleCheck();
-				// Hard cap: guarantee completion even if resize events never go quiet.
-				__scrollRestoreHardCapTimer = setTimeout(function() {
-					__finalizeScrollRestore("hard-cap");
-				}, 3000);
 			})
 
 			if (document.fonts && document.fonts.ready) {
