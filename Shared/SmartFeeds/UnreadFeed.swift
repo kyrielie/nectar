@@ -52,6 +52,8 @@ import Images
 	}
 	#endif
 
+	let bookKeyIndex = SmartFeedBookKeyIndex()
+
 	init() {
 
 		self.unreadCount = AccountManager.shared.unreadCount
@@ -68,13 +70,21 @@ import Images
 @MainActor extension UnreadFeed: ArticleFetcher {
 
 	func fetchArticles() -> Set<Article> {
-		fetchUnreadArticles()
+		let (deduplicated, feedIDsByBookKey) = SmartFeedArticleGrouping.deduplicated(fetchUnreadArticles())
+		bookKeyIndex.update(feedIDsByBookKey)
+		return deduplicated
 	}
 
 	func fetchArticlesAsync() async -> Set<Article> {
-		await fetchUnreadArticlesAsync()
+		let (deduplicated, feedIDsByBookKey) = SmartFeedArticleGrouping.deduplicated(await fetchUnreadArticlesAsync())
+		bookKeyIndex.update(feedIDsByBookKey)
+		return deduplicated
 	}
 
+	// Kept undeduplicated: this is also the badge/count source, and
+	// collapsing duplicate books here would make "All Unread"'s count
+	// disagree with what actually gets marked read. See fetchArticles above
+	// for the deduplicated timeline-display path.
 	func fetchUnreadArticles() -> Set<Article> {
 		AccountManager.shared.fetchArticles(fetchType)
 	}
@@ -82,4 +92,7 @@ import Images
 	func fetchUnreadArticlesAsync() async -> Set<Article> {
 		await AccountManager.shared.fetchArticlesAsync(fetchType)
 	}
+}
+
+extension UnreadFeed: SmartFeedArticleGroupProviding {
 }

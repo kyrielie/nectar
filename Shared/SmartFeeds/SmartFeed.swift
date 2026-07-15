@@ -48,6 +48,7 @@ import Images
 
 	private let delegate: SmartFeedDelegate
 	private var unreadCounts = [String: Int]()
+	let bookKeyIndex = SmartFeedBookKeyIndex()
 
 	init(delegate: SmartFeedDelegate) {
 		self.delegate = delegate
@@ -94,13 +95,22 @@ import Images
 extension SmartFeed: ArticleFetcher {
 
 	func fetchArticles() -> Set<Article> {
-		delegate.fetchArticles()
+		let (deduplicated, feedIDsByBookKey) = SmartFeedArticleGrouping.deduplicated(delegate.fetchArticles())
+		bookKeyIndex.update(feedIDsByBookKey)
+		return deduplicated
 	}
 
 	func fetchArticlesAsync() async -> Set<Article> {
-		await delegate.fetchArticlesAsync()
+		let (deduplicated, feedIDsByBookKey) = SmartFeedArticleGrouping.deduplicated(await delegate.fetchArticlesAsync())
+		bookKeyIndex.update(feedIDsByBookKey)
+		return deduplicated
 	}
 
+	// Unread counts intentionally keep counting every occurrence, not just
+	// deduplicated books -- collapsing duplicates here would make the badge
+	// disagree with what "mark all as read" actually walks through. Dedup is
+	// a timeline *display* concern (see fetchArticles/fetchArticlesAsync
+	// above), not a counting one.
 	func fetchUnreadArticles() -> Set<Article> {
 		delegate.fetchUnreadArticles()
 	}
@@ -108,6 +118,9 @@ extension SmartFeed: ArticleFetcher {
 	func fetchUnreadArticlesAsync() async -> Set<Article> {
 		await delegate.fetchUnreadArticlesAsync()
 	}
+}
+
+extension SmartFeed: SmartFeedArticleGroupProviding {
 }
 
 private extension SmartFeed {
