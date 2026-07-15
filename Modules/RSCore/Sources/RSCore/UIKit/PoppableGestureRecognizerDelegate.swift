@@ -14,8 +14,18 @@ import UIKit
 public final class PoppableGestureRecognizerDelegate: NSObject, UIGestureRecognizerDelegate {
     public weak var navigationController: UINavigationController?
 
+	/// Optional additional gate on top of the `viewControllers.count > 1`
+	/// check below. Set by callers (e.g. ArticleViewController) that need to
+	/// block the interactive pop gesture under some app-specific condition
+	/// -- RSCore itself has no notion of what that condition is, so this is
+	/// left as a closure rather than RSCore depending on an app-level type.
+	public var isAdditionallyBlocked: (() -> Bool)?
+
 	public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return navigationController?.viewControllers.count ?? 0 > 1
+        guard navigationController?.viewControllers.count ?? 0 > 1 else {
+			return false
+		}
+		return !(isAdditionallyBlocked?() ?? false)
     }
 
 	public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
