@@ -34,30 +34,81 @@
 					" readyState=" + document.readyState;
 			}
 
-			// DOMContentLoaded fires before images, web fonts, and any late layout
-			// settle. If those shift document height afterward, the scrollTo below
-			// gets clamped to the shorter pre-reflow height and never reapplied,
-			// which reads as "scroll position resets on reopen." Reapply at load
-			// and fonts.ready to cover both, and log all three so a persisting
-			// reset shows up as a height change between events rather than a guess.
+			// Settle-detection restore: reapplies the target scroll position
+			// whenever document layout changes (via ResizeObserver on
+			// document.body), not just at three fixed lifecycle events, and
+			// declares the restore complete only once layout has stopped
+			// changing (or a hard cap elapses). Replaces the old fixed
+			// three-point (DOMContentLoaded/load/fonts.ready) restore, which
+			// could get clamped by an early scrollTo against a not-yet-final
+			// document height and never get corrected. See
+			// scrollRestoreComplete message handler on the native side.
+			var __scrollRestoreSettleTimer = null;
+			var __scrollRestoreHardCapTimer = null;
+			var __scrollRestoreComplete = false;
+			var __scrollRestoreGeneration = [[loadGeneration]];
+
+			function __applyScrollRestore() {
+				window.scrollTo(0, [[windowScrollY]]);
+			}
+
+			function __finalizeScrollRestore(reason) {
+				if (__scrollRestoreComplete) { return; }
+				__scrollRestoreComplete = true;
+				__applyScrollRestore();
+				clearTimeout(__scrollRestoreHardCapTimer);
+				debugLog(scrollState("scroll restore settled (" + reason + ")"));
+				try {
+					window.webkit.messageHandlers.scrollRestoreComplete.postMessage({
+						generation: __scrollRestoreGeneration,
+						scrollY: window.scrollY,
+						scrollHeight: document.body.scrollHeight
+					});
+				} catch (e) {
+					// messageHandler not installed (e.g. print preview) -- ignore.
+				}
+			}
+
+			function __scheduleSettleCheck() {
+				clearTimeout(__scrollRestoreSettleTimer);
+				__scrollRestoreSettleTimer = setTimeout(function() {
+					__finalizeScrollRestore("quiet-period");
+				}, 250);
+			}
+
 			document.addEventListener("DOMContentLoaded", function(event) {
 				debugLog(scrollState("before DOMContentLoaded restore"));
-				window.scrollTo(0, [[windowScrollY]]);
+				__applyScrollRestore();
 				debugLog(scrollState("after DOMContentLoaded restore"));
 				processPage();
+
+				if (window.ResizeObserver) {
+					var __ro = new ResizeObserver(function() {
+						__applyScrollRestore();
+						__scheduleSettleCheck();
+					});
+					__ro.observe(document.body);
+				}
+				__scheduleSettleCheck();
 			})
 
 			window.addEventListener("load", function(event) {
 				debugLog(scrollState("before load restore"));
-				window.scrollTo(0, [[windowScrollY]]);
+				__applyScrollRestore();
 				debugLog(scrollState("after load restore"));
+				__scheduleSettleCheck();
+				// Hard cap: guarantee completion even if resize events never go quiet.
+				__scrollRestoreHardCapTimer = setTimeout(function() {
+					__finalizeScrollRestore("hard-cap");
+				}, 3000);
 			})
 
 			if (document.fonts && document.fonts.ready) {
 				document.fonts.ready.then(function() {
 					debugLog(scrollState("before fonts.ready restore"));
-					window.scrollTo(0, [[windowScrollY]]);
+					__applyScrollRestore();
 					debugLog(scrollState("after fonts.ready restore"));
+					__scheduleSettleCheck();
 				});
 			}
 

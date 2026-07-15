@@ -26,6 +26,7 @@ final class WebViewController: UIViewController {
 		static let imageWasShown = "imageWasShown"
 		static let showFeedInspector = "showFeedInspector"
 		static let debugLog = "debugLog"
+		static let scrollRestoreComplete = "scrollRestoreComplete"
 	}
 
 	private var topShowBarsView: UIView!
@@ -77,11 +78,27 @@ final class WebViewController: UIViewController {
 	// used for any behavior decision. (loadWebViewGeneration, below webView, is
 	// the counter that actually gates behavior.)
 	private var loadWebViewCallCount = 0
-	// Incremented once per renderPage call, decremented by the next N calls to
-	// scrollPositionDidChange -- see renderPage and scrollPositionDidChange.
-	// N overlapping renderPage calls correctly suppress N post-load reset
-	// events this way, instead of a single boolean only catching the first.
-	private var pendingLoadResets = 0
+	// True from the start of a renderPage() call until page.html's JS confirms
+	// (via the scrollRestoreComplete message) that its own multi-point scroll
+	// restore (DOMContentLoaded / load / fonts.ready / ResizeObserver-driven
+	// reflows) has settled. While true, scrollPositionDidChange's samples are
+	// noise -- either WKWebView's native post-loadHTMLString reset to (0,0), or
+	// one of page.html's own restore attempts sampled before the document has
+	// reached its final height -- and must not be written to windowScrollY or
+	// persisted. See scrollRestoreComplete(generation:scrollY:scrollHeight:).
+	private var isRestoringScrollPosition = false
+
+	// Safety net: if page.html's completion message never arrives (JS error,
+	// ResizeObserver unsupported and load/fonts.ready somehow never fire,
+	// print preview, etc.), don't block real scroll saves forever.
+	private var scrollRestoreFailsafeWorkItem: DispatchWorkItem?
+
+	// Per-load high-water mark for document height, used as a defense-in-depth
+	// guard against persisting a sample taken against a shorter-than-final
+	// document even if it arrives after isRestoringScrollPosition is cleared
+	// (e.g. a late-loading embed that reflows after the settle/hard-cap signal
+	// already fired). Reset at the top of renderPage. See scrollPositionDidChange.
+	private var maxObservedScrollHeight: Double = 0
 
 	// Set by setArticle just before it kicks off its async scroll-position fetch,
 	// and cleared right before that Task calls loadWebView (both on the success
@@ -498,6 +515,24 @@ extension WebViewController: WKScriptMessageHandler {
 			// os.Logger stream as the rest of the app's debug logging, since raw
 			// console.log in WKWebView doesn't show up there on its own.
 			Self.logger.debug("page.html: \(message.body as? String ?? "", privacy: .public)")
+		case MessageName.scrollRestoreComplete:
+			guard let body = message.body as? [String: Any],
+				  let generation = body["generation"] as? Int,
+				  let reportedScrollY = body["scrollY"] as? Int else {
+				return
+			}
+			guard generation == loadWebViewGeneration else {
+				Self.logger.debug("scrollRestoreComplete: discarding stale message, generation=\(generation, privacy: .public) currentGeneration=\(self.loadWebViewGeneration, privacy: .public)")
+				return
+			}
+			scrollRestoreFailsafeWorkItem?.cancel()
+			isRestoringScrollPosition = false
+			Self.logger.debug("scrollRestoreComplete: settled scrollY=\(reportedScrollY, privacy: .public) articleID=\(self.article?.articleID ?? "nil", privacy: .public)")
+			// Reconcile in-memory/DB state with what the page actually settled at,
+			// in case it differs from the value we asked it to restore to (e.g. the
+			// article got shorter than the saved position, so the browser clamped
+			// to max scroll).
+			windowScrollY = reportedScrollY
 		default:
 			return
 		}
@@ -540,10 +575,16 @@ extension WebViewController: UIScrollViewDelegate {
 				Self.logger.debug("scrollPositionDidChange: discarding known-bad sentinel scrollY value")
 				return
 			}
-			if self.pendingLoadResets > 0 {
-				self.pendingLoadResets -= 1
-				Self.logger.debug("scrollPositionDidChange: suppressing post-load event (scrollY=\(javascriptScrollY, privacy: .public), expected windowScrollY=\(self.windowScrollY, privacy: .public), remainingPendingLoadResets=\(self.pendingLoadResets, privacy: .public)) -- treating as WKWebView's own post-load reset, not a real scroll or save")
+			guard !self.isRestoringScrollPosition else {
+				Self.logger.debug("scrollPositionDidChange: discarding sample during restore settling (scrollY=\(javascriptScrollY, privacy: .public)) -- not yet confirmed via scrollRestoreComplete")
 				return
+			}
+			if let scrollHeight = result["scrollHeight"] as? Double, scrollHeight > 0 {
+				if scrollHeight < self.maxObservedScrollHeight - 1 {
+					Self.logger.debug("scrollPositionDidChange: discarding sample, scrollHeight shrank (observed=\(scrollHeight, privacy: .public) max=\(self.maxObservedScrollHeight, privacy: .public)) -- unsettled reflow")
+					return
+				}
+				self.maxObservedScrollHeight = max(self.maxObservedScrollHeight, scrollHeight)
 			}
 			self.windowScrollY = javascriptScrollY
 			Self.logger.debug("scrollPositionDidChange: articleID=\(self.article?.articleID ?? "nil", privacy: .public) scrollY=\(javascriptScrollY, privacy: .public)")
@@ -674,12 +715,14 @@ private extension WebViewController {
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.imageWasShown)
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.showFeedInspector)
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.debugLog)
+				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.scrollRestoreComplete)
 
 				// Add handlers
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.imageWasClicked)
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.imageWasShown)
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.showFeedInspector)
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.debugLog)
+				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.scrollRestoreComplete)
 
 				self.renderPage(webView)
 			}
@@ -703,22 +746,32 @@ private extension WebViewController {
 			"baseURL": rendering.baseURL,
 			"style": rendering.style,
 			"body": rendering.html,
-			"windowScrollY": String(windowScrollY)
+			"windowScrollY": String(windowScrollY),
+			"loadGeneration": String(loadWebViewGeneration)
 		]
 		Self.logger.debug("renderPage: articleID=\(self.article?.articleID ?? "nil", privacy: .public) windowScrollY=\(self.windowScrollY, privacy: .public) bodyLength=\(rendering.html.count, privacy: .public)")
 		// WKWebView fires a scrollViewDidScroll with contentOffset reset to (0,0)
 		// as part of committing a fresh loadHTMLString, before page.html's own
-		// DOMContentLoaded-driven scrollTo has had a chance to run. Without this
-		// guard, that native reset gets picked up by scrollPositionDidChange as
-		// if it were a real scroll and immediately overwrites the just-restored
-		// position with 0 -- confirmed in device logs as the actual mechanism
-		// behind "reopening resets to the top." Suppress exactly the next
-		// scrollPositionDidChange call following this load; anything after that
-		// is the page's own restore or genuine user scrolling. Incrementing
-		// (rather than setting a single flag) means N overlapping loads correctly
-		// suppress N reset events instead of only the first one, regardless of
-		// the order their completions arrive in.
-		pendingLoadResets += 1
+		// scroll restore has had a chance to run or settle. Without this guard,
+		// that native reset (or one of page.html's own restore attempts sampled
+		// before the document has reached its final height) gets picked up by
+		// scrollPositionDidChange as if it were a real scroll and immediately
+		// overwrites the just-restored position -- confirmed in device logs as
+		// the actual mechanism behind "reopening resets to the top." Discard all
+		// scrollPositionDidChange samples until page.html's scrollRestoreComplete
+		// message confirms its own multi-point restore (DOMContentLoaded / load /
+		// fonts.ready / ResizeObserver-driven reflows) has settled; a failsafe
+		// timer below clears this if that message never arrives.
+		isRestoringScrollPosition = true
+		maxObservedScrollHeight = 0
+		scrollRestoreFailsafeWorkItem?.cancel()
+		let failsafe = DispatchWorkItem { [weak self] in
+			guard let self else { return }
+			Self.logger.debug("scrollRestoreComplete: failsafe fired, message never arrived, clearing isRestoringScrollPosition")
+			self.isRestoringScrollPosition = false
+		}
+		scrollRestoreFailsafeWorkItem = failsafe
+		DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: failsafe)
 
 		var html = try! MacroProcessor.renderedText(withTemplate: ArticleRenderer.page.html, substitutions: substitutions)
 		html = ArticleRenderingSpecialCases.filterHTMLIfNeeded(baseURL: rendering.baseURL, html: html)
