@@ -603,6 +603,10 @@ private extension ArticlesDatabase {
 
 	CREATE TABLE if not EXISTS bookReadState (bookKey TEXT NOT NULL PRIMARY KEY, state TEXT NOT NULL, updatedAt DATE NOT NULL);
 
+	CREATE TABLE if not EXISTS bookStarredState (bookKey TEXT NOT NULL PRIMARY KEY, state TEXT NOT NULL, updatedAt DATE NOT NULL);
+
+	CREATE TABLE if not EXISTS bookLovedState (bookKey TEXT NOT NULL PRIMARY KEY, state TEXT NOT NULL, updatedAt DATE NOT NULL);
+
 	CREATE INDEX if not EXISTS articles_feedID_datePublished_articleID on articles (feedID, datePublished, articleID);
 
 	CREATE INDEX if not EXISTS statuses_starred_index on statuses (starred);

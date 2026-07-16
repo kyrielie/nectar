@@ -21,6 +21,7 @@ final class StatusesTable: DatabaseTable, Sendable {
 	let name = DatabaseTableName.statuses
 	private let cache = StatusCache()
 	private let queue: DatabaseQueue
+	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "unknown", category: "StatusesTable")
 
 	init(queue: DatabaseQueue) {
 		self.queue = queue
@@ -261,6 +262,19 @@ private extension StatusesTable {
 		cache.addIfNotCached(statuses)
 
 		saveStatuses(statuses, database)
+
+		// Diagnostic: confirms how many of the statuses just requested for
+		// creation actually persisted, independent of the insertRows-level
+		// failure logging -- this catches the case where insertRows itself
+		// reports success (e.g. .orIgnore treating an existing row as a
+		// no-op "success") but the row that exists doesn't match what was
+		// requested, or was never there to begin with.
+		if let resultSet = self.selectRowsWhere(key: DatabaseKey.articleID, inValues: Array(articleIDs), in: database) {
+			let persistedCount = resultSet.mapToSet(self.statusWithRow).count
+			if persistedCount != articleIDs.count {
+				Self.logger.warning("StatusesTable: createAndSaveStatusesForArticleIDs requested=\(articleIDs.count, privacy: .public) persisted=\(persistedCount, privacy: .public) read=\(read, privacy: .public)")
+			}
+		}
 	}
 
 	func fetchAndCacheStatusesForArticleIDs(_ articleIDs: Set<String>, _ database: FMDatabase) {
