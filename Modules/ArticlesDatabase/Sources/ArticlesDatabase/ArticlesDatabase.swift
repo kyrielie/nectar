@@ -148,6 +148,16 @@ public struct ArticleCounts: Sendable {
 				database.executeStatements("ALTER TABLE articles add column bookKey TEXT;")
 			}
 
+			// nectarfixes #3: bookKeysForArticleIDs/articleIDsForBookKeys (ArticlesTable)
+			// run a WHERE bookKey IN (...) and a WHERE uniqueID IN (...) lookup on every
+			// single read/starred/loved toggle now, to write through to the book-level
+			// state tables and live-propagate to sibling copies of the same book. Neither
+			// column had an index, so both lookups were full table scans of `articles` --
+			// on every tap, regardless of library size. Indexing them turns the toggle's
+			// DB transaction back into an index lookup instead of O(n).
+			database.executeStatements("CREATE INDEX if not EXISTS articles_bookKey_index on articles(bookKey);")
+			database.executeStatements("CREATE INDEX if not EXISTS articles_uniqueID_index on articles(uniqueID);")
+
 			database.executeStatements("CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);")
 			database.executeStatements("DROP TABLE if EXISTS tags;DROP INDEX if EXISTS tags_tagName_index;DROP INDEX if EXISTS articles_feedID_index;DROP INDEX if EXISTS statuses_read_index;DROP TABLE if EXISTS attachments;DROP TABLE if EXISTS attachmentsLookup;")
 		}
