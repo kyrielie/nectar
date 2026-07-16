@@ -300,7 +300,7 @@ enum AmbrosiaSQLiteTransferFetcher {
 			// before anything is imported (plan 3c) -- a manifest that's
 			// missing or internally inconsistent, or a version mismatch,
 			// means this page's file must not be trusted at all.
-			let manifest = try articlesDatabase.readAmbrosiaSQLiteTransferManifest(temporaryFilePath: temporaryFilePath, wireFormatVersion: AmbrosiaSQLiteWireFormat.version)
+			let manifest = try await articlesDatabase.readAmbrosiaSQLiteTransferManifest(temporaryFilePath: temporaryFilePath, wireFormatVersion: AmbrosiaSQLiteWireFormat.version)
 
 			if let expectedWalkID, manifest.walkID != expectedWalkID {
 				try? FileManager.default.removeItem(atPath: temporaryFilePath)
