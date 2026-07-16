@@ -247,7 +247,8 @@ final class ArticleViewController: UIViewController {
 			print("[FullBarTap] attach: bailing out — navigationController=\(String(describing: navigationController)) navigationBar=\(String(describing: navigationController?.navigationBar)) gesture=\(String(describing: fullBarTapGesture))")
 			return
 		}
-		print("[FullBarTap] attach: bar=\(ObjectIdentifier(bar)) gesture.view=\(gesture.view.map { ObjectIdentifier($0) as ObjectIdentifier? } ?? nil) gesture.isEnabled=\(gesture.isEnabled) bar.isUserInteractionEnabled=\(bar.isUserInteractionEnabled) bar.gestureRecognizers=\(bar.gestureRecognizers?.count ?? 0)")
+		let gestureViewDescription = gesture.view.map { String(describing: ObjectIdentifier($0)) } ?? "nil"
+		print("[FullBarTap] attach: bar=\(ObjectIdentifier(bar)) gesture.view=\(gestureViewDescription) gesture.isEnabled=\(gesture.isEnabled) bar.isUserInteractionEnabled=\(bar.isUserInteractionEnabled) bar.gestureRecognizers=\(bar.gestureRecognizers?.count ?? 0)")
 		fullBarTapDelegate.navigationBar = bar
 		guard gesture.view !== bar else {
 			print("[FullBarTap] attach: gesture already on current bar, no-op")
