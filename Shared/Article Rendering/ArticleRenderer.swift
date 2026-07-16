@@ -206,7 +206,19 @@ private extension ArticleRenderer {
 	}()
 
 	func styleString() -> String {
-		return articleTheme.css ?? ArticleRenderer.defaultStyleSheet
+		let base = articleTheme.css ?? ArticleRenderer.defaultStyleSheet
+		#if os(iOS)
+		// Appended after the theme's own CSS (not merged into styleSubstitutions'
+		// macro dictionary) so it applies to every theme, including third-party
+		// imported ones that have no idea this feature exists -- same reasoning as
+		// removeFeedNameLink() in main_ios.js being theme-agnostic rather than
+		// keyed to a specific theme's markup.
+		let overrides = AppDefaults.shared.articleThemeOverrides
+		if !overrides.isEmpty {
+			return base + "\n" + overrides.cssOverrideBlock
+		}
+		#endif
+		return base
 	}
 
 	func template() -> String {

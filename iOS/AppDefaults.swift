@@ -60,6 +60,7 @@ extension Notification.Name {
 	public static let timelineIconSizeDidChange = Notification.Name("TimelineIconSizeDidChangeNotification")
 	public static let timelineNumberOfLinesDidChange = Notification.Name("TimelineNumberOfLinesDidChangeNotification")
 	public static let timelineTagDisplayModeDidChange = Notification.Name("TimelineTagDisplayModeDidChangeNotification")
+	public static let articleThemeOverridesDidChange = Notification.Name("ArticleThemeOverridesDidChangeNotification")
 }
 
 final class AppDefaults: Sendable {
@@ -90,6 +91,7 @@ final class AppDefaults: Sendable {
 		static let articleFullscreenEnabled = "articleFullscreenEnabled"
 		static let blockSwipesWhenBarsHidden = "blockSwipesWhenBarsHidden"
 		static let showFeedNameInReaderView = "showFeedNameInReaderView"
+		static let articleThemeOverrides = "articleThemeOverrides"
 		static let confirmMarkAllAsRead = "confirmMarkAllAsRead"
 		static let lastRefresh = "lastRefresh"
 		static let addFeedAccountID = "addFeedAccountID"
@@ -269,6 +271,26 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			AppDefaults.setBool(for: Key.showFeedNameInReaderView, newValue)
+		}
+	}
+
+	/// User overrides for font, size, line height, and colors in the reader view,
+	/// layered on top of whichever theme (default or imported) is active. See
+	/// ArticleThemeOverrides.cssOverrideBlock and ArticleRenderer.styleString().
+	var articleThemeOverrides: ArticleThemeOverrides {
+		get {
+			guard let json = AppDefaults.string(for: Key.articleThemeOverrides),
+				  let data = json.data(using: .utf8),
+				  let decoded = try? JSONDecoder().decode(ArticleThemeOverrides.self, from: data) else {
+				return ArticleThemeOverrides()
+			}
+			return decoded
+		}
+		set {
+			if let data = try? JSONEncoder().encode(newValue), let json = String(data: data, encoding: .utf8) {
+				AppDefaults.setString(for: Key.articleThemeOverrides, json)
+			}
+			NotificationCenter.default.post(name: .articleThemeOverridesDidChange, object: self)
 		}
 	}
 
