@@ -61,98 +61,12 @@ struct ArticleThemeOverridesView: View {
 
 	var body: some View {
 		Form {
-			Section {
-				preview
-					.listRowInsets(EdgeInsets())
-					.padding()
-					.background(backgroundColor)
-			} header: {
-				Text("Preview", comment: "Preview section header")
-			}
-
-			Section {
-				Toggle(isOn: $useCustomFont) {
-					Text("Custom Font", comment: "Custom Font toggle")
-				}
-				if useCustomFont {
-					Picker(selection: $fontFamilyName) {
-						ForEach(availableFontFamilies, id: \.self) { familyName in
-							Text(familyName).tag(familyName)
-						}
-					} label: {
-						Text("Font", comment: "Font picker label")
-					}
-				}
-			}
-
-			Section {
-				Toggle(isOn: $useCustomFontSize) {
-					Text("Custom Font Size", comment: "Custom Font Size toggle")
-				}
-				if useCustomFontSize {
-					HStack {
-						Slider(value: $fontSize, in: ArticleThemeOverrides.fontSizeRange, step: 1)
-						Text(fontSize, format: .number.precision(.fractionLength(0)))
-							.monospacedDigit()
-							.frame(width: 32, alignment: .trailing)
-							.foregroundStyle(.secondary)
-					}
-				}
-			}
-
-			Section {
-				Toggle(isOn: $useCustomLineHeight) {
-					Text("Custom Line Height", comment: "Custom Line Height toggle")
-				}
-				if useCustomLineHeight {
-					HStack {
-						Slider(value: $lineHeight, in: ArticleThemeOverrides.lineHeightRange, step: 0.1)
-						Text(lineHeight, format: .number.precision(.fractionLength(1)))
-							.monospacedDigit()
-							.frame(width: 32, alignment: .trailing)
-							.foregroundStyle(.secondary)
-					}
-				}
-			}
-
-			Section {
-				Toggle(isOn: $useCustomTextColor) {
-					Text("Custom Text Color", comment: "Custom Text Color toggle")
-				}
-				if useCustomTextColor {
-					ColorPicker(selection: $textColor, supportsOpacity: false) {
-						Text("Text Color", comment: "Text Color picker label")
-					}
-				}
-
-				Toggle(isOn: $useCustomBackgroundColor) {
-					Text("Custom Background Color", comment: "Custom Background Color toggle")
-				}
-				if useCustomBackgroundColor {
-					ColorPicker(selection: $backgroundColor, supportsOpacity: false) {
-						Text("Background Color", comment: "Background Color picker label")
-					}
-				}
-
-				Toggle(isOn: $useCustomLinkColor) {
-					Text("Custom Link Color", comment: "Custom Link Color toggle")
-				}
-				if useCustomLinkColor {
-					ColorPicker(selection: $linkColor, supportsOpacity: false) {
-						Text("Link Color", comment: "Link Color picker label")
-					}
-				}
-			} header: {
-				Text("Colors", comment: "Colors section header")
-			}
-
-			Section {
-				Button(role: .destructive) {
-					resetToThemeDefaults()
-				} label: {
-					Text("Reset to Theme Default", comment: "Reset to Theme Default button")
-				}
-			}
+			previewSection
+			fontSection
+			fontSizeSection
+			lineHeightSection
+			colorsSection
+			resetSection
 		}
 		.navigationTitle(Text("Font & Color Overrides", comment: "Font & Color Overrides navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
@@ -168,6 +82,134 @@ struct ArticleThemeOverridesView: View {
 		.onChange(of: backgroundColor) { _, _ in save() }
 		.onChange(of: useCustomLinkColor) { _, _ in save() }
 		.onChange(of: linkColor) { _, _ in save() }
+	}
+
+	// MARK: - Sections
+
+	/// Split out of `body` (along with the other `...Section` properties below):
+	/// a single `Form` closure containing every section, toggle, picker, and
+	/// conditional inline was too large an expression for the type checker to
+	/// solve within its per-expression time limit ("Getter for property 'body'
+	/// took Xms to type-check"). Giving each section its own explicitly-typed
+	/// `some View` property lets the compiler solve each in isolation instead of
+	/// all at once.
+	@ViewBuilder
+	private var previewSection: some View {
+		Section {
+			preview
+				.listRowInsets(EdgeInsets())
+				.padding()
+				.background(backgroundColor)
+		} header: {
+			Text("Preview", comment: "Preview section header")
+		}
+	}
+
+	@ViewBuilder
+	private var fontSection: some View {
+		Section {
+			Toggle(isOn: $useCustomFont) {
+				Text("Custom Font", comment: "Custom Font toggle")
+			}
+			if useCustomFont {
+				Picker(selection: $fontFamilyName) {
+					ForEach(availableFontFamilies, id: \.self) { familyName in
+						Text(familyName).tag(familyName)
+					}
+				} label: {
+					Text("Font", comment: "Font picker label")
+				}
+			}
+		}
+	}
+
+	@ViewBuilder
+	private var fontSizeSection: some View {
+		Section {
+			Toggle(isOn: $useCustomFontSize) {
+				Text("Custom Font Size", comment: "Custom Font Size toggle")
+			}
+			if useCustomFontSize {
+				fontSizeRow
+			}
+		}
+	}
+
+	private var fontSizeRow: some View {
+		HStack {
+			Slider(value: $fontSize, in: ArticleThemeOverrides.fontSizeRange, step: 1)
+			Text(fontSize, format: .number.precision(.fractionLength(0)))
+				.monospacedDigit()
+				.frame(width: 32, alignment: .trailing)
+				.foregroundStyle(.secondary)
+		}
+	}
+
+	@ViewBuilder
+	private var lineHeightSection: some View {
+		Section {
+			Toggle(isOn: $useCustomLineHeight) {
+				Text("Custom Line Height", comment: "Custom Line Height toggle")
+			}
+			if useCustomLineHeight {
+				lineHeightRow
+			}
+		}
+	}
+
+	private var lineHeightRow: some View {
+		HStack {
+			Slider(value: $lineHeight, in: ArticleThemeOverrides.lineHeightRange, step: 0.1)
+			Text(lineHeight, format: .number.precision(.fractionLength(1)))
+				.monospacedDigit()
+				.frame(width: 32, alignment: .trailing)
+				.foregroundStyle(.secondary)
+		}
+	}
+
+	@ViewBuilder
+	private var colorsSection: some View {
+		Section {
+			Toggle(isOn: $useCustomTextColor) {
+				Text("Custom Text Color", comment: "Custom Text Color toggle")
+			}
+			if useCustomTextColor {
+				ColorPicker(selection: $textColor, supportsOpacity: false) {
+					Text("Text Color", comment: "Text Color picker label")
+				}
+			}
+
+			Toggle(isOn: $useCustomBackgroundColor) {
+				Text("Custom Background Color", comment: "Custom Background Color toggle")
+			}
+			if useCustomBackgroundColor {
+				ColorPicker(selection: $backgroundColor, supportsOpacity: false) {
+					Text("Background Color", comment: "Background Color picker label")
+				}
+			}
+
+			Toggle(isOn: $useCustomLinkColor) {
+				Text("Custom Link Color", comment: "Custom Link Color toggle")
+			}
+			if useCustomLinkColor {
+				ColorPicker(selection: $linkColor, supportsOpacity: false) {
+					Text("Link Color", comment: "Link Color picker label")
+				}
+			}
+		} header: {
+			Text("Colors", comment: "Colors section header")
+		}
+	}
+
+	@ViewBuilder
+	private var resetSection: some View {
+		Section {
+			Button(role: .destructive) {
+				resetToThemeDefaults()
+			} label: {
+				Text("Reset to Theme Default", comment: "Reset to Theme Default button")
+			}
+		}
 	}
 
 	private var preview: some View {
