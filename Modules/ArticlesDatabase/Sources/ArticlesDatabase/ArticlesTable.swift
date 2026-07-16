@@ -771,8 +771,6 @@ final class ArticlesTable: DatabaseTable, Sendable {
 						self.bookStarredStateTable.setState(flag, bookKeys: bookKeys, database)
 					case .loved:
 						self.bookLovedStateTable.setState(flag, bookKeys: bookKeys, database)
-					default:
-						break
 					}
 
 					let siblingArticleIDs = self.articleIDsForBookKeys(bookKeys, excluding: changedArticleIDs, database)
