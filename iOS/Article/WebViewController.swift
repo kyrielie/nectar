@@ -303,6 +303,7 @@ final class WebViewController: UIViewController {
 	}
 
 	func showBars(animated: Bool = true) {
+		print("[FullBarTap] WebViewController.showBars() called, animated=\(animated)")
 		AppDefaults.shared.articleFullscreenEnabled = false
 		coordinator.showStatusBar()
 		topShowBarsViewConstraint?.constant = 0
@@ -315,6 +316,7 @@ final class WebViewController: UIViewController {
 	}
 
 	func hideBars() {
+		print("[FullBarTap] WebViewController.hideBars() called, isFullScreenAvailable=\(isFullScreenAvailable) (articleFullscreenAvailable=\(AppDefaults.shared.articleFullscreenAvailable) idiom=\(traitCollection.userInterfaceIdiom == .phone))")
 		if isFullScreenAvailable {
 			AppDefaults.shared.articleFullscreenEnabled = true
 			coordinator.hideStatusBar()
@@ -324,6 +326,9 @@ final class WebViewController: UIViewController {
 			navigationController?.setToolbarHidden(true, animated: true)
 			setBottomScrollEdgeEffectHidden(true)
 			configureContextMenuInteraction()
+			print("[FullBarTap] hideBars() applied — navigationBar.isHidden should now be true")
+		} else {
+			print("[FullBarTap] hideBars() SKIPPED — isFullScreenAvailable is false, nothing happened")
 		}
 	}
 
