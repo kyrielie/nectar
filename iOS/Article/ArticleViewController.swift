@@ -24,15 +24,22 @@ private final class FullBarTapGestureDelegate: NSObject, UIGestureRecognizerDele
 	weak var navigationBar: UINavigationBar?
 
 	func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-		guard let navigationBar else { return true }
+		guard let navigationBar else {
+			print("[FullBarTap] shouldReceive: navigationBar is nil, returning true")
+			return true
+		}
 		let location = touch.location(in: navigationBar)
+		print("[FullBarTap] shouldReceive: touch at \(location) in bar \(ObjectIdentifier(navigationBar)), bar frame \(navigationBar.frame), subviews: \(navigationBar.subviews.count)")
 		for subview in navigationBar.subviews {
 			guard subview !== navigationBar, subview.isUserInteractionEnabled, !subview.isHidden else { continue }
 			let typeName = String(describing: type(of: subview))
+			print("[FullBarTap]   subview \(typeName) frame=\(subview.frame) interactionEnabled=\(subview.isUserInteractionEnabled)")
 			if (subview is UIControl || typeName.contains("BarButton")), subview.frame.contains(location) {
+				print("[FullBarTap]   -> BLOCKED by \(typeName)")
 				return false
 			}
 		}
+		print("[FullBarTap]   -> ALLOWED (no blocking subview found)")
 		return true
 	}
 }
@@ -142,6 +149,7 @@ final class ArticleViewController: UIViewController {
 		let fullBarTapGesture = UITapGestureRecognizer(target: self, action: #selector(didTapNavigationBar))
 		fullBarTapGesture.delegate = fullBarTapDelegate
 		self.fullBarTapGesture = fullBarTapGesture
+		print("[FullBarTap] viewDidLoad created gesture, calling attachFullBarTapGestureIfNeeded")
 		attachFullBarTapGestureIfNeeded()
 		navigationItem.rightBarButtonItems = [themeBarButtonItem, nextArticleBarButtonItem, prevArticleBarButtonItem]
 
@@ -221,6 +229,7 @@ final class ArticleViewController: UIViewController {
 			}
 			parentNavController.interactivePopGestureRecognizer?.delegate = poppableDelegate
 		}
+		print("[FullBarTap] viewDidAppear calling attachFullBarTapGestureIfNeeded")
 		attachFullBarTapGestureIfNeeded()
 	}
 
@@ -235,12 +244,16 @@ final class ArticleViewController: UIViewController {
 	/// call unconditionally.
 	private func attachFullBarTapGestureIfNeeded() {
 		guard let bar = navigationController?.navigationBar, let gesture = fullBarTapGesture else {
+			print("[FullBarTap] attach: bailing out — navigationController=\(String(describing: navigationController)) navigationBar=\(String(describing: navigationController?.navigationBar)) gesture=\(String(describing: fullBarTapGesture))")
 			return
 		}
+		print("[FullBarTap] attach: bar=\(ObjectIdentifier(bar)) gesture.view=\(gesture.view.map { ObjectIdentifier($0) as ObjectIdentifier? } ?? nil) gesture.isEnabled=\(gesture.isEnabled) bar.isUserInteractionEnabled=\(bar.isUserInteractionEnabled) bar.gestureRecognizers=\(bar.gestureRecognizers?.count ?? 0)")
 		fullBarTapDelegate.navigationBar = bar
 		guard gesture.view !== bar else {
+			print("[FullBarTap] attach: gesture already on current bar, no-op")
 			return
 		}
+		print("[FullBarTap] attach: MOVING gesture from \(String(describing: gesture.view)) to \(ObjectIdentifier(bar))")
 		gesture.view?.removeGestureRecognizer(gesture)
 		bar.addGestureRecognizer(gesture)
 	}
@@ -347,10 +360,12 @@ final class ArticleViewController: UIViewController {
 	// MARK: Actions
 
 	@objc func didTapNavigationBar() {
+		print("[FullBarTap] didTapNavigationBar FIRED — currentWebViewController=\(String(describing: currentWebViewController))")
 		currentWebViewController?.hideBars()
 	}
 
 	@objc func showBars(_ sender: Any) {
+		print("[FullBarTap] showBars(_:) called via \(sender)")
 		currentWebViewController?.showBars()
 	}
 
