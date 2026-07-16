@@ -185,6 +185,18 @@ public struct ArticleCounts: Sendable {
 		try AmbrosiaSQLiteImportTable.importTransfer(temporaryFilePath: temporaryFilePath, feedID: feedID, expectedWireFormatVersion: wireFormatVersion, queue: queue)
 	}
 
+	/// Nectar Implementation Plan 3c: reads and validates a downloaded `.sqlite`
+	/// transfer page's `transfer_manifest` table and wire-format version, without
+	/// importing anything. Callers (`AmbrosiaSQLiteTransferFetcher`) use this to
+	/// decide whether a page is trustworthy enough to import at all, before ever
+	/// calling `importAmbrosiaSQLiteTransfer`. Throws on a wire-format-version
+	/// mismatch, a missing/unreadable manifest, or a `page_row_count` that
+	/// doesn't match the file's own `items` row count.
+	public func readAmbrosiaSQLiteTransferManifest(temporaryFilePath: String, wireFormatVersion: Int32) throws -> AmbrosiaSQLiteTransferManifest {
+		Self.logger.debug("ArticlesDatabase: readAmbrosiaSQLiteTransferManifest \(self.accountID, privacy: .public)")
+		return try AmbrosiaSQLiteImportTable.readAndValidateManifest(atPath: temporaryFilePath, expectedWireFormatVersion: wireFormatVersion)
+	}
+
 	public func fetchArticles(feedID: String) -> Set<Article> {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		return articlesTable.fetchArticles(feedID)

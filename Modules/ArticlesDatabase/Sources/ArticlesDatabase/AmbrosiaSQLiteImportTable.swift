@@ -22,14 +22,29 @@ import os
 import RSDatabase
 import RSDatabaseObjC
 
-enum AmbrosiaSQLiteImportError: Error, CustomStringConvertible {
+/// Manifest describing one page's position within a paginated `.sqlite`
+/// transfer walk (Nectar plan 3a/3c), read from the `transfer_manifest`
+/// table Ambrosia writes alongside `items` in every page file. Public so
+/// `AmbrosiaSQLiteTransferFetcher` (Account module) can read and validate a
+/// page before deciding whether to import it at all.
+public struct AmbrosiaSQLiteTransferManifest: Sendable {
+	public let walkID: String
+	public let pageNumber: Int
+	public let hasMore: Bool
+	public let pageRowCount: Int
+	public let expectedTotalRowCount: Int
+}
+
+public enum AmbrosiaSQLiteImportError: Error, CustomStringConvertible {
 	case couldNotOpenTransferFile(String)
 	case couldNotReadWireFormatVersion
 	case wireFormatVersionMismatch(found: Int32, expected: Int32)
 	case attachFailed
 	case importFailed(String)
+	case manifestMissing
+	case manifestRowCountMismatch(claimed: Int, actual: Int)
 
-	var description: String {
+	public var description: String {
 		switch self {
 		case .couldNotOpenTransferFile(let path):
 			return "Ambrosia SQLite transfer: could not open downloaded file at \(path)"
@@ -41,6 +56,10 @@ enum AmbrosiaSQLiteImportError: Error, CustomStringConvertible {
 			return "Ambrosia SQLite transfer: ATTACH DATABASE failed"
 		case .importFailed(let detail):
 			return "Ambrosia SQLite transfer: import failed (\(detail))"
+		case .manifestMissing:
+			return "Ambrosia SQLite transfer: transfer_manifest table missing or unreadable in downloaded page file"
+		case .manifestRowCountMismatch(let claimed, let actual):
+			return "Ambrosia SQLite transfer: transfer_manifest page_row_count (\(claimed)) does not match actual items row count (\(actual)) in downloaded page file"
 		}
 	}
 }
@@ -73,6 +92,60 @@ enum AmbrosiaSQLiteImportTable {
 			throw AmbrosiaSQLiteImportError.couldNotReadWireFormatVersion
 		}
 		return resultSet.int(forColumnIndex: 0)
+	}
+
+	/// Reads and validates `transfer_manifest` off the downloaded, not-yet-attached
+	/// page file, after first re-running the same wire-format-version check as
+	/// `readWireFormatVersion` (both must happen before ATTACH DATABASE, and
+	/// before any decision is made about whether this page is trustworthy
+	/// enough to import at all -- Nectar plan 3c).
+	///
+	/// Also verifies `page_row_count` against the actual row count in this
+	/// file's own `items` table: a page whose manifest disagrees with its own
+	/// row data is internally inconsistent and must not be imported, per 3c
+	/// ("this page's file is internally inconsistent, don't trust any of it").
+	static func readAndValidateManifest(atPath path: String, expectedWireFormatVersion: Int32) throws -> AmbrosiaSQLiteTransferManifest {
+		let foundVersion = try readWireFormatVersion(atPath: path)
+		guard foundVersion == expectedWireFormatVersion else {
+			throw AmbrosiaSQLiteImportError.wireFormatVersionMismatch(found: foundVersion, expected: expectedWireFormatVersion)
+		}
+
+		guard let standaloneDatabase = FMDatabase(path: path), standaloneDatabase.open() else {
+			throw AmbrosiaSQLiteImportError.couldNotOpenTransferFile(path)
+		}
+		defer { standaloneDatabase.close() }
+
+		guard let manifestResultSet = standaloneDatabase.executeQuery(
+			"SELECT walk_id, page_number, has_more, page_row_count, expected_total_row_count FROM transfer_manifest LIMIT 1;",
+			withArgumentsIn: []
+		) else {
+			throw AmbrosiaSQLiteImportError.manifestMissing
+		}
+		guard manifestResultSet.next(), let walkID = manifestResultSet.swiftString(forColumn: "walk_id") else {
+			manifestResultSet.close()
+			throw AmbrosiaSQLiteImportError.manifestMissing
+		}
+		let pageNumber = Int(manifestResultSet.int(forColumn: "page_number"))
+		let hasMore = manifestResultSet.bool(forColumn: "has_more")
+		let pageRowCount = Int(manifestResultSet.int(forColumn: "page_row_count"))
+		let expectedTotalRowCount = Int(manifestResultSet.int(forColumn: "expected_total_row_count"))
+		manifestResultSet.close()
+
+		guard let countResultSet = standaloneDatabase.executeQuery("SELECT COUNT(*) FROM items;", withArgumentsIn: []),
+		      let actualRowCount = countResultSet.intWithCountResult() else {
+			throw AmbrosiaSQLiteImportError.manifestMissing
+		}
+		guard actualRowCount == pageRowCount else {
+			throw AmbrosiaSQLiteImportError.manifestRowCountMismatch(claimed: pageRowCount, actual: actualRowCount)
+		}
+
+		return AmbrosiaSQLiteTransferManifest(
+			walkID: walkID,
+			pageNumber: pageNumber,
+			hasMore: hasMore,
+			pageRowCount: pageRowCount,
+			expectedTotalRowCount: expectedTotalRowCount
+		)
 	}
 
 	/// Runs the version check (2b) and, on success, the full import (2e) --
