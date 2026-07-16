@@ -52,7 +52,6 @@ final class SettingsViewController: UITableViewController {
 		case enableFullScreenArticles = 2
 		case blockSwipesInFullScreen = 3
 		case showFeedNameInReaderView = 4
-		case themeOverrides = 5
 	}
 
 	private enum HelpRow: Int {
@@ -185,16 +184,6 @@ final class SettingsViewController: UITableViewController {
 	}
 
 	override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-		// Settings.storyboard's Articles section only has static cells for rows
-		// 0-4; themeOverrides is added programmatically here rather than via a
-		// hand-edited storyboard cell (see PASS8_PATCHES.md for the follow-up to
-		// promote this to a real VibrantTableViewCell in Xcode for visual parity).
-		if Section(rawValue: indexPath.section) == .articles, ArticlesRow(rawValue: indexPath.row) == .themeOverrides {
-			let cell = tableView.dequeueReusableCell(withIdentifier: "ThemeOverridesCell") ?? UITableViewCell(style: .default, reuseIdentifier: "ThemeOverridesCell")
-			cell.textLabel?.text = NSLocalizedString("Font & Color Overrides", comment: "Font & Color Overrides")
-			cell.accessoryType = .disclosureIndicator
-			return cell
-		}
 		return super.tableView(tableView, cellForRowAt: indexPath)
 	}
 
@@ -237,9 +226,6 @@ final class SettingsViewController: UITableViewController {
 			case .theme:
 				let articleThemes = UIStoryboard.settings.instantiateController(ofType: ArticleThemesTableViewController.self)
 				self.navigationController?.pushViewController(articleThemes, animated: true)
-			case .themeOverrides:
-				let hosting = UIHostingController(rootView: ArticleThemeOverridesView())
-				self.navigationController?.pushViewController(hosting, animated: true)
 			default:
 				break
 			}

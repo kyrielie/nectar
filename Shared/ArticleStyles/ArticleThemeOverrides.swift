@@ -2,7 +2,7 @@
 //  ArticleThemeOverrides.swift
 //  NetNewsWire
 //
-//  Created for Settings → Articles → Font & Color Overrides.
+//  Created for Settings → Articles → Theme → Font & Color Overrides.
 //  Copyright © 2026 Ranchero Software, LLC. All rights reserved.
 //
 

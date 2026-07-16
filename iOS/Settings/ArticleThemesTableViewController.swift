@@ -9,12 +9,22 @@
 import Foundation
 import UniformTypeIdentifiers
 import UIKit
+import SwiftUI
 
 extension UTType {
 	static var netNewsWireTheme: UTType { UTType(importedAs: "com.ranchero.netnewswire.theme") }
 }
 
 final class ArticleThemesTableViewController: UITableViewController {
+
+	private enum Section: Int, CaseIterable {
+		case themes = 0
+		case customization = 1
+	}
+
+	private enum CustomizationRow: Int {
+		case fontAndColorOverrides = 0
+	}
 
 	override func viewDidLoad() {
 		let importBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(importTheme(_:)))
@@ -40,14 +50,33 @@ final class ArticleThemesTableViewController: UITableViewController {
 	// MARK: - Table view data source
 
 	override func numberOfSections(in tableView: UITableView) -> Int {
-		return 1
+		return Section.allCases.count
 	}
 
 	override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-		return ArticleThemesManager.shared.themeNames.count + 1
+		switch Section(rawValue: section) {
+		case .themes:
+			return ArticleThemesManager.shared.themeNames.count + 1
+		case .customization:
+			return 1
+		case nil:
+			return 0
+		}
+	}
+
+	override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+		guard Section(rawValue: section) == .customization else { return nil }
+		return NSLocalizedString("Customize", comment: "Customize section header")
 	}
 
 	override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+		guard Section(rawValue: indexPath.section) == .themes else {
+			let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
+			cell.textLabel?.text = NSLocalizedString("Font & Color Overrides", comment: "Font & Color Overrides")
+			cell.accessoryType = .disclosureIndicator
+			return cell
+		}
+
 		let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
 
 		let themeName: String
@@ -68,12 +97,23 @@ final class ArticleThemesTableViewController: UITableViewController {
 	}
 
 	override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+		guard Section(rawValue: indexPath.section) == .themes else {
+			if CustomizationRow(rawValue: indexPath.row) == .fontAndColorOverrides {
+				let hosting = UIHostingController(rootView: ArticleThemeOverridesView())
+				navigationController?.pushViewController(hosting, animated: true)
+			}
+			tableView.deselectRow(at: indexPath, animated: true)
+			return
+		}
+
 		guard let cell = tableView.cellForRow(at: indexPath), let themeName = cell.textLabel?.text else { return }
 		ArticleThemesManager.shared.currentThemeName = themeName
 		navigationController?.popViewController(animated: true)
 	}
 
 	override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+		guard Section(rawValue: indexPath.section) == .themes else { return nil }
+
 		guard let cell = tableView.cellForRow(at: indexPath),
 			  let themeName = cell.textLabel?.text,
 			  let theme = ArticleThemesManager.shared.articleThemeWithThemeName(themeName),

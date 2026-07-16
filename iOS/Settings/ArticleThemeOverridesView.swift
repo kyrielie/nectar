@@ -2,15 +2,13 @@
 //  ArticleThemeOverridesView.swift
 //  NetNewsWire-iOS
 //
-//  Created for Settings → Articles → Font & Color Overrides.
+//  Created for Settings → Articles → Theme → Font & Color Overrides.
 //  Copyright © 2026 Ranchero Software. All rights reserved.
 //
 
 import SwiftUI
 
 struct ArticleThemeOverridesView: View {
-
-	private static let defaultFontLabel = NSLocalizedString("Theme Default", comment: "Theme Default font/color")
 
 	@State private var useCustomFont: Bool
 	@State private var fontFamilyName: String
@@ -30,18 +28,36 @@ struct ArticleThemeOverridesView: View {
 	@State private var useCustomLinkColor: Bool
 	@State private var linkColor: Color
 
-	/// Sorted, de-duplicated list of installed font family names, standing in for
-	/// "every font the reader view's WKWebView could plausibly render." System UI
-	/// faces that don't actually work as CSS font-family names are unlikely to appear
-	/// here since UIFont.familyNames only lists names WebKit's font matching also
-	/// understands.
-	private let availableFontFamilies = UIFont.familyNames.sorted()
+	/// The font choices mirror Apple Books' own "Themes & Settings" font menu, not
+	/// every UIFont family name reported by the system: matching Books' menu exactly
+	/// is the point, not enumerating whatever happens to be installed. A few of
+	/// these (Canela, Proxima Nova, Publico) are fonts Apple licenses exclusively
+	/// for Books and aren't exposed to third-party apps as system fonts, so WebKit
+	/// will silently fall back to its default serif/sans-serif for those -- they're
+	/// kept in the list anyway to match Books' menu, and the live preview below
+	/// makes that fallback immediately visible rather than surprising in the
+	/// rendered article.
+	private static let availableFonts: [(displayName: String, cssFontFamily: String)] = [
+		("Athelas", "Athelas"),
+		("Avenir Next", "Avenir Next"),
+		("Canela", "Canela"),
+		("Charter", "Charter"),
+		("Georgia", "Georgia"),
+		("Iowan", "Iowan Old Style"),
+		("Palatino", "Palatino"),
+		("Proxima Nova", "Proxima Nova"),
+		("Publico", "Publico"),
+		("San Francisco", "-apple-system"),
+		("New York", "New York"),
+		("Seravek", "Seravek"),
+		("Times New Roman", "Times New Roman")
+	]
 
 	init() {
 		let overrides = AppDefaults.shared.articleThemeOverrides
 
 		_useCustomFont = State(initialValue: overrides.fontFamilyName != nil)
-		_fontFamilyName = State(initialValue: overrides.fontFamilyName ?? UIFont.familyNames.sorted().first ?? "Helvetica")
+		_fontFamilyName = State(initialValue: overrides.fontFamilyName ?? Self.availableFonts.first!.cssFontFamily)
 
 		_useCustomFontSize = State(initialValue: overrides.fontSize != nil)
 		_fontSize = State(initialValue: overrides.fontSize ?? UIFont.preferredFont(forTextStyle: .body).pointSize)
@@ -125,12 +141,13 @@ struct ArticleThemeOverridesView: View {
 	@ViewBuilder
 	private var previewSection: some View {
 		Section {
-			preview
+			ArticleThemePreviewWebView(css: previewCSS)
+				.frame(height: 220)
 				.listRowInsets(EdgeInsets())
-				.padding()
-				.background(backgroundColor)
 		} header: {
 			Text("Preview", comment: "Preview section header")
+		} footer: {
+			Text("Preview reflects the current theme (\(ArticleThemesManager.shared.currentTheme.name)) with your overrides applied on top.", comment: "Preview footer explaining theme + override layering")
 		}
 	}
 
@@ -142,8 +159,8 @@ struct ArticleThemeOverridesView: View {
 			}
 			if useCustomFont {
 				Picker(selection: $fontFamilyName) {
-					ForEach(availableFontFamilies, id: \.self) { familyName in
-						Text(familyName).tag(familyName)
+					ForEach(Self.availableFonts, id: \.cssFontFamily) { font in
+						Text(font.displayName).tag(font.cssFontFamily)
 					}
 				} label: {
 					Text("Font", comment: "Font picker label")
@@ -241,33 +258,11 @@ struct ArticleThemeOverridesView: View {
 		}
 	}
 
-	private var preview: some View {
-		VStack(alignment: .leading, spacing: 8) {
-			Text("The Sample Chapter Title")
-				.font(.headline)
-				.foregroundStyle(useCustomTextColor ? textColor : .primary)
-			Text("This is a preview of how article text will look with your chosen font, size, line height, and colors. The quick brown fox jumps over the lazy dog.")
-				.font(useCustomFont ? .custom(fontFamilyName, size: useCustomFontSize ? fontSize : UIFont.preferredFont(forTextStyle: .body).pointSize) : .system(size: useCustomFontSize ? fontSize : UIFont.preferredFont(forTextStyle: .body).pointSize))
-				.lineSpacing(previewLineSpacing)
-				.foregroundStyle(useCustomTextColor ? textColor : .primary)
-			Text("A link looks like this.")
-				.foregroundStyle(useCustomLinkColor ? linkColor : .accentColor)
-				.underline()
-		}
-		.frame(maxWidth: .infinity, alignment: .leading)
-	}
-
-	/// SwiftUI's lineSpacing is *extra* space added between lines, not the CSS
-	/// line-height multiplier the override actually stores, so this converts one to
-	/// the other using the same base point size the preview text is rendered at.
-	private var previewLineSpacing: CGFloat {
-		guard useCustomLineHeight else { return 0 }
-		let baseSize = useCustomFontSize ? fontSize : UIFont.preferredFont(forTextStyle: .body).pointSize
-		return CGFloat((lineHeight - 1.0) * baseSize)
-	}
-
-	private func save() {
-		AppDefaults.shared.articleThemeOverrides = ArticleThemeOverrides(
+	/// The override values implied by the current (possibly unsaved) toggle/slider/
+	/// picker state -- used to drive the live preview immediately as the person
+	/// adjusts controls, and also what actually gets persisted in `save()`.
+	private var liveOverrides: ArticleThemeOverrides {
+		ArticleThemeOverrides(
 			fontFamilyName: useCustomFont ? fontFamilyName : nil,
 			fontSize: useCustomFontSize ? fontSize : nil,
 			lineHeight: useCustomLineHeight ? lineHeight : nil,
@@ -275,6 +270,21 @@ struct ArticleThemeOverridesView: View {
 			backgroundColorHex: useCustomBackgroundColor ? backgroundColor.hexString : nil,
 			linkColorHex: useCustomLinkColor ? linkColor.hexString : nil
 		)
+	}
+
+	/// The current theme's own CSS, with the live overrides appended on top --
+	/// exactly what ArticleRenderer.styleString() does for real articles, so the
+	/// preview shown here is the actual rendering a real article would get, not an
+	/// approximation of it.
+	private var previewCSS: String {
+		let themeCSS = ArticleThemesManager.shared.currentTheme.css ?? ""
+		let overrideCSS = liveOverrides.cssOverrideBlock
+		guard !overrideCSS.isEmpty else { return themeCSS }
+		return themeCSS + "\n" + overrideCSS
+	}
+
+	private func save() {
+		AppDefaults.shared.articleThemeOverrides = liveOverrides
 	}
 
 	private func resetToThemeDefaults() {
