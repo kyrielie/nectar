@@ -65,6 +65,8 @@ final class SettingsViewController: UITableViewController {
 	@IBOutlet var articleThemeDetailLabel: UILabel!
 	@IBOutlet var confirmMarkAllAsReadSwitch: UISwitch!
 	@IBOutlet var showFullscreenArticlesSwitch: UISwitch!
+	@IBOutlet var blockSwipesWhenBarsHiddenSwitch: UISwitch!
+	@IBOutlet var showFeedNameInReaderViewSwitch: UISwitch!
 	@IBOutlet var colorPaletteDetailLabel: UILabel!
 	@IBOutlet var openLinksInNetNewsWire: UISwitch!
 
@@ -123,6 +125,9 @@ final class SettingsViewController: UITableViewController {
 		} else {
 			showFullscreenArticlesSwitch.isOn = false
 		}
+
+		blockSwipesWhenBarsHiddenSwitch.isOn = AppDefaults.shared.blockSwipesWhenBarsHidden
+		showFeedNameInReaderViewSwitch.isOn = AppDefaults.shared.showFeedNameInReaderView
 
 		colorPaletteDetailLabel.text = String(describing: AppDefaults.userInterfaceColorPalette)
 
@@ -344,6 +349,14 @@ final class SettingsViewController: UITableViewController {
 		} else {
 			AppDefaults.shared.articleFullscreenAvailable = false
 		}
+	}
+
+	@IBAction func switchBlockSwipesWhenBarsHidden(_ sender: Any) {
+		AppDefaults.shared.blockSwipesWhenBarsHidden = blockSwipesWhenBarsHiddenSwitch.isOn
+	}
+
+	@IBAction func switchShowFeedNameInReaderView(_ sender: Any) {
+		AppDefaults.shared.showFeedNameInReaderView = showFeedNameInReaderViewSwitch.isOn
 	}
 
 	@IBAction func switchBrowserPreference(_ sender: Any) {

@@ -208,7 +208,9 @@ final class ArticleViewController: UIViewController {
 		searchBar.shouldBeginEditing = true
 		if let parentNavController = navigationController?.parent as? UINavigationController {
 			poppableDelegate.navigationController = parentNavController
-			poppableDelegate.isAdditionallyBlocked = { AppDefaults.shared.articleFullscreenEnabled }
+			poppableDelegate.isAdditionallyBlocked = {
+				AppDefaults.shared.articleFullscreenEnabled && AppDefaults.shared.blockSwipesWhenBarsHidden
+			}
 			parentNavController.interactivePopGestureRecognizer?.delegate = poppableDelegate
 		}
 		fullBarTapDelegate.navigationBar = navigationController?.navigationBar
@@ -526,11 +528,13 @@ extension ArticleViewController: UIGestureRecognizerDelegate {
 		// Bars hidden (fullscreen) means the user explicitly asked to read
 		// without chrome; swiping to the next/previous article or back out of
 		// the screen while in that state undoes the hide with no way to tell
-		// it was accidental. Block both until bars are shown again. This
+		// it was accidental. Block both until bars are shown again, unless the
+		// user has turned that off (AppDefaults.shared.blockSwipesWhenBarsHidden)
+		// to keep swiping through a library uninterrupted instead. This
 		// covers the page-turn pan added to pageViewController.scrollViewInsidePageControl
 		// in viewDidLoad (this delegate); the interactive pop gesture is
-		// handled separately by poppableDelegate below, which reads the same flag.
-		return !AppDefaults.shared.articleFullscreenEnabled
+		// handled separately by poppableDelegate below, which reads the same flags.
+		return !(AppDefaults.shared.articleFullscreenEnabled && AppDefaults.shared.blockSwipesWhenBarsHidden)
     }
 
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
