@@ -745,23 +745,23 @@ private extension WebViewController {
 			"title": rendering.title,
 			"baseURL": rendering.baseURL,
 			"style": rendering.style,
-			"body": rendering.html,
-			"windowScrollY": String(windowScrollY),
-			"loadGeneration": String(loadWebViewGeneration)
+			"body": rendering.html
 		]
 		Self.logger.debug("renderPage: articleID=\(self.article?.articleID ?? "nil", privacy: .public) windowScrollY=\(self.windowScrollY, privacy: .public) bodyLength=\(rendering.html.count, privacy: .public)")
 		// WKWebView fires a scrollViewDidScroll with contentOffset reset to (0,0)
-		// as part of committing a fresh loadHTMLString, before page.html's own
-		// scroll restore has had a chance to run or settle. Without this guard,
-		// that native reset (or one of page.html's own restore attempts sampled
-		// before the document has reached its final height) gets picked up by
+		// as part of committing a fresh loadHTMLString, before the injected
+		// scroll-restore script (see WebViewConfiguration.installArticleScripts)
+		// has had a chance to run or settle. Without this guard, that native
+		// reset (or one of the restore script's own attempts sampled before the
+		// document has reached its final height) gets picked up by
 		// scrollPositionDidChange as if it were a real scroll and immediately
 		// overwrites the just-restored position -- confirmed in device logs as
 		// the actual mechanism behind "reopening resets to the top." Discard all
-		// scrollPositionDidChange samples until page.html's scrollRestoreComplete
-		// message confirms its own multi-point restore (DOMContentLoaded / load /
-		// fonts.ready / ResizeObserver-driven reflows) has settled; a failsafe
-		// timer below clears this if that message never arrives.
+		// scrollPositionDidChange samples until the scrollRestoreComplete
+		// message confirms the restore script's own multi-point restore
+		// (DOMContentLoaded / load / fonts.ready / ResizeObserver-driven
+		// reflows) has settled; a failsafe timer below clears this if that
+		// message never arrives.
 		isRestoringScrollPosition = true
 		maxObservedScrollHeight = 0
 		scrollRestoreFailsafeWorkItem?.cancel()
@@ -784,6 +784,7 @@ private extension WebViewController {
 //		print("article.html written to \(fileURL.path)")
 
 		WebViewConfiguration.addContentBlockingRules(to: webView)
+		WebViewConfiguration.installArticleScripts(in: webView, windowScrollY: windowScrollY, generation: loadWebViewGeneration)
 		webView.loadHTMLString(html, baseURL: URL(string: rendering.baseURL))
 	}
 

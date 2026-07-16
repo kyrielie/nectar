@@ -51,6 +51,28 @@ import WebKit
 		}
 	}
 
+	/// Reinstalls the article WKUserScripts on a web view immediately before each load,
+	/// replacing the previous navigation's scroll-restore script with one carrying this
+	/// navigation's target scrollY and generation.
+	///
+	/// WKUserScripts persist on the WKUserContentController across loadHTMLString calls on
+	/// the same WKWebView and re-run on every subsequent navigation. Just adding a new
+	/// scroll-restore script on each call without removing the previous one would leave every
+	/// prior navigation's script (with its now-stale target scrollY) still attached and
+	/// re-firing on every future load. removeAllUserScripts() + a full reinstall keeps exactly
+	/// one scroll-restore script active, matching the navigation it was written for. Call
+	/// this before webView.loadHTMLString, since .atDocumentStart scripts must already be
+	/// registered when a navigation begins.
+	@MainActor
+	static func installArticleScripts(in webView: WKWebView, windowScrollY: Int, generation: Int) {
+		let contentController = webView.configuration.userContentController
+		contentController.removeAllUserScripts()
+		for script in articleScripts {
+			contentController.addUserScript(script)
+		}
+		contentController.addUserScript(scrollRestoreUserScript(windowScrollY: windowScrollY, generation: generation))
+	}
+
 	/// Compile content blocking rules. Call early at app startup.
 	static func compileContentBlockingRules() async {
 
@@ -127,4 +149,108 @@ private extension WebViewConfiguration {
 		}
 		return scripts
 	}()
+
+	/// Content JavaScript is disabled above (`webpagePreferences.allowsContentJavaScript =
+	/// false`), so any inline `<script>` inside page.html's own HTML never runs -- it's "web
+	/// content" JS, which that preference blocks outright, silently. WKUserScripts are
+	/// explicitly exempt from that restriction (as already relied on by main.js/main_ios.js/
+	/// newsfoot.js for their event listeners and window.webkit.messageHandlers bridges), so
+	/// the scroll-restore logic has to be injected this way instead of living in page.html.
+	///
+	/// Reapplies the target scroll position whenever document layout changes (via a
+	/// ResizeObserver on document.body) rather than only at fixed lifecycle points, and
+	/// reports completion -- via the scrollRestoreComplete message, tagged with `generation`
+	/// so WebViewController can discard reports from a superseded navigation -- once layout
+	/// has gone quiet for 250ms or a 3s hard cap (anchored to DOMContentLoaded, which fires
+	/// reliably regardless of how long images/fonts take) elapses.
+	static func scrollRestoreUserScript(windowScrollY: Int, generation: Int) -> WKUserScript {
+		let source = """
+		(function() {
+			function debugLog(message) {
+				try {
+					window.webkit.messageHandlers.debugLog.postMessage(message);
+				} catch (e) {
+					// messageHandler not installed (e.g. print preview) -- ignore.
+				}
+			}
+
+			function scrollState(label) {
+				return label + ": target=\(windowScrollY) actualScrollY=" + window.scrollY +
+					" scrollHeight=" + (document.body ? document.body.scrollHeight : -1) +
+					" innerHeight=" + window.innerHeight +
+					" readyState=" + document.readyState;
+			}
+
+			debugLog("scroll-restore script parsed, generation=\(generation), readyState=" + document.readyState);
+
+			var settleTimer = null;
+			var hardCapTimer = null;
+			var complete = false;
+
+			function applyRestore() {
+				window.scrollTo(0, \(windowScrollY));
+			}
+
+			function finalize(reason) {
+				if (complete) { return; }
+				complete = true;
+				applyRestore();
+				clearTimeout(hardCapTimer);
+				debugLog(scrollState("scroll restore settled (" + reason + ")"));
+				try {
+					window.webkit.messageHandlers.scrollRestoreComplete.postMessage({
+						generation: \(generation),
+						scrollY: window.scrollY,
+						scrollHeight: document.body.scrollHeight
+					});
+				} catch (e) {
+					// messageHandler not installed (e.g. print preview) -- ignore.
+				}
+			}
+
+			function scheduleSettleCheck() {
+				clearTimeout(settleTimer);
+				settleTimer = setTimeout(function() {
+					finalize("quiet-period");
+				}, 250);
+			}
+
+			document.addEventListener("DOMContentLoaded", function() {
+				debugLog(scrollState("before DOMContentLoaded restore"));
+				applyRestore();
+				debugLog(scrollState("after DOMContentLoaded restore"));
+
+				if (window.ResizeObserver) {
+					var ro = new ResizeObserver(function() {
+						applyRestore();
+						scheduleSettleCheck();
+					});
+					ro.observe(document.body);
+				}
+				scheduleSettleCheck();
+
+				hardCapTimer = setTimeout(function() {
+					finalize("hard-cap");
+				}, 3000);
+			});
+
+			window.addEventListener("load", function() {
+				debugLog(scrollState("before load restore"));
+				applyRestore();
+				debugLog(scrollState("after load restore"));
+				scheduleSettleCheck();
+			});
+
+			if (document.fonts && document.fonts.ready) {
+				document.fonts.ready.then(function() {
+					debugLog(scrollState("before fonts.ready restore"));
+					applyRestore();
+					debugLog(scrollState("after fonts.ready restore"));
+					scheduleSettleCheck();
+				});
+			}
+		})();
+		"""
+		return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+	}
 }
