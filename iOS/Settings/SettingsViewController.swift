@@ -224,7 +224,7 @@ final class SettingsViewController: UITableViewController {
 		case .articles:
 			switch ArticlesRow(rawValue: indexPath.row) {
 			case .theme:
-				let articleThemes = UIStoryboard.settings.instantiateController(ofType: ArticleThemesTableViewController.self)
+				let articleThemes = UIHostingController(rootView: ArticleThemeListView())
 				self.navigationController?.pushViewController(articleThemes, animated: true)
 			default:
 				break
