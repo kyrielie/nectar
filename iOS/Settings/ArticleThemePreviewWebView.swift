@@ -44,7 +44,7 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 		<head>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<style>
-		body { margin: 0; padding: 0; -webkit-text-size-adjust: none; }
+		body { margin: 0; padding: 16px 0; -webkit-text-size-adjust: none; box-sizing: border-box; }
 		\(css)
 		</style>
 		</head>

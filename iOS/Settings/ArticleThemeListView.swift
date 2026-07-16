@@ -70,11 +70,20 @@ struct ArticleThemeListView: View {
 		("Times New Roman", "Times New Roman")
 	]
 
+	/// `ArticleThemeOverrides.fontFamilyName` is nil whenever the "Custom Font" toggle
+	/// is off, since nil is exactly what tells `cssOverrideBlock` not to touch
+	/// font-family. That means the override itself can't also remember which font was
+	/// last picked while the toggle is off -- turning the toggle off and back on would
+	/// otherwise always land back on the first font in the list. This key stores just
+	/// that last choice, independent of whether it's currently applied.
+	private static let lastFontFamilyNameDefaultsKey = "ArticleThemeListView.lastFontFamilyName"
+
 	init() {
 		let overrides = AppDefaults.shared.articleThemeOverrides
+		let lastFontFamilyName = UserDefaults.standard.string(forKey: Self.lastFontFamilyNameDefaultsKey)
 
 		_useCustomFont = State(initialValue: overrides.fontFamilyName != nil)
-		_fontFamilyName = State(initialValue: overrides.fontFamilyName ?? Self.availableFonts.first!.cssFontFamily)
+		_fontFamilyName = State(initialValue: overrides.fontFamilyName ?? lastFontFamilyName ?? Self.availableFonts.first!.cssFontFamily)
 
 		_useCustomFontSize = State(initialValue: overrides.fontSize != nil)
 		_fontSize = State(initialValue: overrides.fontSize ?? UIFont.preferredFont(forTextStyle: .body).pointSize)
@@ -131,6 +140,9 @@ struct ArticleThemeListView: View {
 			Text(NSString.localizedStringWithFormat(localizedMessageText as NSString, themeName) as String)
 		}
 		.onReceive(NotificationCenter.default.publisher(for: .ArticleThemeNamesDidChangeNotification)) { _ in
+			themeNamesRefreshToken.toggle()
+		}
+		.onReceive(NotificationCenter.default.publisher(for: .CurrentArticleThemeDidChangeNotification)) { _ in
 			themeNamesRefreshToken.toggle()
 		}
 		.onChange(of: snapshot) { _, _ in save() }
@@ -221,6 +233,7 @@ struct ArticleThemeListView: View {
 				}
 			}
 		}
+		.buttonStyle(.plain)
 		.swipeActions(edge: .trailing) {
 			if !isAppTheme {
 				Button(role: .destructive) {
@@ -390,6 +403,7 @@ struct ArticleThemeListView: View {
 
 	private func save() {
 		AppDefaults.shared.articleThemeOverrides = liveOverrides
+		UserDefaults.standard.set(fontFamilyName, forKey: Self.lastFontFamilyNameDefaultsKey)
 	}
 
 	private func resetToThemeDefaults() {
