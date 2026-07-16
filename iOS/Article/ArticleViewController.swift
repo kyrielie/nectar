@@ -310,10 +310,29 @@ final class ArticleViewController: UIViewController {
 	}
 
 	@IBAction func toggleStar(_ sender: Any) {
+		// Flip the icon immediately so the tap feels instant -- the real
+		// mark still round-trips through the DB and posts
+		// .StatusesDidChange, which calls updateUI() again and confirms
+		// (or corrects) this optimistic state. article.status itself is
+		// left untouched here, so MarkStatusCommand's diffing is unaffected.
+		if let article {
+			let newFlag = !article.status.starred
+			starBarButtonItem.image = newFlag ? Assets.Images.starClosed : Assets.Images.starOpen
+			starBarButtonItem.accLabelText = newFlag
+				? NSLocalizedString("Selected - Read Later", comment: "Selected - Read Later")
+				: NSLocalizedString("Read Later", comment: "Read Later")
+		}
 		coordinator.toggleStarredForCurrentArticle()
 	}
 
 	@objc func toggleLoved(_ sender: Any) {
+		if let article {
+			let newFlag = !article.status.loved
+			heartBarButtonItem.image = newFlag ? Assets.Images.heartClosed : Assets.Images.heartOpen
+			heartBarButtonItem.accLabelText = newFlag
+				? NSLocalizedString("Selected - Loved", comment: "Selected - Loved")
+				: NSLocalizedString("Loved", comment: "Loved")
+		}
 		coordinator.toggleLovedForCurrentArticle()
 	}
 
