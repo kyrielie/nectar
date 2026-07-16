@@ -222,11 +222,18 @@ import os
 		downloadSession.download(Set(urls))
 	}
 
-	/// Fetches and imports an Ambrosia `.sqlite` transfer for `feed`, bypassing
-	/// DownloadSession entirely (see the routing comment in refreshFeeds).
-	/// Tracked the same way a JSON parse Task is (outstandingParseTasks +
-	/// completeRefreshIfReady), so the refresh pass doesn't report itself done
-	/// while an import is still in flight.
+	/// Fetches and imports every page of an Ambrosia `.sqlite` transfer walk
+	/// for `feed`, bypassing DownloadSession entirely (see the routing
+	/// comment in refreshFeeds). Tracked the same way a JSON parse Task is
+	/// (outstandingParseTasks + completeRefreshIfReady), so the refresh pass
+	/// doesn't report itself done while a walk is still in flight.
+	///
+	/// `.incomplete` (plan 3d) is reported via `didComplete`, not
+	/// `reportFeedRefreshError` -- it's a distinct, visible state, not a feed
+	/// error: the walk is retried automatically starting from wherever it
+	/// left off (AmbrosiaSQLiteTransferWalkStateStore) on the next scheduled
+	/// refresh, so surfacing it as an "error" would overstate how much
+	/// attention it needs while understating that it's already self-healing.
 	///
 	/// NOT YET RESOLVED: on success this only calls updateUnreadCounts(feeds:)
 	/// as a best-effort UI nudge. The JSON path's account.updateAsync(feed:parsedFeed:)
@@ -239,6 +246,14 @@ import os
 	/// fire here. Whether the timeline needs it (vs. picking up imported rows
 	/// on its next fetch) needs a closer read of the timeline's data source
 	/// before deciding how to fix -- flagged rather than guessed.
+	///
+	/// NOT YET RESOLVED: `.incomplete` is currently surfaced only through the
+	/// ActivityLog completion message (visible in Settings > Activity Log).
+	/// The plan's 3d also calls for "a distinct status in the feed list
+	/// itself (not just logs)" -- wiring that into MainFeedCollectionViewCell/
+	/// MainFeedRowIdentifier needs a closer look at how that cell already
+	/// surfaces per-feed state (if at all) before adding to it; flagged
+	/// rather than guessed at here.
 	@MainActor private func fetchAndImportAmbrosiaSQLiteTransfer(feed: Feed) {
 		guard let url = Self.url(for: feed), let account = feed.account else {
 			return
@@ -246,7 +261,6 @@ import os
 
 		let activityKind = ActivityKind.refreshFeedContent(feedURL: feed.url)
 		let activityOwner = self.activityOwner
-		let dataSizeMessage = "SQLite transfer"
 
 		outstandingParseTasks += 1
 		Task { @MainActor in
@@ -258,10 +272,20 @@ import os
 			feed.lastCheckDate = Date()
 
 			do {
-				try await AmbrosiaSQLiteTransferFetcher.fetchAndImport(url: url, into: account.database, feedID: feed.feedID)
+				let result = try await AmbrosiaSQLiteTransferFetcher.fetchAndImportWalk(baseURL: url, feedID: feed.feedID, into: account.database)
 				account.updateUnreadCounts(feeds: [feed])
-				if let activityOwner {
-					ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: dataSizeMessage)
+				switch result {
+				case .complete(let pagesImported, let rowsImported):
+					Self.logger.notice("LocalAccountRefresher: SQLite transfer walk complete for \(feed.url) -- \(rowsImported) rows across \(pagesImported) page(s)")
+					if let activityOwner {
+						ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "SQLite transfer: \(rowsImported) book\(rowsImported == 1 ? "" : "s") across \(pagesImported) page\(pagesImported == 1 ? "" : "s")")
+					}
+				case .incomplete(let pagesImported, let rowsImported, let expectedTotal, let lastPageAttempted):
+					Self.logger.notice("LocalAccountRefresher: SQLite transfer walk incomplete for \(feed.url) -- imported \(rowsImported) of \(expectedTotal) rows across \(pagesImported) page(s) this pass, stopped at page \(lastPageAttempted)")
+					if let activityOwner {
+						let progressDetail = expectedTotal > 0 ? "\(rowsImported) of \(expectedTotal) books" : "\(rowsImported) books"
+						ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "Sync incomplete — \(progressDetail) imported so far, will resume next refresh", durationIsSignificant: false)
+					}
 				}
 			} catch {
 				Self.logger.error("LocalAccountRefresher: Ambrosia SQLite transfer failed for \(url.absoluteString): \(error.localizedDescription)")
