@@ -88,6 +88,8 @@ final class AppDefaults: Sendable {
 		static let timelineSortField = "timelineSortField"
 		static let articleFullscreenAvailable = "articleFullscreenAvailable"
 		static let articleFullscreenEnabled = "articleFullscreenEnabled"
+		static let blockSwipesWhenBarsHidden = "blockSwipesWhenBarsHidden"
+		static let showFeedNameInReaderView = "showFeedNameInReaderView"
 		static let confirmMarkAllAsRead = "confirmMarkAllAsRead"
 		static let lastRefresh = "lastRefresh"
 		static let addFeedAccountID = "addFeedAccountID"
@@ -237,6 +239,37 @@ final class AppDefaults: Sendable {
 
 	var logicalArticleFullscreenEnabled: Bool {
 		articleFullscreenAvailable && articleFullscreenEnabled
+	}
+
+	/// When true (default), hiding the article bars also blocks swiping to
+	/// the next/previous article and swiping back, so a tap-to-hide doesn't
+	/// get immediately undone by a swipe the user didn't intend as a "show
+	/// bars again" gesture. Some people would rather keep swiping through a
+	/// library uninterrupted with the bars out of the way, hence the toggle.
+	var blockSwipesWhenBarsHidden: Bool {
+		get {
+			return AppDefaults.bool(for: Key.blockSwipesWhenBarsHidden)
+		}
+		set {
+			AppDefaults.setBool(for: Key.blockSwipesWhenBarsHidden, newValue)
+		}
+	}
+
+	/// Off by default: a book's feed name becomes ambiguous once smart-feed
+	/// deduplication can surface it from more than one feed (see
+	/// SmartFeedArticleGrouping), so the reader view hides it by default
+	/// rather than showing only one of several feeds it happens to belong to.
+	/// When turned on, ArticleRenderer shows the single feed name for
+	/// articles opened from a real feed, or every feed a book appeared in
+	/// (comma-separated) for articles opened from a smart feed where it was
+	/// deduplicated across more than one.
+	var showFeedNameInReaderView: Bool {
+		get {
+			return AppDefaults.bool(for: Key.showFeedNameInReaderView)
+		}
+		set {
+			AppDefaults.setBool(for: Key.showFeedNameInReaderView, newValue)
+		}
 	}
 
 	var confirmMarkAllAsRead: Bool {
@@ -437,6 +470,8 @@ final class AppDefaults: Sendable {
 								Key.timelineSortField: ArticleSorter.SortField.date.rawValue,
 										Key.articleFullscreenAvailable: false,
 										Key.articleFullscreenEnabled: false,
+										Key.blockSwipesWhenBarsHidden: true,
+										Key.showFeedNameInReaderView: false,
 										Key.confirmMarkAllAsRead: true,
 										Key.currentThemeName: Self.defaultThemeName,
 									   Key.splitViewPreferredDisplayMode: UISplitViewController.DisplayMode.oneBesideSecondary.rawValue]
