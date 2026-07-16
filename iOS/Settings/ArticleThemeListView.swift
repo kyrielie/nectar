@@ -1,14 +1,31 @@
 //
-//  ArticleThemeOverridesView.swift
+//  ArticleThemeListView.swift
 //  NetNewsWire-iOS
 //
-//  Created for Settings → Articles → Theme → Font & Color Overrides.
+//  Created for Settings → Theme.
 //  Copyright © 2026 Ranchero Software. All rights reserved.
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
+import RSCore
 
-struct ArticleThemeOverridesView: View {
+extension UTType {
+	static var netNewsWireTheme: UTType { UTType(importedAs: "com.ranchero.netnewswire.theme") }
+}
+
+/// Replaces the former pair of screens (a UIKit theme-picker list that pushed to a
+/// separate SwiftUI overrides screen) with a single scrolling list: picking a theme
+/// and adjusting its font/color overrides now happen in the same place, with one
+/// shared live preview reflecting both.
+struct ArticleThemeListView: View {
+
+	@Environment(\.dismiss) private var dismiss
+
+	@State private var isImporterPresented = false
+	@State private var themeNamesRefreshToken = false
+	@State private var themeToDelete: String?
+	@State private var isDeleteAlertPresented = false
 
 	@State private var useCustomFont: Bool
 	@State private var fontFamilyName: String
@@ -77,6 +94,7 @@ struct ArticleThemeOverridesView: View {
 
 	var body: some View {
 		Form {
+			themesSection
 			previewSection
 			fontSection
 			fontSizeSection
@@ -84,8 +102,37 @@ struct ArticleThemeOverridesView: View {
 			colorsSection
 			resetSection
 		}
-		.navigationTitle(Text("Font & Color Overrides", comment: "Font & Color Overrides navigation title"))
-		.navigationBarTitleDisplayMode(.inline)
+		.navigationTitle(Text("Theme", comment: "Theme navigation title"))
+		.toolbar {
+			ToolbarItem(placement: .primaryAction) {
+				Button {
+					isImporterPresented = true
+				} label: {
+					Image(systemName: "plus")
+				}
+				.accessibilityLabel(Text("Import Theme", comment: "Import Theme"))
+			}
+		}
+		.fileImporter(isPresented: $isImporterPresented, allowedContentTypes: [UTType.netNewsWireTheme]) { result in
+			guard case .success(let url) = result else { return }
+			importTheme(url: url)
+		}
+		.alert(Text("Delete Theme?", comment: "Delete Theme"), isPresented: $isDeleteAlertPresented, presenting: themeToDelete) { themeName in
+			Button(role: .cancel) { } label: {
+				Text("Cancel", comment: "Cancel button")
+			}
+			Button(role: .destructive) {
+				ArticleThemesManager.shared.deleteTheme(themeName: themeName)
+			} label: {
+				Text("Delete", comment: "Delete button")
+			}
+		} message: { themeName in
+			let localizedMessageText = NSLocalizedString("Are you sure you want to delete the theme “%@”?.", comment: "Delete Theme Message")
+			Text(NSString.localizedStringWithFormat(localizedMessageText as NSString, themeName) as String)
+		}
+		.onReceive(NotificationCenter.default.publisher(for: .ArticleThemeNamesDidChangeNotification)) { _ in
+			themeNamesRefreshToken.toggle()
+		}
 		.onChange(of: snapshot) { _, _ in save() }
 	}
 
@@ -139,6 +186,58 @@ struct ArticleThemeOverridesView: View {
 	/// `some View` property lets the compiler solve each in isolation instead of
 	/// all at once.
 	@ViewBuilder
+	private var themesSection: some View {
+		// Reading themeNamesRefreshToken here (even though it isn't otherwise used)
+		// forces this section to be re-evaluated when the notification observer
+		// above flips it, since ArticleThemesManager itself isn't ObservableObject.
+		let _ = themeNamesRefreshToken
+
+		Section {
+			ForEach(themeNames, id: \.self) { themeName in
+				themeRow(themeName)
+			}
+		}
+	}
+
+	private var themeNames: [String] {
+		[ArticleTheme.defaultTheme.name] + ArticleThemesManager.shared.themeNames
+	}
+
+	@ViewBuilder
+	private func themeRow(_ themeName: String) -> some View {
+		let isCurrent = themeName == ArticleThemesManager.shared.currentTheme.name
+		let isAppTheme = ArticleThemesManager.shared.articleThemeWithThemeName(themeName)?.isAppTheme ?? true
+
+		Button {
+			ArticleThemesManager.shared.currentThemeName = themeName
+		} label: {
+			HStack {
+				Text(themeName)
+					.foregroundStyle(.primary)
+				Spacer()
+				if isCurrent {
+					Image(systemName: "checkmark")
+						.foregroundStyle(.tint)
+				}
+			}
+		}
+		.swipeActions(edge: .trailing) {
+			if !isAppTheme {
+				Button(role: .destructive) {
+					themeToDelete = themeName
+					isDeleteAlertPresented = true
+				} label: {
+					Label {
+						Text("Delete", comment: "Delete button")
+					} icon: {
+						Image(systemName: "trash")
+					}
+				}
+			}
+		}
+	}
+
+	@ViewBuilder
 	private var previewSection: some View {
 		Section {
 			ArticleThemePreviewWebView(css: previewCSS)
@@ -166,6 +265,8 @@ struct ArticleThemeOverridesView: View {
 					Text("Font", comment: "Font picker label")
 				}
 			}
+		} header: {
+			Text("Font", comment: "Font section header")
 		}
 	}
 
@@ -178,6 +279,8 @@ struct ArticleThemeOverridesView: View {
 			if useCustomFontSize {
 				fontSizeRow
 			}
+		} header: {
+			Text("Font Size", comment: "Font Size section header")
 		}
 	}
 
@@ -200,6 +303,8 @@ struct ArticleThemeOverridesView: View {
 			if useCustomLineHeight {
 				lineHeightRow
 			}
+		} header: {
+			Text("Line Height", comment: "Line Height section header")
 		}
 	}
 
@@ -301,6 +406,33 @@ struct ArticleThemeOverridesView: View {
 		linkColor = .accentColor
 		save()
 	}
+
+	// MARK: - Import
+
+	private func importTheme(url: URL) {
+		guard let controller = UIApplication.shared.firstKeyWindow?.topViewController else { return }
+
+		if url.startAccessingSecurityScopedResource() {
+			defer {
+				url.stopAccessingSecurityScopedResource()
+			}
+
+			do {
+				try ArticleThemeImporter.importTheme(controller: controller, url: url)
+			} catch {
+				NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
+			}
+		}
+	}
+}
+
+private extension UIApplication {
+	var firstKeyWindow: UIWindow? {
+		connectedScenes
+			.compactMap { $0 as? UIWindowScene }
+			.flatMap { $0.windows }
+			.first { $0.isKeyWindow }
+	}
 }
 
 // MARK: - Color <-> hex
@@ -343,6 +475,6 @@ private extension UIColor {
 
 #Preview {
 	NavigationStack {
-		ArticleThemeOverridesView()
+		ArticleThemeListView()
 	}
 }

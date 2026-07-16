@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import SwiftUI
 import os
 import SafariServices
 import WebKit
@@ -337,7 +338,7 @@ final class ArticleViewController: UIViewController {
 	}
 
 	@objc func showThemePicker(_ sender: Any) {
-		let articleThemes = UIStoryboard.settings.instantiateController(ofType: ArticleThemesTableViewController.self)
+		let articleThemes = UIHostingController(rootView: ArticleThemeListView())
 		navigationController?.pushViewController(articleThemes, animated: true)
 	}
 
