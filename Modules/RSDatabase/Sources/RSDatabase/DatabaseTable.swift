@@ -8,6 +8,7 @@
 
 import Foundation
 import RSDatabaseObjC
+import os
 
 public protocol DatabaseTable {
 
@@ -52,8 +53,29 @@ public extension DatabaseTable {
 	// MARK: Saving
 
 	func insertRows(_ dictionaries: [DatabaseDictionary], insertType: RSDatabaseInsertType, in database: FMDatabase) {
+		// Diagnostic: previously discarded rs_insertRow's per-row
+		// success/failure result (`_ = ...`), so any silently-failing
+		// INSERT here -- constraint violation, type mismatch, an
+		// .orIgnore conflict, etc. -- would vanish without a trace for
+		// every caller of this shared helper (including StatusesTable,
+		// which uses insertType: .orIgnore). Log a count and sample
+		// failing rows so a shortfall shows up regardless of which
+		// table called in.
+		var failedCount = 0
+		var firstFailedKeys = [String]()
 		for oneDictionary in dictionaries {
-			_ = database.rs_insertRow(with: oneDictionary, insertType: insertType, tableName: self.name)
+			let didSucceed = database.rs_insertRow(with: oneDictionary, insertType: insertType, tableName: self.name)
+			if !didSucceed {
+				failedCount += 1
+				if firstFailedKeys.count < 5 {
+					let keyDescription = oneDictionary.keys.sorted().map { "\($0)=\(oneDictionary[$0] ?? "nil")" }.joined(separator: ",")
+					firstFailedKeys.append(keyDescription)
+				}
+			}
+		}
+		if failedCount > 0 {
+			let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "unknown", category: "DatabaseTable")
+			logger.warning("DatabaseTable: insertRows table=\(self.name, privacy: .public) attempted=\(dictionaries.count, privacy: .public) failed=\(failedCount, privacy: .public) insertType=\(String(describing: insertType), privacy: .public) lastError=\(database.lastErrorMessage(), privacy: .public) sampleFailedRows=\(firstFailedKeys.joined(separator: " | "), privacy: .public)")
 		}
 	}
 

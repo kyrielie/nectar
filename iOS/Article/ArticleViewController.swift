@@ -71,6 +71,7 @@ final class ArticleViewController: UIViewController {
 
 	private let poppableDelegate = PoppableGestureRecognizerDelegate()
 	private let fullBarTapDelegate = FullBarTapGestureDelegate()
+	private var fullBarTapGesture: UITapGestureRecognizer?
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticleViewController")
 
 	var article: Article? {
@@ -131,10 +132,17 @@ final class ArticleViewController: UIViewController {
 		// Attach the tap gesture to the navigation bar itself instead, so its
 		// hit area always matches what's visually the bar, regardless of how
 		// many bar buttons currently fit.
-		fullBarTapDelegate.navigationBar = navigationController?.navigationBar
+		//
+		// The navigation bar instance backing this VC can change after initial
+		// load (e.g. split-view collapse/expand reparenting, or state
+		// restoration), so the gesture itself -- not just fullBarTapDelegate's
+		// touch-filtering reference -- has to be able to move to whichever bar
+		// is current. attachFullBarTapGestureIfNeeded() does that; it's called
+		// again from viewDidAppear.
 		let fullBarTapGesture = UITapGestureRecognizer(target: self, action: #selector(didTapNavigationBar))
 		fullBarTapGesture.delegate = fullBarTapDelegate
-		navigationController?.navigationBar.addGestureRecognizer(fullBarTapGesture)
+		self.fullBarTapGesture = fullBarTapGesture
+		attachFullBarTapGestureIfNeeded()
 		navigationItem.rightBarButtonItems = [themeBarButtonItem, nextArticleBarButtonItem, prevArticleBarButtonItem]
 
 		let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
@@ -213,7 +221,28 @@ final class ArticleViewController: UIViewController {
 			}
 			parentNavController.interactivePopGestureRecognizer?.delegate = poppableDelegate
 		}
-		fullBarTapDelegate.navigationBar = navigationController?.navigationBar
+		attachFullBarTapGestureIfNeeded()
+	}
+
+	/// Makes sure fullBarTapGesture is attached to whichever UINavigationBar
+	/// instance is currently backing this VC, and keeps fullBarTapDelegate's
+	/// touch-filtering reference in sync with it. The navigation bar instance
+	/// isn't guaranteed to stay the same for the VC's lifetime (split-view
+	/// collapse/expand reparenting, state restoration), so this has to be
+	/// re-checked -- not just set once in viewDidLoad -- every time the VC
+	/// appears. Re-adding the gesture to the bar it's already on is a no-op
+	/// (a UIGestureRecognizer only ever has one `view`), so this is safe to
+	/// call unconditionally.
+	private func attachFullBarTapGestureIfNeeded() {
+		guard let bar = navigationController?.navigationBar, let gesture = fullBarTapGesture else {
+			return
+		}
+		fullBarTapDelegate.navigationBar = bar
+		guard gesture.view !== bar else {
+			return
+		}
+		gesture.view?.removeGestureRecognizer(gesture)
+		bar.addGestureRecognizer(gesture)
 	}
 
 	override func viewWillDisappear(_ animated: Bool) {
