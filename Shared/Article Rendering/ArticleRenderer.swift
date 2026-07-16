@@ -43,6 +43,7 @@ import os
 	private let title: String
 	private let body: String
 	private let baseURL: String?
+	private let timelineFeed: SidebarItem?
 
 	private static let longDateTimeFormatter: DateFormatter = {
 		let formatter = DateFormatter()
@@ -107,12 +108,13 @@ import os
 		return formatter
 	}()
 
-	private init(article: Article?, theme: ArticleTheme) {
+	private init(article: Article?, theme: ArticleTheme, timelineFeed: SidebarItem? = nil) {
 		self.article = article
 		self.articleTheme = theme
 		self.title = ArticleStringFormatter.sanitizedTitle(article?.title, forHTML: true) ?? ""
 		self.body = article?.body ?? ""
 		self.baseURL = article?.baseURL?.absoluteString
+		self.timelineFeed = timelineFeed
 		if let article {
 			// article.body is contentHTML ?? contentText ?? summary. Logging which
 			// one won tells us directly whether a "missing images, plain text"
@@ -134,8 +136,8 @@ import os
 
 	// MARK: - API
 
-	static func articleHTML(article: Article, theme: ArticleTheme) -> Rendering {
-		let renderer = ArticleRenderer(article: article, theme: theme)
+	static func articleHTML(article: Article, theme: ArticleTheme, timelineFeed: SidebarItem? = nil) -> Rendering {
+		let renderer = ArticleRenderer(article: article, theme: theme, timelineFeed: timelineFeed)
 		return (renderer.articleCSS, renderer.articleHTML, renderer.title, renderer.baseURL ?? "")
 	}
 
@@ -253,7 +255,26 @@ private extension ArticleRenderer {
 			d["dateline_style"] = "articleDateline"
 		}
 
+		// Off by default (AppDefaults.shared.showFeedNameInReaderView): once
+		// SmartFeedArticleGrouping can surface a book from more than one
+		// feed, crediting it to just one feed's name is misleading, so the
+		// reader view hides the feed name entirely unless the user turns it
+		// back on. When on, ArticleFeedNaming resolves the same single-feed
+		// vs. combined-feeds ("Fandom A, Search Results") name the timeline
+		// cell shows, based on whichever smart feed (if any) this article is
+		// currently being viewed from. Leaving feed_link_title empty here
+		// (rather than skipping the template's own [[feed_link_title]]
+		// token) is what lets main.js's removeFeedNameLink() strip the
+		// link generically for every theme -- see that function's comment.
+		#if os(iOS)
+		if AppDefaults.shared.showFeedNameInReaderView {
+			d["feed_link_title"] = ArticleFeedNaming.displayName(for: article, timelineFeed: timelineFeed) ?? ""
+		} else {
+			d["feed_link_title"] = ""
+		}
+		#else
 		d["feed_link_title"] = article.feed?.nameForDisplay ?? ""
+		#endif
 		d["feed_link"] = article.feed?.homePageURL ?? ""
 
 		d["byline"] = byline()
