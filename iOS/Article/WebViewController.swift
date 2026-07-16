@@ -736,7 +736,7 @@ private extension WebViewController {
 		let rendering: ArticleRenderer.Rendering
 
 		if let article = article {
-			rendering = ArticleRenderer.articleHTML(article: article, theme: theme)
+			rendering = ArticleRenderer.articleHTML(article: article, theme: theme, timelineFeed: coordinator?.timelineFeed)
 		} else {
 			rendering = ArticleRenderer.noSelectionHTML(theme: theme)
 		}

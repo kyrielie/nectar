@@ -860,31 +860,8 @@ private extension MainTimelineModernViewController {
 		let iconImage = iconImageFor(article)
 		let showFeedNames = coordinator?.showFeedNames ?? ShowFeedName.none
 		let showIcon = showIcons && iconImage != nil
-		let cellData = MainTimelineCellData(article: article, showFeedName: showFeedNames, feedName: feedNameFor(article), byline: article.byline(), iconImage: iconImage, showIcon: showIcon, numberOfLines: numberOfTextLines, iconSize: iconSize, tagDisplayMode: tagDisplayMode)
+		let cellData = MainTimelineCellData(article: article, showFeedName: showFeedNames, feedName: ArticleFeedNaming.displayName(for: article, timelineFeed: coordinator?.timelineFeed), byline: article.byline(), iconImage: iconImage, showIcon: showIcon, numberOfLines: numberOfTextLines, iconSize: iconSize, tagDisplayMode: tagDisplayMode)
 		return cellData
-	}
-
-	/// The feed name to display for `article`. Inside a smart feed
-	/// (Today/Unread/Starred/Loved/Read/Search), if the article's book
-	/// appeared in more than one feed before deduplication, this combines
-	/// every feed it appeared in (e.g. "Fandom A, Search Results") rather
-	/// than showing only the one feed the surviving representative happens
-	/// to belong to.
-	private func feedNameFor(_ article: Article) -> String? {
-		guard let groupProvider = coordinator?.timelineFeed as? SmartFeedArticleGroupProviding,
-			  let feedIDs = groupProvider.bookKeyIndex.feedIDs(forBookKey: article.bookKey),
-			  feedIDs.count > 1 else {
-			return article.feed?.nameForDisplay
-		}
-
-		let names = feedIDs.compactMap { feedID in
-			article.account?.existingFeed(withFeedID: feedID)?.nameForDisplay
-		}.sorted()
-
-		guard !names.isEmpty else {
-			return article.feed?.nameForDisplay
-		}
-		return names.joined(separator: ", ")
 	}
 
 	private func iconImageFor(_ article: Article) -> IconImage? {

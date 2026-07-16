@@ -171,6 +171,67 @@ function removeArticleIconAvatar() {
 	}
 }
 
+// The feed-name link (populated from ArticleRenderer's feed_link /
+// feed_link_title template keys -- see template.html's headerTable markup)
+// is rendered by every bundled and third-party theme, with different wrapper
+// markup per theme (a bare <a>, one wrapped in its own <div>, one sharing a
+// <td> with the byline, etc.) and no consistent id or class across all of
+// them. Rather than requiring every theme to adopt a specific id (which
+// third-party themes predating that convention wouldn't have) or hardcoding
+// per-theme handling, this piggybacks on how ArticleRenderer already governs
+// visibility: when AppDefaults.shared.showFeedNameInReaderView is off,
+// ArticleRenderer sets feed_link_title to an empty string, so the rendered
+// anchor has a real href (the feed's home page URL) but empty text --
+// whatever theme is active. That combination (non-empty href, empty text)
+// is what identifies the link here, so it can be found and removed the same
+// way regardless of theme markup, matching the removeArticleIconAvatar
+// approach above.
+//
+// When the toggle is on, ArticleRenderer instead fills feed_link_title with
+// a real name (single feed, or several comma-separated feeds if the article
+// was deduplicated across feeds by a smart feed -- see ArticleFeedNaming),
+// so the anchor's text is never empty in that case and this function is a
+// no-op, leaving the theme's own markup exactly as it renders it.
+function removeFeedNameLink() {
+	var links = document.querySelectorAll("a[href]");
+	for (var i = 0; i < links.length; i++) {
+		var link = links[i];
+		var href = link.getAttribute("href");
+		if (!href || href.trim() === "") {
+			continue;
+		}
+		if (link.textContent.trim() !== "") {
+			continue;
+		}
+
+		var parent = link.parentNode;
+
+		// Themes that put the byline right after the feed name in the same
+		// container (e.g. "<a>...</a><br />[[byline]]") would otherwise be
+		// left with a stray blank line above the byline.
+		var nextSibling = link.nextSibling;
+		link.remove();
+		if (nextSibling && nextSibling.nodeName === "BR") {
+			nextSibling.remove();
+		}
+
+		// If removing the link emptied out a wrapper dedicated to it (some
+		// themes give the feed name its own <div>/<span>), remove that
+		// wrapper too rather than leaving an empty element that could still
+		// affect layout. Never remove structural containers, and never
+		// remove a table cell -- doing so would misalign the surrounding
+		// header table rather than just leaving a harmless empty cell.
+		if (parent && parent.textContent.trim() === "" &&
+			!parent.querySelector("img") &&
+			!["HEADER", "ARTICLE", "BODY", "TABLE", "TR", "TD"].includes(parent.tagName)) {
+			parent.remove();
+		}
+
+		// There's only ever one feed-name link per rendered page.
+		return;
+	}
+}
+
 function processPage() {
 	wrapFrames();
 	wrapTables();
@@ -182,6 +243,7 @@ function processPage() {
 	styleLocalFootnotes();
 	removeWpSmiley()
 	removeArticleIconAvatar();
+	removeFeedNameLink();
 	postRenderProcessing();
 }
 
