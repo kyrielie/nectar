@@ -70,18 +70,47 @@ struct ArticleThemeOverridesView: View {
 		}
 		.navigationTitle(Text("Font & Color Overrides", comment: "Font & Color Overrides navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
-		.onChange(of: useCustomFont) { _, _ in save() }
-		.onChange(of: fontFamilyName) { _, _ in save() }
-		.onChange(of: useCustomFontSize) { _, _ in save() }
-		.onChange(of: fontSize) { _, _ in save() }
-		.onChange(of: useCustomLineHeight) { _, _ in save() }
-		.onChange(of: lineHeight) { _, _ in save() }
-		.onChange(of: useCustomTextColor) { _, _ in save() }
-		.onChange(of: textColor) { _, _ in save() }
-		.onChange(of: useCustomBackgroundColor) { _, _ in save() }
-		.onChange(of: backgroundColor) { _, _ in save() }
-		.onChange(of: useCustomLinkColor) { _, _ in save() }
-		.onChange(of: linkColor) { _, _ in save() }
+		.onChange(of: snapshot) { _, _ in save() }
+	}
+
+	/// Chaining a dozen separate `.onChange` modifiers onto `body` (one per
+	/// @State property) was itself a significant chunk of what made `body` too
+	/// slow to type-check, on top of the Form contents -- each modifier adds
+	/// another generic `ModifiedContent` layer the compiler has to solve for in
+	/// the same expression. Bundling every tracked field into one Equatable
+	/// value and reacting to that with a single `.onChange` collapses all
+	/// twelve into one, and is behaviorally identical: `save()` still runs
+	/// whenever any of them changes.
+	private struct FormSnapshot: Equatable {
+		var useCustomFont: Bool
+		var fontFamilyName: String
+		var useCustomFontSize: Bool
+		var fontSize: Double
+		var useCustomLineHeight: Bool
+		var lineHeight: Double
+		var useCustomTextColor: Bool
+		var textColor: Color
+		var useCustomBackgroundColor: Bool
+		var backgroundColor: Color
+		var useCustomLinkColor: Bool
+		var linkColor: Color
+	}
+
+	private var snapshot: FormSnapshot {
+		FormSnapshot(
+			useCustomFont: useCustomFont,
+			fontFamilyName: fontFamilyName,
+			useCustomFontSize: useCustomFontSize,
+			fontSize: fontSize,
+			useCustomLineHeight: useCustomLineHeight,
+			lineHeight: lineHeight,
+			useCustomTextColor: useCustomTextColor,
+			textColor: textColor,
+			useCustomBackgroundColor: useCustomBackgroundColor,
+			backgroundColor: backgroundColor,
+			useCustomLinkColor: useCustomLinkColor,
+			linkColor: linkColor
+		)
 	}
 
 	// MARK: - Sections
