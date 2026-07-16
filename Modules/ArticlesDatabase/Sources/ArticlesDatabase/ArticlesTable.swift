@@ -21,6 +21,8 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	private let queue: DatabaseQueue
 	private let statusesTable: StatusesTable
 	private let bookReadStateTable: BookReadStateTable
+	private let bookStarredStateTable: BookStarredStateTable
+	private let bookLovedStateTable: BookLovedStateTable
 	private let searchTable: SearchTable
 	private let retentionStyle: ArticlesDatabase.RetentionStyle
 	private let articlesCache = OSAllocatedUnfairLock(initialState: [String: Article]())
@@ -40,6 +42,8 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		self.queue = queue
 		self.statusesTable = StatusesTable(queue: queue)
 		self.bookReadStateTable = BookReadStateTable(queue: queue)
+		self.bookStarredStateTable = BookStarredStateTable(queue: queue)
+		self.bookLovedStateTable = BookLovedStateTable(queue: queue)
 		self.retentionStyle = retentionStyle
 
 		self.searchTable = SearchTable(queue: queue)
@@ -277,9 +281,13 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			// Phase 6: for any incoming article whose bookKey already has a
 			// BookReadState row -- a re-subscribe, or the same book turning up in
 			// a second collection feed -- seed the new article's status from that
-			// row instead of the age-based default below. This also covers a case
-			// the age-based split alone gets wrong: an old book explicitly marked
-			// unread would otherwise re-import as read purely from staleness.
+			// row instead of the unread-on-import default below.
+			//
+			// Starred/loved are seeded the same way, from BookStarredState /
+			// BookLovedState, below (after status creation, since
+			// ensureStatusesForArticleIDs only takes a read flag -- starred/loved
+			// default false on the newly-created row and get corrected
+			// afterward for whichever articleIDs need it true).
 			var bookKeysByArticleID = [String: String]()
 			for parsedItem in parsedItems {
 				bookKeysByArticleID[parsedItem.articleID] = parsedItem.bookKey
@@ -291,24 +299,18 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 			let remainingArticleIDs = articleIDs.subtracting(overrideArticleIDs)
 
-			// Ambrosia items ignore datePublished for the unread-on-import default --
-			// a book's publish/added date has no bearing on whether it's been read,
-			// unlike a blog post's age. Signal: presence of the _ambrosia extension
-			// object on the wire, not any specific field inside it (a book with zero
-			// AO3 metadata is still a book, not a blog post).
-			let ambrosiaArticleIDs = Set(parsedItems.filter {
-				remainingArticleIDs.contains($0.articleID) && $0.isAmbrosiaItem
-			}.map { $0.articleID })
-			let nonAmbrosiaRemainingIDs = remainingArticleIDs.subtracting(ambrosiaArticleIDs)
+			// All newly-arrived articles default to unread regardless of
+			// datePublished. Previously this split by age (~6 months) and
+			// created older items with read=true, on the theory that a
+			// long-stale post is unlikely to be something the person wants
+			// to see as new -- but that meant genuinely new arrivals whose
+			// datePublished happened to be old (e.g. backlog/collection
+			// imports) silently never appeared in the unread timeline, even
+			// though every row was correctly persisted to the articles
+			// table. Every remaining article ID is now treated as recent.
+			let recentArticleIDs = remainingArticleIDs
 
-			// Split the remainder by age: articles older than ~6 months default to read.
-			let cutoffDate = Date(timeIntervalSinceNow: -ArticleStatus.staleIntervalInSeconds)
-			let oldArticleIDs = Set(parsedItems.filter { nonAmbrosiaRemainingIDs.contains($0.articleID) && ($0.datePublished ?? .distantFuture) < cutoffDate }.map { $0.articleID })
-			let recentArticleIDs = nonAmbrosiaRemainingIDs.subtracting(oldArticleIDs).union(ambrosiaArticleIDs)
-
-			let (recentStatusesDictionary, _) = self.statusesTable.ensureStatusesForArticleIDs(recentArticleIDs, false, database) // 1a
-			let (oldStatusesDictionary, _) = self.statusesTable.ensureStatusesForArticleIDs(oldArticleIDs, true, database) // 1b
-			var statusesDictionary = recentStatusesDictionary.merging(oldStatusesDictionary) { current, _ in current }
+			var (statusesDictionary, _) = self.statusesTable.ensureStatusesForArticleIDs(recentArticleIDs, false, database) // 1a
 
 			// Override group: one ensureStatusesForArticleIDs call per distinct
 			// read/unread value present, since that function takes a single flag
@@ -319,6 +321,29 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			let (unreadOverrideStatuses, _) = self.statusesTable.ensureStatusesForArticleIDs(unreadOverrideIDs, false, database)
 			statusesDictionary.merge(readOverrideStatuses) { current, _ in current }
 			statusesDictionary.merge(unreadOverrideStatuses) { current, _ in current }
+
+			// Starred/loved overrides: every article just created (recentArticleIDs
+			// union overrideArticleIDs, i.e. all of articleIDs) got a fresh statuses
+			// row defaulting starred/loved to false; flip it true here for any
+			// articleID whose bookKey already has a starred/loved book-level row.
+			// Unlike read/unread, there's no "unstarred override" branch needed --
+			// false is already the row's default, so only the true set needs a
+			// write.
+			let bookStarredStateByBookKey = self.bookStarredStateTable.state(for: Set(bookKeysByArticleID.values), database)
+			let starredOverrideArticleIDs = Set(bookKeysByArticleID.compactMap { articleID, bookKey in
+				bookStarredStateByBookKey[bookKey] == true ? articleID : nil
+			})
+			if !starredOverrideArticleIDs.isEmpty {
+				_ = self.statusesTable.mark(starredOverrideArticleIDs, .starred, true, database)
+			}
+
+			let bookLovedStateByBookKey = self.bookLovedStateTable.state(for: Set(bookKeysByArticleID.values), database)
+			let lovedOverrideArticleIDs = Set(bookKeysByArticleID.compactMap { articleID, bookKey in
+				bookLovedStateByBookKey[bookKey] == true ? articleID : nil
+			})
+			if !lovedOverrideArticleIDs.isEmpty {
+				_ = self.statusesTable.mark(lovedOverrideArticleIDs, .loved, true, database)
+			}
 
 			assert(statusesDictionary.count == articleIDs.count)
 
@@ -720,15 +745,41 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	func mark(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ completion: @escaping ArticleIDsCompletionBlock) {
 		queue.runInTransaction { database in
-			let changedArticleIDs = self.statusesTable.mark(articleIDs, statusKey, flag, database)
+			var changedArticleIDs = self.statusesTable.mark(articleIDs, statusKey, flag, database)
 
-			// Phase 6: write through to BookReadState on every read/unread toggle,
-			// so the book-level store stays in sync with whatever the user just
-			// did, regardless of which (feed, guid) pair they did it through.
-			if statusKey == .read, !changedArticleIDs.isEmpty {
+			// Phase 6 (read) / nectarfixes #3 (starred, loved): write through to
+			// the book-level state table on every read/unread, starred/unstarred,
+			// or loved/unloved toggle, so the book-level store stays in sync with
+			// whatever the user just did, regardless of which (feed, guid) pair
+			// they did it through -- and propagate the same flag live to every
+			// other articleID sharing that bookKey, so any other feed's copy of
+			// the same book updates immediately, without waiting for that copy's
+			// next import/refresh.
+			//
+			// This function's return value is what account.updateStatusesAsync
+			// forwards into the .StatusesDidChange notification's articleIDs
+			// payload, so folding sibling IDs into changedArticleIDs is what
+			// makes already-visible timelines/article views for the sibling
+			// copies repaint live -- no separate notification plumbing needed.
+			if [.read, .starred, .loved].contains(statusKey), !changedArticleIDs.isEmpty {
 				let bookKeys = self.bookKeysForArticleIDs(changedArticleIDs, database)
 				if !bookKeys.isEmpty {
-					self.bookReadStateTable.setState(flag, bookKeys: bookKeys, database)
+					switch statusKey {
+					case .read:
+						self.bookReadStateTable.setState(flag, bookKeys: bookKeys, database)
+					case .starred:
+						self.bookStarredStateTable.setState(flag, bookKeys: bookKeys, database)
+					case .loved:
+						self.bookLovedStateTable.setState(flag, bookKeys: bookKeys, database)
+					default:
+						break
+					}
+
+					let siblingArticleIDs = self.articleIDsForBookKeys(bookKeys, excluding: changedArticleIDs, database)
+					if !siblingArticleIDs.isEmpty {
+						let siblingChangedArticleIDs = self.statusesTable.mark(siblingArticleIDs, statusKey, flag, database)
+						changedArticleIDs.formUnion(siblingChangedArticleIDs)
+					}
 				}
 			}
 
@@ -756,6 +807,44 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			}
 		}
 		return bookKeys
+	}
+
+	/// The reverse of bookKeysForArticleIDs above: every articleID whose
+	/// bookKey (or, for pre-migration rows with no bookKey, whose uniqueID
+	/// used as the bookKey fallback -- see bookKeysForArticleIDs) is in the
+	/// given set, excluding articleIDs already known-changed. Used by
+	/// `mark(_:_:_:_:)` to find every other copy of "the same book" so a
+	/// starred/loved/read toggle on one copy can be live-propagated to the
+	/// rest, not just persisted to the book-level state table for the next
+	/// import to pick up.
+	private func articleIDsForBookKeys(_ bookKeys: Set<String>, excluding: Set<String>, _ database: FMDatabase) -> Set<String> {
+		guard !bookKeys.isEmpty else {
+			return []
+		}
+
+		var articleIDs = Set<String>()
+
+		if let resultSet = self.selectRowsWhere(key: DatabaseKey.bookKey, inValues: Array(bookKeys), in: database) {
+			while resultSet.next() {
+				if let articleID = resultSet.swiftString(forColumn: DatabaseKey.articleID) {
+					articleIDs.insert(articleID)
+				}
+			}
+		}
+
+		// Pre-migration fallback: rows with no bookKey use uniqueID in its
+		// place (see bookKeysForArticleIDs). These rows won't match the
+		// bookKey lookup above, so also match on uniqueID.
+		if let resultSet = self.selectRowsWhere(key: DatabaseKey.uniqueID, inValues: Array(bookKeys), in: database) {
+			while resultSet.next() {
+				if let articleID = resultSet.swiftString(forColumn: DatabaseKey.articleID),
+				   let bookKey = resultSet.swiftString(forColumn: DatabaseKey.bookKey), bookKey.isEmpty {
+					articleIDs.insert(articleID)
+				}
+			}
+		}
+
+		return articleIDs.subtracting(excluding)
 	}
 
 	func markAndFetchNew(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ completion: @escaping ArticleIDsCompletionBlock) {
@@ -987,6 +1076,7 @@ nonisolated private extension ArticlesTable {
 		var droppedNoArticleID = 0
 		var droppedNoStatus = 0
 		var droppedInitFailed = [String]()
+		var cacheHits = 0
 
 		while resultSet.next() {
 			rowsScanned += 1
@@ -998,6 +1088,7 @@ nonisolated private extension ArticlesTable {
 			}
 
 			if let cachedArticle = articlesCache.withLock({ $0[articleID] }) {
+				cacheHits += 1
 				articles.insert(cachedArticle)
 				continue
 			}
@@ -1021,6 +1112,16 @@ nonisolated private extension ArticlesTable {
 		if droppedNoArticleID > 0 || droppedNoStatus > 0 || !droppedInitFailed.isEmpty {
 			Self.logger.warning("ArticlesTable: articlesWithResultSet rowsScanned=\(rowsScanned, privacy: .public) produced=\(articles.count, privacy: .public) droppedNoArticleID=\(droppedNoArticleID, privacy: .public) droppedNoStatus=\(droppedNoStatus, privacy: .public) droppedInitFailed=\(droppedInitFailed.count, privacy: .public) initFailedArticleIDs=\(droppedInitFailed.joined(separator: ","), privacy: .public)")
 		}
+
+		// Diagnostic: unconditional -- the warning above only fires on a
+		// drop, so a clean run (rowsScanned == produced) previously left no
+		// trace at all. Log every call so a shortfall between this
+		// function's own scan and the SQL layer's row count can be told
+		// apart from a shortfall introduced upstream of this function.
+		// cacheHits is broken out separately so a stale in-memory cache
+		// (holding a pre-merge snapshot) can be distinguished from rows
+		// genuinely built fresh off this result set.
+		Self.logger.info("ArticlesTable: articlesWithResultSet rowsScanned=\(rowsScanned, privacy: .public) producedCount=\(articles.count, privacy: .public) cacheHits=\(cacheHits, privacy: .public)")
 
 		resultSet.close()
 		return articles
@@ -1091,6 +1192,30 @@ nonisolated private extension ArticlesTable {
 		Self.signposter.endInterval("Fetch articles", signpostState, "\(articles.count) articles")
 		Self.logger.info("ArticlesTable: fetched \(articles.count, privacy: .public) articles in \(elapsed, privacy: .public) seconds in account \(self.accountID, privacy: .public)")
 
+		// Diagnostic: this query joins articles to statuses, which silently
+		// drops any articles row that lacks a matching statuses row. If a
+		// merge inserted articles without corresponding status rows, the
+		// join-based fetch above will undercount even though the articles
+		// table itself has every row. Compare a raw, join-free count for
+		// the same articleIDs against what the join actually returned.
+		let joinedArticleIDs = Set(articles.map { $0.articleID })
+		if !joinedArticleIDs.isEmpty || sql.contains("natural join statuses") {
+			let rawWhereClause = sql
+				.replacingOccurrences(of: "select * from articles natural join statuses where ", with: "")
+				.replacingOccurrences(of: ";", with: "")
+			let rawSQL = "select count(*) from articles where \(rawWhereClause);"
+			if let rawResultSet = database.executeQuery(rawSQL, withArgumentsIn: parameters) {
+				var rawCount = 0
+				if rawResultSet.next() {
+					rawCount = rawResultSet.long(forColumnIndex: 0)
+				}
+				rawResultSet.close()
+				if rawCount != articles.count {
+					Self.logger.warning("ArticlesTable: articlesWithSQL join mismatch rawArticlesCount=\(rawCount, privacy: .public) joinedFetchedCount=\(articles.count, privacy: .public) sql=\(sql, privacy: .public)")
+				}
+			}
+		}
+
 		return articles
 	}
 
@@ -1116,6 +1241,14 @@ nonisolated private extension ArticlesTable {
 		if let limit = limit {
 			whereClause.append(" order by coalesce(datePublished, dateModified, dateArrived) desc limit \(limit)")
 		}
+
+		// Diagnostic: confirms the exact where-clause and feed count used
+		// for this fetch, so a shortfall can be told apart as either
+		// "query is correct but excludes rows" (e.g. read=0 filtering out
+		// newly-merged articles that didn't get a status row) versus
+		// "query itself is scoped wrong" (stale feedIDs, wrong limit).
+		Self.logger.info("ArticlesTable: fetchUnreadArticles feedIDs=\(feedIDs.count, privacy: .public) whereClause=\(whereClause, privacy: .public)")
+
 		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
 

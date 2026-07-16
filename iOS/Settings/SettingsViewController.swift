@@ -50,6 +50,8 @@ final class SettingsViewController: UITableViewController {
 		case theme = 0
 		case openLinksInNetNewsWire = 1
 		case enableFullScreenArticles = 2
+		case blockSwipesInFullScreen = 3
+		case showFeedNameInReaderView = 4
 	}
 
 	private enum HelpRow: Int {
@@ -164,8 +166,12 @@ final class SettingsViewController: UITableViewController {
 
 		switch Section(rawValue: section) {
 		case .articles:
-			// The Full Screen Articles row is iPhone-only.
-			return traitCollection.userInterfaceIdiom == .phone ? ArticlesRow.allCases.count : ArticlesRow.allCases.count - 1
+			// This app is iPhone-only, so all ArticlesRow cases are always shown.
+			// (Previously this branched on userInterfaceIdiom == .phone, which left
+			// the row count stuck at the pre-Phase-5/6 case count on non-phone
+			// idioms; since there is no non-phone idiom here, that branch was both
+			// dead and, after ArticlesRow grew to 5 cases, wrong.)
+			return ArticlesRow.allCases.count
 		case .troubleshooting:
 			let defaultNumberOfRows = super.tableView(tableView, numberOfRowsInSection: section)
 			if !AccountManager.shared.hasiCloudAccount {
