@@ -44,6 +44,18 @@ private final class FullBarTapGestureDelegate: NSObject, UIGestureRecognizerDele
 	}
 }
 
+private final class AlwaysAllowGestureDelegate: NSObject, UIGestureRecognizerDelegate {
+	func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+		return true
+	}
+	func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+		return true
+	}
+	func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+		return true
+	}
+}
+
 final class ArticleViewController: UIViewController {
 
 	@IBOutlet private weak var nextUnreadBarButtonItem: UIBarButtonItem!
@@ -79,6 +91,8 @@ final class ArticleViewController: UIViewController {
 	private let poppableDelegate = PoppableGestureRecognizerDelegate()
 	private let fullBarTapDelegate = FullBarTapGestureDelegate()
 	private var fullBarTapGesture: UITapGestureRecognizer?
+	private var diagnosticTapGesture: UITapGestureRecognizer?
+	private let diagnosticGestureDelegate = AlwaysAllowGestureDelegate()
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticleViewController")
 
 	var article: Article? {
@@ -231,6 +245,7 @@ final class ArticleViewController: UIViewController {
 		}
 		print("[FullBarTap] viewDidAppear calling attachFullBarTapGestureIfNeeded")
 		attachFullBarTapGestureIfNeeded()
+		installDiagnosticTapCatcherIfNeeded()
 	}
 
 	/// Makes sure fullBarTapGesture is attached to whichever UINavigationBar
@@ -273,6 +288,47 @@ final class ArticleViewController: UIViewController {
 	override func viewSafeAreaInsetsDidChange() {
 		// This will animate if the show/hide bars animation is happening.
 		view.layoutIfNeeded()
+	}
+
+	override func viewDidLayoutSubviews() {
+		super.viewDidLayoutSubviews()
+		if let bar = navigationController?.navigationBar {
+			let barFrameInWindow = bar.convert(bar.bounds, to: nil)
+			print("[FullBarTap] layout: navigationBar.frame=\(bar.frame) inWindow=\(barFrameInWindow) hidden=\(bar.isHidden) alpha=\(bar.alpha) window=\(String(describing: bar.window))")
+		}
+	}
+
+	/// Diagnostic-only: attached to the whole navigationController.view (not just
+	/// the bar) so it sees every tap regardless of what UIKit thinks should
+	/// handle it. cancelsTouchesInView = false and it always returns true from
+	/// shouldReceive, so it never blocks anything -- it just reports what's
+	/// actually under the finger. Remove once the real bug is found.
+	private func installDiagnosticTapCatcherIfNeeded() {
+		guard diagnosticTapGesture == nil, let hostView = navigationController?.view else {
+			return
+		}
+		let gesture = UITapGestureRecognizer(target: self, action: #selector(diagnosticTap(_:)))
+		gesture.cancelsTouchesInView = false
+		gesture.delegate = diagnosticGestureDelegate
+		hostView.addGestureRecognizer(gesture)
+		diagnosticTapGesture = gesture
+		print("[FullBarTap] diagnostic tap catcher installed on \(ObjectIdentifier(hostView))")
+	}
+
+	@objc private func diagnosticTap(_ gesture: UITapGestureRecognizer) {
+		guard let hostView = gesture.view else { return }
+		let locationInHost = gesture.location(in: hostView)
+		let hitView = hostView.hitTest(locationInHost, with: nil)
+		let hitTypeName = hitView.map { String(describing: type(of: $0)) } ?? "nil"
+		var isDescendantOfBar = false
+		var barFrameContainsPoint = false
+		if let bar = navigationController?.navigationBar {
+			isDescendantOfBar = hitView?.isDescendant(of: bar) ?? false
+			let locationInBar = gesture.location(in: bar)
+			barFrameContainsPoint = bar.bounds.contains(locationInBar)
+			print("[FullBarTap] diagnosticTap: locationInHost=\(locationInHost) locationInBar=\(locationInBar) barBounds=\(bar.bounds) barFrameContainsPoint=\(barFrameContainsPoint)")
+		}
+		print("[FullBarTap] diagnosticTap: hitView=\(hitTypeName) isDescendantOfNavigationBar=\(isDescendantOfBar)")
 	}
 
 	func updateUI() {
