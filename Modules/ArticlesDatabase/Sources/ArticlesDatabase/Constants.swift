@@ -13,9 +13,7 @@ import Foundation
 struct DatabaseTableName {
 	static let articles = "articles"
 	static let statuses = "statuses"
-	static let bookReadState = "bookReadState"
-	static let bookStarredState = "bookStarredState"
-	static let bookLovedState = "bookLovedState"
+	static let bookState = "bookState"
 }
 
 struct DatabaseKey {

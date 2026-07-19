@@ -20,9 +20,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	private let accountID: String
 	private let queue: DatabaseQueue
 	private let statusesTable: StatusesTable
-	private let bookReadStateTable: BookReadStateTable
-	private let bookStarredStateTable: BookStarredStateTable
-	private let bookLovedStateTable: BookLovedStateTable
+	private let bookStateTable: BookStateTable
 	private let searchTable: SearchTable
 	private let retentionStyle: ArticlesDatabase.RetentionStyle
 	private let articlesCache = OSAllocatedUnfairLock(initialState: [String: Article]())
@@ -41,9 +39,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		self.accountID = accountID
 		self.queue = queue
 		self.statusesTable = StatusesTable(queue: queue)
-		self.bookReadStateTable = BookReadStateTable(queue: queue)
-		self.bookStarredStateTable = BookStarredStateTable(queue: queue)
-		self.bookLovedStateTable = BookLovedStateTable(queue: queue)
+		self.bookStateTable = BookStateTable(queue: queue)
 		self.retentionStyle = retentionStyle
 
 		self.searchTable = SearchTable(queue: queue)
@@ -292,12 +288,24 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			for parsedItem in parsedItems {
 				bookKeysByArticleID[parsedItem.articleID] = parsedItem.bookKey
 			}
-			let bookReadStateByBookKey = self.bookReadStateTable.state(for: Set(bookKeysByArticleID.values), database)
-			let overrideArticleIDs = Set(bookKeysByArticleID.compactMap { articleID, bookKey in
-				bookReadStateByBookKey[bookKey] != nil ? articleID : nil
+			let bookStateByBookKey = self.bookStateTable.state(for: Set(bookKeysByArticleID.values), database)
+
+			// Read override: previously detected via "does a bookReadState row
+			// exist at all," which only worked because that table was written
+			// exclusively by explicit read/unread toggles. Now that read/
+			// starred/loved/scrollPosition share one row, a row's mere
+			// presence no longer implies read was ever explicitly set (it
+			// might exist only because of a starred/loved/scroll write). The
+			// distinction this originally existed for -- explicit history vs.
+			// the old age-based default -- is moot anyway: every non-override
+			// article already defaults to unread regardless of age (see
+			// above), so only the "explicitly read" case needs to be pulled
+			// out at all; everything else is unread either way.
+			let readOverrideArticleIDs = Set(bookKeysByArticleID.compactMap { articleID, bookKey in
+				bookStateByBookKey[bookKey]?.read == true ? articleID : nil
 			})
 
-			let remainingArticleIDs = articleIDs.subtracting(overrideArticleIDs)
+			let remainingArticleIDs = articleIDs.subtracting(readOverrideArticleIDs)
 
 			// All newly-arrived articles default to unread regardless of
 			// datePublished. Previously this split by age (~6 months) and
@@ -311,35 +319,25 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			let recentArticleIDs = remainingArticleIDs
 
 			var (statusesDictionary, _) = self.statusesTable.ensureStatusesForArticleIDs(recentArticleIDs, false, database) // 1a
-
-			// Override group: one ensureStatusesForArticleIDs call per distinct
-			// read/unread value present, since that function takes a single flag
-			// for the whole set passed in.
-			let readOverrideIDs = Set(overrideArticleIDs.filter { bookReadStateByBookKey[bookKeysByArticleID[$0] ?? ""] == true })
-			let unreadOverrideIDs = overrideArticleIDs.subtracting(readOverrideIDs)
-			let (readOverrideStatuses, _) = self.statusesTable.ensureStatusesForArticleIDs(readOverrideIDs, true, database)
-			let (unreadOverrideStatuses, _) = self.statusesTable.ensureStatusesForArticleIDs(unreadOverrideIDs, false, database)
+			let (readOverrideStatuses, _) = self.statusesTable.ensureStatusesForArticleIDs(readOverrideArticleIDs, true, database)
 			statusesDictionary.merge(readOverrideStatuses) { current, _ in current }
-			statusesDictionary.merge(unreadOverrideStatuses) { current, _ in current }
 
 			// Starred/loved overrides: every article just created (recentArticleIDs
-			// union overrideArticleIDs, i.e. all of articleIDs) got a fresh statuses
+			// union readOverrideArticleIDs, i.e. all of articleIDs) got a fresh statuses
 			// row defaulting starred/loved to false; flip it true here for any
-			// articleID whose bookKey already has a starred/loved book-level row.
+			// articleID whose bookKey already has starred/loved set true.
 			// Unlike read/unread, there's no "unstarred override" branch needed --
 			// false is already the row's default, so only the true set needs a
 			// write.
-			let bookStarredStateByBookKey = self.bookStarredStateTable.state(for: Set(bookKeysByArticleID.values), database)
 			let starredOverrideArticleIDs = Set(bookKeysByArticleID.compactMap { articleID, bookKey in
-				bookStarredStateByBookKey[bookKey] == true ? articleID : nil
+				bookStateByBookKey[bookKey]?.starred == true ? articleID : nil
 			})
 			if !starredOverrideArticleIDs.isEmpty {
 				_ = self.statusesTable.mark(starredOverrideArticleIDs, .starred, true, database)
 			}
 
-			let bookLovedStateByBookKey = self.bookLovedStateTable.state(for: Set(bookKeysByArticleID.values), database)
 			let lovedOverrideArticleIDs = Set(bookKeysByArticleID.compactMap { articleID, bookKey in
-				bookLovedStateByBookKey[bookKey] == true ? articleID : nil
+				bookStateByBookKey[bookKey]?.loved == true ? articleID : nil
 			})
 			if !lovedOverrideArticleIDs.isEmpty {
 				_ = self.statusesTable.mark(lovedOverrideArticleIDs, .loved, true, database)
@@ -766,11 +764,11 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				if !bookKeys.isEmpty {
 					switch statusKey {
 					case .read:
-						self.bookReadStateTable.setState(flag, bookKeys: bookKeys, database)
+						self.bookStateTable.setRead(flag, bookKeys: bookKeys, database)
 					case .starred:
-						self.bookStarredStateTable.setState(flag, bookKeys: bookKeys, database)
+						self.bookStateTable.setStarred(flag, bookKeys: bookKeys, database)
 					case .loved:
-						self.bookLovedStateTable.setState(flag, bookKeys: bookKeys, database)
+						self.bookStateTable.setLoved(flag, bookKeys: bookKeys, database)
 					}
 
 					let siblingArticleIDs = self.articleIDsForBookKeys(bookKeys, excluding: changedArticleIDs, database)
@@ -868,11 +866,25 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
-	// MARK: - Scroll position (Phase 2)
+	// MARK: - Scroll position (Phase 2 / nectarfixes #3: bookKey-keyed, not articleID-keyed)
+	//
+	// Primary storage is bookStateTable, keyed by bookKey (falling back to
+	// uniqueID via bookKeysForArticleIDs' existing convention -- see there),
+	// so scroll position survives feed deletion/re-subscription and is shared
+	// across every feed's copy of the same book, same as read/starred/loved.
+	// statusesTable.scrollPosition remains only as a last-resort fallback for
+	// the case where the articleID doesn't resolve to any row at all (so no
+	// key of any kind is available); that fallback row is deleted along with
+	// the rest of the article/statuses data on feed deletion, which is
+	// acceptable -- there's no book-level identity to preserve it under.
 
 	func saveScrollPosition(_ scrollPosition: Double, articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
 		queue.runInTransaction { database in
-			self.statusesTable.saveScrollPosition(scrollPosition, articleID: articleID, database)
+			if let bookKey = self.bookKeysForArticleIDs([articleID], database).first {
+				self.bookStateTable.setScrollPosition(scrollPosition, bookKey: bookKey, database)
+			} else {
+				self.statusesTable.saveScrollPosition(scrollPosition, articleID: articleID, database)
+			}
 			DispatchQueue.main.async {
 				completion()
 			}
@@ -881,7 +893,12 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	func fetchScrollPosition(articleID: String, _ completion: @escaping @Sendable (Double) -> Void) {
 		queue.runInDatabase { database in
-			let scrollPosition = self.statusesTable.fetchScrollPosition(articleID: articleID, database)
+			let scrollPosition: Double
+			if let bookKey = self.bookKeysForArticleIDs([articleID], database).first {
+				scrollPosition = self.bookStateTable.scrollPosition(for: bookKey, database)
+			} else {
+				scrollPosition = self.statusesTable.fetchScrollPosition(articleID: articleID, database)
+			}
 			DispatchQueue.main.async {
 				completion(scrollPosition)
 			}

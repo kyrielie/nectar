@@ -187,7 +187,7 @@ public struct ArticleCounts: Sendable {
 	/// `/feed/search.sqlite`, or `/feed/random-daily.sqlite` routes. `temporaryFilePath`
 	/// must already be the decompressed (LZFSE-decoded) file on disk; this method does
 	/// not touch compression. Per the Wire Contract's explicit non-goals, this does not
-	/// reindex search or write BookReadStateTable rows -- confirmed accepted trade-off.
+	/// reindex search or write BookStateTable rows -- confirmed accepted trade-off.
 	/// Throws on any failure (I/O, version mismatch, or SQL error) with no partial writes:
 	/// the whole import runs inside one transaction and is rolled back on error.
 	public func importAmbrosiaSQLiteTransfer(temporaryFilePath: String, feedID: String, wireFormatVersion: Int32) throws {
@@ -623,11 +623,7 @@ private extension ArticlesDatabase {
 
 	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOLEAN NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL);
 
-	CREATE TABLE if not EXISTS bookReadState (bookKey TEXT NOT NULL PRIMARY KEY, state TEXT NOT NULL, updatedAt DATE NOT NULL);
-
-	CREATE TABLE if not EXISTS bookStarredState (bookKey TEXT NOT NULL PRIMARY KEY, state TEXT NOT NULL, updatedAt DATE NOT NULL);
-
-	CREATE TABLE if not EXISTS bookLovedState (bookKey TEXT NOT NULL PRIMARY KEY, state TEXT NOT NULL, updatedAt DATE NOT NULL);
+	CREATE TABLE if not EXISTS bookState (bookKey TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOL NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, updatedAt DATE NOT NULL);
 
 	CREATE INDEX if not EXISTS articles_feedID_datePublished_articleID on articles (feedID, datePublished, articleID);
 
