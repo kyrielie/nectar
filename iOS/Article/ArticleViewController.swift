@@ -196,6 +196,23 @@ final class ArticleViewController: UIViewController {
 			}
 			navigationController.interactivePopGestureRecognizer?.delegate = poppableDelegate
 			Self.logger.debug("ArticleViewController: viewDidAppear installed poppableDelegate as interactivePopGestureRecognizer.delegate (articleBackSwipeEnabled=\(AppDefaults.shared.articleBackSwipeEnabled), isRootSplitCollapsed=\(self.coordinator.isRootSplitCollapsed), navigationController.viewControllers.count=\(navigationController.viewControllers.count))")
+			// DIAGNOSTIC (temporary): correlate this navigationController's identity
+			// against the "new observer <UINavigationController: 0x...> / removing old
+			// observer <UINavigationController: 0x...>" console lines UIKit prints when
+			// a *different* mechanism -- not interactivePopGestureRecognizer -- registers
+			// itself as an observer of the paging scroll view to support swipe-back from
+			// within horizontally-scrolling content. If the pointer here never matches
+			// the "new observer" pointer at gesture time, that confirms the real
+			// back-swipe the person feels is driven by that separate path, which our
+			// delegate has no say over.
+			let popGesture = navigationController.interactivePopGestureRecognizer
+			Self.logger.debug("ArticleViewController: viewDidAppear diagnostic navigationController=\(navigationController), interactivePopGestureRecognizer=\(String(describing: popGesture)), isEnabled=\(popGesture?.isEnabled ?? false), delegateIsPoppableDelegate=\(popGesture?.delegate === self.poppableDelegate)")
+			if let scrollView = pageViewController.scrollViewInsidePageControl {
+				let recognizers = scrollView.gestureRecognizers ?? []
+				Self.logger.debug("ArticleViewController: viewDidAppear diagnostic scrollViewInsidePageControl=\(scrollView) gestureRecognizers=\(recognizers.map { "\(type(of: $0)) delegate=\(String(describing: $0.delegate.map { type(of: $0) })) enabled=\($0.isEnabled)" })")
+			} else {
+				Self.logger.debug("ArticleViewController: viewDidAppear diagnostic scrollViewInsidePageControl is nil")
+			}
 		} else {
 			Self.logger.debug("ArticleViewController: viewDidAppear found navigationController == nil -- poppableDelegate was NOT installed, interactivePopGestureRecognizer.delegate is whatever UIKit's default is")
 		}
@@ -536,15 +553,15 @@ extension ArticleViewController: UIGestureRecognizerDelegate {
 		// paging swipe itself is done via isScrollEnabled in viewDidLoad/
 		// viewWillAppear; enabling/disabling the back-swipe is done via
 		// poppableDelegate.isAdditionallyBlocked in viewDidAppear.
+		Self.logger.debug("ArticleViewController: edge-detection gestureRecognizerShouldBegin -> true (gestureRecognizer=\(gestureRecognizer))")
 		return true
     }
 
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
 		let point = gestureRecognizer.location(in: nil)
-		if point.x > 40 {
-			return true
-		}
-		return false
+		let result = point.x > 40
+		Self.logger.debug("ArticleViewController: edge-detection shouldRecognizeSimultaneouslyWith -> \(result) (point.x=\(point.x), gestureRecognizer=\(gestureRecognizer), otherGestureRecognizer=\(otherGestureRecognizer))")
+		return result
     }
 
 }

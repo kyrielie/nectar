@@ -35,23 +35,23 @@ public final class PoppableGestureRecognizerDelegate: NSObject, UIGestureRecogni
 		let stackCount = navigationController?.viewControllers.count ?? 0
 		let hasBack = canGoBack?() ?? (stackCount > 1)
 		guard hasBack else {
-			print("PoppableGestureRecognizerDelegate: gestureRecognizerShouldBegin -> false (viewControllers.count=\(stackCount), canGoBack override \(canGoBack == nil ? "is nil" : "returned false"), navigationController is \(navigationController == nil ? "nil" : "set"))")
+			print("PoppableGestureRecognizerDelegate: gestureRecognizerShouldBegin -> false (viewControllers.count=\(stackCount), canGoBack override \(canGoBack == nil ? "is nil" : "returned false"), navigationController is \(navigationController == nil ? "nil" : "set"), gestureRecognizer=\(gestureRecognizer), view=\(String(describing: gestureRecognizer.view)))")
 			return false
 		}
 		let blocked = isAdditionallyBlocked?() ?? false
-		print("PoppableGestureRecognizerDelegate: gestureRecognizerShouldBegin -> \(!blocked) (isAdditionallyBlocked closure \(isAdditionallyBlocked == nil ? "is nil" : "returned \(blocked)"))")
+		print("PoppableGestureRecognizerDelegate: gestureRecognizerShouldBegin -> \(!blocked) (isAdditionallyBlocked closure \(isAdditionallyBlocked == nil ? "is nil" : "returned \(blocked)"), gestureRecognizer=\(gestureRecognizer), view=\(String(describing: gestureRecognizer.view)))")
 		return !blocked
     }
 
 	public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+		print("PoppableGestureRecognizerDelegate: shouldRecognizeSimultaneouslyWith -> true (gestureRecognizer=\(gestureRecognizer), otherGestureRecognizer=\(otherGestureRecognizer))")
 		return true
     }
 
 	public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-		if otherGestureRecognizer is UIPanGestureRecognizer {
-			return true
-		}
-		return false
+		let result = otherGestureRecognizer is UIPanGestureRecognizer
+		print("PoppableGestureRecognizerDelegate: shouldBeRequiredToFailBy -> \(result) (gestureRecognizer=\(gestureRecognizer), otherGestureRecognizer=\(otherGestureRecognizer))")
+		return result
 	}
 }
 
