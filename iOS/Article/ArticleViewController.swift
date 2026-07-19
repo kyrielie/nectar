@@ -195,6 +195,14 @@ final class ArticleViewController: UIViewController {
 				!AppDefaults.shared.articleBackSwipeEnabled
 			}
 			navigationController.interactivePopGestureRecognizer?.delegate = poppableDelegate
+			// iOS 26 split the pop gesture in two: interactivePopGestureRecognizer stays
+			// edge-only, while the new interactiveContentPopGestureRecognizer recognizes
+			// swipe-to-pop anywhere in the content area. Without installing poppableDelegate
+			// here too, articleBackSwipeEnabled = false only blocked the edge swipe --
+			// content-area swipe-back still popped the article unconditionally.
+			if #available(iOS 26, *) {
+				navigationController.interactiveContentPopGestureRecognizer?.delegate = poppableDelegate
+			}
 			Self.logger.debug("ArticleViewController: viewDidAppear installed poppableDelegate as interactivePopGestureRecognizer.delegate (articleBackSwipeEnabled=\(AppDefaults.shared.articleBackSwipeEnabled), isRootSplitCollapsed=\(self.coordinator.isRootSplitCollapsed), navigationController.viewControllers.count=\(navigationController.viewControllers.count))")
 			// DIAGNOSTIC (temporary): correlate this navigationController's identity
 			// against the "new observer <UINavigationController: 0x...> / removing old
@@ -207,6 +215,13 @@ final class ArticleViewController: UIViewController {
 			// delegate has no say over.
 			let popGesture = navigationController.interactivePopGestureRecognizer
 			Self.logger.debug("ArticleViewController: viewDidAppear diagnostic navigationController=\(navigationController), interactivePopGestureRecognizer=\(String(describing: popGesture)), isEnabled=\(popGesture?.isEnabled ?? false), delegateIsPoppableDelegate=\(popGesture?.delegate === self.poppableDelegate)")
+			// DIAGNOSTIC (temporary): confirm poppableDelegate actually took on the
+			// content-area pop gesture too -- remove once verified alongside the
+			// diagnostic above.
+			if #available(iOS 26, *) {
+				let contentPopGesture = navigationController.interactiveContentPopGestureRecognizer
+				Self.logger.debug("ArticleViewController: viewDidAppear diagnostic interactiveContentPopGestureRecognizer=\(String(describing: contentPopGesture)), isEnabled=\(contentPopGesture?.isEnabled ?? false), delegateIsPoppableDelegate=\(contentPopGesture?.delegate === self.poppableDelegate)")
+			}
 			if let scrollView = pageViewController.scrollViewInsidePageControl {
 				let recognizers = scrollView.gestureRecognizers ?? []
 				Self.logger.debug("ArticleViewController: viewDidAppear diagnostic scrollViewInsidePageControl=\(scrollView) gestureRecognizers=\(recognizers.map { "\(type(of: $0)) delegate=\(String(describing: $0.delegate.map { type(of: $0) })) enabled=\($0.isEnabled)" })")
