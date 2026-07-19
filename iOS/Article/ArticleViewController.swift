@@ -145,6 +145,7 @@ final class ArticleViewController: UIViewController {
 		let controller = createWebViewController(article, updateView: true)
 
 		self.pageViewController.setViewControllers([controller], direction: .forward, animated: false, completion: nil)
+		pageViewController.scrollViewInsidePageControl?.isScrollEnabled = AppDefaults.shared.articlePagingSwipeEnabled
 		if AppDefaults.shared.logicalArticleFullscreenEnabled {
 			controller.hideBars()
 		}
@@ -167,6 +168,7 @@ final class ArticleViewController: UIViewController {
 		} else {
 			currentWebViewController?.showBars()
 		}
+		pageViewController.scrollViewInsidePageControl?.isScrollEnabled = AppDefaults.shared.articlePagingSwipeEnabled
 		super.viewWillAppear(animated)
 	}
 
@@ -180,7 +182,7 @@ final class ArticleViewController: UIViewController {
 		if let parentNavController = navigationController?.parent as? UINavigationController {
 			poppableDelegate.navigationController = parentNavController
 			poppableDelegate.isAdditionallyBlocked = {
-				AppDefaults.shared.articleFullscreenEnabled && AppDefaults.shared.blockSwipesWhenBarsHidden
+				!AppDefaults.shared.articleBackSwipeEnabled
 			}
 			parentNavController.interactivePopGestureRecognizer?.delegate = poppableDelegate
 		}
@@ -514,16 +516,14 @@ extension ArticleViewController: UIPageViewControllerDelegate {
 extension ArticleViewController: UIGestureRecognizerDelegate {
 
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-		// Bars hidden (fullscreen) means the user explicitly asked to read
-		// without chrome; swiping to the next/previous article or back out of
-		// the screen while in that state undoes the hide with no way to tell
-		// it was accidental. Block both until bars are shown again, unless the
-		// user has turned that off (AppDefaults.shared.blockSwipesWhenBarsHidden)
-		// to keep swiping through a library uninterrupted instead. This
-		// covers the page-turn pan added to pageViewController.scrollViewInsidePageControl
-		// in viewDidLoad (this delegate); the interactive pop gesture is
-		// handled separately by poppableDelegate below, which reads the same flags.
-		return !(AppDefaults.shared.articleFullscreenEnabled && AppDefaults.shared.blockSwipesWhenBarsHidden)
+		// This gates the extra edge-detection pan added to
+		// pageViewController.scrollViewInsidePageControl in viewDidLoad, used only
+		// to resolve conflicts with the interactive pop gesture at the left edge
+		// (see shouldRecognizeSimultaneouslyWith below). Enabling/disabling the
+		// paging swipe itself is done via isScrollEnabled in viewDidLoad/
+		// viewWillAppear; enabling/disabling the back-swipe is done via
+		// poppableDelegate.isAdditionallyBlocked in viewDidAppear.
+		return true
     }
 
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {

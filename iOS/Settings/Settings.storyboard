@@ -357,27 +357,27 @@
                                             </constraints>
                                         </tableViewCellContentView>
                                     </tableViewCell>
-                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="Nct-c1-Swp" customClass="VibrantTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="Nct-bk-Swp" customClass="VibrantTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
                                         <rect key="frame" x="20" y="1096" width="374" height="92"/>
                                         <autoresizingMask key="autoresizingMask"/>
-                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Nct-c1-Swp" id="Nct-c2-Swp">
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Nct-bk-Swp" id="Nct-bk-Ctv">
                                             <rect key="frame" x="0.0" y="0.0" width="374" height="92"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
-                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" verticalCompressionResistancePriority="751" text="Block Swipes in Full Screen" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-c3-Swp">
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" verticalCompressionResistancePriority="751" text="Enable Swipe Back" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-bk-Lbl">
                                                     <rect key="frame" x="20" y="11" width="202" height="15.5"/>
                                                     <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
                                                     <nil key="textColor"/>
                                                     <nil key="highlightedColor"/>
                                                 </label>
-                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-c4-Swp">
+                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-bk-Swt">
                                                     <rect key="frame" x="293" y="6" width="63" height="28"/>
                                                     <color key="onTintColor" name="primaryAccentColor"/>
                                                     <connections>
-                                                        <action selector="switchBlockSwipesWhenBarsHidden:" destination="a0p-rk-skQ" eventType="valueChanged" id="Nct-c5-Swp"/>
+                                                        <action selector="switchBackSwipeEnabled:" destination="a0p-rk-skQ" eventType="valueChanged" id="Nct-bk-Act"/>
                                                     </connections>
                                                 </switch>
-                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="When Full Screen is on, also block swiping to the next/previous article or back, so hiding the bars can't be undone by an accidental swipe." textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-c6-Swp">
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="Swipe from the left edge of an article to go back to the timeline." textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-bk-Ftn">
                                                     <rect key="frame" x="20" y="33" width="262.5" height="0.0"/>
                                                     <fontDescription key="fontDescription" style="UICTFontTextStyleFootnote"/>
                                                     <nil key="textColor"/>
@@ -385,16 +385,57 @@
                                                 </label>
                                             </subviews>
                                             <constraints>
-                                                <constraint firstItem="Nct-c4-Swp" firstAttribute="centerY" secondItem="Nct-c3-Swp" secondAttribute="centerY" id="Nct-c7-Swp"/>
-                                                <constraint firstItem="Nct-c6-Swp" firstAttribute="leading" secondItem="Nct-c2-Swp" secondAttribute="leadingMargin" id="Nct-c8-Swp"/>
-                                                <constraint firstItem="Nct-c3-Swp" firstAttribute="top" secondItem="Nct-c2-Swp" secondAttribute="topMargin" id="Nct-c9-Swp"/>
-                                                <constraint firstItem="Nct-c4-Swp" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Nct-c6-Swp" secondAttribute="trailing" constant="8" id="Nct-cA-Swp"/>
-                                                <constraint firstAttribute="trailingMargin" secondItem="Nct-c4-Swp" secondAttribute="trailing" id="Nct-cB-Swp"/>
-                                                <constraint firstItem="Nct-c4-Swp" firstAttribute="top" relation="greaterThanOrEqual" secondItem="Nct-c2-Swp" secondAttribute="top" constant="6" id="Nct-cC-Swp"/>
-                                                <constraint firstItem="Nct-c6-Swp" firstAttribute="bottom" secondItem="Nct-c2-Swp" secondAttribute="bottomMargin" id="Nct-cD-Swp"/>
-                                                <constraint firstItem="Nct-c4-Swp" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Nct-c3-Swp" secondAttribute="trailing" constant="8" id="Nct-cE-Swp"/>
-                                                <constraint firstItem="Nct-c3-Swp" firstAttribute="leading" secondItem="Nct-c2-Swp" secondAttribute="leadingMargin" id="Nct-cF-Swp"/>
-                                                <constraint firstItem="Nct-c6-Swp" firstAttribute="top" secondItem="Nct-c3-Swp" secondAttribute="bottom" constant="6.5" id="Nct-cG-Swp"/>
+                                                <constraint firstItem="Nct-bk-Swt" firstAttribute="centerY" secondItem="Nct-bk-Lbl" secondAttribute="centerY" id="Nct-bk-C1"/>
+                                                <constraint firstItem="Nct-bk-Ftn" firstAttribute="leading" secondItem="Nct-bk-Ctv" secondAttribute="leadingMargin" id="Nct-bk-C2"/>
+                                                <constraint firstItem="Nct-bk-Lbl" firstAttribute="top" secondItem="Nct-bk-Ctv" secondAttribute="topMargin" id="Nct-bk-C3"/>
+                                                <constraint firstItem="Nct-bk-Swt" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Nct-bk-Ftn" secondAttribute="trailing" constant="8" id="Nct-bk-C4"/>
+                                                <constraint firstAttribute="trailingMargin" secondItem="Nct-bk-Swt" secondAttribute="trailing" id="Nct-bk-C5"/>
+                                                <constraint firstItem="Nct-bk-Swt" firstAttribute="top" relation="greaterThanOrEqual" secondItem="Nct-bk-Ctv" secondAttribute="top" constant="6" id="Nct-bk-C6"/>
+                                                <constraint firstItem="Nct-bk-Ftn" firstAttribute="bottom" secondItem="Nct-bk-Ctv" secondAttribute="bottomMargin" id="Nct-bk-C7"/>
+                                                <constraint firstItem="Nct-bk-Swt" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Nct-bk-Lbl" secondAttribute="trailing" constant="8" id="Nct-bk-C8"/>
+                                                <constraint firstItem="Nct-bk-Lbl" firstAttribute="leading" secondItem="Nct-bk-Ctv" secondAttribute="leadingMargin" id="Nct-bk-C9"/>
+                                                <constraint firstItem="Nct-bk-Ftn" firstAttribute="top" secondItem="Nct-bk-Lbl" secondAttribute="bottom" constant="6.5" id="Nct-bk-CA"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                    </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="Nct-pg-Swp" customClass="VibrantTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="1188" width="374" height="92"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Nct-pg-Swp" id="Nct-pg-Ctv">
+                                            <rect key="frame" x="0.0" y="0.0" width="374" height="92"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" verticalCompressionResistancePriority="751" text="Enable Paging Swipe" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-pg-Lbl">
+                                                    <rect key="frame" x="20" y="11" width="202" height="15.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-pg-Swt">
+                                                    <rect key="frame" x="293" y="6" width="63" height="28"/>
+                                                    <color key="onTintColor" name="primaryAccentColor"/>
+                                                    <connections>
+                                                        <action selector="switchPagingSwipeEnabled:" destination="a0p-rk-skQ" eventType="valueChanged" id="Nct-pg-Act"/>
+                                                    </connections>
+                                                </switch>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="Swipe left or right anywhere in an article to move to the next or previous article." textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-pg-Ftn">
+                                                    <rect key="frame" x="20" y="33" width="262.5" height="0.0"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleFootnote"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="Nct-pg-Swt" firstAttribute="centerY" secondItem="Nct-pg-Lbl" secondAttribute="centerY" id="Nct-pg-C1"/>
+                                                <constraint firstItem="Nct-pg-Ftn" firstAttribute="leading" secondItem="Nct-pg-Ctv" secondAttribute="leadingMargin" id="Nct-pg-C2"/>
+                                                <constraint firstItem="Nct-pg-Lbl" firstAttribute="top" secondItem="Nct-pg-Ctv" secondAttribute="topMargin" id="Nct-pg-C3"/>
+                                                <constraint firstItem="Nct-pg-Swt" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Nct-pg-Ftn" secondAttribute="trailing" constant="8" id="Nct-pg-C4"/>
+                                                <constraint firstAttribute="trailingMargin" secondItem="Nct-pg-Swt" secondAttribute="trailing" id="Nct-pg-C5"/>
+                                                <constraint firstItem="Nct-pg-Swt" firstAttribute="top" relation="greaterThanOrEqual" secondItem="Nct-pg-Ctv" secondAttribute="top" constant="6" id="Nct-pg-C6"/>
+                                                <constraint firstItem="Nct-pg-Ftn" firstAttribute="bottom" secondItem="Nct-pg-Ctv" secondAttribute="bottomMargin" id="Nct-pg-C7"/>
+                                                <constraint firstItem="Nct-pg-Swt" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Nct-pg-Lbl" secondAttribute="trailing" constant="8" id="Nct-pg-C8"/>
+                                                <constraint firstItem="Nct-pg-Lbl" firstAttribute="leading" secondItem="Nct-pg-Ctv" secondAttribute="leadingMargin" id="Nct-pg-C9"/>
+                                                <constraint firstItem="Nct-pg-Ftn" firstAttribute="top" secondItem="Nct-pg-Lbl" secondAttribute="bottom" constant="6.5" id="Nct-pg-CA"/>
                                             </constraints>
                                         </tableViewCellContentView>
                                     </tableViewCell>
@@ -597,7 +638,8 @@
                     <connections>
                         <outlet property="ambrosiaSQLiteTransferSwitch" destination="amB-sw-51a" id="amB-ot-51a"/>
                         <outlet property="articleThemeDetailLabel" destination="DUf-DZ-3Nm" id="QHN-Le-zyw"/>
-                        <outlet property="blockSwipesWhenBarsHiddenSwitch" destination="Nct-c4-Swp" id="Nct-oc-Swp"/>
+                        <outlet property="backSwipeEnabledSwitch" destination="Nct-bk-Swt" id="Nct-oc-Bk1"/>
+                        <outlet property="pagingSwipeEnabledSwitch" destination="Nct-pg-Swt" id="Nct-oc-Pg1"/>
                         <outlet property="colorPaletteDetailLabel" destination="16m-Ns-Y8V" id="zdj-Ag-ZUw"/>
                         <outlet property="confirmMarkAllAsReadSwitch" destination="UOo-9z-IuL" id="yLZ-Kf-wDt"/>
                         <outlet property="groupByFeedSwitch" destination="JNi-Wz-RbU" id="TwH-Kd-o6N"/>
