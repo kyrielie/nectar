@@ -328,15 +328,18 @@ struct SidebarItemNode: Hashable, Sendable {
 		self.mainFeedCollectionViewController = rootSplitViewController.viewController(for: .primary) as? MainFeedCollectionViewController
 		self.mainFeedCollectionViewController.coordinator = self
 		self.mainFeedCollectionViewController?.navigationController?.delegate = self
+		Self.logger.debug("SceneCoordinator: init captured mainFeedCollectionViewController.navigationController=\(String(describing: self.mainFeedCollectionViewController?.navigationController))")
 		updateNavigationBarSubtitles(nil)
 
 		self.mainTimelineViewController = rootSplitViewController.viewController(for: .supplementary) as? MainTimelineModernViewController
 		self.mainTimelineViewController?.coordinator = self
 		self.mainTimelineViewController?.navigationController?.delegate = self
+		Self.logger.debug("SceneCoordinator: init captured mainTimelineViewController.navigationController=\(String(describing: self.mainTimelineViewController?.navigationController))")
 
 		self.articleViewController = rootSplitViewController.viewController(for: .secondary) as? ArticleViewController
 		self.articleViewController?.coordinator = self
 		self.articleViewController?.navigationController?.delegate = self
+		Self.logger.debug("SceneCoordinator: init captured articleViewController.navigationController=\(String(describing: self.articleViewController?.navigationController)) -- identical to mainTimelineViewController's? \(self.articleViewController?.navigationController === self.mainTimelineViewController?.navigationController)")
 
 		for sectionNode in treeController.rootNode.childNodes {
 			markExpanded(sectionNode)
@@ -1640,6 +1643,8 @@ extension SceneCoordinator: UINavigationControllerDelegate {
 			return
 		}
 
+		Self.logger.debug("SceneCoordinator: navigationController(_:didShow:) navigationController=\(navigationController) viewController=\(viewController) isArticleViewController=\(viewController === self.articleViewController) isMainTimelineViewController=\(viewController === self.mainTimelineViewController) articleBackSwipeEnabled=\(AppDefaults.shared.articleBackSwipeEnabled) currentArticle=\(String(describing: self.currentArticle?.articleID))")
+
 		// If we are showing the Feeds and only the feeds start clearing stuff
 		if viewController === mainFeedCollectionViewController && !isTimelineViewControllerPending {
 			activityManager.invalidateCurrentActivities()
@@ -1653,6 +1658,17 @@ extension SceneCoordinator: UINavigationControllerDelegate {
 		// ArticleViewController will be pushed, but we will briefly show the Timeline.  Don't clear things out when that happens.
 		// Also skip during state restoration so we don't clear the restored article.
 		if viewController === mainTimelineViewController && rootSplitViewController.isCollapsed && !isArticleViewControllerPending && !isRestoringState {
+			// DIAGNOSTIC (temporary): this is the exact transition that fires when
+			// swipe-back (of any kind -- edge or content-area) succeeds and pops
+			// Article off the collapsed stack, clearing currentArticle. If this
+			// fires while AppDefaults.shared.articleBackSwipeEnabled is false, the
+			// call stack below should show which gesture-driven transition path
+			// (_UINavigationInteractiveTransition / handleNavigationTransition:)
+			// is responsible, since poppableDelegate has no say over this
+			// navigationController when it isn't the one it was installed on.
+			if !AppDefaults.shared.articleBackSwipeEnabled {
+				Self.logger.debug("SceneCoordinator: navigationController(_:didShow:) clearing currentArticle while articleBackSwipeEnabled=false -- navigationController=\(navigationController), call stack: \(Thread.callStackSymbols.prefix(12).joined(separator: "\n"))")
+			}
 			currentArticle = nil
 			mainTimelineViewController?.updateArticleSelection(animations: [.scroll, .select, .navigation])
 			activityManager.invalidateReading()
