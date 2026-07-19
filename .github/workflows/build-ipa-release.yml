@@ -1,0 +1,100 @@
+name: Build IPA Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create/attach the IPA to (e.g. v0.1.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-ipa-release:
+    name: Build and Release Unsigned IPA
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Generate Secrets Sources
+        run: PROJECT_DIR="$GITHUB_WORKSPACE" ./buildscripts/updateSecrets.sh
+
+      - name: Select Xcode 26.3
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+
+      - name: Archive (unsigned)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          archive_path="${RUNNER_TEMP}/Nectar.xcarchive"
+          build_log="${RUNNER_TEMP}/Nectar-archive-build.log"
+          rm -rf "$archive_path"
+
+          set -o pipefail
+          xcodebuild \
+            -project NetNewsWire.xcodeproj \
+            -scheme NetNewsWire-iOS \
+            -destination "generic/platform=iOS" \
+            -archivePath "$archive_path" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            archive 2>&1 | tee "$build_log" | xcbeautify --renderer github-actions
+
+      - name: Package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          archive_path="${RUNNER_TEMP}/Nectar.xcarchive"
+          payload_dir="${RUNNER_TEMP}/Payload"
+          ipa_path="${RUNNER_TEMP}/Nectar-unsigned.ipa"
+
+          app_path=$(find "$archive_path/Products/Applications" -maxdepth 1 -name "*.app" | head -n1)
+          if [ -z "$app_path" ]; then
+            echo "No .app found in archive products" >&2
+            exit 1
+          fi
+
+          rm -rf "$payload_dir" "$ipa_path"
+          mkdir -p "$payload_dir"
+          cp -R "$app_path" "$payload_dir/"
+
+          (cd "${RUNNER_TEMP}" && zip -qr "$(basename "$ipa_path")" "Payload")
+
+          mkdir -p build-output
+          cp "$ipa_path" build-output/
+
+          echo "IPA_PATH=build-output/Nectar-unsigned.ipa" >> "$GITHUB_ENV"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nectar-unsigned-ipa
+          path: ${{ env.IPA_PATH }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Attach IPA to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          tag="${{ inputs.tag }}"
+
+          if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "$tag" "$IPA_PATH" --repo "${{ github.repository }}" --clobber
+          else
+            gh release create "$tag" "$IPA_PATH" \
+              --repo "${{ github.repository }}" \
+              --title "$tag" \
+              --generate-notes
+          fi
