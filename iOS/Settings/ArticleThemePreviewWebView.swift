@@ -21,8 +21,8 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 	let css: String
 
 	private static let sampleBody = """
-	<h1>The Sample Chapter Title</h1>
-	<p>This is a preview of how article text will look with your chosen font, size, line height, and colors. The quick brown fox jumps over the lazy dog.</p>
+	<h1>Sample Chapter</h1>
+	<p>Preview text in your chosen font, size, and line height. The quick brown fox jumps over the lazy dog.</p>
 	<p><a href="#">A link looks like this.</a></p>
 	"""
 

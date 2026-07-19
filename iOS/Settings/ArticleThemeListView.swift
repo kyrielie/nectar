@@ -38,12 +38,15 @@ struct ArticleThemeListView: View {
 
 	@State private var useCustomTextColor: Bool
 	@State private var textColor: Color
+	@State private var textColorDark: Color
 
 	@State private var useCustomBackgroundColor: Bool
 	@State private var backgroundColor: Color
+	@State private var backgroundColorDark: Color
 
 	@State private var useCustomLinkColor: Bool
 	@State private var linkColor: Color
+	@State private var linkColorDark: Color
 
 	/// The font choices mirror Apple Books' own "Themes & Settings" font menu, not
 	/// every UIFont family name reported by the system: matching Books' menu exactly
@@ -93,12 +96,15 @@ struct ArticleThemeListView: View {
 
 		_useCustomTextColor = State(initialValue: overrides.textColorHex != nil)
 		_textColor = State(initialValue: Color(hex: overrides.textColorHex) ?? .primary)
+		_textColorDark = State(initialValue: Color(hex: overrides.textColorDarkHex ?? overrides.textColorHex) ?? .primary)
 
 		_useCustomBackgroundColor = State(initialValue: overrides.backgroundColorHex != nil)
 		_backgroundColor = State(initialValue: Color(hex: overrides.backgroundColorHex) ?? Color(UIColor.systemBackground))
+		_backgroundColorDark = State(initialValue: Color(hex: overrides.backgroundColorDarkHex ?? overrides.backgroundColorHex) ?? Color(UIColor.systemBackground))
 
 		_useCustomLinkColor = State(initialValue: overrides.linkColorHex != nil)
 		_linkColor = State(initialValue: Color(hex: overrides.linkColorHex) ?? .accentColor)
+		_linkColorDark = State(initialValue: Color(hex: overrides.linkColorDarkHex ?? overrides.linkColorHex) ?? .accentColor)
 	}
 
 	var body: some View {
@@ -165,10 +171,13 @@ struct ArticleThemeListView: View {
 		var lineHeight: Double
 		var useCustomTextColor: Bool
 		var textColor: Color
+		var textColorDark: Color
 		var useCustomBackgroundColor: Bool
 		var backgroundColor: Color
+		var backgroundColorDark: Color
 		var useCustomLinkColor: Bool
 		var linkColor: Color
+		var linkColorDark: Color
 	}
 
 	private var snapshot: FormSnapshot {
@@ -181,10 +190,13 @@ struct ArticleThemeListView: View {
 			lineHeight: lineHeight,
 			useCustomTextColor: useCustomTextColor,
 			textColor: textColor,
+			textColorDark: textColorDark,
 			useCustomBackgroundColor: useCustomBackgroundColor,
 			backgroundColor: backgroundColor,
+			backgroundColorDark: backgroundColorDark,
 			useCustomLinkColor: useCustomLinkColor,
-			linkColor: linkColor
+			linkColor: linkColor,
+			linkColorDark: linkColorDark
 		)
 	}
 
@@ -256,12 +268,12 @@ struct ArticleThemeListView: View {
 	private var previewSection: some View {
 		Section {
 			ArticleThemePreviewWebView(css: previewCSS)
-				.frame(height: 220)
+				.frame(height: 320)
 				.listRowInsets(EdgeInsets())
 		} header: {
 			Text("Preview", comment: "Preview section header")
 		} footer: {
-			Text("Preview reflects the current theme (\(ArticleThemesManager.shared.currentTheme.name)) with your overrides applied on top.", comment: "Preview footer explaining theme + override layering")
+			Text("Reflects the current theme (\(ArticleThemesManager.shared.currentTheme.name)) plus your overrides.", comment: "Preview footer explaining theme + override layering")
 		}
 	}
 
@@ -341,7 +353,18 @@ struct ArticleThemeListView: View {
 			}
 			if useCustomTextColor {
 				ColorPicker(selection: $textColor, supportsOpacity: false) {
-					Text("Text Color", comment: "Text Color picker label")
+					Label {
+						Text("Text Color", comment: "Text Color (light) picker label")
+					} icon: {
+						Image(systemName: "sun.max")
+					}
+				}
+				ColorPicker(selection: $textColorDark, supportsOpacity: false) {
+					Label {
+						Text("Text Color (Dark Mode)", comment: "Text Color (dark) picker label")
+					} icon: {
+						Image(systemName: "moon")
+					}
 				}
 			}
 
@@ -350,7 +373,18 @@ struct ArticleThemeListView: View {
 			}
 			if useCustomBackgroundColor {
 				ColorPicker(selection: $backgroundColor, supportsOpacity: false) {
-					Text("Background Color", comment: "Background Color picker label")
+					Label {
+						Text("Background Color", comment: "Background Color (light) picker label")
+					} icon: {
+						Image(systemName: "sun.max")
+					}
+				}
+				ColorPicker(selection: $backgroundColorDark, supportsOpacity: false) {
+					Label {
+						Text("Background Color (Dark Mode)", comment: "Background Color (dark) picker label")
+					} icon: {
+						Image(systemName: "moon")
+					}
 				}
 			}
 
@@ -359,11 +393,24 @@ struct ArticleThemeListView: View {
 			}
 			if useCustomLinkColor {
 				ColorPicker(selection: $linkColor, supportsOpacity: false) {
-					Text("Link Color", comment: "Link Color picker label")
+					Label {
+						Text("Link Color", comment: "Link Color (light) picker label")
+					} icon: {
+						Image(systemName: "sun.max")
+					}
+				}
+				ColorPicker(selection: $linkColorDark, supportsOpacity: false) {
+					Label {
+						Text("Link Color (Dark Mode)", comment: "Link Color (dark) picker label")
+					} icon: {
+						Image(systemName: "moon")
+					}
 				}
 			}
 		} header: {
 			Text("Colors", comment: "Colors section header")
+		} footer: {
+			Text("Each color has a separate light and dark mode value.", comment: "Colors section footer explaining light/dark pairing")
 		}
 	}
 
@@ -387,8 +434,11 @@ struct ArticleThemeListView: View {
 			fontSize: useCustomFontSize ? fontSize : nil,
 			lineHeight: useCustomLineHeight ? lineHeight : nil,
 			textColorHex: useCustomTextColor ? textColor.hexString : nil,
+			textColorDarkHex: useCustomTextColor ? textColorDark.hexString : nil,
 			backgroundColorHex: useCustomBackgroundColor ? backgroundColor.hexString : nil,
-			linkColorHex: useCustomLinkColor ? linkColor.hexString : nil
+			backgroundColorDarkHex: useCustomBackgroundColor ? backgroundColorDark.hexString : nil,
+			linkColorHex: useCustomLinkColor ? linkColor.hexString : nil,
+			linkColorDarkHex: useCustomLinkColor ? linkColorDark.hexString : nil
 		)
 	}
 
@@ -418,8 +468,11 @@ struct ArticleThemeListView: View {
 		fontSize = UIFont.preferredFont(forTextStyle: .body).pointSize
 		lineHeight = 1.4
 		textColor = .primary
+		textColorDark = .primary
 		backgroundColor = Color(UIColor.systemBackground)
+		backgroundColorDark = Color(UIColor.systemBackground)
 		linkColor = .accentColor
+		linkColorDark = .accentColor
 		save()
 	}
 
