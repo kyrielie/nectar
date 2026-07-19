@@ -62,6 +62,20 @@ struct SidebarItemNode: Hashable, Sendable {
 	private var mainTimelineViewController: MainTimelineModernViewController?
 	private var articleViewController: ArticleViewController?
 
+	// DIAGNOSTIC-CONFIRMED FIX: gestures with ids 91/92 in the console logs
+	// (UINavigationController.edgeSwipe / .contentSwipe on a UILayoutContainerView
+	// distinct from articleViewController's own) belong to
+	// mainTimelineViewController.navigationController -- the collapsed split
+	// view's actual pushed-stack owner. articleViewController's own poppableDelegate
+	// (installed in ArticleViewController.viewDidAppear) has no visibility into this
+	// second navigationController, so it never blocked this gesture even when
+	// AppDefaults.shared.articleBackSwipeEnabled is false. That unblocked pop
+	// triggers MainTimelineModernViewController.viewDidAppear -> deselectIfNecessary()
+	// -> coordinator.selectArticle(nil), which is what actually clears the article --
+	// not the didShow delegate callback below, which (see installNavigationDelegates)
+	// was never even successfully wired up.
+	private let timelinePoppableDelegate = PoppableGestureRecognizerDelegate()
+
 	private let fetchAndMergeArticlesQueue = CoalescingQueue(name: "Fetch and Merge Articles", interval: 0.5)
 	private let rebuildBackingStoresQueue = CoalescingQueue(name: "Rebuild The Backing Stores", interval: 0.5)
 	private var fetchSerialNumber = 0
@@ -468,11 +482,57 @@ struct SidebarItemNode: Hashable, Sendable {
 	}
 
 	func resetFocus() {
+		installNavigationDelegates()
+
 		if currentArticle != nil {
 			mainTimelineViewController?.focus()
 		} else {
 			mainFeedCollectionViewController?.focus()
 		}
+	}
+
+	/// `init()` assigns `self` as each column's `navigationController.delegate` and
+	/// installs `timelinePoppableDelegate` on the timeline's pop gestures, but at
+	/// that point `navigationController` is still nil for every column (confirmed
+	/// via "SceneCoordinator: init captured ...navigationController=nil" logging --
+	/// the view hierarchy isn't established until RootSplitViewController's own
+	/// view loads). Both installs are therefore silent no-ops at init time. This
+	/// method re-does them once the columns are guaranteed to have a live
+	/// navigationController; it's idempotent, so calling it repeatedly from
+	/// resetFocus() (itself called from RootSplitViewController.viewDidAppear) is
+	/// safe and cheap.
+	private func installNavigationDelegates() {
+		if mainFeedCollectionViewController?.navigationController?.delegate !== self {
+			mainFeedCollectionViewController?.navigationController?.delegate = self
+			Self.logger.debug("SceneCoordinator: installNavigationDelegates set mainFeedCollectionViewController.navigationController=\(String(describing: self.mainFeedCollectionViewController?.navigationController)) delegate")
+		}
+		if mainTimelineViewController?.navigationController?.delegate !== self {
+			mainTimelineViewController?.navigationController?.delegate = self
+			Self.logger.debug("SceneCoordinator: installNavigationDelegates set mainTimelineViewController.navigationController=\(String(describing: self.mainTimelineViewController?.navigationController)) delegate")
+		}
+		if articleViewController?.navigationController?.delegate !== self {
+			articleViewController?.navigationController?.delegate = self
+			Self.logger.debug("SceneCoordinator: installNavigationDelegates set articleViewController.navigationController=\(String(describing: self.articleViewController?.navigationController)) delegate -- identical to mainTimelineViewController's? \(self.articleViewController?.navigationController === self.mainTimelineViewController?.navigationController)")
+		}
+
+		guard let timelineNavigationController = mainTimelineViewController?.navigationController else {
+			return
+		}
+		guard timelinePoppableDelegate.navigationController !== timelineNavigationController else {
+			return
+		}
+		timelinePoppableDelegate.navigationController = timelineNavigationController
+		timelinePoppableDelegate.canGoBack = { [weak self] in
+			self?.currentArticle != nil
+		}
+		timelinePoppableDelegate.isAdditionallyBlocked = {
+			!AppDefaults.shared.articleBackSwipeEnabled
+		}
+		timelineNavigationController.interactivePopGestureRecognizer?.delegate = timelinePoppableDelegate
+		if #available(iOS 26, *) {
+			timelineNavigationController.interactiveContentPopGestureRecognizer?.delegate = timelinePoppableDelegate
+		}
+		Self.logger.debug("SceneCoordinator: installNavigationDelegates installed timelinePoppableDelegate on mainTimelineViewController.navigationController=\(timelineNavigationController) (articleBackSwipeEnabled=\(AppDefaults.shared.articleBackSwipeEnabled))")
 	}
 
 	func selectFirstUnreadInAllUnread() {
