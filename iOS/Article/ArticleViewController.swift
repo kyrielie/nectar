@@ -99,6 +99,7 @@ final class ArticleViewController: UIViewController {
 		navigationItem.compactAppearance = appearance
 
 		let fullScreenTapZone = UIView()
+		fullScreenTapZone.translatesAutoresizingMaskIntoConstraints = false
 		NSLayoutConstraint.activate([
 			fullScreenTapZone.widthAnchor.constraint(equalToConstant: 150),
 			fullScreenTapZone.heightAnchor.constraint(equalToConstant: 44)
