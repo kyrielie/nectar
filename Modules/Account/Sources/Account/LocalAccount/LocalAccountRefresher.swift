@@ -897,7 +897,7 @@ private extension LocalAccountRefresher {
 			NSURLErrorCannotConnectToHost,
 			NSURLErrorNetworkConnectionLost,
 			NSURLErrorNotConnectedToInternet,
-			NSURLErrorDNSLookupFailed,
+			NSURLErrorDNSLookupFailed
 		]
 		return connectionLevelCodes.contains(error.code)
 	}
