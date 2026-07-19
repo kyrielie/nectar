@@ -183,10 +183,6 @@ final class SettingsViewController: UITableViewController {
 		}
 	}
 
-	override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-		return super.tableView(tableView, cellForRowAt: indexPath)
-	}
-
 	override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 
 		switch Section(rawValue: indexPath.section) {
