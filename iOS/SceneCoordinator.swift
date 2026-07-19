@@ -518,21 +518,41 @@ struct SidebarItemNode: Hashable, Sendable {
 		guard let timelineNavigationController = mainTimelineViewController?.navigationController else {
 			return
 		}
-		guard timelinePoppableDelegate.navigationController !== timelineNavigationController else {
-			return
+		if timelinePoppableDelegate.navigationController !== timelineNavigationController {
+			timelinePoppableDelegate.navigationController = timelineNavigationController
+			timelinePoppableDelegate.canGoBack = { [weak self] in
+				self?.currentArticle != nil
+			}
+			timelinePoppableDelegate.isAdditionallyBlocked = {
+				!AppDefaults.shared.articleBackSwipeEnabled
+			}
+			timelineNavigationController.interactivePopGestureRecognizer?.delegate = timelinePoppableDelegate
+			if #available(iOS 26, *) {
+				timelineNavigationController.interactiveContentPopGestureRecognizer?.delegate = timelinePoppableDelegate
+			}
+			Self.logger.debug("SceneCoordinator: installNavigationDelegates installed timelinePoppableDelegate on mainTimelineViewController.navigationController=\(timelineNavigationController) (articleBackSwipeEnabled=\(AppDefaults.shared.articleBackSwipeEnabled))")
 		}
-		timelinePoppableDelegate.navigationController = timelineNavigationController
-		timelinePoppableDelegate.canGoBack = { [weak self] in
-			self?.currentArticle != nil
-		}
-		timelinePoppableDelegate.isAdditionallyBlocked = {
-			!AppDefaults.shared.articleBackSwipeEnabled
-		}
-		timelineNavigationController.interactivePopGestureRecognizer?.delegate = timelinePoppableDelegate
+		// Delegate-only vetoing is unreliable for interactiveContentPopGestureRecognizer
+		// (see ArticleViewController.updateBackSwipeGating); keep isEnabled in sync on
+		// every call, not just the first time this navigationController is seen, so a
+		// mid-session Settings toggle takes effect without waiting for the delegate
+		// re-installation guard above.
+		updateTimelineBackSwipeGating(on: timelineNavigationController)
+	}
+
+	/// Applies `AppDefaults.shared.articleBackSwipeEnabled` directly to both
+	/// pop gesture recognizers on the collapsed-mode shared navigation
+	/// controller, mirroring ArticleViewController.updateBackSwipeGating.
+	/// interactiveContentPopGestureRecognizer's own documentation says it
+	/// "should only be used to set up failure requirements with it", so the
+	/// delegate veto installed above isn't sufficient on its own.
+	private func updateTimelineBackSwipeGating(on navigationController: UINavigationController) {
+		let allowed = AppDefaults.shared.articleBackSwipeEnabled
+		navigationController.interactivePopGestureRecognizer?.isEnabled = allowed
 		if #available(iOS 26, *) {
-			timelineNavigationController.interactiveContentPopGestureRecognizer?.delegate = timelinePoppableDelegate
+			navigationController.interactiveContentPopGestureRecognizer?.isEnabled = allowed
 		}
-		Self.logger.debug("SceneCoordinator: installNavigationDelegates installed timelinePoppableDelegate on mainTimelineViewController.navigationController=\(timelineNavigationController) (articleBackSwipeEnabled=\(AppDefaults.shared.articleBackSwipeEnabled))")
+		Self.logger.debug("SceneCoordinator: updateTimelineBackSwipeGating isEnabled=\(allowed) navigationController=\(navigationController)")
 	}
 
 	func selectFirstUnreadInAllUnread() {
@@ -676,6 +696,9 @@ struct SidebarItemNode: Hashable, Sendable {
 	}
 
 	func userDefaultsDidChange() {
+		if let timelineNavigationController = mainTimelineViewController?.navigationController {
+			updateTimelineBackSwipeGating(on: timelineNavigationController)
+		}
 		sortDirection = AppDefaults.shared.timelineSortDirection
 		groupByFeed = AppDefaults.shared.timelineGroupByFeed
 		sortField = AppDefaults.shared.timelineSortField
