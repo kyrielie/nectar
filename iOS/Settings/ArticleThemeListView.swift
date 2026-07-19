@@ -202,7 +202,8 @@ struct ArticleThemeListView: View {
 		// Reading themeNamesRefreshToken here (even though it isn't otherwise used)
 		// forces this section to be re-evaluated when the notification observer
 		// above flips it, since ArticleThemesManager itself isn't ObservableObject.
-		_ = themeNamesRefreshToken
+		// swiftlint:disable:next redundant_discardable_let
+		let _ = themeNamesRefreshToken
 
 		Section {
 			ForEach(themeNames, id: \.self) { themeName in
