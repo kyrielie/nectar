@@ -85,7 +85,8 @@ final class AppDefaults: Sendable {
 		static let timelineSortField = "timelineSortField"
 		static let articleFullscreenAvailable = "articleFullscreenAvailable"
 		static let articleFullscreenEnabled = "articleFullscreenEnabled"
-		static let blockSwipesWhenBarsHidden = "blockSwipesWhenBarsHidden"
+		static let articleBackSwipeEnabled = "articleBackSwipeEnabled"
+		static let articlePagingSwipeEnabled = "articlePagingSwipeEnabled"
 		static let showFeedNameInReaderView = "showFeedNameInReaderView"
 		static let articleThemeOverrides = "articleThemeOverrides"
 		static let confirmMarkAllAsRead = "confirmMarkAllAsRead"
@@ -239,17 +240,27 @@ final class AppDefaults: Sendable {
 		articleFullscreenAvailable && articleFullscreenEnabled
 	}
 
-	/// When true (default), hiding the article bars also blocks swiping to
-	/// the next/previous article and swiping back, so a tap-to-hide doesn't
-	/// get immediately undone by a swipe the user didn't intend as a "show
-	/// bars again" gesture. Some people would rather keep swiping through a
-	/// library uninterrupted with the bars out of the way, hence the toggle.
-	var blockSwipesWhenBarsHidden: Bool {
+	/// Controls the article view's edge-swipe-back-to-timeline gesture (the
+	/// standard interactive pop gesture). Independent of fullscreen state.
+	/// Default: true.
+	var articleBackSwipeEnabled: Bool {
 		get {
-			return AppDefaults.bool(for: Key.blockSwipesWhenBarsHidden)
+			return AppDefaults.bool(for: Key.articleBackSwipeEnabled)
 		}
 		set {
-			AppDefaults.setBool(for: Key.blockSwipesWhenBarsHidden, newValue)
+			AppDefaults.setBool(for: Key.articleBackSwipeEnabled, newValue)
+		}
+	}
+
+	/// Controls the article view's swipe-to-next/previous-article gesture
+	/// (paging on ArticleViewController's UIPageViewController). Independent
+	/// of fullscreen state. Default: true.
+	var articlePagingSwipeEnabled: Bool {
+		get {
+			return AppDefaults.bool(for: Key.articlePagingSwipeEnabled)
+		}
+		set {
+			AppDefaults.setBool(for: Key.articlePagingSwipeEnabled, newValue)
 		}
 	}
 
@@ -488,7 +499,8 @@ final class AppDefaults: Sendable {
 								Key.timelineSortField: ArticleSorter.SortField.date.rawValue,
 										Key.articleFullscreenAvailable: false,
 										Key.articleFullscreenEnabled: false,
-										Key.blockSwipesWhenBarsHidden: true,
+										Key.articleBackSwipeEnabled: true,
+									Key.articlePagingSwipeEnabled: true,
 										Key.showFeedNameInReaderView: false,
 										Key.confirmMarkAllAsRead: true,
 										Key.currentThemeName: Self.defaultThemeName,

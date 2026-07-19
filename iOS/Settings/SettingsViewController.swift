@@ -50,8 +50,9 @@ final class SettingsViewController: UITableViewController {
 		case theme = 0
 		case openLinksInNetNewsWire = 1
 		case enableFullScreenArticles = 2
-		case blockSwipesInFullScreen = 3
-		case showFeedNameInReaderView = 4
+		case enableBackSwipe = 3
+		case enablePagingSwipe = 4
+		case showFeedNameInReaderView = 5
 	}
 
 	private enum HelpRow: Int {
@@ -67,7 +68,8 @@ final class SettingsViewController: UITableViewController {
 	@IBOutlet var articleThemeDetailLabel: UILabel!
 	@IBOutlet var confirmMarkAllAsReadSwitch: UISwitch!
 	@IBOutlet var showFullscreenArticlesSwitch: UISwitch!
-	@IBOutlet var blockSwipesWhenBarsHiddenSwitch: UISwitch!
+	@IBOutlet var backSwipeEnabledSwitch: UISwitch!
+	@IBOutlet var pagingSwipeEnabledSwitch: UISwitch!
 	@IBOutlet var showFeedNameInReaderViewSwitch: UISwitch!
 	@IBOutlet var colorPaletteDetailLabel: UILabel!
 	@IBOutlet var openLinksInNetNewsWire: UISwitch!
@@ -128,7 +130,8 @@ final class SettingsViewController: UITableViewController {
 			showFullscreenArticlesSwitch.isOn = false
 		}
 
-		blockSwipesWhenBarsHiddenSwitch.isOn = AppDefaults.shared.blockSwipesWhenBarsHidden
+		backSwipeEnabledSwitch.isOn = AppDefaults.shared.articleBackSwipeEnabled
+		pagingSwipeEnabledSwitch.isOn = AppDefaults.shared.articlePagingSwipeEnabled
 		showFeedNameInReaderViewSwitch.isOn = AppDefaults.shared.showFeedNameInReaderView
 
 		colorPaletteDetailLabel.text = String(describing: AppDefaults.userInterfaceColorPalette)
@@ -170,7 +173,7 @@ final class SettingsViewController: UITableViewController {
 			// (Previously this branched on userInterfaceIdiom == .phone, which left
 			// the row count stuck at the pre-Phase-5/6 case count on non-phone
 			// idioms; since there is no non-phone idiom here, that branch was both
-			// dead and, after ArticlesRow grew to 5 cases, wrong.)
+			// dead and, after ArticlesRow grew to 6 cases, wrong.)
 			return ArticlesRow.allCases.count
 		case .troubleshooting:
 			let defaultNumberOfRows = super.tableView(tableView, numberOfRowsInSection: section)
@@ -353,8 +356,12 @@ final class SettingsViewController: UITableViewController {
 		}
 	}
 
-	@IBAction func switchBlockSwipesWhenBarsHidden(_ sender: Any) {
-		AppDefaults.shared.blockSwipesWhenBarsHidden = blockSwipesWhenBarsHiddenSwitch.isOn
+	@IBAction func switchBackSwipeEnabled(_ sender: Any) {
+		AppDefaults.shared.articleBackSwipeEnabled = backSwipeEnabledSwitch.isOn
+	}
+
+	@IBAction func switchPagingSwipeEnabled(_ sender: Any) {
+		AppDefaults.shared.articlePagingSwipeEnabled = pagingSwipeEnabledSwitch.isOn
 	}
 
 	@IBAction func switchShowFeedNameInReaderView(_ sender: Any) {
