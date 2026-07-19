@@ -185,6 +185,9 @@ final class ArticleViewController: UIViewController {
 				!AppDefaults.shared.articleBackSwipeEnabled
 			}
 			navigationController.interactivePopGestureRecognizer?.delegate = poppableDelegate
+			Self.logger.debug("ArticleViewController: viewDidAppear installed poppableDelegate as interactivePopGestureRecognizer.delegate (articleBackSwipeEnabled=\(AppDefaults.shared.articleBackSwipeEnabled), navigationController.viewControllers.count=\(navigationController.viewControllers.count))")
+		} else {
+			Self.logger.debug("ArticleViewController: viewDidAppear found navigationController == nil -- poppableDelegate was NOT installed, interactivePopGestureRecognizer.delegate is whatever UIKit's default is")
 		}
 	}
 

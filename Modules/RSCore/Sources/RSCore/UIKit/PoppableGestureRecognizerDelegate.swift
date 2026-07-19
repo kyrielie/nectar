@@ -22,10 +22,14 @@ public final class PoppableGestureRecognizerDelegate: NSObject, UIGestureRecogni
 	public var isAdditionallyBlocked: (() -> Bool)?
 
 	public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        guard navigationController?.viewControllers.count ?? 0 > 1 else {
+        let stackCount = navigationController?.viewControllers.count ?? 0
+        guard stackCount > 1 else {
+			print("PoppableGestureRecognizerDelegate: gestureRecognizerShouldBegin -> false (viewControllers.count=\(stackCount), navigationController is \(navigationController == nil ? "nil" : "set"))")
 			return false
 		}
-		return !(isAdditionallyBlocked?() ?? false)
+		let blocked = isAdditionallyBlocked?() ?? false
+		print("PoppableGestureRecognizerDelegate: gestureRecognizerShouldBegin -> \(!blocked) (isAdditionallyBlocked closure \(isAdditionallyBlocked == nil ? "is nil" : "returned \(blocked)"))")
+		return !blocked
     }
 
 	public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
