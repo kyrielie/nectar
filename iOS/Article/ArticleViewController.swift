@@ -181,21 +181,11 @@ final class ArticleViewController: UIViewController {
 		searchBar.shouldBeginEditing = true
 		if let navigationController {
 			poppableDelegate.navigationController = navigationController
-			// This column's own navigationController only ever contains the
-			// article itself (viewControllers.count == 1), even when Feed and
-			// Timeline are visually behind it, because ArticleViewController is
-			// shown via rootSplitViewController.show(.secondary) rather than a
-			// push onto a shared stack. An article only ever appears here after
-			// being selected from a timeline, so whenever the split view is
-			// collapsed there's always a timeline to go back to.
-			poppableDelegate.canGoBack = { [weak self] in
-				self?.coordinator.isRootSplitCollapsed ?? false
-			}
 			poppableDelegate.isAdditionallyBlocked = {
 				!AppDefaults.shared.articleBackSwipeEnabled
 			}
 			navigationController.interactivePopGestureRecognizer?.delegate = poppableDelegate
-			Self.logger.debug("ArticleViewController: viewDidAppear installed poppableDelegate as interactivePopGestureRecognizer.delegate (articleBackSwipeEnabled=\(AppDefaults.shared.articleBackSwipeEnabled), isRootSplitCollapsed=\(coordinator.isRootSplitCollapsed), navigationController.viewControllers.count=\(navigationController.viewControllers.count))")
+			Self.logger.debug("ArticleViewController: viewDidAppear installed poppableDelegate as interactivePopGestureRecognizer.delegate (articleBackSwipeEnabled=\(AppDefaults.shared.articleBackSwipeEnabled), navigationController.viewControllers.count=\(navigationController.viewControllers.count))")
 		} else {
 			Self.logger.debug("ArticleViewController: viewDidAppear found navigationController == nil -- poppableDelegate was NOT installed, interactivePopGestureRecognizer.delegate is whatever UIKit's default is")
 		}
