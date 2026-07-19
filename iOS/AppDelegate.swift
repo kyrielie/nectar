@@ -113,11 +113,6 @@ import Images
 		ArticleThemesManager.shared.start()
 		NetworkMonitor.shared.start()
 
-#if !SKIP_APP_GROUP_ACCESS
-		ExtensionContainersFile.shared.start()
-		ExtensionFeedAddRequestFile.shared.start()
-#endif
-
 		#if DEBUG
 		ArticleStatusSyncTimer.shared.update()
 		#endif
@@ -189,22 +184,14 @@ import Images
 	func prepareAccountsForBackground() {
 		updateBadge()
 
-#if !SKIP_APP_GROUP_ACCESS
-		ExtensionFeedAddRequestFile.shared.suspend()
-#endif
-
 		ArticleStatusSyncTimer.shared.invalidate()
 		scheduleBackgroundFeedRefresh()
 		syncArticleStatus()
-		WidgetDataEncoder.shared?.encode()
 		waitForSyncTasksToFinish()
 	}
 
 	func prepareAccountsForForeground() {
 		updateBadge()
-#if !SKIP_APP_GROUP_ACCESS
-		ExtensionFeedAddRequestFile.shared.resume()
-#endif
 		ArticleStatusSyncTimer.shared.update()
 
 		let shouldForceRefresh = hasInterruptedFeeds
@@ -333,7 +320,7 @@ private extension AppDelegate {
 			return
 		}
 
-		if AccountManager.shared.refreshInProgress || isSyncArticleStatusRunning || WidgetDataEncoder.shared?.isRunning ?? false {
+		if AccountManager.shared.refreshInProgress || isSyncArticleStatusRunning {
 			Self.logger.info("Waiting for sync to finish…")
 			DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
 				self?.waitToComplete(completion: completion)
@@ -456,7 +443,6 @@ private extension AppDelegate {
 			}
 			await AccountManager.shared.refreshAll(errorHandler: ErrorHandler.log)
 			if !AccountManager.shared.isSuspended {
-				await WidgetDataEncoder.shared?.encodeAndWait()
 				self.suspendApplication()
 				Self.logger.info("Background refresh completed.")
 				task.setTaskCompleted(success: true)
