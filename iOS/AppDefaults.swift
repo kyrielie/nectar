@@ -70,11 +70,7 @@ final class AppDefaults: Sendable {
 
 	private init() {}
 
-	nonisolated(unsafe) static let store: UserDefaults = {
-		let appIdentifierPrefix = Bundle.main.object(forInfoDictionaryKey: "AppIdentifierPrefix") as! String
-		let suiteName = "\(appIdentifierPrefix)group.\(Bundle.main.bundleIdentifier!)"
-		return UserDefaults.init(suiteName: suiteName)!
-	}()
+	nonisolated(unsafe) static let store: UserDefaults = .standard
 
 	struct Key {
 		static let userInterfaceColorPalette = "userInterfaceColorPalette"
