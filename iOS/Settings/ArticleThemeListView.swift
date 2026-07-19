@@ -202,7 +202,7 @@ struct ArticleThemeListView: View {
 		// Reading themeNamesRefreshToken here (even though it isn't otherwise used)
 		// forces this section to be re-evaluated when the notification observer
 		// above flips it, since ArticleThemesManager itself isn't ObservableObject.
-		let _ = themeNamesRefreshToken
+		_ = themeNamesRefreshToken
 
 		Section {
 			ForEach(themeNames, id: \.self) { themeName in
