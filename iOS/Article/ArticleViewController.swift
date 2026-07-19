@@ -179,12 +179,12 @@ final class ArticleViewController: UIViewController {
 		}
 		coordinator.isArticleViewControllerPending = false
 		searchBar.shouldBeginEditing = true
-		if let parentNavController = navigationController?.parent as? UINavigationController {
-			poppableDelegate.navigationController = parentNavController
+		if let navigationController {
+			poppableDelegate.navigationController = navigationController
 			poppableDelegate.isAdditionallyBlocked = {
 				!AppDefaults.shared.articleBackSwipeEnabled
 			}
-			parentNavController.interactivePopGestureRecognizer?.delegate = poppableDelegate
+			navigationController.interactivePopGestureRecognizer?.delegate = poppableDelegate
 		}
 	}
 
