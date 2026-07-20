@@ -12,14 +12,11 @@ import Account
 
 struct AccountStatsView: View {
 
-	private static let helpURL = URL(string: "https://netnewswire.com/help/account-stats.html")!
-
 	private let model = AccountStatsViewModel()
 
 	@State private var rows = [AccountStatsRowData]()
 	@State private var totals: AccountStatsTotals?
 	@State private var isVacuuming = false
-	@State private var showHelp = false
 
 	var body: some View {
 		List {
@@ -63,7 +60,7 @@ struct AccountStatsView: View {
 
 			Section {
 			} footer: {
-				helpLinkFooter
+				helpFooter
 			}
 		}
 		.navigationTitle(NSLocalizedString("Account Stats", comment: "Account Stats screen title"))
@@ -78,9 +75,6 @@ struct AccountStatsView: View {
 				}
 				.disabled(isVacuuming)
 			}
-		}
-		.sheet(isPresented: $showHelp) {
-			SafariView(url: Self.helpURL)
 		}
 		.task {
 			await refresh()
@@ -115,13 +109,12 @@ private extension AccountStatsView {
 		var id: String { label }
 	}
 
-	var helpLinkFooter: some View {
-		Button(NSLocalizedString("Account Stats Help", comment: "Help link")) {
-			showHelp = true
-		}
-		.font(.subheadline)
-		.frame(maxWidth: .infinity)
-		.padding(.top, 8)
+	var helpFooter: some View {
+		Text("Databases adds up the sizes of each account's article, feed-settings, and sync-queue databases. Some counts can look out of step with the main window — for example, status records for articles that no longer appear in a feed — which is expected, not an error.", comment: "Account Stats explainer")
+			.font(.footnote)
+			.foregroundStyle(.secondary)
+			.frame(maxWidth: .infinity, alignment: .leading)
+			.padding(.top, 8)
 	}
 
 	func statsRow(_ item: StatItem, isBold: Bool) -> some View {
