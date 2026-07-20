@@ -3,6 +3,12 @@ name: Publish AltStore Source
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g. v0.1.1)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -12,10 +18,40 @@ jobs:
     name: Publish source.json
     runs-on: macos-26
     steps:
+      - name: Resolve release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag_name=$(jq -r '.release.tag_name' "$GITHUB_EVENT_PATH")
+            release_id=$(jq -r '.release.id' "$GITHUB_EVENT_PATH")
+            published_at=$(jq -r '.release.published_at' "$GITHUB_EVENT_PATH")
+            body=$(jq -r '.release.body // ""' "$GITHUB_EVENT_PATH")
+          else
+            tag_name="${{ inputs.tag }}"
+            release_json=$(gh api "repos/${{ github.repository }}/releases/tags/$tag_name")
+            release_id=$(echo "$release_json" | jq -r '.id')
+            published_at=$(echo "$release_json" | jq -r '.published_at')
+            body=$(echo "$release_json" | jq -r '.body // ""')
+          fi
+
+          echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
+          echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
+          echo "published_at=$published_at" >> "$GITHUB_OUTPUT"
+          {
+            echo "body<<RELEASE_BODY_EOF"
+            echo "$body"
+            echo "RELEASE_BODY_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Checkout release tag
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ steps.release.outputs.tag_name }}
           path: repo
 
       - name: Select Xcode 26.3
@@ -49,11 +85,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          asset_json=$(gh api "repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets" \
+          asset_json=$(gh api "repos/${{ github.repository }}/releases/${{ steps.release.outputs.release_id }}/assets" \
             --jq '[.[] | select(.name | endswith(".ipa"))][0]')
 
           if [ -z "$asset_json" ] || [ "$asset_json" = "null" ]; then
-            echo "No .ipa asset found on release ${{ github.event.release.tag_name }}" >&2
+            echo "No .ipa asset found on release ${{ steps.release.outputs.tag_name }}" >&2
             exit 1
           fi
 
@@ -84,8 +120,8 @@ jobs:
         env:
           VERSION: ${{ steps.settings.outputs.marketing_version }}
           BUILD_VERSION: ${{ steps.settings.outputs.build_version }}
-          RELEASE_DATE: ${{ github.event.release.published_at }}
-          RELEASE_NOTES: ${{ github.event.release.body }}
+          RELEASE_DATE: ${{ steps.release.outputs.published_at }}
+          RELEASE_NOTES: ${{ steps.release.outputs.body }}
           DOWNLOAD_URL: ${{ steps.asset.outputs.download_url }}
           SIZE_BYTES: ${{ steps.asset.outputs.size }}
           MIN_OS_VERSION: ${{ steps.settings.outputs.min_os_version }}
@@ -125,5 +161,5 @@ jobs:
             exit 0
           fi
           git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" 2>/dev/null || true
-          git commit -m "Publish ${{ github.event.release.tag_name }} to source.json"
+          git commit -m "Publish ${{ steps.release.outputs.tag_name }} to source.json"
           git push origin HEAD:gh-pages
