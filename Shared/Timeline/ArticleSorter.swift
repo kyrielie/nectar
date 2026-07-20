@@ -32,6 +32,32 @@ import Articles
 				NSLocalizedString("Author", comment: "Sort field")
 			}
 		}
+
+		/// Label for the row when sorted ascending, worded for what this field
+		/// actually means (chronological order reads oddly as "A to Z," and an
+		/// alphabetic field reads oddly as "Oldest to Newest").
+		var ascendingLabel: String {
+			switch self {
+			case .date:
+				NSLocalizedString("Oldest First", comment: "Ascending sort direction — date")
+			case .wordCount:
+				NSLocalizedString("Fewest Words First", comment: "Ascending sort direction — word count")
+			case .title, .author:
+				NSLocalizedString("A to Z", comment: "Ascending sort direction — alphabetic")
+			}
+		}
+
+		/// Label for the row when sorted descending. See `ascendingLabel`.
+		var descendingLabel: String {
+			switch self {
+			case .date:
+				NSLocalizedString("Newest First", comment: "Descending sort direction — date")
+			case .wordCount:
+				NSLocalizedString("Most Words First", comment: "Descending sort direction — word count")
+			case .title, .author:
+				NSLocalizedString("Z to A", comment: "Descending sort direction — alphabetic")
+			}
+		}
 	}
 
 	static func sortedByDate(articles: [Article], sortDirection: ComparisonResult, groupByFeed: Bool, feedNameFor: (Article) -> String = { $0.sortableFeedName }) -> [Article] {
