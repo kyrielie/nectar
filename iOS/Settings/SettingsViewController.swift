@@ -39,11 +39,12 @@ final class SettingsViewController: UITableViewController {
 	}
 
 	private enum TimelineRow: Int {
-		case sortOrder = 0
-		case groupByFeed = 1
-		case refreshClearsReadArticles = 2
-		case confirmMarkAllAsRead = 3
-		case timelineLayout = 4
+		case sortField = 0
+		case sortDirection = 1
+		case groupByFeed = 2
+		case refreshClearsReadArticles = 3
+		case confirmMarkAllAsRead = 4
+		case timelineLayout = 5
 	}
 
 	private enum ArticlesRow: Int, CaseIterable {
@@ -61,8 +62,8 @@ final class SettingsViewController: UITableViewController {
 
 	private weak var opmlAccount: Account?
 
-	@IBOutlet var timelineSortOrderSwitch: UISwitch!
-	@IBOutlet var timelineSortDetailLabel: UILabel!
+	@IBOutlet var timelineSortFieldDetailLabel: UILabel!
+	@IBOutlet var timelineSortDirectionDetailLabel: UILabel!
 	@IBOutlet var groupByFeedSwitch: UISwitch!
 	@IBOutlet var ambrosiaSQLiteTransferSwitch: UISwitch!
 	@IBOutlet var refreshClearsReadArticlesSwitch: UISwitch!
@@ -97,13 +98,7 @@ final class SettingsViewController: UITableViewController {
 	override func viewWillAppear(_ animated: Bool) {
 		super.viewWillAppear(animated)
 
-		if AppDefaults.shared.timelineSortDirection == .orderedAscending {
-			timelineSortOrderSwitch.isOn = true
-		} else {
-			timelineSortOrderSwitch.isOn = false
-		}
-
-		updateTimelineSortDetailLabel()
+		updateTimelineSortLabels()
 
 		if AppDefaults.shared.timelineGroupByFeed {
 			groupByFeedSwitch.isOn = true
@@ -211,10 +206,16 @@ final class SettingsViewController: UITableViewController {
 			}
 		case .timeline:
 			switch TimelineRow(rawValue: indexPath.row) {
-			case .sortOrder:
+			case .sortField:
 				if let sourceView = tableView.cellForRow(at: indexPath) {
 					let sourceRect = tableView.rectForRow(at: indexPath)
 					presentSortFieldPicker(sourceView: sourceView, sourceRect: sourceRect)
+				}
+				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
+			case .sortDirection:
+				if let sourceView = tableView.cellForRow(at: indexPath) {
+					let sourceRect = tableView.rectForRow(at: indexPath)
+					presentSortDirectionPicker(sourceView: sourceView, sourceRect: sourceRect)
 				}
 				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
 			case .timelineLayout:
@@ -310,26 +311,17 @@ final class SettingsViewController: UITableViewController {
 		dismiss(animated: true)
 	}
 
-	@IBAction func switchTimelineOrder(_ sender: Any) {
-		if timelineSortOrderSwitch.isOn {
-			AppDefaults.shared.timelineSortDirection = .orderedAscending
-		} else {
-			AppDefaults.shared.timelineSortDirection = .orderedDescending
-		}
-		updateTimelineSortDetailLabel()
-	}
-
-	/// Keeps the sort-order row's detail label in sync with the current
-	/// `timelineSortField`/`timelineSortDirection`, so the row visibly shows
-	/// what it's sorting by instead of reading as a plain ascending/descending
-	/// toggle. Called on appearance and whenever either value changes from
-	/// this screen.
-	func updateTimelineSortDetailLabel() {
-		let field = AppDefaults.shared.timelineSortField.displayName
-		let direction = AppDefaults.shared.timelineSortDirection == .orderedAscending
-			? NSLocalizedString("Oldest to Newest", comment: "Ascending sort direction")
-			: NSLocalizedString("Newest to Oldest", comment: "Descending sort direction")
-		timelineSortDetailLabel.text = "\(NSLocalizedString("Sort by", comment: "Sort field row title")) \(field)\n\(direction)"
+	/// Keeps both sort rows' detail labels in sync with the current
+	/// `timelineSortField`/`timelineSortDirection`. The direction label is
+	/// worded per-field (`ascendingLabel`/`descendingLabel`) rather than a
+	/// fixed "Oldest to Newest," since that phrasing doesn't mean anything
+	/// once the field is Title, Author, or Word Count. Called on appearance
+	/// and whenever either value changes from this screen.
+	func updateTimelineSortLabels() {
+		let field = AppDefaults.shared.timelineSortField
+		let direction = AppDefaults.shared.timelineSortDirection
+		timelineSortFieldDetailLabel.text = field.displayName
+		timelineSortDirectionDetailLabel.text = direction == .orderedAscending ? field.ascendingLabel : field.descendingLabel
 	}
 
 	@IBAction func switchGroupByFeed(_ sender: Any) {
@@ -562,9 +554,6 @@ private extension SettingsViewController {
 		self.present(docPicker, animated: true)
 	}
 
-	// Reuses the existing .sortOrder row (which already carries the
-	// ascending/descending switch) as the tap target for field selection too,
-	// rather than adding a new storyboard row for it.
 	func presentSortFieldPicker(sourceView: UIView, sourceRect: CGRect) {
 		let title = NSLocalizedString("Sort Timeline By", comment: "Sort field picker title")
 		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
@@ -581,7 +570,40 @@ private extension SettingsViewController {
 			}
 			let action = UIAlertAction(title: actionTitle, style: .default) { [weak self] _ in
 				AppDefaults.shared.timelineSortField = field
-				self?.updateTimelineSortDetailLabel()
+				self?.updateTimelineSortLabels()
+			}
+			alert.addAction(action)
+		}
+
+		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
+		alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
+
+		self.present(alert, animated: true)
+	}
+
+	func presentSortDirectionPicker(sourceView: UIView, sourceRect: CGRect) {
+		let title = NSLocalizedString("Order", comment: "Sort direction picker title")
+		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+
+		if let popoverController = alert.popoverPresentationController {
+			popoverController.sourceView = view
+			popoverController.sourceRect = sourceRect
+		}
+
+		let field = AppDefaults.shared.timelineSortField
+		let directions: [(ComparisonResult, String)] = [
+			(.orderedDescending, field.descendingLabel),
+			(.orderedAscending, field.ascendingLabel)
+		]
+
+		for (direction, label) in directions {
+			var actionTitle = label
+			if direction == AppDefaults.shared.timelineSortDirection {
+				actionTitle = "✓ " + actionTitle
+			}
+			let action = UIAlertAction(title: actionTitle, style: .default) { [weak self] _ in
+				AppDefaults.shared.timelineSortDirection = direction
+				self?.updateTimelineSortLabels()
 			}
 			alert.addAction(action)
 		}
