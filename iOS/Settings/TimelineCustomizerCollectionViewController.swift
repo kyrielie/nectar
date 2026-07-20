@@ -38,8 +38,11 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 				wordCount: 4231,
 				isComplete: false,
 				fandoms: ["The Lord of the Rings - J. R. R. Tolkien"],
+				relationships: ["Aragorn/Arwen"],
+				characters: ["Aragorn", "Frodo Baggins", "Barliman Butterbur"],
 				ratings: ["Teen And Up Audiences"],
 				warnings: ["No Archive Warnings Apply"],
+				categories: ["Fluff", "Canon-Compliant", "Introspection"],
 				status: ArticleStatus(articleID: "_testArticleID", read: false, starred: false, dateArrived: .now))
 	}
 
