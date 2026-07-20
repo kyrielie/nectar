@@ -1,0 +1,48 @@
+{
+    "name": "Nectar",
+    "subtitle": "A feed reader.",
+    "description": "Nectar is a feed reader for iOS.",
+    "iconURL": "https://kyrielie.github.io/nectar/icon.png",
+    "website": "https://github.com/kyrielie/nectar",
+    "tintColor": "#4185A9",
+    "apps": [
+        {
+            "name": "Nectar",
+            "bundleIdentifier": "com.kyrielie.nectar",
+            "developerName": "kyrielie",
+            "subtitle": "A feed reader.",
+            "localizedDescription": "Nectar is a feed reader for iOS.",
+            "iconURL": "https://kyrielie.github.io/nectar/icon.png",
+            "tintColor": "#4185A9",
+            "category": "other",
+            "screenshots": [
+                "https://kyrielie.github.io/nectar/screenshots/1.png",
+                "https://kyrielie.github.io/nectar/screenshots/2.png",
+                "https://kyrielie.github.io/nectar/screenshots/3.png",
+                "https://kyrielie.github.io/nectar/screenshots/4.png",
+                "https://kyrielie.github.io/nectar/screenshots/5.png",
+                "https://kyrielie.github.io/nectar/screenshots/6.png"
+            ],
+            "appPermissions": {
+                "entitlements": [
+                    "keychain-access-groups"
+                ],
+                "privacy": {
+                    "NSPhotoLibraryAddUsageDescription": "Grant permission to save images from the article."
+                }
+            },
+            "versions": [
+                {
+                    "version": "7.1.1",
+                    "buildVersion": "7108",
+                    "date": "2026-07-19T06:02:52Z",
+                    "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/commits/v0.0.1\r\n\r\nInstallation\r\n- Unsigned ipa, must be sideloaded. Either use altstore or sideloadly. Altstore is safer. \r\n\r\nFeatures\r\n- Displays metadata to JSON feed items from Ambrosia. Description, fandom, rating, warnings, category.\r\n- Adjustable timeline display, variable size cards and details.\r\n- Saves reading progress, reading progress bar in timeline.\r\n- New smart feed for loved books.\r\n- Swipe gestures toggle.\r\n- Full screen reading.\r\n- Theme overrides, font, color and line height.\r\n- Syncing based on ao3 id, allows for duplicate items across feeds.\r\n- Sort by word count, author, title, and publish/update date.",
+                    "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.0.1/Nectar-unsigned.ipa",
+                    "size": 5089505,
+                    "minOSVersion": "17.0"
+                }
+            ]
+        }
+    ],
+    "news": []
+}
