@@ -62,6 +62,7 @@ final class SettingsViewController: UITableViewController {
 	private weak var opmlAccount: Account?
 
 	@IBOutlet var timelineSortOrderSwitch: UISwitch!
+	@IBOutlet var timelineSortDetailLabel: UILabel!
 	@IBOutlet var groupByFeedSwitch: UISwitch!
 	@IBOutlet var ambrosiaSQLiteTransferSwitch: UISwitch!
 	@IBOutlet var refreshClearsReadArticlesSwitch: UISwitch!
@@ -101,6 +102,8 @@ final class SettingsViewController: UITableViewController {
 		} else {
 			timelineSortOrderSwitch.isOn = false
 		}
+
+		updateTimelineSortDetailLabel()
 
 		if AppDefaults.shared.timelineGroupByFeed {
 			groupByFeedSwitch.isOn = true
@@ -313,6 +316,20 @@ final class SettingsViewController: UITableViewController {
 		} else {
 			AppDefaults.shared.timelineSortDirection = .orderedDescending
 		}
+		updateTimelineSortDetailLabel()
+	}
+
+	/// Keeps the sort-order row's detail label in sync with the current
+	/// `timelineSortField`/`timelineSortDirection`, so the row visibly shows
+	/// what it's sorting by instead of reading as a plain ascending/descending
+	/// toggle. Called on appearance and whenever either value changes from
+	/// this screen.
+	func updateTimelineSortDetailLabel() {
+		let field = AppDefaults.shared.timelineSortField.displayName
+		let direction = AppDefaults.shared.timelineSortDirection == .orderedAscending
+			? NSLocalizedString("Oldest to Newest", comment: "Ascending sort direction")
+			: NSLocalizedString("Newest to Oldest", comment: "Descending sort direction")
+		timelineSortDetailLabel.text = "\(NSLocalizedString("Sort by", comment: "Sort field row title")) \(field)\n\(direction)"
 	}
 
 	@IBAction func switchGroupByFeed(_ sender: Any) {
@@ -562,8 +579,9 @@ private extension SettingsViewController {
 			if field == AppDefaults.shared.timelineSortField {
 				actionTitle = "✓ " + actionTitle
 			}
-			let action = UIAlertAction(title: actionTitle, style: .default) { _ in
+			let action = UIAlertAction(title: actionTitle, style: .default) { [weak self] _ in
 				AppDefaults.shared.timelineSortField = field
+				self?.updateTimelineSortDetailLabel()
 			}
 			alert.addAction(action)
 		}
