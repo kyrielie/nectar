@@ -138,6 +138,16 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		fetchArticlesCount { self.fetchLovedArticlesCount(feedIDs, $0) }
 	}
 
+	// MARK: - Fetching Last Opened Articles (Last Opened smart feed)
+
+	func fetchLastOpenedArticles(_ feedIDs: Set<String>, _ limit: Int?) -> Set<Article> {
+		fetchArticles { self.fetchLastOpenedArticles(feedIDs, limit, $0) }
+	}
+
+	func fetchLastOpenedArticlesAsync(_ feedIDs: Set<String>, _ limit: Int?, _ completion: @escaping ArticleSetResultBlock) {
+		fetchArticlesAsync({ self.fetchLastOpenedArticles(feedIDs, limit, $0) }, completion)
+	}
+
 	// MARK: - Fetching Counts Async
 
 	func fetchArticleCountsAsync(_ feedIDs: Set<String>, _ completion: @escaping @Sendable (ArticleCounts) -> Void) {
@@ -905,6 +915,34 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
+	// MARK: - Last opened (Last Opened smart feed)
+	//
+	// Not part of the boolean ArticleStatus.Key/mark(_:_:_:_:) system above --
+	// this is a timestamp, not a flag, and every call is a real "this just
+	// happened," not a state diff. bookState is still the bookKey-keyed source
+	// of truth (shared across every copy of the same book, same as
+	// read/starred/loved/scrollPosition), propagated to statuses.lastOpenedAt on
+	// every sibling articleID so LastOpenedFeedDelegate's SQL can filter/order
+	// on it directly, the same way loved=1 backs LovedFeedDelegate.
+
+	func recordBookOpened(articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
+		queue.runInTransaction { database in
+			let now = Date()
+			if let bookKey = self.bookKeysForArticleIDs([articleID], database).first {
+				self.bookStateTable.setLastOpenedAt(now, bookKey: bookKey, database)
+				let allArticleIDs = self.articleIDsForBookKeys([bookKey], excluding: [], database)
+				self.statusesTable.setLastOpenedAt(now, articleIDs: allArticleIDs, database)
+			} else {
+				// Pre-migration row with no resolvable bookKey: statuses is the
+				// only place to record it, same fallback tier as scrollPosition.
+				self.statusesTable.setLastOpenedAt(now, articleIDs: [articleID], database)
+			}
+			DispatchQueue.main.async {
+				completion()
+			}
+		}
+	}
+
 	// MARK: - Reading progress (Phase A1)
 
 	func saveReadingProgress(_ readingProgress: Double, articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
@@ -1375,6 +1413,21 @@ nonisolated private extension ArticlesTable {
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
 		let whereClause = "feedID in \(placeholders) and loved=1"
 		return fetchArticleCountsWithWhereClause(database, whereClause: whereClause, parameters: parameters)
+	}
+
+	func fetchLastOpenedArticles(_ feedIDs: Set<String>, _ limit: Int?, _ database: FMDatabase) -> Set<Article> {
+		// select * from articles natural join statuses where feedID in ('http://ranchero.com/xml/rss.xml') and lastOpenedAt is not null order by lastOpenedAt desc limit 10;
+		if feedIDs.isEmpty {
+			return Set<Article>()
+		}
+		let parameters = feedIDs.map { $0 as AnyObject }
+		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
+		var whereClause = "feedID in \(placeholders) and lastOpenedAt is not null"
+		whereClause.append(" order by lastOpenedAt desc")
+		if let limit = limit {
+			whereClause.append(" limit \(limit)")
+		}
+		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
 
 	static func statusesCount(_ database: FMDatabase) -> Int {

@@ -18,9 +18,15 @@ nonisolated public enum ReadFilterType: Sendable {
 @MainActor public protocol SidebarItem: SidebarItemIdentifiable, ArticleFetcher, DisplayNameProvider, UnreadCountProvider {
 	@MainActor var account: Account? { get }
 	@MainActor var defaultReadFilterType: ReadFilterType { get }
+	/// True only for the Last Opened smart feed: its timeline order is fixed
+	/// (most-recently-opened first) and ignores the global Timeline Layout
+	/// sort setting entirely -- see SceneCoordinator.replaceArticles.
+	@MainActor var forcesLastOpenedSort: Bool { get }
 }
 
 @MainActor public extension SidebarItem {
+
+	var forcesLastOpenedSort: Bool { false }
 
 	func readFiltered(readFilterEnabledTable: [SidebarItemIdentifier: Bool]) -> Bool {
 		guard defaultReadFilterType != .alwaysRead else {

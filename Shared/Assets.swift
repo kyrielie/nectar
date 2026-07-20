@@ -129,6 +129,11 @@ struct Assets {
 		static let todayFeed = IconImage(RSImage(symbol: "tray.and.arrow.down.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: UIColor.systemOrange)
 		static let unreadFeed = IconImage(RSImage(symbol: "largecircle.fill.circle")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent)
 		static let readFeed = IconImage(RSImage(symbol: "checkmark.circle.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent)
+		// Last Opened smart feed icon. Placeholder symbol choice -- swap for
+		// whatever SF Symbol fits the icon set; not cross-checked against the
+		// app's actual icon conventions beyond "recently opened" being a
+		// reasonable read for it.
+		static let lastOpenedFeed = IconImage(RSImage(symbol: "clock.arrow.circlepath")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent)
 		static var timelineStar: RSImage {
 			let image = RSImage(symbol: "star.fill")!
 			return image.withTintColor(Assets.Colors.star, renderingMode: .alwaysOriginal)

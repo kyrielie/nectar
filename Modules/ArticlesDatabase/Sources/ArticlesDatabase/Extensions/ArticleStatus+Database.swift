@@ -18,8 +18,9 @@ extension ArticleStatus {
 		let starred = row.bool(forColumn: DatabaseKey.starred)
 		let readingProgress = row.columnIsNull(DatabaseKey.readingProgress) ? nil : row.double(forColumn: DatabaseKey.readingProgress)
 		let loved = row.bool(forColumn: DatabaseKey.loved)
+		let lastOpenedAt = row.columnIsNull(DatabaseKey.lastOpenedAt) ? nil : row.date(forColumn: DatabaseKey.lastOpenedAt)
 
-		self.init(articleID: articleID, read: read, starred: starred, dateArrived: dateArrived, readingProgress: readingProgress, loved: loved)
+		self.init(articleID: articleID, read: read, starred: starred, dateArrived: dateArrived, readingProgress: readingProgress, loved: loved, lastOpenedAt: lastOpenedAt)
 	}
 
 	func databaseDictionary() -> DatabaseDictionary {

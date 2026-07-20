@@ -28,6 +28,7 @@ public final class ArticleStatus: Hashable, Sendable {
 		var starred: Bool
 		var readingProgress: Double?
 		var loved: Bool
+		var lastOpenedAt: Date?
 	}
 
 	private let state: OSAllocatedUnfairLock<State>
@@ -73,9 +74,22 @@ public final class ArticleStatus: Hashable, Sendable {
 		}
 	}
 
-	public init(articleID: String, read: Bool, starred: Bool, dateArrived: Date, readingProgress: Double? = nil, loved: Bool = false) {
+	/// When this book was last opened into the reader. Local UI state, same
+	/// treatment as scrollPosition/readingProgress -- not part of the syncable
+	/// ArticleStatus.Key set. Backs LastOpenedFeedDelegate's fixed sort order
+	/// (see SceneCoordinator.replaceArticles) without a second DB round-trip.
+	public var lastOpenedAt: Date? {
+		get {
+			state.withLock { $0.lastOpenedAt }
+		}
+		set {
+			state.withLock { $0.lastOpenedAt = newValue }
+		}
+	}
+
+	public init(articleID: String, read: Bool, starred: Bool, dateArrived: Date, readingProgress: Double? = nil, loved: Bool = false, lastOpenedAt: Date? = nil) {
 		self.articleID = articleID
-		self.state = OSAllocatedUnfairLock(initialState: State(read: read, starred: starred, readingProgress: readingProgress, loved: loved))
+		self.state = OSAllocatedUnfairLock(initialState: State(read: read, starred: starred, readingProgress: readingProgress, loved: loved, lastOpenedAt: lastOpenedAt))
 		self.dateArrived = dateArrived
 	}
 
@@ -114,7 +128,7 @@ public final class ArticleStatus: Hashable, Sendable {
 	// MARK: - Equatable
 
 	public static func ==(lhs: ArticleStatus, rhs: ArticleStatus) -> Bool {
-		return lhs.articleID == rhs.articleID && lhs.dateArrived == rhs.dateArrived && lhs.read == rhs.read && lhs.starred == rhs.starred && lhs.readingProgress == rhs.readingProgress && lhs.loved == rhs.loved
+		return lhs.articleID == rhs.articleID && lhs.dateArrived == rhs.dateArrived && lhs.read == rhs.read && lhs.starred == rhs.starred && lhs.readingProgress == rhs.readingProgress && lhs.loved == rhs.loved && lhs.lastOpenedAt == rhs.lastOpenedAt
 	}
 }
 
