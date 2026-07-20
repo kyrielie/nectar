@@ -35,6 +35,11 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 				datePublished: date,
 				dateModified: nil,
 				authors: Set([Author(authorID: "_testAuthorID", name: "J. R. R. Tolkien", url: nil, avatarURL: nil, emailAddress: nil)!]),
+				wordCount: 4231,
+				isComplete: false,
+				fandoms: ["The Lord of the Rings - J. R. R. Tolkien"],
+				ratings: ["Teen And Up Audiences"],
+				warnings: ["No Archive Warnings Apply"],
 				status: ArticleStatus(articleID: "_testArticleID", read: false, starred: false, dateArrived: .now))
 	}
 
