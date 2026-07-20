@@ -126,7 +126,10 @@
       "comment" : "Automatic"
     },
     "Background Color" : {
-      "comment" : "Background Color picker label"
+      "comment" : "Background Color (light) picker label"
+    },
+    "Background Color (Dark Mode)" : {
+      "comment" : "Background Color (dark) picker label"
     },
     "Badges" : {
       "comment" : "Badges tag display mode"
@@ -295,6 +298,9 @@
     },
     "Duplicate Theme" : {
       "comment" : "Duplicate Theme"
+    },
+    "Each color has a separate light and dark mode value." : {
+      "comment" : "Colors section footer explaining light/dark pairing"
     },
     "Enable Notifications" : {
       "comment" : "Notifications"
@@ -479,7 +485,10 @@
       "comment" : "Line Height section header"
     },
     "Link Color" : {
-      "comment" : "Link Color picker label"
+      "comment" : "Link Color (light) picker label"
+    },
+    "Link Color (Dark Mode)" : {
+      "comment" : "Link Color (dark) picker label"
     },
     "Link:" : {
       "comment" : "Link"
@@ -660,9 +669,6 @@
     "Preview" : {
       "comment" : "Preview\nPreview section header"
     },
-    "Preview reflects the current theme (%@) with your overrides applied on top." : {
-      "comment" : "Preview footer explaining theme + override layering"
-    },
     "Previous Article" : {
       "comment" : "Previous Article"
     },
@@ -683,6 +689,9 @@
     },
     "Recently Added" : {
       "comment" : "Recently Added pseudo-feed title"
+    },
+    "Reflects the current theme (%@) plus your overrides." : {
+      "comment" : "Preview footer explaining theme + override layering"
     },
     "Refresh" : {
       "comment" : "Refresh"
@@ -826,7 +835,10 @@
       "comment" : "Tag Display"
     },
     "Text Color" : {
-      "comment" : "Text Color picker label"
+      "comment" : "Text Color (light) picker label"
+    },
+    "Text Color (Dark Mode)" : {
+      "comment" : "Text Color (dark) picker label"
     },
     "Thanks to Sheila and my family; thanks to my friends in Seattle and around the globe; thanks to the ever-patient and ever-awesome NetNewsWire beta testers.\n\nThanks to [Gus Mueller](https://shapeof.com/) for [FMDB](https://github.com/ccgus/fmdb) by [Flying Meat Software](http://flyingmeat.com/). Thanks to [GitHub](https://github.com) and [Discourse](https://discourse.com) for making open source collaboration easy and fun. Thanks to [Ben Ubois](https://benubois.com/) at [Feedbin](https://feedbin.com) for all the extra help with syncing and article rendering — and [for hosting the server for the Reader view](https://feedbin.com/blog/2019/03/11/the-future-of-full-content/)." : {
       "comment" : "A list of credits for the app.",
