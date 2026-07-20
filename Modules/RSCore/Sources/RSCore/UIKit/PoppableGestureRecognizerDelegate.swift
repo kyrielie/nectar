@@ -14,14 +14,6 @@ import UIKit
 public final class PoppableGestureRecognizerDelegate: NSObject, UIGestureRecognizerDelegate {
     public weak var navigationController: UINavigationController?
 
-	/// Optional additional gate on top of the "is there something to pop
-	/// back to" check below. Set by callers (e.g. ArticleViewController) that
-	/// need to block the interactive pop gesture under some app-specific
-	/// condition -- RSCore itself has no notion of what that condition is,
-	/// so this is left as a closure rather than RSCore depending on an
-	/// app-level type.
-	public var isAdditionallyBlocked: (() -> Bool)?
-
 	/// Optional override for whether there's a logical "back" to go to.
 	/// Falls back to `navigationController.viewControllers.count > 1` when
 	/// nil. Callers whose navigation controller doesn't reflect the true
@@ -32,26 +24,16 @@ public final class PoppableGestureRecognizerDelegate: NSObject, UIGestureRecogni
 	public var canGoBack: (() -> Bool)?
 
 	public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-		let stackCount = navigationController?.viewControllers.count ?? 0
-		let hasBack = canGoBack?() ?? (stackCount > 1)
-		guard hasBack else {
-			print("PoppableGestureRecognizerDelegate: gestureRecognizerShouldBegin -> false (viewControllers.count=\(stackCount), canGoBack override \(canGoBack == nil ? "is nil" : "returned false"), navigationController is \(navigationController == nil ? "nil" : "set"), gestureRecognizer=\(gestureRecognizer), view=\(String(describing: gestureRecognizer.view)))")
-			return false
-		}
-		let blocked = isAdditionallyBlocked?() ?? false
-		print("PoppableGestureRecognizerDelegate: gestureRecognizerShouldBegin -> \(!blocked) (isAdditionallyBlocked closure \(isAdditionallyBlocked == nil ? "is nil" : "returned \(blocked)"), gestureRecognizer=\(gestureRecognizer), view=\(String(describing: gestureRecognizer.view)))")
-		return !blocked
+		let hasBack = canGoBack?() ?? ((navigationController?.viewControllers.count ?? 0) > 1)
+		return hasBack
     }
 
 	public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-		print("PoppableGestureRecognizerDelegate: shouldRecognizeSimultaneouslyWith -> true (gestureRecognizer=\(gestureRecognizer), otherGestureRecognizer=\(otherGestureRecognizer))")
 		return true
     }
 
 	public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-		let result = otherGestureRecognizer is UIPanGestureRecognizer
-		print("PoppableGestureRecognizerDelegate: shouldBeRequiredToFailBy -> \(result) (gestureRecognizer=\(gestureRecognizer), otherGestureRecognizer=\(otherGestureRecognizer))")
-		return result
+		return otherGestureRecognizer is UIPanGestureRecognizer
 	}
 }
 

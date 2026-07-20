@@ -317,6 +317,11 @@ final class WebViewController: UIViewController {
 		additionalSafeAreaInsets.bottom = 0
 		setBottomScrollEdgeEffectHidden(false)
 		configureContextMenuInteraction()
+		// setNavigationBarHidden/setToolbarHidden reset interactivePopGestureRecognizer's
+		// (and interactiveContentPopGestureRecognizer's) isEnabled back to true as a
+		// side effect, which silently overrides articleBackSwipeEnabled = false. Re-apply
+		// the gate immediately after so showing the bars doesn't re-enable back-swipe.
+		coordinator.applyArticleBackSwipeGating()
 	}
 
 	func hideBars() {
@@ -329,6 +334,7 @@ final class WebViewController: UIViewController {
 			navigationController?.setToolbarHidden(true, animated: true)
 			setBottomScrollEdgeEffectHidden(true)
 			configureContextMenuInteraction()
+			coordinator.applyArticleBackSwipeGating()
 		}
 	}
 
