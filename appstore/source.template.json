@@ -1,0 +1,30 @@
+{
+    "name": "Nectar",
+    "subtitle": "A feed reader.",
+    "description": "Nectar is a feed reader for iOS.",
+    "iconURL": "https://kyrielie.github.io/nectar/icon.png",
+    "website": "https://github.com/kyrielie/nectar",
+    "tintColor": "#4185A9",
+    "apps": [
+        {
+            "name": "Nectar",
+            "bundleIdentifier": "com.kyrielie.nectar",
+            "developerName": "kyrielie",
+            "subtitle": "A feed reader.",
+            "localizedDescription": "Nectar is a feed reader for iOS.",
+            "iconURL": "https://kyrielie.github.io/nectar/icon.png",
+            "tintColor": "#4185A9",
+            "category": "other",
+            "screenshots": [],
+            "appPermissions": {
+                "entitlements": [
+                    "keychain-access-groups"
+                ],
+                "privacy": {
+                    "NSPhotoLibraryAddUsageDescription": "Grant permission to save images from the article."
+                }
+            }
+        }
+    ],
+    "news": []
+}
