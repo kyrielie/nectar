@@ -522,50 +522,35 @@ struct SidebarItemNode: Hashable, Sendable {
 	/// the same instance, depending on split-view collapse state), and both the
 	/// edge (`interactivePopGestureRecognizer`) and content-area
 	/// (`interactiveContentPopGestureRecognizer`, iOS 26+) recognizers on each.
-	///
-	/// `isEnabled` is the single source of truth for this setting -- Apple's own
+	/// isEnabled is the single source of truth for this setting -- Apple's own
 	/// documentation says delegate-only vetoing isn't supported for
-	/// `interactiveContentPopGestureRecognizer`, so `PoppableGestureRecognizerDelegate`
+	/// interactiveContentPopGestureRecognizer, so PoppableGestureRecognizerDelegate
 	/// no longer tries to gate on the setting itself; it only answers "is there
-	/// something to go back to" (`canGoBack`).
+	/// something to go back to" (falling back to its default
+	/// viewControllers.count > 1 check).
+	///
+	/// mainTimelineViewController?.navigationController and
+	/// articleViewController?.navigationController are each column's own
+	/// inner navigation-controller wrapper, which UISplitViewController
+	/// creates around bare column content and which only ever contains that
+	/// column's single view controller. The navigation controller that
+	/// actually performs the push/pop when the split view is collapsed --
+	/// and whose interactivePopGestureRecognizer is the one the person
+	/// actually swipes -- is each of those wrappers' .parent. Gate that one.
 	///
 	/// This needs to be called any time the setting could have taken effect
 	/// without a view appearing/reappearing: when the Settings switch changes
-	/// (via `userDefaultsDidChange()`), and whenever `WebViewController`
-	/// shows/hides the toolbars, since `setNavigationBarHidden`/`setToolbarHidden`
-	/// reset `isEnabled` back to `true` as a side effect.
+	/// (via userDefaultsDidChange()), and whenever WebViewController
+	/// shows/hides the toolbars, since setNavigationBarHidden/setToolbarHidden
+	/// reset isEnabled back to true as a side effect.
 	func applyArticleBackSwipeGating() {
 		let allowed = AppDefaults.shared.articleBackSwipeEnabled
-		let navigationControllers = Set([mainTimelineViewController?.navigationController,
-										  articleViewController?.navigationController].compactMap { $0 })
-		Self.logger.debug("applyArticleBackSwipeGating: articleBackSwipeEnabled=\(allowed, privacy: .public) navControllerCount=\(navigationControllers.count, privacy: .public)")
+		let navigationControllers = Set([mainTimelineViewController?.navigationController?.parent as? UINavigationController,
+										  articleViewController?.navigationController?.parent as? UINavigationController].compactMap { $0 })
 		for navigationController in navigationControllers {
 			navigationController.interactivePopGestureRecognizer?.isEnabled = allowed
 			if #available(iOS 26, *) {
 				navigationController.interactiveContentPopGestureRecognizer?.isEnabled = allowed
-			}
-			let popEnabledNow = navigationController.interactivePopGestureRecognizer?.isEnabled
-			let contentPopEnabledNow: Bool?
-			if #available(iOS 26, *) {
-				contentPopEnabledNow = navigationController.interactiveContentPopGestureRecognizer?.isEnabled
-			} else {
-				contentPopEnabledNow = nil
-			}
-			Self.logger.debug("applyArticleBackSwipeGating: immediately after set -- nav=\(String(describing: navigationController), privacy: .public) interactivePopGestureRecognizer.isEnabled=\(String(describing: popEnabledNow), privacy: .public) interactiveContentPopGestureRecognizer.isEnabled=\(String(describing: contentPopEnabledNow), privacy: .public)")
-
-			// Check again after a beat to see whether something (e.g. the tail end of a
-			// setNavigationBarHidden/setToolbarHidden animation) silently resets isEnabled
-			// out from under us after this function returns.
-			DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak navigationController] in
-				guard let navigationController else { return }
-				let popEnabledLater = navigationController.interactivePopGestureRecognizer?.isEnabled
-				let contentPopEnabledLater: Bool?
-				if #available(iOS 26, *) {
-					contentPopEnabledLater = navigationController.interactiveContentPopGestureRecognizer?.isEnabled
-				} else {
-					contentPopEnabledLater = nil
-				}
-				Self.logger.debug("applyArticleBackSwipeGating: 0.5s later -- nav=\(String(describing: navigationController), privacy: .public) interactivePopGestureRecognizer.isEnabled=\(String(describing: popEnabledLater), privacy: .public) interactiveContentPopGestureRecognizer.isEnabled=\(String(describing: contentPopEnabledLater), privacy: .public)")
 			}
 		}
 	}

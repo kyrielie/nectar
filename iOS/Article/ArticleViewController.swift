@@ -185,19 +185,19 @@ final class ArticleViewController: UIViewController {
 		}
 		coordinator.isArticleViewControllerPending = false
 		searchBar.shouldBeginEditing = true
-		if let navigationController {
-			poppableDelegate.navigationController = navigationController
-			// This column's own navigationController only ever contains the
-			// article itself (viewControllers.count == 1), even when Feed and
-			// Timeline are visually behind it, because ArticleViewController is
-			// shown via rootSplitViewController.show(.secondary) rather than a
-			// push onto a shared stack. An article only ever appears here after
-			// being selected from a timeline, so whenever the split view is
-			// collapsed there's always a timeline to go back to.
-			poppableDelegate.canGoBack = { [weak self] in
-				self?.coordinator.isRootSplitCollapsed ?? false
-			}
-			navigationController.interactivePopGestureRecognizer?.delegate = poppableDelegate
+		if let parentNavController = navigationController?.parent as? UINavigationController {
+			poppableDelegate.navigationController = parentNavController
+			// ArticleViewController's own navigationController is an inner,
+			// per-column wrapper that UISplitViewController creates around
+			// each column's bare content controller; it only ever contains
+			// the article itself (viewControllers.count == 1), even when
+			// Feed and Timeline are visually behind it. The navigation
+			// controller that actually performs the push/pop when the split
+			// view is collapsed is reached via .parent -- this is also how
+			// upstream NetNewsWire resolves it, and it's what makes canGoBack
+			// able to fall back to the default viewControllers.count > 1
+			// check instead of needing an override.
+			parentNavController.interactivePopGestureRecognizer?.delegate = poppableDelegate
 			// iOS 26 splits the pop gesture in two: interactivePopGestureRecognizer stays
 			// edge-only, while the new interactiveContentPopGestureRecognizer recognizes
 			// swipe-to-pop anywhere in the content area. poppableDelegate needs to be
@@ -207,11 +207,10 @@ final class ArticleViewController: UIViewController {
 			// interactiveContentPopGestureRecognizer's delegate as only being for
 			// setting up failure requirements, not vetoing recognition.
 			if #available(iOS 26, *) {
-				navigationController.interactiveContentPopGestureRecognizer?.delegate = poppableDelegate
+				parentNavController.interactiveContentPopGestureRecognizer?.delegate = poppableDelegate
 			}
 			coordinator.applyArticleBackSwipeGating()
-			Self.logger.debug("viewDidAppear: applied gating, navigationController.viewControllers.count=\(navigationController.viewControllers.count, privacy: .public)")
-			configureContentPopFailureRequirementIfNeeded(on: navigationController)
+			configureContentPopFailureRequirementIfNeeded(on: parentNavController)
 		}
 	}
 

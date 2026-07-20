@@ -308,7 +308,6 @@ final class WebViewController: UIViewController {
 	}
 
 	func showBars(animated: Bool = true) {
-		Self.logger.debug("showBars: called, animated=\(animated, privacy: .public)")
 		AppDefaults.shared.articleFullscreenEnabled = false
 		coordinator.showStatusBar()
 		topShowBarsViewConstraint?.constant = 0
@@ -323,12 +322,10 @@ final class WebViewController: UIViewController {
 		// side effect, which silently overrides articleBackSwipeEnabled = false. Re-apply
 		// the gate immediately after so showing the bars doesn't re-enable back-swipe.
 		coordinator.applyArticleBackSwipeGating()
-		Self.logger.debug("showBars: returned from applyArticleBackSwipeGating")
 	}
 
 	func hideBars() {
 		if isFullScreenAvailable {
-			Self.logger.debug("hideBars: called")
 			AppDefaults.shared.articleFullscreenEnabled = true
 			coordinator.hideStatusBar()
 			topShowBarsViewConstraint?.constant = -44.0
@@ -338,7 +335,6 @@ final class WebViewController: UIViewController {
 			setBottomScrollEdgeEffectHidden(true)
 			configureContextMenuInteraction()
 			coordinator.applyArticleBackSwipeGating()
-			Self.logger.debug("hideBars: returned from applyArticleBackSwipeGating")
 		}
 	}
 
