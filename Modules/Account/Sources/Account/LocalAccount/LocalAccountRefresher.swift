@@ -511,11 +511,12 @@ import os
 				return
 			}
 
-			let (parsedFeed, feedIsPartial) = await self.mergedParsedFeed(startingWith: firstPageParsedFeed, originalURL: url, owner: activityOwner, activityKind: activityKind)
+			let (parsedFeed, feedIsPartial, cutoffReason) = await self.mergedParsedFeed(startingWith: firstPageParsedFeed, originalURL: url, owner: activityOwner, activityKind: activityKind)
+			let cutoffSuffix = cutoffReason.map { " — \($0.logMessage)" } ?? ""
 
 			guard let account = feed.account else {
 				if let activityOwner {
-					ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: dataSizeMessage)
+					ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: dataSizeMessage + cutoffSuffix)
 				}
 				return
 			}
@@ -542,7 +543,7 @@ import os
 			}
 
 			if let activityOwner {
-				ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: dataSizeMessage)
+				ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: dataSizeMessage + cutoffSuffix)
 			}
 
 			self.delegate?.localAccountRefresher(self, articleChanges: articleChanges)
@@ -616,11 +617,36 @@ import os
 	/// the local database.
 	private static let maxPaginationPages = 200
 
-	private func mergedParsedFeed(startingWith parsedFeed: ParsedFeed, originalURL: URL, owner: ActivityOwner?, activityKind: ActivityKind) async -> (feed: ParsedFeed, isPartial: Bool) {
+	/// Why pagination stopped short of a `nil` `next_url` -- distinct from
+	/// `isPartial`, which only says *that* a feed came back incomplete.
+	/// Surfaced in the Activity Log completion message so a cut-off feed
+	/// is visible there and not just in `os_log`.
+	private enum PaginationCutoffReason {
+		case deadlineReached(afterPages: Int)
+		case pageFetchFailed(page: Int)
+		case pageParseFailed(page: Int)
+		case pageLimitReached(limit: Int)
+
+		var logMessage: String {
+			switch self {
+			case .deadlineReached(let afterPages):
+				return "stopped early after \(afterPages) page\(afterPages == 1 ? "" : "s") — background time limit reached"
+			case .pageFetchFailed(let page):
+				return "stopped — page \(page) fetch failed"
+			case .pageParseFailed(let page):
+				return "stopped — page \(page) failed to parse"
+			case .pageLimitReached(let limit):
+				return "stopped — hit \(limit)-page safety limit"
+			}
+		}
+	}
+
+	private func mergedParsedFeed(startingWith parsedFeed: ParsedFeed, originalURL: URL, owner: ActivityOwner?, activityKind: ActivityKind) async -> (feed: ParsedFeed, isPartial: Bool, cutoffReason: PaginationCutoffReason?) {
 		var mergedItems = parsedFeed.items
 		var currentNextURLString = parsedFeed.nextURL
 		var pageCount = 1
 		var isPartial = false
+		var cutoffReason: PaginationCutoffReason?
 
 		while let nextURLString = currentNextURLString,
 			  let nextURL = URL(string: nextURLString),
@@ -639,6 +665,7 @@ import os
 				Self.logger.notice("LocalAccountRefresher: page fetch deadline reached for \(originalURL.absoluteString) after \(pageCount) page(s) -- stopping early")
 				interruptedFeedURLs.insert(originalURL.absoluteString)
 				isPartial = true
+				cutoffReason = .deadlineReached(afterPages: pageCount)
 				break
 			}
 
@@ -656,6 +683,7 @@ import os
 					let bodyPreview = String(data: pageData.prefix(500), encoding: .utf8) ?? "<non-UTF8 body, \(pageData.count) bytes>"
 					Self.logger.error("LocalAccountRefresher: next_url page \(pageNumber) fetch failed for \(nextURL.absoluteString) -- status: \(statusCode.map(String.init) ?? "none"), body: \(bodyPreview)")
 					isPartial = true
+					cutoffReason = .pageFetchFailed(page: pageNumber)
 					break
 				}
 				// Use originalURL (the feed's base URL), not nextURL (this page's
@@ -674,14 +702,20 @@ import os
 				guard let pageParsedFeed = try await FeedParser.parse(pageParserData) else {
 					Self.logger.error("LocalAccountRefresher: next_url page \(pageNumber) parse returned nil for \(nextURL.absoluteString)")
 					isPartial = true
+					cutoffReason = .pageParseFailed(page: pageNumber)
 					break
 				}
 				mergedItems.formUnion(pageParsedFeed.items)
 				currentNextURLString = pageParsedFeed.nextURL
 				pageCount += 1
+				if let owner {
+					let detail = ActivityLog.shared.nextTaskNumberString()
+					ActivityLog.shared.logCompletedActivity(owner: owner, kind: activityKind, detail: detail, message: "Page \(pageNumber) fetched — \(pageParsedFeed.items.count) item\(pageParsedFeed.items.count == 1 ? "" : "s"), \(mergedItems.count) total so far")
+				}
 			} catch {
 				Self.logger.error("LocalAccountRefresher: next_url page \(pageNumber) fetch error for \(nextURL.absoluteString): \(error.localizedDescription)")
 				isPartial = true
+				cutoffReason = .pageFetchFailed(page: pageNumber)
 				break
 			}
 		}
@@ -689,16 +723,17 @@ import os
 		if pageCount >= Self.maxPaginationPages && currentNextURLString != nil {
 			Self.logger.error("LocalAccountRefresher: hit maxPaginationPages (\(Self.maxPaginationPages)) for \(originalURL.absoluteString) with more pages remaining -- treating as partial")
 			isPartial = true
+			cutoffReason = .pageLimitReached(limit: Self.maxPaginationPages)
 		}
 
 		guard pageCount > 1 else {
-			return (parsedFeed, isPartial)
+			return (parsedFeed, isPartial, cutoffReason)
 		}
 
 		Self.logger.notice("LocalAccountRefresher: merged \(pageCount) next_url pages for \(originalURL.absoluteString), \(mergedItems.count) total items, isPartial: \(isPartial)")
 
 		let mergedFeed = ParsedFeed(type: parsedFeed.type, title: parsedFeed.title, homePageURL: parsedFeed.homePageURL, feedURL: parsedFeed.feedURL, language: parsedFeed.language, feedDescription: parsedFeed.feedDescription, nextURL: nil, iconURL: parsedFeed.iconURL, faviconURL: parsedFeed.faviconURL, authors: parsedFeed.authors, expired: parsedFeed.expired, hubs: parsedFeed.hubs, items: mergedItems)
-		return (mergedFeed, isPartial)
+		return (mergedFeed, isPartial, cutoffReason)
 	}
 }
 
