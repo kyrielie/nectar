@@ -66,6 +66,10 @@ struct DatabaseKey {
 	// auto-delete" set.
 	static let loved = "loved"
 
+	// Last Opened smart feed: bookState-primary, statuses-propagated, same
+	// tier as scrollPosition/loved above.
+	static let lastOpenedAt = "lastOpenedAt"
+
 	// BookReadState (Phase 6 fork addition)
 	static let state = "state"
 	static let updatedAt = "updatedAt"

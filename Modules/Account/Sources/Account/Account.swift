@@ -93,6 +93,7 @@ public enum FetchType {
 	case unread(_: Int? = nil)
 	case read(_: Int? = nil)
 	case today(_: Int? = nil)
+	case lastOpened(_: Int? = nil)
 	case folder(Folder, Bool)
 	case feed(Feed)
 	case articleIDs(Set<String>)
@@ -846,6 +847,8 @@ public enum FetchType {
 			return _fetchReadArticles(limit: limit)
 		case .today(let limit):
 			return _fetchTodayArticles(limit: limit)
+		case .lastOpened(let limit):
+			return _fetchLastOpenedArticles(limit: limit)
 		case .folder(let folder, let readFilter):
 			if readFilter {
 				return _fetchUnreadArticles(container: folder)
@@ -875,6 +878,8 @@ public enum FetchType {
 			return await _fetchReadArticlesAsync(limit: limit)
 		case .today(let limit):
 			return await _fetchTodayArticlesAsync(limit: limit)
+		case .lastOpened(let limit):
+			return await _fetchLastOpenedArticlesAsync(limit: limit)
 		case .folder(let folder, let readFilter):
 			if readFilter {
 				return await _fetchUnreadArticlesAsync(container: folder)
@@ -1081,6 +1086,19 @@ public enum FetchType {
 
 	public func fetchScrollPosition(forArticleID articleID: String) async -> Double {
 		await database.fetchScrollPositionAsync(articleID: articleID)
+	}
+
+	// MARK: - Last Opened (Last Opened smart feed)
+
+	/// Records that this book was just opened into the reader. bookKey-keyed and
+	/// shared across every duplicate copy, same as read/starred/loved/
+	/// scrollPosition -- opening any copy bumps the whole book. Does not send
+	/// .StatusesDidChange (see StatusesTable.setLastOpenedAt); SceneCoordinator
+	/// is responsible for deciding *whether* to call this at all (see
+	/// currentArticle's didSet) so that opening a book from the Last Opened feed
+	/// itself doesn't reorder that feed.
+	public func recordBookOpened(articleID: String) async {
+		await database.recordBookOpenedAsync(articleID: articleID)
 	}
 
 	// MARK: - Reading Progress (Phase A1)
@@ -1317,6 +1335,16 @@ private extension Account {
 
 	func _fetchLovedArticlesAsync(limit: Int? = nil) async -> Set<Article> {
 		await database.fetchedLovedArticlesAsync(feedIDs: flattenedFeedsIDs, limit: limit)
+	}
+
+	// MARK: - Last Opened Articles
+
+	func _fetchLastOpenedArticles(limit: Int? = nil) -> Set<Article> {
+		database.fetchLastOpenedArticles(feedIDs: flattenedFeedsIDs, limit: limit)
+	}
+
+	func _fetchLastOpenedArticlesAsync(limit: Int? = nil) async -> Set<Article> {
+		await database.fetchedLastOpenedArticlesAsync(feedIDs: flattenedFeedsIDs, limit: limit)
 	}
 
 	// MARK: - Read Articles

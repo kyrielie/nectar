@@ -139,6 +139,19 @@ public struct ArticleCounts: Sendable {
 				database.executeStatements("ALTER TABLE statuses add column loved BOOLEAN NOT NULL DEFAULT 0;")
 			}
 
+			// Last Opened smart feed: per-articleID denormalized copy of bookState's
+			// lastOpenedAt, propagated the same way loved/starred are, so the
+			// timeline can query/order by it with a plain WHERE/ORDER BY -- same
+			// reasoning as the loved column above.
+			if !self.statusesTableContainsLastOpenedAtColumn(database) {
+				Self.logger.debug("ArticlesDatabase: adding lastOpenedAt column (statuses) \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE statuses add column lastOpenedAt DATE;")
+			}
+			if !self.bookStateTableContainsLastOpenedAtColumn(database) {
+				Self.logger.debug("ArticlesDatabase: adding lastOpenedAt column (bookState) \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE bookState add column lastOpenedAt DATE;")
+			}
+
 			// Phase 6 (book-level read state): identity key used to dedup a book's
 			// read state across collection feeds and re-subscriptions. Nullable --
 			// existing rows read back as nil and Article falls back to uniqueID
@@ -262,6 +275,17 @@ public struct ArticleCounts: Sendable {
 		return articlesTable.fetchLovedArticlesCount(feedIDs)
 	}
 
+	// MARK: - Fetching Last Opened Articles (Last Opened smart feed)
+	//
+	// No fetchLastOpenedArticlesCount -- unlike Read/Loved/Read Later, the
+	// badge is suppressed rather than repurposed (see LastOpenedFeedDelegate),
+	// since "10" is a constant cap, not information about the library.
+
+	public func fetchLastOpenedArticles(feedIDs: Set<String>, limit: Int? = nil) -> Set<Article> {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		return articlesTable.fetchLastOpenedArticles(feedIDs, limit)
+	}
+
 	/// Returns aggregate article counts (total, unread, starred, statuses) for the given feeds.
 	public func fetchArticleCountsAsync(feedIDs: Set<String>) async -> ArticleCounts {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
@@ -345,6 +369,14 @@ public struct ArticleCounts: Sendable {
 	public func fetchedLovedArticlesAsync(feedIDs: Set<String>, limit: Int? = nil) async -> Set<Article> {
 		await withCheckedContinuation { continuation in
 			_fetchedLovedArticlesAsync(feedIDs: feedIDs, limit: limit) { articles in
+				continuation.resume(returning: articles)
+			}
+		}
+	}
+
+	public func fetchedLastOpenedArticlesAsync(feedIDs: Set<String>, limit: Int? = nil) async -> Set<Article> {
+		await withCheckedContinuation { continuation in
+			_fetchedLastOpenedArticlesAsync(feedIDs: feedIDs, limit: limit) { articles in
 				continuation.resume(returning: articles)
 			}
 		}
@@ -577,6 +609,21 @@ public struct ArticleCounts: Sendable {
 		}
 	}
 
+	/// Records that this book was just opened into the reader. bookKey-keyed and
+	/// shared across every duplicate copy, same as read/starred/loved/
+	/// scrollPosition -- opening any copy bumps the whole book. Does not send
+	/// .StatusesDidChange (see StatusesTable.setLastOpenedAt); SceneCoordinator
+	/// is responsible for deciding *whether* to call this at all (see
+	/// currentArticle's didSet) so that opening a book from the Last Opened feed
+	/// itself doesn't reorder that feed.
+	public func recordBookOpenedAsync(articleID: String) async {
+		await withCheckedContinuation { continuation in
+			_recordBookOpened(articleID: articleID) {
+				continuation.resume()
+			}
+		}
+	}
+
 	/// Fraction (0...1) of the article read (Phase A1). No fetch counterpart is needed:
 	/// readingProgress is loaded in bulk as part of ArticleStatus (see StatusesTable),
 	/// the same path `read`/`starred` already use, rather than a per-article async fetch.
@@ -621,9 +668,9 @@ private extension ArticlesDatabase {
 	static let tableCreationStatements = """
 	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, series TEXT);
 
-	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOLEAN NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL);
+	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOLEAN NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE);
 
-	CREATE TABLE if not EXISTS bookState (bookKey TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOL NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, updatedAt DATE NOT NULL);
+	CREATE TABLE if not EXISTS bookState (bookKey TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOL NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE, updatedAt DATE NOT NULL);
 
 	CREATE INDEX if not EXISTS articles_feedID_datePublished_articleID on articles (feedID, datePublished, articleID);
 
@@ -672,6 +719,28 @@ private extension ArticlesDatabase {
 			return false
 		}
 		return columnMap["loved"] != nil
+	}
+
+	/// Same approach as `statusesTableContainsScrollPositionColumn` above.
+	nonisolated func statusesTableContainsLastOpenedAtColumn(_ database: FMDatabase) -> Bool {
+		guard let resultSet = database.executeQuery("select * from statuses limit 1;", withArgumentsIn: nil),
+			  let columnMap = resultSet.columnNameToIndexMap else {
+			return false
+		}
+		return columnMap["lastopenedat"] != nil
+	}
+
+	/// Same approach as `statusesTableContainsScrollPositionColumn` above, against
+	/// bookState instead. ArticlesDatabase only holds a reference to articlesTable
+	/// (whose containsColumn is hardwired to the "articles" table), not
+	/// bookStateTable, so this is duplicated here rather than plumbed through --
+	/// same reasoning as the statuses-table helpers above.
+	nonisolated func bookStateTableContainsLastOpenedAtColumn(_ database: FMDatabase) -> Bool {
+		guard let resultSet = database.executeQuery("select * from bookState limit 1;", withArgumentsIn: nil),
+			  let columnMap = resultSet.columnNameToIndexMap else {
+			return false
+		}
+		return columnMap["lastopenedat"] != nil
 	}
 
 	// MARK: - Operations
@@ -749,6 +818,11 @@ private extension ArticlesDatabase {
 		articlesTable.saveScrollPosition(scrollPosition, articleID: articleID, completion)
 	}
 
+	func _recordBookOpened(articleID: String, completion: @escaping DatabaseCompletionBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.recordBookOpened(articleID: articleID, completion)
+	}
+
 	func _fetchScrollPosition(articleID: String, completion: @escaping @Sendable (Double) -> Void) {
 		articlesTable.fetchScrollPosition(articleID: articleID, completion)
 	}
@@ -791,6 +865,11 @@ private extension ArticlesDatabase {
 	func _fetchedLovedArticlesAsync(feedIDs: Set<String>, limit: Int? = nil, _ completion: @escaping ArticleSetResultBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.fetchLovedArticlesAsync(feedIDs, limit, completion)
+	}
+
+	func _fetchedLastOpenedArticlesAsync(feedIDs: Set<String>, limit: Int? = nil, _ completion: @escaping ArticleSetResultBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.fetchLastOpenedArticlesAsync(feedIDs, limit, completion)
 	}
 
 	func _fetchedReadArticlesAsync(feedIDs: Set<String>, limit: Int? = nil, _ completion: @escaping ArticleSetResultBlock) {

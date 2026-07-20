@@ -237,6 +237,29 @@ final class StatusesTable: DatabaseTable, Sendable {
 		}
 		updateRowsWithValue(NSNumber(value: readingProgress), valueKey: DatabaseKey.readingProgress, whereKey: DatabaseKey.articleID, matches: [articleID], database: database)
 	}
+
+	// MARK: - Last opened (Last Opened smart feed)
+
+	/// Denormalized propagation target for bookState.lastOpenedAt -- see
+	/// ArticlesTable.recordBookOpened. Local UI state, like scrollPosition;
+	/// not part of the ArticleStatus.Key/mark system and does not send
+	/// .StatusesDidChange (a timeline resort on every book open would be
+	/// unwanted churn for every feed except Last Opened itself, and Last
+	/// Opened's SmartFeed already re-fetches on a normal selection change).
+	/// Also mirrored onto any cached ArticleStatus instances, same reasoning
+	/// as saveReadingProgress above, so SceneCoordinator's fixed sort (see
+	/// article.status.lastOpenedAt) sees the update without a DB round trip.
+	func setLastOpenedAt(_ date: Date, articleIDs: Set<String>, _ database: FMDatabase) {
+		guard !articleIDs.isEmpty else {
+			return
+		}
+		for articleID in articleIDs {
+			if let status = cache[articleID] {
+				status.lastOpenedAt = date
+			}
+		}
+		updateRowsWithValue(date, valueKey: DatabaseKey.lastOpenedAt, whereKey: DatabaseKey.articleID, matches: Array(articleIDs), database: database)
+	}
 }
 
 // MARK: - Private

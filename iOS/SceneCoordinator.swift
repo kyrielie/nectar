@@ -270,6 +270,18 @@ struct SidebarItemNode: Hashable, Sendable {
 		didSet {
 			if let article = currentArticle {
 				AppDefaults.shared.selectedArticle = ArticleSpecifier(article: article)
+
+				// Opening a book from the Last Opened feed itself must not
+				// reorder that feed -- e.g. opening row 4 becoming row 1 the
+				// next time you glance at it is disorienting, and defeats the
+				// point of a stable "what did I last read" list. Every other
+				// entry point (a real feed, Unread, Starred, Loved, Read,
+				// search, etc.) still records normally.
+				if timelineFeed?.forcesLastOpenedSort != true, let account = article.account {
+					Task {
+						await account.recordBookOpened(articleID: article.articleID)
+					}
+				}
 			} else {
 				AppDefaults.shared.selectedArticle = nil
 			}
@@ -2247,7 +2259,18 @@ private extension SceneCoordinator {
 	}
 
 	func replaceArticles(with unsortedArticles: Set<Article>, animated: Bool) {
-		let sortedArticles = Array(unsortedArticles).sorted(by: sortField, sortDirection: sortDirection, groupByFeed: groupByFeed)
+		let sortedArticles: ArticleArray
+		if timelineFeed?.forcesLastOpenedSort == true {
+			// Fixed order, ignoring AppDefaults.shared.timelineSortField/
+			// timelineSortDirection entirely -- this feed's entire reason to
+			// exist is "most recently opened first," regardless of whatever
+			// the user has the Timeline Layout sort set to elsewhere.
+			sortedArticles = Array(unsortedArticles).sorted {
+				($0.status.lastOpenedAt ?? .distantPast) > ($1.status.lastOpenedAt ?? .distantPast)
+			}
+		} else {
+			sortedArticles = Array(unsortedArticles).sorted(by: sortField, sortDirection: sortDirection, groupByFeed: groupByFeed)
+		}
 		replaceArticles(with: sortedArticles, animated: animated)
 	}
 

@@ -25,7 +25,7 @@
 //  copy is immediately the state for every copy. This is deliberate -- it's
 //  the same book.
 
-// CREATE TABLE if not EXISTS bookState (bookKey TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOL NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, updatedAt DATE NOT NULL);
+// CREATE TABLE if not EXISTS bookState (bookKey TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOL NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE, updatedAt DATE NOT NULL);
 
 import Foundation
 import RSDatabase
@@ -41,6 +41,7 @@ struct BookState: Sendable {
 	var loved: Bool
 	var scrollPosition: Double
 	var readingProgress: Double?
+	var lastOpenedAt: Date?
 }
 
 final class BookStateTable: DatabaseTable, Sendable {
@@ -71,7 +72,8 @@ final class BookStateTable: DatabaseTable, Sendable {
 				starred: resultSet.bool(forColumn: DatabaseKey.starred),
 				loved: resultSet.bool(forColumn: DatabaseKey.loved),
 				scrollPosition: resultSet.double(forColumn: DatabaseKey.scrollPosition),
-				readingProgress: resultSet.columnIsNull(DatabaseKey.readingProgress) ? nil : resultSet.double(forColumn: DatabaseKey.readingProgress)
+				readingProgress: resultSet.columnIsNull(DatabaseKey.readingProgress) ? nil : resultSet.double(forColumn: DatabaseKey.readingProgress),
+				lastOpenedAt: resultSet.columnIsNull(DatabaseKey.lastOpenedAt) ? nil : resultSet.date(forColumn: DatabaseKey.lastOpenedAt)
 			)
 		}
 		return d
@@ -106,6 +108,12 @@ final class BookStateTable: DatabaseTable, Sendable {
 		upsert(bookKeys: [bookKey], column: DatabaseKey.scrollPosition, doubleValue: value, database)
 	}
 
+	// MARK: - Last opened (Last Opened smart feed)
+
+	func setLastOpenedAt(_ date: Date, bookKey: String, _ database: FMDatabase) {
+		upsert(bookKeys: [bookKey], column: DatabaseKey.lastOpenedAt, dateValue: date, database)
+	}
+
 	// MARK: - Private
 
 	/// Partial upsert of a single boolean column, leaving every other column on an
@@ -136,6 +144,23 @@ final class BookStateTable: DatabaseTable, Sendable {
 			database.executeUpdate(
 				"INSERT INTO \(name) (\(DatabaseKey.bookKey), \(column), \(DatabaseKey.updatedAt)) VALUES (?, ?, ?) ON CONFLICT(\(DatabaseKey.bookKey)) DO UPDATE SET \(column) = excluded.\(column), \(DatabaseKey.updatedAt) = excluded.\(DatabaseKey.updatedAt)",
 				withArgumentsIn: [bookKey, doubleValue, now]
+			)
+		}
+	}
+
+	/// Same shape as the bool/double overloads above, for a Date-typed column
+	/// (lastOpenedAt). Bound directly as a Date, matching how dateArrived is
+	/// bound elsewhere in this codebase (see ArticlesTable's dateArrived
+	/// filters) rather than converting to a raw timeIntervalSince1970 first.
+	private func upsert(bookKeys: Set<String>, column: String, dateValue: Date, _ database: FMDatabase) {
+		guard !bookKeys.isEmpty else {
+			return
+		}
+		let now = Date()
+		for bookKey in bookKeys {
+			database.executeUpdate(
+				"INSERT INTO \(name) (\(DatabaseKey.bookKey), \(column), \(DatabaseKey.updatedAt)) VALUES (?, ?, ?) ON CONFLICT(\(DatabaseKey.bookKey)) DO UPDATE SET \(column) = excluded.\(column), \(DatabaseKey.updatedAt) = excluded.\(DatabaseKey.updatedAt)",
+				withArgumentsIn: [bookKey, dateValue, now]
 			)
 		}
 	}

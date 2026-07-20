@@ -20,6 +20,15 @@ import Images
 		return .none
 	}
 
+	// True only for the Last Opened feed -- see SceneCoordinator.replaceArticles
+	// (fixed most-recently-opened-first order, bypassing sortField/sortDirection)
+	// and SceneCoordinator.currentArticle's didSet (suppresses recordBookOpened
+	// when the book was opened from this feed, so opening row 4 doesn't jump it
+	// to row 1 in the same list you're looking at).
+	public var forcesLastOpenedSort: Bool {
+		delegate is LastOpenedFeedDelegate
+	}
+
 	var sidebarItemID: SidebarItemIdentifier? {
 		delegate.sidebarItemID
 	}
