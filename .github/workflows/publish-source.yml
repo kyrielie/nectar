@@ -54,6 +54,11 @@ jobs:
           ref: ${{ steps.release.outputs.tag_name }}
           path: repo
 
+      - name: Checkout main (scripts and templates)
+        uses: actions/checkout@v5
+        with:
+          path: main
+
       - name: Select Xcode 26.3
         run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
 
@@ -110,7 +115,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -d pages ]; then
+          if [ ! -d pages/.git ]; then
+            rm -rf pages
             mkdir pages
             (cd pages && git init -b gh-pages)
           fi
@@ -133,8 +139,8 @@ jobs:
             existing_arg="--existing=pages/source.json"
           fi
 
-          python3 repo/scripts/update_source.py \
-            --template=repo/appstore/source.template.json \
+          python3 main/scripts/update_source.py \
+            --template=main/appstore/source.template.json \
             $existing_arg \
             --output=pages/source.json
 
@@ -142,10 +148,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp repo/appstore/icon.png pages/icon.png
+          cp main/appstore/icon.png pages/icon.png
           rm -rf pages/screenshots
-          if [ -d repo/appstore/screenshots ] && [ "$(ls -A repo/appstore/screenshots 2>/dev/null)" ]; then
-            cp -R repo/appstore/screenshots pages/screenshots
+          if [ -d main/appstore/screenshots ] && [ "$(ls -A main/appstore/screenshots 2>/dev/null)" ]; then
+            cp -R main/appstore/screenshots pages/screenshots
           fi
 
       - name: Commit and push gh-pages
