@@ -14,10 +14,8 @@ struct ErrorLogView: View {
 
 	@State private var entries = [ErrorLogEntry]()
 	@State private var plainText = ""
-	@State private var showHelp = false
 
 	private static let maxEntries = 200
-	private static let helpURL = URL(string: "https://netnewswire.com/help/error-log.html")!
 
 	var body: some View {
 		VStack(spacing: 0) {
@@ -36,7 +34,7 @@ struct ErrorLogView: View {
 				}
 			}
 			Divider()
-			helpLinkFooter
+			helpFooter
 		}
 		.navigationTitle("Error Log")
 		.toolbar {
@@ -46,9 +44,6 @@ struct ErrorLogView: View {
 				}
 				.disabled(entries.isEmpty)
 			}
-		}
-		.sheet(isPresented: $showHelp) {
-			SafariView(url: Self.helpURL)
 		}
 		.task {
 			let allEntries = await AccountManager.shared.errorLogDatabase.allEntries()
@@ -74,13 +69,12 @@ struct ErrorLogView: View {
 			.padding()
 	}
 
-	private var helpLinkFooter: some View {
-		Button(NSLocalizedString("Error Log Help", comment: "Help link")) {
-			showHelp = true
-		}
-		.font(.subheadline)
-		.frame(maxWidth: .infinity)
-		.padding(.vertical, 12)
+	private var helpFooter: some View {
+		Text("Recent errors from syncing, feed downloads, keychain access, and other operations, with the account, operation, and error message for each.", comment: "Error Log explainer")
+			.font(.footnote)
+			.foregroundStyle(.secondary)
+			.frame(maxWidth: .infinity, alignment: .leading)
+			.padding(.vertical, 12)
 	}
 }
 

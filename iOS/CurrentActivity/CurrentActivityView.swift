@@ -11,11 +11,8 @@ import ActivityLog
 
 struct CurrentActivityView: View {
 
-	private static let helpURL = URL(string: "https://netnewswire.com/help/current-activity.html")!
-
 	@State private var model = CurrentActivityViewModel()
 	@State private var activities = [Activity]()
-	@State private var showHelp = false
 	@Environment(\.dismiss) private var dismiss
 
 	var body: some View {
@@ -33,7 +30,7 @@ struct CurrentActivityView: View {
 
 			Section {
 			} footer: {
-				helpLinkFooter
+				helpFooter
 			}
 		}
 		.navigationTitle(NSLocalizedString("Current Activity", comment: "Current Activity"))
@@ -53,9 +50,6 @@ struct CurrentActivityView: View {
 				}
 			}
 		}
-		.sheet(isPresented: $showHelp) {
-			SafariView(url: Self.helpURL)
-		}
 		.onAppear {
 			model.displayedActivitiesDidChange = {
 				activities = model.displayedActivities
@@ -72,13 +66,12 @@ struct CurrentActivityView: View {
 
 private extension CurrentActivityView {
 
-	var helpLinkFooter: some View {
-		Button(NSLocalizedString("Current Activity Help", comment: "Help link")) {
-			showHelp = true
-		}
-		.font(.subheadline)
-		.frame(maxWidth: .infinity)
-		.padding(.top, 8)
+	var helpFooter: some View {
+		Text("Shows what the app is doing right now — refreshing feeds, syncing statuses, downloading favicons and images, and more. Each item clears a couple seconds after it finishes.", comment: "Current Activity explainer")
+			.font(.footnote)
+			.foregroundStyle(.secondary)
+			.frame(maxWidth: .infinity, alignment: .leading)
+			.padding(.top, 8)
 	}
 
 	func activityRow(_ activity: Activity) -> some View {

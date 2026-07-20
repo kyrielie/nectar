@@ -11,13 +11,10 @@ import RSCore
 
 struct DinosaursView: View {
 
-	private static let helpURL = URL(string: "https://netnewswire.com/help/dinosaurs.html")!
-
 	// MARK: State
 	@State private var model = DinosaursViewModel()
 	@State private var dinosaurPendingDeletion: DinosaurRow?
 	@State private var showDeleteConfirmation = false
-	@State private var showHelp = false
 	@State private var homePageURL: HomePageURL?
 
 	// MARK: Constants
@@ -98,7 +95,7 @@ struct DinosaursView: View {
 
 			Section {
 			} footer: {
-				helpLinkFooter
+				helpFooter
 			}
 		}
 		.navigationTitle("🦖 Dinosaurs")
@@ -106,9 +103,6 @@ struct DinosaursView: View {
 		.task {
 			model.sortBy(.lastArticleDate, ascending: true)
 			await model.refresh()
-		}
-		.sheet(isPresented: $showHelp) {
-			SafariView(url: Self.helpURL)
 		}
 		.sheet(item: $homePageURL) { homePageURL in
 			SafariView(url: homePageURL.url)
@@ -140,13 +134,12 @@ struct DinosaursView: View {
 
 private extension DinosaursView {
 
-	var helpLinkFooter: some View {
-		Button(NSLocalizedString("Dinosaurs Help", comment: "Help link")) {
-			showHelp = true
-		}
-		.font(.subheadline)
-		.frame(maxWidth: .infinity)
-		.padding(.top, 8)
+	var helpFooter: some View {
+		Text("Lists feeds with no recent article, based on the response code and date the app last saw for each. Ambrosia feeds are ordered by AO3 publish date, so a stale-looking feed usually just means no new or updated work has posted — not that anything is broken.", comment: "Dinosaurs explainer")
+			.font(.footnote)
+			.foregroundStyle(.secondary)
+			.frame(maxWidth: .infinity, alignment: .leading)
+			.padding(.top, 8)
 	}
 }
 
