@@ -49,6 +49,18 @@ import Images
 	/// Comma-joined fandom list, truncated for row display. "" when absent.
 	let fandomString: String
 
+	/// Comma-joined relationship/character/freeform-tag lists, truncated the
+	/// same way as `fandomString`. "" when absent. Plumbed through from
+	/// `Article` now so the data is available, but nothing in
+	/// `metadataLines`/`metadataBadges` reads these yet -- no Tag Display
+	/// mode currently renders relationships, characters, or freeform tags.
+	/// This is preparatory: adding them to the actual rendering (and to
+	/// `previewArticle`'s example data for exercising that rendering) is
+	/// separate, follow-up work.
+	let relationshipString: String
+	let characterString: String
+	let categoryString: String
+
 	/// nil when completion status is unknown (not "confirmed incomplete").
 	let isComplete: Bool?
 
@@ -179,6 +191,27 @@ import Images
 			self.fandomString = ""
 		}
 
+		// Not yet read by metadataLines/metadataBadges -- see the property
+		// doc comments above. Populated now so the data is ready whenever
+		// Tag Display rendering is extended to include them.
+		if let relationships = article.relationships, !relationships.isEmpty {
+			self.relationshipString = Self.truncatedJoinedList(relationships)
+		} else {
+			self.relationshipString = ""
+		}
+
+		if let characters = article.characters, !characters.isEmpty {
+			self.characterString = Self.truncatedJoinedList(characters)
+		} else {
+			self.characterString = ""
+		}
+
+		if let categories = article.categories, !categories.isEmpty {
+			self.categoryString = Self.truncatedJoinedList(categories)
+		} else {
+			self.categoryString = ""
+		}
+
 		self.isComplete = article.isComplete
 		self.ratings = article.ratings
 		self.warnings = article.warnings
@@ -206,6 +239,9 @@ import Images
 		self.readingProgress = nil
 		self.wordCountString = ""
 		self.fandomString = ""
+		self.relationshipString = ""
+		self.characterString = ""
+		self.categoryString = ""
 		self.isComplete = nil
 		self.ratings = nil
 		self.warnings = nil
