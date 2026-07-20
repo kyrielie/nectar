@@ -245,12 +245,9 @@ final class AppDefaults: Sendable {
 	/// Default: true.
 	var articleBackSwipeEnabled: Bool {
 		get {
-			let value = AppDefaults.bool(for: Key.articleBackSwipeEnabled)
-			print("AppDefaults: articleBackSwipeEnabled read -> \(value)")
-			return value
+			return AppDefaults.bool(for: Key.articleBackSwipeEnabled)
 		}
 		set {
-			print("AppDefaults: articleBackSwipeEnabled write -> \(newValue)")
 			AppDefaults.setBool(for: Key.articleBackSwipeEnabled, newValue)
 		}
 	}

@@ -197,53 +197,20 @@ final class ArticleViewController: UIViewController {
 			poppableDelegate.canGoBack = { [weak self] in
 				self?.coordinator.isRootSplitCollapsed ?? false
 			}
-			poppableDelegate.isAdditionallyBlocked = {
-				!AppDefaults.shared.articleBackSwipeEnabled
-			}
 			navigationController.interactivePopGestureRecognizer?.delegate = poppableDelegate
-			// iOS 26 split the pop gesture in two: interactivePopGestureRecognizer stays
+			// iOS 26 splits the pop gesture in two: interactivePopGestureRecognizer stays
 			// edge-only, while the new interactiveContentPopGestureRecognizer recognizes
-			// swipe-to-pop anywhere in the content area. Without installing poppableDelegate
-			// here too, articleBackSwipeEnabled = false only blocked the edge swipe --
-			// content-area swipe-back still popped the article unconditionally.
+			// swipe-to-pop anywhere in the content area. poppableDelegate needs to be
+			// installed on both so canGoBack applies consistently; actually enabling/
+			// disabling the back-swipe setting itself is done via isEnabled in
+			// coordinator.applyArticleBackSwipeGating(), since Apple documents
+			// interactiveContentPopGestureRecognizer's delegate as only being for
+			// setting up failure requirements, not vetoing recognition.
 			if #available(iOS 26, *) {
 				navigationController.interactiveContentPopGestureRecognizer?.delegate = poppableDelegate
 			}
-			// The delegate above vetoes the gesture via gestureRecognizerShouldBegin,
-			// but Apple documents interactiveContentPopGestureRecognizer as something
-			// that "should only be used to set up failure requirements with it" --
-			// i.e. delegate-only vetoing isn't the supported way to gate this specific
-			// recognizer. Disable it (and its edge-only sibling) outright as well, so
-			// blocking doesn't depend solely on the delegate call.
-			updateBackSwipeGating(on: navigationController)
+			coordinator.applyArticleBackSwipeGating()
 			configureContentPopFailureRequirementIfNeeded(on: navigationController)
-			Self.logger.debug("ArticleViewController: viewDidAppear installed poppableDelegate as interactivePopGestureRecognizer.delegate (articleBackSwipeEnabled=\(AppDefaults.shared.articleBackSwipeEnabled), isRootSplitCollapsed=\(self.coordinator.isRootSplitCollapsed), navigationController.viewControllers.count=\(navigationController.viewControllers.count))")
-			// DIAGNOSTIC (temporary): correlate this navigationController's identity
-			// against the "new observer <UINavigationController: 0x...> / removing old
-			// observer <UINavigationController: 0x...>" console lines UIKit prints when
-			// a *different* mechanism -- not interactivePopGestureRecognizer -- registers
-			// itself as an observer of the paging scroll view to support swipe-back from
-			// within horizontally-scrolling content. If the pointer here never matches
-			// the "new observer" pointer at gesture time, that confirms the real
-			// back-swipe the person feels is driven by that separate path, which our
-			// delegate has no say over.
-			let popGesture = navigationController.interactivePopGestureRecognizer
-			Self.logger.debug("ArticleViewController: viewDidAppear diagnostic navigationController=\(navigationController), interactivePopGestureRecognizer=\(String(describing: popGesture)), isEnabled=\(popGesture?.isEnabled ?? false), delegateIsPoppableDelegate=\(popGesture?.delegate === self.poppableDelegate)")
-			// DIAGNOSTIC (temporary): confirm poppableDelegate actually took on the
-			// content-area pop gesture too -- remove once verified alongside the
-			// diagnostic above.
-			if #available(iOS 26, *) {
-				let contentPopGesture = navigationController.interactiveContentPopGestureRecognizer
-				Self.logger.debug("ArticleViewController: viewDidAppear diagnostic interactiveContentPopGestureRecognizer=\(String(describing: contentPopGesture)), isEnabled=\(contentPopGesture?.isEnabled ?? false), delegateIsPoppableDelegate=\(contentPopGesture?.delegate === self.poppableDelegate)")
-			}
-			if let scrollView = pageViewController.scrollViewInsidePageControl {
-				let recognizers = scrollView.gestureRecognizers ?? []
-				Self.logger.debug("ArticleViewController: viewDidAppear diagnostic scrollViewInsidePageControl=\(scrollView) gestureRecognizers=\(recognizers.map { "\(type(of: $0)) delegate=\(String(describing: $0.delegate.map { type(of: $0) })) enabled=\($0.isEnabled)" })")
-			} else {
-				Self.logger.debug("ArticleViewController: viewDidAppear diagnostic scrollViewInsidePageControl is nil")
-			}
-		} else {
-			Self.logger.debug("ArticleViewController: viewDidAppear found navigationController == nil -- poppableDelegate was NOT installed, interactivePopGestureRecognizer.delegate is whatever UIKit's default is")
 		}
 	}
 
@@ -340,8 +307,7 @@ final class ArticleViewController: UIViewController {
 	}
 
 	@objc func userDefaultsDidChange(_ note: Notification) {
-		guard let navigationController else { return }
-		updateBackSwipeGating(on: navigationController)
+		coordinator.applyArticleBackSwipeGating()
 	}
 
 	@objc func willEnterForeground(_ note: Notification) {
@@ -586,16 +552,13 @@ extension ArticleViewController: UIGestureRecognizerDelegate {
 		// (see shouldRecognizeSimultaneouslyWith below). Enabling/disabling the
 		// paging swipe itself is done via isScrollEnabled in viewDidLoad/
 		// viewWillAppear; enabling/disabling the back-swipe is done via
-		// poppableDelegate.isAdditionallyBlocked in viewDidAppear.
-		Self.logger.debug("ArticleViewController: edge-detection gestureRecognizerShouldBegin -> true (gestureRecognizer=\(gestureRecognizer))")
+		// coordinator.applyArticleBackSwipeGating().
 		return true
     }
 
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
 		let point = gestureRecognizer.location(in: nil)
-		let result = point.x > 40
-		Self.logger.debug("ArticleViewController: edge-detection shouldRecognizeSimultaneouslyWith -> \(result) (point.x=\(point.x), gestureRecognizer=\(gestureRecognizer), otherGestureRecognizer=\(otherGestureRecognizer))")
-		return result
+		return point.x > 40
     }
 
 }
@@ -609,25 +572,6 @@ private extension ArticleViewController {
 		controller.coordinator = coordinator
 		controller.setArticle(article, updateView: updateView)
 		return controller
-	}
-
-	/// Applies `AppDefaults.shared.articleBackSwipeEnabled` directly to both
-	/// pop gesture recognizers, in addition to the delegate veto set up
-	/// alongside this call in viewDidAppear.
-	///
-	/// interactiveContentPopGestureRecognizer's own documentation says it
-	/// "should only be used to set up failure requirements with it" --
-	/// relying only on gestureRecognizerShouldBegin returning false (the
-	/// previous behavior here) is exactly what Apple calls out as
-	/// unsupported for this particular recognizer. isEnabled is the
-	/// confirmed-reliable veto.
-	func updateBackSwipeGating(on navigationController: UINavigationController) {
-		let allowed = AppDefaults.shared.articleBackSwipeEnabled
-		navigationController.interactivePopGestureRecognizer?.isEnabled = allowed
-		if #available(iOS 26, *) {
-			navigationController.interactiveContentPopGestureRecognizer?.isEnabled = allowed
-		}
-		Self.logger.debug("ArticleViewController: updateBackSwipeGating isEnabled=\(allowed) navigationController=\(navigationController)")
 	}
 
 	/// Requires interactiveContentPopGestureRecognizer to fail before the
@@ -645,7 +589,6 @@ private extension ArticleViewController {
 		}
 		contentPopGesture.require(toFail: pagingPanGesture)
 		hasConfiguredContentPopFailureRequirement = true
-		Self.logger.debug("ArticleViewController: configured interactiveContentPopGestureRecognizer.require(toFail: pagingPanGesture)")
 	}
 
 }
