@@ -15,7 +15,14 @@
             "iconURL": "https://kyrielie.github.io/nectar/icon.png",
             "tintColor": "#4185A9",
             "category": "other",
-            "screenshots": [],
+            "screenshots": [
+                "https://kyrielie.github.io/nectar/screenshots/1.png",
+                "https://kyrielie.github.io/nectar/screenshots/2.png",
+                "https://kyrielie.github.io/nectar/screenshots/3.png",
+                "https://kyrielie.github.io/nectar/screenshots/4.png",
+                "https://kyrielie.github.io/nectar/screenshots/5.png",
+                "https://kyrielie.github.io/nectar/screenshots/6.png"
+            ],
             "appPermissions": {
                 "entitlements": [
                     "keychain-access-groups"
