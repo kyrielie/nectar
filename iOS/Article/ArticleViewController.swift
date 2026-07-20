@@ -210,6 +210,7 @@ final class ArticleViewController: UIViewController {
 				navigationController.interactiveContentPopGestureRecognizer?.delegate = poppableDelegate
 			}
 			coordinator.applyArticleBackSwipeGating()
+			Self.logger.debug("viewDidAppear: applied gating, navigationController.viewControllers.count=\(navigationController.viewControllers.count, privacy: .public)")
 			configureContentPopFailureRequirementIfNeeded(on: navigationController)
 		}
 	}
