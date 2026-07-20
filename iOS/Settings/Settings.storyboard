@@ -91,14 +91,14 @@
                             </tableViewSection>
                             <tableViewSection headerTitle="Timeline" id="9Pk-Y8-JVJ">
                                 <cells>
-                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="MpA-w1-Wwh" customClass="VibrantTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" accessoryType="disclosureIndicator" indentationWidth="10" id="MpA-w1-Wwh" customClass="VibrantTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
                                         <rect key="frame" x="20" y="478.5" width="374" height="51.5"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="MpA-w1-Wwh" id="GhU-ib-Mz8">
                                             <rect key="frame" x="0.0" y="0.0" width="374" height="51.5"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
-                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="250" text="Sort Oldest to Newest" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="c9W-IF-u6i" customClass="VibrantLabel" customModule="NetNewsWire" customModuleProvider="target">
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="250" text="Sort by Date&#10;Oldest to Newest" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="c9W-IF-u6i" customClass="VibrantLabel" customModule="NetNewsWire" customModuleProvider="target">
                                                     <rect key="frame" x="20" y="15" width="167.5" height="21.5"/>
                                                     <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
                                                     <nil key="textColor"/>
@@ -646,6 +646,7 @@
                         <outlet property="openLinksInNetNewsWire" destination="dhR-L2-PX3" id="z1b-pX-bwG"/>
                         <outlet property="refreshClearsReadArticlesSwitch" destination="duV-CN-JmH" id="xTd-jF-Ei1"/>
                         <outlet property="showFeedNameInReaderViewSwitch" destination="Nct-d4-Fnm" id="Nct-od-Fnm"/>
+                        <outlet property="timelineSortDetailLabel" destination="c9W-IF-u6i" id="c9W-ot-u6i"/>
                         <outlet property="showFullscreenArticlesSwitch" destination="2Md-2E-7Z4" id="lEN-VP-wEO"/>
                         <outlet property="timelineSortOrderSwitch" destination="Keq-Np-l9O" id="Zm7-HG-r5h"/>
                     </connections>
