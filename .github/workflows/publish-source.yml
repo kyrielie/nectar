@@ -1,0 +1,129 @@
+name: Publish AltStore Source
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  publish-source:
+    name: Publish source.json
+    runs-on: macos-26
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          path: repo
+
+      - name: Select Xcode 26.3
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+
+      - name: Read build settings
+        id: settings
+        working-directory: repo
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          settings=$(xcodebuild -showBuildSettings \
+            -project NetNewsWire.xcodeproj \
+            -scheme NetNewsWire-iOS \
+            -destination "generic/platform=iOS" 2>/dev/null)
+
+          marketing_version=$(echo "$settings" | grep -m1 '^\s*MARKETING_VERSION' | awk -F'= ' '{print $2}')
+          current_project_version=$(echo "$settings" | grep -m1 '^\s*CURRENT_PROJECT_VERSION' | awk -F'= ' '{print $2}')
+          min_os_version=$(echo "$settings" | grep -m1 '^\s*IPHONEOS_DEPLOYMENT_TARGET' | awk -F'= ' '{print $2}')
+
+          echo "marketing_version=$marketing_version" >> "$GITHUB_OUTPUT"
+          echo "build_version=$current_project_version" >> "$GITHUB_OUTPUT"
+          echo "min_os_version=$min_os_version" >> "$GITHUB_OUTPUT"
+
+      - name: Find IPA release asset
+        id: asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          asset_json=$(gh api "repos/${{ github.repository }}/releases/${{ github.event.release.id }}/assets" \
+            --jq '[.[] | select(.name | endswith(".ipa"))][0]')
+
+          if [ -z "$asset_json" ] || [ "$asset_json" = "null" ]; then
+            echo "No .ipa asset found on release ${{ github.event.release.tag_name }}" >&2
+            exit 1
+          fi
+
+          download_url=$(echo "$asset_json" | jq -r '.browser_download_url')
+          size=$(echo "$asset_json" | jq -r '.size')
+
+          echo "download_url=$download_url" >> "$GITHUB_OUTPUT"
+          echo "size=$size" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v5
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: pages
+
+      - name: Initialize gh-pages branch if missing
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -d pages ]; then
+            mkdir pages
+            (cd pages && git init -b gh-pages)
+          fi
+
+      - name: Merge new version into source.json
+        shell: bash
+        env:
+          VERSION: ${{ steps.settings.outputs.marketing_version }}
+          BUILD_VERSION: ${{ steps.settings.outputs.build_version }}
+          RELEASE_DATE: ${{ github.event.release.published_at }}
+          RELEASE_NOTES: ${{ github.event.release.body }}
+          DOWNLOAD_URL: ${{ steps.asset.outputs.download_url }}
+          SIZE_BYTES: ${{ steps.asset.outputs.size }}
+          MIN_OS_VERSION: ${{ steps.settings.outputs.min_os_version }}
+        run: |
+          set -euo pipefail
+
+          existing_arg=""
+          if [ -f pages/source.json ]; then
+            existing_arg="--existing=pages/source.json"
+          fi
+
+          python3 repo/scripts/update_source.py \
+            --template=repo/appstore/source.template.json \
+            $existing_arg \
+            --output=pages/source.json
+
+      - name: Sync icon and screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp repo/appstore/icon.png pages/icon.png
+          rm -rf pages/screenshots
+          if [ -d repo/appstore/screenshots ] && [ "$(ls -A repo/appstore/screenshots 2>/dev/null)" ]; then
+            cp -R repo/appstore/screenshots pages/screenshots
+          fi
+
+      - name: Commit and push gh-pages
+        working-directory: pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to publish"
+            exit 0
+          fi
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" 2>/dev/null || true
+          git commit -m "Publish ${{ github.event.release.tag_name }} to source.json"
+          git push origin HEAD:gh-pages
