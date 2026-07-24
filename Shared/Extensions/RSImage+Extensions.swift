@@ -8,18 +8,11 @@
 
 import RSCore
 import Images
-#if os(macOS)
-import AppKit
-#else
 import UIKit
-#endif
 
 extension RSImage {
 
 	static var appIconImage: RSImage? {
-		#if os(macOS)
-		return RSImage(named: NSImage.applicationIconName)
-		#elseif os(iOS)
 		// https://stackoverflow.com/a/51241158/14256
 		if let icons = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
 			let primaryIcon = icons["CFBundlePrimaryIcon"] as? [String: Any],
@@ -28,7 +21,6 @@ extension RSImage {
 			return RSImage(named: lastIcon)
 		}
 		return nil
-		#endif
 	}
 }
 

@@ -49,12 +49,6 @@ import Images
 		return delegate.smallIcon
 	}
 
-	#if os(macOS)
-	var pasteboardWriter: NSPasteboardWriting {
-		return SmartFeedPasteboardWriter(smartFeed: self)
-	}
-	#endif
-
 	private let delegate: SmartFeedDelegate
 	private var unreadCounts = [String: Int]()
 	let bookKeyIndex = SmartFeedBookKeyIndex()

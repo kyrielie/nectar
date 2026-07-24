@@ -95,8 +95,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		51314706235C41FC00387FDC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.intentdefinition; name = Base; path = Base.lproj/Intents.intentdefinition; sourceTree = "<group>"; };
-		51314714235C420900387FDC /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Intents.strings; sourceTree = "<group>"; };
 		518B2ED22351B3DD00400001 /* Nectar-iOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Nectar-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		840A1F0A2E4133F400CFCCFC /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 		840D617C2029031C009BC708 /* Nectar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nectar.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -125,17 +123,6 @@
 			);
 			target = 840D617B2029031C009BC708 /* Nectar-iOS */;
 		};
-		84D35E0B2DB9F32D004AA60E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Commands/MarkCommandValidationStatus.swift,
-				ExtensionPoints/SendToMarsEditCommand.swift,
-				ExtensionPoints/SendToMicroBlogCommand.swift,
-				SmartFeeds/SmartFeedPasteboardWriter.swift,
-				Timer/AccountRefreshTimer.swift,
-			);
-			target = 840D617B2029031C009BC708 /* Nectar-iOS */;
-		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -144,7 +131,7 @@
 		84719F372DB9C60400EEF332 /* xcconfig */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (common, ); path = xcconfig; sourceTree = "<group>"; };
 		84A6CFB52D1B4EC500F23315 /* iOS */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (84A6D03F2D1B4EC500F23315 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = iOS; sourceTree = "<group>"; };
 		84CB35042DB9B5E2002AC251 /* Modules */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Modules; sourceTree = "<group>"; };
-		84D35D422DB9F32D004AA60E /* Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (84D35E0B2DB9F32D004AA60E /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Shared; sourceTree = "<group>"; };
+		84D35D422DB9F32D004AA60E /* Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Shared; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -180,14 +167,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		513145F9235A55A700387FDC /* Intents */ = {
-			isa = PBXGroup;
-			children = (
-				51314707235C41FC00387FDC /* Intents.intentdefinition */,
-			);
-			path = Intents;
-			sourceTree = "<group>";
-		};
 		84023C9D2FC7E3B800284625 /* Recovered References */ = {
 			isa = PBXGroup;
 			children = (
@@ -223,7 +202,6 @@
 				848CEF1E2DB74B56002B35B5 /* NetNewsWire-iOS.xctestplan */,
 				840A1F092E41337800CFCCFC /* Technotes */,
 				84A6CFB52D1B4EC500F23315 /* iOS */,
-				513145F9235A55A700387FDC /* Intents */,
 				84D35D422DB9F32D004AA60E /* Shared */,
 				849182072FD32B1B005C3150 /* Themes */,
 				84719F0E2DB9C52B00EEF332 /* Tests */,
@@ -429,18 +407,6 @@
 			targetProxy = 518B2ED72351B3DD00400001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
-
-/* Begin PBXVariantGroup section */
-		51314707235C41FC00387FDC /* Intents.intentdefinition */ = {
-			isa = PBXVariantGroup;
-			children = (
-				51314706235C41FC00387FDC /* Base */,
-				51314714235C420900387FDC /* en */,
-			);
-			name = Intents.intentdefinition;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		518B2ED92351B3DD00400001 /* Debug */ = {

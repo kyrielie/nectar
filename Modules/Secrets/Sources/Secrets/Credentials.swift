@@ -54,10 +54,6 @@ extension CredentialsError: LocalizedError {
 
 public enum CredentialsType: String, Sendable {
 	case basic = "password"
-	case newsBlurBasic = "newsBlurBasic"
-	case newsBlurSessionID = "newsBlurSessionId"
-	case readerBasic = "readerBasic"
-	case readerAPIKey = "readerAPIKey"
 	case oauthAccessToken = "oauthAccessToken"
 	case oauthAccessTokenSecret = "oauthAccessTokenSecret"
 	case oauthRefreshToken = "oauthRefreshToken"
