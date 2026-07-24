@@ -5,10 +5,8 @@
 //  Nectar Implementation Plan, Phase 3 ("compress contentHTML at rest").
 //
 //  Reuses the same NSData.compressed(using: .lzfse)/decompressed(using: .lzfse)
-//  Foundation API this codebase already uses for CloudKit sync (see
-//  Modules/Account/Sources/Account/CloudKit/CloudKitArticlesZone.swift's
-//  compressArticleRecords and CloudKitArticlesZoneDelegate.swift), per the
-//  Wire Contract's compression reference in the implementation plan.
+//  Foundation API, per the Wire Contract's compression reference in the
+//  implementation plan.
 //
 //  articles.contentHTML is a TEXT column (see ArticlesDatabase.swift's
 //  `CREATE TABLE ... articles` statement) and FMDB's row accessors this
@@ -29,9 +27,8 @@ enum ContentHTMLCompression {
 	/// Compresses `html` for storage. Returns nil/empty input unchanged
 	/// (nothing to compress), and falls back to storing the original string
 	/// if LZFSE compression fails for some reason, rather than losing the
-	/// content -- matching the CloudKitArticlesZone reference pattern's
-	/// tolerance for compress failures (as opposed to the wire-transfer
-	/// route's decompress step, which is a hard failure by design).
+	/// content, as opposed to the wire-transfer route's decompress step,
+	/// which is a hard failure by design.
 	static func compress(_ html: String?) -> String? {
 		guard let html, !html.isEmpty else {
 			return html
