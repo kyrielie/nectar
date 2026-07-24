@@ -8,7 +8,6 @@
 
 import Foundation
 import RSWeb
-import NewsBlur
 import Secrets
 
 public extension URLRequest {
@@ -25,30 +24,6 @@ public extension URLRequest {
 			let data = Data("\(credentials.username):\(credentials.secret)".utf8)
 			let base64 = data.base64EncodedString()
 			let auth = "Basic \(base64)"
-			setValue(auth, forHTTPHeaderField: HTTPRequestHeader.authorization)
-		case .newsBlurBasic:
-			setValue("application/x-www-form-urlencoded", forHTTPHeaderField: HTTPRequestHeader.contentType)
-			httpMethod = "POST"
-			var postData = URLComponents()
-			postData.queryItems = [
-				URLQueryItem(name: "username", value: credentials.username),
-				URLQueryItem(name: "password", value: credentials.secret)
-			]
-			httpBody = postData.enhancedPercentEncodedQuery?.data(using: .utf8)
-		case .newsBlurSessionID:
-			setValue("\(NewsBlurAPICaller.sessionIDCookieKey)=\(credentials.secret)", forHTTPHeaderField: "Cookie")
-			httpShouldHandleCookies = true
-		case .readerBasic:
-			setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-			httpMethod = "POST"
-			var postData = URLComponents()
-			postData.queryItems = [
-				URLQueryItem(name: "Email", value: credentials.username),
-				URLQueryItem(name: "Passwd", value: credentials.secret)
-			]
-			httpBody = postData.enhancedPercentEncodedQuery?.data(using: .utf8)
-		case .readerAPIKey:
-			let auth = "GoogleLogin auth=\(credentials.secret)"
 			setValue(auth, forHTTPHeaderField: HTTPRequestHeader.authorization)
 		case .oauthAccessToken:
 			let auth = "OAuth \(credentials.secret)"

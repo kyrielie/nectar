@@ -10,13 +10,8 @@
 
 import SwiftUI
 import Images
-#if os(macOS)
-import AppKit
-typealias PlatformColor = NSColor
-#else
 import UIKit
 typealias PlatformColor = UIColor
-#endif
 
 struct IconImageView: View {
 	let icon: IconImage
@@ -38,11 +33,7 @@ struct IconImageView: View {
 
 	private var tintColor: Color? {
 		guard let preferredColor = icon.preferredColor else { return nil }
-		#if os(macOS)
-		return Color(nsColor: preferredColor)
-		#else
 		return Color(uiColor: preferredColor)
-		#endif
 	}
 
 	var body: some View {
@@ -64,28 +55,15 @@ struct IconImageView: View {
 	}
 
 	private var backgroundColor: Color {
-		#if os(macOS)
-		let nsColor = isDarkMode ? Assets.Colors.iconDarkBackground : Assets.Colors.iconLightBackground
-		return Color(nsColor: nsColor)
-		#else
 		return Color(Assets.Colors.iconBackground)
-		#endif
 	}
 
 	// Fallback tint to something sensible if preferredColor is not set (for symbols)
 	private var defaultTint: Color {
-		#if os(macOS)
-		return Color(nsColor: Assets.Colors.primaryAccent)
-		#else
 		return Color(Assets.Colors.secondaryAccent)
-		#endif
 	}
 
 	private func platformImage(for icon: IconImage) -> Image {
-		#if os(macOS)
-		return Image(nsImage: icon.image)
-		#else
 		return Image(uiImage: icon.image)
-		#endif
 	}
 }

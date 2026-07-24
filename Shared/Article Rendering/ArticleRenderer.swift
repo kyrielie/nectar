@@ -7,9 +7,7 @@
 //
 
 import Foundation
-#if os(iOS)
 import UIKit
-#endif
 import RSCore
 import Articles
 import Account
@@ -207,7 +205,6 @@ private extension ArticleRenderer {
 
 	func styleString() -> String {
 		let base = articleTheme.css ?? ArticleRenderer.defaultStyleSheet
-		#if os(iOS)
 		// Appended after the theme's own CSS (not merged into styleSubstitutions'
 		// macro dictionary) so it applies to every theme, including third-party
 		// imported ones that have no idea this feature exists -- same reasoning as
@@ -217,7 +214,6 @@ private extension ArticleRenderer {
 		if !overrides.isEmpty {
 			return base + "\n" + overrides.cssOverrideBlock
 		}
-		#endif
 		return base
 	}
 
@@ -248,10 +244,6 @@ private extension ArticleRenderer {
 
 		d["body"] = body
 
-		#if os(macOS)
-		d["text_size_class"] = AppDefaults.shared.articleTextSize.cssClass
-		#endif
-
 		var components = URLComponents()
 		components.scheme = Self.imageIconScheme
 		components.path = article.articleID
@@ -278,15 +270,11 @@ private extension ArticleRenderer {
 		// (rather than skipping the template's own [[feed_link_title]]
 		// token) is what lets main.js's removeFeedNameLink() strip the
 		// link generically for every theme -- see that function's comment.
-		#if os(iOS)
 		if AppDefaults.shared.showFeedNameInReaderView {
 			d["feed_link_title"] = ArticleFeedNaming.displayName(for: article, timelineFeed: timelineFeed) ?? ""
 		} else {
 			d["feed_link_title"] = ""
 		}
-		#else
-		d["feed_link_title"] = article.feed?.nameForDisplay ?? ""
-		#endif
 		d["feed_link"] = article.feed?.homePageURL ?? ""
 
 		d["byline"] = byline()
@@ -351,18 +339,12 @@ private extension ArticleRenderer {
 		return byline
 	}
 
-	#if os(iOS)
 	func styleSubstitutions() -> [String: String] {
 		var d = [String: String]()
 		let bodyFont = UIFont.preferredFont(forTextStyle: .body)
 		d["font-size"] = String(describing: bodyFont.pointSize)
 		return d
 	}
-	#else
-	func styleSubstitutions() -> [String: String] {
-		return [String: String]()
-	}
-	#endif
 
 }
 

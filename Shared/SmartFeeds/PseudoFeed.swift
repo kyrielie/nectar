@@ -6,19 +6,6 @@
 //  Copyright © 2017 Ranchero Software. All rights reserved.
 //
 
-#if os(macOS)
-
-import AppKit
-import Articles
-import Account
-import RSCore
-
-protocol PseudoFeed: AnyObject, SidebarItem, SmallIconProvider, PasteboardWriterOwner {
-
-}
-
-#else
-
 import UIKit
 import Articles
 import Account
@@ -27,5 +14,3 @@ import RSCore
 protocol PseudoFeed: AnyObject, SidebarItem, SmallIconProvider {
 
 }
-
-#endif
