@@ -49,22 +49,11 @@ public extension Notification.Name {
 nonisolated public enum AccountType: Int, Codable, Sendable {
 	// Raw values should not change since they’re stored on disk.
 	case onMyMac = 1
-	case cloudKit = 2
-	case feedly = 16
-
-	public var isDeveloperRestricted: Bool {
-		return self == .cloudKit || self == .feedly
-	}
 
 	public var displayName: String {
 		switch self {
 		case .onMyMac:
 			return NSLocalizedString("account.name.on-my-device", tableName: "DefaultAccountNames", comment: "Local account name, e.g. Collections")
-		// These proper names don’t have a translation.
-		case .cloudKit:
-			return "iCloud"
-		case .feedly:
-			return "Feedly"
 		}
 	}
 }
@@ -310,10 +299,6 @@ public enum FetchType {
 		switch type {
 		case .onMyMac:
 			self.delegate = LocalAccountDelegate()
-		case .cloudKit:
-			self.delegate = CloudKitAccountDelegate(dataFolder: dataFolder)
-		case .feedly:
-			self.delegate = FeedlyAccountDelegate(dataFolder: dataFolder, api: FeedlyAccountDelegate.environment)
 		}
 
 		self.accountID = accountID
@@ -321,7 +306,7 @@ public enum FetchType {
 		self.dataFolder = dataFolder
 
 		let databaseFilePath = (dataFolder as NSString).appendingPathComponent("DB.sqlite3")
-		let retentionStyle: ArticlesDatabase.RetentionStyle = (type == .onMyMac || type == .cloudKit) ? .feedBased : .syncSystem
+		let retentionStyle: ArticlesDatabase.RetentionStyle = .feedBased
 		self.database = ArticlesDatabase(databaseFilePath: databaseFilePath, accountID: accountID, retentionStyle: retentionStyle)
 
 		defaultName = type.displayName
@@ -418,42 +403,6 @@ public enum FetchType {
 				return nil
 			}
 		})
-	}
-
-	nonisolated internal static func oauthAuthorizationClient(for type: AccountType) -> OAuthAuthorizationClient {
-		switch type {
-		case .feedly:
-			return FeedlyAccountDelegate.environment.oauthAuthorizationClient
-		default:
-			fatalError("\(type) is not a client for OAuth authorization code granting.")
-		}
-	}
-
-	public static func oauthAuthorizationCodeGrantRequest(for type: AccountType) -> URLRequest {
-		let grantingType: OAuthAuthorizationGranting.Type
-		switch type {
-		case .feedly:
-			grantingType = FeedlyAccountDelegate.self
-		default:
-			fatalError("\(type) does not support OAuth authorization code granting.")
-		}
-
-		return grantingType.oauthAuthorizationCodeGrantRequest()
-	}
-
-	public static func requestOAuthAccessToken(with response: OAuthAuthorizationResponse,
-	                                           client: OAuthAuthorizationClient,
-	                                           accountType: AccountType) async throws -> OAuthAuthorizationGrant {
-		let grantingType: OAuthAuthorizationGranting.Type
-
-		switch accountType {
-		case .feedly:
-			grantingType = FeedlyAccountDelegate.self
-		default:
-			fatalError("\(accountType) does not support OAuth authorization code granting.")
-		}
-
-		return try await grantingType.requestOAuthAccessToken(with: response)
 	}
 
 	public func receiveRemoteNotification(userInfo: [AnyHashable: Any]) async {
@@ -954,7 +903,6 @@ public enum FetchType {
 	@discardableResult
 	func updateAsync(feed: Feed, parsedFeed: ParsedFeed, isPartial: Bool = false) async -> ArticleChanges {
 		precondition(Thread.isMainThread)
-		precondition(type == .onMyMac || type == .cloudKit)
 
 		feed.takeSettings(from: parsedFeed)
 		let parsedItems = parsedFeed.items
@@ -966,25 +914,11 @@ public enum FetchType {
 	}
 
 	func updateAsync(feedID: String, parsedItems: Set<ParsedItem>, deleteOlder: Bool = true) async -> ArticleChanges {
-		// Used only by an On My Mac or iCloud account.
 		precondition(Thread.isMainThread)
-		precondition(type == .onMyMac || type == .cloudKit)
 
 		let articleChanges = await database.updateAsync(parsedItems: parsedItems, feedID: feedID, deleteOlder: deleteOlder)
 		sendNotificationAbout(articleChanges)
 		return articleChanges
-	}
-
-	func updateAsync(feedIDsAndItems: [String: Set<ParsedItem>], defaultRead: Bool) async {
-		// Used only by syncing systems.
-		precondition(Thread.isMainThread)
-		precondition(type != .onMyMac && type != .cloudKit)
-		guard !feedIDsAndItems.isEmpty else {
-			return
-		}
-
-		let newAndUpdatedArticles = await database.updateAsync(feedIDsAndItems: feedIDsAndItems, defaultRead: defaultRead)
-		sendNotificationAbout(newAndUpdatedArticles)
 	}
 
 	/// Mark statuses for articleIDs. Returns the articleIDs whose status actually changed.
@@ -1186,20 +1120,6 @@ public enum FetchType {
 			await feedSettingsDatabase.vacuum()
 		}
 		await delegate.vacuumDatabases()
-	}
-
-	public func fetchCloudKitStats(progress: @escaping CloudKitStatsProgressHandler) async throws -> CloudKitStats {
-		guard type == .cloudKit, let cloudKitDelegate = delegate as? CloudKitAccountDelegate else {
-			throw AccountError.invalidParameter
-		}
-		return try await cloudKitDelegate.fetchCloudKitStats(progress: progress)
-	}
-
-	public func cleanUpCloudKit(dryRun: Bool, progress: @escaping @MainActor @Sendable (CloudKitCleanUpProgress) -> Void) async throws {
-		guard type == .cloudKit, let cloudKitDelegate = delegate as? CloudKitAccountDelegate else {
-			throw AccountError.invalidParameter
-		}
-		try await cloudKitDelegate.cleanUpCloudKit(dryRun: dryRun, progress: progress)
 	}
 
 	public func debugDropConditionalGetInfo() {

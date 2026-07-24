@@ -30,7 +30,6 @@ final class SettingsViewController: UITableViewController {
 		case activityLog = 1
 		case accountStats = 2
 		case dinosaurs = 3
-		case cloudKitZoneStats = 4
 	}
 
 	private enum FeedsRow: Int {
@@ -174,11 +173,10 @@ final class SettingsViewController: UITableViewController {
 			// dead and, after ArticlesRow grew to 6 cases, wrong.)
 			return ArticlesRow.allCases.count
 		case .troubleshooting:
-			let defaultNumberOfRows = super.tableView(tableView, numberOfRowsInSection: section)
-			if !AccountManager.shared.hasiCloudAccount {
-				return defaultNumberOfRows - 1
-			}
-			return defaultNumberOfRows
+			// The storyboard's troubleshooting section still has a trailing
+			// cloudKit-zone-stats row; it's unreachable now that cloudKit
+			// accounts don't exist, so it's always excluded.
+			return super.tableView(tableView, numberOfRowsInSection: section) - 1
 		default:
 			return super.tableView(tableView, numberOfRowsInSection: section)
 		}
@@ -242,8 +240,6 @@ final class SettingsViewController: UITableViewController {
 					return UIHostingController(rootView: ErrorLogView())
 				case .accountStats:
 					return UIHostingController(rootView: AccountStatsView())
-				case .cloudKitZoneStats:
-					return UIHostingController(rootView: CloudKitStatsView())
 				case .activityLog:
 					return UIHostingController(rootView: ActivityLogView())
 				case .dinosaurs:
