@@ -39,8 +39,6 @@ struct AboutView: View {
 						.padding(.top, 16)
 					AboutCreditView(contributorType: "Contributing Developers", contributors: [.mauriceParker, .stuartBreckenridge])
 					AboutCreditView(contributorType: "App Icon", contributors: [.bradEllis])
-					AboutCreditView(contributorType: "Feedly Syncing", contributors: [.kielGillard])
-					AboutCreditView(contributorType: "NewsBlur Syncing", contributors: [.anhDo])
 					AboutCreditView(contributorType: "Under-the-hood magic & CSS", contributors: [.nateWeaver])
 					AboutCreditView(contributorType: "Newsfoot (JS footnote displayer)", contributors: [.andrewBrehaut])
 					AboutCreditView(contributorType: "Help Book", contributors: [.ryanDotson])

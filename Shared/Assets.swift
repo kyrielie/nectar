@@ -17,8 +17,6 @@ typealias RSColor = UIColor
 
 struct Assets {
 	@MainActor struct Images {
-		static var accountCloudKit: RSImage { RSImage(named: "accountCloudKit")! }
-		static var accountFeedly: RSImage { RSImage(named: "accountFeedly")! }
 
 		// Named starOpen/starClosed for historical reasons — these back the "Read
 		// Later" action (Phase 3), not literal starring; the internal ArticleStatus.Key
@@ -107,10 +105,6 @@ struct Assets {
 			} else {
 				return Assets.Images.accountLocalPhoneImage
 			}
-		case .cloudKit:
-			return Assets.Images.accountCloudKit
-		case .feedly:
-			return Assets.Images.accountFeedly
 		}
 	}
 
