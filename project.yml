@@ -1,0 +1,165 @@
+# project.yml — regenerate NetNewsWire.xcodeproj from this with:
+#   xcodegen generate
+#
+# Once this is committed, add "NetNewsWire.xcodeproj" to .gitignore — the
+# project file becomes a build artifact instead of something to hand-edit.
+#
+# This replaces the local Modules/* packages, which were previously attached
+# to the project as a synchronized folder group (no XCLocalSwiftPackageReference
+# at all), causing every "Missing package product" error. XcodeGen's `packages:`
+# section wires each one up as a real local Swift package dependency.
+
+name: NetNewsWire
+
+options:
+  createIntermediateGroups: true
+  usesTabs: true
+  developmentLanguage: en
+  autogenerateSchemes: false
+  deploymentTarget:
+    iOS: "17.0"
+
+configFiles:
+  Debug: xcconfig/NetNewsWire_project_debug.xcconfig
+  Release: xcconfig/NetNewsWire_project_release.xcconfig
+
+# Local Swift packages under Modules/. Only the ones actually consumed below
+# get wired into the app target; declaring the rest here is harmless (XcodeGen
+# only adds an XCLocalSwiftPackageReference for packages a target depends on).
+packages:
+  RSCore:
+    path: Modules/RSCore
+  RSDatabase:
+    path: Modules/RSDatabase
+  RSParser:
+    path: Modules/RSParser
+  RSTree:
+    path: Modules/RSTree
+  RSWeb:
+    path: Modules/RSWeb
+  Secrets:
+    path: Modules/Secrets
+  HTMLMetadata:
+    path: Modules/HTMLMetadata
+  ActivityLog:
+    path: Modules/ActivityLog
+  ErrorLog:
+    path: Modules/ErrorLog
+  Images:
+    path: Modules/Images
+  SyncDatabase:
+    path: Modules/SyncDatabase
+  Articles:
+    path: Modules/Articles
+  ArticlesDatabase:
+    path: Modules/ArticlesDatabase
+  Account:
+    path: Modules/Account
+  FeedFinder:
+    path: Modules/FeedFinder
+  Zip:
+    url: https://github.com/marmelroy/Zip.git
+    revision: 059e7346082d02de16220cd79df7db18ddeba8c3
+
+targets:
+  Nectar-iOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: iOS
+        excludes:
+          - Resources/Info.plist
+      - path: Shared
+      - path: Themes
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: Account
+      - package: ErrorLog
+      - package: Articles
+      - package: ArticlesDatabase
+      - package: Secrets
+      - package: SyncDatabase
+      - package: Zip
+      - package: RSWeb
+      - package: HTMLMetadata
+      - package: ActivityLog
+      - package: Images
+      - package: RSParser
+      - package: RSCore
+      - package: RSTree
+      - package: RSDatabase
+    attributes:
+      SystemCapabilities:
+        com.apple.BackgroundModes:
+          enabled: true
+    configFiles:
+      Debug: xcconfig/NetNewsWire_iOSapp_target.xcconfig
+      Release: xcconfig/NetNewsWire_iOSapp_target.xcconfig
+    settings:
+      configs:
+        Debug:
+          CODE_SIGN_IDENTITY: "Apple Development"
+          CODE_SIGN_STYLE: Automatic
+          DEVELOPER_ENTITLEMENTS: "-dev"
+          DEVELOPMENT_TEAM: S35M3D45Z9
+          PRODUCT_BUNDLE_IDENTIFIER: com.kyrielie.nectar
+          PROVISIONING_PROFILE_SPECIFIER: ""
+        Release:
+          CODE_SIGN_IDENTITY: "Apple Development"
+          CODE_SIGN_STYLE: Automatic
+          DEVELOPMENT_TEAM: S35M3D45Z9
+          PRODUCT_BUNDLE_IDENTIFIER: com.kyrielie.nectar
+          PROVISIONING_PROFILE_SPECIFIER: ""
+    postCompileScripts: []
+    preBuildScripts:
+      - name: "Run Script: Verify No Build Settings"
+        script: |
+          #xcrun -sdk macosx swiftc -target x86_64-macosx10.11  buildscripts/VerifyNoBuildSettings.swift -o $CONFIGURATION_TEMP_DIR/VerifyNoBS
+          #$CONFIGURATION_TEMP_DIR/VerifyNoBS ${PROJECT_NAME}.xcodeproj/project.pbxproj
+          #if [ $? -ne 0 ]
+          #then
+          #   echo "error: Build Setting were found in the project.pbxproj file.  Most likely you didn't intend to change this file and should revert it."
+          #   exit 1
+          #fi
+        basedOnDependencyAnalysis: false
+
+  Nectar-iOSTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/NetNewsWire-iOSTests
+    dependencies:
+      - target: Nectar-iOS
+    configFiles:
+      Debug: xcconfig/NetNewsWire_iOSTests_target.xcconfig
+      Release: xcconfig/NetNewsWire_iOSTests_target.xcconfig
+    settings:
+      configs:
+        Debug:
+          DEVELOPMENT_TEAM: S35M3D45Z9
+          PRODUCT_BUNDLE_IDENTIFIER: com.kyrielie.nectar.NectarTests
+        Release:
+          DEVELOPMENT_TEAM: S35M3D45Z9
+          PRODUCT_BUNDLE_IDENTIFIER: com.kyrielie.nectar.NectarTests
+
+schemes:
+  Nectar-iOS:
+    build:
+      targets:
+        Nectar-iOS: all
+        Nectar-iOSTests: [test]
+      preActions:
+        - script: |
+            "${PROJECT_DIR}/buildscripts/updateSecrets.sh"
+          settingsTarget: Nectar-iOS
+    test:
+      config: Debug
+      testPlans:
+        - path: NetNewsWire-iOS.xctestplan
+          defaultPlan: true
+      commandLineArguments: {}
+    run:
+      config: Debug
+    archive:
+      config: Release

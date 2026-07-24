@@ -62,16 +62,12 @@ final class AccountInspectorViewController: UITableViewController {
 		dismiss(animated: true)
 	}
 
-	@IBAction func credentials(_ sender: Any) {
-		guard let account = account else { return }
-		switch account.type {
-		default:
-			break
-		}
-	}
+	// Unreachable: the credentials section is never shown (see displayedSections)
+	// now that only `.onMyMac` accounts exist; kept as a no-op for the storyboard wiring.
+	@IBAction func credentials(_ sender: Any) {}
 
 	@IBAction func deleteAccount(_ sender: Any) {
-		guard let account = account else {
+		guard account != nil else {
 			return
 		}
 
