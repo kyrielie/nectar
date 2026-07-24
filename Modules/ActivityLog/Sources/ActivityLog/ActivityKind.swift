@@ -36,15 +36,6 @@ public enum ActivityKind: Sendable, Hashable {
 	case removeFolder
 	case restoreFolder
 
-	// CloudKit background work
-
-	case cleanUpCloudKitRecords
-	case subscribeToCloudKitZone
-	case fetchCloudKitStats
-	case scanCloudKitStatusRecords
-	case scanCloudKitArticleRecords
-	case receiveCloudKitNotification
-
 	// Maintenance and lifecycle
 
 	case vacuumDatabase
@@ -106,18 +97,6 @@ public enum ActivityKind: Sendable, Hashable {
 			return NSLocalizedString("Removing folder", bundle: .module, comment: "Activity kind")
 		case .restoreFolder:
 			return NSLocalizedString("Restoring folder", bundle: .module, comment: "Activity kind")
-		case .cleanUpCloudKitRecords:
-			return NSLocalizedString("Cleaning up iCloud records", bundle: .module, comment: "Activity kind")
-		case .fetchCloudKitStats:
-			return NSLocalizedString("Fetching iCloud stats", bundle: .module, comment: "Activity kind")
-		case .scanCloudKitStatusRecords:
-			return NSLocalizedString("Scanning iCloud status records", bundle: .module, comment: "Activity kind")
-		case .scanCloudKitArticleRecords:
-			return NSLocalizedString("Scanning iCloud article records", bundle: .module, comment: "Activity kind")
-		case .receiveCloudKitNotification:
-			return NSLocalizedString("Receiving sync notification", bundle: .module, comment: "Activity kind")
-		case .subscribeToCloudKitZone:
-			return NSLocalizedString("Subscribing to zone changes", bundle: .module, comment: "Activity kind")
 		case .vacuumDatabase:
 			return NSLocalizedString("Vacuuming database", bundle: .module, comment: "Activity kind")
 		case .validateCredentials:

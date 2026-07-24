@@ -19,10 +19,6 @@ extension AccountType {
 		switch self {
 		case .onMyMac:
 			return .secondary
-		case .cloudKit:
-			return .purple
-		case .feedly:
-			return .green
 		}
 	}
 
@@ -35,10 +31,6 @@ extension AccountType {
 			} else {
 				return Image("accountLocalPhone")
 			}
-		case .cloudKit:
-			return Image("accountCloudKit")
-		case .feedly:
-			return Image("accountFeedly")
 		}
 	}
 

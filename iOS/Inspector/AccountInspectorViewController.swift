@@ -7,7 +7,6 @@
 //
 
 import UIKit
-import SafariServices
 import RSCore
 import Account
 
@@ -32,17 +31,14 @@ final class AccountInspectorViewController: UITableViewController {
 		nameTextField.text = account.name
 		nameTextField.delegate = self
 		activeSwitch.isOn = account.isActive
-		syncContentSwitch.isOn = AccountManager.shared.syncArticleContentForUnreadArticles
 
 		navigationItem.title = account.nameForDisplay
 
-		if account.type != .onMyMac {
-			deleteAccountButton.setTitle(NSLocalizedString("Remove Account", comment: "Remove Account"), for: .normal)
-		}
-
-		if account.type != .cloudKit {
-			limitationsAndSolutionsButton.isHidden = true
-		}
+		// Nectar only ever has `.onMyMac` accounts; these controls were
+		// cloudKit-only and are now permanently unreachable. Left wired to the
+		// storyboard as hidden no-ops rather than touching Interface Builder XML.
+		syncContentSwitch.isHidden = true
+		limitationsAndSolutionsButton.isHidden = true
 
 		if isModal {
 			let doneBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(done))
@@ -58,9 +54,9 @@ final class AccountInspectorViewController: UITableViewController {
 		account?.isActive = activeSwitch.isOn
 	}
 
-	@IBAction func syncContentSwitchDidChange(_ sender: UISwitch) {
-		AccountManager.shared.syncArticleContentForUnreadArticles = sender.isOn
-	}
+	// Unreachable: sync-content section is never shown (see displayedSections),
+	// but the action stays wired so the storyboard connection isn't left dangling.
+	@IBAction func syncContentSwitchDidChange(_ sender: UISwitch) {}
 
 	@objc func done() {
 		dismiss(animated: true)
@@ -80,14 +76,7 @@ final class AccountInspectorViewController: UITableViewController {
 		}
 
 		let title = NSLocalizedString("Remove Account", comment: "Remove Account")
-		let message: String = {
-			switch account.type {
-			case .feedly:
-				return NSLocalizedString("Are you sure you want to remove this account? NetNewsWire will no longer be able to access articles and feeds unless the account is added again.", comment: "Log Out and Remove Account")
-			default:
-				return NSLocalizedString("Are you sure you want to remove this account? This cannot be undone.", comment: "Remove Account")
-			}
-		}()
+		let message = NSLocalizedString("Are you sure you want to remove this account? This cannot be undone.", comment: "Remove Account")
 		let alertController = UIAlertController(title: title, message: message, preferredStyle: .alert)
 		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
 		let cancelAction = UIAlertAction(title: cancelTitle, style: .cancel)
@@ -111,47 +100,28 @@ final class AccountInspectorViewController: UITableViewController {
 		present(alertController, animated: true)
 	}
 
-	@IBAction func openLimitationsAndSolutions(_ sender: Any) {
-		let vc = SFSafariViewController(url: CloudKitWebDocumentation.limitationsAndSolutionsURL)
-		vc.modalPresentationStyle = .pageSheet
-		present(vc, animated: true)
-	}
+	// Unreachable: limitationsAndSolutionsButton is permanently hidden now that
+	// cloudKit accounts no longer exist; kept as a no-op for the storyboard wiring.
+	@IBAction func openLimitationsAndSolutions(_ sender: Any) {}
 }
 
 // MARK: - Table View
 
 extension AccountInspectorViewController {
 
-	/// Sections as laid out in the storyboard.
+	/// Sections as laid out in the storyboard. `.credentials` and `.syncContent`
+	/// are cloudKit/Feedly-only and unreachable now that only `.onMyMac`
+	/// accounts exist, but the raw values are left as-is since they still
+	/// correspond to real (unused) sections in the storyboard.
 	enum StoryboardSection: Int {
 		case nameAndActive = 0
-		case credentials = 1
 		case deleteAccount = 2
-		case syncContent = 3
 	}
 
-	var isCloudKitAccount: Bool {
-		account?.type == .cloudKit
-	}
-
-	var hidesCredentialsSection: Bool {
-		guard let account else {
-			return true
-		}
-		switch account.type {
-		case .onMyMac, .cloudKit, .feedly:
-			return true
-		default:
-			return false
-		}
-	}
-
-	/// The storyboard sections to display, in order, for the current account type.
+	/// The storyboard sections to display, in order, for the current account.
 	///
 	/// - Default account: name/active only
-	/// - cloudKit: name/active, sync content, delete
-	/// - Other hidden-credentials: name/active, delete
-	/// - All others: name/active, credentials, delete
+	/// - Any other (additional local) account: name/active, delete
 	var displayedSections: [StoryboardSection] {
 		guard let account else {
 			return []
@@ -159,13 +129,7 @@ extension AccountInspectorViewController {
 		if account == AccountManager.shared.defaultAccount {
 			return [.nameAndActive]
 		}
-		if isCloudKitAccount {
-			return [.nameAndActive, .syncContent, .deleteAccount]
-		}
-		if hidesCredentialsSection {
-			return [.nameAndActive, .deleteAccount]
-		}
-		return [.nameAndActive, .credentials, .deleteAccount]
+		return [.nameAndActive, .deleteAccount]
 	}
 
 	override func numberOfSections(in tableView: UITableView) -> Int {
@@ -204,9 +168,6 @@ extension AccountInspectorViewController {
 	}
 
 	override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-		if displayedSections[section] == .syncContent {
-			return "Syncing article content increases iCloud storage use, sync time, and battery use.\n\nArticle status and the content of starred articles are always synced."
-		}
 		let storyboardIndex = displayedSections[section].rawValue
 		return super.tableView(tableView, titleForFooterInSection: storyboardIndex)
 	}
