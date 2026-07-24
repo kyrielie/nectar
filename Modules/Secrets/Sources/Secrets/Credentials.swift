@@ -54,9 +54,6 @@ extension CredentialsError: LocalizedError {
 
 public enum CredentialsType: String, Sendable {
 	case basic = "password"
-	case oauthAccessToken = "oauthAccessToken"
-	case oauthAccessTokenSecret = "oauthAccessTokenSecret"
-	case oauthRefreshToken = "oauthRefreshToken"
 }
 
 nonisolated public struct Credentials: Equatable, Sendable {
