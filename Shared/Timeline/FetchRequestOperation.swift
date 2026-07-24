@@ -23,96 +23,6 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 // which diverged when we changed — just on iOS — how we keep track
 // of sidebar item hide-read-articles settings.
 
-#if os(macOS)
-
-@MainActor final class FetchRequestOperation {
-
-	let id: Int
-	let readFilterEnabledTable: [SidebarItemIdentifier: Bool]
-	let resultBlock: FetchRequestOperationResultBlock
-	var isCanceled = false
-	var isFinished = false
-	private let fetchers: [ArticleFetcher]
-
-	init(id: Int, readFilterEnabledTable: [SidebarItemIdentifier: Bool], fetchers: [ArticleFetcher], resultBlock: @escaping FetchRequestOperationResultBlock) {
-		precondition(Thread.isMainThread)
-		self.id = id
-		self.readFilterEnabledTable = readFilterEnabledTable
-		self.fetchers = fetchers
-		self.resultBlock = resultBlock
-	}
-
-	@MainActor func run(_ completion: @escaping (FetchRequestOperation) -> Void) {
-		precondition(Thread.isMainThread)
-		precondition(!isFinished)
-
-		Task { @MainActor in
-			var didCallCompletion = false
-
-			func callCompletionIfNeeded() {
-				if !didCallCompletion {
-					didCallCompletion = true
-					completion(self)
-				}
-			}
-
-			if isCanceled {
-				callCompletionIfNeeded()
-				return
-			}
-
-			if fetchers.isEmpty {
-				isFinished = true
-				resultBlock(Set<Article>(), self)
-				callCompletionIfNeeded()
-				return
-			}
-
-			Self.logger.debug("FetchRequestOperation \(self.id, privacy: .public): run starting — \(self.fetchers.count) fetcher(s)")
-
-			let numberOfFetchers = fetchers.count
-			var fetchersReturned = 0
-			var fetchedArticles = Set<Article>()
-
-			@MainActor func process(_ articles: Set<Article>) {
-				precondition(Thread.isMainThread)
-				guard !self.isCanceled else {
-					callCompletionIfNeeded()
-					return
-				}
-
-				assert(!self.isFinished)
-
-				fetchedArticles.formUnion(articles)
-				fetchersReturned += 1
-				if fetchersReturned == numberOfFetchers {
-					self.isFinished = true
-					self.resultBlock(fetchedArticles, self)
-					callCompletionIfNeeded()
-				}
-			}
-
-			for fetcher in fetchers {
-				let articles: Set<Article>
-
-				if (fetcher as? SidebarItem)?.readFiltered(readFilterEnabledTable: readFilterEnabledTable) ?? true {
-					articles = await fetcher.fetchUnreadArticlesAsync()
-				} else {
-					articles = await fetcher.fetchArticlesAsync()
-				}
-
-				process(articles)
-			}
-
-			// Belt-and-suspenders: ensure the queue never deadlocks even if
-			// the loop above is ever refactored to skip process().
-			callCompletionIfNeeded()
-		}
-	}
-}
-
-#else
-
 @MainActor final class FetchRequestOperation {
 
 	let id: Int
@@ -203,8 +113,6 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 		}
 	}
 }
-
-#endif
 
 private extension FetchRequestOperation {
 

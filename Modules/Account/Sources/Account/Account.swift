@@ -51,15 +51,9 @@ nonisolated public enum AccountType: Int, Codable, Sendable {
 	case onMyMac = 1
 	case cloudKit = 2
 	case feedly = 16
-	case feedbin = 17
-	case newsBlur = 19
-	case freshRSS = 20
-	case inoreader = 21
-	case bazQux = 22
-	case theOldReader = 23
 
 	public var isDeveloperRestricted: Bool {
-		return self == .cloudKit || self == .feedbin || self == .feedly || self == .inoreader
+		return self == .cloudKit || self == .feedly
 	}
 
 	public var displayName: String {
@@ -71,18 +65,6 @@ nonisolated public enum AccountType: Int, Codable, Sendable {
 			return "iCloud"
 		case .feedly:
 			return "Feedly"
-		case .feedbin:
-			return "Feedbin"
-		case .newsBlur:
-			return "NewsBlur"
-		case .freshRSS:
-			return "FreshRSS"
-		case .inoreader:
-			return NSLocalizedString("Inoreader", comment: "Account name")
-		case .bazQux:
-			return NSLocalizedString("BazQux", comment: "Account name")
-		case .theOldReader:
-			return NSLocalizedString("The Old Reader", comment: "Account name")
 		}
 	}
 }
@@ -330,20 +312,8 @@ public enum FetchType {
 			self.delegate = LocalAccountDelegate()
 		case .cloudKit:
 			self.delegate = CloudKitAccountDelegate(dataFolder: dataFolder)
-		case .feedbin:
-			self.delegate = FeedbinAccountDelegate(dataFolder: dataFolder)
 		case .feedly:
 			self.delegate = FeedlyAccountDelegate(dataFolder: dataFolder, api: FeedlyAccountDelegate.environment)
-		case .newsBlur:
-			self.delegate = NewsBlurAccountDelegate(dataFolder: dataFolder)
-		case .freshRSS:
-			self.delegate = ReaderAPIAccountDelegate(dataFolder: dataFolder, variant: .freshRSS)
-		case .inoreader:
-			self.delegate = ReaderAPIAccountDelegate(dataFolder: dataFolder, variant: .inoreader)
-		case .bazQux:
-			self.delegate = ReaderAPIAccountDelegate(dataFolder: dataFolder, variant: .bazQux)
-		case .theOldReader:
-			self.delegate = ReaderAPIAccountDelegate(dataFolder: dataFolder, variant: .theOldReader)
 		}
 
 		self.accountID = accountID
@@ -444,12 +414,6 @@ public enum FetchType {
 	public static func validateCredentials(type: AccountType, credentials: Credentials, endpoint: URL? = nil) async throws -> Credentials? {
 		try await ActivityLog.shared.logActivity(owner: .app, kind: .validateCredentials, detail: type.displayName, successMessage: { $0 == nil ? "Invalid credentials" : "Credentials valid" }, {
 			switch type {
-			case .feedbin:
-				return try await FeedbinAccountDelegate.validateCredentials(credentials: credentials, endpoint: endpoint)
-			case .newsBlur:
-				return try await NewsBlurAccountDelegate.validateCredentials(credentials: credentials, endpoint: endpoint)
-			case .freshRSS, .inoreader, .bazQux, .theOldReader:
-				return try await ReaderAPIAccountDelegate.validateCredentials(credentials: credentials, endpoint: endpoint)
 			default:
 				return nil
 			}

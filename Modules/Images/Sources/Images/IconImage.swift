@@ -6,11 +6,7 @@
 //  Copyright © 2019 Ranchero Software. All rights reserved.
 //
 
-#if os(macOS)
-import AppKit
-#else
 import UIKit
-#endif
 import os
 import RSCore
 
@@ -80,11 +76,7 @@ private extension IconImage {
 	}
 
 	func luminanceCGImage() -> CGImage? {
-		#if os(macOS)
-		image.cgImage(forProposedRect: nil, context: nil, hints: nil)
-		#else
 		image.cgImage
-		#endif
 	}
 
 	static func luminanceType(for cgImage: CGImage?) -> ImageLuminanceType {
