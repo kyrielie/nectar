@@ -59,9 +59,6 @@
     "Activity may contain feed URLs and other information you may not want to share publicly." : {
       "comment" : "Activity log privacy warning"
     },
-    "Add Account" : {
-      "comment" : "Add Account"
-    },
     "Add Feed" : {
       "comment" : "Add Feed"
     },
@@ -86,9 +83,6 @@
     "All Unread" : {
       "comment" : "All Unread pseudo-feed title"
     },
-    "API URL: https://fresh.rss.net/api/greader.php" : {
-      "comment" : "FreshRSS API Helper"
-    },
     "Are you sure you want to delete the “%@” feed?" : {
       "comment" : "Feed delete text"
     },
@@ -101,14 +95,8 @@
     "Are you sure you want to delete the theme “%@”?." : {
       "comment" : "Delete Theme Message"
     },
-    "Are you sure you want to remove this account? NetNewsWire will no longer be able to access articles and feeds unless the account is added again." : {
-      "comment" : "Log Out and Remove Account"
-    },
     "Are you sure you want to remove this account? This cannot be undone." : {
       "comment" : "Remove Account"
-    },
-    "Article Content Records" : {
-      "comment" : "Article content records header"
     },
     "Article Search" : {
       "comment" : "Article Search"
@@ -134,17 +122,11 @@
     "Badges" : {
       "comment" : "Badges tag display mode"
     },
-    "Can’t Add iCloud Account" : {
-      "comment" : "CloudKit account setup failure description — iCloud Drive not enabled."
-    },
     "Can't reach %@ right now" : {
       "comment" : "Can't reach library right now"
     },
     "Cancel" : {
       "comment" : "Cancel\nCancel button"
-    },
-    "Canceled." : {
-      "comment" : "Scan status text when canceled"
     },
     "Choose an account to receive the imported feeds and folders" : {
       "comment" : "Import Account"
@@ -154,18 +136,6 @@
     },
     "Clean Up" : {
       "comment" : "Clean Up button"
-    },
-    "Clean Up iCloud Records" : {
-      "comment" : "Clean up alert title"
-    },
-    "Clean Up…" : {
-      "comment" : "Clean up button"
-    },
-    "Cleanup canceled." : {
-      "comment" : "Cleanup status text when canceled"
-    },
-    "Cleanup failed to complete, but you may be able to clean up more if you wait a few minutes and try again." : {
-      "comment" : "Cleanup error message"
     },
     "Close" : {
       "comment" : "Close"
@@ -269,12 +239,6 @@
     "Delete Theme?" : {
       "comment" : "Delete Theme"
     },
-    "Deleting read content records…" : {
-      "comment" : "Cleanup phase text"
-    },
-    "Deleting unread content records…" : {
-      "comment" : "Cleanup phase text"
-    },
     "Dismiss" : {
       "comment" : "Dismiss"
     },
@@ -371,9 +335,6 @@
     "Find in Article" : {
       "comment" : "Find in Article"
     },
-    "Find Out More" : {
-      "comment" : "Find Out More"
-    },
     "Finding feed" : {
       "comment" : "Finding feed"
     },
@@ -413,20 +374,8 @@
     "Go To Today" : {
       "comment" : "Go To Today"
     },
-    "Help" : {
-      "comment" : "Help"
-    },
     "Here" : {
       "comment" : "Here"
-    },
-    "How to Optimize iCloud Syncing" : {
-      "comment" : "Help link"
-    },
-    "iCloud storage cleanup completed." : {
-      "comment" : "Cleanup phase text when completed"
-    },
-    "iCloud Storage Stats" : {
-      "comment" : "iCloud Storage Stats window title"
     },
     "Import Failed" : {
       "comment" : "Import Failed"
@@ -454,23 +403,14 @@
     "Invalid Address" : {
       "comment" : "Invalid Address"
     },
-    "Invalid API URL." : {
-      "comment" : "Invalid API URL"
-    },
-    "Invalid email/password combination." : {
-      "comment" : "Credentials Error"
-    },
-    "Invalid username/password combination." : {
-      "comment" : "Credentials Error"
-    },
-    "Keychain error while storing credentials." : {
-      "comment" : "Credentials Error"
-    },
     "Large" : {
       "comment" : "Large"
     },
     "Last Article" : {
       "comment" : "Last Article Date"
+    },
+    "Last Opened" : {
+      "comment" : "Last Opened pseudo-feed title"
     },
     "Last Response" : {
       "comment" : "Last HTTP Response"
@@ -578,12 +518,6 @@
     "NetNewsWire News" : {
       "comment" : "NetNewsWire News"
     },
-    "NetNewsWire will use your iCloud account to sync your subscriptions across your Mac and iOS devices." : {
-      "comment" : "iCloud"
-    },
-    "Network error. Try again later." : {
-      "comment" : "Credentials Error"
-    },
     "New Article Notifications" : {
       "comment" : "New Article Notifications"
     },
@@ -657,15 +591,6 @@
     "Open Settings" : {
       "comment" : "Open Settings button"
     },
-    "Open Settings to configure iCloud and enable iCloud Drive." : {
-      "comment" : "CloudKit account setup recovery suggestion"
-    },
-    "Open System Settings" : {
-      "comment" : "Open System Settings button"
-    },
-    "Open System Settings to configure iCloud and enable iCloud Drive." : {
-      "comment" : "CloudKit account setup recovery suggestion"
-    },
     "Order" : {
       "comment" : "Sort direction picker title"
     },
@@ -684,18 +609,6 @@
     "Previous Article" : {
       "comment" : "Previous Article"
     },
-    "Read" : {
-      "comment" : "Read row label"
-    },
-    "Read Content Deleted" : {
-      "comment" : "Cleanup stat row label"
-    },
-    "read content record" : {
-      "comment" : "Singular label for read content records"
-    },
-    "read content records" : {
-      "comment" : "Plural label for read content records"
-    },
     "Read Later" : {
       "comment" : "Command\nRead Later"
     },
@@ -710,9 +623,6 @@
     },
     "Refresh" : {
       "comment" : "Refresh"
-    },
-    "Refresh Scan" : {
-      "comment" : "Refresh scan button"
     },
     "Remove" : {
       "comment" : "Remove\nRemove from Read Later"
@@ -738,20 +648,8 @@
     "Reset to Theme Default" : {
       "comment" : "Reset to Theme Default button"
     },
-    "Return to Previous Scan Results" : {
-      "comment" : "Return to previous scan results button"
-    },
     "Running" : {
       "comment" : "Running"
-    },
-    "Scan completed." : {
-      "comment" : "Scan status text when completed"
-    },
-    "Scan failed." : {
-      "comment" : "Scan failed text"
-    },
-    "Scanning iCloud storage" : {
-      "comment" : "Scan status text while fetching"
     },
     "Search" : {
       "comment" : "Search"
@@ -795,9 +693,6 @@
     "Share AO3 Series Link" : {
       "comment" : "Command"
     },
-    "Share Stats" : {
-      "comment" : "Share stats menu item"
-    },
     "Show feeds that haven’t updated in…" : {
       "comment" : "Show stale feeds text"
     },
@@ -810,27 +705,6 @@
     "Shows what the app is doing right now — refreshing feeds, syncing statuses, downloading favicons and images, and more. Each item clears a couple seconds after it finishes." : {
       "comment" : "Current Activity explainer"
     },
-    "Sign in to your BazQux account and sync your feeds across your devices. Your username and password will be encrypted and stored in Keychain.\n\nDon’t have a BazQux account?" : {
-      "comment" : "BazQux"
-    },
-    "Sign in to your Feedbin account and sync your feeds across your devices. Your username and password will be encrypted and stored in Keychain.\n\nDon’t have a Feedbin account?" : {
-      "comment" : "Feedbin"
-    },
-    "Sign in to your FreshRSS instance and sync your feeds across your devices. Your username and password will be encrypted and stored in Keychain.\n\nDon’t have an FreshRSS instance?" : {
-      "comment" : "FreshRSS"
-    },
-    "Sign in to your Inoreader account and sync your feeds across your devices. Your username and password will be encrypted and stored in Keychain.\n\nDon’t have an Inoreader account?" : {
-      "comment" : "Inoreader"
-    },
-    "Sign in to your NewsBlur account and sync your feeds across your devices. Your username and password will be encrypted and stored in Keychain.\n\nDon’t have a NewsBlur account?" : {
-      "comment" : "NewsBlur"
-    },
-    "Sign in to your The Old Reader account and sync your feeds across your devices. Your username and password will be encrypted and stored in Keychain.\n\nDon’t have a The Old Reader account?" : {
-      "comment" : "TOR"
-    },
-    "Sign Up Here" : {
-      "comment" : "Sign Up"
-    },
     "Small" : {
       "comment" : "Small"
     },
@@ -839,9 +713,6 @@
     },
     "Sort Timeline By" : {
       "comment" : "Sort field picker title"
-    },
-    "Status Records" : {
-      "comment" : "Status records section header"
     },
     "Statuses" : {
       "comment" : "Statuses"
@@ -874,20 +745,8 @@
     "Theme installed" : {
       "comment" : "Theme installed"
     },
-    "There is already a Feedbin account with that username created." : {
-      "comment" : "Duplicate Error"
-    },
-    "There is already a NewsBlur account with that username created." : {
-      "comment" : "Duplicate Error"
-    },
-    "There is already an account of that type with that username created." : {
-      "comment" : "Duplicate Error"
-    },
     "This device cannot send emails." : {
       "comment" : "This device cannot send emails."
-    },
-    "This may take several minutes." : {
-      "comment" : "Clean up confirmation suffix"
     },
     "This theme cannot be used because of data corruption in the Info.plist. %@." : {
       "comment" : "Decoding key missing"
@@ -900,15 +759,6 @@
     },
     "This theme cannot be used because the the value—“%@”—is not found in the Info.plist." : {
       "comment" : "Decoding value missing"
-    },
-    "This will delete any not-starred content records.\n\nThis may take several minutes." : {
-      "comment" : "Clean up confirmation when plan is stale"
-    },
-    "This will delete any read content records.\n\nThis may take several minutes." : {
-      "comment" : "Clean up confirmation when sync unread is on and plan is stale"
-    },
-    "This will delete:" : {
-      "comment" : "Clean up confirmation prefix"
     },
     "Timeline Layout" : {
       "comment" : "Timeline Layout"
@@ -946,20 +796,8 @@
     "Unread" : {
       "comment" : "Unread"
     },
-    "Unread Content Deleted" : {
-      "comment" : "Cleanup stat row label"
-    },
-    "unread content record" : {
-      "comment" : "Singular label for unread content records"
-    },
-    "unread content records" : {
-      "comment" : "Plural label for unread content records"
-    },
     "Untitled" : {
       "comment" : "Feed name"
-    },
-    "Update Credentials" : {
-      "comment" : "Update Credentials"
     },
     "Updated %@" : {
       "comment" : "Updated"
@@ -969,18 +807,6 @@
     },
     "Updating…" : {
       "comment" : "Updating…"
-    },
-    "Username & password required." : {
-      "comment" : "Credentials Error"
-    },
-    "Username and password are required." : {
-      "comment" : "Credentials Error"
-    },
-    "Username required." : {
-      "comment" : "Credentials Error"
-    },
-    "Username, password, and API URL are required." : {
-      "comment" : "Credentials Error"
     },
     "Vacuum Databases" : {
       "comment" : "Vacuum databases button"

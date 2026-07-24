@@ -15,11 +15,11 @@ protocol AddAccountDismissDelegate: UIViewController {
 }
 
 // Ambrosia Reader: local-only fork. Every non-local AccountType onboarding
-// path is stripped here; the enum cases themselves are left alone in
-// Account.swift since removing them would touch too much shared code for
-// no benefit. "Add Ambrosia Library" (paired local account, see Phase 4)
-// will be added here as an additional local.sectionContent entry once it
-// exists; for now this offers exactly one flow: a plain local account.
+// path is stripped here; AccountType itself (in Account.swift) has also
+// been reduced to just `.onMyMac`. "Add Ambrosia Library" (paired local
+// account, see Phase 4) will be added here as an additional
+// local.sectionContent entry once it exists; for now this offers exactly
+// one flow: a plain local account.
 final class AddAccountViewController: UITableViewController, AddAccountDismissDelegate {
 
 	private enum AddAccountSections: Int, CaseIterable {
@@ -109,11 +109,6 @@ final class AddAccountViewController: UITableViewController, AddAccountDismissDe
 			let addViewController = navController.topViewController as! LocalAccountViewController
 			addViewController.delegate = self
 			present(navController, animated: true)
-		default:
-			// Ambrosia Reader is local-only; every other AccountType's
-			// onboarding path has been removed. This case is unreachable
-			// because sectionContent above only ever offers .onMyMac.
-			assertionFailure("Unsupported account type in Ambrosia Reader fork: \(accountType)")
 		}
 	}
 

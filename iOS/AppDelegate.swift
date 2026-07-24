@@ -9,7 +9,6 @@
 import UIKit
 @preconcurrency import BackgroundTasks
 import os
-import WidgetKit
 import RSCore
 import RSWeb
 import Account
