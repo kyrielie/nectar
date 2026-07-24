@@ -1667,8 +1667,8 @@ struct SidebarItemNode: Hashable, Sendable {
 	}
 
 	/// This will dismiss the foremost view controller if the user
-	/// has launched from an external action (i.e., a widget tap, or
-	/// selecting an article via a notification).
+	/// has launched from an external action (i.e., selecting an
+	/// article via a notification).
 	///
 	/// The dismiss is only applicable if the view controller is a
 	/// `SFSafariViewController` or `SettingsViewController`,

@@ -1,24 +1,6 @@
 {
-  "originHash" : "1dc84bfa5ec4e6d8fb1e2092be6a131b44546f89608b898a48152662e8f5b1dd",
+  "originHash" : "337977c17aac73558570624017f9679a8e1b66398b4a560b6ebdc591a39f8581",
   "pins" : [
-    {
-      "identity" : "plcrashreporter",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/microsoft/plcrashreporter.git",
-      "state" : {
-        "revision" : "0254f941c646b1ed17b243654723d0f071e990d0",
-        "version" : "1.12.2"
-      }
-    },
-    {
-      "identity" : "sparkle-binary",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Ranchero-Software/Sparkle-Binary.git",
-      "state" : {
-        "revision" : "d1a8b3c98d96c601453f2e4230f1dd65b60d0581",
-        "version" : "2.0.1"
-      }
-    },
     {
       "identity" : "tidemark",
       "kind" : "remoteSourceControl",
