@@ -332,6 +332,14 @@ final class WebViewController: UIViewController {
 			bottomShowBarsViewConstraint?.constant = 44.0
 			navigationController?.setNavigationBarHidden(true, animated: true)
 			navigationController?.setToolbarHidden(true, animated: true)
+			// showBars() resets additionalSafeAreaInsets.bottom synchronously; do the
+			// equivalent here rather than relying solely on the reactive
+			// viewSafeAreaInsetsDidChange -> updateBottomSafeAreaForFullScreen() path.
+			// Leaving this asymmetric meant the webview's adjustedContentInset.bottom
+			// could still reflect the pre-fullscreen inset for a beat after hideBars()
+			// returns, shifting the visible scroll position relative to where it
+			// settles once the deferred update finally runs.
+			updateBottomSafeAreaForFullScreen()
 			setBottomScrollEdgeEffectHidden(true)
 			configureContextMenuInteraction()
 			coordinator.applyArticleBackSwipeGating()
@@ -711,6 +719,13 @@ private extension WebViewController {
 				webView.scrollView.contentInset = UIEdgeInsets(top: 0, left: -1, bottom: 0, right: 0)
 
 				webView.scrollView.setZoomScale(1.0, animated: false)
+
+				// Tapping the status bar performs scrollsToTop on the first eligible
+				// scroll view, which jumps the article back to its beginning and
+				// discards the reader's place. PreloadedWebView instances are pooled
+				// and reused (see loadWebViewGeneration above), so this must be set
+				// on every dequeue rather than once at creation.
+				webView.scrollView.scrollsToTop = false
 
 				self.view.setNeedsLayout()
 				self.view.layoutIfNeeded()
