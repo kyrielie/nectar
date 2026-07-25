@@ -35,7 +35,7 @@ final class ShareAO3SeriesLinkActivity: UIActivity {
 	}
 
 	override var activityType: UIActivity.ActivityType? {
-		return UIActivity.ActivityType(rawValue: "com.ambrosia.Nectar.shareSeriesLink")
+		return UIActivity.ActivityType(rawValue: "com.kyrielie.Nectar.shareSeriesLink")
 	}
 
 	override static var activityCategory: UIActivity.Category {
