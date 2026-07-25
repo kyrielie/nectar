@@ -14,7 +14,7 @@ protocol AddAccountDismissDelegate: UIViewController {
 	func dismiss()
 }
 
-// Ambrosia Reader: local-only fork. Every non-local AccountType onboarding
+// Nectar: local-only fork. Every non-local AccountType onboarding
 // path is stripped here; AccountType itself (in Account.swift) has also
 // been reduced to just `.onMyMac`. "Add Ambrosia Library" (paired local
 // account, see Phase 4) will be added here as an additional

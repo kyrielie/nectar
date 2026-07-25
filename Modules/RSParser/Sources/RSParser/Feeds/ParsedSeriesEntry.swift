@@ -2,7 +2,7 @@
 //  ParsedSeriesEntry.swift
 //  RSParser
 //
-//  Created for the Ambrosia Reader fork.
+//  Created for the Nectar fork.
 //
 
 import Foundation

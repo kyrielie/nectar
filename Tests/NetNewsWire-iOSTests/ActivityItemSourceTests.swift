@@ -7,7 +7,7 @@
 
 import Testing
 import UIKit
-@testable import AmbrosiaReader
+@testable import Nectar
 
 @MainActor @Suite struct ActivityItemSourceTests {
 

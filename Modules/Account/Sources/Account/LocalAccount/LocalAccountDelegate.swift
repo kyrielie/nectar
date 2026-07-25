@@ -33,7 +33,7 @@ public extension Notification.Name {
 	let behaviors: AccountBehaviors = []
 	let isOPMLImportInProgress = false
 
-	private static let logger = Logger(subsystem: "com.ambrosia.Nectar", category: "LocalAccountDelegate")
+	private static let logger = Logger(subsystem: "com.kyrielie.Nectar", category: "LocalAccountDelegate")
 
 	var progressInfo = ProgressInfo() {
 		didSet {
