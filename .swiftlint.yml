@@ -39,9 +39,7 @@ excluded:
   - ".swiftpm"
   - ".claude"
   - Modules/*/.build/
-  - Modules/Secrets/Sources/Secrets/SecretKey.swift
   - Modules/Account/Tests/
-  - Modules/Account/Sources/Account/Feedly/
   - Widget/Resources/Localized.swift
   - Shared/Extensions/NSAttributedString+NetNewsWire.swift
   - buildscripts/
