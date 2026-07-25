@@ -13,9 +13,11 @@ byline: HTML that combines all the authors and links to them if available.
 avatar_src: The image source URL for the feed icon / avatar.
 dateline_style: Either "articleDateline" or "articleDatelineTitle" depending on if the title was populated or not.
 
-datetime_long: Long version of a combined publish date and time.
-datetime_medium: Medium length version of a combined publish date and time.
-datetime_short: Short version of a combined publish date and time.
+datetime_long: Long version of the publish date. Despite the name, this is
+    date-only, not date+time: article times are always set to 12:00 and
+    aren't meaningful, so no token combines date and time.
+datetime_medium: Medium version of the publish date. See datetime_long.
+datetime_short: Short version of the publish date. See datetime_long.
 
 date_long: Long version of the publish date.
 date_medium: Medium version of the publish date.
