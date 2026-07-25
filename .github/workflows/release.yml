@@ -140,6 +140,10 @@ jobs:
         with:
           path: main
 
+      - name: Generate Secrets Sources
+        working-directory: repo
+        run: PROJECT_DIR="$GITHUB_WORKSPACE/repo" ./buildscripts/updateSecrets.sh
+
       - name: Select Xcode 26.3
         run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
 
@@ -153,7 +157,13 @@ jobs:
           settings=$(xcodebuild -showBuildSettings \
             -project NetNewsWire.xcodeproj \
             -scheme Nectar-iOS \
-            -destination "generic/platform=iOS" 2>/dev/null)
+            -destination "generic/platform=iOS" 2>xcodebuild-showbuildsettings.log) || {
+            echo "::error::xcodebuild -showBuildSettings failed. stderr was:"
+            cat xcodebuild-showbuildsettings.log
+            echo "::error::Available schemes in this checkout:"
+            xcodebuild -list -project NetNewsWire.xcodeproj || true
+            exit 1
+          }
 
           marketing_version=$(echo "$settings" | grep -m1 '^\s*MARKETING_VERSION' | awk -F'= ' '{print $2}')
           current_project_version=$(echo "$settings" | grep -m1 '^\s*CURRENT_PROJECT_VERSION' | awk -F'= ' '{print $2}')
