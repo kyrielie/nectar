@@ -37,8 +37,6 @@ packages:
     path: Modules/RSTree
   RSWeb:
     path: Modules/RSWeb
-  Secrets:
-    path: Modules/Secrets
   HTMLMetadata:
     path: Modules/HTMLMetadata
   ActivityLog:
@@ -78,7 +76,6 @@ targets:
       - package: ErrorLog
       - package: Articles
       - package: ArticlesDatabase
-      - package: Secrets
       - package: SyncDatabase
       - package: Zip
       - package: RSWeb
@@ -149,10 +146,6 @@ schemes:
       targets:
         Nectar-iOS: all
         Nectar-iOSTests: [test]
-      preActions:
-        - script: |
-            "${PROJECT_DIR}/buildscripts/updateSecrets.sh"
-          settingsTarget: Nectar-iOS
     test:
       config: Debug
       testPlans:

@@ -39,7 +39,6 @@ public enum ActivityKind: Sendable, Hashable {
 	// Maintenance and lifecycle
 
 	case vacuumDatabase
-	case validateCredentials
 	case exportOPML
 
 	// App-level
@@ -99,8 +98,6 @@ public enum ActivityKind: Sendable, Hashable {
 			return NSLocalizedString("Restoring folder", bundle: .module, comment: "Activity kind")
 		case .vacuumDatabase:
 			return NSLocalizedString("Vacuuming database", bundle: .module, comment: "Activity kind")
-		case .validateCredentials:
-			return NSLocalizedString("Validating credentials", bundle: .module, comment: "Activity kind")
 		case .exportOPML:
 			return NSLocalizedString("Exporting OPML", bundle: .module, comment: "Activity kind")
 		case .refreshFeedContent, .findFeed, .fetchFeedCandidate, .downloadFeedImage, .downloadFavicon, .downloadAvatar, .downloadHTMLMetadata:

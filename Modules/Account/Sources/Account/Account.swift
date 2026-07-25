@@ -17,7 +17,6 @@ import RSParser
 import RSDatabase
 import ArticlesDatabase
 import RSWeb
-import Secrets
 import ErrorLog
 import ActivityLog
 import os
@@ -345,64 +344,6 @@ public enum FetchType {
 
 		delegate.account = self
 		delegate.accountDidInitialize()
-	}
-
-	// MARK: - Credentials
-
-	public func storeCredentials(_ credentials: Credentials) throws {
-		username = credentials.username
-		guard let server = delegate.server else {
-			assertionFailure()
-			return
-		}
-		do {
-			try CredentialsManager.storeCredentials(credentials, server: server)
-		} catch {
-			Self.logger.error("Account: storeCredentials: failed to store credentials: \(error.localizedDescription, privacy: .public)")
-			postCredentialError(error, operation: "Storing credentials")
-			throw error
-		}
-		delegate.credentials = credentials
-	}
-
-	public func retrieveCredentials(type: CredentialsType) throws -> Credentials? {
-		guard let username = self.username else {
-			Self.logger.error("Account: retrieveCredentials: username is nil for \(type.rawValue, privacy: .public)")
-			return nil
-		}
-		guard let server = delegate.server else {
-			Self.logger.error("Account: retrieveCredentials: delegate.server is nil for \(type.rawValue, privacy: .public)")
-			return nil
-		}
-		do {
-			return try CredentialsManager.retrieveCredentials(type: type, server: server, username: username)
-		} catch {
-			Self.logger.error("Account: retrieveCredentials: failed to retrieve \(type.rawValue, privacy: .public) credentials: \(error.localizedDescription, privacy: .public)")
-			postCredentialError(error, operation: "Retrieving credentials")
-			throw error
-		}
-	}
-
-	public func removeCredentials(type: CredentialsType) throws {
-		guard let username = self.username, let server = delegate.server else {
-			return
-		}
-		do {
-			try CredentialsManager.removeCredentials(type: type, server: server, username: username)
-		} catch {
-			Self.logger.error("Account: removeCredentials: failed to remove credentials: \(error.localizedDescription, privacy: .public)")
-			postCredentialError(error, operation: "Removing credentials")
-			throw error
-		}
-	}
-
-	public static func validateCredentials(type: AccountType, credentials: Credentials, endpoint: URL? = nil) async throws -> Credentials? {
-		try await ActivityLog.shared.logActivity(owner: .app, kind: .validateCredentials, detail: type.displayName, successMessage: { $0 == nil ? "Invalid credentials" : "Credentials valid" }, {
-			switch type {
-			default:
-				return nil
-			}
-		})
 	}
 
 	public func receiveRemoteNotification(userInfo: [AnyHashable: Any]) async {
@@ -1193,13 +1134,6 @@ public enum FetchType {
 // MARK: - Fetching Articles (Private)
 
 private extension Account {
-
-	// MARK: - Credential Errors
-
-	func postCredentialError(_ error: Error, operation: String, fileName: String = #fileID, functionName: String = #function, lineNumber: Int = #line) {
-		let errorLogUserInfo = ErrorLogUserInfoKey.userInfo(sourceName: nameForDisplay, sourceID: type.rawValue, operation: operation, errorMessage: AccountError.detailedErrorMessage(error), fileName: fileName, functionName: functionName, lineNumber: lineNumber)
-		NotificationCenter.default.post(name: .appDidEncounterError, object: self, userInfo: errorLogUserInfo)
-	}
 
 	// MARK: - Starred Articles
 

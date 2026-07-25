@@ -10,7 +10,6 @@ import Foundation
 import RSCore
 import RSWeb
 import Articles
-import Secrets
 
 @MainActor protocol AccountDelegate: ProgressInfoReporter {
 
@@ -24,7 +23,6 @@ import Secrets
 	var isOPMLImportInProgress: Bool { get }
 
 	var server: String? { get }
-	var credentials: Credentials? { get set }
 	var accountSettings: AccountSettings? { get set }
 
 	func receiveRemoteNotification(userInfo: [AnyHashable: Any]) async
@@ -57,8 +55,6 @@ import Secrets
 	func accountDidInitialize()
 
 	func accountWillBeDeleted()
-
-	static func validateCredentials(credentials: Credentials, endpoint: URL?) async throws -> Credentials?
 
 	func vacuumDatabases() async
 

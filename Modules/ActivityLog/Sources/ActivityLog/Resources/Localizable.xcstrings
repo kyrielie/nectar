@@ -314,6 +314,7 @@
     },
     "Validating credentials" : {
       "comment" : "Activity kind",
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {

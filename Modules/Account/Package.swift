@@ -7,7 +7,6 @@ let package = Package(
 	products: [
 		.library(
 			name: "Account",
-			type: .dynamic,
 			targets: ["Account"])
 	],
 	dependencies: [
@@ -15,7 +14,6 @@ let package = Package(
 		.package(path: "../Articles"),
 		.package(path: "../ArticlesDatabase"),
 		.package(path: "../FeedFinder"),
-		.package(path: "../Secrets"),
 		.package(path: "../ErrorLog"),
 		.package(path: "../SyncDatabase"),
 		.package(path: "../RSWeb"),
@@ -36,7 +34,6 @@ let package = Package(
 				"ArticlesDatabase",
 				"ErrorLog",
 				"FeedFinder",
-				"Secrets",
 				"SyncDatabase"
 			],
 			swiftSettings: [
