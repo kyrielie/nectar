@@ -1,12 +1,10 @@
-name: Publish AltStore Source
+name: Release IPA and Publish Source
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to publish (e.g. v0.1.1)"
+        description: "Release tag to create/attach the IPA to (e.g. v0.1.1)"
         required: true
         type: string
 
@@ -14,8 +12,98 @@ permissions:
   contents: write
 
 jobs:
+  build-ipa-release:
+    name: Build and Release Unsigned IPA
+    runs-on: macos-26
+    outputs:
+      tag: ${{ inputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Generate Secrets Sources
+        run: PROJECT_DIR="$GITHUB_WORKSPACE" ./buildscripts/updateSecrets.sh
+
+      - name: Select Xcode 26.3
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+
+      - name: Archive (unsigned)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          archive_path="${RUNNER_TEMP}/Nectar.xcarchive"
+          build_log="${RUNNER_TEMP}/Nectar-archive-build.log"
+          rm -rf "$archive_path"
+
+          set -o pipefail
+          xcodebuild \
+            -project NetNewsWire.xcodeproj \
+            -scheme Nectar-iOS \
+            -destination "generic/platform=iOS" \
+            -archivePath "$archive_path" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            archive 2>&1 | tee "$build_log" | xcbeautify --renderer github-actions
+
+      - name: Package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          archive_path="${RUNNER_TEMP}/Nectar.xcarchive"
+          payload_dir="${RUNNER_TEMP}/Payload"
+          ipa_path="${RUNNER_TEMP}/Nectar-unsigned.ipa"
+
+          app_path=$(find "$archive_path/Products/Applications" -maxdepth 1 -name "*.app" | head -n1)
+          if [ -z "$app_path" ]; then
+            echo "No .app found in archive products" >&2
+            exit 1
+          fi
+
+          rm -rf "$payload_dir" "$ipa_path"
+          mkdir -p "$payload_dir"
+          cp -R "$app_path" "$payload_dir/"
+
+          (cd "${RUNNER_TEMP}" && zip -qr "$(basename "$ipa_path")" "Payload")
+
+          mkdir -p build-output
+          cp "$ipa_path" build-output/
+
+          echo "IPA_PATH=build-output/Nectar-unsigned.ipa" >> "$GITHUB_ENV"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nectar-unsigned-ipa
+          path: ${{ env.IPA_PATH }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Attach IPA to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          tag="${{ inputs.tag }}"
+
+          if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "$tag" "$IPA_PATH" --repo "${{ github.repository }}" --clobber
+          else
+            gh release create "$tag" "$IPA_PATH" \
+              --repo "${{ github.repository }}" \
+              --title "$tag" \
+              --generate-notes
+          fi
+
   publish-source:
     name: Publish source.json
+    needs: build-ipa-release
     runs-on: macos-26
     steps:
       - name: Resolve release
@@ -26,18 +114,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ "${{ github.event_name }}" = "release" ]; then
-            tag_name=$(jq -r '.release.tag_name' "$GITHUB_EVENT_PATH")
-            release_id=$(jq -r '.release.id' "$GITHUB_EVENT_PATH")
-            published_at=$(jq -r '.release.published_at' "$GITHUB_EVENT_PATH")
-            body=$(jq -r '.release.body // ""' "$GITHUB_EVENT_PATH")
-          else
-            tag_name="${{ inputs.tag }}"
-            release_json=$(gh api "repos/${{ github.repository }}/releases/tags/$tag_name")
-            release_id=$(echo "$release_json" | jq -r '.id')
-            published_at=$(echo "$release_json" | jq -r '.published_at')
-            body=$(echo "$release_json" | jq -r '.body // ""')
-          fi
+          tag_name="${{ needs.build-ipa-release.outputs.tag }}"
+          release_json=$(gh api "repos/${{ github.repository }}/releases/tags/$tag_name")
+          release_id=$(echo "$release_json" | jq -r '.id')
+          published_at=$(echo "$release_json" | jq -r '.published_at')
+          body=$(echo "$release_json" | jq -r '.body // ""')
 
           echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
           echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
@@ -71,7 +152,7 @@ jobs:
 
           settings=$(xcodebuild -showBuildSettings \
             -project NetNewsWire.xcodeproj \
-            -scheme NetNewsWire-iOS \
+            -scheme Nectar-iOS \
             -destination "generic/platform=iOS" 2>/dev/null)
 
           marketing_version=$(echo "$settings" | grep -m1 '^\s*MARKETING_VERSION' | awk -F'= ' '{print $2}')

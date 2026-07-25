@@ -27,13 +27,6 @@ import RSParser
 		return formatter
 	}()
 
-	private let timeFormatter: DateFormatter = {
-		let formatter = DateFormatter()
-		formatter.dateStyle = .none
-		formatter.timeStyle = .short
-		return formatter
-	}()
-
 	init() {
 		NotificationCenter.default.addObserver(self, selector: #selector(handleAppDidGoToBackground(_:)), name: .appDidGoToBackground, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(handleLowMemory(_:)), name: .lowMemory, object: nil)
@@ -160,10 +153,10 @@ import RSParser
 	// `dateString` is intentionally uncached: ~97% of dates are
 	// unique at per-second precision in a real database, so a cache
 	// is a net regression vs calling DateFormatter directly.
+	//
+	// Always day/month/year, never a time: items' times are all
+	// auto-set to 12:00, so a time-of-day display would be meaningless.
 	func dateString(_ date: Date) -> String {
-		if Calendar.dateIsToday(date) {
-			return timeFormatter.string(from: date)
-		}
 		return dateFormatter.string(from: date)
 	}
 

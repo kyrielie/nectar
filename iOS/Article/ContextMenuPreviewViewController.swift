@@ -36,9 +36,10 @@ final class ContextMenuPreviewViewController: UIViewController {
 			icon.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20)
 		])
 
+		// Items' times are all auto-set to 12:00, so only show day/month/year.
 		let dateFormatter = DateFormatter()
 		dateFormatter.dateStyle = .long
-		dateFormatter.timeStyle = .medium
+		dateFormatter.timeStyle = .none
 		dateTimeLabel.text = dateFormatter.string(from: article.logicalDatePublished)
 
 		// When in landscape the context menu preview will force this controller into a tiny
