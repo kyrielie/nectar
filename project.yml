@@ -83,7 +83,6 @@ targets:
       - package: SyncDatabase
         embed: true
       - package: Zip
-        embed: true
       - package: RSWeb
         embed: true
       - package: HTMLMetadata
