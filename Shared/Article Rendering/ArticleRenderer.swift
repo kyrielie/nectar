@@ -43,27 +43,6 @@ import os
 	private let baseURL: String?
 	private let timelineFeed: SidebarItem?
 
-	private static let longDateTimeFormatter: DateFormatter = {
-		let formatter = DateFormatter()
-		formatter.dateStyle = .long
-		formatter.timeStyle = .medium
-		return formatter
-	}()
-
-	private static let mediumDateTimeFormatter: DateFormatter = {
-		let formatter = DateFormatter()
-		formatter.dateStyle = .medium
-		formatter.timeStyle = .short
-		return formatter
-	}()
-
-	private static let shortDateTimeFormatter: DateFormatter = {
-		let formatter = DateFormatter()
-		formatter.dateStyle = .short
-		formatter.timeStyle = .short
-		return formatter
-	}()
-
 	private static let longDateFormatter: DateFormatter = {
 		let formatter = DateFormatter()
 		formatter.dateStyle = .long
@@ -280,9 +259,13 @@ private extension ArticleRenderer {
 		d["byline"] = byline()
 
 		let datePublished = article.logicalDatePublished
-		d["datetime_long"] = Self.longDateTimeFormatter.string(from: datePublished)
-		d["datetime_medium"] = Self.mediumDateTimeFormatter.string(from: datePublished)
-		d["datetime_short"] = Self.shortDateTimeFormatter.string(from: datePublished)
+		// datetime_* used to include a time component, but every article's time
+		// is auto-set to 12:00, so it never carried real information. All themes
+		// (including future ones) reference these same tokens, so fixing them
+		// here fixes every theme without editing each one.
+		d["datetime_long"] = Self.longDateFormatter.string(from: datePublished)
+		d["datetime_medium"] = Self.mediumDateFormatter.string(from: datePublished)
+		d["datetime_short"] = Self.shortDateFormatter.string(from: datePublished)
 		d["date_long"] = Self.longDateFormatter.string(from: datePublished)
 		d["date_medium"] = Self.mediumDateFormatter.string(from: datePublished)
 		d["date_short"] = Self.shortDateFormatter.string(from: datePublished)
