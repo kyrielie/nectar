@@ -52,7 +52,7 @@ jobs:
           set -o pipefail
           xcodebuild \
             -project NetNewsWire.xcodeproj \
-            -scheme NetNewsWire-iOS \
+            -scheme Nectar-iOS \
             -xcconfig .github/ios-ci-no-signing.xcconfig \
             -destination "platform=iOS Simulator,name=iPhone 17" \
             OTHER_SWIFT_FLAGS='$(inherited) -DDEBUG -DSKIP_APP_GROUP_ACCESS' \
