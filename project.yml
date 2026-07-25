@@ -73,19 +73,33 @@ targets:
         buildPhase: resources
     dependencies:
       - package: Account
+        embed: true
       - package: ErrorLog
+        embed: true
       - package: Articles
+        embed: true
       - package: ArticlesDatabase
+        embed: true
       - package: SyncDatabase
+        embed: true
       - package: Zip
+        embed: true
       - package: RSWeb
+        embed: true
       - package: HTMLMetadata
+        embed: true
       - package: ActivityLog
+        embed: true
       - package: Images
+        embed: true
       - package: RSParser
+        embed: true
       - package: RSCore
+        embed: true
       - package: RSTree
+        embed: true
       - package: RSDatabase
+        embed: true
     attributes:
       SystemCapabilities:
         com.apple.BackgroundModes:
