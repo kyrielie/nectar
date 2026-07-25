@@ -13,7 +13,6 @@ import Articles
 import ArticlesDatabase
 import FeedFinder
 import RSWeb
-import Secrets
 import os
 
 /// Posted after a refresh pass completes with one or more feeds left
@@ -44,7 +43,6 @@ public extension Notification.Name {
 	}
 
 	let server: String? = nil
-	var credentials: Credentials?
 	var accountSettings: AccountSettings?
 
 	private lazy var refresher: LocalAccountRefresher = {
@@ -308,10 +306,6 @@ public extension Notification.Name {
 	}
 
 	func accountWillBeDeleted() {
-	}
-
-	static func validateCredentials(credentials: Credentials, endpoint: URL?) async throws -> Credentials? {
-		nil
 	}
 
 	func vacuumDatabases() async {
