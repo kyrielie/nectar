@@ -425,36 +425,53 @@ struct SidebarItemNode: Hashable, Sendable {
 		}
 
 		guard let sidebarItemNode = nodeFor(sidebarItemID: selectedSidebarItem),
-			  let indexPath = indexPathFor(sidebarItemNode) else {
+			  let indexPath = indexPathFor(sidebarItemNode),
+			  let sidebarItem = sidebarItemNode.representedObject as? SidebarItem else {
 			isRestoringState = false
 			return
 		}
-		selectSidebarItem(indexPath: indexPath, animations: []) {
-			self.restoreSelectedArticle(stateInfo)
-		}
-	}
 
-	private func restoreSelectedArticle(_ stateInfo: StateRestorationInfo) {
-		defer {
-			isRestoringState = false
+		// Resolve the article synchronously, if any, up front. AccountManager.fetchArticle is a
+		// synchronous, main-thread DB read (see AccountManager.fetchArticle) and does not need the
+		// timeline's `articles` array -- which isn't populated yet at this point in restoration --
+		// to be built first. Resolving this now, instead of inside fetchAndReplaceArticlesAsync's
+		// completion below, is what lets both the timeline and the article (if any) get pushed in
+		// the same run-loop turn, before the first frame is ever drawn, rather than leaving the
+		// timeline visible and tappable for the duration of that async fetch.
+		let article = stateInfo.selectedArticle.flatMap { articleSpecifier in
+			AccountManager.shared.fetchArticle(accountID: articleSpecifier.accountID,
+											   articleID: articleSpecifier.articleID)
 		}
 
-		guard let articleSpecifier = stateInfo.selectedArticle else {
-			return
-		}
-
-		let article = articles.article(matching: articleSpecifier) ??
-		AccountManager.shared.fetchArticle(accountID: articleSpecifier.accountID,
-										   articleID: articleSpecifier.articleID)
+		currentFeedIndexPath = indexPath
+		mainFeedCollectionViewController.updateFeedSelection(animations: [])
+		activityManager.selecting(sidebarItem: sidebarItem)
+		rootSplitViewController.show(.supplementary)
+		timelineFeed = sidebarItem
 
 		if let article {
-			// Disable animation since this function runs only during state restoration on launch.
+			// Disable animation since this runs only during state restoration on launch.
 			// Scroll position restoration comes from the article's own saved position (see
 			// selectArticle), not from stateInfo.articleWindowScrollY -- that field is a single
 			// value shared across every article and is no longer used as a restore source.
 			UIView.performWithoutAnimation {
 				selectArticle(article)
 			}
+		}
+
+		// The timeline's row data is still fetched asynchronously here, same as before -- but it
+		// now happens underneath the already-pushed supplementary/secondary columns instead of
+		// gating them, so there's nothing left for the user to see or tap while it's in flight.
+		// MainTimelineModernViewController.restoreSelectionIfNecessary (invoked via
+		// reinitializeArticles below) picks up currentArticle, set above via selectArticle, once
+		// the data source is populated, so row highlighting still ends up correct.
+		fetchAndReplaceArticlesAsync(animated: false) {
+			self.mainTimelineViewController?.reinitializeArticles(resetScroll: true)
+			if self.isReadFeedsFiltered {
+				self.rebuildBackingStores()
+			}
+			AppDefaults.shared.selectedSidebarItem = sidebarItem.sidebarItemID
+			self.isRestoringState = false
 		}
 	}
 
