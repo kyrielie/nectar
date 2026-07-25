@@ -406,7 +406,7 @@ private extension AppDelegate {
 	/// Register all background tasks.
 	nonisolated func registerBackgroundTasks() {
 		// Register background feed refresh.
-		BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.ambrosia.Nectar.FeedRefresh", using: nil) { task in
+		BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.kyrielie.Nectar.FeedRefresh", using: nil) { task in
 			self.performBackgroundFeedRefresh(with: task as! BGAppRefreshTask)
 		}
 	}
@@ -417,7 +417,7 @@ private extension AppDelegate {
 		// task scheduler can hang indefinitely.
 		backgroundTaskDispatchQueue.async {
 			do {
-				let request = BGAppRefreshTaskRequest(identifier: "com.ambrosia.Nectar.FeedRefresh")
+				let request = BGAppRefreshTaskRequest(identifier: "com.kyrielie.Nectar.FeedRefresh")
 				request.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60)
 				try BGTaskScheduler.shared.submit(request)
 			} catch {
