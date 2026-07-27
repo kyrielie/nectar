@@ -83,6 +83,7 @@ struct ArticleThemeListView: View {
 
 	init() {
 		let overrides = AppDefaults.shared.articleThemeOverrides
+		let themeColors = ArticleThemeColorExtractor.colors(for: ArticleThemesManager.shared.currentTheme)
 		let lastFontFamilyName = UserDefaults.standard.string(forKey: Self.lastFontFamilyNameDefaultsKey)
 
 		_useCustomFont = State(initialValue: overrides.fontFamilyName != nil)
@@ -94,17 +95,21 @@ struct ArticleThemeListView: View {
 		_useCustomLineHeight = State(initialValue: overrides.lineHeight != nil)
 		_lineHeight = State(initialValue: overrides.lineHeight ?? 1.4)
 
+		// Seeded from the theme's own colors (not `.primary`/`.accentColor`/`systemBackground`)
+		// so that turning a custom-color toggle on doesn't itself change anything visually --
+		// the picker starts out showing exactly what's already on screen, and only actually
+		// diverges from the theme once the person picks a different color.
 		_useCustomTextColor = State(initialValue: overrides.textColorHex != nil)
-		_textColor = State(initialValue: Color(hex: overrides.textColorHex) ?? .primary)
-		_textColorDark = State(initialValue: Color(hex: overrides.textColorDarkHex ?? overrides.textColorHex) ?? .primary)
+		_textColor = State(initialValue: Color(hex: overrides.textColorHex) ?? Color(themeColors.textColor))
+		_textColorDark = State(initialValue: Color(hex: overrides.textColorDarkHex ?? overrides.textColorHex) ?? Color(themeColors.textColorDark))
 
 		_useCustomBackgroundColor = State(initialValue: overrides.backgroundColorHex != nil)
-		_backgroundColor = State(initialValue: Color(hex: overrides.backgroundColorHex) ?? Color(UIColor.systemBackground))
-		_backgroundColorDark = State(initialValue: Color(hex: overrides.backgroundColorDarkHex ?? overrides.backgroundColorHex) ?? Color(UIColor.systemBackground))
+		_backgroundColor = State(initialValue: Color(hex: overrides.backgroundColorHex) ?? Color(themeColors.backgroundColor))
+		_backgroundColorDark = State(initialValue: Color(hex: overrides.backgroundColorDarkHex ?? overrides.backgroundColorHex) ?? Color(themeColors.backgroundColorDark))
 
 		_useCustomLinkColor = State(initialValue: overrides.linkColorHex != nil)
-		_linkColor = State(initialValue: Color(hex: overrides.linkColorHex) ?? .accentColor)
-		_linkColorDark = State(initialValue: Color(hex: overrides.linkColorDarkHex ?? overrides.linkColorHex) ?? .accentColor)
+		_linkColor = State(initialValue: Color(hex: overrides.linkColorHex) ?? Color(themeColors.linkColor))
+		_linkColorDark = State(initialValue: Color(hex: overrides.linkColorDarkHex ?? overrides.linkColorHex) ?? Color(themeColors.linkColorDark))
 	}
 
 	var body: some View {
@@ -459,6 +464,8 @@ struct ArticleThemeListView: View {
 	}
 
 	private func resetToThemeDefaults() {
+		let themeColors = ArticleThemeColorExtractor.colors(for: ArticleThemesManager.shared.currentTheme)
+
 		useCustomFont = false
 		useCustomFontSize = false
 		useCustomLineHeight = false
@@ -467,12 +474,12 @@ struct ArticleThemeListView: View {
 		useCustomLinkColor = false
 		fontSize = UIFont.preferredFont(forTextStyle: .body).pointSize
 		lineHeight = 1.4
-		textColor = .primary
-		textColorDark = .primary
-		backgroundColor = Color(UIColor.systemBackground)
-		backgroundColorDark = Color(UIColor.systemBackground)
-		linkColor = .accentColor
-		linkColorDark = .accentColor
+		textColor = Color(themeColors.textColor)
+		textColorDark = Color(themeColors.textColorDark)
+		backgroundColor = Color(themeColors.backgroundColor)
+		backgroundColorDark = Color(themeColors.backgroundColorDark)
+		linkColor = Color(themeColors.linkColor)
+		linkColorDark = Color(themeColors.linkColorDark)
 		save()
 	}
 
@@ -521,26 +528,8 @@ private extension Color {
 	}
 }
 
-private extension UIColor {
-
-	convenience init?(cssHex: String) {
-		var hex = cssHex.trimmingCharacters(in: .whitespacesAndNewlines)
-		if hex.hasPrefix("#") {
-			hex.removeFirst()
-		}
-		guard hex.count == 6, let rgbValue = UInt32(hex, radix: 16) else { return nil }
-		let red = CGFloat((rgbValue & 0xFF0000) >> 16) / 255.0
-		let green = CGFloat((rgbValue & 0x00FF00) >> 8) / 255.0
-		let blue = CGFloat(rgbValue & 0x0000FF) / 255.0
-		self.init(red: red, green: green, blue: blue, alpha: 1.0)
-	}
-
-	var cssHexString: String {
-		var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
-		getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-		return String(format: "#%02X%02X%02X", Int(red * 255), Int(green * 255), Int(blue * 255))
-	}
-}
+// `UIColor(cssHex:)` / `cssHexString` now live in ArticleThemeColorExtractor.swift,
+// shared with the theme color extractor.
 
 #Preview {
 	NavigationStack {

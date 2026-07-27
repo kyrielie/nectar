@@ -477,3 +477,40 @@ function endFind() {
 	clearHighlightRects()
 	CurrentFindState = null;
 }
+
+// Table of contents.
+//
+// Ambrosia book content can be a single book (in which case top-level
+// <h1> markup is the book's own title, not a TOC entry) or several books
+// concatenated together (Calibre-derived anthology export), in which case
+// each book's own <h1> begins a run of that book's <h2 class="toc-heading">
+// chapter headings, up to the next <h1>.
+//
+// Source content reuses the same id (e.g. "calibre_toc_3") across separate
+// books in an anthology, so ids are not unique within the document and
+// document.getElementById() is not a reliable way to jump to a specific
+// entry. Instead, entries are addressed by their position in document
+// order among all <h1>/.toc-heading elements combined ("tocIndex"); id is
+// still reported for display/debugging but must not be used for lookup.
+function tocNodes() {
+	return Array.from(document.querySelectorAll('h1, .toc-heading'));
+}
+
+getTableOfContents = withEncodedArg(options => {
+	const entries = tocNodes().map((h, tocIndex) => ({
+		tocIndex,
+		id: h.id,
+		text: h.textContent.trim(),
+		tagName: h.tagName.toLowerCase(),
+		isTocHeading: h.classList.contains('toc-heading')
+	}));
+	return btoa(JSON.stringify(entries));
+});
+
+scrollToHeading = withEncodedArg(options => {
+	const nodes = tocNodes();
+	const el = nodes[options.tocIndex];
+	if (el) {
+		el.scrollIntoView({ behavior: 'instant', block: 'start' });
+	}
+});

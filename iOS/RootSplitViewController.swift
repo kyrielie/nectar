@@ -17,6 +17,10 @@ final class RootSplitViewController: UISplitViewController {
 		return coordinator.prefersStatusBarHidden
 	}
 
+	override var prefersHomeIndicatorAutoHidden: Bool {
+		return coordinator.prefersHomeIndicatorAutoHidden
+	}
+
 	override var preferredStatusBarUpdateAnimation: UIStatusBarAnimation {
 		return .slide
 	}

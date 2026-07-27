@@ -123,6 +123,7 @@ struct SidebarItemNode: Hashable, Sendable {
 	}
 
 	var prefersStatusBarHidden = false
+	var prefersHomeIndicatorAutoHidden = false
 
 	private let treeControllerDelegate = SidebarTreeControllerDelegate()
 	private let treeController: TreeController
@@ -446,10 +447,19 @@ struct SidebarItemNode: Hashable, Sendable {
 		currentFeedIndexPath = indexPath
 		mainFeedCollectionViewController.updateFeedSelection(animations: [])
 		activityManager.selecting(sidebarItem: sidebarItem)
-		rootSplitViewController.show(.supplementary)
 		timelineFeed = sidebarItem
 
 		if let article {
+			// Don't also call show(.supplementary) here: selectArticle(_:) below calls
+			// show(.secondary) itself, and firing both column transitions back-to-back
+			// in the same run-loop turn -- before the split view has completed its very
+			// first layout pass at launch -- reproduces the same "attempt to nest wrapped
+			// navigation controllers" crash documented in selectArticle's own
+			// presentedViewController-dismissal comment above, just via a different
+			// trigger (state restoration racing itself, not a TOC modal dismissal).
+			// show(.secondary) supersedes show(.supplementary) anyway once an article is
+			// selected, so the second call was always redundant, not just racy.
+			//
 			// Disable animation since this runs only during state restoration on launch.
 			// Scroll position restoration comes from the article's own saved position (see
 			// selectArticle), not from stateInfo.articleWindowScrollY -- that field is a single
@@ -457,6 +467,8 @@ struct SidebarItemNode: Hashable, Sendable {
 			UIView.performWithoutAnimation {
 				selectArticle(article)
 			}
+		} else {
+			rootSplitViewController.show(.supplementary)
 		}
 
 		// The timeline's row data is still fetched asynchronously here, same as before -- but it
@@ -1180,6 +1192,22 @@ struct SidebarItemNode: Hashable, Sendable {
 			return
 		}
 
+		// If a full-screen modal (e.g. TableOfContentsViewController, presented
+		// from ArticleViewController) is still up or mid-dismissal when a new
+		// article gets selected -- e.g. via the long-press context menu's
+		// prev/next actions, which stay available even while the TOC/Find
+		// toolbar replaces the prev/next buttons, see §3/§4 -- performing a
+		// rootSplitViewController.show(...) column transition at the same time
+		// re-parents articleViewController's navigationItem while its old
+		// navigation controller is still tearing down, producing
+		// "Layout requested for visible navigation bar ... top item belongs to
+		// a different navigation bar ... attempt to nest wrapped navigation
+		// controllers." Dismiss first, synchronously, so the two transitions
+		// never overlap.
+		if let presentedViewController = articleViewController?.presentedViewController {
+			presentedViewController.dismiss(animated: false)
+		}
+
 		currentArticle = article
 		activityManager.reading(feed: timelineFeed, article: article)
 
@@ -1366,11 +1394,14 @@ struct SidebarItemNode: Hashable, Sendable {
 	}
 
 	func markAllAsReadInTimeline(completion: (() -> Void)? = nil) {
-		markAllAsRead(articles) {
-			self.rootSplitViewController.preferredDisplayMode = .twoBesideSecondary
-			self.rootSplitViewController.show(.primary)
-			completion?()
-		}
+		// Previously also set preferredDisplayMode = .twoBesideSecondary and called
+		// show(.primary) here, which forced navigation back to the feed list on every
+		// mark-all-as-read -- nothing about marking articles read should change which
+		// split-view column is visible. markAllAsRead(_:completion:) already drives
+		// status changes through the normal .StatusesDidChange notification the
+		// timeline diffing observes, so no manual navigation call is needed for the UI
+		// to update.
+		markAllAsRead(articles, completion: completion)
 	}
 
 	func canMarkAboveAsRead(for article: Article) -> Bool {
@@ -1527,6 +1558,16 @@ struct SidebarItemNode: Hashable, Sendable {
 		UIView.animate(withDuration: 0.15) {
 			self.rootSplitViewController.setNeedsStatusBarAppearanceUpdate()
 		}
+	}
+
+	func showHomeIndicator() {
+		prefersHomeIndicatorAutoHidden = false
+		rootSplitViewController.setNeedsUpdateOfHomeIndicatorAutoHidden()
+	}
+
+	func hideHomeIndicator() {
+		prefersHomeIndicatorAutoHidden = true
+		rootSplitViewController.setNeedsUpdateOfHomeIndicatorAutoHidden()
 	}
 
 	func showSettings(scrollToArticlesSection: Bool = false) {

@@ -75,6 +75,8 @@ struct Assets {
 		static let heartOpen = RSImage(symbol: "heart")!
 		static let heartClosed = RSImage(symbol: "heart.fill")!
 		static let theme = RSImage(symbol: "doc.richtext")!
+		static let findInArticle = RSImage(symbol: "magnifyingglass")!
+		static let tableOfContents = RSImage(symbol: "list.bullet")!
 
 		// Loved smart feed icon: filled heart, system red -- replaces the
 		// starredFeed-borrowed placeholder in LovedFeedDelegate.swift.

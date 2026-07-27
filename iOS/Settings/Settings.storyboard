@@ -277,6 +277,39 @@
                                             <outlet property="label" destination="YHt-eS-KrX" id="zaC-7C-hda"/>
                                         </connections>
                                     </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="Upd-a1-Lbl" customClass="VibrantTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="735.5" width="374" height="51.5"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Upd-a1-Lbl" id="Upd-a2-Lbl">
+                                            <rect key="frame" x="0.0" y="0.0" width="374" height="51.5"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="Show Last Updated Label" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Upd-a3-Lbl">
+                                                    <rect key="frame" x="20" y="15" width="227.5" height="21.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Upd-a4-Lbl" userLabel="Show Last Updated Label">
+                                                    <rect key="frame" x="293" y="12" width="63" height="28"/>
+                                                    <color key="onTintColor" name="primaryAccentColor"/>
+                                                    <connections>
+                                                        <action selector="switchShowLastUpdatedLabel:" destination="a0p-rk-skQ" eventType="valueChanged" id="Upd-a5-Lbl"/>
+                                                    </connections>
+                                                </switch>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="Upd-a3-Lbl" firstAttribute="top" secondItem="Upd-a2-Lbl" secondAttribute="topMargin" id="Upd-a6-Lbl"/>
+                                                <constraint firstItem="Upd-a3-Lbl" firstAttribute="leading" secondItem="Upd-a2-Lbl" secondAttribute="leadingMargin" id="Upd-a7-Lbl"/>
+                                                <constraint firstItem="Upd-a4-Lbl" firstAttribute="top" relation="greaterThanOrEqual" secondItem="Upd-a2-Lbl" secondAttribute="top" constant="6" id="Upd-a8-Lbl"/>
+                                                <constraint firstAttribute="bottom" relation="greaterThanOrEqual" secondItem="Upd-a4-Lbl" secondAttribute="bottom" constant="6" id="Upd-a9-Lbl"/>
+                                                <constraint firstAttribute="trailingMargin" secondItem="Upd-a4-Lbl" secondAttribute="trailing" id="Upd-aA-Lbl"/>
+                                                <constraint firstItem="Upd-a4-Lbl" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Upd-a3-Lbl" secondAttribute="trailing" constant="8" id="Upd-aB-Lbl"/>
+                                                <constraint firstItem="Upd-a4-Lbl" firstAttribute="centerY" secondItem="Upd-a2-Lbl" secondAttribute="centerY" id="Upd-aC-Lbl"/>
+                                                <constraint firstAttribute="bottomMargin" secondItem="Upd-a3-Lbl" secondAttribute="bottom" id="Upd-aD-Lbl"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                    </tableViewCell>
                                 </cells>
                             </tableViewSection>
                             <tableViewSection headerTitle="Articles" id="TRr-Ew-IvU">
@@ -504,6 +537,175 @@
                                             <outlet property="label" destination="Nct-d3-Fnm" id="Nct-dC-Fnm"/>
                                         </connections>
                                     </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="Nct-e1-Ppn" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="1239.5" width="374" height="51.5"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Nct-e1-Ppn" id="Nct-e2-Ppn">
+                                            <rect key="frame" x="0.0" y="0.0" width="374" height="51.5"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="Show Previous/Next Article Buttons" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-e3-Ppn">
+                                                    <rect key="frame" x="20" y="15" width="265" height="21.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-e4-Ppn" userLabel="Show Previous/Next Article Buttons">
+                                                    <rect key="frame" x="293" y="12" width="63" height="28"/>
+                                                    <color key="onTintColor" name="primaryAccentColor"/>
+                                                    <connections>
+                                                        <action selector="switchShowPrevNextArticleButtons:" destination="a0p-rk-skQ" eventType="valueChanged" id="Nct-e5-Ppn"/>
+                                                    </connections>
+                                                </switch>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="Nct-e4-Ppn" firstAttribute="leading" secondItem="Nct-e3-Ppn" secondAttribute="trailing" constant="8" symbolic="YES" id="Nct-e6-Ppn"/>
+                                                <constraint firstItem="Nct-e3-Ppn" firstAttribute="top" secondItem="Nct-e2-Ppn" secondAttribute="topMargin" id="Nct-e7-Ppn"/>
+                                                <constraint firstAttribute="bottomMargin" secondItem="Nct-e3-Ppn" secondAttribute="bottom" id="Nct-e8-Ppn"/>
+                                                <constraint firstAttribute="trailingMargin" secondItem="Nct-e4-Ppn" secondAttribute="trailing" id="Nct-e9-Ppn"/>
+                                                <constraint firstItem="Nct-e4-Ppn" firstAttribute="centerY" secondItem="Nct-e2-Ppn" secondAttribute="centerY" id="Nct-eA-Ppn"/>
+                                                <constraint firstItem="Nct-e3-Ppn" firstAttribute="leading" secondItem="Nct-e2-Ppn" secondAttribute="leadingMargin" id="Nct-eB-Ppn"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                        <connections>
+                                            <outlet property="label" destination="Nct-e3-Ppn" id="Nct-eC-Ppn"/>
+                                        </connections>
+                                    </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="Nct-f1-Toc" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="1291" width="374" height="51.5"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Nct-f1-Toc" id="Nct-f2-Toc">
+                                            <rect key="frame" x="0.0" y="0.0" width="374" height="51.5"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="Show Table of Contents/Find Buttons" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-f3-Toc">
+                                                    <rect key="frame" x="20" y="15" width="265" height="21.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-f4-Toc" userLabel="Show Table of Contents/Find Buttons">
+                                                    <rect key="frame" x="293" y="12" width="63" height="28"/>
+                                                    <color key="onTintColor" name="primaryAccentColor"/>
+                                                    <connections>
+                                                        <action selector="switchShowTableOfContentsAndFind:" destination="a0p-rk-skQ" eventType="valueChanged" id="Nct-f5-Toc"/>
+                                                    </connections>
+                                                </switch>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="Nct-f4-Toc" firstAttribute="leading" secondItem="Nct-f3-Toc" secondAttribute="trailing" constant="8" symbolic="YES" id="Nct-f6-Toc"/>
+                                                <constraint firstItem="Nct-f3-Toc" firstAttribute="top" secondItem="Nct-f2-Toc" secondAttribute="topMargin" id="Nct-f7-Toc"/>
+                                                <constraint firstAttribute="bottomMargin" secondItem="Nct-f3-Toc" secondAttribute="bottom" id="Nct-f8-Toc"/>
+                                                <constraint firstAttribute="trailingMargin" secondItem="Nct-f4-Toc" secondAttribute="trailing" id="Nct-f9-Toc"/>
+                                                <constraint firstItem="Nct-f4-Toc" firstAttribute="centerY" secondItem="Nct-f2-Toc" secondAttribute="centerY" id="Nct-fA-Toc"/>
+                                                <constraint firstItem="Nct-f3-Toc" firstAttribute="leading" secondItem="Nct-f2-Toc" secondAttribute="leadingMargin" id="Nct-fB-Toc"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                        <connections>
+                                            <outlet property="label" destination="Nct-f3-Toc" id="Nct-fC-Toc"/>
+                                        </connections>
+                                    </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="Nct-g1-Ntc" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="1342.5" width="374" height="51.5"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Nct-g1-Ntc" id="Nct-g2-Ntc">
+                                            <rect key="frame" x="0.0" y="0.0" width="374" height="51.5"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="Hide Notch in Full Screen" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-g3-Ntc">
+                                                    <rect key="frame" x="20" y="15" width="265" height="21.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-g4-Ntc" userLabel="Hide Notch in Full Screen">
+                                                    <rect key="frame" x="293" y="12" width="63" height="28"/>
+                                                    <color key="onTintColor" name="primaryAccentColor"/>
+                                                    <connections>
+                                                        <action selector="switchHideNotchInFullScreen:" destination="a0p-rk-skQ" eventType="valueChanged" id="Nct-g5-Ntc"/>
+                                                    </connections>
+                                                </switch>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="Nct-g4-Ntc" firstAttribute="leading" secondItem="Nct-g3-Ntc" secondAttribute="trailing" constant="8" symbolic="YES" id="Nct-g6-Ntc"/>
+                                                <constraint firstItem="Nct-g3-Ntc" firstAttribute="top" secondItem="Nct-g2-Ntc" secondAttribute="topMargin" id="Nct-g7-Ntc"/>
+                                                <constraint firstAttribute="bottomMargin" secondItem="Nct-g3-Ntc" secondAttribute="bottom" id="Nct-g8-Ntc"/>
+                                                <constraint firstAttribute="trailingMargin" secondItem="Nct-g4-Ntc" secondAttribute="trailing" id="Nct-g9-Ntc"/>
+                                                <constraint firstItem="Nct-g4-Ntc" firstAttribute="centerY" secondItem="Nct-g2-Ntc" secondAttribute="centerY" id="Nct-gA-Ntc"/>
+                                                <constraint firstItem="Nct-g3-Ntc" firstAttribute="leading" secondItem="Nct-g2-Ntc" secondAttribute="leadingMargin" id="Nct-gB-Ntc"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                        <connections>
+                                            <outlet property="label" destination="Nct-g3-Ntc" id="Nct-gC-Ntc"/>
+                                        </connections>
+                                    </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" accessoryType="disclosureIndicator" indentationWidth="10" id="Nct-h1-Pgc" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="1394" width="374" height="51"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Nct-h1-Pgc" id="Nct-h2-Pgc">
+                                            <rect key="frame" x="0.0" y="0.0" width="343.5" height="51"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Page Counter" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-h3-Pgc">
+                                                    <rect key="frame" x="20" y="15.5" width="98" height="20.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Off" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-h4-Pgc">
+                                                    <rect key="frame" x="258" y="15.5" width="77.5" height="20.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="Nct-h4-Pgc" firstAttribute="trailing" secondItem="Nct-h2-Pgc" secondAttribute="trailingMargin" id="Nct-h5-Pgc"/>
+                                                <constraint firstItem="Nct-h4-Pgc" firstAttribute="centerY" secondItem="Nct-h2-Pgc" secondAttribute="centerY" id="Nct-h6-Pgc"/>
+                                                <constraint firstItem="Nct-h3-Pgc" firstAttribute="leading" secondItem="Nct-h2-Pgc" secondAttribute="leadingMargin" id="Nct-h7-Pgc"/>
+                                                <constraint firstItem="Nct-h3-Pgc" firstAttribute="centerY" secondItem="Nct-h2-Pgc" secondAttribute="centerY" id="Nct-h8-Pgc"/>
+                                                <constraint firstItem="Nct-h4-Pgc" firstAttribute="leading" secondItem="Nct-h3-Pgc" secondAttribute="trailing" constant="8" symbolic="YES" id="Nct-h9-Pgc"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                        <connections>
+                                            <outlet property="detail" destination="Nct-h4-Pgc" id="Nct-hA-Pgc"/>
+                                            <outlet property="label" destination="Nct-h3-Pgc" id="Nct-hB-Pgc"/>
+                                        </connections>
+                                    </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="Dis-a1-Lnk" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="1445.5" width="374" height="51.5"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Dis-a1-Lnk" id="Dis-a2-Lnk">
+                                            <rect key="frame" x="0.0" y="0.0" width="374" height="51.5"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="Disable Article Links" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Dis-a3-Lnk">
+                                                    <rect key="frame" x="20" y="15" width="265" height="21.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Dis-a4-Lnk" userLabel="Disable Article Links">
+                                                    <rect key="frame" x="293" y="12" width="63" height="28"/>
+                                                    <color key="onTintColor" name="primaryAccentColor"/>
+                                                    <connections>
+                                                        <action selector="switchDisableArticleLinks:" destination="a0p-rk-skQ" eventType="valueChanged" id="Dis-a5-Lnk"/>
+                                                    </connections>
+                                                </switch>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="Dis-a4-Lnk" firstAttribute="leading" secondItem="Dis-a3-Lnk" secondAttribute="trailing" constant="8" symbolic="YES" id="Dis-a6-Lnk"/>
+                                                <constraint firstItem="Dis-a3-Lnk" firstAttribute="top" secondItem="Dis-a2-Lnk" secondAttribute="topMargin" id="Dis-a7-Lnk"/>
+                                                <constraint firstAttribute="bottomMargin" secondItem="Dis-a3-Lnk" secondAttribute="bottom" id="Dis-a8-Lnk"/>
+                                                <constraint firstAttribute="trailingMargin" secondItem="Dis-a4-Lnk" secondAttribute="trailing" id="Dis-a9-Lnk"/>
+                                                <constraint firstItem="Dis-a4-Lnk" firstAttribute="centerY" secondItem="Dis-a2-Lnk" secondAttribute="centerY" id="Dis-aA-Lnk"/>
+                                                <constraint firstItem="Dis-a3-Lnk" firstAttribute="leading" secondItem="Dis-a2-Lnk" secondAttribute="leadingMargin" id="Dis-aB-Lnk"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                        <connections>
+                                            <outlet property="label" destination="Dis-a3-Lnk" id="Dis-aC-Lnk"/>
+                                        </connections>
+                                    </tableViewCell>
                                 </cells>
                             </tableViewSection>
                             <tableViewSection headerTitle="Appearance" id="TkH-4v-yhk">
@@ -673,10 +875,16 @@
                         <outlet property="pagingSwipeEnabledSwitch" destination="Nct-pg-Swt" id="Nct-oc-Pg1"/>
                         <outlet property="colorPaletteDetailLabel" destination="16m-Ns-Y8V" id="zdj-Ag-ZUw"/>
                         <outlet property="confirmMarkAllAsReadSwitch" destination="UOo-9z-IuL" id="yLZ-Kf-wDt"/>
+                        <outlet property="showLastUpdatedLabelSwitch" destination="Upd-a4-Lbl" id="Upd-oa-Lbl"/>
                         <outlet property="groupByFeedSwitch" destination="JNi-Wz-RbU" id="TwH-Kd-o6N"/>
                         <outlet property="openLinksInNetNewsWire" destination="dhR-L2-PX3" id="z1b-pX-bwG"/>
                         <outlet property="refreshClearsReadArticlesSwitch" destination="duV-CN-JmH" id="xTd-jF-Ei1"/>
                         <outlet property="showFeedNameInReaderViewSwitch" destination="Nct-d4-Fnm" id="Nct-od-Fnm"/>
+                        <outlet property="showPrevNextArticleButtonsSwitch" destination="Nct-e4-Ppn" id="Nct-oe-Ppn"/>
+                        <outlet property="showTableOfContentsAndFindSwitch" destination="Nct-f4-Toc" id="Nct-of-Toc"/>
+                        <outlet property="hideNotchInFullScreenSwitch" destination="Nct-g4-Ntc" id="Nct-og-Ntc"/>
+                        <outlet property="pageCounterDisplayModeDetailLabel" destination="Nct-h4-Pgc" id="Nct-oh-Pgc"/>
+                        <outlet property="disableArticleLinksSwitch" destination="Dis-a4-Lnk" id="Dis-oa-Lnk"/>
                         <outlet property="timelineSortFieldDetailLabel" destination="Keq-Np-l9O" id="c9W-ot-u6i"/>
                         <outlet property="showFullscreenArticlesSwitch" destination="2Md-2E-7Z4" id="lEN-VP-wEO"/>
                         <outlet property="timelineSortDirectionDetailLabel" destination="SBF-dt-002" id="Zm7-HG-r5h"/>

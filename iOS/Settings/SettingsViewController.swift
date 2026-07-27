@@ -44,6 +44,7 @@ final class SettingsViewController: UITableViewController {
 		case refreshClearsReadArticles = 3
 		case confirmMarkAllAsRead = 4
 		case timelineLayout = 5
+		case showLastUpdatedLabel = 6
 	}
 
 	private enum ArticlesRow: Int, CaseIterable {
@@ -53,6 +54,11 @@ final class SettingsViewController: UITableViewController {
 		case enableBackSwipe = 3
 		case enablePagingSwipe = 4
 		case showFeedNameInReaderView = 5
+		case showPrevNextArticleButtons = 6
+		case showTableOfContentsAndFind = 7
+		case hideNotchInFullScreen = 8
+		case pageCounterDisplayMode = 9
+		case disableArticleLinks = 10
 	}
 
 	private enum HelpRow: Int {
@@ -68,10 +74,16 @@ final class SettingsViewController: UITableViewController {
 	@IBOutlet var refreshClearsReadArticlesSwitch: UISwitch!
 	@IBOutlet var articleThemeDetailLabel: UILabel!
 	@IBOutlet var confirmMarkAllAsReadSwitch: UISwitch!
+	@IBOutlet var showLastUpdatedLabelSwitch: UISwitch!
 	@IBOutlet var showFullscreenArticlesSwitch: UISwitch!
 	@IBOutlet var backSwipeEnabledSwitch: UISwitch!
 	@IBOutlet var pagingSwipeEnabledSwitch: UISwitch!
 	@IBOutlet var showFeedNameInReaderViewSwitch: UISwitch!
+	@IBOutlet var showPrevNextArticleButtonsSwitch: UISwitch!
+	@IBOutlet var showTableOfContentsAndFindSwitch: UISwitch!
+	@IBOutlet var hideNotchInFullScreenSwitch: UISwitch!
+	@IBOutlet var pageCounterDisplayModeDetailLabel: UILabel!
+	@IBOutlet var disableArticleLinksSwitch: UISwitch!
 	@IBOutlet var colorPaletteDetailLabel: UILabel!
 	@IBOutlet var openLinksInNetNewsWire: UISwitch!
 
@@ -121,6 +133,8 @@ final class SettingsViewController: UITableViewController {
 			confirmMarkAllAsReadSwitch.isOn = false
 		}
 
+		showLastUpdatedLabelSwitch.isOn = AppDefaults.shared.showLastUpdatedLabel
+
 		if AppDefaults.shared.articleFullscreenAvailable {
 			showFullscreenArticlesSwitch.isOn = true
 		} else {
@@ -130,6 +144,11 @@ final class SettingsViewController: UITableViewController {
 		backSwipeEnabledSwitch.isOn = AppDefaults.shared.articleBackSwipeEnabled
 		pagingSwipeEnabledSwitch.isOn = AppDefaults.shared.articlePagingSwipeEnabled
 		showFeedNameInReaderViewSwitch.isOn = AppDefaults.shared.showFeedNameInReaderView
+		showPrevNextArticleButtonsSwitch.isOn = AppDefaults.shared.showPrevNextArticleButtons
+		showTableOfContentsAndFindSwitch.isOn = AppDefaults.shared.showTableOfContentsAndFind
+		hideNotchInFullScreenSwitch.isOn = AppDefaults.shared.hideNotchInFullScreen
+		updatePageCounterDisplayModeLabel()
+		disableArticleLinksSwitch.isOn = AppDefaults.shared.disableArticleLinks
 
 		colorPaletteDetailLabel.text = String(describing: AppDefaults.userInterfaceColorPalette)
 
@@ -227,6 +246,12 @@ final class SettingsViewController: UITableViewController {
 			case .theme:
 				let articleThemes = UIHostingController(rootView: ArticleThemeListView())
 				self.navigationController?.pushViewController(articleThemes, animated: true)
+			case .pageCounterDisplayMode:
+				if let sourceView = tableView.cellForRow(at: indexPath) {
+					let sourceRect = tableView.rectForRow(at: indexPath)
+					presentPageCounterDisplayModePicker(sourceView: sourceView, sourceRect: sourceRect)
+				}
+				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
 			default:
 				break
 			}
@@ -320,6 +345,17 @@ final class SettingsViewController: UITableViewController {
 		timelineSortDirectionDetailLabel.text = direction == .orderedAscending ? field.ascendingLabel : field.descendingLabel
 	}
 
+	func updatePageCounterDisplayModeLabel() {
+		switch AppDefaults.shared.pageCounterDisplayMode {
+		case .off:
+			pageCounterDisplayModeDetailLabel.text = NSLocalizedString("Off", comment: "Page counter off")
+		case .percentage:
+			pageCounterDisplayModeDetailLabel.text = NSLocalizedString("Percentage", comment: "Page counter percentage")
+		case .pageCount:
+			pageCounterDisplayModeDetailLabel.text = NSLocalizedString("Page Count", comment: "Page counter page count")
+		}
+	}
+
 	@IBAction func switchGroupByFeed(_ sender: Any) {
 		if groupByFeedSwitch.isOn {
 			AppDefaults.shared.timelineGroupByFeed = true
@@ -353,6 +389,10 @@ final class SettingsViewController: UITableViewController {
 		}
 	}
 
+	@IBAction func switchShowLastUpdatedLabel(_ sender: Any) {
+		AppDefaults.shared.showLastUpdatedLabel = showLastUpdatedLabelSwitch.isOn
+	}
+
 	@IBAction func switchFullscreenArticles(_ sender: Any) {
 		if showFullscreenArticlesSwitch.isOn {
 			AppDefaults.shared.articleFullscreenAvailable = true
@@ -371,6 +411,22 @@ final class SettingsViewController: UITableViewController {
 
 	@IBAction func switchShowFeedNameInReaderView(_ sender: Any) {
 		AppDefaults.shared.showFeedNameInReaderView = showFeedNameInReaderViewSwitch.isOn
+	}
+
+	@IBAction func switchShowPrevNextArticleButtons(_ sender: Any) {
+		AppDefaults.shared.showPrevNextArticleButtons = showPrevNextArticleButtonsSwitch.isOn
+	}
+
+	@IBAction func switchShowTableOfContentsAndFind(_ sender: Any) {
+		AppDefaults.shared.showTableOfContentsAndFind = showTableOfContentsAndFindSwitch.isOn
+	}
+
+	@IBAction func switchHideNotchInFullScreen(_ sender: Any) {
+		AppDefaults.shared.hideNotchInFullScreen = hideNotchInFullScreenSwitch.isOn
+	}
+
+	@IBAction func switchDisableArticleLinks(_ sender: Any) {
+		AppDefaults.shared.disableArticleLinks = disableArticleLinksSwitch.isOn
 	}
 
 	@IBAction func switchBrowserPreference(_ sender: Any) {
@@ -548,6 +604,39 @@ private extension SettingsViewController {
 		let docPicker = UIDocumentPickerViewController(forExporting: [tempFile])
 		docPicker.modalPresentationStyle = .formSheet
 		self.present(docPicker, animated: true)
+	}
+
+	func presentPageCounterDisplayModePicker(sourceView: UIView, sourceRect: CGRect) {
+		let title = NSLocalizedString("Page Counter", comment: "Page counter picker title")
+		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+
+		if let popoverController = alert.popoverPresentationController {
+			popoverController.sourceView = view
+			popoverController.sourceRect = sourceRect
+		}
+
+		let options: [(PageCounterDisplayMode, String)] = [
+			(.off, NSLocalizedString("Off", comment: "Page counter off")),
+			(.percentage, NSLocalizedString("Percentage", comment: "Page counter percentage")),
+			(.pageCount, NSLocalizedString("Page Count", comment: "Page counter page count"))
+		]
+
+		for (mode, label) in options {
+			var actionTitle = label
+			if mode == AppDefaults.shared.pageCounterDisplayMode {
+				actionTitle = "✓ " + actionTitle
+			}
+			let action = UIAlertAction(title: actionTitle, style: .default) { [weak self] _ in
+				AppDefaults.shared.pageCounterDisplayMode = mode
+				self?.updatePageCounterDisplayModeLabel()
+			}
+			alert.addAction(action)
+		}
+
+		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
+		alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
+
+		self.present(alert, animated: true)
 	}
 
 	func presentSortFieldPicker(sourceView: UIView, sourceRect: CGRect) {
