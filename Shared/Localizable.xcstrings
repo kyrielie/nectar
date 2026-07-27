@@ -570,6 +570,9 @@
     "Number of Lines" : {
       "comment" : "Number of Lines"
     },
+    "Off" : {
+      "comment" : "Page counter off"
+    },
     "OK" : {
       "comment" : "OK button"
     },
@@ -597,8 +600,17 @@
     "Overwrite" : {
       "comment" : "Overwrite"
     },
+    "Page Count" : {
+      "comment" : "Page counter page count"
+    },
+    "Page Counter" : {
+      "comment" : "Page counter picker title"
+    },
     "Pending" : {
       "comment" : "Pending"
+    },
+    "Percentage" : {
+      "comment" : "Page counter percentage"
     },
     "Please enter a valid http:// or https:// address." : {
       "comment" : "Invalid address message"
@@ -719,6 +731,9 @@
     },
     "Swipe a feed to show the action menu and delete button." : {
       "comment" : "Dinosaurs swipe hint."
+    },
+    "Table of Contents" : {
+      "comment" : "Table of Contents"
     },
     "Tag Display" : {
       "comment" : "Tag Display"

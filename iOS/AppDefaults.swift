@@ -55,6 +55,12 @@ enum TagDisplayMode: Int, CaseIterable, Sendable {
 	}
 }
 
+enum PageCounterDisplayMode: String, CaseIterable, Sendable {
+	case off
+	case percentage
+	case pageCount
+}
+
 extension Notification.Name {
 	public static let userInterfaceColorPaletteDidUpdate = Notification.Name("UserInterfaceColorPaletteDidUpdateNotification")
 	public static let timelineIconSizeDidChange = Notification.Name("TimelineIconSizeDidChangeNotification")
@@ -88,6 +94,12 @@ final class AppDefaults: Sendable {
 		static let articleBackSwipeEnabled = "articleBackSwipeEnabled"
 		static let articlePagingSwipeEnabled = "articlePagingSwipeEnabled"
 		static let showFeedNameInReaderView = "showFeedNameInReaderView"
+		static let showPrevNextArticleButtons = "showPrevNextArticleButtons"
+		static let showTableOfContentsAndFind = "showTableOfContentsAndFind"
+		static let hideNotchInFullScreen = "hideNotchInFullScreen"
+		static let pageCounterDisplayMode = "pageCounterDisplayMode"
+		static let disableArticleLinks = "disableArticleLinks"
+		static let showLastUpdatedLabel = "showLastUpdatedLabel"
 		static let articleThemeOverrides = "articleThemeOverrides"
 		static let confirmMarkAllAsRead = "confirmMarkAllAsRead"
 		static let lastRefresh = "lastRefresh"
@@ -278,6 +290,86 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			AppDefaults.setBool(for: Key.showFeedNameInReaderView, newValue)
+		}
+	}
+
+	/// Whether the reader view toolbar shows the previous/next article buttons.
+	/// Replaced by the Table of Contents/Find buttons when showTableOfContentsAndFind
+	/// is on — see ArticleViewController.rightBarButtonItems().
+	var showPrevNextArticleButtons: Bool {
+		get {
+			return AppDefaults.bool(for: Key.showPrevNextArticleButtons)
+		}
+		set {
+			AppDefaults.setBool(for: Key.showPrevNextArticleButtons, newValue)
+		}
+	}
+
+	/// Whether the reader view toolbar shows Table of Contents/Find buttons
+	/// instead of the previous/next article buttons. Opt-in (default false)
+	/// since it replaces, rather than adds to, the existing toolbar slot.
+	var showTableOfContentsAndFind: Bool {
+		get {
+			return AppDefaults.bool(for: Key.showTableOfContentsAndFind)
+		}
+		set {
+			AppDefaults.setBool(for: Key.showTableOfContentsAndFind, newValue)
+		}
+	}
+
+	/// Whether the notch/Dynamic Island area is masked (solid black) while in
+	/// fullscreen reading mode, instead of showing through as normal. Exposed
+	/// as its own toggle -- independent of the page counter below -- for
+	/// people who want the notch hidden but don't care about the counter.
+	/// The page counter turning on also hides the notch (see
+	/// WebViewController.updateNotchAndPageCounterVisibility()) without
+	/// requiring this setting to also be switched on: showing a page counter
+	/// in a space that still displays the notch would look broken.
+	var hideNotchInFullScreen: Bool {
+		get {
+			return AppDefaults.bool(for: Key.hideNotchInFullScreen)
+		}
+		set {
+			AppDefaults.setBool(for: Key.hideNotchInFullScreen, newValue)
+		}
+	}
+
+	/// Page counter shown in the notch's leading side space while in
+	/// fullscreen reading mode. Off by default; when on, implies hiding the
+	/// notch regardless of hideNotchInFullScreen's own value (see above).
+	var pageCounterDisplayMode: PageCounterDisplayMode {
+		get {
+			guard let rawValue = AppDefaults.string(for: Key.pageCounterDisplayMode),
+				  let mode = PageCounterDisplayMode(rawValue: rawValue) else {
+				return .off
+			}
+			return mode
+		}
+		set {
+			AppDefaults.setString(for: Key.pageCounterDisplayMode, newValue.rawValue)
+		}
+	}
+
+	/// When on, tapping any link in the article body (including target=_blank
+	/// links) is suppressed entirely rather than navigating anywhere. Off by
+	/// default, since it changes existing behavior.
+	var disableArticleLinks: Bool {
+		get {
+			return AppDefaults.bool(for: Key.disableArticleLinks)
+		}
+		set {
+			AppDefaults.setBool(for: Key.disableArticleLinks, newValue)
+		}
+	}
+
+	/// The "Updated X ago" / "Updated Just Now" label shown under the feed
+	/// list while idle. On by default, preserving current behavior.
+	var showLastUpdatedLabel: Bool {
+		get {
+			return AppDefaults.bool(for: Key.showLastUpdatedLabel)
+		}
+		set {
+			AppDefaults.setBool(for: Key.showLastUpdatedLabel, newValue)
 		}
 	}
 
@@ -502,6 +594,8 @@ final class AppDefaults: Sendable {
 										Key.articleBackSwipeEnabled: true,
 									Key.articlePagingSwipeEnabled: true,
 										Key.showFeedNameInReaderView: false,
+									Key.showPrevNextArticleButtons: true,
+									Key.showLastUpdatedLabel: true,
 										Key.confirmMarkAllAsRead: true,
 										Key.currentThemeName: Self.defaultThemeName,
 									   Key.splitViewPreferredDisplayMode: UISplitViewController.DisplayMode.oneBesideSecondary.rawValue]

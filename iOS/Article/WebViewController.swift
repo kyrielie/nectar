@@ -34,6 +34,15 @@ final class WebViewController: UIViewController {
 	private var topShowBarsViewConstraint: NSLayoutConstraint!
 	private var bottomShowBarsViewConstraint: NSLayoutConstraint!
 
+	// §6/§7: persistent notch mask + page counter, both only ever visible
+	// while fullscreen reading mode is actually active (bars hidden) -- see
+	// updateNotchAndPageCounterVisibility(), called from showBars()/hideBars().
+	// Distinct from topShowBarsView above: that view is an invisible tap
+	// target that's pulled off-screen while fullscreen, not a persistent
+	// mask over the notch itself.
+	private var notchCoverView: UIView!
+	private var pageCounterLabel: UILabel!
+
 	// The only authoritative reference to "the" current webview. Previously this was
 	// a computed property returning view.subviews[0], which silently returned whichever
 	// PreloadedWebView happened to be backmost if more than one was ever inserted --
@@ -140,6 +149,14 @@ final class WebViewController: UIViewController {
 		// Configure the tap zones
 		configureTopShowBarsView()
 		configureBottomShowBarsView()
+		configureNotchCoverView()
+		// Without this, notchCoverView stays at its configureNotchCoverView() default
+		// (isHidden = true) until the first showBars()/hideBars() call -- which, for a
+		// freshly-paged-in article in the fullscreen pager, can land a frame or more
+		// after this view is already on screen, showing a real flash of the bare notch
+		// on every page turn. renderPage() below will refresh the color/text again once
+		// the theme is known; this just gets visibility correct immediately.
+		updateNotchAndPageCounterVisibility()
 
 		if !isAwaitingInitialScrollFetch {
 			loadWebView(reason: "viewDidLoad")
@@ -317,6 +334,7 @@ final class WebViewController: UIViewController {
 		additionalSafeAreaInsets.bottom = 0
 		setBottomScrollEdgeEffectHidden(false)
 		configureContextMenuInteraction()
+		updateNotchAndPageCounterVisibility()
 		// setNavigationBarHidden/setToolbarHidden reset interactivePopGestureRecognizer's
 		// (and interactiveContentPopGestureRecognizer's) isEnabled back to true as a
 		// side effect, which silently overrides articleBackSwipeEnabled = false. Re-apply
@@ -342,6 +360,7 @@ final class WebViewController: UIViewController {
 			updateBottomSafeAreaForFullScreen()
 			setBottomScrollEdgeEffectHidden(true)
 			configureContextMenuInteraction()
+			updateNotchAndPageCounterVisibility()
 			coordinator.applyArticleBackSwipeGating()
 		}
 	}
@@ -439,6 +458,11 @@ extension WebViewController: WKNavigationDelegate {
 	func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
 
 		if navigationAction.navigationType == .linkActivated {
+			if AppDefaults.shared.disableArticleLinks {
+				decisionHandler(.cancel)
+				return
+			}
+
 			guard let url = navigationAction.request.url else {
 				decisionHandler(.allow)
 				return
@@ -505,6 +529,10 @@ extension WebViewController: WKUIDelegate {
 	}
 
 	func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+		if AppDefaults.shared.disableArticleLinks {
+			return nil
+		}
+
 		guard let url = navigationAction.request.url else {
 			return nil
 		}
@@ -616,6 +644,21 @@ extension WebViewController: UIScrollViewDelegate {
 				let percentScrolled = (Double(javascriptScrollY) + innerHeight) / scrollHeight
 				if percentScrolled >= 0.99 {
 					self.coordinator.markCurrentArticleAsReadFromScrollCompletion()
+				}
+
+				// Page counter (§7). Reuses this same JS bridge payload rather than
+				// adding a second round trip -- percentScrolled/scrollHeight/innerHeight
+				// are already exactly what's needed.
+				switch AppDefaults.shared.pageCounterDisplayMode {
+				case .off:
+					break
+				case .percentage:
+					let clamped = min(max(percentScrolled, 0), 1)
+					self.pageCounterLabel.text = "\(Int((clamped * 100).rounded()))%"
+				case .pageCount:
+					let totalPages = max(1, Int((scrollHeight / innerHeight).rounded(.up)))
+					let currentPage = min(totalPages, Int((Double(javascriptScrollY) / innerHeight).rounded()) + 1)
+					self.pageCounterLabel.text = "\(currentPage)/\(totalPages)"
 				}
 
 				// Visible reading progress (Phase A1). Reuses this same JS bridge payload
@@ -811,6 +854,32 @@ private extension WebViewController {
 
 		WebViewConfiguration.addContentBlockingRules(to: webView)
 		WebViewConfiguration.installArticleScripts(in: webView, windowScrollY: windowScrollY, generation: loadWebViewGeneration)
+
+		// §1a. WKWebView defaults to .systemBackground (see PreloadedWebView.init) until
+		// this runs, which is near-black in dark mode -- resolve the theme's actual
+		// background before loadHTMLString commits the navigation, so there's no flash
+		// of the wrong color. Precedence: override background (if set) -> theme's own
+		// background -> ArticleThemeColorExtractor's black/white fallback.
+		let themeColors = ArticleThemeColorExtractor.colors(for: theme)
+		let overrides = AppDefaults.shared.articleThemeOverrides
+		let isDark = webView.traitCollection.userInterfaceStyle == .dark
+		let resolvedBackground: UIColor
+		if isDark, let hex = overrides.backgroundColorDarkHex ?? overrides.backgroundColorHex, let overrideColor = UIColor(cssHex: hex) {
+			resolvedBackground = overrideColor
+		} else if !isDark, let hex = overrides.backgroundColorHex, let overrideColor = UIColor(cssHex: hex) {
+			resolvedBackground = overrideColor
+		} else {
+			resolvedBackground = isDark ? themeColors.backgroundColorDark : themeColors.backgroundColor
+		}
+		webView.backgroundColor = resolvedBackground
+		webView.underPageBackgroundColor = resolvedBackground
+		webView.scrollView.backgroundColor = resolvedBackground
+
+		// Keep the notch cover / page counter in sync with the same resolved color and
+		// text color on every render, not just on the next bars-toggle -- otherwise they
+		// keep showing whatever was last set, stale, through an article/theme change.
+		updateNotchAndPageCounterVisibility(resolvedBackground: resolvedBackground, resolvedText: isDark ? themeColors.textColorDark : themeColors.textColor)
+
 		webView.loadHTMLString(html, baseURL: URL(string: rendering.baseURL))
 	}
 
@@ -918,6 +987,80 @@ private extension WebViewController {
 			bottomShowBarsView.heightAnchor.constraint(equalToConstant: 44.0)
 		])
 		bottomShowBarsView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(showBars(_:))))
+	}
+
+	// §6/§7. notchCoverView spans the top safe-area inset (the notch/Dynamic
+	// Island's own footprint) -- pinned view.topAnchor to
+	// view.safeAreaLayoutGuide.topAnchor rather than a fixed height, so it
+	// tracks whatever that inset actually is on the current device without
+	// needing to recompute anything when it changes. pageCounterLabel sits
+	// on top of it, leading-aligned per the current design (a single label,
+	// not mirrored on both sides).
+	func configureNotchCoverView() {
+		notchCoverView = UIView()
+		notchCoverView.isHidden = true
+		notchCoverView.translatesAutoresizingMaskIntoConstraints = false
+		view.addSubview(notchCoverView)
+
+		NSLayoutConstraint.activate([
+			notchCoverView.topAnchor.constraint(equalTo: view.topAnchor),
+			notchCoverView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+			notchCoverView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+			notchCoverView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+		])
+
+		pageCounterLabel = UILabel()
+		pageCounterLabel.font = .preferredFont(forTextStyle: .caption2)
+		pageCounterLabel.textColor = .label
+		pageCounterLabel.isHidden = true
+		pageCounterLabel.translatesAutoresizingMaskIntoConstraints = false
+		view.addSubview(pageCounterLabel)
+
+		NSLayoutConstraint.activate([
+			pageCounterLabel.centerYAnchor.constraint(equalTo: notchCoverView.centerYAnchor),
+			// NOTE: was 20pt, reported as still clipped by the corner curvature on
+			// iPhone 17 in the simulator -- bumped to Self.pageCounterLeadingInset as a
+			// starting point (topShowBarsView's own 44pt tap-zone height, not a fresh
+			// guess), but this needs re-checking against an iPhone 17 simulator/device
+			// before treating it as correct. Do not further adjust this blind.
+			pageCounterLabel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: Self.pageCounterLeadingInset)
+		])
+	}
+
+	private static let pageCounterLeadingInset: CGFloat = 44
+
+	/// Called from showBars()/hideBars() (no args -- reuses whatever color was last
+	/// resolved by renderPage()) and from renderPage() itself (explicit args, so the
+	/// notch cover/label track the theme's actual color on every render instead of
+	/// only refreshing on the next bars-toggle). Visibility is gated on
+	/// isFullScreenAvailable (device + the general "Enable Full Screen
+	/// Articles" setting) rather than the momentary articleFullscreenEnabled
+	/// flag that showBars()/hideBars() flip on every tap-to-reveal -- the
+	/// notch cover sits entirely above where a revealed nav bar renders, so
+	/// there's no visual conflict with keeping it up while bars are
+	/// momentarily peeked at, and tying it to the peek state was what made it
+	/// flicker in and out during ordinary reading/scrolling.
+	func updateNotchAndPageCounterVisibility(resolvedBackground: UIColor? = nil, resolvedText: UIColor? = nil) {
+		let pageCounterOn = AppDefaults.shared.pageCounterDisplayMode != .off
+		// The page counter implies notch-hiding on its own -- a visible
+		// counter over a still-visible notch would look broken -- without
+		// requiring hideNotchInFullScreen to also be switched on.
+		let shouldHideNotch = AppDefaults.shared.hideNotchInFullScreen || pageCounterOn
+
+		// Prefer the just-resolved theme color (renderPage's call); otherwise reuse
+		// webView.backgroundColor, which renderPage's §1a fix keeps theme-accurate
+		// between renders, rather than falling back to .systemBackground (the stale,
+		// often near-black-in-dark-mode default this used to fall back to).
+		if let resolvedBackground {
+			notchCoverView.backgroundColor = resolvedBackground
+		} else if let webViewBackground = webView?.backgroundColor {
+			notchCoverView.backgroundColor = webViewBackground
+		}
+		if let resolvedText {
+			pageCounterLabel.textColor = resolvedText
+		}
+		notchCoverView.isHidden = !(shouldHideNotch && isFullScreenAvailable)
+		pageCounterLabel.isHidden = !(pageCounterOn && isFullScreenAvailable)
 	}
 
 	func updateBottomSafeAreaForFullScreen() {
@@ -1093,6 +1236,41 @@ extension WebViewController {
 
 	func selectPreviousSearchResult() {
 		webView?.evaluateJavaScript("selectPreviousResult()")
+	}
+
+}
+
+struct TableOfContentsEntry: Codable, Hashable {
+	let tocIndex: Int
+	let id: String
+	let text: String
+	let tagName: String
+	let isTocHeading: Bool
+}
+
+extension WebViewController {
+
+	/// Entries are addressed by `tocIndex` (position among all h1/.toc-heading
+	/// elements in document order), not `id` — anthology content reuses the
+	/// same id (e.g. "calibre_toc_3") across separate concatenated books, so
+	/// `id` alone can't distinguish "chapter 3 of book 1" from "chapter 3 of
+	/// book 2." See main_ios.js's tocNodes()/getTableOfContents/scrollToHeading.
+	func fetchTableOfContents(completionHandler: @escaping ([TableOfContentsEntry]) -> Void) {
+		webView?.evaluateJavaScript("getTableOfContents(\"e30=\")") { result, error in   // "e30=" == base64("{}")
+			guard error == nil, let b64 = result as? String,
+				  let data = Data(base64Encoded: b64),
+				  let entries = try? JSONDecoder().decode([TableOfContentsEntry].self, from: data) else {
+				completionHandler([])
+				return
+			}
+			completionHandler(entries)
+		}
+	}
+
+	func scrollToHeading(tocIndex: Int) {
+		guard let json = try? JSONEncoder().encode(["tocIndex": tocIndex]) else { return }
+		let encoded = json.base64EncodedString()
+		webView?.evaluateJavaScript("scrollToHeading(\"\(encoded)\")")
 	}
 
 }
