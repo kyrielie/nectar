@@ -62,6 +62,7 @@ struct Assets {
 		static let filter = RSImage(symbol: "line.3.horizontal.decrease")!
 		static let folderOutlinePlus = RSImage(symbol: "folder.badge.plus")!
 		static let info = RSImage(symbol: "info.circle")!
+		static let opmlImport = RSImage(symbol: "square.and.arrow.down.on.square")!
 		static let plus = RSImage(symbol: "plus")!
 		static let prevArticle = RSImage(symbol: "chevron.up")!
 		static let openInSidebar = RSImage(symbol: "arrow.turn.down.left")!
