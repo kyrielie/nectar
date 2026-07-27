@@ -12,6 +12,7 @@
 		043291147B3052FD66395025 /* FindInArticleActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2594B99073E3744C3DCD2F2B /* FindInArticleActivity.swift */; };
 		047567E697676EC2560CA38A /* AddComboTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5EC3A464FBA86925E9E4C3C /* AddComboTableViewCell.swift */; };
 		057BD9C465F313B558B6521C /* AddFeedSelectFolderTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = D9CF9FA05BD676DCDB04BB7D /* AddFeedSelectFolderTableViewCell.xib */; };
+		08BFA0E4BEC0ECAF6534281B /* OPMLImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E99DF16E2818DD03F982E08 /* OPMLImportCoordinator.swift */; };
 		0C257B3C3DBCEC2DF3864D1F /* ArticleThemeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69C41E0B0165A72DC7F0E0C7 /* ArticleThemeListView.swift */; };
 		0C36E550FACBBAF7BDD93C4B /* CacheCleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2A5425DA3C15784F10FEAF4 /* CacheCleaner.swift */; };
 		107E5EF06F2AB15102DA6497 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAEAF0FF77BBE87180FB32D9 /* AboutView.swift */; };
@@ -325,6 +326,7 @@
 		592E25A74431291C0AF61880 /* MainFeedCollectionViewFolderCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFeedCollectionViewFolderCell.swift; sourceTree = "<group>"; };
 		59AF7CC16EB713B75FA9E683 /* MainTimelineDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTimelineDataSource.swift; sourceTree = "<group>"; };
 		5E35397FAEA4725E263E0F4B /* SmartFeedArticleGrouping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartFeedArticleGrouping.swift; sourceTree = "<group>"; };
+		5E99DF16E2818DD03F982E08 /* OPMLImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OPMLImportCoordinator.swift; sourceTree = "<group>"; };
 		5EC887B424297E7132E79D2A /* ArticleSearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleSearchBar.swift; sourceTree = "<group>"; };
 		5F44A24ABF6010736C5337D5 /* AddFeedFolderViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFeedFolderViewController.swift; sourceTree = "<group>"; };
 		5F56A5C6264448CAA93A5D43 /* TodayFeedDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayFeedDelegate.swift; sourceTree = "<group>"; };
@@ -631,6 +633,7 @@
 				F5A5136B05A2BD28770F62DE /* Add */,
 				14B6A4B13A0F87D8BA1CE1F7 /* Article */,
 				1F9CD0D543FCA3227D1CC4AC /* CurrentActivity */,
+				92EC9E72B3BBD92E0E0D1CE8 /* Import */,
 				D67F02407ECE9B46BA698E2D /* Inspector */,
 				5C8A4B8647A735733DA75211 /* LaunchScreenPad.storyboard */,
 				1BF9963C87F8A75C81FAAE8F /* LaunchScreenPhone.storyboard */,
@@ -704,6 +707,14 @@
 				D31FBDC8619C257400DD4395 /* WebViewConfiguration.swift */,
 			);
 			path = "Article Rendering";
+			sourceTree = "<group>";
+		};
+		92EC9E72B3BBD92E0E0D1CE8 /* Import */ = {
+			isa = PBXGroup;
+			children = (
+				5E99DF16E2818DD03F982E08 /* OPMLImportCoordinator.swift */,
+			);
+			path = Import;
 			sourceTree = "<group>";
 		};
 		A70142E2275329A4A02D3F45 /* Resources */ = {
@@ -1235,6 +1246,7 @@
 				DA634D3C75477A6467872838 /* NSAttributedString+Extensions.swift in Sources */,
 				1C1BC9B13ACD28DCED2C5C59 /* Node+Extensions.swift in Sources */,
 				96DFE385B2B481A0F7004FB2 /* OPMLExporter.swift in Sources */,
+				08BFA0E4BEC0ECAF6534281B /* OPMLImportCoordinator.swift in Sources */,
 				4E7362661B0643809D41364A /* OpenInSafariActivity.swift in Sources */,
 				3285C1FDAE9B53072301A90A /* PreloadedWebView.swift in Sources */,
 				40A2D7BAF98A3C69E20E06A0 /* PseudoFeed.swift in Sources */,

@@ -945,6 +945,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 			Context Menu Order:
 			1. Add Feed
 			2. Add Folder
+			3. Import OPML…
 		*/
 
 		var menuItems: [UIAction] = []
@@ -962,6 +963,16 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 
 		menuItems.append(addFolderAction)
 
+		let importOPMLActionTitle = NSLocalizedString("Import OPML…", comment: "Import OPML")
+		let importOPMLAction = UIAction(title: importOPMLActionTitle, image: Assets.Images.opmlImport) { [weak self] _ in
+			guard let self else { return }
+			OPMLImportCoordinator.begin(presentingController: self, barButtonItem: self.addNewItemButton)
+		}
+		menuItems.append(importOPMLAction)
+
+		// menuItems.reversed(): the last item appended ends up first in the menu, so
+		// this list is built bottom-to-top of the visual order documented above --
+		// Import OPML appended last lands after Add Folder, at the bottom.
 		let contextMenu = UIMenu(title: "", image: nil, identifier: nil, options: [], children: menuItems.reversed())
 
 		self.addNewItemButton.menu = contextMenu
@@ -1005,6 +1016,13 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 			}
 			alertController.addAction(addFolderAction)
 		}
+
+		let importOPMLActionTitle = NSLocalizedString("Import OPML…", comment: "Import OPML")
+		let importOPMLAction = UIAlertAction(title: importOPMLActionTitle, style: .default) { [weak self] _ in
+			guard let self else { return }
+			OPMLImportCoordinator.begin(presentingController: self, barButtonItem: sender)
+		}
+		alertController.addAction(importOPMLAction)
 
 		alertController.addAction(cancelAction)
 

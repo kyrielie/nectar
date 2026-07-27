@@ -185,6 +185,13 @@ final class ArticleViewController: UIViewController {
 		} else {
 			currentWebViewController?.showBars()
 		}
+		// Home-indicator auto-hide (system fade-after-inactivity, reappear-on-touch) is
+		// independent of the fullscreen bars toggle above -- it should be available
+		// whenever an article is on screen at all, not only once the person has
+		// explicitly hidden the toolbars. Previously this was only set from
+		// WebViewController.showBars()/hideBars(), so it never took effect unless
+		// fullscreen reading mode was in use.
+		coordinator.hideHomeIndicator()
 		pageViewController.scrollViewInsidePageControl?.isScrollEnabled = AppDefaults.shared.articlePagingSwipeEnabled
 		super.viewWillAppear(animated)
 	}
@@ -231,6 +238,7 @@ final class ArticleViewController: UIViewController {
 			endFind()
 			searchBar.shouldBeginEditing = false
 		}
+		coordinator.showHomeIndicator()
 		// Pass animated: false — animating the nav bar / toolbar visibility change during the
 		// disappear transition triggers an Auto Layout assertion (NSISEngine) and crashes.
 		currentWebViewController?.showBars(animated: false)
