@@ -450,22 +450,34 @@ struct SidebarItemNode: Hashable, Sendable {
 		timelineFeed = sidebarItem
 
 		if let article {
-			// Don't also call show(.supplementary) here: selectArticle(_:) below calls
-			// show(.secondary) itself, and firing both column transitions back-to-back
-			// in the same run-loop turn -- before the split view has completed its very
-			// first layout pass at launch -- reproduces the same "attempt to nest wrapped
-			// navigation controllers" crash documented in selectArticle's own
-			// presentedViewController-dismissal comment above, just via a different
-			// trigger (state restoration racing itself, not a TOC modal dismissal).
-			// show(.secondary) supersedes show(.supplementary) anyway once an article is
-			// selected, so the second call was always redundant, not just racy.
+			// The previous fix here (removing a redundant show(.supplementary) call
+			// immediately before this one) turned out to be necessary but not
+			// sufficient. The real problem: restoreWindowState runs from
+			// SceneDelegate.scene(_:willConnectTo:options:), which fires before the
+			// window is ever key/visible -- i.e. before UIKit's very first commit/
+			// layout pass. Calling rootSplitViewController.show(.secondary)
+			// (inside selectArticle, below) this early means it runs *before* the
+			// split view has ever resolved its own adaptive column layout even
+			// once. When the window later actually becomes key and UIKit performs
+			// that real first layout, the split view's own internal
+			// _prepareTransitionToLayout: machinery collides with the
+			// already-in-flight state our early call left behind -- same
+			// "attempt to nest wrapped navigation controllers" crash as before,
+			// just from a single call landing too early rather than from two
+			// calls landing back-to-back.
+			//
+			// Fix: defer to the next run-loop turn, so this runs after scene
+			// connection finishes and the window/split view have had their first
+			// layout pass, instead of nested inside it.
 			//
 			// Disable animation since this runs only during state restoration on launch.
 			// Scroll position restoration comes from the article's own saved position (see
 			// selectArticle), not from stateInfo.articleWindowScrollY -- that field is a single
 			// value shared across every article and is no longer used as a restore source.
-			UIView.performWithoutAnimation {
-				selectArticle(article)
+			DispatchQueue.main.async { [weak self] in
+				UIView.performWithoutAnimation {
+					self?.selectArticle(article)
+				}
 			}
 		} else {
 			rootSplitViewController.show(.supplementary)
