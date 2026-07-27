@@ -183,6 +183,22 @@ private extension WebViewConfiguration {
 
 			debugLog("scroll-restore script parsed, generation=\(generation), readyState=" + document.readyState);
 
+			// §1b. Runs at .atDocumentStart, before first paint: hide the document
+			// immediately so WKWebView never paints it at its natural (0,0) scroll
+			// position before applyRestore() gets a chance to run from
+			// DOMContentLoaded. Revealed as soon as that first restore lands, with a
+			// short hard-cap fallback below in case DOMContentLoaded is ever delayed
+			// or skipped, so the page is never left invisible.
+			document.documentElement.style.visibility = 'hidden';
+			var revealed = false;
+			function reveal(reason) {
+				if (revealed) { return; }
+				revealed = true;
+				document.documentElement.style.visibility = 'visible';
+				debugLog("scroll-restore reveal (" + reason + ")");
+			}
+			setTimeout(function() { reveal("reveal-hard-cap"); }, 500);
+
 			var settleTimer = null;
 			var hardCapTimer = null;
 			var complete = false;
@@ -218,6 +234,7 @@ private extension WebViewConfiguration {
 			document.addEventListener("DOMContentLoaded", function() {
 				debugLog(scrollState("before DOMContentLoaded restore"));
 				applyRestore();
+				reveal("DOMContentLoaded");
 				debugLog(scrollState("after DOMContentLoaded restore"));
 
 				if (window.ResizeObserver) {

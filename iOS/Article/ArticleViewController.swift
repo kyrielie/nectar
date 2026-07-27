@@ -18,8 +18,17 @@ import Articles
 final class ArticleViewController: UIViewController {
 
 	@IBOutlet private weak var nextUnreadBarButtonItem: UIBarButtonItem!
-	@IBOutlet private weak var prevArticleBarButtonItem: UIBarButtonItem!
-	@IBOutlet private weak var nextArticleBarButtonItem: UIBarButtonItem!
+	// Strong, unlike the other bar-button outlets here: these two are now
+	// conditionally left out of navigationItem.rightBarButtonItems (see
+	// rightBarButtonItems()/showPrevNextArticleButtons), and nothing else
+	// retains them when they're not currently in that array. Weak outlets
+	// with no other owner get deallocated, which crashed updateUI()'s
+	// isEnabled assignments below when the setting was off (Fatally
+	// unwrapped Optional value). readBarButtonItem/starBarButtonItem/
+	// actionBarButtonItem/nextUnreadBarButtonItem don't need this because
+	// they're unconditionally in toolbarItems, set once in viewDidLoad.
+	@IBOutlet private var prevArticleBarButtonItem: UIBarButtonItem!
+	@IBOutlet private var nextArticleBarButtonItem: UIBarButtonItem!
 	@IBOutlet private weak var readBarButtonItem: UIBarButtonItem!
 	@IBOutlet private weak var starBarButtonItem: UIBarButtonItem!
 	@IBOutlet private weak var actionBarButtonItem: UIBarButtonItem!
@@ -32,6 +41,8 @@ final class ArticleViewController: UIViewController {
 	// catalogs aren't diffable as text.
 	private lazy var heartBarButtonItem = UIBarButtonItem(image: Assets.Images.heartOpen, style: .plain, target: self, action: #selector(toggleLoved(_:)))
 	private lazy var themeBarButtonItem = UIBarButtonItem(image: Assets.Images.theme, style: .plain, target: self, action: #selector(showThemePicker(_:)))
+	private lazy var findInArticleBarButtonItem = UIBarButtonItem(image: Assets.Images.findInArticle, style: .plain, target: self, action: #selector(beginFind(_:)))
+	private lazy var tableOfContentsBarButtonItem = UIBarButtonItem(image: Assets.Images.tableOfContents, style: .plain, target: self, action: #selector(showTableOfContents(_:)))
 
 	@IBOutlet private var searchBar: ArticleSearchBar!
 	@IBOutlet private var searchBarBottomConstraint: NSLayoutConstraint!
@@ -112,7 +123,7 @@ final class ArticleViewController: UIViewController {
 		])
 		fullScreenTapZone.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapNavigationBar)))
 		navigationItem.titleView = fullScreenTapZone
-		navigationItem.rightBarButtonItems = [themeBarButtonItem, nextArticleBarButtonItem, prevArticleBarButtonItem]
+		navigationItem.rightBarButtonItems = rightBarButtonItems()
 
 		let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
 		toolbarItems = [
@@ -306,8 +317,21 @@ final class ArticleViewController: UIViewController {
 		currentWebViewController?.fullReload()
 	}
 
+	// Order preserved exactly as before this setting existed: themeBarButtonItem first,
+	// then either TOC/Find (replaces, doesn't add alongside) or next/prev.
+	private func rightBarButtonItems() -> [UIBarButtonItem] {
+		var items: [UIBarButtonItem] = [themeBarButtonItem]
+		if AppDefaults.shared.showTableOfContentsAndFind {
+			items.append(contentsOf: [tableOfContentsBarButtonItem, findInArticleBarButtonItem])
+		} else if AppDefaults.shared.showPrevNextArticleButtons {
+			items.append(contentsOf: [nextArticleBarButtonItem, prevArticleBarButtonItem])
+		}
+		return items
+	}
+
 	@objc func userDefaultsDidChange(_ note: Notification) {
 		coordinator.applyArticleBackSwipeGating()
+		navigationItem.rightBarButtonItems = rightBarButtonItems()
 	}
 
 	@objc func willEnterForeground(_ note: Notification) {
@@ -373,6 +397,19 @@ final class ArticleViewController: UIViewController {
 	@objc func showThemePicker(_ sender: Any) {
 		let articleThemes = UIHostingController(rootView: ArticleThemeListView())
 		navigationController?.pushViewController(articleThemes, animated: true)
+	}
+
+	@objc func showTableOfContents(_ sender: Any) {
+		guard let webViewController = currentWebViewController else { return }
+		webViewController.fetchTableOfContents { [weak self] entries in
+			guard let self, !entries.isEmpty else { return }
+			let tocViewController = TableOfContentsViewController(entries: entries) { [weak self] tocIndex in
+				self?.currentWebViewController?.scrollToHeading(tocIndex: tocIndex)
+			}
+			let navController = UINavigationController(rootViewController: tocViewController)
+			navController.modalPresentationStyle = .fullScreen
+			self.present(navController, animated: true)
+		}
 	}
 
 	@IBAction func showActivityDialog(_ sender: Any) {
