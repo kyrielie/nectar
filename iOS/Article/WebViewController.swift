@@ -121,12 +121,13 @@ final class WebViewController: UIViewController {
 
 	var windowScrollY = 0 {
 		didSet {
-			if windowScrollY != AppDefaults.shared.articleWindowScrollY {
-				AppDefaults.shared.articleWindowScrollY = windowScrollY
-			}
-			// Per-article persistence (Phase 2), alongside the existing single-global
-			// AppDefaults write above, which still backs relaunch state restoration
-			// (SceneCoordinator's stateInfo.articleWindowScrollY path) and is left as-is.
+			// Per-article persistence (Phase 2). The single-global AppDefaults
+			// write that used to sit here has been removed -- see the comments
+			// on ArticleViewController.setScrollPosition(articleWindowScrollY:)
+			// and AppDefaults.articleWindowScrollY, now also deleted: relaunch
+			// and Handoff restore were already migrated to this per-book path
+			// (SceneCoordinator.restoreSelectedSidebarItemAndArticle/selectArticle),
+			// leaving the global write with zero readers.
 			if let article = article, let account = article.account {
 				let articleID = article.articleID
 				let scrollY = windowScrollY
@@ -264,11 +265,6 @@ final class WebViewController: UIViewController {
 				}
 			}
 		}
-	}
-
-	func setScrollPosition(articleWindowScrollY: Int) {
-		windowScrollY = articleWindowScrollY
-		loadWebView(reason: "setScrollPosition")
 	}
 
 	func focus() {
