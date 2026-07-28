@@ -97,6 +97,22 @@ typealias ArticleArray = [Article]
 		return anyArticlePassesTest { !$0.status.starred }
 	}
 
+	func canMarkAllAsLoved() -> Bool {
+		return anyArticlePassesTest { !$0.status.loved }
+	}
+
+	func canMarkAllAsUnloved() -> Bool {
+		return anyArticlePassesTest { $0.status.loved }
+	}
+
+	func canMarkAllAsReadLater() -> Bool {
+		return anyArticlePassesTest { !$0.status.starred }
+	}
+
+	func canMarkAllAsNotReadLater() -> Bool {
+		return anyArticlePassesTest { $0.status.starred }
+	}
+
 	func unreadArticles() -> [Article]? {
 		let articles = self.filter { !$0.status.read }
 		return articles.isEmpty ? nil : articles

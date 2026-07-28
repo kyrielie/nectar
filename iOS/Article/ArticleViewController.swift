@@ -410,7 +410,11 @@ final class ArticleViewController: UIViewController {
 	@objc func showTableOfContents(_ sender: Any) {
 		guard let webViewController = currentWebViewController else { return }
 		webViewController.fetchTableOfContents { [weak self] entries in
-			guard let self, !entries.isEmpty else { return }
+			guard let self else { return }
+			guard !entries.isEmpty else {
+				Self.logger.error("showTableOfContents: fetchTableOfContents returned no entries; see WebViewController's log for the underlying cause")
+				return
+			}
 			let tocViewController = TableOfContentsViewController(entries: entries) { [weak self] tocIndex in
 				self?.currentWebViewController?.scrollToHeading(tocIndex: tocIndex)
 			}

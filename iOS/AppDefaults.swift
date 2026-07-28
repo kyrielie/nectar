@@ -393,6 +393,10 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	// No longer surfaced in Settings (nothing writes it anymore, so it stays permanently
+	// at its registered default from here on for the timeline's mark-all button), but kept
+	// for the ~12 other `MarkAsReadAlertController.confirm(...)` call sites elsewhere in the
+	// app / possible future use.
 	var confirmMarkAllAsRead: Bool {
 		get {
 			return AppDefaults.bool(for: Key.confirmMarkAllAsRead)

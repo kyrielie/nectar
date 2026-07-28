@@ -459,26 +459,102 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 	}
 
 	@IBAction func markAllAsRead(_ sender: Any?) {
-		let title = NSLocalizedString("Mark All as Read", comment: "Command")
+		presentMarkAllSheet(sourceType: sender)
+	}
 
-		if let source = sender as? UIBarButtonItem {
-			MarkAsReadAlertController.confirm(self, coordinator: coordinator, confirmTitle: title, sourceType: source) { [weak self] in
-				self?.markAllAsReadInTimeline()
+	private func presentMarkAllSheet(sourceType: Any?) {
+		let currentArticles = articles
+
+		let alert = UIAlertController(
+			title: NSLocalizedString("Mark All In This Timeline As…", comment: "Mark all sheet title"),
+			message: nil,
+			preferredStyle: .actionSheet
+		)
+
+		let markReadAction = UIAlertAction(title: NSLocalizedString("Mark All as Read", comment: "Command"), style: .default) { [weak self] _ in
+			self?.markAllAsReadInTimeline()
+		}
+		markReadAction.isEnabled = currentArticles?.canMarkAllAsRead() ?? false
+		alert.addAction(markReadAction)
+
+		let markLovedAction = UIAlertAction(title: NSLocalizedString("Mark All as Loved", comment: "Command"), style: .default) { [weak self] _ in
+			guard let self, let articles = self.articles else { return }
+			self.coordinator?.markAllAsLoved(articles)
+		}
+		markLovedAction.isEnabled = currentArticles?.canMarkAllAsLoved() ?? false
+		alert.addAction(markLovedAction)
+
+		let markReadLaterAction = UIAlertAction(title: NSLocalizedString("Mark All as Read Later", comment: "Command"), style: .default) { [weak self] _ in
+			guard let self, let articles = self.articles else { return }
+			self.coordinator?.markAllAsReadLater(articles)
+		}
+		markReadLaterAction.isEnabled = currentArticles?.canMarkAllAsReadLater() ?? false
+		alert.addAction(markReadLaterAction)
+
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Open Settings", comment: "Open Settings button"), style: .default) { [weak self] _ in
+			Task { @MainActor in
+				self?.coordinator?.showSettings(scrollToArticlesSection: true)
 			}
+		})
+
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel button"), style: .cancel))
+
+		// iPad popover anchor -- match the existing `MarkAsReadAlertController.alert(sourceType:)`
+		// pattern (it accepts UIBarButtonItem/UIView/CGRect via a small protocol) rather than
+		// reinventing anchor logic; this app is not iPad-only-safe to skip, since
+		// TARGETED_DEVICE_FAMILY = 1,2 still builds for iPad (per the July audit -- see that
+		// doc's open item on iPad support, unresolved, not this plan's concern to fix, but the
+		// popover anchor here must not crash on iPad regardless).
+		if let barButtonItem = sourceType as? UIBarButtonItem {
+			alert.popoverPresentationController?.barButtonItem = barButtonItem
 		}
 
-		if sender is UIKeyCommand {
-			guard let collectionView else {
-				return
-			}
-			guard let indexPath = collectionView.indexPathsForSelectedItems?.first, let contentView = collectionView.cellForItem(at: indexPath)?.contentView else {
-				return
-			}
+		present(alert, animated: true)
+	}
 
-			MarkAsReadAlertController.confirm(self, coordinator: coordinator, confirmTitle: title, sourceType: contentView) { [weak self] in
-				self?.markAllAsReadInTimeline()
-			}
+	private func confirmAndPerform(title: String, action: @escaping () -> Void) {
+		let alert = UIAlertController(title: title, message: nil, preferredStyle: .alert)
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel button"), style: .cancel))
+		alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "OK button"), style: .destructive) { _ in action() })
+		present(alert, animated: true)
+	}
+
+	private func rebuildMarkAllAsReadMenu() {
+		guard let markAllAsReadButton, let currentArticles = articles else {
+			markAllAsReadButton?.menu = nil
+			return
 		}
+
+		var inverseActions: [UIAction] = []
+
+		if currentArticles.anyArticleIsReadAndCanMarkUnread() {
+			inverseActions.append(UIAction(title: NSLocalizedString("Mark All as Unread", comment: "Command")) { [weak self] _ in
+				self?.confirmAndPerform(title: NSLocalizedString("Mark All as Unread?", comment: "Confirm title")) {
+					guard let self, let articles = self.articles else { return }
+					self.coordinator?.markAllAsUnread(articles)
+				}
+			})
+		}
+
+		if currentArticles.canMarkAllAsUnloved() {
+			inverseActions.append(UIAction(title: NSLocalizedString("Remove All from Loved", comment: "Command")) { [weak self] _ in
+				self?.confirmAndPerform(title: NSLocalizedString("Remove All from Loved?", comment: "Confirm title")) {
+					guard let self, let articles = self.articles else { return }
+					self.coordinator?.markAllAsUnloved(articles)
+				}
+			})
+		}
+
+		if currentArticles.canMarkAllAsNotReadLater() {
+			inverseActions.append(UIAction(title: NSLocalizedString("Remove All from Read Later", comment: "Command")) { [weak self] _ in
+				self?.confirmAndPerform(title: NSLocalizedString("Remove All from Read Later?", comment: "Confirm title")) {
+					guard let self, let articles = self.articles else { return }
+					self.coordinator?.markAllAsNotReadLater(articles)
+				}
+			})
+		}
+
+		markAllAsReadButton.menu = inverseActions.isEmpty ? nil : UIMenu(title: "", children: inverseActions)
 	}
 
 	@IBAction func nextUnread(_ sender: Any) {
@@ -925,7 +1001,8 @@ private extension MainTimelineModernViewController {
 	}
 
 	func updateToolbar() {
-		markAllAsReadButton?.isEnabled = isTimelineUnreadAvailable
+		markAllAsReadButton?.isEnabled = true
+		rebuildMarkAllAsReadMenu()
 		nextUnreadButton.isEnabled = coordinator?.isNextUnreadAvailable ?? false
 		if #unavailable(iOS 26) {
 			rebuildToolbarItems()
