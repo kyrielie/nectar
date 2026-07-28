@@ -451,11 +451,26 @@
     "Mark Above as Read" : {
       "comment" : "Command"
     },
+    "Mark All as Loved" : {
+      "comment" : "Command"
+    },
     "Mark All as Read" : {
       "comment" : "Command"
     },
     "Mark All as Read in “%@”" : {
       "comment" : "Command"
+    },
+    "Mark All as Read Later" : {
+      "comment" : "Command"
+    },
+    "Mark All as Unread" : {
+      "comment" : "Command"
+    },
+    "Mark All as Unread?" : {
+      "comment" : "Confirm title"
+    },
+    "Mark All In This Timeline As…" : {
+      "comment" : "Mark all sheet title"
     },
     "Mark Article Unread" : {
       "comment" : "Mark Article Unread"
@@ -641,6 +656,18 @@
     },
     "Remove Account" : {
       "comment" : "Remove Account"
+    },
+    "Remove All from Loved" : {
+      "comment" : "Command"
+    },
+    "Remove All from Loved?" : {
+      "comment" : "Confirm title"
+    },
+    "Remove All from Read Later" : {
+      "comment" : "Command"
+    },
+    "Remove All from Read Later?" : {
+      "comment" : "Confirm title"
     },
     "Remove from Loved" : {
       "comment" : "Command"

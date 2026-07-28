@@ -14,8 +14,9 @@ import UIKit
 /// A single, non-merged book has at most one h1-tagged entry (the book's own
 /// title) and renders as a flat, non-expandable chapter list. A merged/
 /// anthology book has more than one h1-tagged entry -- each begins a group of
-/// that book's own .toc-heading chapter entries, up to the next h1 -- and
-/// renders as an expand/collapse outline, one group per book.
+/// that book's own h2 chapter entries (ordinary chapters and Calibre's
+/// "Afterword" closer alike), up to the next h1 -- and renders as an
+/// expand/collapse outline, one group per book.
 final class TableOfContentsViewController: UICollectionViewController {
 
 	private enum Item: Hashable {
@@ -65,9 +66,10 @@ final class TableOfContentsViewController: UICollectionViewController {
 	// MARK: Grouping
 
 	/// h1 entries are book boundaries; every following entry up to the next
-	/// h1 belongs to that book. Ambrosia's toc-heading class is only ever
-	/// applied to h2 chapter headings, never to the h1 book title itself, so
-	/// bookEntries and chapterEntries never overlap.
+	/// h1 belongs to that book. Book/chapter separation is by tagName (h1
+	/// vs. h2), not by CSS class -- Calibre's toc-heading class marks only
+	/// a subset of chapter h2s (Afterword / repeated one-shot titles), so
+	/// it is never a reliable discriminant on its own.
 	private var bookEntries: [TableOfContentsEntry] {
 		entries.filter { $0.tagName == "h1" }
 	}
@@ -89,7 +91,11 @@ final class TableOfContentsViewController: UICollectionViewController {
 				}
 				result.append((entry, []))
 				currentChapters = []
-			} else if entry.isTocHeading {
+			} else {
+				// tocNodes() only ever emits h1 or h2 (see main_ios.js), so
+				// anything reaching here is an h2 -- an ordinary chapter,
+				// Calibre's "Afterword" closer, or a one-shot's repeated
+				// title heading. All are real, navigable chapter entries.
 				currentChapters.append(entry)
 			}
 		}
@@ -142,7 +148,7 @@ final class TableOfContentsViewController: UICollectionViewController {
 		if !isAnthology {
 			// Flat, non-expandable list -- there's nothing to disclose.
 			var sectionSnapshot = NSDiffableDataSourceSectionSnapshot<Item>()
-			let chapterItems = entries.filter { $0.isTocHeading }.map { Item.chapter($0) }
+			let chapterItems = entries.filter { $0.tagName != "h1" }.map { Item.chapter($0) }
 			sectionSnapshot.append(chapterItems)
 			dataSource.apply(sectionSnapshot, to: 0, animatingDifferences: false)
 			return
