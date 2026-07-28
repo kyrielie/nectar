@@ -481,6 +481,9 @@
     "Mark As Read" : {
       "comment" : "Mark As Read"
     },
+    "Mark as read for all matching articles." : {
+      "comment" : "Mark as read for all matching articles."
+    },
     "Mark as Unread" : {
       "comment" : "Command"
     },
@@ -867,9 +870,6 @@
     },
     "Word Count" : {
       "comment" : "Sort field"
-    },
-    "You can turn this confirmation off in Settings." : {
-      "comment" : "You can turn this confirmation off in Settings."
     },
     "You must have at least one active account." : {
       "comment" : "Missing active account"

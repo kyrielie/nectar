@@ -1451,6 +1451,12 @@ private extension Account {
 		NotificationCenter.default.post(name: .StatusesDidChange, object: self, userInfo: [UserInfoKey.articleIDs: articleIDs])
 	}
 
+}
+
+// MARK: - Container Overrides
+
+extension Account {
+
 	func sendNotificationAbout(_ articleChanges: ArticleChanges) {
 		var feeds = Set<Feed>()
 
@@ -1489,11 +1495,6 @@ private extension Account {
 			NotificationCenter.default.postOnMainThread(name: .AccountDidDownloadArticles, object: self, userInfo: userInfo)
 		}
 	}
-}
-
-// MARK: - Container Overrides
-
-extension Account {
 
 	public func existingFeed(withFeedID feedID: String) -> Feed? {
 		return idToFeedDictionary[feedID]
