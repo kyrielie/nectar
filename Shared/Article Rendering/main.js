@@ -112,7 +112,7 @@ function flattenPreElements() {
 }
 
 function reloadArticleImage(imageSrc) {
-	var image = document.getElementById("nnwImageIcon");
+	var image = document.querySelector('img[src^="nnwimageicon:"]');
 	if (image) {
 		image.src = imageSrc + "?" + new Date().getTime();
 	}
@@ -165,10 +165,7 @@ function removeWpSmiley() {
 // is removed here in the shared rendering pipeline rather than in each template,
 // which lets user-installed NetNewsWire themes keep working unmodified.
 function removeArticleIconAvatar() {
-	var icon = document.getElementById("nnwImageIcon");
-	if (icon) {
-		icon.remove();
-	}
+	document.querySelectorAll('img[src^="nnwimageicon:"]').forEach(img => img.remove());
 }
 
 // The feed-name link (populated from ArticleRenderer's feed_link /
@@ -232,19 +229,29 @@ function removeFeedNameLink() {
 	}
 }
 
+function runStep(name, fn) {
+	try {
+		fn();
+	} catch (e) {
+		if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.debugLog) {
+			window.webkit.messageHandlers.debugLog.postMessage(name + ": " + (e && e.message ? e.message : String(e)));
+		}
+	}
+}
+
 function processPage() {
-	wrapFrames();
-	wrapTables();
-	inlineVideos();
-	stripStyles();
-	constrainBodyRelativeIframes();
-	convertImgSrc();
-	flattenPreElements();
-	styleLocalFootnotes();
-	removeWpSmiley()
 	removeArticleIconAvatar();
 	removeFeedNameLink();
-	postRenderProcessing();
+	runStep("wrapFrames", wrapFrames);
+	runStep("wrapTables", wrapTables);
+	runStep("inlineVideos", inlineVideos);
+	runStep("stripStyles", stripStyles);
+	runStep("constrainBodyRelativeIframes", constrainBodyRelativeIframes);
+	runStep("convertImgSrc", convertImgSrc);
+	runStep("flattenPreElements", flattenPreElements);
+	runStep("styleLocalFootnotes", styleLocalFootnotes);
+	runStep("removeWpSmiley", removeWpSmiley);
+	runStep("postRenderProcessing", postRenderProcessing);
 }
 
 document.addEventListener("DOMContentLoaded", function(event) {
