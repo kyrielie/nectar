@@ -232,10 +232,22 @@ final class StatusesTable: DatabaseTable, Sendable {
 	/// onto the cached ArticleStatus instance (if any) so readers of `article.status.
 	/// readingProgress` see the update immediately without a second DB round trip.
 	func saveReadingProgress(_ readingProgress: Double, articleID: String, _ database: FMDatabase) {
-		if let status = cache[articleID] {
-			status.readingProgress = readingProgress
+		saveReadingProgress(readingProgress, articleIDs: [articleID], database)
+	}
+
+	/// Plural form: writes the same reading progress to every sibling copy of a
+	/// book (see ArticlesTable.saveReadingProgress), mirroring how mark(_:_:_:_:)
+	/// already accepts a Set<String>. Updates each sibling's cached ArticleStatus
+	/// too, so article.status.readingProgress stays synchronously correct for
+	/// every open copy, not just the one the user is reading.
+	func saveReadingProgress(_ readingProgress: Double, articleIDs: Set<String>, _ database: FMDatabase) {
+		guard !articleIDs.isEmpty else { return }
+		for articleID in articleIDs {
+			if let status = cache[articleID] {
+				status.readingProgress = readingProgress
+			}
 		}
-		updateRowsWithValue(NSNumber(value: readingProgress), valueKey: DatabaseKey.readingProgress, whereKey: DatabaseKey.articleID, matches: [articleID], database: database)
+		updateRowsWithValue(NSNumber(value: readingProgress), valueKey: DatabaseKey.readingProgress, whereKey: DatabaseKey.articleID, matches: Array(articleIDs), database: database)
 	}
 
 	// MARK: - Last opened (Last Opened smart feed)

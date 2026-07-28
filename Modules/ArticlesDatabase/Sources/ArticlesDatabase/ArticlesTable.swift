@@ -353,6 +353,20 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				_ = self.statusesTable.mark(lovedOverrideArticleIDs, .loved, true, database)
 			}
 
+			// readingProgress override: same idea as starred/loved above, but
+			// keyed off a per-articleID Double rather than a shared true/false
+			// flag, since a re-subscribed or newly-collection-imported copy of a
+			// book the reader already has progress on shouldn't reset to nil.
+			let readingProgressOverrides: [String: Double] = bookKeysByArticleID.reduce(into: [:]) { result, pair in
+				let (articleID, bookKey) = pair
+				if let progress = bookStateByBookKey[bookKey]?.readingProgress {
+					result[articleID] = progress
+				}
+			}
+			for (articleID, progress) in readingProgressOverrides {
+				self.statusesTable.saveReadingProgress(progress, articleID: articleID, database)
+			}
+
 			assert(statusesDictionary.count == articleIDs.count)
 
 			// Diagnostic: the assert above is compiled out in Release builds, so
@@ -945,11 +959,17 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	// MARK: - Reading progress (Phase A1)
 
-	func saveReadingProgress(_ readingProgress: Double, articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
+	func saveReadingProgress(_ readingProgress: Double, articleID: String, _ completion: @escaping @Sendable (Set<String>) -> Void) {
 		queue.runInTransaction { database in
-			self.statusesTable.saveReadingProgress(readingProgress, articleID: articleID, database)
+			var changedArticleIDs: Set<String> = [articleID]
+			if let bookKey = self.bookKeysForArticleIDs([articleID], database).first {
+				self.bookStateTable.setReadingProgress(readingProgress, bookKey: bookKey, database)
+				let siblingArticleIDs = self.articleIDsForBookKeys([bookKey], excluding: [articleID], database)
+				changedArticleIDs.formUnion(siblingArticleIDs)
+			}
+			self.statusesTable.saveReadingProgress(readingProgress, articleIDs: changedArticleIDs, database)
 			DispatchQueue.main.async {
-				completion()
+				completion(changedArticleIDs)
 			}
 		}
 	}
