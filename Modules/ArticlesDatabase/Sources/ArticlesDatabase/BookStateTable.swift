@@ -87,15 +87,15 @@ final class BookStateTable: DatabaseTable, Sendable {
 	// column to touch.
 
 	func setRead(_ flag: Bool, bookKeys: Set<String>, _ database: FMDatabase) {
-		upsert(bookKeys: bookKeys, column: DatabaseKey.read, boolValue: flag, database)
+		upsert(bookKeys: bookKeys, column: DatabaseKey.read, value: flag, database)
 	}
 
 	func setStarred(_ flag: Bool, bookKeys: Set<String>, _ database: FMDatabase) {
-		upsert(bookKeys: bookKeys, column: DatabaseKey.starred, boolValue: flag, database)
+		upsert(bookKeys: bookKeys, column: DatabaseKey.starred, value: flag, database)
 	}
 
 	func setLoved(_ flag: Bool, bookKeys: Set<String>, _ database: FMDatabase) {
-		upsert(bookKeys: bookKeys, column: DatabaseKey.loved, boolValue: flag, database)
+		upsert(bookKeys: bookKeys, column: DatabaseKey.loved, value: flag, database)
 	}
 
 	// MARK: - Scroll position / reading progress
@@ -105,24 +105,31 @@ final class BookStateTable: DatabaseTable, Sendable {
 	}
 
 	func setScrollPosition(_ value: Double, bookKey: String, _ database: FMDatabase) {
-		upsert(bookKeys: [bookKey], column: DatabaseKey.scrollPosition, doubleValue: value, database)
+		upsert(bookKeys: [bookKey], column: DatabaseKey.scrollPosition, value: value, database)
+	}
+
+	func readingProgress(for bookKey: String, _ database: FMDatabase) -> Double? {
+		state(for: [bookKey], database)[bookKey]?.readingProgress
+	}
+
+	func setReadingProgress(_ value: Double, bookKey: String, _ database: FMDatabase) {
+		upsert(bookKeys: [bookKey], column: DatabaseKey.readingProgress, value: value, database)
 	}
 
 	// MARK: - Last opened (Last Opened smart feed)
 
 	func setLastOpenedAt(_ date: Date, bookKey: String, _ database: FMDatabase) {
-		upsert(bookKeys: [bookKey], column: DatabaseKey.lastOpenedAt, dateValue: date, database)
+		upsert(bookKeys: [bookKey], column: DatabaseKey.lastOpenedAt, value: date, database)
 	}
 
 	// MARK: - Private
 
-	/// Partial upsert of a single boolean column, leaving every other column on an
-	/// existing row untouched. This is the reason a raw INSERT ... ON CONFLICT is
-	/// used here instead of the insertRows(insertType: .orReplace) helper the old
-	/// single-column tables used: .orReplace replaces the *whole row*, which would
-	/// silently reset read/starred/loved/scrollPosition back to their defaults on
-	/// every unrelated column's update once they all share one row.
-	private func upsert(bookKeys: Set<String>, column: String, boolValue: Bool, _ database: FMDatabase) {
+	/// Partial upsert of a single column, leaving every other column on an
+	/// existing row untouched (see the class-level doc comment on why a raw
+	/// INSERT ... ON CONFLICT is used instead of insertRows(insertType: .orReplace)).
+	/// `value` must be a type FMDB's argument binding already accepts directly --
+	/// Bool, Double, or Date, matching this table's only non-String columns.
+	private func upsert(bookKeys: Set<String>, column: String, value: Sendable, _ database: FMDatabase) {
 		guard !bookKeys.isEmpty else {
 			return
 		}
@@ -130,37 +137,7 @@ final class BookStateTable: DatabaseTable, Sendable {
 		for bookKey in bookKeys {
 			database.executeUpdate(
 				"INSERT INTO \(name) (\(DatabaseKey.bookKey), \(column), \(DatabaseKey.updatedAt)) VALUES (?, ?, ?) ON CONFLICT(\(DatabaseKey.bookKey)) DO UPDATE SET \(column) = excluded.\(column), \(DatabaseKey.updatedAt) = excluded.\(DatabaseKey.updatedAt)",
-				withArgumentsIn: [bookKey, boolValue, now]
-			)
-		}
-	}
-
-	private func upsert(bookKeys: Set<String>, column: String, doubleValue: Double, _ database: FMDatabase) {
-		guard !bookKeys.isEmpty else {
-			return
-		}
-		let now = Date()
-		for bookKey in bookKeys {
-			database.executeUpdate(
-				"INSERT INTO \(name) (\(DatabaseKey.bookKey), \(column), \(DatabaseKey.updatedAt)) VALUES (?, ?, ?) ON CONFLICT(\(DatabaseKey.bookKey)) DO UPDATE SET \(column) = excluded.\(column), \(DatabaseKey.updatedAt) = excluded.\(DatabaseKey.updatedAt)",
-				withArgumentsIn: [bookKey, doubleValue, now]
-			)
-		}
-	}
-
-	/// Same shape as the bool/double overloads above, for a Date-typed column
-	/// (lastOpenedAt). Bound directly as a Date, matching how dateArrived is
-	/// bound elsewhere in this codebase (see ArticlesTable's dateArrived
-	/// filters) rather than converting to a raw timeIntervalSince1970 first.
-	private func upsert(bookKeys: Set<String>, column: String, dateValue: Date, _ database: FMDatabase) {
-		guard !bookKeys.isEmpty else {
-			return
-		}
-		let now = Date()
-		for bookKey in bookKeys {
-			database.executeUpdate(
-				"INSERT INTO \(name) (\(DatabaseKey.bookKey), \(column), \(DatabaseKey.updatedAt)) VALUES (?, ?, ?) ON CONFLICT(\(DatabaseKey.bookKey)) DO UPDATE SET \(column) = excluded.\(column), \(DatabaseKey.updatedAt) = excluded.\(DatabaseKey.updatedAt)",
-				withArgumentsIn: [bookKey, dateValue, now]
+				withArgumentsIn: [bookKey, value, now]
 			)
 		}
 	}
