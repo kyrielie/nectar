@@ -46,26 +46,19 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 				status: ArticleStatus(articleID: "_testArticleID", read: false, starred: false, dateArrived: .now))
 	}
 
-	private var cachedTimelineLines: Int = AppDefaults.shared.timelineNumberOfLines
-	private var cachedTagDisplayMode: TagDisplayMode = AppDefaults.shared.timelineTagDisplayMode
-
     override func viewDidLoad() {
         super.viewDidLoad()
 		title = NSLocalizedString("Timeline Layout", comment: "Timeline Layout")
 
-		NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
-			guard let self = self else { return }
+		NotificationCenter.default.addObserver(forName: AppDefaults.timelineNumberOfLinesDidChange, object: nil, queue: .main) { [weak self] _ in
 			Task { @MainActor in
+				self?.userDefaultsDidChange()
+			}
+		}
 
-				if AppDefaults.shared.timelineNumberOfLines != self.cachedTimelineLines {
-					self.cachedTimelineLines = AppDefaults.shared.timelineNumberOfLines
-					self.userDefaultsDidChange()
-				}
-
-				if AppDefaults.shared.timelineTagDisplayMode != self.cachedTagDisplayMode {
-					self.cachedTagDisplayMode = AppDefaults.shared.timelineTagDisplayMode
-					self.userDefaultsDidChange()
-				}
+		NotificationCenter.default.addObserver(forName: AppDefaults.timelineTagDisplayModeDidChange, object: nil, queue: .main) { [weak self] _ in
+			Task { @MainActor in
+				self?.userDefaultsDidChange()
 			}
 		}
 
