@@ -235,17 +235,14 @@ import os
 	/// refresh, so surfacing it as an "error" would overstate how much
 	/// attention it needs while understating that it's already self-healing.
 	///
-	/// NOT YET RESOLVED: on success this only calls updateUnreadCounts(feeds:)
-	/// as a best-effort UI nudge. The JSON path's account.updateAsync(feed:parsedFeed:)
-	/// produces an ArticleChanges (new/updated Article objects) that
-	/// sendNotificationAbout(_:) uses to post .AccountDidDownloadArticles --
-	/// the notification the timeline view actually observes to insert new
-	/// articles. The SQLite importer writes straight into ArticlesTable/
-	/// StatusesTable via ArticlesDatabase.importAmbrosiaSQLiteTransfer and never
-	/// constructs Article/ArticleChanges values, so that notification does not
-	/// fire here. Whether the timeline needs it (vs. picking up imported rows
-	/// on its next fetch) needs a closer read of the timeline's data source
-	/// before deciding how to fix -- flagged rather than guessed.
+	/// Posts `.AccountDidDownloadArticles` via `account.sendNotificationAbout(_:)`
+	/// with the new/updated Article values accumulated across every page of the
+	/// walk (see AmbrosiaSQLiteTransferFetcher.fetchAndImportWalk), the same
+	/// notification the JSON path's account.updateAsync(feed:parsedFeed:) posts
+	/// and the timeline observes to insert new articles -- this import path
+	/// previously wrote straight into ArticlesTable/StatusesTable without ever
+	/// constructing Article/ArticleChanges values, so the notification never
+	/// fired for it.
 	///
 	/// NOT YET RESOLVED: `.incomplete` is currently surfaced only through the
 	/// ActivityLog completion message (visible in Settings > Activity Log).
@@ -273,14 +270,23 @@ import os
 
 			do {
 				let result = try await AmbrosiaSQLiteTransferFetcher.fetchAndImportWalk(baseURL: url, feedID: feed.feedID, into: account.database)
-				account.updateUnreadCounts(feeds: [feed])
 				switch result {
-				case .complete(let pagesImported, let rowsImported):
+				case .complete(let pagesImported, let rowsImported, let articleChanges):
+					account.sendNotificationAbout(articleChanges)
 					Self.logger.notice("LocalAccountRefresher: SQLite transfer walk complete for \(feed.url) -- \(rowsImported) rows across \(pagesImported) page(s)")
 					if let activityOwner {
 						ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "SQLite transfer: \(rowsImported) book\(rowsImported == 1 ? "" : "s") across \(pagesImported) page\(pagesImported == 1 ? "" : "s")")
 					}
-				case .incomplete(let pagesImported, let rowsImported, let expectedTotal, let lastPageAttempted):
+				case .incomplete(let pagesImported, let rowsImported, let expectedTotal, let lastPageAttempted, let articleChanges):
+					if articleChanges.new?.isEmpty != false && articleChanges.updated?.isEmpty != false {
+						// sendNotificationAbout(_:) is a no-op for an empty ArticleChanges
+						// (see Account.sendNotificationAbout), so fall back to the old
+						// best-effort nudge for the case where this pass imported nothing
+						// at all before giving up (e.g. every attempt for page 1 failed).
+						account.updateUnreadCounts(feeds: [feed])
+					} else {
+						account.sendNotificationAbout(articleChanges)
+					}
 					Self.logger.notice("LocalAccountRefresher: SQLite transfer walk incomplete for \(feed.url) -- imported \(rowsImported) of \(expectedTotal) rows across \(pagesImported) page(s) this pass, stopped at page \(lastPageAttempted)")
 					if let activityOwner {
 						let progressDetail = expectedTotal > 0 ? "\(rowsImported) of \(expectedTotal) books" : "\(rowsImported) books"

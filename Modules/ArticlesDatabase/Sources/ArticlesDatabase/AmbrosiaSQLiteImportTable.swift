@@ -152,7 +152,14 @@ enum AmbrosiaSQLiteImportTable {
 	/// ATTACH, bulk-copy `items` into `articles`/`statuses` computing `bookKey`
 	/// per row, DETACH. Everything after the version check happens inside one
 	/// transaction: a hard error midway rolls back cleanly with no partial writes.
-	static func importTransfer(temporaryFilePath: String, feedID: String, expectedWireFormatVersion: Int32, queue: DatabaseQueue) throws {
+	///
+	/// Returns which incoming articleIDs were new vs. already-present before
+	/// this import, so the caller can construct an `ArticleChanges` and post
+	/// `.AccountDidDownloadArticles` -- previously this import path wrote
+	/// straight into `articles`/`statuses` via `INSERT OR REPLACE ... SELECT`
+	/// without ever producing `Article` values, so that notification never
+	/// fired for `.sqlite`-routed imports.
+	static func importTransfer(temporaryFilePath: String, feedID: String, expectedWireFormatVersion: Int32, queue: DatabaseQueue) throws -> (new: Set<String>, updated: Set<String>) {
 
 		let foundVersion = try readWireFormatVersion(atPath: temporaryFilePath)
 		guard foundVersion == expectedWireFormatVersion else {
@@ -164,6 +171,8 @@ enum AmbrosiaSQLiteImportTable {
 		// is a synchronous, single-threaded call -- this var is never touched
 		// from more than one thread at a time in practice.
 		nonisolated(unsafe) var importError: Error?
+		nonisolated(unsafe) var newIDs = Set<String>()
+		nonisolated(unsafe) var updatedIDs = Set<String>()
 
 		queue.runInTransactionSync { database in
 			guard database.executeUpdate("ATTACH DATABASE ? AS \(attachedSchemaName);", withArgumentsIn: [temporaryFilePath]) else {
@@ -175,7 +184,7 @@ enum AmbrosiaSQLiteImportTable {
 			}
 
 			do {
-				try Self.copyItems(feedID: feedID, database: database)
+				(newIDs, updatedIDs) = try Self.copyItems(feedID: feedID, database: database)
 			} catch {
 				importError = error
 				// Roll back explicitly: runInTransactionSync commits unconditionally
@@ -191,6 +200,8 @@ enum AmbrosiaSQLiteImportTable {
 			Self.logger.error("AmbrosiaSQLiteImportTable: import failed for feedID \(feedID, privacy: .public): \(String(describing: importError), privacy: .public)")
 			throw importError
 		}
+
+		return (newIDs, updatedIDs)
 	}
 
 	/// bookKey precedence, mirrored from ParsedItem.bookKey exactly:
@@ -207,7 +218,43 @@ enum AmbrosiaSQLiteImportTable {
 	END
 	"""
 
-	private static func copyItems(feedID: String, database: FMDatabase) throws {
+	private static func copyItems(feedID: String, database: FMDatabase) throws -> (new: Set<String>, updated: Set<String>) {
+		// Read the incoming IDs off the attached transfer file, then check which
+		// of them already exist in `articles`, before running the INSERT OR
+		// REPLACE below -- INSERT OR REPLACE doesn't distinguish insert-vs-update
+		// in its result, and sqlite3_changes() isn't reliably per-row-classified
+		// either, so this is the simplest correct way to get the new/updated split.
+		guard let incomingIDsResultSet = database.executeQuery("SELECT id FROM \(attachedSchemaName).items;", withArgumentsIn: []) else {
+			throw AmbrosiaSQLiteImportError.importFailed("incoming id read: \(database.lastErrorMessage() ?? "unknown error")")
+		}
+		var incomingIDs = Set<String>()
+		while incomingIDsResultSet.next() {
+			if let id = incomingIDsResultSet.swiftString(forColumn: "id") {
+				incomingIDs.insert(id)
+			}
+		}
+		incomingIDsResultSet.close()
+
+		var existingIDsBeforeImport = Set<String>()
+		if !incomingIDs.isEmpty {
+			// AmbrosiaSQLiteImportTable is a plain enum, not a DatabaseTable
+			// conformer, so the selectRowsWhere(key:inValues:in:) helper other
+			// tables get via that protocol isn't directly callable here --
+			// this is the same query inlined by hand, matching how ArticlesTable
+			// builds its own "articleID in (...)" queries elsewhere.
+			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(incomingIDs.count))!
+			let sql = "SELECT articleID FROM articles WHERE articleID IN \(placeholders);"
+			guard let existingIDsResultSet = database.executeQuery(sql, withArgumentsIn: Array(incomingIDs)) else {
+				throw AmbrosiaSQLiteImportError.importFailed("existing id read: \(database.lastErrorMessage() ?? "unknown error")")
+			}
+			while existingIDsResultSet.next() {
+				if let id = existingIDsResultSet.swiftString(forColumn: "articleID") {
+					existingIDsBeforeImport.insert(id)
+				}
+			}
+			existingIDsResultSet.close()
+		}
+
 		// articles.articleID is calculatedArticleID(feedID:uniqueID:) elsewhere in
 		// this codebase, but the wire `id` ("ambrosia-book-<calibre_id>") is already
 		// globally stable per the Wire Contract, so it's used directly as both
@@ -261,6 +308,8 @@ enum AmbrosiaSQLiteImportTable {
 		guard database.executeUpdate(insertStatusesSQL, withArgumentsIn: [Date().timeIntervalSince1970]) else {
 			throw AmbrosiaSQLiteImportError.importFailed("statuses insert: \(database.lastErrorMessage() ?? "unknown error")")
 		}
+
+		return (incomingIDs.subtracting(existingIDsBeforeImport), incomingIDs.intersection(existingIDsBeforeImport))
 	}
 
 	/// Reads `content_html` off the attached transfer file one row at a time,
