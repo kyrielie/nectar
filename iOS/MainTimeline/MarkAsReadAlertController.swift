@@ -28,14 +28,10 @@ extension UIBarButtonItem: MarkAsReadAlertControllerSourceType {}
 			return
 		}
 
-		if AppDefaults.shared.confirmMarkAllAsRead {
-			let alertController = MarkAsReadAlertController.alert(coordinator: coordinator, confirmTitle: confirmTitle, cancelCompletion: cancelCompletion, sourceType: sourceType) { _ in
-				completion()
-			}
-			controller.present(alertController, animated: true)
-		} else {
+		let alertController = MarkAsReadAlertController.alert(coordinator: coordinator, confirmTitle: confirmTitle, cancelCompletion: cancelCompletion, sourceType: sourceType) { _ in
 			completion()
 		}
+		controller.present(alertController, animated: true)
 	}
 
 	private static func alert<T>(coordinator: SceneCoordinator,
@@ -45,8 +41,8 @@ extension UIBarButtonItem: MarkAsReadAlertControllerSourceType {}
 	                             completion: @escaping (UIAlertAction) -> Void) -> UIAlertController where T: MarkAsReadAlertControllerSourceType {
 
 		let title = NSLocalizedString("Mark As Read", comment: "Mark As Read")
-		let message = NSLocalizedString("You can turn this confirmation off in Settings.",
-										comment: "You can turn this confirmation off in Settings.")
+		let message = NSLocalizedString("Mark as read for all matching articles.",
+										comment: "Mark as read for all matching articles.")
 		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
 		let settingsTitle = NSLocalizedString("Open Settings", comment: "Open Settings button")
 

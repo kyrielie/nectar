@@ -459,10 +459,6 @@ final class ArticleViewController: UIViewController {
 	func openInAppBrowser() {
 		currentWebViewController?.openInAppBrowser()
 	}
-
-	func setScrollPosition(articleWindowScrollY: Int) {
-		currentWebViewController?.setScrollPosition(articleWindowScrollY: articleWindowScrollY)
-	}
 }
 
 // MARK: Find in Article
