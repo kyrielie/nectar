@@ -29,6 +29,7 @@
 import Foundation
 import os
 import RSWeb
+import Articles
 import ArticlesDatabase
 
 enum AmbrosiaSQLiteTransferError: Error, CustomStringConvertible {
@@ -66,8 +67,8 @@ private enum AmbrosiaSQLiteTransferWalkControl: Error {
 /// scheduled refresh (resuming from the persisted state this call leaves
 /// behind), but stays visible until a walk actually reaches `.complete`.
 enum AmbrosiaSQLiteWalkResult {
-	case complete(pagesImported: Int, rowsImported: Int)
-	case incomplete(pagesImported: Int, rowsImported: Int, expectedTotal: Int, lastPageAttempted: Int)
+	case complete(pagesImported: Int, rowsImported: Int, articleChanges: ArticleChanges)
+	case incomplete(pagesImported: Int, rowsImported: Int, expectedTotal: Int, lastPageAttempted: Int, articleChanges: ArticleChanges)
 }
 
 enum AmbrosiaSQLiteTransferFetcher {
@@ -129,6 +130,8 @@ enum AmbrosiaSQLiteTransferFetcher {
 		}
 
 		var pagesImportedThisCall = 0
+		var newArticlesSoFar = Set<Article>()
+		var updatedArticlesSoFar = Set<Article>()
 
 		while true {
 			let pageURL = Self.url(for: baseURL, page: page)
@@ -167,14 +170,20 @@ enum AmbrosiaSQLiteTransferFetcher {
 					status: .incomplete
 				)
 				AmbrosiaSQLiteTransferWalkStateStore.save(state)
-				return .incomplete(pagesImported: pagesImportedThisCall, rowsImported: importedRowCountSoFar, expectedTotal: 0, lastPageAttempted: page)
+				return .incomplete(pagesImported: pagesImportedThisCall, rowsImported: importedRowCountSoFar, expectedTotal: 0, lastPageAttempted: page, articleChanges: ArticleChanges(new: newArticlesSoFar, updated: updatedArticlesSoFar, deleted: nil))
 			}
 
 			let (temporaryFilePath, manifest) = fetchResult
 			walkID = manifest.walkID
 
 			do {
-				try await articlesDatabase.importAmbrosiaSQLiteTransfer(temporaryFilePath: temporaryFilePath, feedID: feedID, wireFormatVersion: AmbrosiaSQLiteWireFormat.version)
+				let articleChanges = try await articlesDatabase.importAmbrosiaSQLiteTransfer(temporaryFilePath: temporaryFilePath, feedID: feedID, wireFormatVersion: AmbrosiaSQLiteWireFormat.version)
+				if let new = articleChanges.new {
+					newArticlesSoFar.formUnion(new)
+				}
+				if let updated = articleChanges.updated {
+					updatedArticlesSoFar.formUnion(updated)
+				}
 			} catch {
 				try? FileManager.default.removeItem(atPath: temporaryFilePath)
 				throw error
@@ -207,7 +216,7 @@ enum AmbrosiaSQLiteTransferFetcher {
 			// between page 1 and the last page of a long walk (plan 3c).
 			if importedRowCountSoFar == manifest.expectedTotalRowCount {
 				AmbrosiaSQLiteTransferWalkStateStore.clear(feedID: feedID)
-				return .complete(pagesImported: pagesImportedThisCall, rowsImported: importedRowCountSoFar)
+				return .complete(pagesImported: pagesImportedThisCall, rowsImported: importedRowCountSoFar, articleChanges: ArticleChanges(new: newArticlesSoFar, updated: updatedArticlesSoFar, deleted: nil))
 			} else {
 				Self.logger.error("AmbrosiaSQLiteTransferFetcher: final-total mismatch for feedID \(feedID, privacy: .public) -- imported \(importedRowCountSoFar), expected \(manifest.expectedTotalRowCount)")
 				let state = AmbrosiaSQLiteTransferWalkState(
@@ -219,7 +228,7 @@ enum AmbrosiaSQLiteTransferFetcher {
 					status: .incomplete
 				)
 				AmbrosiaSQLiteTransferWalkStateStore.save(state)
-				return .incomplete(pagesImported: pagesImportedThisCall, rowsImported: importedRowCountSoFar, expectedTotal: manifest.expectedTotalRowCount, lastPageAttempted: page)
+				return .incomplete(pagesImported: pagesImportedThisCall, rowsImported: importedRowCountSoFar, expectedTotal: manifest.expectedTotalRowCount, lastPageAttempted: page, articleChanges: ArticleChanges(new: newArticlesSoFar, updated: updatedArticlesSoFar, deleted: nil))
 			}
 		}
 	}

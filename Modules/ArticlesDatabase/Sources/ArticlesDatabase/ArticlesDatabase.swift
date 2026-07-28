@@ -203,9 +203,18 @@ public struct ArticleCounts: Sendable {
 	/// reindex search or write BookStateTable rows -- confirmed accepted trade-off.
 	/// Throws on any failure (I/O, version mismatch, or SQL error) with no partial writes:
 	/// the whole import runs inside one transaction and is rolled back on error.
-	public func importAmbrosiaSQLiteTransfer(temporaryFilePath: String, feedID: String, wireFormatVersion: Int32) throws {
+	///
+	/// Returns the new/updated Article values from this import so the caller can post
+	/// `.AccountDidDownloadArticles` -- previously this import path wrote straight into
+	/// the article tables without ever producing Article/ArticleChanges values, so that
+	/// notification never fired for `.sqlite`-routed imports.
+	@discardableResult
+	public func importAmbrosiaSQLiteTransfer(temporaryFilePath: String, feedID: String, wireFormatVersion: Int32) throws -> ArticleChanges {
 		Self.logger.debug("ArticlesDatabase: importAmbrosiaSQLiteTransfer \(self.accountID, privacy: .public) feedID: \(feedID, privacy: .public)")
-		try AmbrosiaSQLiteImportTable.importTransfer(temporaryFilePath: temporaryFilePath, feedID: feedID, expectedWireFormatVersion: wireFormatVersion, queue: queue)
+		let (newIDs, updatedIDs) = try AmbrosiaSQLiteImportTable.importTransfer(temporaryFilePath: temporaryFilePath, feedID: feedID, expectedWireFormatVersion: wireFormatVersion, queue: queue)
+		let newArticles = newIDs.isEmpty ? nil : articlesTable.fetchArticles(articleIDs: newIDs)
+		let updatedArticles = updatedIDs.isEmpty ? nil : articlesTable.fetchArticles(articleIDs: updatedIDs)
+		return ArticleChanges(new: newArticles, updated: updatedArticles, deleted: nil)
 	}
 
 	/// Nectar Implementation Plan 3c: reads and validates a downloaded `.sqlite`
@@ -627,10 +636,10 @@ public struct ArticleCounts: Sendable {
 	/// Fraction (0...1) of the article read (Phase A1). No fetch counterpart is needed:
 	/// readingProgress is loaded in bulk as part of ArticleStatus (see StatusesTable),
 	/// the same path `read`/`starred` already use, rather than a per-article async fetch.
-	public func saveReadingProgressAsync(_ readingProgress: Double, articleID: String) async {
+	public func saveReadingProgressAsync(_ readingProgress: Double, articleID: String) async -> Set<String> {
 		await withCheckedContinuation { continuation in
-			_saveReadingProgress(readingProgress, articleID: articleID) {
-				continuation.resume()
+			_saveReadingProgress(readingProgress, articleID: articleID) { changedArticleIDs in
+				continuation.resume(returning: changedArticleIDs)
 			}
 		}
 	}
@@ -827,7 +836,7 @@ private extension ArticlesDatabase {
 		articlesTable.fetchScrollPosition(articleID: articleID, completion)
 	}
 
-	func _saveReadingProgress(_ readingProgress: Double, articleID: String, completion: @escaping DatabaseCompletionBlock) {
+	func _saveReadingProgress(_ readingProgress: Double, articleID: String, completion: @escaping @Sendable (Set<String>) -> Void) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.saveReadingProgress(readingProgress, articleID: articleID, completion)
 	}
