@@ -462,8 +462,38 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 		presentMarkAllSheet(sourceType: sender)
 	}
 
+	private struct MarkAllSheetAction {
+		let title: String
+		let isEnabled: Bool
+		let handler: () -> Void
+	}
+
 	private func presentMarkAllSheet(sourceType: Any?) {
 		let currentArticles = articles
+
+		let actions: [MarkAllSheetAction] = [
+			MarkAllSheetAction(
+				title: NSLocalizedString("Mark All as Read", comment: "Command"),
+				isEnabled: currentArticles?.canMarkAllAsRead() ?? false,
+				handler: { [weak self] in self?.markAllAsReadInTimeline() }
+			),
+			MarkAllSheetAction(
+				title: NSLocalizedString("Mark All as Loved", comment: "Command"),
+				isEnabled: currentArticles?.canMarkAllAsLoved() ?? false,
+				handler: { [weak self] in
+					guard let self, let articles = self.articles else { return }
+					self.coordinator?.markAllAsLoved(articles)
+				}
+			),
+			MarkAllSheetAction(
+				title: NSLocalizedString("Mark All as Read Later", comment: "Command"),
+				isEnabled: currentArticles?.canMarkAllAsReadLater() ?? false,
+				handler: { [weak self] in
+					guard let self, let articles = self.articles else { return }
+					self.coordinator?.markAllAsReadLater(articles)
+				}
+			),
+		]
 
 		let alert = UIAlertController(
 			title: NSLocalizedString("Mark All In This Timeline As…", comment: "Mark all sheet title"),
@@ -471,25 +501,11 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 			preferredStyle: .actionSheet
 		)
 
-		let markReadAction = UIAlertAction(title: NSLocalizedString("Mark All as Read", comment: "Command"), style: .default) { [weak self] _ in
-			self?.markAllAsReadInTimeline()
+		for action in actions {
+			let alertAction = UIAlertAction(title: action.title, style: .default) { _ in action.handler() }
+			alertAction.isEnabled = action.isEnabled
+			alert.addAction(alertAction)
 		}
-		markReadAction.isEnabled = currentArticles?.canMarkAllAsRead() ?? false
-		alert.addAction(markReadAction)
-
-		let markLovedAction = UIAlertAction(title: NSLocalizedString("Mark All as Loved", comment: "Command"), style: .default) { [weak self] _ in
-			guard let self, let articles = self.articles else { return }
-			self.coordinator?.markAllAsLoved(articles)
-		}
-		markLovedAction.isEnabled = currentArticles?.canMarkAllAsLoved() ?? false
-		alert.addAction(markLovedAction)
-
-		let markReadLaterAction = UIAlertAction(title: NSLocalizedString("Mark All as Read Later", comment: "Command"), style: .default) { [weak self] _ in
-			guard let self, let articles = self.articles else { return }
-			self.coordinator?.markAllAsReadLater(articles)
-		}
-		markReadLaterAction.isEnabled = currentArticles?.canMarkAllAsReadLater() ?? false
-		alert.addAction(markReadLaterAction)
 
 		alert.addAction(UIAlertAction(title: NSLocalizedString("Open Settings", comment: "Open Settings button"), style: .default) { [weak self] _ in
 			Task { @MainActor in
@@ -525,33 +541,29 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 			return
 		}
 
-		var inverseActions: [UIAction] = []
+		let candidates: [(canPerform: Bool, title: String, confirmTitle: String, perform: (ArticleArray) -> Void)] = [
+			(currentArticles.anyArticleIsReadAndCanMarkUnread(),
+			 NSLocalizedString("Mark All as Unread", comment: "Command"),
+			 NSLocalizedString("Mark All as Unread?", comment: "Confirm title"),
+			 { [weak self] articles in self?.coordinator?.markAllAsUnread(articles) }),
+			(currentArticles.canMarkAllAsUnloved(),
+			 NSLocalizedString("Remove All from Loved", comment: "Command"),
+			 NSLocalizedString("Remove All from Loved?", comment: "Confirm title"),
+			 { [weak self] articles in self?.coordinator?.markAllAsUnloved(articles) }),
+			(currentArticles.canMarkAllAsNotReadLater(),
+			 NSLocalizedString("Remove All from Read Later", comment: "Command"),
+			 NSLocalizedString("Remove All from Read Later?", comment: "Confirm title"),
+			 { [weak self] articles in self?.coordinator?.markAllAsNotReadLater(articles) }),
+		]
 
-		if currentArticles.anyArticleIsReadAndCanMarkUnread() {
-			inverseActions.append(UIAction(title: NSLocalizedString("Mark All as Unread", comment: "Command")) { [weak self] _ in
-				self?.confirmAndPerform(title: NSLocalizedString("Mark All as Unread?", comment: "Confirm title")) {
+		let inverseActions: [UIAction] = candidates.compactMap { candidate in
+			guard candidate.canPerform else { return nil }
+			return UIAction(title: candidate.title) { [weak self] _ in
+				self?.confirmAndPerform(title: candidate.confirmTitle) {
 					guard let self, let articles = self.articles else { return }
-					self.coordinator?.markAllAsUnread(articles)
+					candidate.perform(articles)
 				}
-			})
-		}
-
-		if currentArticles.canMarkAllAsUnloved() {
-			inverseActions.append(UIAction(title: NSLocalizedString("Remove All from Loved", comment: "Command")) { [weak self] _ in
-				self?.confirmAndPerform(title: NSLocalizedString("Remove All from Loved?", comment: "Confirm title")) {
-					guard let self, let articles = self.articles else { return }
-					self.coordinator?.markAllAsUnloved(articles)
-				}
-			})
-		}
-
-		if currentArticles.canMarkAllAsNotReadLater() {
-			inverseActions.append(UIAction(title: NSLocalizedString("Remove All from Read Later", comment: "Command")) { [weak self] _ in
-				self?.confirmAndPerform(title: NSLocalizedString("Remove All from Read Later?", comment: "Confirm title")) {
-					guard let self, let articles = self.articles else { return }
-					self.coordinator?.markAllAsNotReadLater(articles)
-				}
-			})
+			}
 		}
 
 		markAllAsReadButton.menu = inverseActions.isEmpty ? nil : UIMenu(title: "", children: inverseActions)
