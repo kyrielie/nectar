@@ -9,19 +9,16 @@ import UIKit
 import UniformTypeIdentifiers
 import Account
 
-/// Account-picker -> document-picker -> import flow, shared by any entry point that
-/// wants "pick an OPML file and import it" without duplicating the multi-account
-/// picker/import-failure-alert logic.
-///
-/// Scoped narrower than the plan originally sketched: `SettingsViewController`'s own
-/// existing `importOPML(sourceView:sourceRect:)` chain is left as-is rather than
-/// refactored to call through here, since that code already works and re-plumbing it
-/// carries real regression risk without a build/test pass available while writing this.
-/// This coordinator is a second, independent implementation of the same three-step
-/// flow, used only by the new Add Feed button entry points (§12) below. If the
-/// duplication between this file and `SettingsViewController`'s OPML extension becomes
-/// a maintenance problem, that refactor is still worth doing as a separate, dedicated
-/// pass -- flag if wanted.
+/// Account-picker -> document-picker -> import flow, shared by every entry point that
+/// wants "pick an OPML file and import it" -- the Add Feed button's long-press menu and
+/// tap action sheet (`MainFeedCollectionViewController`), the empty-state Import OPML
+/// button (`MainFeedCollectionViewController.importOPMLFromEmptyState`, which pre-creates
+/// a `.onMyMac` account when none exists and then calls through here -- with exactly one
+/// active account present, `start()` skips the account picker and goes straight to the
+/// document picker), and Settings' Import OPML row (`SettingsViewController`). All three
+/// previously had their own independent copy of this same three-step flow; consolidated
+/// here so there's one account-picker/document-picker/import-failure-alert implementation
+/// instead of three.
 @MainActor
 final class OPMLImportCoordinator: NSObject {
 

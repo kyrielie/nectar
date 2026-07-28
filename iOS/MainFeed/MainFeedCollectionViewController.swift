@@ -9,7 +9,6 @@
 import UIKit
 import os
 import SafariServices
-import UniformTypeIdentifiers
 import WebKit
 import RSCore
 import RSTree
@@ -585,31 +584,16 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		return container
 	}()
 
-	/// Reuses the existing OPML document-picker import flow (see `SettingsViewController`).
 	/// If no account exists yet, a local-only account is created first so the import has
-	/// somewhere to go — this fork restricts account creation to `.onMyMac` regardless.
+	/// somewhere to go -- this fork restricts account creation to `.onMyMac` regardless.
+	/// With exactly one active account now guaranteed, OPMLImportCoordinator.start() skips
+	/// its account picker and goes straight to the document picker.
 	@objc func importOPMLFromEmptyState(_ sender: Any) {
 		if AccountManager.shared.accounts.isEmpty {
 			_ = AccountManager.shared.createAccount(type: .onMyMac)
 			updateEmptyStateVisibility()
 		}
-		presentOPMLDocumentPickerForEmptyState()
-	}
-
-	private func presentOPMLDocumentPickerForEmptyState() {
-		var contentTypes: [UTType] = []
-		if let opmlByExtension = UTType(filenameExtension: "opml") {
-			contentTypes.append(opmlByExtension)
-		}
-		if let registeredOPML = UTType("org.opml.opml") {
-			contentTypes.append(registeredOPML)
-		}
-		contentTypes.append(.xml)
-
-		let documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: contentTypes, asCopy: true)
-		documentPicker.delegate = self
-		documentPicker.modalPresentationStyle = .formSheet
-		present(documentPicker, animated: true)
+		OPMLImportCoordinator.begin(presentingController: self, sourceView: sender as? UIView)
 	}
 
 	/// Manual pairing entry point. There's no token or credential to enter — the
@@ -1539,28 +1523,4 @@ extension MainFeedCollectionViewController {
 		pushUndoableCommand(deleteCommand)
 		deleteCommand.perform()
 	}
-}
-
-// MARK: - UIDocumentPickerDelegate
-
-extension MainFeedCollectionViewController: UIDocumentPickerDelegate {
-
-	func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-		guard let account = AccountManager.shared.accounts.first else {
-			return
-		}
-		for url in urls {
-			account.importOPML(url) { [weak self] result in
-				switch result {
-				case .success:
-					break
-				case .failure:
-					let title = NSLocalizedString("Import Failed", comment: "Import Failed")
-					let message = NSLocalizedString("We were unable to process the selected file.  Please ensure that it is a properly formatted OPML file.", comment: "Import Failed Message")
-					self?.presentError(title: title, message: message)
-				}
-			}
-		}
-	}
-
 }

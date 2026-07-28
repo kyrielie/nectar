@@ -1245,21 +1245,36 @@ struct TableOfContentsEntry: Codable, Hashable {
 	let id: String
 	let text: String
 	let tagName: String
+	/// True for Calibre's "Afterword" closer and a one-shot's repeated title
+	/// heading. Not used for book/chapter grouping (tagName does that job —
+	/// see TableOfContentsViewController.chaptersByBook); kept as a signal
+	/// for possible future UI treatment (e.g. visually de-emphasizing these
+	/// rows), currently unread elsewhere.
 	let isTocHeading: Bool
 }
 
 extension WebViewController {
 
-	/// Entries are addressed by `tocIndex` (position among all h1/.toc-heading
-	/// elements in document order), not `id` — anthology content reuses the
-	/// same id (e.g. "calibre_toc_3") across separate concatenated books, so
-	/// `id` alone can't distinguish "chapter 3 of book 1" from "chapter 3 of
-	/// book 2." See main_ios.js's tocNodes()/getTableOfContents/scrollToHeading.
+	/// Entries are addressed by `tocIndex` (position among all h1/h2.heading/
+	/// h2.toc-heading elements in document order), not `id` — anthology content
+	/// reuses the same id (e.g. "calibre_toc_3") across separate concatenated
+	/// books, so `id` alone can't distinguish "chapter 3 of book 1" from
+	/// "chapter 3 of book 2." See main_ios.js's tocNodes()/getTableOfContents/
+	/// scrollToHeading.
 	func fetchTableOfContents(completionHandler: @escaping ([TableOfContentsEntry]) -> Void) {
 		webView?.evaluateJavaScript("getTableOfContents(\"e30=\")") { result, error in   // "e30=" == base64("{}")
-			guard error == nil, let b64 = result as? String,
-				  let data = Data(base64Encoded: b64),
-				  let entries = try? JSONDecoder().decode([TableOfContentsEntry].self, from: data) else {
+			if let error {
+				Self.logger.error("fetchTableOfContents: getTableOfContents() JS call failed: \(error.localizedDescription, privacy: .public)")
+				completionHandler([])
+				return
+			}
+			guard let b64 = result as? String, let data = Data(base64Encoded: b64) else {
+				Self.logger.error("fetchTableOfContents: getTableOfContents() returned an unexpected result type or invalid base64")
+				completionHandler([])
+				return
+			}
+			guard let entries = try? JSONDecoder().decode([TableOfContentsEntry].self, from: data) else {
+				Self.logger.error("fetchTableOfContents: failed to decode TableOfContentsEntry array from getTableOfContents() result")
 				completionHandler([])
 				return
 			}

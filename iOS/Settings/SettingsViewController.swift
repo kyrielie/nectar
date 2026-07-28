@@ -9,7 +9,6 @@
 import UIKit
 import CoreServices
 import SwiftUI
-import UniformTypeIdentifiers
 import RSCore
 import Account
 import ActivityLog
@@ -42,9 +41,8 @@ final class SettingsViewController: UITableViewController {
 		case sortDirection = 1
 		case groupByFeed = 2
 		case refreshClearsReadArticles = 3
-		case confirmMarkAllAsRead = 4
-		case timelineLayout = 5
-		case showLastUpdatedLabel = 6
+		case timelineLayout = 4
+		case showLastUpdatedLabel = 5
 	}
 
 	private enum ArticlesRow: Int, CaseIterable {
@@ -65,7 +63,7 @@ final class SettingsViewController: UITableViewController {
 		case about = 0
 	}
 
-	private weak var opmlAccount: Account?
+	private weak var exportOPMLAccount: Account?
 
 	@IBOutlet var timelineSortFieldDetailLabel: UILabel!
 	@IBOutlet var timelineSortDirectionDetailLabel: UILabel!
@@ -73,7 +71,6 @@ final class SettingsViewController: UITableViewController {
 	@IBOutlet var ambrosiaSQLiteTransferSwitch: UISwitch!
 	@IBOutlet var refreshClearsReadArticlesSwitch: UISwitch!
 	@IBOutlet var articleThemeDetailLabel: UILabel!
-	@IBOutlet var confirmMarkAllAsReadSwitch: UISwitch!
 	@IBOutlet var showLastUpdatedLabelSwitch: UISwitch!
 	@IBOutlet var showFullscreenArticlesSwitch: UISwitch!
 	@IBOutlet var backSwipeEnabledSwitch: UISwitch!
@@ -126,12 +123,6 @@ final class SettingsViewController: UITableViewController {
 		}
 
 		articleThemeDetailLabel.text = ArticleThemesManager.shared.currentTheme.name
-
-		if AppDefaults.shared.confirmMarkAllAsRead {
-			confirmMarkAllAsReadSwitch.isOn = true
-		} else {
-			confirmMarkAllAsReadSwitch.isOn = false
-		}
 
 		showLastUpdatedLabelSwitch.isOn = AppDefaults.shared.showLastUpdatedLabel
 
@@ -210,7 +201,7 @@ final class SettingsViewController: UITableViewController {
 				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
 				if let sourceView = tableView.cellForRow(at: indexPath) {
 					let sourceRect = tableView.rectForRow(at: indexPath)
-					importOPML(sourceView: sourceView, sourceRect: sourceRect)
+					OPMLImportCoordinator.begin(presentingController: self, sourceView: sourceView, sourceRect: sourceRect)
 				}
 			case .exportSubscriptions:
 				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
@@ -381,14 +372,6 @@ final class SettingsViewController: UITableViewController {
 		}
 	}
 
-	@IBAction func switchConfirmMarkAllAsRead(_ sender: Any) {
-		if confirmMarkAllAsReadSwitch.isOn {
-			AppDefaults.shared.confirmMarkAllAsRead = true
-		} else {
-			AppDefaults.shared.confirmMarkAllAsRead = false
-		}
-	}
-
 	@IBAction func switchShowLastUpdatedLabel(_ sender: Any) {
 		AppDefaults.shared.showLastUpdatedLabel = showLastUpdatedLabelSwitch.isOn
 	}
@@ -457,27 +440,6 @@ final class SettingsViewController: UITableViewController {
 
 }
 
-// MARK: - OPML Document Picker
-
-extension SettingsViewController: UIDocumentPickerDelegate {
-
-	func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-		for url in urls {
-			opmlAccount?.importOPML(url) { result in
-				switch result {
-				case .success:
-					break
-				case .failure:
-					let title = NSLocalizedString("Import Failed", comment: "Import Failed")
-					let message = NSLocalizedString("We were unable to process the selected file.  Please ensure that it is a properly formatted OPML file.", comment: "Import Failed Message")
-					self.presentError(title: title, message: message)
-				}
-			}
-		}
-	}
-
-}
-
 // MARK: - Private
 
 private extension SettingsViewController {
@@ -495,68 +457,9 @@ private extension SettingsViewController {
 		presentingParentController?.present(addNavViewController, animated: true)
 	}
 
-	func importOPML(sourceView: UIView, sourceRect: CGRect) {
-		switch AccountManager.shared.activeAccounts.count {
-		case 0:
-			presentError(title: "Error", message: NSLocalizedString("You must have at least one active account.", comment: "Missing active account"))
-		case 1:
-			opmlAccount = AccountManager.shared.activeAccounts.first
-			importOPMLDocumentPicker()
-		default:
-			importOPMLAccountPicker(sourceView: sourceView, sourceRect: sourceRect)
-		}
-	}
-
-	func importOPMLAccountPicker(sourceView: UIView, sourceRect: CGRect) {
-		let title = NSLocalizedString("Choose an account to receive the imported feeds and folders", comment: "Import Account")
-		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
-
-		if let popoverController = alert.popoverPresentationController {
-			popoverController.sourceView = view
-			popoverController.sourceRect = sourceRect
-		}
-
-		for account in AccountManager.shared.sortedActiveAccounts {
-			let action = UIAlertAction(title: account.nameForDisplay, style: .default) { [weak self] _ in
-				self?.opmlAccount = account
-				self?.importOPMLDocumentPicker()
-			}
-			alert.addAction(action)
-		}
-
-		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
-		alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
-
-		self.present(alert, animated: true)
-	}
-
-	func importOPMLDocumentPicker() {
-		var contentTypes: [UTType] = []
-
-		// Create UTType for .opml files by extension, without requiring conformance.
-		// This ensures files ending in .opml can be selected no matter how OPML is registered.
-		// <https://github.com/Ranchero-Software/NetNewsWire/issues/4858>
-		if let opmlByExtension = UTType(filenameExtension: "opml") {
-			contentTypes.append(opmlByExtension)
-		}
-
-		// Also try the registered org.opml.opml UTI if it exists
-		if let registeredOPML = UTType("org.opml.opml") {
-			contentTypes.append(registeredOPML)
-		}
-
-		// Include XML as a fallback
-		contentTypes.append(.xml)
-
-		let documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: contentTypes, asCopy: true)
-		documentPicker.delegate = self
-		documentPicker.modalPresentationStyle = .formSheet
-		self.present(documentPicker, animated: true)
-	}
-
 	func exportOPML(sourceView: UIView, sourceRect: CGRect) {
 		if AccountManager.shared.accounts.count == 1 {
-			opmlAccount = AccountManager.shared.accounts.first!
+			exportOPMLAccount = AccountManager.shared.accounts.first!
 			exportOPMLDocumentPicker()
 		} else {
 			exportOPMLAccountPicker(sourceView: sourceView, sourceRect: sourceRect)
@@ -574,7 +477,7 @@ private extension SettingsViewController {
 
 		for account in AccountManager.shared.sortedAccounts {
 			let action = UIAlertAction(title: account.nameForDisplay, style: .default) { [weak self] _ in
-				self?.opmlAccount = account
+				self?.exportOPMLAccount = account
 				self?.exportOPMLDocumentPicker()
 			}
 			alert.addAction(action)
@@ -587,7 +490,7 @@ private extension SettingsViewController {
 	}
 
 	func exportOPMLDocumentPicker() {
-		guard let account = opmlAccount else { return }
+		guard let account = exportOPMLAccount else { return }
 
 		let accountName = account.nameForDisplay.replacingOccurrences(of: " ", with: "").trimmingCharacters(in: .whitespaces)
 		let filename = "Subscriptions-\(accountName).opml"

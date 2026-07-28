@@ -374,6 +374,18 @@ function withEncodedArg(fn) {
 	}
 }
 
+// btoa() only handles Latin-1 (code points 0-255) and throws InvalidCharacterError
+// on anything outside that range -- which real article/book text hits constantly:
+// curly quotes, em dashes, accented characters, emoji. Every Swift-bound JSON
+// payload built in this file must go through this instead of raw btoa(), or a
+// single non-Latin-1 character anywhere in the payload silently breaks the whole
+// call (see getTableOfContents/updateFind, and WebViewController.swift's
+// fetchTableOfContents, which swallows the resulting evaluateJavaScript error
+// with no logging -- so this class of bug shows up as "the button does nothing").
+function toBase64(str) {
+	return btoa(unescape(encodeURIComponent(str)));
+}
+
 function escapeRegex(s) {
 	return s.replace(/[.?*+^$\\()[\]{}]/g, '\\$&');
 }
@@ -460,7 +472,7 @@ updateFind = withEncodedArg(options => {
 	}
 	
 	CurrentFindState = newFindState;
-	return btoa(JSON.stringify(CurrentFindState, (k, v) => (ExcludeKeys.has(k) ? undefined : v)));
+	return toBase64(JSON.stringify(CurrentFindState, (k, v) => (ExcludeKeys.has(k) ? undefined : v)));
 });
 
 selectNextResult = withEncodedArg(options => {
@@ -483,17 +495,21 @@ function endFind() {
 // Ambrosia book content can be a single book (in which case top-level
 // <h1> markup is the book's own title, not a TOC entry) or several books
 // concatenated together (Calibre-derived anthology export), in which case
-// each book's own <h1> begins a run of that book's <h2 class="toc-heading">
-// chapter headings, up to the next <h1>.
+// each book's own <h1> begins a run of that book's <h2> chapter headings,
+// up to the next <h1>. Calibre emits two distinct classes on those <h2>s:
+// ordinary chapters get class="heading"; a book's closing "Afterword" (and,
+// for one-shots, a repeated title heading) gets class="toc-heading". Both
+// are real, navigable TOC entries -- selecting only "toc-heading" silently
+// drops every ordinary chapter, so both classes are matched here.
 //
 // Source content reuses the same id (e.g. "calibre_toc_3") across separate
 // books in an anthology, so ids are not unique within the document and
 // document.getElementById() is not a reliable way to jump to a specific
 // entry. Instead, entries are addressed by their position in document
-// order among all <h1>/.toc-heading elements combined ("tocIndex"); id is
+// order among all <h1>/<h2> heading elements combined ("tocIndex"); id is
 // still reported for display/debugging but must not be used for lookup.
 function tocNodes() {
-	return Array.from(document.querySelectorAll('h1, .toc-heading'));
+	return Array.from(document.querySelectorAll('h1, h2.heading, h2.toc-heading'));
 }
 
 getTableOfContents = withEncodedArg(options => {
@@ -504,7 +520,7 @@ getTableOfContents = withEncodedArg(options => {
 		tagName: h.tagName.toLowerCase(),
 		isTocHeading: h.classList.contains('toc-heading')
 	}));
-	return btoa(JSON.stringify(entries));
+	return toBase64(JSON.stringify(entries));
 });
 
 scrollToHeading = withEncodedArg(options => {

@@ -1416,6 +1416,26 @@ struct SidebarItemNode: Hashable, Sendable {
 		markAllAsRead(articles, completion: completion)
 	}
 
+	func markAllAsUnread(_ articles: [Article], completion: (() -> Void)? = nil) {
+		markArticlesWithUndo(articles, statusKey: .read, flag: false, completion: completion)
+	}
+
+	func markAllAsLoved(_ articles: [Article], completion: (() -> Void)? = nil) {
+		markArticlesWithUndo(articles, statusKey: .loved, flag: true, completion: completion)
+	}
+
+	func markAllAsUnloved(_ articles: [Article], completion: (() -> Void)? = nil) {
+		markArticlesWithUndo(articles, statusKey: .loved, flag: false, completion: completion)
+	}
+
+	func markAllAsReadLater(_ articles: [Article], completion: (() -> Void)? = nil) {
+		markArticlesWithUndo(articles, statusKey: .starred, flag: true, completion: completion)
+	}
+
+	func markAllAsNotReadLater(_ articles: [Article], completion: (() -> Void)? = nil) {
+		markArticlesWithUndo(articles, statusKey: .starred, flag: false, completion: completion)
+	}
+
 	func canMarkAboveAsRead(for article: Article) -> Bool {
 		let articlesAboveArray = articles.articlesAbove(article: article)
 		return articlesAboveArray.canMarkAllAsRead()
