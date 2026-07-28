@@ -112,7 +112,7 @@ function flattenPreElements() {
 }
 
 function reloadArticleImage(imageSrc) {
-	var image = document.querySelector('img[src^="nnwimageicon:"]');
+	var image = document.querySelector('img[src^="nnwimageicon:" i]');
 	if (image) {
 		image.src = imageSrc + "?" + new Date().getTime();
 	}
@@ -165,7 +165,7 @@ function removeWpSmiley() {
 // is removed here in the shared rendering pipeline rather than in each template,
 // which lets user-installed NetNewsWire themes keep working unmodified.
 function removeArticleIconAvatar() {
-	document.querySelectorAll('img[src^="nnwimageicon:"]').forEach(img => img.remove());
+	document.querySelectorAll('img[src^="nnwimageicon:" i]').forEach(img => img.remove());
 }
 
 // The feed-name link (populated from ArticleRenderer's feed_link /
