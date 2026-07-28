@@ -951,10 +951,11 @@ public enum FetchType {
 	/// but reading it synchronously into the model isn't enough on its own, since the
 	/// timeline's collection view only redraws a cell when told to. Post a dedicated,
 	/// lighter-weight .ReadingProgressDidChange notification so the timeline knows to
-	/// refresh the affected row.
+	/// refresh the affected row(s) -- as of the bookKey write-through below, that can be
+	/// more than one articleID when the same book appears via more than one feed.
 	public func saveReadingProgress(_ readingProgress: Double, forArticleID articleID: String) async {
-		await database.saveReadingProgressAsync(readingProgress, articleID: articleID)
-		NotificationCenter.default.post(name: .ReadingProgressDidChange, object: self, userInfo: [UserInfoKey.articleIDs: Set([articleID])])
+		let changedArticleIDs = await database.saveReadingProgressAsync(readingProgress, articleID: articleID)
+		NotificationCenter.default.post(name: .ReadingProgressDidChange, object: self, userInfo: [UserInfoKey.articleIDs: changedArticleIDs])
 	}
 
 	/// Mark articleIDs as unread.
