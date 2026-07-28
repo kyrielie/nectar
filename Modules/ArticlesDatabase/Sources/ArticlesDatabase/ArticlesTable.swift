@@ -1612,6 +1612,13 @@ nonisolated private extension ArticlesTable {
 		}
 
 		updateRowsWithDictionary(changesDictionary, whereKey: DatabaseKey.articleID, matches: updatedArticle.articleID, database: database)
+
+		// The cached Article for this articleID holds immutable (`let`) values —
+		// wordCount, isComplete, chapterCurrent/Total, etc. — taken from whenever
+		// it was first fetched. Since we just wrote new values to the database,
+		// drop the stale cache entry so the next fetch re-reads the row instead
+		// of handing back the old object.
+		removeArticleIDsFromCache(Set([updatedArticle.articleID]))
 	}
 
 	func addArticlesToCache(_ articles: Set<Article>?) {

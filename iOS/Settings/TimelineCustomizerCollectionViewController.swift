@@ -50,13 +50,13 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
         super.viewDidLoad()
 		title = NSLocalizedString("Timeline Layout", comment: "Timeline Layout")
 
-		NotificationCenter.default.addObserver(forName: AppDefaults.timelineNumberOfLinesDidChange, object: nil, queue: .main) { [weak self] _ in
+		NotificationCenter.default.addObserver(forName: .timelineNumberOfLinesDidChange, object: nil, queue: .main) { [weak self] _ in
 			Task { @MainActor in
 				self?.userDefaultsDidChange()
 			}
 		}
 
-		NotificationCenter.default.addObserver(forName: AppDefaults.timelineTagDisplayModeDidChange, object: nil, queue: .main) { [weak self] _ in
+		NotificationCenter.default.addObserver(forName: .timelineTagDisplayModeDidChange, object: nil, queue: .main) { [weak self] _ in
 			Task { @MainActor in
 				self?.userDefaultsDidChange()
 			}
