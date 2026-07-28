@@ -101,7 +101,6 @@ final class AppDefaults: Sendable {
 		static let disableArticleLinks = "disableArticleLinks"
 		static let showLastUpdatedLabel = "showLastUpdatedLabel"
 		static let articleThemeOverrides = "articleThemeOverrides"
-		static let confirmMarkAllAsRead = "confirmMarkAllAsRead"
 		static let lastRefresh = "lastRefresh"
 		static let addFeedAccountID = "addFeedAccountID"
 		static let addFeedFolderName = "addFeedFolderName"
@@ -109,7 +108,6 @@ final class AppDefaults: Sendable {
 		static let useSystemBrowser = "useSystemBrowser"
 		static let currentThemeName = "currentThemeName"
 		static let hideReadFeeds = "hideReadFeeds"
-		static let articleWindowScrollY = "articleWindowScrollY"
 		static let expandedContainers = "expandedContainers"
 		static let smartFeedsHidingReadArticles = "smartFeedsHidingReadArticles"
 		static let feedsHidingReadArticles = "feedsHidingReadArticles"
@@ -393,19 +391,6 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	// No longer surfaced in Settings (nothing writes it anymore, so it stays permanently
-	// at its registered default from here on for the timeline's mark-all button), but kept
-	// for the ~12 other `MarkAsReadAlertController.confirm(...)` call sites elsewhere in the
-	// app / possible future use.
-	var confirmMarkAllAsRead: Bool {
-		get {
-			return AppDefaults.bool(for: Key.confirmMarkAllAsRead)
-		}
-		set {
-			AppDefaults.setBool(for: Key.confirmMarkAllAsRead, newValue)
-		}
-	}
-
 	var splitViewPreferredDisplayMode: Int {
 		get {
 			return AppDefaults.int(for: Key.splitViewPreferredDisplayMode)
@@ -471,23 +456,6 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			UserDefaults.standard.set(newValue, forKey: Key.hideReadFeeds)
-		}
-	}
-
-	/// Write-only as of Phase A0 (nectar-plan-v3.md): WebViewController still writes this on
-	/// every scroll change, but nothing reads it back to restore a position anymore -- it was a
-	/// single value shared across every article, so using it to restore whichever article the
-	/// user returns to on relaunch/Handoff meant restoring the *last-scrolled* article's offset
-	/// onto a possibly different article. Per-article restoration now goes entirely through
-	/// Account.fetchScrollPosition(forArticleID:). Left in place (rather than deleted outright)
-	/// because StateRestorationInfo's shape/migration still carries it; worth removing properly
-	/// in a follow-up once nothing depends on that shape.
-	var articleWindowScrollY: Int {
-		get {
-			UserDefaults.standard.integer(forKey: Key.articleWindowScrollY)
-		}
-		set {
-			UserDefaults.standard.set(newValue, forKey: Key.articleWindowScrollY)
 		}
 	}
 
@@ -600,7 +568,6 @@ final class AppDefaults: Sendable {
 										Key.showFeedNameInReaderView: false,
 									Key.showPrevNextArticleButtons: true,
 									Key.showLastUpdatedLabel: true,
-										Key.confirmMarkAllAsRead: true,
 										Key.currentThemeName: Self.defaultThemeName,
 									   Key.splitViewPreferredDisplayMode: UISplitViewController.DisplayMode.oneBesideSecondary.rawValue]
 		AppDefaults.store.register(defaults: defaults)
@@ -675,7 +642,6 @@ struct StateRestorationInfo {
 	let feedsHidingReadArticles: [String: Set<String>]
 	let foldersShowingReadArticles: [String: Set<String>]
 	let selectedArticle: ArticleSpecifier?
-	let articleWindowScrollY: Int
 
 	init(hideReadFeeds: Bool,
 	     expandedContainers: Set<ContainerIdentifier>,
@@ -683,8 +649,7 @@ struct StateRestorationInfo {
 	     smartFeedsHidingReadArticles: Set<String>,
 	     feedsHidingReadArticles: [String: Set<String>],
 	     foldersShowingReadArticles: [String: Set<String>],
-	     selectedArticle: ArticleSpecifier?,
-	     articleWindowScrollY: Int) {
+	     selectedArticle: ArticleSpecifier?) {
 		self.hideReadFeeds = hideReadFeeds
 		self.expandedContainers = expandedContainers
 		self.selectedSidebarItem = selectedSidebarItem
@@ -692,9 +657,8 @@ struct StateRestorationInfo {
 		self.feedsHidingReadArticles = feedsHidingReadArticles
 		self.foldersShowingReadArticles = foldersShowingReadArticles
 		self.selectedArticle = selectedArticle
-		self.articleWindowScrollY = articleWindowScrollY
 
-		AppDefaults.logger.debug("AppDefaults: StateRestorationInfo:\nexpandedContainers: \(expandedContainers)\nselectedSidebarItem: \(selectedSidebarItem?.userInfo ?? [String: String]())\nsmartFeedsHidingReadArticles: \(smartFeedsHidingReadArticles)\nfeedsHidingReadArticles: \(feedsHidingReadArticles)\nfoldersShowingReadArticles: \(foldersShowingReadArticles)\nselectedArticle: \(selectedArticle?.dictionary ?? [String: String]())\narticleWindowScrollY: \(articleWindowScrollY)")
+		AppDefaults.logger.debug("AppDefaults: StateRestorationInfo:\nexpandedContainers: \(expandedContainers)\nselectedSidebarItem: \(selectedSidebarItem?.userInfo ?? [String: String]())\nsmartFeedsHidingReadArticles: \(smartFeedsHidingReadArticles)\nfeedsHidingReadArticles: \(feedsHidingReadArticles)\nfoldersShowingReadArticles: \(foldersShowingReadArticles)\nselectedArticle: \(selectedArticle?.dictionary ?? [String: String]())")
 	}
 
 	init() {
@@ -704,8 +668,7 @@ struct StateRestorationInfo {
 				  smartFeedsHidingReadArticles: AppDefaults.shared.smartFeedsHidingReadArticles,
 				  feedsHidingReadArticles: AppDefaults.shared.feedsHidingReadArticles,
 				  foldersShowingReadArticles: AppDefaults.shared.foldersShowingReadArticles,
-				  selectedArticle: AppDefaults.shared.selectedArticle,
-				  articleWindowScrollY: AppDefaults.shared.articleWindowScrollY)
+				  selectedArticle: AppDefaults.shared.selectedArticle)
 	}
 
 	// TODO: Delete for NetNewsWire 7.1.
@@ -794,7 +757,6 @@ struct StateRestorationInfo {
 				  smartFeedsHidingReadArticles: smartFeedsHidingReadArticles,
 				  feedsHidingReadArticles: feedsHidingReadArticles,
 				  foldersShowingReadArticles: AppDefaults.shared.foldersShowingReadArticles,
-				  selectedArticle: AppDefaults.shared.selectedArticle,
-				  articleWindowScrollY: AppDefaults.shared.articleWindowScrollY)
+				  selectedArticle: AppDefaults.shared.selectedArticle)
 	}
 }
