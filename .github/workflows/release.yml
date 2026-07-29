@@ -175,8 +175,13 @@ jobs:
           current_project_version=$(echo "$settings" | grep -m1 '^\s*CURRENT_PROJECT_VERSION' | awk -F'= ' '{print $2}')
           min_os_version=$(echo "$settings" | grep -m1 '^\s*IPHONEOS_DEPLOYMENT_TARGET' | awk -F'= ' '{print $2}')
 
+          # Suffix with the workflow run number so buildVersion is unique even when
+          # re-publishing over a clobbered release without bumping xcconfig. AltStore
+          # only surfaces an update when version and/or buildVersion changes.
+          build_version="${current_project_version}.${GITHUB_RUN_NUMBER}"
+
           echo "marketing_version=$marketing_version" >> "$GITHUB_OUTPUT"
-          echo "build_version=$current_project_version" >> "$GITHUB_OUTPUT"
+          echo "build_version=$build_version" >> "$GITHUB_OUTPUT"
           echo "min_os_version=$min_os_version" >> "$GITHUB_OUTPUT"
 
       - name: Find IPA release asset
