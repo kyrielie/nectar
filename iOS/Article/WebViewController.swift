@@ -1005,6 +1005,13 @@ private extension WebViewController {
 			notchCoverView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
 		])
 
+		// notchCoverView overlaps topShowBarsView's tap zone whenever the notch is
+		// hidden, silently swallowing the tap meant to bring the bars back (it's an
+		// opaque UIView added after topShowBarsView, so it sits on top in z-order).
+		// Rather than making it pass-through, fold it into the same reveal gesture --
+		// the whole masked strip is a reasonable extension of the tap-to-reveal zone.
+		notchCoverView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(showBars(_:))))
+
 		pageCounterLabel = UILabel()
 		pageCounterLabel.font = .preferredFont(forTextStyle: .caption2)
 		pageCounterLabel.textColor = .label
