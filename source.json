@@ -34,7 +34,7 @@
             "versions": [
                 {
                     "version": "7.1.1",
-                    "buildVersion": "7108.11",
+                    "buildVersion": "7108.10",
                     "date": "2026-07-28T04:38:24Z",
                     "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.0.1...v0.0.2\r\n\r\n- Toolbar improvements\r\n- Hide notch\r\n\r\nAltstore source: `https://kyrielie.github.io/nectar/source.json`",
                     "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.0.2/Nectar-unsigned.ipa",
