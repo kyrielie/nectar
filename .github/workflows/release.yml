@@ -41,6 +41,16 @@ jobs:
           build_log="${RUNNER_TEMP}/Nectar-archive-build.log"
           rm -rf "$archive_path"
 
+          # Suffix CURRENT_PROJECT_VERSION with the run number so the buildVersion
+          # embedded in this ipa matches the one publish-source writes to
+          # source.json -- AltStore refuses to install if they disagree.
+          base_project_version=$(xcodebuild -showBuildSettings \
+            -project NetNewsWire.xcodeproj \
+            -scheme Nectar-iOS \
+            -destination "generic/platform=iOS" \
+            | grep -m1 '^\s*CURRENT_PROJECT_VERSION' | awk -F'= ' '{print $2}')
+          build_version="${base_project_version}.${GITHUB_RUN_NUMBER}"
+
           set -o pipefail
           xcodebuild \
             -project NetNewsWire.xcodeproj \
@@ -49,6 +59,7 @@ jobs:
             -archivePath "$archive_path" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
+            CURRENT_PROJECT_VERSION="$build_version" \
             CODE_SIGN_IDENTITY="" \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             archive 2>&1 | tee "$build_log" | xcbeautify --renderer github-actions
