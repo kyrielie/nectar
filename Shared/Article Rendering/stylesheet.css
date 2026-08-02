@@ -34,6 +34,20 @@ a:hover {
 	cursor: default;
 }
 
+/* AO3 direct-reading support -- shown inline, above the feed-derived
+   summary, when the on-demand chapter fetch didn't persist new content.
+   Deliberately not .systemMessage: that class is absolutely positioned for
+   full-page placeholder states (loading, no selection), which would
+   misplace this notice inside real article body content. */
+.ao3ChapterFetchNotice {
+	margin: 0 0 1em 0;
+	padding: 0.6em 0.8em;
+	border-left: 3px solid rgba(0, 0, 0, 0.3);
+	background: rgba(0, 0, 0, 0.05);
+	font-size: 0.9em;
+	font-style: italic;
+}
+
 :root {
 	--header-table-border-color: rgba(0, 0, 0, 0.1);
 	--header-color: rgba(0, 0, 0, 0.66);
