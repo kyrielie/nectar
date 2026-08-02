@@ -70,4 +70,31 @@ import Testing
 			#expect(item.wordCount != nil)
 		}
 	}
+
+	// A bare <br> or <hr> (no trailing slash) inside the summary's prose --
+	// AO3 emits these unclosed -- must not be mistaken for an unclosed
+	// element that swallows the rest of the summary, including the
+	// Words:/Chapters: stats paragraph. Regression coverage for three
+	// entries in testfeed.atom that hit this: "anyway you slice it" has a
+	// <br> inside the byline-adjacent paragraph, "[Podfic] Ready to Lose"
+	// has one inside the "Author's Summary from" line, and "pulses can
+	// drive from here" has a bare <hr> section break between paragraphs.
+	@Test func bareBrAndHrDoNotSwallowStatsParagraph() throws {
+		let feed = try #require(try FeedParser.parse(parserData("testfeed", "atom", "https://archiveofourown.org/tags/1147379/feed.atom")))
+
+		let anonymous = try #require(feed.items.first { $0.title == "anyway you slice it" })
+		#expect(anonymous.wordCount == 258)
+		#expect(anonymous.chapterCurrent == 1)
+		#expect(anonymous.chapterTotal == 5)
+
+		let podfic = try #require(feed.items.first { $0.title == "[Podfic] Ready to Lose" })
+		#expect(podfic.wordCount == 11)
+		#expect(podfic.chapterCurrent == 1)
+		#expect(podfic.chapterTotal == 1)
+
+		let pulses = try #require(feed.items.first { $0.title == "pulses can drive from here" })
+		#expect(pulses.wordCount == 5305)
+		#expect(pulses.chapterCurrent == 1)
+		#expect(pulses.chapterTotal == 1)
+	}
 }
