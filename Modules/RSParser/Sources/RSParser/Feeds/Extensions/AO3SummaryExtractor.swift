@@ -365,6 +365,23 @@ private func flattenedText(_ element: AO3Element) -> String {
 /// depth-tracked stack is sufficient -- no general-purpose HTML tree needed.
 private final class AO3SummaryScannerDelegate: HTMLScannerDelegate {
 
+	// AO3's generated summary HTML emits void elements like <br> and <hr>
+	// without a trailing slash (e.g. "...Adult<br>Your flight..."). HTMLScanner
+	// does no void-element tracking of its own -- by design, see its header
+	// comment -- and only reports `selfClosing == true` for a literal "/>",
+	// so a bare <br> arrives as an ordinary start tag. Without this list, it
+	// gets pushed onto `stack` and is never popped (no matching </br> exists
+	// in the source), which silently swallows every subsequent top-level
+	// block -- including the `Words:` stats paragraph -- as a descendant of
+	// the still-open element. `extract` then finds zero top-level stats
+	// paragraphs instead of one and returns nil for an entry that's
+	// otherwise a perfectly ordinary AO3 summary, with no error and no
+	// crash -- the item just silently loses all AO3 metadata.
+	private static let voidElements: Set<String> = [
+		"area", "base", "br", "col", "embed", "hr", "img", "input",
+		"link", "meta", "param", "source", "track", "wbr"
+	]
+
 	private(set) var topLevelBlocks: [AO3Element] = []
 	private var stack: [AO3Element] = []
 
@@ -373,13 +390,14 @@ private final class AO3SummaryScannerDelegate: HTMLScannerDelegate {
 	                 attributes: HTMLAttributes,
 	                 selfClosing: Bool) {
 		let tagName = String(decoding: name, as: UTF8.self).lowercased()
-		let element = AO3Element(tag: tagName, attributes: attributes.dictionary(), selfClosing: selfClosing)
+		let effectiveSelfClosing = selfClosing || Self.voidElements.contains(tagName)
+		let element = AO3Element(tag: tagName, attributes: attributes.dictionary(), selfClosing: effectiveSelfClosing)
 
 		if let parent = stack.last {
 			parent.children.append(.element(element))
 		}
 
-		if !selfClosing {
+		if !effectiveSelfClosing {
 			stack.append(element)
 		} else if stack.isEmpty {
 			topLevelBlocks.append(element)
