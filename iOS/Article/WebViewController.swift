@@ -146,6 +146,7 @@ final class WebViewController: UIViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(currentArticleThemeDidChangeNotification(_:)), name: .CurrentArticleThemeDidChangeNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(articleThemeOverridesDidChangeNotification(_:)), name: .articleThemeOverridesDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(handleSceneDidEnterBackground(_:)), name: UIScene.didEnterBackgroundNotification, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidComplete(_:)), name: .ao3ChapterFetchDidComplete, object: nil)
 
 		// Configure the tap zones
 		configureTopShowBarsView()
@@ -226,6 +227,25 @@ final class WebViewController: UIViewController {
 		loadWebView(reason: "themeOverridesChanged")
 	}
 
+	@objc func ao3ChapterFetchDidComplete(_ note: Notification) {
+		guard let fetchedArticleID = note.userInfo?[AO3ChapterFetchUserInfoKey.articleID] as? String,
+		      let article, article.articleID == fetchedArticleID, let account = article.account else {
+			return
+		}
+		Task {
+			// Re-fetch the Article rather than mutating in place -- contentHTML
+			// (and chapterCurrent) just changed underneath the copy this view
+			// controller is holding, and Article's stored properties are
+			// immutable (see Article.swift).
+			let refetchedArticles = await account.fetchArticlesAsync(.articleIDs([fetchedArticleID]))
+			guard let refetchedArticle = refetchedArticles.first, self.article?.articleID == fetchedArticleID else {
+				return
+			}
+			self.article = refetchedArticle
+			self.loadWebView(reason: "ao3ChapterFetchDidComplete(\(fetchedArticleID))")
+		}
+	}
+
 	// MARK: Actions
 
 	@objc func showBars(_ sender: Any) {
@@ -262,6 +282,11 @@ final class WebViewController: UIViewController {
 					self.windowScrollY = Int(scrollPosition)
 					self.isAwaitingInitialScrollFetch = false
 					self.loadWebView(reason: "setArticle(\(articleID)) after scroll fetch")
+					// Fire-and-forget: no-op for anything but an AO3-sourced
+					// article whose stored content looks stale. See
+					// AO3ChapterFetcher.fetchIfNeeded and
+					// ao3ChapterFetchDidComplete(_:) above for the reload path.
+					AO3ChapterFetcher.shared.fetchIfNeeded(for: article)
 				}
 			}
 		}
