@@ -76,6 +76,8 @@ public enum ActivityOwner: Sendable, Hashable {
 			hasher.combine(5)
 		case .htmlMetadataDownloader:
 			hasher.combine(6)
+		case .ao3ChapterFetcher:
+			hasher.combine(7)
 		}
 	}
 }
