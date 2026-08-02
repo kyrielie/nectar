@@ -63,6 +63,48 @@ final class RSSItem {
 	}
 
 	func toParsedItem(feedURL: String) -> ParsedItem {
+		// AO3 tag/user feeds carry their metadata as machine-generated HTML
+		// inside the summary itself. Try that extraction before falling back
+		// to the generic "promote summary to contentHTML" behavior below --
+		// on success, contentHTML is deliberately left nil (Workstream 2 of
+		// the AO3 plan fills it in on demand) and the cleaned prose becomes
+		// the summary.
+		if let s = summary, !s.isEmpty, let result = AO3SummaryExtractor.extract(fromSummaryHTML: s) {
+			return ParsedItem(
+				syncServiceID: nil,
+				uniqueID: uniqueID,
+				feedURL: feedURL,
+				url: permalink,
+				externalURL: link,
+				title: title,
+				language: language,
+				contentHTML: nil,
+				contentText: nil,
+				markdown: markdown,
+				summary: result.cleanedSummaryHTML,
+				imageURL: nil,
+				bannerImageURL: nil,
+				datePublished: datePublished,
+				dateModified: dateModified,
+				authors: authors.isEmpty ? nil : authors,
+				tags: result.additionalTags.map { Set($0) },
+				attachments: attachments.isEmpty ? nil : attachments,
+				isAmbrosiaItem: false,
+				wordCount: result.wordCount,
+				chapterCurrent: result.chapterCurrent,
+				chapterTotal: result.chapterTotal,
+				isComplete: result.isComplete,
+				fandoms: result.fandoms,
+				relationships: result.relationships,
+				characters: result.characters,
+				ratings: result.ratings,
+				warnings: result.warnings,
+				categories: result.categories,
+				series: result.series,
+				ao3WorkID: AO3SummaryExtractor.ao3WorkID(fromPermalink: permalink)
+			)
+		}
+
 		// If body is empty and summary has content,
 		// promote summary to body and drop summary.
 		var contentHTML = body
