@@ -31,8 +31,33 @@ public struct AO3ChapterExtractionResult: Sendable {
 	public let chapters: [AO3ExtractedChapter]
 }
 
+/// The four ways a fetched AO3 work page can come back, distinguished by
+/// document shape alone -- there is no HTTP-status-level signal for any of
+/// the three failure cases; AO3 returns 200 for all of them.
+public enum AO3ChapterExtractionOutcome: Sendable {
+	/// `#workskin` plus at least one `.chapter` div were found -- the normal
+	/// case.
+	case success(AO3ChapterExtractionResult)
+	/// The Adult Content Warning interstitial -- expected to be unreachable
+	/// now that every fetch sends `view_adult=true` unconditionally, so
+	/// seeing this outcome in practice means that parameter didn't do its
+	/// job (redirect stripping it, an AO3 behavior change, or a gate this
+	/// hasn't been sampled against yet).
+	case adultContentGate
+	/// AO3's "restricted to registered users" login wall
+	/// (`div#signin`, "This work is only available to registered users of
+	/// the Archive."). Distinct from `.notFound` -- Workstream 3's
+	/// authenticated retry fires specifically on this outcome.
+	case registrationRequired
+	/// Neither `#workskin`+`.chapter` divs, nor either known gate page, was
+	/// found. Catch-all for a genuinely deleted/moved work, or any other
+	/// shape not yet sampled (a collection- or series-level gate, for
+	/// instance).
+	case notFound
+}
+
 /// Extracts storable article content from a fetched AO3 work page
-/// (`GET .../works/<id>?view_full_work=true`).
+/// (`GET .../works/<id>?view_full_work=true&view_adult=true`).
 ///
 /// AO3 wraps a work's title, its own summary, and every concatenated posted
 /// chapter in a single `<div id="workskin">`, unconditionally -- present and
@@ -44,39 +69,88 @@ public struct AO3ChapterExtractionResult: Sendable {
 /// renderer without the other.
 public enum AO3ChapterHTMLExtractor {
 
-	/// Returns `nil` when no `<div class="chapter" id="chapter-...">` is
-	/// found -- a gated/restricted work (logged out) and a deleted/moved
-	/// work currently look identical by this signal (see the plan's "Still
-	/// open" list); callers should treat both as "couldn't fetch", leaving
-	/// the article's existing `contentHTML` (nil, on first fetch) alone
-	/// rather than treating this as an error worth retrying aggressively.
-	public static func extract(fromWorkPageHTML html: String) -> AO3ChapterExtractionResult? {
+	/// See `AO3ChapterExtractionOutcome` for what each case means and when
+	/// callers should treat it as retryable (`.registrationRequired`, via
+	/// Workstream 3) versus not (`.adultContentGate`, `.notFound`).
+	public static func extract(fromWorkPageHTML html: String) -> AO3ChapterExtractionOutcome {
 		let root = parseHTMLLiteTree(html)
 
-		guard let (workSkinParent, workSkinIndex, workSkinDiv) = firstDescendantWithParent(of: root, where: {
+		if let (workSkinParent, workSkinIndex, workSkinDiv) = firstDescendantWithParent(of: root, where: {
 			$0.tag == "div" && $0.attributes["id"] == "workskin"
-		}) else {
-			return nil
+		}) {
+			let chapterDivs = descendants(of: workSkinDiv, where: {
+				$0.tag == "div" && $0.attributes["class"] == "chapter" && ($0.attributes["id"]?.hasPrefix("chapter-") ?? false)
+			})
+			if !chapterDivs.isEmpty {
+				stripPhantomTitleHeadingClass(inWorkSkin: workSkinDiv)
+
+				let chapters = chapterDivs.compactMap(extractedChapter)
+
+				var contentHTML = ""
+				if let styleElement = precedingStyleElement(parent: workSkinParent, beforeIndex: workSkinIndex) {
+					contentHTML += serializeHTMLLiteNodes([.element(styleElement)])
+				}
+				contentHTML += serializeHTMLLiteNodes([.element(workSkinDiv)])
+
+				return .success(AO3ChapterExtractionResult(contentHTML: contentHTML, chapters: chapters))
+			}
+
+			// Single-chapter works carry no per-chapter <div class="chapter">
+			// wrapper at all -- confirmed against a real work (87955346,
+			// "Chapters: 1/1"): the body sits directly inside
+			// <div id="chapters" role="article">, with no h3.title chapter
+			// heading either, since there's only ever one implicit chapter.
+			// Without this branch, every single-chapter AO3 work was
+			// misreported as gated/removed.
+			if let chaptersDiv = firstDescendant(of: workSkinDiv, where: {
+				$0.tag == "div" && $0.attributes["id"] == "chapters"
+			}) {
+				stripPhantomTitleHeadingClass(inWorkSkin: workSkinDiv)
+				stripLandmarkHeading(from: chaptersDiv)
+
+				let chapters = [AO3ExtractedChapter(id: "chapter-1", title: "Chapter 1")]
+
+				var contentHTML = ""
+				if let styleElement = precedingStyleElement(parent: workSkinParent, beforeIndex: workSkinIndex) {
+					contentHTML += serializeHTMLLiteNodes([.element(styleElement)])
+				}
+				contentHTML += serializeHTMLLiteNodes([.element(workSkinDiv)])
+
+				return .success(AO3ChapterExtractionResult(contentHTML: contentHTML, chapters: chapters))
+			}
 		}
 
-		let chapterDivs = descendants(of: workSkinDiv, where: {
-			$0.tag == "div" && $0.attributes["class"] == "chapter" && ($0.attributes["id"]?.hasPrefix("chapter-") ?? false)
-		})
-		guard !chapterDivs.isEmpty else {
-			return nil
+		if isAdultContentGate(root) {
+			return .adultContentGate
 		}
-
-		stripPhantomTitleHeadingClass(inWorkSkin: workSkinDiv)
-
-		let chapters = chapterDivs.compactMap(extractedChapter)
-
-		var contentHTML = ""
-		if let styleElement = precedingStyleElement(parent: workSkinParent, beforeIndex: workSkinIndex) {
-			contentHTML += serializeHTMLLiteNodes([.element(styleElement)])
+		if isRegistrationRequired(root) {
+			return .registrationRequired
 		}
-		contentHTML += serializeHTMLLiteNodes([.element(workSkinDiv)])
+		return .notFound
+	}
+}
 
-		return AO3ChapterExtractionResult(contentHTML: contentHTML, chapters: chapters)
+// MARK: - Gate page detection
+
+private extension AO3ChapterHTMLExtractor {
+
+	/// Adult Content Warning interstitial: anchored on the heading text --
+	/// the simplest reliable signal, and it doesn't depend on the per-work
+	/// "Yes, Continue" link's exact `view_adult=true`-suffixed href.
+	static func isAdultContentGate(_ root: HTMLLiteElement) -> Bool {
+		firstDescendant(of: root, where: {
+			$0.tag == "h2" && $0.attributes["class"] == "landmark heading" && flattenedText($0).trimmingCharacters(in: .whitespacesAndNewlines) == "Adult Content Warning"
+		}) != nil
+	}
+
+	/// Registration-required login wall: matched on `div#signin`'s
+	/// presence -- an id, so cheaper and more specific than matching the
+	/// "Sorry! This work is only available to registered users of the
+	/// Archive." prose.
+	static func isRegistrationRequired(_ root: HTMLLiteElement) -> Bool {
+		firstDescendant(of: root, where: {
+			$0.tag == "div" && $0.attributes["id"] == "signin"
+		}) != nil
 	}
 }
 
@@ -121,18 +195,30 @@ private extension AO3ChapterHTMLExtractor {
 		if let body = firstDescendant(of: chapterDiv, where: {
 			$0.tag == "div" && $0.attributes["class"] == "userstuff module" && $0.attributes["role"] == "article"
 		}) {
-			// Strip the "Chapter Text" landmark heading -- matched by
-			// id="work", not by its English text, so a locale variant
-			// isn't silently missed (untested against a non-English work).
-			body.children.removeAll {
-				if case .element(let el) = $0, el.attributes["id"] == "work" {
-					return true
-				}
-				return false
-			}
+			stripLandmarkHeading(from: body)
 		}
 
 		return AO3ExtractedChapter(id: id, title: title)
+	}
+}
+
+// MARK: - Landmark heading strip
+
+private extension AO3ChapterHTMLExtractor {
+
+	/// Strips the "Chapter Text" / "Work Text:" landmark heading -- matched
+	/// by id="work", not by its English text, so a locale variant isn't
+	/// silently missed (untested against a non-English work). Shared by
+	/// both the multi-chapter body (`div.userstuff.module[role="article"]`)
+	/// and the single-chapter body (`div#chapters[role="article"]`
+	/// directly) -- the heading's id is the same either way.
+	static func stripLandmarkHeading(from body: HTMLLiteElement) {
+		body.children.removeAll {
+			if case .element(let el) = $0, el.attributes["id"] == "work" {
+				return true
+			}
+			return false
+		}
 	}
 }
 

@@ -5,7 +5,8 @@
 //  Nectar AO3 direct-reading support, Workstream 2 ("On-demand chapter
 //  fetch and storage") -- see docs/ao3-merged-plan-nectar.md.
 //
-//  Fetches an AO3 work's live page (`?view_full_work=true`) on demand and
+//  Fetches an AO3 work's live page (`?view_full_work=true&view_adult=true`)
+//  on demand and
 //  persists the extracted, workskin-preserving contentHTML for any article
 //  whose bookKey identifies it as an AO3 work ("ao3-work:<id>"). Modeled
 //  directly on HTMLMetadataDownloader: same hoursBetweenAttempts gate, same
@@ -51,7 +52,23 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 
 	private let attemptDates = OSAllocatedUnfairLock(initialState: [String: Date]())
 
+	/// Human-readable reason the most recent fetch for an article didn't
+	/// persist new content, keyed by articleID. Cleared on a subsequent
+	/// success. Exists so a view showing the article can explain why full
+	/// text isn't loading (see `lastFetchFailureMessage(forArticleID:)`)
+	/// instead of the failure being visible only in the Activity Log.
+	private let failureMessages = OSAllocatedUnfairLock(initialState: [String: String]())
+
 	init() {}
+
+	/// The reason the most recent fetch attempt for this article failed, if
+	/// any -- `nil` if the article has never had a failed fetch, or if its
+	/// last fetch succeeded. Callers needing to react live to a new failure
+	/// (rather than polling this after the fact) should observe
+	/// `.ao3ChapterFetchDidFail` instead, which carries the same message.
+	public func lastFetchFailureMessage(forArticleID articleID: String) -> String? {
+		failureMessages.withLock { $0[articleID] }
+	}
 
 	/// Kicks off a fetch if `article` is an AO3-sourced article (per its
 	/// bookKey) whose stored content looks stale or missing, and enough time
@@ -83,7 +100,12 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 			// compare against, don't treat that as stale on every call.
 			return false
 		}
-		let storedChapterCount = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: contentHTML)?.chapters.count ?? 0
+		let storedChapterCount: Int
+		if case .success(let result) = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: contentHTML) {
+			storedChapterCount = result.chapters.count
+		} else {
+			storedChapterCount = 0
+		}
 		return storedChapterCount < chapterCurrent
 	}
 }
@@ -121,7 +143,7 @@ nonisolated private extension AO3ChapterFetcher {
 	}
 
 	func download(workID: String, articleID: String, accountID: String, feedID: String) {
-		guard let url = URL(string: "https://archiveofourown.org/works/\(workID)?view_full_work=true") else {
+		guard let url = URL(string: "https://archiveofourown.org/works/\(workID)?view_full_work=true&view_adult=true") else {
 			return
 		}
 
@@ -141,35 +163,51 @@ nonisolated private extension AO3ChapterFetcher {
 					// hammering a gated/deleted/moved work; no further
 					// backoff bookkeeping needed here.
 					let statusCode = downloadResponse.response?.forcedStatusCode ?? -1
-					let userInfo = [NSLocalizedDescriptionKey: "HTTP \(statusCode)"]
-					activityLog.didFail(.ao3ChapterFetcher, kind: kind, error: NSError(domain: "Nectar", code: statusCode, userInfo: userInfo))
+					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Could not reach AO3 (HTTP \(statusCode))")
 					return
 				}
 
-				guard let html = String(data: data, encoding: .utf8),
-				      let extraction = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html) else {
-					// No .chapter div found -- gated (logged out) or
-					// deleted/moved look identical by this signal (see
-					// AO3ChapterHTMLExtractor's doc comment); treat as
-					// unfetchable rather than an error worth retrying
-					// aggressively. Existing contentHTML (nil, on first
-					// fetch) is left alone; ArticleRenderer's
-					// contentHTML ?? contentText ?? summary chain already
-					// falls back to Workstream 1's blurb.
-					let userInfo = [NSLocalizedDescriptionKey: "No chapter content found (gated or removed work)"]
-					activityLog.didFail(.ao3ChapterFetcher, kind: kind, error: NSError(domain: "Nectar", code: -1, userInfo: userInfo))
+				guard let html = String(data: data, encoding: .utf8) else {
+					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "No chapter content found (gated or removed work)")
+					return
+				}
+
+				let extraction: AO3ChapterExtractionResult
+				switch AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html) {
+				case .success(let result):
+					extraction = result
+				case .registrationRequired:
+					// Expected, normal outcome until Workstream 3 (login)
+					// ships -- there's currently no way to satisfy it.
+					// Once it does, this is the branch that should trigger
+					// the authenticated retry instead of failing outright.
+					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "This work is only available to registered AO3 users")
+					return
+				case .adultContentGate:
+					// Anomalous now that view_adult=true is sent
+					// unconditionally -- surfaced distinctly, not folded
+					// into .notFound, so it's easy to notice if it starts
+					// happening.
+					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Adult content gate encountered despite view_adult=true (unexpected)")
+					return
+				case .notFound:
+					// Genuinely ambiguous remainder -- deleted/moved work,
+					// or a gate shape not yet sampled. Existing
+					// contentHTML (nil, on first fetch) is left alone;
+					// ArticleRenderer's contentHTML ?? contentText ??
+					// summary chain already falls back to Workstream 1's
+					// blurb.
+					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "No chapter content found (gated or removed work)")
 					return
 				}
 
 				guard let account = AccountManager.shared.existingAccount(accountID: accountID) else {
-					let userInfo = [NSLocalizedDescriptionKey: "Account no longer exists"]
-					activityLog.didFail(.ao3ChapterFetcher, kind: kind, error: NSError(domain: "Nectar", code: -1, userInfo: userInfo))
+					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Account no longer exists")
 					return
 				}
 				let existingArticles = await account.fetchArticlesAsync(.articleIDs([articleID]))
 				guard let existingArticle = existingArticles.first else {
-					let userInfo = [NSLocalizedDescriptionKey: "Article no longer exists"]
-					activityLog.didFail(.ao3ChapterFetcher, kind: kind, error: NSError(domain: "Nectar", code: -1, userInfo: userInfo))
+					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Article no longer exists")
 					return
 				}
 
@@ -177,14 +215,27 @@ nonisolated private extension AO3ChapterFetcher {
 				_ = await account.updateAsync(feedID: feedID, parsedItems: [parsedItem], deleteOlder: false)
 
 				activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: ActivityLog.dataSizeMessage(data), returnedFromCache: downloadResponse.returnedFromCache)
-				postNotification(articleID: articleID)
+				failureMessages.withLock { $0[articleID] = nil }
+				postNotification(name: .ao3ChapterFetchDidComplete, articleID: articleID)
 
 			} catch {
 				// Pre-response failure (DNS, TLS, network) -- same
 				// leave-it-alone handling.
-				activityLog.didFail(.ao3ChapterFetcher, kind: kind, error: error)
+				fail(articleID: articleID, kind: kind, activityLog: activityLog, message: error.localizedDescription, error: error)
 			}
 		}
+	}
+
+	/// Records `message` as the article's current failure reason, logs it to
+	/// the Activity Log (unchanged behavior), and posts
+	/// `.ao3ChapterFetchDidFail` so an already-visible article view can
+	/// react immediately rather than waiting for the next fetch attempt.
+	@MainActor
+	func fail(articleID: String, kind: ActivityKind, activityLog: ActivityLog, message: String, error: Error? = nil) {
+		let loggedError = error ?? NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: message])
+		activityLog.didFail(.ao3ChapterFetcher, kind: kind, error: loggedError)
+		failureMessages.withLock { $0[articleID] = message }
+		postNotification(name: .ao3ChapterFetchDidFail, articleID: articleID, message: message)
 	}
 
 	/// Copies every field from `existingArticle` unchanged except
@@ -244,10 +295,13 @@ nonisolated private extension AO3ChapterFetcher {
 		)
 	}
 
-	func postNotification(articleID: String) {
-		let userInfo: [String: Any] = [AO3ChapterFetchUserInfoKey.articleID: articleID]
+	func postNotification(name: Notification.Name, articleID: String, message: String? = nil) {
+		var userInfo: [String: Any] = [AO3ChapterFetchUserInfoKey.articleID: articleID]
+		if let message {
+			userInfo[AO3ChapterFetchUserInfoKey.message] = message
+		}
 		NotificationCenter.default.postOnMainThread(
-			name: .ao3ChapterFetchDidComplete, object: self, userInfo: userInfo
+			name: name, object: self, userInfo: userInfo
 		)
 	}
 }
