@@ -18,3 +18,12 @@ func parserData(_ filename: String, _ fileExtension: String, _ url: String) -> P
 	let data = try! Data(contentsOf: URL(fileURLWithPath: path))
 	return ParserData(url: url, data: data)
 }
+
+/// Load a fixture from `Tests/RSParserTests/Resources/` as a raw `String`,
+/// for consumers (like `AO3ChapterHTMLExtractor`) that parse HTML text
+/// directly rather than through a `ParserData`/URL-bearing entry point.
+func htmlFixtureString(_ filename: String, _ fileExtension: String = "html") -> String {
+	let resourcePath = "Resources/\(filename)"
+	let path = Bundle.module.path(forResource: resourcePath, ofType: fileExtension)!
+	return try! String(contentsOf: URL(fileURLWithPath: path), encoding: .utf8)
+}
