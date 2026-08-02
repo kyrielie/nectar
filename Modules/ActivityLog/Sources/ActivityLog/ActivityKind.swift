@@ -53,6 +53,7 @@ public enum ActivityKind: Sendable, Hashable {
 	case downloadFavicon(faviconURL: String)
 	case downloadAvatar(avatarURL: String)
 	case downloadHTMLMetadata(urlString: String)
+	case fetchAO3Chapter(workID: String)
 
 	/// Localized description for activity kinds that don't carry a URL to display separately.
 	/// Returns nil for the URL-bearing cases — each caller renders its own primary + URL form.
@@ -100,7 +101,7 @@ public enum ActivityKind: Sendable, Hashable {
 			return NSLocalizedString("Vacuuming database", bundle: .module, comment: "Activity kind")
 		case .exportOPML:
 			return NSLocalizedString("Exporting OPML", bundle: .module, comment: "Activity kind")
-		case .refreshFeedContent, .findFeed, .fetchFeedCandidate, .downloadFeedImage, .downloadFavicon, .downloadAvatar, .downloadHTMLMetadata:
+		case .refreshFeedContent, .findFeed, .fetchFeedCandidate, .downloadFeedImage, .downloadFavicon, .downloadAvatar, .downloadHTMLMetadata, .fetchAO3Chapter:
 			return nil
 		}
 	}
@@ -133,6 +134,9 @@ public enum ActivityKind: Sendable, Hashable {
 		case .downloadHTMLMetadata(let urlString):
 			let format = NSLocalizedString("Downloading metadata %@", bundle: .module, comment: "Activity kind — downloading HTML metadata — %@ is the URL")
 			return String(format: format, urlString)
+		case .fetchAO3Chapter(let workID):
+			let format = NSLocalizedString("Fetching AO3 chapters for work %@", bundle: .module, comment: "Activity kind — fetching AO3 chapter content — %@ is the AO3 work id")
+			return String(format: format, workID)
 		default:
 			return ""
 		}
