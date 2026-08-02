@@ -134,7 +134,14 @@ extension Article {
 		// contentHTML needs compressing before it lands in the update dictionary --
 		// addPossibleStringChangeWithKeyPath would otherwise write the decompressed
 		// in-memory string straight to the TEXT column (Phase 3).
-		if contentHTML != existingArticle.contentHTML {
+		//
+		// Only write when the incoming value is non-nil (same "don't blank out
+		// data we already have" rule as wordCount/fandoms/etc. below). A
+		// ParsedItem rebuilt from an ordinary feed refresh has contentHTML == nil
+		// by design (e.g. AO3 items, where chapter text is fetched on demand
+		// separately) -- without this guard, every ordinary refresh after a
+		// successful chapter fetch would silently wipe the cached content.
+		if contentHTML != existingArticle.contentHTML, let contentHTML {
 			d[DatabaseKey.contentHTML] = ContentHTMLCompression.compress(contentHTML) ?? ""
 		}
 		addPossibleStringChangeWithKeyPath(\Article.contentText, existingArticle, DatabaseKey.contentText, &d)
