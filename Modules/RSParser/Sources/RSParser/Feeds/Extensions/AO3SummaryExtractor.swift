@@ -38,10 +38,13 @@ public enum AO3SummaryExtractor {
 	/// paragraph, unique to its export). Callers should fall back to their
 	/// existing generic summary handling in that case.
 	public static func extract(fromSummaryHTML html: String) -> AO3ExtractionResult? {
-		let delegate = AO3SummaryScannerDelegate()
-		let scanner = HTMLScanner(delegate: delegate)
-		scanner.parse(Array(html.utf8))
-		let blocks = delegate.topLevelBlocks
+		let root = parseHTMLLiteTree(html)
+		let blocks: [HTMLLiteElement] = root.children.compactMap {
+			guard case .element(let element) = $0 else {
+				return nil
+			}
+			return element
+		}
 
 		let statsBlocks = blocks.filter { $0.tag == "p" && flattenedText($0).hasPrefix("Words:") }
 		guard statsBlocks.count == 1, let statsBlock = statsBlocks.first else {
@@ -58,7 +61,7 @@ public enum AO3SummaryExtractor {
 		var relationships: [String]?
 		var additionalTags: [String]?
 		var series: [ParsedSeriesEntry] = []
-		var passthroughBlocks: [AO3Node] = []
+		var passthroughBlocks: [HTMLLiteNode] = []
 
 		for block in blocks {
 			if block === statsBlock {
@@ -93,7 +96,7 @@ public enum AO3SummaryExtractor {
 			passthroughBlocks.append(.element(block))
 		}
 
-		let cleaned = serialize(passthroughBlocks)
+		let cleaned = serializeHTMLLiteNodes(passthroughBlocks)
 		let cleanedSummaryHTML = cleaned.isEmpty ? nil : cleaned
 
 		return AO3ExtractionResult(
@@ -176,41 +179,11 @@ private extension AO3SummaryExtractor {
 
 private extension AO3SummaryExtractor {
 
-	static func isBylineBlock(_ block: AO3Element, text: String) -> Bool {
-		if text == "by Anonymous" && !containsElement(block, tag: "a") {
+	static func isBylineBlock(_ block: HTMLLiteElement, text: String) -> Bool {
+		if text == "by Anonymous" && firstDescendant(of: block, where: { $0.tag == "a" }) == nil {
 			return true
 		}
-		return containsAuthorLink(block)
-	}
-
-	static func containsAuthorLink(_ node: AO3Element) -> Bool {
-		for child in node.children {
-			guard case .element(let element) = child else {
-				continue
-			}
-			if element.tag == "a" && element.attributes["rel"] == "author" {
-				return true
-			}
-			if containsAuthorLink(element) {
-				return true
-			}
-		}
-		return false
-	}
-
-	static func containsElement(_ node: AO3Element, tag: String) -> Bool {
-		for child in node.children {
-			guard case .element(let element) = child else {
-				continue
-			}
-			if element.tag == tag {
-				return true
-			}
-			if containsElement(element, tag: tag) {
-				return true
-			}
-		}
-		return false
+		return firstDescendant(of: block, where: { $0.tag == "a" && $0.attributes["rel"] == "author" }) != nil
 	}
 }
 
@@ -219,8 +192,8 @@ private extension AO3SummaryExtractor {
 private extension AO3SummaryExtractor {
 
 	/// `Series: Part <N> of <a href=".../series/<id>">Name</a>`
-	static func parseSeriesEntry(_ block: AO3Element, text: String) -> ParsedSeriesEntry? {
-		guard let anchor = firstAnchor(block) else {
+	static func parseSeriesEntry(_ block: HTMLLiteElement, text: String) -> ParsedSeriesEntry? {
+		guard let anchor = firstDescendant(of: block, where: { $0.tag == "a" }) else {
 			return nil
 		}
 		guard let ofRange = text.range(of: " of ") else {
@@ -234,21 +207,6 @@ private extension AO3SummaryExtractor {
 		let name = flattenedText(anchor).trimmingCharacters(in: .whitespacesAndNewlines)
 		let ao3ID = seriesID(fromHref: anchor.attributes["href"])
 		return ParsedSeriesEntry(name: name, index: index, ao3ID: ao3ID)
-	}
-
-	static func firstAnchor(_ node: AO3Element) -> AO3Element? {
-		for child in node.children {
-			guard case .element(let element) = child else {
-				continue
-			}
-			if element.tag == "a" {
-				return element
-			}
-			if let found = firstAnchor(element) {
-				return found
-			}
-		}
-		return nil
 	}
 
 	static func seriesID(fromHref href: String?) -> String? {
@@ -265,7 +223,7 @@ private extension AO3SummaryExtractor {
 
 private extension AO3SummaryExtractor {
 
-	static func parseTagList(_ ul: AO3Element,
+	static func parseTagList(_ ul: HTMLLiteElement,
 	                          fandoms: inout [String]?,
 	                          ratings: inout [String]?,
 	                          warnings: inout [String]?,
@@ -322,146 +280,4 @@ private extension AO3SummaryExtractor {
 			}
 		}
 	}
-}
-
-// MARK: - Node tree
-
-private final class AO3Element {
-	let tag: String
-	let attributes: [String: String]
-	let selfClosing: Bool
-	var children: [AO3Node] = []
-
-	init(tag: String, attributes: [String: String], selfClosing: Bool) {
-		self.tag = tag
-		self.attributes = attributes
-		self.selfClosing = selfClosing
-	}
-}
-
-private enum AO3Node {
-	case element(AO3Element)
-	case text(String)
-}
-
-private func flattenedText(_ element: AO3Element) -> String {
-	var s = ""
-	for child in element.children {
-		switch child {
-		case .text(let text):
-			s += text
-		case .element(let el):
-			s += flattenedText(el)
-		}
-	}
-	return s
-}
-
-// MARK: - Scanner delegate
-
-/// Builds a lightweight tree of top-level `<p>`/`<ul>`/etc. blocks (and their
-/// descendants) out of `HTMLScanner`'s flat event stream. AO3's generated
-/// summary HTML never nests one top-level block inside another, so a simple
-/// depth-tracked stack is sufficient -- no general-purpose HTML tree needed.
-private final class AO3SummaryScannerDelegate: HTMLScannerDelegate {
-
-	// AO3's generated summary HTML emits void elements like <br> and <hr>
-	// without a trailing slash (e.g. "...Adult<br>Your flight..."). HTMLScanner
-	// does no void-element tracking of its own -- by design, see its header
-	// comment -- and only reports `selfClosing == true` for a literal "/>",
-	// so a bare <br> arrives as an ordinary start tag. Without this list, it
-	// gets pushed onto `stack` and is never popped (no matching </br> exists
-	// in the source), which silently swallows every subsequent top-level
-	// block -- including the `Words:` stats paragraph -- as a descendant of
-	// the still-open element. `extract` then finds zero top-level stats
-	// paragraphs instead of one and returns nil for an entry that's
-	// otherwise a perfectly ordinary AO3 summary, with no error and no
-	// crash -- the item just silently loses all AO3 metadata.
-	private static let voidElements: Set<String> = [
-		"area", "base", "br", "col", "embed", "hr", "img", "input",
-		"link", "meta", "param", "source", "track", "wbr"
-	]
-
-	private(set) var topLevelBlocks: [AO3Element] = []
-	private var stack: [AO3Element] = []
-
-	func htmlScanner(_ scanner: HTMLScanner,
-	                 didStartTag name: ArraySlice<UInt8>,
-	                 attributes: HTMLAttributes,
-	                 selfClosing: Bool) {
-		let tagName = String(decoding: name, as: UTF8.self).lowercased()
-		let effectiveSelfClosing = selfClosing || Self.voidElements.contains(tagName)
-		let element = AO3Element(tag: tagName, attributes: attributes.dictionary(), selfClosing: effectiveSelfClosing)
-
-		if let parent = stack.last {
-			parent.children.append(.element(element))
-		}
-
-		if !effectiveSelfClosing {
-			stack.append(element)
-		} else if stack.isEmpty {
-			topLevelBlocks.append(element)
-		}
-	}
-
-	func htmlScanner(_ scanner: HTMLScanner, didEndTag name: ArraySlice<UInt8>) {
-		guard !stack.isEmpty else {
-			return
-		}
-		let element = stack.removeLast()
-		if stack.isEmpty {
-			topLevelBlocks.append(element)
-		}
-	}
-
-	func htmlScanner(_ scanner: HTMLScanner, didFindCharacters bytes: ArraySlice<UInt8>) {
-		guard let parent = stack.last else {
-			// Text between top-level blocks (whitespace) -- discarded.
-			return
-		}
-		let text = String(decoding: bytes, as: UTF8.self)
-		parent.children.append(.text(text))
-	}
-}
-
-// MARK: - Re-serialization for pass-through content
-
-private func serialize(_ nodes: [AO3Node]) -> String {
-	var s = ""
-	for node in nodes {
-		serialize(node, into: &s)
-	}
-	return s
-}
-
-private func serialize(_ node: AO3Node, into s: inout String) {
-	switch node {
-	case .text(let text):
-		s += escapeText(text)
-	case .element(let element):
-		s += "<\(element.tag)"
-		for (name, value) in element.attributes {
-			s += " \(name)=\"\(escapeAttribute(value))\""
-		}
-		if element.selfClosing {
-			s += "/>"
-			return
-		}
-		s += ">"
-		for child in element.children {
-			serialize(child, into: &s)
-		}
-		s += "</\(element.tag)>"
-	}
-}
-
-private func escapeText(_ s: String) -> String {
-	s.replacingOccurrences(of: "&", with: "&amp;")
-		.replacingOccurrences(of: "<", with: "&lt;")
-		.replacingOccurrences(of: ">", with: "&gt;")
-}
-
-private func escapeAttribute(_ s: String) -> String {
-	s.replacingOccurrences(of: "&", with: "&amp;")
-		.replacingOccurrences(of: "\"", with: "&quot;")
 }
