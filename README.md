@@ -4,7 +4,7 @@ Nectar is an iOS feed reader application specifically built for Archive of Our O
 
 It is also the companion app for [Ambrosia](https://github.com/kyrielie/ambrosia), a local library for fanfiction that can host a JSON feed. It reads a JSON Feed extension (`_ambrosia`) that carries fic-specific metadata — word count, chapter progress, fandom, rating and warnings, series — and surfaces it directly in the timeline and article view. This is the fastest way I could think of transferring works onto my phone.
 
-Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) and uses its code and licence, but it is not affiliated with or supported by the NetNewsWire project. It will always be free and open source. Nectar is not associated with Archive of Our Own, it makes requests to AO3's servers each time you open a work.
+Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) and uses its code and licence, but it is not affiliated with or supported by the NetNewsWire project. It will always be free and open source. Nectar is not associated with Archive of Our Own, it makes requests to AO3's servers each time you open a work. Your reading history stays on your device and is not shared.
 
 ## Status
 
