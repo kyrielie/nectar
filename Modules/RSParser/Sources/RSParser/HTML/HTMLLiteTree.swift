@@ -19,8 +19,12 @@ import Foundation
 // warranted.
 
 final class HTMLLiteElement {
-	let tag: String
-	let attributes: [String: String]
+	// `var`, not `let`: `AO3ChapterHTMLExtractor` rewrites a chapter's title
+	// heading (tag and class) in place rather than rebuilding the tree, so
+	// the mutated node serializes correctly as part of the larger
+	// `#workskin` unit it lives inside.
+	var tag: String
+	var attributes: [String: String]
 	let selfClosing: Bool
 	var children: [HTMLLiteNode] = []
 
@@ -73,6 +77,25 @@ func firstDescendant(of element: HTMLLiteElement, where predicate: (HTMLLiteElem
 			return el
 		}
 		if let found = firstDescendant(of: el, where: predicate) {
+			return found
+		}
+	}
+	return nil
+}
+
+/// Like `firstDescendant(of:where:)`, but also returns the matched node's
+/// parent and its index within `parent.children` -- for a caller that needs
+/// to inspect siblings (e.g. `AO3ChapterHTMLExtractor` looking for a `<style>`
+/// block immediately preceding `#workskin`).
+func firstDescendantWithParent(of element: HTMLLiteElement, where predicate: (HTMLLiteElement) -> Bool) -> (parent: HTMLLiteElement, index: Int, element: HTMLLiteElement)? {
+	for (index, child) in element.children.enumerated() {
+		guard case .element(let el) = child else {
+			continue
+		}
+		if predicate(el) {
+			return (element, index, el)
+		}
+		if let found = firstDescendantWithParent(of: el, where: predicate) {
 			return found
 		}
 	}
