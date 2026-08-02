@@ -12,6 +12,9 @@
         }
       }
     },
+    "AO3 Chapters" : {
+      "comment" : "Activity owner name"
+    },
     "Avatars" : {
       "comment" : "Activity owner name",
       "localizations" : {
@@ -107,6 +110,9 @@
     },
     "Fetching %@" : {
       "comment" : "Activity kind — fetching a candidate URL during feed finding"
+    },
+    "Fetching AO3 chapters for work %@" : {
+      "comment" : "Activity kind — fetching AO3 chapter content — %@ is the AO3 work id"
     },
     "Fetching article IDs" : {
       "comment" : "Activity kind"
