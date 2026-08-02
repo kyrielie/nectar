@@ -89,7 +89,23 @@ import os
 		self.article = article
 		self.articleTheme = theme
 		self.title = ArticleStringFormatter.sanitizedTitle(article?.title, forHTML: true) ?? ""
-		self.body = article?.body ?? ""
+		if let article, article.contentHTML == nil,
+		   let failureMessage = AO3ChapterFetcher.shared.lastFetchFailureMessage(forArticleID: article.articleID) {
+			// contentHTML is nil (full chapter text never landed) and the
+			// most recent fetch attempt for this article is known to have
+			// failed -- surface why inline, above the feed-derived summary
+			// article.body falls back to, rather than leaving the person to
+			// guess or dig through the Activity Log. Escaped defensively even
+			// though every current message is one of this app's own fixed
+			// strings, not fetched/user content.
+			let escapedMessage = failureMessage
+				.replacingOccurrences(of: "&", with: "&amp;")
+				.replacingOccurrences(of: "<", with: "&lt;")
+				.replacingOccurrences(of: ">", with: "&gt;")
+			self.body = "<p class='ao3ChapterFetchNotice'>Full text unavailable: \(escapedMessage)</p>" + (article.body ?? "")
+		} else {
+			self.body = article?.body ?? ""
+		}
 		self.baseURL = article?.baseURL?.absoluteString
 		self.timelineFeed = timelineFeed
 		if let article {

@@ -147,6 +147,7 @@ final class WebViewController: UIViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(articleThemeOverridesDidChangeNotification(_:)), name: .articleThemeOverridesDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(handleSceneDidEnterBackground(_:)), name: UIScene.didEnterBackgroundNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidComplete(_:)), name: .ao3ChapterFetchDidComplete, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidFail(_:)), name: .ao3ChapterFetchDidFail, object: nil)
 
 		// Configure the tap zones
 		configureTopShowBarsView()
@@ -244,6 +245,20 @@ final class WebViewController: UIViewController {
 			self.article = refetchedArticle
 			self.loadWebView(reason: "ao3ChapterFetchDidComplete(\(fetchedArticleID))")
 		}
+	}
+
+	@objc func ao3ChapterFetchDidFail(_ note: Notification) {
+		// Unlike the success path, the Article itself hasn't changed --
+		// contentHTML is deliberately left alone on failure (see
+		// AO3ChapterFetcher's header comment) -- so there's nothing to
+		// re-fetch. Just re-render in place: ArticleRenderer reads the
+		// new failure message straight from AO3ChapterFetcher's own
+		// storage, keyed by articleID, the next time it builds the body.
+		guard let fetchedArticleID = note.userInfo?[AO3ChapterFetchUserInfoKey.articleID] as? String,
+		      let article, article.articleID == fetchedArticleID else {
+			return
+		}
+		loadWebView(reason: "ao3ChapterFetchDidFail(\(fetchedArticleID))")
 	}
 
 	// MARK: Actions
