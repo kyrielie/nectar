@@ -1053,6 +1053,14 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		}
 		alertController.addAction(importOPMLAction)
 
+		let importAO3LinksActionTitle = NSLocalizedString("Import AO3 Links…", comment: "Import pasted AO3 link list")
+		let importAO3LinksAction = UIAlertAction(title: importAO3LinksActionTitle, style: .default) { [weak self] _ in
+			guard let self else { return }
+			let hosting = UIHostingController(rootView: AO3LinkListImportView())
+			present(hosting, animated: true)
+		}
+		alertController.addAction(importAO3LinksAction)
+
 		alertController.addAction(cancelAction)
 
 		alertController.popoverPresentationController?.barButtonItem = sender

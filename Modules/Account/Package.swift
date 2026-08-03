@@ -46,7 +46,6 @@ let package = Package(
 			name: "AccountTests",
 			dependencies: ["Account", "RSParser"],
 			resources: [
-				.copy("JSON"),
 				.copy("Resources")
 			],
 			swiftSettings: [.swiftLanguageMode(.v6)]
