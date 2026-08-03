@@ -436,19 +436,23 @@ private extension ArticleRenderer {
 		}
 
 		var rows: [AO3PrefaceRow] = []
-		func appendRow(_ label: String, _ values: [String]?) {
+		func appendRow(_ label: String, _ values: [String]?, isWide: Bool = false) {
 			guard let values, !values.isEmpty else {
 				return
 			}
-			rows.append(AO3PrefaceRow(label: label, values: values.map { AO3TagEntry(text: $0) }))
+			rows.append(AO3PrefaceRow(label: label, values: values.map { AO3TagEntry(text: $0) }, isWide: isWide))
 		}
 
 		appendRow("Rating:", article.ratings)
 		appendRow("Archive Warning:", article.warnings)
 		appendRow("Category:", article.categories)
-		appendRow("Fandom:", article.fandoms)
-		appendRow("Relationships:", article.relationships)
-		appendRow("Characters:", article.characters)
+		// Fandom/Relationships/Characters render wide (full preface width,
+		// own line below the label) -- matching AO3ChapterHTMLExtractor's
+		// real-fetch path, since these can carry dozens of values just as
+		// easily in Ambrosia's own parsed fields as off a live AO3 page.
+		appendRow("Fandom:", article.fandoms, isWide: true)
+		appendRow("Relationships:", article.relationships, isWide: true)
+		appendRow("Characters:", article.characters, isWide: true)
 		// Additional Tags (AO3's freeform tags) has no home on Article at
 		// all -- Workstream 1 doesn't parse a distinct freeform-tags bucket
 		// from the Atom feed, so there's nothing to synthesize this row
