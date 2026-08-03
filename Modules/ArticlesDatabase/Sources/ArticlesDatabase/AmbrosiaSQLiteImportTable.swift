@@ -265,13 +265,21 @@ enum AmbrosiaSQLiteImportTable {
 		// primitive, so compression (Phase 3, "on both ingestion paths") has to
 		// happen in Swift, and ContentHTMLCompression is the same choke point
 		// the JSONFeedParser path's Article+Database.swift uses.
+		// isAmbrosiaItem is set to 1 unconditionally here, unlike the AO3
+		// Work Header stats columns above it (commentCount/kudosCount/
+		// bookmarkCount/hitCount), which are deliberately left out of this
+		// column list so they stay NULL. Every row on this import path came
+		// from an Ambrosia SQLite transfer by definition -- leaving this
+		// column NULL/default would be wrong here, not just harmlessly
+		// absent, since it's what lets AO3ChapterFetcher/ArticleRenderer
+		// tell an Ambrosia-sourced row from a native AO3 one.
 		let insertArticlesSQL = """
 		INSERT OR REPLACE INTO articles (
 		  articleID, feedID, uniqueID, title, url, externalURL, summary,
 		  datePublished, dateModified, authors, tags,
 		  wordCount, chapterCurrent, chapterTotal, isComplete,
 		  fandoms, relationships, characters, ratings, warnings, categories, series,
-		  bookKey
+		  isAmbrosiaItem, bookKey
 		)
 		SELECT
 		  t.id, ?, t.id, t.title, t.url, t.url, t.summary,
@@ -279,7 +287,7 @@ enum AmbrosiaSQLiteImportTable {
 		  t.word_count, t.chapter_current, t.chapter_total, t.is_complete,
 		  t.fandoms_json, t.relationships_json, t.characters_json, t.ratings_json,
 		  t.warnings_json, t.categories_json, t.series_json,
-		  \(bookKeySQLExpression)
+		  1, \(bookKeySQLExpression)
 		FROM \(attachedSchemaName).items AS t;
 		"""
 		guard database.executeUpdate(insertArticlesSQL, withArgumentsIn: [feedID]) else {
