@@ -391,7 +391,13 @@ private extension AO3ChapterHTMLExtractor {
 				// of <a class="tag" href="...">.
 				let entries = tagEntries(fromLinksIn: dd)
 				guard !entries.isEmpty else { continue }
-				rows.append(AO3PrefaceRow(label: label, values: entries))
+				// fandom/relationship/character/freeform can carry dozens
+				// or hundreds of tags on a heavily-tagged work -- rendered
+				// wide (full preface width, own line) rather than confined
+				// to the label-adjacent column like the bounded rows
+				// (rating/warning/category, usually one or two values).
+				let isWide = classTokens.contains("fandom") || classTokens.contains("relationship") || classTokens.contains("character") || classTokens.contains("freeform")
+				rows.append(AO3PrefaceRow(label: label, values: entries, isWide: isWide))
 			} else if classTokens.contains("language") {
 				let text = flattenedText(dd).trimmingCharacters(in: .whitespacesAndNewlines)
 				guard !text.isEmpty else { continue }
