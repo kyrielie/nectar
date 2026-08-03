@@ -176,6 +176,54 @@ import Testing
 		#expect(result.contentHTML.contains("Listen or download via google drive"))
 	}
 
+	// MARK: - Work Header metadata block
+
+	@Test func metaGroupCapturedForMultiChapterWork() throws {
+		let html = htmlFixtureString("ao3-work-multi-chapter.html")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		#expect(result.contentHTML.contains("class=\"work meta group\""))
+		// A real, AO3-encoded tag link ("M/M" -> "M*s*M") -- confirms the
+		// block is captured whole, not re-derived from Article metadata.
+		#expect(result.contentHTML.contains("href=\"/tags/M*s*M/works\""))
+		#expect(result.contentHTML.contains("Check Please! (Webcomic)"))
+	}
+
+	@Test func metaGroupCollectionsRowCapturedForSingleChapterWork() throws {
+		// This fixture's Work Header includes a Collections row -- the only
+		// one of the four fixtures that does. Confirms rows this extractor
+		// doesn't know about by name still come through, since the whole
+		// <dl> is captured rather than parsed field-by-field.
+		let html = htmlFixtureString("ao3-work-single-chapter.html")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		#expect(result.contentHTML.contains("class=\"collections\""))
+		#expect(result.contentHTML.contains("href=\"/collections/Voiceteam2025\""))
+	}
+
+	@Test func metaGroupPrecedesStyleAndWorkskin() throws {
+		let html = htmlFixtureString("ao3-work-workskin.html")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		let metaRange = try #require(result.contentHTML.range(of: "class=\"work meta group\""))
+		let styleRange = try #require(result.contentHTML.range(of: "<style"))
+		let workskinRange = try #require(result.contentHTML.range(of: "id=\"workskin\""))
+		#expect(metaRange.lowerBound < styleRange.lowerBound)
+		#expect(styleRange.lowerBound < workskinRange.lowerBound)
+	}
+
 	// MARK: - TOC regression
 
 	@Test func workTitleIsNotAToCHeading() throws {

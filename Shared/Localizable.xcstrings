@@ -59,6 +59,9 @@
     "Activity may contain feed URLs and other information you may not want to share publicly." : {
       "comment" : "Activity log privacy warning"
     },
+    "Add an AO3 Feed" : {
+      "comment" : "AO3 onboarding primary action"
+    },
     "Add Feed" : {
       "comment" : "Add Feed"
     },
@@ -344,6 +347,9 @@
     "Folders" : {
       "comment" : "Folders"
     },
+    "Follow a tag, a user, or a specific work on Archive of Our Own, and Nectar will pull in full chapter text as it's posted -- no ads, no extra taps out to the browser." : {
+
+    },
     "Font" : {
       "comment" : "Font picker label\nFont section header"
     },
@@ -575,6 +581,12 @@
     "No results" : {
       "comment" : "No results"
     },
+    "Not Now" : {
+      "comment" : "AO3 onboarding dismiss action"
+    },
+    "Not Signed In" : {
+      "comment" : "AO3 signed-out status"
+    },
     "Notifications" : {
       "comment" : "Notifications"
     },
@@ -747,6 +759,21 @@
     "Shows what the app is doing right now — refreshing feeds, syncing statuses, downloading favicons and images, and more. Each item clears a couple seconds after it finishes." : {
       "comment" : "Current Activity explainer"
     },
+    "Sign In to AO3" : {
+      "comment" : "AO3 login screen title\nAO3 sign in button"
+    },
+    "Sign Out" : {
+      "comment" : "AO3 sign out button"
+    },
+    "Sign out of AO3?" : {
+      "comment" : "AO3 sign out confirmation title"
+    },
+    "Signed In" : {
+      "comment" : "AO3 signed-in status"
+    },
+    "Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Sign-in is for reading only -- Nectar can't post kudos, subscribe, bookmark, or comment." : {
+      "comment" : "AO3 account section footer"
+    },
     "Small" : {
       "comment" : "Small"
     },
@@ -755,6 +782,9 @@
     },
     "Sort Timeline By" : {
       "comment" : "Sort field picker title"
+    },
+    "Status" : {
+      "comment" : "AO3 sign-in status row label"
     },
     "Statuses" : {
       "comment" : "Statuses"

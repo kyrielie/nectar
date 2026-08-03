@@ -82,6 +82,7 @@ final class AppDefaults: Sendable {
 		static let userInterfaceColorPalette = "userInterfaceColorPalette"
 		static let lastImageCacheFlushDate = "lastImageCacheFlushDate"
 		static let firstRunDate = "firstRunDate"
+		static let hasShownAO3Onboarding = "hasShownAO3Onboarding"
 		static let timelineGroupByFeed = "timelineGroupByFeed"
 		static let refreshClearsReadArticles = "refreshClearsReadArticles"
 		static let timelineNumberOfLines = "timelineNumberOfLines"
@@ -371,7 +372,21 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	/// User overrides for font, size, line height, and colors in the reader view,
+	/// Whether the AO3 first-run onboarding screen (shown once, only when
+	/// the local account has zero subscribed feeds) has already been shown.
+	/// Off by default; set once the screen is dismissed (by either action)
+	/// so it never shows again regardless of the account's feed count
+	/// afterward. See MainFeedCollectionViewController.presentAO3OnboardingIfNeeded().
+	var hasShownAO3Onboarding: Bool {
+		get {
+			return AppDefaults.bool(for: Key.hasShownAO3Onboarding)
+		}
+		set {
+			AppDefaults.setBool(for: Key.hasShownAO3Onboarding, newValue)
+		}
+	}
+
+
 	/// layered on top of whichever theme (default or imported) is active. See
 	/// ArticleThemeOverrides.cssOverrideBlock and ArticleRenderer.styleString().
 	var articleThemeOverrides: ArticleThemeOverrides {
