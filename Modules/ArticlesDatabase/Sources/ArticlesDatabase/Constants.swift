@@ -50,6 +50,15 @@ struct DatabaseKey {
 	static let series = "series"
 	static let bookKey = "bookKey"
 
+	// AO3 Work Header stats (populated by AO3ChapterFetcher, not part of
+	// the `_ambrosia` extension above)
+	static let commentCount = "commentCount"
+	static let kudosCount = "kudosCount"
+	static let bookmarkCount = "bookmarkCount"
+	static let hitCount = "hitCount"
+	static let lastPrefaceFetchDate = "lastPrefaceFetchDate"
+	static let isAmbrosiaItem = "isAmbrosiaItem"
+
 	// ArticleStatus
 	static let read = "read"
 	static let starred = "starred"

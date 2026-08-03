@@ -39,12 +39,37 @@ public final class Article: Hashable, Sendable {
 	public let warnings: [String]?
 	public let categories: [String]?
 	public let series: [ArticleSeriesEntry]?
+	// Comments/Kudos/Bookmarks/Hits, read off AO3's live dl.stats block by
+	// AO3ChapterFetcher on each successful chapter fetch (see
+	// AO3ChapterHTMLExtractor.AO3ChapterExtractionResult) -- not part of
+	// the `_ambrosia` extension object Workstream 1 parses, so these are
+	// populated later than the fields above, only once a chapter fetch has
+	// succeeded at least once.
+	public let commentCount: Int?
+	public let kudosCount: Int?
+	public let bookmarkCount: Int?
+	public let hitCount: Int?
+	// The most recent successful AO3ChapterFetcher fetch's completion time
+	// for this article, if any -- distinct from datePublished/dateModified
+	// (feed-derived). Used to decide whether a "settled" (non-stale) AO3
+	// article is nonetheless due for a refetch under the user's chosen
+	// refetch cadence (see AO3PrefaceRefetchPreference). nil for an article
+	// that has never had a successful chapter fetch.
+	public let lastPrefaceFetchDate: Date?
+	// True whenever this article's originating ParsedItem carried an
+	// `_ambrosia` extension object at all (regardless of which fields
+	// inside it were populated) -- i.e. it arrived from an Ambrosia feed or
+	// SQLite import, as opposed to a native AO3 Atom feed. Distinguishes an
+	// Ambrosia-sourced row (whose contentHTML is Ambrosia's own epub-derived
+	// preface until/unless a chapter fetch overwrites it) from a native AO3
+	// item, for AO3ChapterFetcher/ArticleRenderer.
+	public let isAmbrosiaItem: Bool
 	// Book-level read-state identity key (see ParsedItem.bookKey). Always
 	// resolves to at least uniqueID, so this is non-optional.
 	public let bookKey: String
 	public let status: ArticleStatus
 
-	public init(accountID: String, articleID: String?, feedID: String, uniqueID: String, title: String?, contentHTML: String?, contentText: String?, markdown: String?, url: String?, externalURL: String?, summary: String?, imageURL: String?, datePublished: Date?, dateModified: Date?, authors: Set<Author>?, wordCount: Int? = nil, chapterCurrent: Int? = nil, chapterTotal: Int? = nil, isComplete: Bool? = nil, fandoms: [String]? = nil, relationships: [String]? = nil, characters: [String]? = nil, ratings: [String]? = nil, warnings: [String]? = nil, categories: [String]? = nil, series: [ArticleSeriesEntry]? = nil, bookKey: String? = nil, status: ArticleStatus) {
+	public init(accountID: String, articleID: String?, feedID: String, uniqueID: String, title: String?, contentHTML: String?, contentText: String?, markdown: String?, url: String?, externalURL: String?, summary: String?, imageURL: String?, datePublished: Date?, dateModified: Date?, authors: Set<Author>?, wordCount: Int? = nil, chapterCurrent: Int? = nil, chapterTotal: Int? = nil, isComplete: Bool? = nil, fandoms: [String]? = nil, relationships: [String]? = nil, characters: [String]? = nil, ratings: [String]? = nil, warnings: [String]? = nil, categories: [String]? = nil, series: [ArticleSeriesEntry]? = nil, commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, lastPrefaceFetchDate: Date? = nil, isAmbrosiaItem: Bool = false, bookKey: String? = nil, status: ArticleStatus) {
 		self.accountID = accountID
 		self.feedID = feedID
 		self.uniqueID = uniqueID
@@ -70,6 +95,12 @@ public final class Article: Hashable, Sendable {
 		self.warnings = warnings
 		self.categories = categories
 		self.series = series
+		self.commentCount = commentCount
+		self.kudosCount = kudosCount
+		self.bookmarkCount = bookmarkCount
+		self.hitCount = hitCount
+		self.lastPrefaceFetchDate = lastPrefaceFetchDate
+		self.isAmbrosiaItem = isAmbrosiaItem
 		self.bookKey = bookKey ?? uniqueID
 		self.status = status
 
@@ -93,7 +124,7 @@ public final class Article: Hashable, Sendable {
 	// MARK: - Equatable
 
 	static public func ==(lhs: Article, rhs: Article) -> Bool {
-		return lhs.articleID == rhs.articleID && lhs.accountID == rhs.accountID && lhs.feedID == rhs.feedID && lhs.uniqueID == rhs.uniqueID && lhs.title == rhs.title && lhs.contentHTML == rhs.contentHTML && lhs.contentText == rhs.contentText && lhs.rawLink == rhs.rawLink && lhs.rawExternalLink == rhs.rawExternalLink && lhs.summary == rhs.summary && lhs.rawImageLink == rhs.rawImageLink && lhs.datePublished == rhs.datePublished && lhs.dateModified == rhs.dateModified && lhs.authors == rhs.authors && lhs.wordCount == rhs.wordCount && lhs.chapterCurrent == rhs.chapterCurrent && lhs.chapterTotal == rhs.chapterTotal && lhs.isComplete == rhs.isComplete && lhs.fandoms == rhs.fandoms && lhs.relationships == rhs.relationships && lhs.characters == rhs.characters && lhs.ratings == rhs.ratings && lhs.warnings == rhs.warnings && lhs.categories == rhs.categories && lhs.series == rhs.series && lhs.bookKey == rhs.bookKey
+		return lhs.articleID == rhs.articleID && lhs.accountID == rhs.accountID && lhs.feedID == rhs.feedID && lhs.uniqueID == rhs.uniqueID && lhs.title == rhs.title && lhs.contentHTML == rhs.contentHTML && lhs.contentText == rhs.contentText && lhs.rawLink == rhs.rawLink && lhs.rawExternalLink == rhs.rawExternalLink && lhs.summary == rhs.summary && lhs.rawImageLink == rhs.rawImageLink && lhs.datePublished == rhs.datePublished && lhs.dateModified == rhs.dateModified && lhs.authors == rhs.authors && lhs.wordCount == rhs.wordCount && lhs.chapterCurrent == rhs.chapterCurrent && lhs.chapterTotal == rhs.chapterTotal && lhs.isComplete == rhs.isComplete && lhs.fandoms == rhs.fandoms && lhs.relationships == rhs.relationships && lhs.characters == rhs.characters && lhs.ratings == rhs.ratings && lhs.warnings == rhs.warnings && lhs.categories == rhs.categories && lhs.series == rhs.series && lhs.commentCount == rhs.commentCount && lhs.kudosCount == rhs.kudosCount && lhs.bookmarkCount == rhs.bookmarkCount && lhs.hitCount == rhs.hitCount && lhs.lastPrefaceFetchDate == rhs.lastPrefaceFetchDate && lhs.isAmbrosiaItem == rhs.isAmbrosiaItem && lhs.bookKey == rhs.bookKey
 	}
 }
 

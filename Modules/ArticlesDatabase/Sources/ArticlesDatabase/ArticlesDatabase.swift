@@ -114,6 +114,34 @@ public struct ArticleCounts: Sendable {
 				}
 			}
 
+			// AO3 Work Header stats (Comments/Kudos/Bookmarks/Hits), read off
+			// AO3's live dl.stats block by AO3ChapterHTMLExtractor on each
+			// successful chapter fetch -- not part of the `_ambrosia`
+			// extension object above, so a separate additive-only column
+			// group, same containsColumn-guarded ALTER TABLE pattern.
+			let ao3StatsColumns = ["commentCount", "kudosCount", "bookmarkCount", "hitCount"]
+			for column in ao3StatsColumns {
+				if !self.articlesTable.containsColumn(column, in: database) {
+					Self.logger.debug("ArticlesDatabase: adding \(column, privacy: .public) column \(accountID, privacy: .public)")
+					database.executeStatements("ALTER TABLE articles add column \(column) INTEGER;")
+				}
+			}
+
+			// lastPrefaceFetchDate (AO3ChapterFetcher's own "when did this last
+			// succeed" bookkeeping, for the refetch-cadence setting) and
+			// isAmbrosiaItem (an Ambrosia-vs-native-AO3 marker, needed so
+			// AO3ChapterFetcher/ArticleRenderer can tell a failed refetch should
+			// leave Ambrosia's own preface alone). Same additive, containsColumn-
+			// guarded pattern as the columns above.
+			if !self.articlesTable.containsColumn("lastPrefaceFetchDate", in: database) {
+				Self.logger.debug("ArticlesDatabase: adding lastPrefaceFetchDate column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE articles add column lastPrefaceFetchDate DATE;")
+			}
+			if !self.articlesTable.containsColumn("isAmbrosiaItem", in: database) {
+				Self.logger.debug("ArticlesDatabase: adding isAmbrosiaItem column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE articles add column isAmbrosiaItem BOOL;")
+			}
+
 			// Phase 2 (reading behavior): per-article scroll position, replacing the old
 			// single-global AppDefaults.shared.articleWindowScrollY. Additive/nullable-with-
 			// default, so the same containsColumn-guarded ALTER TABLE pattern as the columns

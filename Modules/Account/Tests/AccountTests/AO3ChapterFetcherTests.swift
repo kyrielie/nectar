@@ -15,6 +15,7 @@
 //
 
 import XCTest
+import RSParser
 import Articles
 @testable import Account
 
@@ -80,6 +81,71 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		XCTAssertNil(AO3ChapterFetcher.ao3WorkID(fromBookKey: article.bookKey))
 	}
 
+	// MARK: - Ambrosia preface preservation (item 4)
+
+	func testIsStaleWithAmbrosiaPrefaceNoWorkskin() {
+		// ambrosia_preface_fixture.html is test2.json's real content_html
+		// verbatim: Ambrosia's own epub-derived preface, structurally
+		// nothing like an AO3 work page (no #workskin at all, calibre*
+		// classes instead of AO3's). AO3ChapterHTMLExtractor can't find a
+		// chapter count in it, so isStale correctly reports true here --
+		// this fixture, on its own, documents why AO3ChapterFetcher must
+		// never treat "extraction failed against Ambrosia's own preface" as
+		// a reason to overwrite that preface: rebuildParsedItem is only
+		// ever reached after a successful download+extraction (see the
+		// early returns in download's switch), so this stale/mismatched
+		// state is what triggers a fetch attempt, not what a failed one
+		// leaves behind.
+		let article = Self.makeArticle(contentHTML: Self.ambrosiaPrefaceFixture, chapterCurrent: 1)
+		XCTAssertTrue(AO3ChapterFetcher.shared.isStale(article: article))
+	}
+
+	func testRebuildParsedItemPreservesIsAmbrosiaItemFromExistingArticle() {
+		// The bug this item fixed: rebuildParsedItem used to hardcode
+		// isAmbrosiaItem: false regardless of what the existing article
+		// actually was. Construct an existingArticle carrying Ambrosia's
+		// real preface content and isAmbrosiaItem: true (as
+		// AmbrosiaSQLiteImportTable's bulk insert would have set it, or a
+		// prior successful chapter fetch would have carried forward), and
+		// confirm the rebuilt ParsedItem still says isAmbrosiaItem: true --
+		// this is what lets a later failed-fetch code path distinguish
+		// this row from a native AO3 item, without needing to be tested
+		// here directly against an unmockable Downloader.
+		let existingArticle = Self.makeArticle(
+			contentHTML: Self.ambrosiaPrefaceFixture,
+			chapterCurrent: 1,
+			isAmbrosiaItem: true
+		)
+		// AO3ExtractedChapter/AO3ChapterExtractionResult have no public
+		// memberwise init (RSParser is a separate module, imported here
+		// normally, not @testable) -- go through the real extractor
+		// against a minimal one-chapter fixture instead of hand-
+		// constructing the result.
+		guard case .success(let extraction) = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: Self.workPageFixture(chapterCount: 1)) else {
+			XCTFail("Expected .success extracting the minimal work page fixture")
+			return
+		}
+		let parsedItem = AO3ChapterFetcher.rebuildParsedItem(from: existingArticle, workID: "999", extraction: extraction)
+		XCTAssertTrue(parsedItem.isAmbrosiaItem)
+		XCTAssertNotNil(parsedItem.lastPrefaceFetchDate)
+	}
+
+	func testRebuildParsedItemPreservesIsAmbrosiaItemFalseForNativeAO3Article() {
+		// The other half of the same fix: a native AO3 article (never
+		// Ambrosia-sourced) must not spuriously flip to true.
+		let existingArticle = Self.makeArticle(
+			contentHTML: Self.workPageFixture(chapterCount: 1),
+			chapterCurrent: 1,
+			isAmbrosiaItem: false
+		)
+		guard case .success(let extraction) = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: Self.workPageFixture(chapterCount: 1)) else {
+			XCTFail("Expected .success extracting the minimal work page fixture")
+			return
+		}
+		let parsedItem = AO3ChapterFetcher.rebuildParsedItem(from: existingArticle, workID: "999", extraction: extraction)
+		XCTAssertFalse(parsedItem.isAmbrosiaItem)
+	}
+
 	// MARK: - Fixtures
 
 	/// A minimal synthetic work page: just enough structure
@@ -103,7 +169,7 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		return "<div id=\"workskin\">\(chapters)</div>"
 	}
 
-	private static func makeArticle(contentHTML: String?, chapterCurrent: Int?, ao3WorkID: String? = "999") -> Article {
+	private static func makeArticle(contentHTML: String?, chapterCurrent: Int?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false) -> Article {
 		let status = ArticleStatus(articleID: "test-article-id", read: false, starred: false, dateArrived: Date())
 		let bookKey: String? = ao3WorkID.map { "ao3-work:\($0)" }
 		return Article(
@@ -123,8 +189,20 @@ final class AO3ChapterFetcherTests: XCTestCase {
 			dateModified: nil,
 			authors: nil,
 			chapterCurrent: chapterCurrent,
+			isAmbrosiaItem: isAmbrosiaItem,
 			bookKey: bookKey,
 			status: status
 		)
 	}
+
+	/// test2.json's real `content_html` verbatim -- Ambrosia's own
+	/// epub-derived preface for a book with no AO3 chapter fetch yet.
+	private static let ambrosiaPrefaceFixture: String = {
+		let fileURL = Bundle.module.resourceURL!.appendingPathComponent("Resources/ambrosia_preface_fixture.html")
+		guard let contents = try? String(contentsOf: fileURL, encoding: .utf8) else {
+			XCTFail("Unable to read ambrosia_preface_fixture.html at \(fileURL)")
+			return ""
+		}
+		return contents
+	}()
 }

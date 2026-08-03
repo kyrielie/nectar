@@ -58,6 +58,23 @@ public struct ParsedItem: Hashable, Sendable {
 	public let categories: [String]?
 	public let series: [ParsedSeriesEntry]?
 
+	// AO3 Work Header stats (Comments/Kudos/Bookmarks/Hits), read off AO3's
+	// live dl.stats block -- not part of the `_ambrosia` extension object
+	// above (Ambrosia's own JSON Feed has no equivalent field), and never
+	// set from an ordinary feed refresh. Populated only by
+	// AO3ChapterFetcher.rebuildParsedItem, from AO3ChapterExtractionResult,
+	// on each successful chapter fetch.
+	public let commentCount: Int?
+	public let kudosCount: Int?
+	public let bookmarkCount: Int?
+	public let hitCount: Int?
+	// Completion time of the AO3ChapterFetcher fetch that produced this
+	// ParsedItem, for the refetch-cadence setting. Same "fetcher-only,
+	// never feed-derived" precedent as the stats above: set only by
+	// AO3ChapterFetcher.rebuildParsedItem on success, nil otherwise, and
+	// threaded straight through to Article.lastPrefaceFetchDate.
+	public let lastPrefaceFetchDate: Date?
+
 	// Read-state identity fields (see LocalFeedServer's JSONFeedAmbrosiaExtension
 	// on the Ambrosia side). Deliberately separate from `uniqueID`, which stays
 	// "ambrosia-book-<calibre_id>" forever -- ao3WorkID may only become known
@@ -125,6 +142,11 @@ public struct ParsedItem: Hashable, Sendable {
 	            warnings: [String]? = nil,
 	            categories: [String]? = nil,
 	            series: [ParsedSeriesEntry]? = nil,
+	            commentCount: Int? = nil,
+	            kudosCount: Int? = nil,
+	            bookmarkCount: Int? = nil,
+	            hitCount: Int? = nil,
+	            lastPrefaceFetchDate: Date? = nil,
 	            ao3WorkID: String? = nil,
 	            isAnthology: Bool? = nil,
 	            ao3SeriesID: String? = nil,
@@ -158,6 +180,11 @@ public struct ParsedItem: Hashable, Sendable {
 		self.warnings = warnings
 		self.categories = categories
 		self.series = series
+		self.commentCount = commentCount
+		self.kudosCount = kudosCount
+		self.bookmarkCount = bookmarkCount
+		self.hitCount = hitCount
+		self.lastPrefaceFetchDate = lastPrefaceFetchDate
 		self.ao3WorkID = ao3WorkID
 		self.isAnthology = isAnthology
 		self.ao3SeriesID = ao3SeriesID
