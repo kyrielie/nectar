@@ -585,6 +585,67 @@ public enum FetchType {
 		return feed
 	}
 
+	/// The `nectar-import:` scheme used for the one-time pasted-AO3-link-list
+	/// import feed's synthetic URL -- see `importPastedAO3Links(_:)` below and
+	/// `LocalAccountRefresher.feedShouldBeSkippedForDisallowedHostReasons`,
+	/// which permanently excludes this scheme from every refresh pass. Unlike
+	/// every other feed in this codebase, this feed has no real server to
+	/// fetch from -- its articles are written directly via `updateAsync`,
+	/// never through `LocalAccountRefresher`/`DownloadSession`.
+	static let importedLinksFeedURL = "nectar-import://pasted-ao3-links"
+
+	/// Scans `pastedText` for AO3 work links (known-host allowlist, work id
+	/// via the existing `AO3SummaryExtractor.ao3WorkID(fromPermalink:)`,
+	/// deduped within the paste) and adds each as a bare-link article under a
+	/// single reused "Imported Links" feed -- created on first use, top-level.
+	/// No live AO3 fetch: articles are titled from their work id only, until
+	/// the person opens one and the existing AO3ChapterFetcher path takes
+	/// over. Returns the number of new links added (0 if none were
+	/// recognized or all were already imported previously -- `updateAsync`'s
+	/// `deleteOlder: false` plus this feed's stable feedID means a repeat
+	/// paste of the same link is a no-op at the database level, not just
+	/// within a single paste).
+	@discardableResult
+	public func importPastedAO3Links(_ pastedText: String) async -> Int {
+		let links = AO3LinkListImporter.importedLinks(fromPastedText: pastedText)
+		guard !links.isEmpty else {
+			return 0
+		}
+
+		let feed: Feed
+		if let existing = existingFeed(withURL: Self.importedLinksFeedURL) {
+			feed = existing
+		} else {
+			feed = createFeed(with: NSLocalizedString("Imported Links", comment: "Pasted AO3 link-list import feed name"), url: Self.importedLinksFeedURL, feedID: Self.importedLinksFeedURL, homePageURL: nil)
+			addFeedToTreeAtTopLevel(feed)
+		}
+
+		let parsedItems = Set(links.map { link in
+			ParsedItem(syncServiceID: nil,
+			           uniqueID: link.ao3WorkID,
+			           feedURL: Self.importedLinksFeedURL,
+			           url: link.permalink,
+			           externalURL: nil,
+			           title: String(format: NSLocalizedString("AO3 Work %@", comment: "Imported-link placeholder title, before the work is opened and its real title fetched"), link.ao3WorkID),
+			           language: nil,
+			           contentHTML: nil,
+			           contentText: nil,
+			           markdown: nil,
+			           summary: nil,
+			           imageURL: nil,
+			           bannerImageURL: nil,
+			           datePublished: nil,
+			           dateModified: nil,
+			           authors: nil,
+			           tags: nil,
+			           attachments: nil,
+			           ao3WorkID: link.ao3WorkID)
+		})
+
+		let articleChanges = await updateAsync(feedID: feed.feedID, parsedItems: parsedItems, deleteOlder: false)
+		return articleChanges.new?.count ?? 0
+	}
+
 	func clearFeedSettings(_ feed: Feed) {
 		// Call before permanently removing a feed so the next feed created at this URL
 		// doesn’t inherit a stale feedID/externalID from the cache or database.
