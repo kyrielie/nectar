@@ -37,6 +37,41 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		XCTAssertNil(AO3ChapterFetcher.ao3WorkID(fromBookKey: "ao3-work:"))
 	}
 
+	// MARK: - Anthology / combined-series bookKeys (fetchIfNeeded)
+
+	/// A combined-series article never resolves an ao3WorkID (covered
+	/// above), so fetchIfNeeded can't make a request for it -- this
+	/// confirms that no longer means total silence: it should post
+	/// .ao3ChapterFetchDidFail with an explanatory message exactly once.
+	func testFetchIfNeededNotesAnthologyBookKeyInsteadOfSilentNoOp() {
+		let article = Self.makeArticle(contentHTML: nil, chapterCurrent: nil, ao3WorkID: nil, bookKeyOverride: "ao3-series:4242-\(UUID().uuidString)")
+		let expectation = XCTNSNotificationExpectation(name: .ao3ChapterFetchDidFail, object: nil, notificationCenter: .default)
+
+		AO3ChapterFetcher.shared.fetchIfNeeded(for: article)
+
+		wait(for: [expectation], timeout: 1.0)
+		XCTAssertEqual(
+			AO3ChapterFetcher.shared.lastFetchFailureMessage(forArticleID: article.articleID),
+			"Combined AO3 series can't be refreshed individually -- showing imported content"
+		)
+	}
+
+	/// Calling fetchIfNeeded a second time for the same anthology article
+	/// must not post a second notification -- it's a one-time note, not a
+	/// recurring failure, so it shouldn't behave like the download-retry
+	/// path's per-attempt gate.
+	func testFetchIfNeededNotesAnthologyBookKeyOnlyOnce() {
+		let article = Self.makeArticle(contentHTML: nil, chapterCurrent: nil, ao3WorkID: nil, bookKeyOverride: "calibre-series:Once Only \(UUID().uuidString)")
+		let firstExpectation = XCTNSNotificationExpectation(name: .ao3ChapterFetchDidFail, object: nil, notificationCenter: .default)
+		AO3ChapterFetcher.shared.fetchIfNeeded(for: article)
+		wait(for: [firstExpectation], timeout: 1.0)
+
+		let secondExpectation = XCTNSNotificationExpectation(name: .ao3ChapterFetchDidFail, object: nil, notificationCenter: .default)
+		secondExpectation.isInverted = true
+		AO3ChapterFetcher.shared.fetchIfNeeded(for: article)
+		wait(for: [secondExpectation], timeout: 0.5)
+	}
+
 	// MARK: - isStale(article:)
 
 	func testIsStaleWithNilContentHTML() {
@@ -79,6 +114,69 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		// relies on rather than asserting on network behavior.
 		let article = Self.makeArticle(contentHTML: nil, chapterCurrent: nil, ao3WorkID: nil)
 		XCTAssertNil(AO3ChapterFetcher.ao3WorkID(fromBookKey: article.bookKey))
+	}
+
+	// MARK: - isStale(article:) refetch cadence
+
+	func testIsStaleSettledArticleWithinCadenceIntervalIsNotStale() {
+		let previous = AO3PrefaceRefetchPreference.current
+		AO3PrefaceRefetchPreference.current = .monthly
+		defer { AO3PrefaceRefetchPreference.current = previous }
+
+		let article = Self.makeArticle(
+			contentHTML: Self.workPageFixture(chapterCount: 3),
+			chapterCurrent: 3,
+			lastPrefaceFetchDate: Date().addingTimeInterval(-60 * 60) // 1 hour ago
+		)
+		XCTAssertFalse(AO3ChapterFetcher.shared.isStale(article: article))
+	}
+
+	func testIsStaleSettledArticleExceedingCadenceIntervalIsStale() {
+		let previous = AO3PrefaceRefetchPreference.current
+		AO3PrefaceRefetchPreference.current = .monthly
+		defer { AO3PrefaceRefetchPreference.current = previous }
+
+		let fortyDaysAgo = Date().addingTimeInterval(-40 * 24 * 60 * 60)
+		let article = Self.makeArticle(
+			contentHTML: Self.workPageFixture(chapterCount: 3),
+			chapterCurrent: 3,
+			lastPrefaceFetchDate: fortyDaysAgo
+		)
+		XCTAssertTrue(AO3ChapterFetcher.shared.isStale(article: article))
+	}
+
+	func testIsStaleAlwaysCadenceForcesRefetchOfSettledArticle() {
+		// .always's timeInterval is 0, so any recorded lastPrefaceFetchDate
+		// -- however recent -- satisfies the ">= interval" check. The
+		// attemptDates floor in downloadIfNeeded (not isStale) is what
+		// actually prevents this from double-firing on rapid re-opens.
+		let previous = AO3PrefaceRefetchPreference.current
+		AO3PrefaceRefetchPreference.current = .always
+		defer { AO3PrefaceRefetchPreference.current = previous }
+
+		let article = Self.makeArticle(
+			contentHTML: Self.workPageFixture(chapterCount: 3),
+			chapterCurrent: 3,
+			lastPrefaceFetchDate: Date()
+		)
+		XCTAssertTrue(AO3ChapterFetcher.shared.isStale(article: article))
+	}
+
+	func testIsStaleSettledArticleWithNoLastPrefaceFetchDateIsNotForcedStale() {
+		// A settled article that's never gone through a recorded chapter
+		// fetch (nil lastPrefaceFetchDate -- e.g. pre-dating this feature)
+		// is left alone by the cadence check rather than treated as
+		// perpetually overdue, even under .always.
+		let previous = AO3PrefaceRefetchPreference.current
+		AO3PrefaceRefetchPreference.current = .always
+		defer { AO3PrefaceRefetchPreference.current = previous }
+
+		let article = Self.makeArticle(
+			contentHTML: Self.workPageFixture(chapterCount: 3),
+			chapterCurrent: 3,
+			lastPrefaceFetchDate: nil
+		)
+		XCTAssertFalse(AO3ChapterFetcher.shared.isStale(article: article))
 	}
 
 	// MARK: - Ambrosia preface preservation (item 4)
@@ -169,9 +267,9 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		return "<div id=\"workskin\">\(chapters)</div>"
 	}
 
-	private static func makeArticle(contentHTML: String?, chapterCurrent: Int?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false) -> Article {
+	private static func makeArticle(contentHTML: String?, chapterCurrent: Int?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false, lastPrefaceFetchDate: Date? = nil, bookKeyOverride: String? = nil) -> Article {
 		let status = ArticleStatus(articleID: "test-article-id", read: false, starred: false, dateArrived: Date())
-		let bookKey: String? = ao3WorkID.map { "ao3-work:\($0)" }
+		let bookKey: String? = bookKeyOverride ?? ao3WorkID.map { "ao3-work:\($0)" }
 		return Article(
 			accountID: "test-account-id",
 			articleID: "test-article-id",
@@ -189,6 +287,7 @@ final class AO3ChapterFetcherTests: XCTestCase {
 			dateModified: nil,
 			authors: nil,
 			chapterCurrent: chapterCurrent,
+			lastPrefaceFetchDate: lastPrefaceFetchDate,
 			isAmbrosiaItem: isAmbrosiaItem,
 			bookKey: bookKey,
 			status: status

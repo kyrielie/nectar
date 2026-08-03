@@ -11,7 +11,7 @@
 //  on demand and
 //  persists the extracted, workskin-preserving contentHTML for any article
 //  whose bookKey identifies it as an AO3 work ("ao3-work:<id>"). Modeled
-//  directly on HTMLMetadataDownloader: same hoursBetweenAttempts gate, same
+//  directly on HTMLMetadataDownloader: same anti-hammering attemptDates gate, same
 //  ActivityLog start/complete/fail calls, same "leave existing content alone
 //  on failure, don't retry aggressively" shape. The primary fetch is
 //  anonymous -- Downloader already forces httpShouldSetCookies = false /
@@ -53,8 +53,32 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AO3ChapterFetcher")
 
-	private static let hoursBetweenAttempts = 3
+	// Was a flat 3-hour anti-hammering floor on retry attempts. Lowered to 1
+	// minute once AO3PrefaceRefetchPreference's .always cadence existed --
+	// 3 hours would have silently defeated "always" for any article reopened
+	// sooner than that, and this floor's job is only to stop rapid re-opens
+	// from firing the same request twice, not to pace legitimate refetches
+	// (that's the cadence preference's job now).
+	private static let secondsBetweenAttempts: TimeInterval = 60
 	private static let ao3WorkIDBookKeyPrefix = "ao3-work:"
+
+	/// bookKey prefixes `ParsedItem.bookKey` uses for an anthology
+	/// (`isAnthology == true`) -- see the doc comment on `bookKey` there.
+	/// Neither ever resolves to an `ao3WorkID`, and never will: there's no
+	/// single AO3 work URL to fetch for a Calibre-merged compilation of
+	/// several separate works.
+	private static let anthologyBookKeyPrefixes = ["ao3-series:", "calibre-series:"]
+
+	/// Upper bound on how many articles one background sweep (see
+	/// `sweepStaleUnreadArticles`) fetches, and the delay between each --
+	/// deliberately conservative. The sweep is the one place in this file
+	/// capable of firing several AO3 requests back-to-back with no user
+	/// action in between (fetchIfNeeded's other caller,
+	/// WebViewController.setArticle, is naturally paced by how fast a
+	/// person can open articles); keeping it slow and bounded is the
+	/// actual mitigation here, not just Downloader's reactive 429 backoff.
+	private static let maxArticlesPerSweep = 5
+	private static let secondsBetweenSweepRequests: TimeInterval = 5
 
 	private let attemptDates = OSAllocatedUnfairLock(initialState: [String: Date]())
 
@@ -65,7 +89,25 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// instead of the failure being visible only in the Activity Log.
 	private let failureMessages = OSAllocatedUnfairLock(initialState: [String: String]())
 
-	init() {}
+	/// Account IDs a background sweep is currently running for -- guards
+	/// against two AccountRefreshDidFinish notifications in quick
+	/// succession starting overlapping sweeps for the same account.
+	private let sweepingAccountIDs = OSAllocatedUnfairLock(initialState: Set<String>())
+
+	init() {
+		// Complements the open-time trigger in fetchIfNeeded: without
+		// this, an AO3-work article that's never opened never picks up a
+		// formatting change or a settled work's new comments/kudos/hits,
+		// no matter how long it sits unread. Scoped to unread articles
+		// only (see sweepStaleUnreadArticles) and throttled (see
+		// maxArticlesPerSweep/secondsBetweenSweepRequests above).
+		NotificationCenter.default.addObserver(forName: .AccountRefreshDidFinish, object: nil, queue: .main) { [weak self] note in
+			guard let self, let account = note.object as? Account else { return }
+			Task { @MainActor in
+				await self.sweepStaleUnreadArticles(in: account)
+			}
+		}
+	}
 
 	/// The reason the most recent fetch attempt for this article failed, if
 	/// any -- `nil` if the article has never had a failed fetch, or if its
@@ -82,19 +124,42 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// other article -- including one with no resolvable ao3WorkID at all.
 	/// Fire-and-forget; callers observe `.ao3ChapterFetchDidComplete` to know
 	/// when to reload.
+	///
+	/// An anthology/combined-series bookKey (`ao3-series:`/
+	/// `calibre-series:` -- see `ParsedItem.bookKey`) never resolves to an
+	/// `ao3WorkID` at all: a Calibre-merged anthology isn't one AO3 work,
+	/// so there's no single live page to refetch from (fetching and
+	/// merging every member work was scoped out of Workstream 2 -- see
+	/// ao3-merged-plan.md's "Deferred" section). That's out of scope to
+	/// fix here, but leaving it a bare no-op made it indistinguishable
+	/// from "nothing needed checking" -- `noteAnthologyUnsupportedIfNeeded`
+	/// logs it once per article instead, so it shows up in the Activity
+	/// Log rather than silently doing nothing forever.
 	public func fetchIfNeeded(for article: Article) {
-		guard let workID = Self.ao3WorkID(fromBookKey: article.bookKey), isStale(article: article) else {
+		guard let workID = Self.ao3WorkID(fromBookKey: article.bookKey) else {
+			noteAnthologyUnsupportedIfNeeded(for: article)
+			return
+		}
+		guard isStale(article: article) else {
 			return
 		}
 		downloadIfNeeded(workID: workID, articleID: article.articleID, accountID: article.accountID, feedID: article.feedID)
 	}
 
-	/// True when the article has no stored content yet, or when the stored
+	/// True when the article has no stored content yet, when the stored
 	/// content's own chapter count -- re-derived by walking the same
 	/// `#workskin` wrapper AO3ChapterHTMLExtractor produced, since the stored
 	/// contentHTML *is* that wrapper -- is behind `chapterCurrent` (the
-	/// feed-reported total, Workstream 1's territory). Exposed internally for
-	/// direct testing against fixtures.
+	/// feed-reported total, Workstream 1's territory), or when the chapter
+	/// count matches ("settled") but the user's chosen refetch cadence
+	/// (AO3PrefaceRefetchPreference) says the last successful fetch is old
+	/// enough to check again anyway -- otherwise a settled work's
+	/// comments/kudos/hits/formatting would never update again. A settled
+	/// article with no recorded lastPrefaceFetchDate (never fetched through
+	/// this mechanism) is left alone by the cadence check rather than being
+	/// treated as overdue, since there's no fetch time to measure the
+	/// interval from. Exposed internally for direct testing against
+	/// fixtures.
 	func isStale(article: Article) -> Bool {
 		guard let contentHTML = article.contentHTML, !contentHTML.isEmpty else {
 			return true
@@ -112,7 +177,13 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 		} else {
 			storedChapterCount = 0
 		}
-		return storedChapterCount < chapterCurrent
+		if storedChapterCount < chapterCurrent {
+			return true
+		}
+		guard let lastPrefaceFetchDate = article.lastPrefaceFetchDate else {
+			return false
+		}
+		return Date().timeIntervalSince(lastPrefaceFetchDate) >= AO3PrefaceRefetchPreference.current.timeInterval
 	}
 }
 
@@ -127,6 +198,81 @@ extension AO3ChapterFetcher {
 		let workID = String(bookKey.dropFirst(ao3WorkIDBookKeyPrefix.count))
 		return workID.isEmpty ? nil : workID
 	}
+
+	/// Checks the account's unread articles for stale AO3-work content and
+	/// calls `fetchIfNeeded` for a bounded, throttled batch -- see
+	/// `maxArticlesPerSweep`/`secondsBetweenSweepRequests`. Scoped to
+	/// unread rather than every article in the account: unread is both
+	/// what someone's actually about to read and, for any account with a
+	/// real archive, a small fraction of total stored articles, so this
+	/// doesn't turn into an unbounded full-account crawl on every refresh.
+	@MainActor
+	func sweepStaleUnreadArticles(in account: Account) async {
+		let alreadySweeping = sweepingAccountIDs.withLock { ids in
+			if ids.contains(account.accountID) {
+				return true
+			}
+			ids.insert(account.accountID)
+			return false
+		}
+		guard !alreadySweeping else {
+			return
+		}
+		defer {
+			sweepingAccountIDs.withLock { $0.remove(account.accountID) }
+		}
+
+		let unread = await account.fetchArticlesAsync(.unread(nil))
+		let eligible = unread
+			.filter { Self.ao3WorkID(fromBookKey: $0.bookKey) != nil }
+			.filter { isStale(article: $0) }
+			.prefix(Self.maxArticlesPerSweep)
+
+		for article in eligible {
+			fetchIfNeeded(for: article)
+			try? await Task.sleep(nanoseconds: UInt64(Self.secondsBetweenSweepRequests * 1_000_000_000))
+		}
+	}
+
+	/// Logs the anthology/combined-series case to the Activity Log once
+	/// per article (reusing `attemptDates` as the "already noted" gate, so
+	/// reopening the same article repeatedly doesn't spam the log) instead
+	/// of `fetchIfNeeded` silently doing nothing. Also records a
+	/// `failureMessages` entry for API consistency with the real-failure
+	/// path, though it currently has nowhere to surface in the reader:
+	/// `ArticleRenderer`'s inline notice only shows when `contentHTML ==
+	/// nil`, which is never true for an Ambrosia-sourced article (see
+	/// `ao3SyntheticPrefaceHTML`'s doc comment).
+	///
+	/// Nonisolated, like `fetchIfNeeded` itself -- the "already noted"
+	/// check runs synchronously against the lock-protected `attemptDates`
+	/// dictionary, and only the actual ActivityLog/notification work hops
+	/// to the main actor, mirroring `downloadIfNeeded`/`download` below.
+	func noteAnthologyUnsupportedIfNeeded(for article: Article) {
+		guard Self.anthologyBookKeyPrefixes.contains(where: { article.bookKey.hasPrefix($0) }) else {
+			return
+		}
+		let alreadyNoted = attemptDates.withLock { dates in
+			if dates[article.articleID] != nil {
+				return true
+			}
+			dates[article.articleID] = .distantPast
+			return false
+		}
+		guard !alreadyNoted else {
+			return
+		}
+
+		let articleID = article.articleID
+		let bookKey = article.bookKey
+		Task { @MainActor in
+			let activityLog = ActivityLog.shared
+			let kind = ActivityKind.skipAO3SeriesFetch(bookKey: bookKey)
+			activityLog.createActivity(owner: .ao3ChapterFetcher, kind: kind, detail: nil)
+			activityLog.didStart(.ao3ChapterFetcher, kind: kind)
+			self.fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Combined AO3 series can't be refreshed individually -- showing imported content")
+		}
+	}
 }
 
 // MARK: - Private
@@ -136,7 +282,7 @@ nonisolated private extension AO3ChapterFetcher {
 	func downloadIfNeeded(workID: String, articleID: String, accountID: String, feedID: String) {
 		let shouldDownload = attemptDates.withLock { dates in
 			let currentDate = Date()
-			if let attemptDate = dates[articleID], attemptDate > currentDate.bySubtracting(hours: Self.hoursBetweenAttempts) {
+			if let attemptDate = dates[articleID], attemptDate > currentDate.addingTimeInterval(-Self.secondsBetweenAttempts) {
 				return false
 			}
 			dates[articleID] = currentDate
@@ -165,11 +311,20 @@ nonisolated private extension AO3ChapterFetcher {
 
 				guard let data = downloadResponse.data, !data.isEmpty, let response = downloadResponse.response, response.statusIsOK else {
 					// Bad response -- leave existing content alone. The
-					// hoursBetweenAttempts gate above already prevents
+					// attemptDates gate above already prevents
 					// hammering a gated/deleted/moved work; no further
-					// backoff bookkeeping needed here.
+					// backoff bookkeeping needed here for this specific
+					// article. A 429 specifically also means Downloader
+					// itself has now started a per-host cooldown (see
+					// Downloader.retryAfterMessages) that holds off every
+					// other AO3 fetch, not just this one, until it
+					// expires -- called out distinctly here so it isn't
+					// read as an ordinary one-off failure.
 					let statusCode = downloadResponse.response?.forcedStatusCode ?? -1
-					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Could not reach AO3 (HTTP \(statusCode))")
+					let message = statusCode == HTTPResponseCode.tooManyRequests
+						? "AO3 rate limit hit -- backing off before retrying"
+						: "Could not reach AO3 (HTTP \(statusCode))"
+					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: message)
 					return
 				}
 

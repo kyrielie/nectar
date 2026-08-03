@@ -21,6 +21,19 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 	private var callbacks = [URL: [(callback: DownloadCallback, fromCache: Bool)]]()
 	private let cache = DownloadCache.shared
 
+	// 429 Too Many Requests responses, per host. Mirrors DownloadSession's
+	// retryAfterMessages -- that handling previously existed only in
+	// DownloadSession (used for feed-refresh sessions), not here, so a
+	// one-shot caller like AO3ChapterFetcher had no awareness of a 429 or
+	// Cloudflare-style rate limit at all: every non-2xx response, 429
+	// included, just failed the caller's own statusIsOK check with no
+	// distinct handling, and nothing paused further requests to that host.
+	private var retryAfterMessages = [String: HTTPResponse429]()
+
+	// Default for hosts that don't send a Retry-After value. Matches
+	// DownloadSession.defaultRetryAfter.
+	private static let defaultRetryAfter: TimeInterval = 10 * 60
+
 	nonisolated private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "Downloader")
 
 	private init() {
@@ -73,6 +86,19 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 			return
 		}
 
+		if let host = url.host()?.lowercased() {
+			if let retryAfterMessage = retryAfterMessages[host] {
+				if Date() >= retryAfterMessage.resumeDate {
+					retryAfterMessages[host] = nil
+				} else {
+					Self.logger.info("Downloader: skipping \(url) — rate-limited by \(host) until \(retryAfterMessage.resumeDate)")
+					let syntheticResponse = HTTPURLResponse(url: url, statusCode: HTTPResponseCode.tooManyRequests, httpVersion: nil, headerFields: nil)
+					callback(DownloadResponse(data: nil, response: syntheticResponse, returnedFromCache: false), nil)
+					return
+				}
+			}
+		}
+
 		let isCacheableRequest = urlRequest.httpMethod == HTTPMethod.get
 
 		// Return cached record if available.
@@ -107,11 +133,41 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 				self.cache.add(url.absoluteString, data: data, response: response)
 			}
 
+			let response429 = Self.createHTTPResponse429(url: url, response: response)
+
 			Task { @MainActor in
+				if let response429 {
+					Self.logger.info("Downloader: recording 429 for \(response429.host), retrying no earlier than \(response429.resumeDate)")
+					self.retryAfterMessages[response429.host] = response429
+				}
 				self.callAndReleaseCallbacks(url, data, response, error)
 			}
 		}
 		task.resume()
+	}
+}
+
+private extension Downloader {
+
+	// Not actor-isolated -- called from the dataTask completion handler,
+	// which doesn't run on the main actor. Reads only its arguments, so
+	// this is safe to compute off-actor before hopping back to update
+	// retryAfterMessages.
+	nonisolated static func createHTTPResponse429(url: URL, response: URLResponse?) -> HTTPResponse429? {
+		guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == HTTPResponseCode.tooManyRequests else {
+			return nil
+		}
+
+		let parsedRetryAfter: TimeInterval? = {
+			if let retryAfterValue = httpResponse.value(forHTTPHeaderField: HTTPResponseHeader.retryAfter),
+			   let parsed = TimeInterval(retryAfterValue),
+			   parsed > 0 {
+				return parsed
+			}
+			return nil
+		}()
+
+		return HTTPResponse429(url: url, retryAfter: parsedRetryAfter ?? defaultRetryAfter)
 	}
 }
 

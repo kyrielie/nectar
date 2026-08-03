@@ -142,3 +142,49 @@ a.footnote {
 	position:relative;
 	top: -0.1em;
 }
+
+/* AO3 direct-reading support -- the work preface (rating, warning,
+   category, fandom, relationships, characters, series, stats). One shared
+   rule set for both paths, since both render through AO3PrefaceRenderer
+   into the same dl.tags markup: #ao3SyntheticPreface is the fallback
+   built from already-parsed Article metadata, shown only before a
+   chapter fetch has ever succeeded; #ao3Preface is AO3's own Work
+   Header, parsed and re-rendered by AO3ChapterHTMLExtractor once a fetch
+   has (see ArticleRenderer.ao3SyntheticPrefaceHTML and
+   AO3ChapterHTMLExtractor.serializedContentHTML). Real AO3 tag/series
+   links come through as ordinary <a> elements inside each <dd>, so no
+   separate link styling is needed here.
+
+   Deliberately kept in core.css, not stylesheet.css: core.css is
+   concatenated ahead of every theme's own CSS, custom or default (see
+   ArticleTheme.init()/ArticleTheme.init(url:isAppTheme:)), where
+   stylesheet.css is only the default theme's file. A custom .nnwtheme
+   bundle under Themes/ supplies its own stylesheet.css with no dl/dt/dd
+   rules of its own, so this must live somewhere every theme actually
+   loads or a non-default theme falls back to the browser's default <dl>
+   box model -- dt and dd each block-level, dd on its own line below dt,
+   instead of the same-line grid layout below. */
+#ao3SyntheticPreface,
+#ao3Preface {
+	margin: 0 0 1.5em 0;
+	padding-bottom: 1em;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+	font-size: 0.9em;
+}
+#ao3SyntheticPreface dl.tags,
+#ao3Preface dl.tags {
+	margin: 0;
+	display: grid;
+	grid-template-columns: auto 1fr;
+	column-gap: 0.6em;
+	row-gap: 0.4em;
+}
+#ao3SyntheticPreface dt,
+#ao3Preface dt {
+	font-weight: 600;
+	white-space: nowrap;
+}
+#ao3SyntheticPreface dd,
+#ao3Preface dd {
+	margin: 0;
+}
