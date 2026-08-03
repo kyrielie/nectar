@@ -284,6 +284,9 @@
         }
       }
     },
+    "Skipped AO3 refresh for combined series %@" : {
+      "comment" : "Activity kind — a combined/anthology series has no single AO3 work to refetch — %@ is the book's series-based bookKey"
+    },
     "Subscribing to feed" : {
       "comment" : "Activity kind",
       "localizations" : {

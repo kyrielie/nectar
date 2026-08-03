@@ -31,8 +31,12 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 	private var retryAfterMessages = [String: HTTPResponse429]()
 
 	// Default for hosts that don't send a Retry-After value. Matches
-	// DownloadSession.defaultRetryAfter.
-	private static let defaultRetryAfter: TimeInterval = 10 * 60
+	// DownloadSession.defaultRetryAfter. Marked nonisolated (rather than
+	// implicitly @MainActor via the enclosing class) because it's read
+	// from createHTTPResponse429 below, which itself is nonisolated --
+	// called from the URLSession dataTask completion handler, off the
+	// main actor. Safe: an immutable TimeInterval needs no isolation.
+	nonisolated private static let defaultRetryAfter: TimeInterval = 10 * 60
 
 	nonisolated private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "Downloader")
 

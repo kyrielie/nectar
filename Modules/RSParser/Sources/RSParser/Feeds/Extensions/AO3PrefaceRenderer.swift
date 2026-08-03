@@ -35,9 +35,21 @@ public struct AO3PrefaceRow: Sendable, Equatable {
 	public let label: String
 	public let values: [AO3TagEntry]
 
-	public init(label: String, values: [AO3TagEntry]) {
+	/// True for rows that can carry a large, unbounded number of values --
+	/// Fandom, Relationships, Characters, Additional Tags (freeform) -- as
+	/// opposed to short/bounded rows like Rating or Category. A wide row
+	/// renders its `<dd>` spanning the full preface width on its own line
+	/// below the label, instead of squeezed into the label-adjacent grid
+	/// column alongside every other row: a work with dozens of relationship
+	/// or freeform tags otherwise wraps its tag list inside a column that's
+	/// only as wide as "1fr" of the label column leaves free, wasting the
+	/// row's own label-height line and most of the preface's width.
+	public let isWide: Bool
+
+	public init(label: String, values: [AO3TagEntry], isWide: Bool = false) {
 		self.label = label
 		self.values = values
+		self.isWide = isWide
 	}
 }
 
@@ -89,7 +101,8 @@ public enum AO3PrefaceRenderer {
 		for row in data.rows {
 			let joined = row.values.map(renderedEntry).joined(separator: ", ")
 			guard !joined.isEmpty else { continue }
-			rowsHTML += "<dt>\(escape(row.label))</dt><dd>\(joined)</dd>"
+			let classAttribute = row.isWide ? " class='wide'" : ""
+			rowsHTML += "<dt\(classAttribute)>\(escape(row.label))</dt><dd\(classAttribute)>\(joined)</dd>"
 		}
 		for stat in data.statsRows {
 			guard !stat.value.isEmpty else { continue }
