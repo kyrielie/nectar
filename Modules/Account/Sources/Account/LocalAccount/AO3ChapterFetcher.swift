@@ -324,9 +324,13 @@ nonisolated private extension AO3ChapterFetcher {
 	}
 
 	/// Copies every field from `existingArticle` unchanged except
-	/// `contentHTML` (the freshly fetched, workskin-preserving HTML) and
+	/// `contentHTML` (the freshly fetched, workskin-preserving HTML),
 	/// `chapterCurrent` (bumped to the chapter count actually found in this
-	/// fetch). `chapterTotal`/`isComplete` are left as whatever the article
+	/// fetch), and the four AO3 Work Header stats counts (commentCount/
+	/// kudosCount/bookmarkCount/hitCount, taken from this fetch's
+	/// extraction rather than the existing article, so they refresh on
+	/// every successful re-fetch the same way chapterCurrent does).
+	/// `chapterTotal`/`isComplete` are left as whatever the article
 	/// already has -- those are Workstream 1's (feed-derived) territory, and
 	/// a partial chapter fetch shouldn't be used to infer completion.
 	///
@@ -364,7 +368,7 @@ nonisolated private extension AO3ChapterFetcher {
 			authors: authors,
 			tags: nil,
 			attachments: nil,
-			isAmbrosiaItem: false,
+			isAmbrosiaItem: existingArticle.isAmbrosiaItem,
 			wordCount: existingArticle.wordCount,
 			chapterCurrent: extraction.chapters.count,
 			chapterTotal: existingArticle.chapterTotal,
@@ -376,6 +380,15 @@ nonisolated private extension AO3ChapterFetcher {
 			warnings: existingArticle.warnings,
 			categories: existingArticle.categories,
 			series: series,
+			commentCount: extraction.commentCount,
+			kudosCount: extraction.kudosCount,
+			bookmarkCount: extraction.bookmarkCount,
+			hitCount: extraction.hitCount,
+			// rebuildParsedItem only runs on a successful extraction (it's
+			// handed the extraction.chapters/stats result), so "now" is
+			// correct here regardless of caller -- a failed fetch never
+			// reaches this function at all.
+			lastPrefaceFetchDate: Date(),
 			ao3WorkID: workID
 		)
 	}

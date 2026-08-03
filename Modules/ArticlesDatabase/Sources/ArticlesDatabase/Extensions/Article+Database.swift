@@ -56,7 +56,14 @@ extension Article {
 		let series = Self.seriesFromRow(row)
 		let bookKey = row.swiftString(forColumn: DatabaseKey.bookKey)
 
-		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, series: series, bookKey: bookKey, status: status)
+		let commentCount = row.columnIsNull(DatabaseKey.commentCount) ? nil : Int(row.longLongInt(forColumn: DatabaseKey.commentCount))
+		let kudosCount = row.columnIsNull(DatabaseKey.kudosCount) ? nil : Int(row.longLongInt(forColumn: DatabaseKey.kudosCount))
+		let bookmarkCount = row.columnIsNull(DatabaseKey.bookmarkCount) ? nil : Int(row.longLongInt(forColumn: DatabaseKey.bookmarkCount))
+		let hitCount = row.columnIsNull(DatabaseKey.hitCount) ? nil : Int(row.longLongInt(forColumn: DatabaseKey.hitCount))
+		let lastPrefaceFetchDate = row.date(forColumn: DatabaseKey.lastPrefaceFetchDate)
+		let isAmbrosiaItem = row.columnIsNull(DatabaseKey.isAmbrosiaItem) ? false : row.bool(forColumn: DatabaseKey.isAmbrosiaItem)
+
+		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, series: series, commentCount: commentCount, kudosCount: kudosCount, bookmarkCount: bookmarkCount, hitCount: hitCount, lastPrefaceFetchDate: lastPrefaceFetchDate, isAmbrosiaItem: isAmbrosiaItem, bookKey: bookKey, status: status)
 	}
 
 	private static func authorsFromRow(_ row: FMResultSet) -> Set<Author>? {
@@ -111,7 +118,7 @@ extension Article {
 
 		let series = parsedItem.series?.map { ArticleSeriesEntry(name: $0.name, index: $0.index, ao3ID: $0.ao3ID) }
 
-		self.init(accountID: accountID, articleID: parsedItem.syncServiceID, feedID: feedID, uniqueID: parsedItem.uniqueID, title: parsedItem.title, contentHTML: parsedItem.contentHTML, contentText: parsedItem.contentText, markdown: parsedItem.markdown, url: parsedItem.url, externalURL: parsedItem.externalURL, summary: parsedItem.summary, imageURL: parsedItem.imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: parsedItem.wordCount, chapterCurrent: parsedItem.chapterCurrent, chapterTotal: parsedItem.chapterTotal, isComplete: parsedItem.isComplete, fandoms: parsedItem.fandoms, relationships: parsedItem.relationships, characters: parsedItem.characters, ratings: parsedItem.ratings, warnings: parsedItem.warnings, categories: parsedItem.categories, series: series, bookKey: parsedItem.bookKey, status: status)
+		self.init(accountID: accountID, articleID: parsedItem.syncServiceID, feedID: feedID, uniqueID: parsedItem.uniqueID, title: parsedItem.title, contentHTML: parsedItem.contentHTML, contentText: parsedItem.contentText, markdown: parsedItem.markdown, url: parsedItem.url, externalURL: parsedItem.externalURL, summary: parsedItem.summary, imageURL: parsedItem.imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: parsedItem.wordCount, chapterCurrent: parsedItem.chapterCurrent, chapterTotal: parsedItem.chapterTotal, isComplete: parsedItem.isComplete, fandoms: parsedItem.fandoms, relationships: parsedItem.relationships, characters: parsedItem.characters, ratings: parsedItem.ratings, warnings: parsedItem.warnings, categories: parsedItem.categories, series: series, commentCount: parsedItem.commentCount, kudosCount: parsedItem.kudosCount, bookmarkCount: parsedItem.bookmarkCount, hitCount: parsedItem.hitCount, lastPrefaceFetchDate: parsedItem.lastPrefaceFetchDate, isAmbrosiaItem: parsedItem.isAmbrosiaItem, bookKey: parsedItem.bookKey, status: status)
 	}
 
 	private func addPossibleStringChangeWithKeyPath(_ comparisonKeyPath: KeyPath<Article, String?>, _ otherArticle: Article, _ key: String, _ dictionary: inout DatabaseDictionary) {
@@ -211,6 +218,35 @@ extension Article {
 		}
 		if bookKey != existingArticle.bookKey {
 			d[DatabaseKey.bookKey] = bookKey
+		}
+
+		// AO3 Work Header stats. Same "only write when a new non-nil value
+		// shows up" rule as wordCount/etc. above -- a rebuilt ParsedItem
+		// whose extraction found no dl.stats block (or no chapter fetch has
+		// run since these columns were added) shouldn't blank out counts
+		// already stored from an earlier successful fetch.
+		if commentCount != existingArticle.commentCount, let commentCount {
+			d[DatabaseKey.commentCount] = commentCount
+		}
+		if kudosCount != existingArticle.kudosCount, let kudosCount {
+			d[DatabaseKey.kudosCount] = kudosCount
+		}
+		if bookmarkCount != existingArticle.bookmarkCount, let bookmarkCount {
+			d[DatabaseKey.bookmarkCount] = bookmarkCount
+		}
+		if hitCount != existingArticle.hitCount, let hitCount {
+			d[DatabaseKey.hitCount] = hitCount
+		}
+		if lastPrefaceFetchDate != existingArticle.lastPrefaceFetchDate, let lastPrefaceFetchDate {
+			d[DatabaseKey.lastPrefaceFetchDate] = lastPrefaceFetchDate
+		}
+
+		// isAmbrosiaItem is set once at import time and shouldn't flip back to
+		// false on a later AO3ChapterFetcher rebuild (which always copies it
+		// forward from the existing article -- see rebuildParsedItem) or any
+		// other update that happens not to carry it; only ever write `true`.
+		if isAmbrosiaItem != existingArticle.isAmbrosiaItem, isAmbrosiaItem {
+			d[DatabaseKey.isAmbrosiaItem] = isAmbrosiaItem
 		}
 
 		return d.count < 1 ? nil : d
@@ -320,6 +356,22 @@ extension Article {
 		if let series, !series.isEmpty, let json = Self.jsonString(series) {
 			d[DatabaseKey.series] = json
 		}
+		if let commentCount {
+			d[DatabaseKey.commentCount] = commentCount
+		}
+		if let kudosCount {
+			d[DatabaseKey.kudosCount] = kudosCount
+		}
+		if let bookmarkCount {
+			d[DatabaseKey.bookmarkCount] = bookmarkCount
+		}
+		if let hitCount {
+			d[DatabaseKey.hitCount] = hitCount
+		}
+		if let lastPrefaceFetchDate {
+			d[DatabaseKey.lastPrefaceFetchDate] = lastPrefaceFetchDate
+		}
+		d[DatabaseKey.isAmbrosiaItem] = isAmbrosiaItem
 		d[DatabaseKey.bookKey] = bookKey
 		return d
 	}

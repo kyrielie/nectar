@@ -246,6 +246,32 @@ import Testing
 		#expect(result.hitCount == nil)
 	}
 
+	@Test func seriesRowHandlesTwoCommaSeparatedSeries() throws {
+		// ao3-work-two-series.html: a work belonging to two series at once
+		// ("Double Or Nothing" and "Je Me Souviens"), each rendered as its
+		// own comma-separated <span class="series"> inside one <dd
+		// class="series"> -- confirms seriesEntries(fromDD:) reads both via
+		// its descendants search rather than only the first. Regression
+		// coverage, not a new feature: no code change was needed for this
+		// case, since descendants(of:where:) already walks all matches.
+		let html = htmlFixtureString("ao3-work-two-series.html")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		#expect(result.contentHTML.contains("href='/series/4183855'"))
+		#expect(result.contentHTML.contains("Double Or Nothing"))
+		#expect(result.contentHTML.contains("href='/series/4569715'"))
+		#expect(result.contentHTML.contains("Je Me Souviens"))
+		// Only the linked series name comes from the anchor text; the "Part
+		// <N> of " prefix ahead of it is unlinked plain text, matching
+		// Ambrosia's own preface style (see seriesEntries(fromDD:)).
+		#expect(result.contentHTML.contains("Part 6 of"))
+		#expect(result.contentHTML.contains("Part 2 of"))
+	}
+
 	@Test func metaGroupCollectionsRowRenderedForSingleChapterWork() throws {
 		// This fixture's Work Header includes a Collections row -- the only
 		// one of the four fixtures that does. Confirms a row this app
