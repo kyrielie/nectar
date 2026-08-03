@@ -178,7 +178,7 @@ import Testing
 
 	// MARK: - Work Header metadata block
 
-	@Test func metaGroupCapturedForMultiChapterWork() throws {
+	@Test func workHeaderRenderedForMultiChapterWork() throws {
 		let html = htmlFixtureString("ao3-work-multi-chapter.html")
 		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
 		guard case .success(let result) = outcome else {
@@ -186,18 +186,73 @@ import Testing
 			return
 		}
 
-		#expect(result.contentHTML.contains("class=\"work meta group\""))
-		// A real, AO3-encoded tag link ("M/M" -> "M*s*M") -- confirms the
-		// block is captured whole, not re-derived from Article metadata.
-		#expect(result.contentHTML.contains("href=\"/tags/M*s*M/works\""))
+		// The Work Header is now parsed and re-rendered through
+		// AO3PrefaceRenderer, not captured verbatim -- confirm it lands as
+		// its own unit ahead of the workskin, using the shared preface
+		// markup (id="ao3Preface", dl.tags) rather than AO3's own
+		// "work meta group" class.
+		#expect(result.contentHTML.contains("id='ao3Preface'"))
+		#expect(!result.contentHTML.contains("class=\"work meta group\""))
+		// Real, AO3-encoded tag link ("M/M" -> "M*s*M") -- confirms hrefs
+		// are read directly off the source <a> elements, not synthesized.
+		#expect(result.contentHTML.contains("href='/tags/M*s*M/works'"))
 		#expect(result.contentHTML.contains("Check Please! (Webcomic)"))
 	}
 
-	@Test func metaGroupCollectionsRowCapturedForSingleChapterWork() throws {
+	@Test func workHeaderStatsCountsParsedForMultiChapterWork() throws {
+		// Same fixture's dl.stats -- confirmed values: Comments: 272,
+		// Kudos: 113, Bookmarks: 14 (wrapped in an <a>, so this also
+		// confirms flattenedText is used rather than the dd's direct
+		// text), Hits: 1,776 (comma-formatted, parsed with commas
+		// stripped).
+		let html = htmlFixtureString("ao3-work-multi-chapter.html")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		#expect(result.commentCount == 272)
+		#expect(result.kudosCount == 113)
+		#expect(result.bookmarkCount == 14)
+		#expect(result.hitCount == 1776)
+	}
+
+	@Test func workHeaderStatsCountsNilWhenMetadataBlockAbsent() throws {
+		// A minimal work page with a workskin+chapter but no
+		// dl.work.meta.group at all (matches the two known gate pages,
+		// and any future page shape not yet sampled) -- confirms
+		// extraction still succeeds and the stats counts default to nil
+		// rather than 0 or crashing.
+		let html = """
+		<html><body>
+		<div id="workskin">
+		<div class="chapter" id="chapter-1">
+		<div class="chapter preface group"><h3 class="title">Chapter 1</h3></div>
+		<div class="userstuff module" role="article">Body text.</div>
+		</div>
+		</div>
+		</body></html>
+		"""
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		#expect(result.commentCount == nil)
+		#expect(result.kudosCount == nil)
+		#expect(result.bookmarkCount == nil)
+		#expect(result.hitCount == nil)
+	}
+
+	@Test func metaGroupCollectionsRowRenderedForSingleChapterWork() throws {
 		// This fixture's Work Header includes a Collections row -- the only
-		// one of the four fixtures that does. Confirms rows this extractor
-		// doesn't know about by name still come through, since the whole
-		// <dl> is captured rather than parsed field-by-field.
+		// one of the four fixtures that does. Confirms a row this app
+		// doesn't special-case by name (no dedicated Article field for
+		// collections) still comes through the tags/collections generic
+		// link-reading path rather than being silently dropped, now that
+		// the block is parsed field-by-field instead of captured whole.
 		let html = htmlFixtureString("ao3-work-single-chapter.html")
 		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
 		guard case .success(let result) = outcome else {
@@ -205,8 +260,9 @@ import Testing
 			return
 		}
 
-		#expect(result.contentHTML.contains("class=\"collections\""))
-		#expect(result.contentHTML.contains("href=\"/collections/Voiceteam2025\""))
+		#expect(result.contentHTML.contains("href='/collections/Voiceteam2025'"))
+		#expect(result.contentHTML.contains("Voiceteam 2025"))
+		#expect(result.contentHTML.contains("href='/collections/VT2025_Dapper'"))
 	}
 
 	@Test func metaGroupPrecedesStyleAndWorkskin() throws {
@@ -217,7 +273,7 @@ import Testing
 			return
 		}
 
-		let metaRange = try #require(result.contentHTML.range(of: "class=\"work meta group\""))
+		let metaRange = try #require(result.contentHTML.range(of: "id='ao3Preface'"))
 		let styleRange = try #require(result.contentHTML.range(of: "<style"))
 		let workskinRange = try #require(result.contentHTML.range(of: "id=\"workskin\""))
 		#expect(metaRange.lowerBound < styleRange.lowerBound)
