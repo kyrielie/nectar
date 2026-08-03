@@ -889,16 +889,6 @@ private extension LocalAccountRefresher {
 		guard let url = url(for: feed) else {
 			return (true, "Skipped — invalid URL")
 		}
-
-		// The pasted-AO3-link-list import feed (Account.importedLinksFeedURL)
-		// has no real server behind it -- its articles are written directly
-		// via updateAsync, never fetched. Permanently excluded here, not just
-		// this-pass-skipped: unlike badHosts below, a later refresh attempt
-		// would never succeed, so there's no reason to keep retrying it.
-		if url.scheme?.lowercased() == "nectar-import" {
-			return (true, "Skipped — one-time import, no server to refresh from")
-		}
-
 		guard let lowercaseHost = url.host()?.lowercased() else {
 			return (true, "Skipped — no host")
 		}

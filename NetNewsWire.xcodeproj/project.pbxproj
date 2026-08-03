@@ -134,7 +134,6 @@
 		984E0EAB531C7F6FB4086738 /* MainTimelineCellLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AD1F1DEE29D5AC5F3AF3280 /* MainTimelineCellLayout.swift */; };
 		98CFFD3E273890E57EEB014F /* AccountNotificationInspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE60AD3DFCB945E8A8E31218 /* AccountNotificationInspectorView.swift */; };
 		9A4A0FB8D419866DC0B35721 /* Images in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 1ED5F18CEF977EC9F1E394EF /* Images */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		9B0C9B5A28FAA99197FF0CE2 /* AO3LinkListImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAC3DB1499C178FD818855B3 /* AO3LinkListImportView.swift */; };
 		9BD92BA7096736A58A43EFEC /* LastOpenedFeedDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67DA9E3DE55F00F8FDBD9AA6 /* LastOpenedFeedDelegate.swift */; };
 		9D73FF0EC56144D64612D908 /* TodayFeedDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F56A5C6264448CAA93A5D43 /* TodayFeedDelegate.swift */; };
 		9E1F05E5E01E2553E361E19D /* RootSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B147CEBBBC65514A864B1183 /* RootSplitViewController.swift */; };
@@ -394,7 +393,6 @@
 		B4AA5C3AF2D66603B137286C /* AccountStatsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStatsViewModel.swift; sourceTree = "<group>"; };
 		B7EF8AEC62BAFF8805D52EC6 /* IconImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconImageView.swift; sourceTree = "<group>"; };
 		B8B1B49AB8B30C88EC7F5F47 /* TitleActivityItemSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleActivityItemSource.swift; sourceTree = "<group>"; };
-		BAC3DB1499C178FD818855B3 /* AO3LinkListImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3LinkListImportView.swift; sourceTree = "<group>"; };
 		BBA5B8A874CE124C100A11D6 /* TableOfContentsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableOfContentsViewController.swift; sourceTree = "<group>"; };
 		BBBC5386FE8A011F4426330E /* ArticleThemePreviewWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemePreviewWebView.swift; sourceTree = "<group>"; };
 		BDD3222E8CC315E9CA217756 /* ArticleUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleUtilities.swift; sourceTree = "<group>"; };
@@ -720,7 +718,6 @@
 		92EC9E72B3BBD92E0E0D1CE8 /* Import */ = {
 			isa = PBXGroup;
 			children = (
-				BAC3DB1499C178FD818855B3 /* AO3LinkListImportView.swift */,
 				5E99DF16E2818DD03F982E08 /* OPMLImportCoordinator.swift */,
 			);
 			path = Import;
@@ -1165,7 +1162,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				BE43C5ED1F77EEF08E709078 /* AO3AccountSettingsView.swift in Sources */,
-				9B0C9B5A28FAA99197FF0CE2 /* AO3LinkListImportView.swift in Sources */,
 				3DA20BFB7C763BE1E5A29D1E /* AO3LoginViewController.swift in Sources */,
 				0F772D9D5114AF9C11A782A8 /* AO3OnboardingView.swift in Sources */,
 				2BA4B293F8F08024211727E1 /* AboutContributor.swift in Sources */,
