@@ -66,6 +66,17 @@ struct AO3AccountSettingsView: View {
 			} footer: {
 				Text(NSLocalizedString("Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Sign-in is for reading only -- Nectar can't post kudos, subscribe, bookmark, or comment.", comment: "AO3 account section footer"))
 			}
+
+			Section {
+				Text(NSLocalizedString("About Tag & User Feeds", comment: "AO3 RSS limitations info row title"))
+					.font(.headline)
+				Text(NSLocalizedString("AO3's tag and user RSS feeds only cover canonical tags -- a feed for a synonym or an uncommonly-spelled tag will come back empty even if the tag itself has works. Feeds can't combine multiple tags the way AO3's own filtered search results can.", comment: "AO3 RSS limitations: canonical tags and combining"))
+					.foregroundStyle(.secondary)
+				Text(NSLocalizedString("Works an author has archive-locked to registered users never appear in RSS at all, signed in or not -- RSS has no concept of an authenticated request. Nectar's AO3 sign-in above only helps once a locked work's link reaches Nectar some other way.", comment: "AO3 RSS limitations: archive-locked works"))
+					.foregroundStyle(.secondary)
+			} footer: {
+				Text(NSLocalizedString("These are limits of AO3's existing RSS mechanism itself, not of Nectar.", comment: "AO3 RSS limitations section footer"))
+			}
 		}
 		.navigationTitle(Text(verbatim: "Archive of Our Own"))
 		.sheet(isPresented: $isShowingLogin, onDismiss: {
