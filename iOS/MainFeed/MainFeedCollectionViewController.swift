@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import SwiftUI
 import os
 import SafariServices
 import WebKit
@@ -136,6 +137,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 	override func viewDidAppear(_ animated: Bool) {
 		super.viewDidAppear(animated)
 		self.deselectIfNeccessary()
+		self.presentAO3OnboardingIfNeeded()
 	}
 
 	func deselectIfNeccessary() {
@@ -167,6 +169,49 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 				return
 			}
 		})
+	}
+
+	/// Presents the AO3 first-run screen (Workstream 4) at most once ever,
+	/// and only when every account has zero subscribed feeds -- someone who
+	/// already has feeds, from any source, clearly doesn't need "how do I
+	/// add my first feed" guidance. Checked on every appearance of this
+	/// screen (not just app launch) since a brand-new local account starts
+	/// with zero feeds and this is the first screen shown after that
+	/// account is created.
+	func presentAO3OnboardingIfNeeded() {
+		guard !AppDefaults.shared.hasShownAO3Onboarding else {
+			return
+		}
+		guard !AccountManager.shared.accounts.contains(where: { !$0.flattenedFeeds().isEmpty }) else {
+			AppDefaults.shared.hasShownAO3Onboarding = true
+			return
+		}
+
+		let onboardingView = AO3OnboardingView(
+			onAddFeed: { [weak self] in
+				self?.dismiss(animated: true) {
+					// "https://archiveofourown.org/" as a URL-field starting
+					// point, not a complete feed URL -- AddFeedViewController
+					// still requires the person to paste their actual tag,
+					// user, or work feed link. Whether a plain (non-.atom)
+					// AO3 page URL autodiscovers via FeedFinder is
+					// unverified (see the plan's Workstream 4 note); the
+					// safest starting point that's definitely still correct
+					// either way is the bare domain.
+					self?.coordinator.showAddFeed(initialFeed: "https://archiveofourown.org/", initialFeedName: nil)
+				}
+			},
+			onSkip: { [weak self] in
+				self?.dismiss(animated: true)
+			}
+		)
+
+		let hostingController = UIHostingController(rootView: onboardingView)
+		hostingController.modalPresentationStyle = .formSheet
+		hostingController.isModalInPresentation = false
+
+		AppDefaults.shared.hasShownAO3Onboarding = true
+		present(hostingController, animated: true)
 	}
 
 	func registerForNotifications() {

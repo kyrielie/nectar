@@ -18,17 +18,44 @@ public struct AO3ExtractedChapter: Sendable {
 
 public struct AO3ChapterExtractionResult: Sendable {
 
-	/// The `#workskin` wrapper (plus its preceding `<style>` block, when the
-	/// work has a custom skin), re-serialized as a single unit. This is what
-	/// actually gets rendered -- title, work-level summary, and every posted
-	/// chapter concatenated, exactly as the live page groups them. Splitting
-	/// this into per-chapter HTML and discarding the wrapper would break the
-	/// workskin's styling, since every one of its rules is scoped under
-	/// `#workskin` (see `AO3ChapterHTMLExtractor`'s header comment).
+	/// The Work Header metadata block (rating/warning/category/fandom/
+	/// relationships/characters/tags/language/series/collections/stats),
+	/// when found, followed by the `#workskin` wrapper (plus its preceding
+	/// `<style>` block, when the work has a custom skin), re-serialized as a
+	/// single unit. This is what actually gets rendered -- metadata, title,
+	/// work-level summary, and every posted chapter concatenated, exactly
+	/// as the live page groups them (except the metadata block, which is
+	/// relocated here from elsewhere on the page -- see
+	/// `AO3ChapterHTMLExtractor`'s header comment). Splitting the
+	/// style+workskin portion into per-chapter HTML and discarding the
+	/// wrapper would break the workskin's styling, since every one of its
+	/// rules is scoped under `#workskin`.
 	public let contentHTML: String
 
 	/// Per-chapter boundaries/titles, in document order, for the TOC only.
 	public let chapters: [AO3ExtractedChapter]
+
+	/// Structured counts read off the Work Header's `dl.stats` block (see
+	/// `AO3PrefaceRenderer`/`parseWorkHeader` below), for persisting to the
+	/// database independent of however the preface itself ends up
+	/// displayed. Nil when the metadata block itself was absent (gated
+	/// pages) or didn't include that particular stat -- Comments and
+	/// Bookmarks are both known to be sometimes absent even on a normal
+	/// work page (confirmed: ao3-work-single-chapter.html's fixture has no
+	/// Comments row).
+	public let commentCount: Int?
+	public let kudosCount: Int?
+	public let bookmarkCount: Int?
+	public let hitCount: Int?
+
+	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil) {
+		self.contentHTML = contentHTML
+		self.chapters = chapters
+		self.commentCount = commentCount
+		self.kudosCount = kudosCount
+		self.bookmarkCount = bookmarkCount
+		self.hitCount = hitCount
+	}
 }
 
 /// The four ways a fetched AO3 work page can come back, distinguished by
@@ -67,6 +94,15 @@ public enum AO3ChapterExtractionOutcome: Sendable {
 /// scoped `#workskin .classname { ... }`, so it and the wrapper have to be
 /// captured and stored together as one unit -- neither means anything to a
 /// renderer without the other.
+///
+/// Separately, the work's rating/warning/category/fandom/relationships/
+/// characters/tags/language/series/collections/stats live in their own
+/// `<dl class="work meta group">`, entirely outside `#workskin` (a sibling
+/// of `#work-skin` under `#main`) -- AO3's own live page renders this table
+/// as the "Work Header" landmark. Parsed into structured data (see
+/// `parseWorkHeader`/`AO3PrefaceRenderer`), re-rendered in this app's own
+/// preface style, and prepended to `contentHTML` as its own unit, unrelated
+/// positionally to the style+workskin capture.
 public enum AO3ChapterHTMLExtractor {
 
 	/// See `AO3ChapterExtractionOutcome` for what each case means and when
@@ -85,14 +121,9 @@ public enum AO3ChapterHTMLExtractor {
 				stripPhantomTitleHeadingClass(inWorkSkin: workSkinDiv)
 
 				let chapters = chapterDivs.compactMap(extractedChapter)
+				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				var contentHTML = ""
-				if let styleElement = precedingStyleElement(parent: workSkinParent, beforeIndex: workSkinIndex) {
-					contentHTML += serializeHTMLLiteNodes([.element(styleElement)])
-				}
-				contentHTML += serializeHTMLLiteNodes([.element(workSkinDiv)])
-
-				return .success(AO3ChapterExtractionResult(contentHTML: contentHTML, chapters: chapters))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount))
 			}
 
 			// Single-chapter works carry no per-chapter <div class="chapter">
@@ -109,14 +140,9 @@ public enum AO3ChapterHTMLExtractor {
 				stripLandmarkHeading(from: chaptersDiv)
 
 				let chapters = [AO3ExtractedChapter(id: "chapter-1", title: "Chapter 1")]
+				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				var contentHTML = ""
-				if let styleElement = precedingStyleElement(parent: workSkinParent, beforeIndex: workSkinIndex) {
-					contentHTML += serializeHTMLLiteNodes([.element(styleElement)])
-				}
-				contentHTML += serializeHTMLLiteNodes([.element(workSkinDiv)])
-
-				return .success(AO3ChapterExtractionResult(contentHTML: contentHTML, chapters: chapters))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount))
 			}
 		}
 
@@ -245,6 +271,249 @@ private extension AO3ChapterHTMLExtractor {
 			return
 		}
 		titleHeading.attributes["class"] = "title"
+	}
+}
+
+// MARK: - Content assembly
+
+private extension AO3ChapterHTMLExtractor {
+
+	/// The metadata block (rating/warning/category/fandom/relationships/
+	/// characters/additional tags/language/series/collections/stats),
+	/// rendered ahead of the style+workskin unit. Found by a plain
+	/// descendant search on `<dl class="work meta group">` -- confirmed
+	/// unique per page across every fixture in hand, and unlike the
+	/// `<style>` block, not positionally coupled to `#workskin` at all (it
+	/// lives entirely outside `#work-skin`, as a sibling under `#main`), so
+	/// no sibling-adjacency logic is needed to find it.
+	///
+	/// Absent on the two known gate pages (confirmed: 0 occurrences in
+	/// ao3-work-adult-content-gate.html) and, more importantly, on any
+	/// future page shape this hasn't been sampled against either -- so this
+	/// is optional. A work extracting successfully without its metadata
+	/// block is a smaller loss than the whole extraction failing over it.
+	///
+	/// Previously (patch 0006) this block was captured whole rather than
+	/// parsed field-by-field, specifically to get AO3's own real,
+	/// correctly-encoded tag links (e.g. "M/M" -> "M*s*M") and to pick up
+	/// any row not yet sampled (Series, at the time) for free. Parsing into
+	/// `AO3PrefaceData` via `parseWorkHeader` below keeps both of those --
+	/// real hrefs are read directly off each `<a>`, and Series is now
+	/// confirmed and handled (see `seriesEntries(fromDD:)`) -- while also
+	/// re-rendering through `AO3PrefaceRenderer`, the same renderer
+	/// `ArticleRenderer` uses for the pre-fetch synthetic preface. That's
+	/// what makes both prefaces look alike (Ambrosia-style comma-joined
+	/// tags, inline stats) instead of this one carrying AO3's own
+	/// `<ul class="commas"><li>` markup, and it's what turns
+	/// Comments/Kudos/Bookmarks/Hits into structured data this function can
+	/// hand back to callers instead of leaving them buried in an opaque
+	/// HTML blob.
+	static func serializedContentHTML(root: HTMLLiteElement, workSkinParent: HTMLLiteElement, workSkinIndex: Int, workSkinDiv: HTMLLiteElement) -> (contentHTML: String, commentCount: Int?, kudosCount: Int?, bookmarkCount: Int?, hitCount: Int?) {
+		var contentHTML = ""
+		var counts = (commentCount: Int?.none, kudosCount: Int?.none, bookmarkCount: Int?.none, hitCount: Int?.none)
+
+		if let workHeader = parseWorkHeader(root: root) {
+			if let prefaceHTML = AO3PrefaceRenderer.html(id: "ao3Preface", data: workHeader.data) {
+				contentHTML += prefaceHTML
+			}
+			counts = (workHeader.commentCount, workHeader.kudosCount, workHeader.bookmarkCount, workHeader.hitCount)
+		}
+		if let styleElement = precedingStyleElement(parent: workSkinParent, beforeIndex: workSkinIndex) {
+			contentHTML += serializeHTMLLiteNodes([.element(styleElement)])
+		}
+		contentHTML += serializeHTMLLiteNodes([.element(workSkinDiv)])
+		return (contentHTML, counts.commentCount, counts.kudosCount, counts.bookmarkCount, counts.hitCount)
+	}
+}
+
+// MARK: - Work Header parsing
+
+/// Result of parsing `<dl class="work meta group">` into structured data:
+/// the renderable preface rows, plus the four stats counts worth
+/// persisting to the database separately from however the preface itself
+/// is displayed.
+struct AO3WorkHeaderExtraction {
+	let data: AO3PrefaceData
+	let commentCount: Int?
+	let kudosCount: Int?
+	let bookmarkCount: Int?
+	let hitCount: Int?
+}
+
+private extension AO3ChapterHTMLExtractor {
+
+	/// Parses AO3's real `<dl class="work meta group">` -- confirmed against
+	/// six independent fetched-page fixtures (entire.html,
+	/// ao3-work-single-chapter.html, plus fullworkseries.html,
+	/// twoauthors.html, and twoseries.html, all sampled specifically to
+	/// confirm the Series row's real shape) -- into row/stats data ready for
+	/// `AO3PrefaceRenderer`.
+	///
+	/// Row identification is by each `<dt>`'s class token, not its label
+	/// text: label text varies by row content in ways that don't affect
+	/// meaning ("Category:" vs "Categories:" depending on count, confirmed
+	/// in twoseries.html; "Updated:" vs "Completed:" for the same `dt
+	/// class="status"`, confirmed comparing fullworkseries.html against
+	/// twoauthors.html) -- keying on class is what AO3's own site CSS does
+	/// too, and is stable across both variations.
+	static func parseWorkHeader(root: HTMLLiteElement) -> AO3WorkHeaderExtraction? {
+		guard let metaGroup = firstDescendant(of: root, where: {
+			$0.tag == "dl" && $0.attributes["class"] == "work meta group"
+		}) else {
+			return nil
+		}
+
+		var rows: [AO3PrefaceRow] = []
+		var statsRows: [AO3PrefaceStatsRow] = []
+		var commentCount: Int?
+		var kudosCount: Int?
+		var bookmarkCount: Int?
+		var hitCount: Int?
+
+		var pendingDT: HTMLLiteElement?
+		for element in directChildElements(of: metaGroup) {
+			if element.tag == "dt" {
+				pendingDT = element
+				continue
+			}
+			guard element.tag == "dd", let dt = pendingDT else {
+				continue
+			}
+			let dd = element
+			pendingDT = nil
+
+			let classTokens = Set((dt.attributes["class"] ?? "").split(separator: " ").map(String.init))
+			let label = flattenedText(dt).trimmingCharacters(in: .whitespacesAndNewlines)
+
+			if classTokens.contains("tags") {
+				// rating / warning / category / fandom / relationship /
+				// character / freeform -- each a <ul class="commas"><li>
+				// of <a class="tag" href="...">.
+				let entries = tagEntries(fromLinksIn: dd)
+				guard !entries.isEmpty else { continue }
+				rows.append(AO3PrefaceRow(label: label, values: entries))
+			} else if classTokens.contains("language") {
+				let text = flattenedText(dd).trimmingCharacters(in: .whitespacesAndNewlines)
+				guard !text.isEmpty else { continue }
+				rows.append(AO3PrefaceRow(label: label, values: [AO3TagEntry(text: text)]))
+			} else if classTokens.contains("series") {
+				let entries = seriesEntries(fromDD: dd)
+				guard !entries.isEmpty else { continue }
+				rows.append(AO3PrefaceRow(label: label, values: entries))
+			} else if classTokens.contains("collections") {
+				// Plain comma-separated <a> links directly in the dd, no
+				// <ul><li> wrapper -- confirmed a different shape from the
+				// tag rows above (ao3-work-single-chapter.html).
+				let entries = tagEntries(fromLinksIn: dd)
+				guard !entries.isEmpty else { continue }
+				rows.append(AO3PrefaceRow(label: label, values: entries))
+			} else if classTokens.contains("stats") {
+				guard let statsDL = firstDescendant(of: dd, where: { $0.tag == "dl" && $0.attributes["class"] == "stats" }) else {
+					continue
+				}
+				var pendingStatDT: HTMLLiteElement?
+				for statElement in directChildElements(of: statsDL) {
+					if statElement.tag == "dt" {
+						pendingStatDT = statElement
+						continue
+					}
+					guard statElement.tag == "dd", let statDT = pendingStatDT else {
+						continue
+					}
+					pendingStatDT = nil
+
+					let statLabel = flattenedText(statDT).trimmingCharacters(in: .whitespacesAndNewlines)
+					// flattenedText, not just the dd's own text, since
+					// Bookmarks wraps its number in an <a href=".../bookmarks">
+					// (confirmed: entire.html) -- reading only direct text
+					// would silently drop it.
+					let statValue = flattenedText(statElement).trimmingCharacters(in: .whitespacesAndNewlines)
+					guard !statValue.isEmpty else { continue }
+					statsRows.append(AO3PrefaceStatsRow(label: statLabel, value: statValue))
+
+					let numeric = Int(statValue.replacingOccurrences(of: ",", with: ""))
+					switch statDT.attributes["class"] {
+					case "comments": commentCount = numeric
+					case "kudos": kudosCount = numeric
+					case "bookmarks": bookmarkCount = numeric
+					case "hits": hitCount = numeric
+					default: break
+					}
+				}
+			}
+		}
+
+		// Words is deliberately not parsed out to a dedicated field here --
+		// it's still part of statsRows' display text (nothing is lost
+		// visually), but Article.wordCount stays Workstream 1's territory,
+		// same as chapterTotal/isComplete, so a chapter fetch can't
+		// silently override a value the feed parser already owns.
+
+		guard !rows.isEmpty || !statsRows.isEmpty else {
+			return nil
+		}
+		return AO3WorkHeaderExtraction(
+			data: AO3PrefaceData(rows: rows, statsRows: statsRows),
+			commentCount: commentCount,
+			kudosCount: kudosCount,
+			bookmarkCount: bookmarkCount,
+			hitCount: hitCount
+		)
+	}
+
+	/// `<a class="tag" href="...">Name</a>` entries, wherever they sit
+	/// (inside `ul.commas > li`, or directly in the dd for
+	/// language/collections rows) -- descendant search finds either shape
+	/// without needing to special-case the wrapper.
+	static func tagEntries(fromLinksIn dd: HTMLLiteElement) -> [AO3TagEntry] {
+		descendants(of: dd, where: { $0.tag == "a" }).map {
+			AO3TagEntry(text: flattenedText($0).trimmingCharacters(in: .whitespacesAndNewlines), href: $0.attributes["href"])
+		}
+	}
+
+	/// `<dd class="series">` holds one or more `<span class="series">`
+	/// entries (comma-separated in the source when a work belongs to more
+	/// than one series -- confirmed in twoseries.html), each wrapping
+	/// optional Previous/Next Work navigation links around the one that
+	/// actually matters: `<span class="position">Part <N> of
+	/// <a href="/series/<id>">Name</a></span>`. Only that inner span is
+	/// read; the Previous/Next links are page-navigation chrome, not
+	/// metadata about the work itself.
+	static func seriesEntries(fromDD dd: HTMLLiteElement) -> [AO3TagEntry] {
+		let spans = descendants(of: dd, where: { $0.tag == "span" && $0.attributes["class"] == "series" })
+		return spans.compactMap { span in
+			guard let positionSpan = firstDescendant(of: span, where: { $0.tag == "span" && $0.attributes["class"] == "position" }) else {
+				return nil
+			}
+			guard let anchor = firstDescendant(of: positionSpan, where: { $0.tag == "a" }) else {
+				return nil
+			}
+			let name = flattenedText(anchor).trimmingCharacters(in: .whitespacesAndNewlines)
+			let fullText = flattenedText(positionSpan).trimmingCharacters(in: .whitespacesAndNewlines)
+			guard !name.isEmpty, let nameRange = fullText.range(of: name) else {
+				return AO3TagEntry(text: name, href: anchor.attributes["href"])
+			}
+			// Everything before the linked name -- "Part 6 of " -- stays
+			// unlinked, matching Ambrosia's own preface style (confirmed:
+			// test2.json's Series row links only the series name, not the
+			// "Part 1 of" prefix).
+			let prefix = String(fullText[fullText.startIndex..<nameRange.lowerBound])
+			return AO3TagEntry(text: name, href: anchor.attributes["href"], prefix: prefix)
+		}
+	}
+
+	/// `element.children` filtered down to just the `.element` nodes, in
+	/// order -- `dl.work.meta.group`'s and the inner `dl.stats`' direct
+	/// children alternate dt/dd with only whitespace text nodes between
+	/// them, so this is enough to pair them up sequentially without needing
+	/// a "next sibling" lookup.
+	static func directChildElements(of element: HTMLLiteElement) -> [HTMLLiteElement] {
+		element.children.compactMap {
+			if case .element(let el) = $0 {
+				return el
+			}
+			return nil
+		}
 	}
 }
 

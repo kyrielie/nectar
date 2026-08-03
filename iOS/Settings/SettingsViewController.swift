@@ -22,6 +22,7 @@ final class SettingsViewController: UITableViewController {
 		case appearance = 3
 		case troubleshooting = 4
 		case help = 5
+		case ao3Account = 6
 	}
 
 	private enum TroubleshootingRow: Int {
@@ -284,6 +285,9 @@ final class SettingsViewController: UITableViewController {
 			default:
 				break
 			}
+		case .ao3Account:
+			let hosting = UIHostingController(rootView: AO3AccountSettingsView())
+			self.navigationController?.pushViewController(hosting, animated: true)
 		default:
 			tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
 		}
