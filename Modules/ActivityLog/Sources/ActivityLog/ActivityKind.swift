@@ -54,6 +54,7 @@ public enum ActivityKind: Sendable, Hashable {
 	case downloadAvatar(avatarURL: String)
 	case downloadHTMLMetadata(urlString: String)
 	case fetchAO3Chapter(workID: String)
+	case skipAO3SeriesFetch(bookKey: String)
 
 	/// Localized description for activity kinds that don't carry a URL to display separately.
 	/// Returns nil for the URL-bearing cases — each caller renders its own primary + URL form.
@@ -101,7 +102,7 @@ public enum ActivityKind: Sendable, Hashable {
 			return NSLocalizedString("Vacuuming database", bundle: .module, comment: "Activity kind")
 		case .exportOPML:
 			return NSLocalizedString("Exporting OPML", bundle: .module, comment: "Activity kind")
-		case .refreshFeedContent, .findFeed, .fetchFeedCandidate, .downloadFeedImage, .downloadFavicon, .downloadAvatar, .downloadHTMLMetadata, .fetchAO3Chapter:
+		case .refreshFeedContent, .findFeed, .fetchFeedCandidate, .downloadFeedImage, .downloadFavicon, .downloadAvatar, .downloadHTMLMetadata, .fetchAO3Chapter, .skipAO3SeriesFetch:
 			return nil
 		}
 	}
@@ -137,6 +138,9 @@ public enum ActivityKind: Sendable, Hashable {
 		case .fetchAO3Chapter(let workID):
 			let format = NSLocalizedString("Fetching AO3 chapters for work %@", bundle: .module, comment: "Activity kind — fetching AO3 chapter content — %@ is the AO3 work id")
 			return String(format: format, workID)
+		case .skipAO3SeriesFetch(let bookKey):
+			let format = NSLocalizedString("Skipped AO3 refresh for combined series %@", bundle: .module, comment: "Activity kind — a combined/anthology series has no single AO3 work to refetch — %@ is the book's series-based bookKey")
+			return String(format: format, bookKey)
 		default:
 			return ""
 		}

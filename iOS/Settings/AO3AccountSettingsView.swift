@@ -19,6 +19,7 @@ struct AO3AccountSettingsView: View {
 	@State private var isSignedIn = AO3SessionStore.isSignedIn
 	@State private var isShowingLogin = false
 	@State private var isShowingSignOutConfirmation = false
+	@State private var refetchInterval = AO3PrefaceRefetchPreference.current
 
 	var body: some View {
 		List {
@@ -31,6 +32,19 @@ struct AO3AccountSettingsView: View {
 						 : NSLocalizedString("Not Signed In", comment: "AO3 signed-out status"))
 						.foregroundStyle(.secondary)
 				}
+			}
+
+			Section {
+				Picker(NSLocalizedString("Check for Updates", comment: "AO3 preface refetch cadence picker label"), selection: $refetchInterval) {
+					ForEach(AO3PrefaceRefetchInterval.allCases, id: \.self) { interval in
+						Text(interval.description).tag(interval)
+					}
+				}
+				.onChange(of: refetchInterval) { _, newValue in
+					AO3PrefaceRefetchPreference.current = newValue
+				}
+			} footer: {
+				Text(NSLocalizedString("How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes.", comment: "AO3 preface refetch cadence footer"))
 			}
 
 			Section {
