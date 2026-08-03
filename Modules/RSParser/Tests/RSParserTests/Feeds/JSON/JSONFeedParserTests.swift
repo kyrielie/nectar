@@ -122,6 +122,14 @@ import RSParser
 		// _ambrosia.date_modified fills the standard dateModified field since
 		// Ambrosia's JSONFeedItem has no top-level date_modified of its own.
 		#expect(withExtension.dateModified != nil)
+		// _ambrosia.comment_count / kudos_count / bookmark_count / hit_count --
+		// the same ParsedItem fields AO3ChapterHTMLExtractor populates from a
+		// live chapter fetch, here wired to the feed read path instead so a
+		// friend's own hosted Ambrosia server can publish these stats.
+		#expect(withExtension.commentCount == 57)
+		#expect(withExtension.kudosCount == 1203)
+		#expect(withExtension.bookmarkCount == 88)
+		#expect(withExtension.hitCount == 15420)
 
 		let withoutExtension = try #require(parsedFeed.items.first { $0.uniqueID == "ambrosia-book-43" })
 		#expect(withoutExtension.wordCount == nil)
@@ -130,5 +138,9 @@ import RSParser
 		#expect(withoutExtension.fandoms == nil)
 		#expect(withoutExtension.series == nil)
 		#expect(withoutExtension.dateModified == nil)
+		#expect(withoutExtension.commentCount == nil)
+		#expect(withoutExtension.kudosCount == nil)
+		#expect(withoutExtension.bookmarkCount == nil)
+		#expect(withoutExtension.hitCount == nil)
 	}
 }

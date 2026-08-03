@@ -29,7 +29,11 @@
         "series": [
           { "name": "The Long Way Home Series", "index": 2, "ao3_id": "987654" }
         ],
-        "date_modified": "2024-06-15T08:30:00Z"
+        "date_modified": "2024-06-15T08:30:00Z",
+        "comment_count": 57,
+        "kudos_count": 1203,
+        "bookmark_count": 88,
+        "hit_count": 15420
       }
     },
     {
