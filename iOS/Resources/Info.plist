@@ -239,8 +239,8 @@
 		</dict>
 	</array>
 	<key>UserAgent</key>
-	<string>Nectar (https://netnewswire.com/)</string>
+	<string>Nectar (https://github.com/kyrielie/nectar)</string>
 	<key>UserAgentExtended</key>
-	<string>Nectar (https://netnewswire.com/; [platform]; [version] ([build]))</string>
+	<string>Nectar (https://github.com/kyrielie/nectar; [platform]; [version] ([build]))</string>
 </dict>
 </plist>

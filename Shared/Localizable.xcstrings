@@ -131,6 +131,9 @@
     "Cancel" : {
       "comment" : "Cancel\nCancel button"
     },
+    "Check for Updates" : {
+      "comment" : "AO3 preface refetch cadence picker label"
+    },
     "Choose an account to receive the imported feeds and folders" : {
       "comment" : "Import Account"
     },
@@ -382,6 +385,9 @@
     },
     "Here" : {
       "comment" : "Here"
+    },
+    "How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes." : {
+      "comment" : "AO3 preface refetch cadence footer"
     },
     "Import Failed" : {
       "comment" : "Import Failed"
