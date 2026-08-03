@@ -72,6 +72,17 @@ public struct JSONFeedParser {
 		static let ambrosiaSeriesIndex = "index"
 		static let ambrosiaSeriesAO3ID = "ao3_id"
 
+		// AO3 Work Header stats (Comments/Kudos/Bookmarks/Hits), wire-format
+		// support for a friend's own hosted Ambrosia server to publish
+		// search-result-derived stats to another Nectar user. Distinct from
+		// AO3ChapterHTMLExtractor's own fetch-derived counts on ParsedItem --
+		// both write into the same commentCount/kudosCount/bookmarkCount/hitCount
+		// fields, but this is the feed read path rather than the live chapter fetch.
+		static let ambrosiaCommentCount = "comment_count"
+		static let ambrosiaKudosCount = "kudos_count"
+		static let ambrosiaBookmarkCount = "bookmark_count"
+		static let ambrosiaHitCount = "hit_count"
+
 		// Read-state identity fields (see LocalFeedServer's JSONFeedAmbrosiaExtension).
 		static let ambrosiaAO3WorkID = "ao3_work_id"
 		static let ambrosiaIsAnthology = "is_anthology"
@@ -227,7 +238,7 @@ private extension JSONFeedParser {
 			dateModified = parseDate(ambrosiaDateModified)
 		}
 
-		return ParsedItem(syncServiceID: nil, uniqueID: uniqueID, feedURL: feedURL, url: url, externalURL: externalURL, title: title, language: language, contentHTML: contentHTML, contentText: contentText, markdown: nil, summary: summary, imageURL: imageURL, bannerImageURL: bannerImageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, tags: tags, attachments: attachments, isAmbrosiaItem: ambrosia != nil, wordCount: ambrosia?[Key.ambrosiaWordCount] as? Int, chapterCurrent: ambrosia?[Key.ambrosiaChapterCurrent] as? Int, chapterTotal: ambrosia?[Key.ambrosiaChapterTotal] as? Int, isComplete: ambrosia?[Key.ambrosiaIsComplete] as? Bool, fandoms: ambrosia?[Key.ambrosiaFandoms] as? [String], relationships: ambrosia?[Key.ambrosiaRelationships] as? [String], characters: ambrosia?[Key.ambrosiaCharacters] as? [String], ratings: ambrosia?[Key.ambrosiaRatings] as? [String], warnings: ambrosia?[Key.ambrosiaWarnings] as? [String], categories: ambrosia?[Key.ambrosiaCategories] as? [String], series: parseAmbrosiaSeries(ambrosia), ao3WorkID: ambrosia?[Key.ambrosiaAO3WorkID] as? String, isAnthology: ambrosia?[Key.ambrosiaIsAnthology] as? Bool, ao3SeriesID: ambrosia?[Key.ambrosiaAO3SeriesID] as? String, seriesName: ambrosia?[Key.ambrosiaBookSeriesName] as? String)
+		return ParsedItem(syncServiceID: nil, uniqueID: uniqueID, feedURL: feedURL, url: url, externalURL: externalURL, title: title, language: language, contentHTML: contentHTML, contentText: contentText, markdown: nil, summary: summary, imageURL: imageURL, bannerImageURL: bannerImageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, tags: tags, attachments: attachments, isAmbrosiaItem: ambrosia != nil, wordCount: ambrosia?[Key.ambrosiaWordCount] as? Int, chapterCurrent: ambrosia?[Key.ambrosiaChapterCurrent] as? Int, chapterTotal: ambrosia?[Key.ambrosiaChapterTotal] as? Int, isComplete: ambrosia?[Key.ambrosiaIsComplete] as? Bool, fandoms: ambrosia?[Key.ambrosiaFandoms] as? [String], relationships: ambrosia?[Key.ambrosiaRelationships] as? [String], characters: ambrosia?[Key.ambrosiaCharacters] as? [String], ratings: ambrosia?[Key.ambrosiaRatings] as? [String], warnings: ambrosia?[Key.ambrosiaWarnings] as? [String], categories: ambrosia?[Key.ambrosiaCategories] as? [String], series: parseAmbrosiaSeries(ambrosia), commentCount: ambrosia?[Key.ambrosiaCommentCount] as? Int, kudosCount: ambrosia?[Key.ambrosiaKudosCount] as? Int, bookmarkCount: ambrosia?[Key.ambrosiaBookmarkCount] as? Int, hitCount: ambrosia?[Key.ambrosiaHitCount] as? Int, ao3WorkID: ambrosia?[Key.ambrosiaAO3WorkID] as? String, isAnthology: ambrosia?[Key.ambrosiaIsAnthology] as? Bool, ao3SeriesID: ambrosia?[Key.ambrosiaAO3SeriesID] as? String, seriesName: ambrosia?[Key.ambrosiaBookSeriesName] as? String)
 	}
 
 	static func parseAmbrosiaSeries(_ ambrosia: JSONDictionary?) -> [ParsedSeriesEntry]? {
