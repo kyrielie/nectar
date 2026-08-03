@@ -3,7 +3,9 @@
 //  Account
 //
 //  Nectar AO3 direct-reading support, Workstream 2 ("On-demand chapter
-//  fetch and storage") -- see docs/ao3-merged-plan-nectar.md.
+//  fetch and storage") -- see docs/ao3-merged-plan-nectar.md. Workstream 3
+//  ("optional AO3 login") is layered on top of this file: see
+//  retryAuthenticated(...) below and AO3AuthenticatedFetcher.
 //
 //  Fetches an AO3 work's live page (`?view_full_work=true&view_adult=true`)
 //  on demand and
@@ -11,9 +13,13 @@
 //  whose bookKey identifies it as an AO3 work ("ao3-work:<id>"). Modeled
 //  directly on HTMLMetadataDownloader: same hoursBetweenAttempts gate, same
 //  ActivityLog start/complete/fail calls, same "leave existing content alone
-//  on failure, don't retry aggressively" shape. Fetches are anonymous --
-//  Downloader already forces httpShouldSetCookies = false / .never cookie
-//  policy app-wide, so no change is needed to get that behavior here.
+//  on failure, don't retry aggressively" shape. The primary fetch is
+//  anonymous -- Downloader already forces httpShouldSetCookies = false /
+//  .never cookie policy app-wide, so no change was needed to get that
+//  behavior here. The one exception is the single authenticated retry on
+//  .registrationRequired, which deliberately bypasses Downloader (see
+//  retryAuthenticated's doc comment for why) and attaches a Cookie header
+//  by hand.
 //
 //  ParsedItem reconstruction: Account.updateAsync(feedID:parsedItems:...) is
 //  the only write path for contentHTML (no single-field "update just this"
@@ -177,12 +183,25 @@ nonisolated private extension AO3ChapterFetcher {
 				case .success(let result):
 					extraction = result
 				case .registrationRequired:
-					// Expected, normal outcome until Workstream 3 (login)
-					// ships -- there's currently no way to satisfy it.
-					// Once it does, this is the branch that should trigger
-					// the authenticated retry instead of failing outright.
-					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "This work is only available to registered AO3 users")
-					return
+					switch await retryAuthenticated(url: url) {
+					case .success(let result):
+						extraction = result
+					case .signedOut:
+						// The stored session itself is what's rejected --
+						// distinct from never having signed in at all.
+						// Clearing it means the next fetch attempt (and the
+						// Settings sign-in row) both reflect reality instead
+						// of claiming a session that AO3 no longer honors.
+						AO3SessionStore.clearSession()
+						fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Signed out of AO3 -- sign in again in Settings to read this work")
+						return
+					case .notSignedIn:
+						fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "This work is only available to registered AO3 users")
+						return
+					case .otherFailure(let retryMessage):
+						fail(articleID: articleID, kind: kind, activityLog: activityLog, message: retryMessage)
+						return
+					}
 				case .adultContentGate:
 					// Anomalous now that view_adult=true is sent
 					// unconditionally -- surfaced distinctly, not folded
@@ -223,6 +242,72 @@ nonisolated private extension AO3ChapterFetcher {
 				// leave-it-alone handling.
 				fail(articleID: articleID, kind: kind, activityLog: activityLog, message: error.localizedDescription, error: error)
 			}
+		}
+	}
+
+	/// Result of the single authenticated retry attempted on
+	/// `.registrationRequired`. Distinct from `AO3ChapterExtractionOutcome`
+	/// because the two failure modes that matter here -- "never signed in"
+	/// versus "signed in, but AO3 rejected the session" -- have no
+	/// counterpart in the anonymous-fetch outcome and need different
+	/// handling (only the latter clears the stored session).
+	enum AuthenticatedRetryResult {
+		case success(AO3ChapterExtractionResult)
+		/// No session is stored at all -- login was never completed, or was
+		/// signed out. Not itself an error; the caller falls back to the
+		/// ordinary "registered users only" message.
+		case notSignedIn
+		/// A session was stored and sent, and AO3 still returned
+		/// `.registrationRequired` -- the session is expired or otherwise
+		/// invalid. Caller clears it.
+		case signedOut
+		/// The retry reached AO3 but hit a different outcome
+		/// (`.adultContentGate`, `.notFound`) or a network-level failure --
+		/// not a login problem, so the stored session is left alone.
+		case otherFailure(message: String)
+	}
+
+	/// Retries `url` once with the stored AO3 session's Cookie header
+	/// attached, on `.registrationRequired` only -- `.adultContentGate` and
+	/// `.notFound` aren't login problems and a login retry wouldn't fix
+	/// either (per the plan).
+	///
+	/// Deliberately bypasses `Downloader.shared` rather than adding a
+	/// Cookie header to a request routed through it: `Downloader`'s cache
+	/// is keyed on URL alone, and the anonymous fetch that got
+	/// `.registrationRequired` just cached a response at this exact URL --
+	/// reusing `Downloader` here would silently hand back that cached
+	/// gate-page response instead of ever making the authenticated
+	/// request. `AO3AuthenticatedFetcher` uses its own cache-free ephemeral
+	/// session instead.
+	@MainActor
+	func retryAuthenticated(url: URL) async -> AuthenticatedRetryResult {
+		guard AO3SessionStore.isSignedIn else {
+			return .notSignedIn
+		}
+
+		do {
+			guard let (data, response) = try await AO3AuthenticatedFetcher.fetch(url) else {
+				return .notSignedIn
+			}
+			guard response.statusIsOK, !data.isEmpty, let html = String(data: data, encoding: .utf8) else {
+				return .otherFailure(message: "Could not reach AO3 (HTTP \(response.statusCode))")
+			}
+			switch AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html) {
+			case .success(let result):
+				return .success(result)
+			case .registrationRequired:
+				return .signedOut
+			case .adultContentGate:
+				return .otherFailure(message: "Adult content gate encountered despite view_adult=true (unexpected)")
+			case .notFound:
+				return .otherFailure(message: "No chapter content found (gated or removed work)")
+			}
+		} catch {
+			// Network-level failure on the retry itself -- not a login
+			// problem, so the stored session is left alone; a future fetch
+			// attempt gets another chance.
+			return .otherFailure(message: error.localizedDescription)
 		}
 	}
 

@@ -9,6 +9,7 @@
 import Foundation
 import UIKit
 import RSCore
+import RSParser
 import Articles
 import Account
 import os
@@ -85,10 +86,27 @@ import os
 		return formatter
 	}()
 
+	/// yyyy-MM-dd, matching AO3's own "Stats:" date format exactly (see
+	/// entire.html's `<dd class="published">2026-07-07</dd>`), so the
+	/// synthesized preface's Published/Updated rows read the same as both
+	/// AO3's live page and Ambrosia's own epub-derived preface.
+	private static let ao3StatsDateFormatter: DateFormatter = {
+		let formatter = DateFormatter()
+		formatter.dateFormat = "yyyy-MM-dd"
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		return formatter
+	}()
+
 	private init(article: Article?, theme: ArticleTheme, timelineFeed: SidebarItem? = nil) {
 		self.article = article
 		self.articleTheme = theme
 		self.title = ArticleStringFormatter.sanitizedTitle(article?.title, forHTML: true) ?? ""
+
+		var bodyPrefix = ""
+		if let article, let prefaceHTML = Self.ao3SyntheticPrefaceHTML(for: article) {
+			bodyPrefix += prefaceHTML
+		}
+
 		if let article, article.contentHTML == nil,
 		   let failureMessage = AO3ChapterFetcher.shared.lastFetchFailureMessage(forArticleID: article.articleID) {
 			// contentHTML is nil (full chapter text never landed) and the
@@ -102,10 +120,9 @@ import os
 				.replacingOccurrences(of: "&", with: "&amp;")
 				.replacingOccurrences(of: "<", with: "&lt;")
 				.replacingOccurrences(of: ">", with: "&gt;")
-			self.body = "<p class='ao3ChapterFetchNotice'>Full text unavailable: \(escapedMessage)</p>" + (article.body ?? "")
-		} else {
-			self.body = article?.body ?? ""
+			bodyPrefix += "<p class='ao3ChapterFetchNotice'>Full text unavailable: \(escapedMessage)</p>"
 		}
+		self.body = bodyPrefix + (article?.body ?? "")
 		self.baseURL = article?.baseURL?.absoluteString
 		self.timelineFeed = timelineFeed
 		if let article {
@@ -376,3 +393,104 @@ private extension ArticleRenderer {
 		return url
 	}
 }
+
+// MARK: - Synthesized AO3 preface
+
+private extension ArticleRenderer {
+
+	/// A front-matter block mirroring AO3's own metadata table
+	/// (rating/warning/category/fandom/relationships/characters/language/
+	/// series/stats), synthesized from Workstream 1's already-parsed
+	/// metadata on `article` -- used only as a fallback for the window
+	/// before a chapter fetch has ever succeeded.
+	///
+	/// Once `AO3ChapterFetcher` succeeds once, the real `<dl class="work
+	/// meta group">` block is captured verbatim by `AO3ChapterHTMLExtractor`
+	/// and baked directly into the front of `article.contentHTML` -- at that
+	/// point this function must return nil, or the real block and this
+	/// synthesized approximation would both show, stacked. That's the
+	/// `article.contentHTML == nil` guard below: it's not just "don't
+	/// crash on missing data", it's the actual real-vs-synthesized switch.
+	///
+	/// Before that first successful fetch, this is still worth showing --
+	/// it's the strongest available check that Workstream 1's feed parsing
+	/// itself is correct, since it doesn't depend on a successful chapter
+	/// fetch at all. It also means real AO3 tag links are only available
+	/// post-fetch; this fallback intentionally doesn't attempt to
+	/// reconstruct AO3's tag-URL encoding scheme (see the design discussion
+	/// that led to full extraction instead of synthesis, for the case where
+	/// contentHTML does exist) -- rows here are plain text.
+	///
+	/// This guard also happens to be exactly the right check for Ambrosia
+	/// items, which always arrive with contentHTML already populated
+	/// (Ambrosia's JSON feed sets content_html directly, including its own
+	/// complete preface) -- they never have a nil contentHTML to fall back
+	/// from, so this never fires for them and there's no risk of stacking a
+	/// second preface above Ambrosia's own.
+	static func ao3SyntheticPrefaceHTML(for article: Article) -> String? {
+		guard article.contentHTML == nil else {
+			return nil
+		}
+		guard article.fandoms != nil || article.ratings != nil || article.warnings != nil || article.categories != nil else {
+			return nil
+		}
+
+		var rows: [AO3PrefaceRow] = []
+		func appendRow(_ label: String, _ values: [String]?) {
+			guard let values, !values.isEmpty else {
+				return
+			}
+			rows.append(AO3PrefaceRow(label: label, values: values.map { AO3TagEntry(text: $0) }))
+		}
+
+		appendRow("Rating:", article.ratings)
+		appendRow("Archive Warning:", article.warnings)
+		appendRow("Category:", article.categories)
+		appendRow("Fandom:", article.fandoms)
+		appendRow("Relationships:", article.relationships)
+		appendRow("Characters:", article.characters)
+		// Additional Tags (AO3's freeform tags) has no home on Article at
+		// all -- Workstream 1 doesn't parse a distinct freeform-tags bucket
+		// from the Atom feed, so there's nothing to synthesize this row
+		// from. Flagged here rather than silently dropped: if this becomes
+		// a priority, it needs a Workstream 1 change first, not a change
+		// here.
+
+		if let series = article.series, !series.isEmpty {
+			let entries = series.map { entry in
+				AO3TagEntry(text: entry.name, prefix: "Part \(entry.index) of ")
+			}
+			rows.append(AO3PrefaceRow(label: "Series:", values: entries))
+		}
+
+		// Collections: deliberately not synthesized here -- flagged as an
+		// open decision (no Workstream 1 field exists for it; Ambrosia's
+		// own collections list comes from a different data source than the
+		// Atom feed this app parses). Revisit once that's decided.
+
+		// Each stat is its own row -- matching AO3's own dt/dd-per-stat
+		// shape (and AO3PrefaceRenderer's rendering of it) rather than the
+		// single bundled "Stats:" row this used to synthesize, so the two
+		// paths produce identical markup (see AO3PrefaceRenderer).
+		var statsRows: [AO3PrefaceStatsRow] = []
+		if let datePublished = article.datePublished {
+			statsRows.append(AO3PrefaceStatsRow(label: "Published:", value: ao3StatsDateFormatter.string(from: datePublished)))
+		}
+		if let dateModified = article.dateModified, dateModified != article.datePublished {
+			statsRows.append(AO3PrefaceStatsRow(label: "Updated:", value: ao3StatsDateFormatter.string(from: dateModified)))
+		}
+		if let wordCount = article.wordCount {
+			statsRows.append(AO3PrefaceStatsRow(label: "Words:", value: String(wordCount)))
+		}
+		if let chapterCurrent = article.chapterCurrent {
+			// "?" for an unposted/unknown total, matching AO3's own
+			// "Chapters: N/?" convention for an in-progress work whose
+			// planned length the author hasn't declared.
+			let total = article.chapterTotal.map(String.init) ?? "?"
+			statsRows.append(AO3PrefaceStatsRow(label: "Chapters:", value: "\(chapterCurrent)/\(total)"))
+		}
+
+		return AO3PrefaceRenderer.html(id: "ao3SyntheticPreface", data: AO3PrefaceData(rows: rows, statsRows: statsRows))
+	}
+}
+
