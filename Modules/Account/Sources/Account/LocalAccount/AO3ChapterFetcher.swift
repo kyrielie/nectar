@@ -219,7 +219,7 @@ extension AO3ChapterFetcher {
 			return
 		}
 		defer {
-			sweepingAccountIDs.withLock { $0.remove(account.accountID) }
+			_ = sweepingAccountIDs.withLock { $0.remove(account.accountID) }
 		}
 
 		let unread = await account.fetchArticlesAsync(.unread(nil))
@@ -391,6 +391,19 @@ nonisolated private extension AO3ChapterFetcher {
 				activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: ActivityLog.dataSizeMessage(data), returnedFromCache: downloadResponse.returnedFromCache)
 				failureMessages.withLock { $0[articleID] = nil }
 				postNotification(name: .ao3ChapterFetchDidComplete, articleID: articleID)
+
+				// Task 6 (kudos-on-like), piggyback path: this fetch's
+				// response already carried a CSRF token (extraction.csrfToken),
+				// so if this book is loved and hasn't had a kudos landed
+				// for it yet, leave one now instead of firing a second,
+				// dedicated request. existingArticle.status.loved is read
+				// before rebuildParsedItem/updateAsync above, but loved
+				// isn't a field either of those touch, so it still
+				// reflects the book's current state. No-op (including
+				// when the feature is off) -- see
+				// AO3KudosManager.attemptKudosIfNeeded's own eligibility
+				// checks.
+				AO3KudosManager.attemptKudosIfNeeded(article: existingArticle, workID: workID, csrfToken: extraction.csrfToken)
 
 			} catch {
 				// Pre-response failure (DNS, TLS, network) -- same

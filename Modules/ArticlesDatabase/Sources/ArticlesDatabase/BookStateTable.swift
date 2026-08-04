@@ -25,7 +25,7 @@
 //  copy is immediately the state for every copy. This is deliberate -- it's
 //  the same book.
 
-// CREATE TABLE if not EXISTS bookState (bookKey TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOL NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE, updatedAt DATE NOT NULL);
+// CREATE TABLE if not EXISTS bookState (bookKey TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOL NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE, updatedAt DATE NOT NULL, kudosAttemptedAt DATE, kudosAttemptedAuthenticated BOOL NOT NULL DEFAULT 0);
 
 import Foundation
 import RSDatabase
@@ -42,6 +42,12 @@ struct BookState: Sendable {
 	var scrollPosition: Double
 	var readingProgress: Double?
 	var lastOpenedAt: Date?
+
+	// Kudos-on-like (Task 6). kudosAttemptedAt nil = never attempted;
+	// kudosAttemptedAuthenticated is only meaningful when kudosAttemptedAt
+	// is non-nil -- see the DatabaseKey.kudosAttemptedAt doc comment.
+	var kudosAttemptedAt: Date?
+	var kudosAttemptedAuthenticated: Bool
 }
 
 final class BookStateTable: DatabaseTable, Sendable {
@@ -73,7 +79,9 @@ final class BookStateTable: DatabaseTable, Sendable {
 				loved: resultSet.bool(forColumn: DatabaseKey.loved),
 				scrollPosition: resultSet.double(forColumn: DatabaseKey.scrollPosition),
 				readingProgress: resultSet.columnIsNull(DatabaseKey.readingProgress) ? nil : resultSet.double(forColumn: DatabaseKey.readingProgress),
-				lastOpenedAt: resultSet.columnIsNull(DatabaseKey.lastOpenedAt) ? nil : resultSet.date(forColumn: DatabaseKey.lastOpenedAt)
+				lastOpenedAt: resultSet.columnIsNull(DatabaseKey.lastOpenedAt) ? nil : resultSet.date(forColumn: DatabaseKey.lastOpenedAt),
+				kudosAttemptedAt: resultSet.columnIsNull(DatabaseKey.kudosAttemptedAt) ? nil : resultSet.date(forColumn: DatabaseKey.kudosAttemptedAt),
+				kudosAttemptedAuthenticated: resultSet.bool(forColumn: DatabaseKey.kudosAttemptedAuthenticated)
 			)
 		}
 		return d
@@ -120,6 +128,36 @@ final class BookStateTable: DatabaseTable, Sendable {
 
 	func setLastOpenedAt(_ date: Date, bookKey: String, _ database: FMDatabase) {
 		upsert(bookKeys: [bookKey], column: DatabaseKey.lastOpenedAt, value: date, database)
+	}
+
+	// MARK: - Kudos-on-like (Task 6)
+	//
+	// Two columns need to change together atomically (the timestamp and
+	// whether the attempt was authenticated), unlike every other property
+	// above, so this doesn't go through the single-column `upsert` helper
+	// below -- see setKudosAttempted's own INSERT ... ON CONFLICT.
+
+	/// nil if a kudos POST has never been attempted for this book.
+	func kudosAttempt(for bookKey: String, _ database: FMDatabase) -> (attemptedAt: Date, authenticated: Bool)? {
+		guard let state = state(for: [bookKey], database)[bookKey], let attemptedAt = state.kudosAttemptedAt else {
+			return nil
+		}
+		return (attemptedAt, state.kudosAttemptedAuthenticated)
+	}
+
+	func setKudosAttempted(at date: Date, authenticated: Bool, bookKey: String, _ database: FMDatabase) {
+		let now = Date()
+		database.executeUpdate(
+			"""
+			INSERT INTO \(name) (\(DatabaseKey.bookKey), \(DatabaseKey.kudosAttemptedAt), \(DatabaseKey.kudosAttemptedAuthenticated), \(DatabaseKey.updatedAt))
+			VALUES (?, ?, ?, ?)
+			ON CONFLICT(\(DatabaseKey.bookKey)) DO UPDATE SET
+				\(DatabaseKey.kudosAttemptedAt) = excluded.\(DatabaseKey.kudosAttemptedAt),
+				\(DatabaseKey.kudosAttemptedAuthenticated) = excluded.\(DatabaseKey.kudosAttemptedAuthenticated),
+				\(DatabaseKey.updatedAt) = excluded.\(DatabaseKey.updatedAt)
+			""",
+			withArgumentsIn: [bookKey, date, authenticated, now]
+		)
 	}
 
 	// MARK: - Private

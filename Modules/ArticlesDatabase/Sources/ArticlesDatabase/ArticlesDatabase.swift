@@ -45,6 +45,18 @@ public struct ArticleCounts: Sendable {
 	public let statusesCount: Int
 }
 
+/// One article's stored (compressed) `contentHTML` size, for the Manage
+/// Storage screen. `storedContentHTMLSize` is the LZFSE-compressed,
+/// base64-encoded size actually held in the `articles.contentHTML` column --
+/// an honest number since it's what's actually on disk, not a decompressed
+/// estimate.
+public struct ArticleStorageInfo: Sendable {
+	public let articleID: String
+	public let title: String?
+	public let bookKey: String?
+	public let storedContentHTMLSize: Int
+}
+
 @MainActor public final class ArticlesDatabase {
 	public enum RetentionStyle: Sendable {
 		case feedBased // Local and iCloud: article retention is defined by contents of feed
@@ -180,6 +192,22 @@ public struct ArticleCounts: Sendable {
 				database.executeStatements("ALTER TABLE bookState add column lastOpenedAt DATE;")
 			}
 
+			// Task 6 (kudos-on-like): forward-only kudos-attempt tracking per
+			// book, bookState-only (no statuses-table mirror -- see the
+			// DatabaseKey.kudosAttemptedAt doc comment). kudosAttemptedAt
+			// nullable (nil = never attempted); kudosAttemptedAuthenticated
+			// records guest vs logged-in once an attempt has happened, which
+			// the re-attempt policy in Task 6 depends on. Same
+			// containsColumn-guarded ALTER TABLE pattern as lastOpenedAt above.
+			if !self.bookStateTableContainsKudosAttemptedAtColumn(database) {
+				Self.logger.debug("ArticlesDatabase: adding kudosAttemptedAt column (bookState) \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE bookState add column kudosAttemptedAt DATE;")
+			}
+			if !self.bookStateTableContainsKudosAttemptedAuthenticatedColumn(database) {
+				Self.logger.debug("ArticlesDatabase: adding kudosAttemptedAuthenticated column (bookState) \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE bookState add column kudosAttemptedAuthenticated BOOL NOT NULL DEFAULT 0;")
+			}
+
 			// Phase 6 (book-level read state): identity key used to dedup a book's
 			// read state across collection feeds and re-subscriptions. Nullable --
 			// existing rows read back as nil and Article falls back to uniqueID
@@ -257,6 +285,15 @@ public struct ArticleCounts: Sendable {
 		return try AmbrosiaSQLiteImportTable.readAndValidateManifest(atPath: temporaryFilePath, expectedWireFormatVersion: wireFormatVersion)
 	}
 
+	/// Task 4 (SQLite export): bulk-copies this account's articles/statuses
+	/// into a fresh `.sqlite` file at `destinationPath`, optionally scoped
+	/// to `feedIDs` (nil/empty exports every article in the account).
+	/// `destinationPath` must not already exist.
+	public func exportArticlesSQLite(feedIDs: Set<String>? = nil, toPath destinationPath: String) throws {
+		Self.logger.debug("ArticlesDatabase: exportArticlesSQLite \(self.accountID, privacy: .public)")
+		try ArticleSQLiteExportTable.exportArticles(feedIDs: feedIDs, toPath: destinationPath, queue: queue)
+	}
+
 	public func fetchArticles(feedID: String) -> Set<Article> {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		return articlesTable.fetchArticles(feedID)
@@ -329,6 +366,54 @@ public struct ArticleCounts: Sendable {
 		return await withCheckedContinuation { continuation in
 			articlesTable.fetchArticleCountsAsync(feedIDs) { articleCounts in
 				continuation.resume(returning: articleCounts)
+			}
+		}
+	}
+
+	/// Largest-N articles by stored (compressed) `contentHTML` size, sorted
+	/// descending -- backs the Manage Storage screen's list.
+	public func fetchArticleStorageInfo(limit: Int) async -> [ArticleStorageInfo] {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		return await withCheckedContinuation { continuation in
+			articlesTable.fetchArticleStorageInfoAsync(limit: limit) { info in
+				continuation.resume(returning: info)
+			}
+		}
+	}
+
+	/// Total stored (compressed) `contentHTML` size across all articles --
+	/// backs the Manage Storage screen's total-on-disk-size figure.
+	public func fetchTotalContentHTMLSize() async -> Int {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		return await withCheckedContinuation { continuation in
+			articlesTable.fetchTotalContentHTMLSizeAsync { size in
+				continuation.resume(returning: size)
+			}
+		}
+	}
+
+	// MARK: - Kudos-on-like (Task 6)
+
+	/// Whether/how a kudos POST has already been attempted for this book --
+	/// nil if never attempted. See Task 6's re-attempt policy: a guest
+	/// attempt can be retried once an AO3 account is configured, a
+	/// logged-in attempt never can.
+	public func kudosAttempt(bookKey: String) async -> (attemptedAt: Date, authenticated: Bool)? {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		return await withCheckedContinuation { continuation in
+			articlesTable.kudosAttemptAsync(bookKey: bookKey) { result in
+				continuation.resume(returning: result)
+			}
+		}
+	}
+
+	/// Records that a kudos POST was attempted for this book, and whether
+	/// it was an authenticated (logged-in) or guest attempt.
+	public func setKudosAttempted(bookKey: String, authenticated: Bool) async {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		await withCheckedContinuation { continuation in
+			articlesTable.setKudosAttemptedAsync(bookKey: bookKey, authenticated: authenticated) {
+				continuation.resume()
 			}
 		}
 	}
@@ -707,7 +792,7 @@ private extension ArticlesDatabase {
 
 	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOLEAN NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE);
 
-	CREATE TABLE if not EXISTS bookState (bookKey TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOL NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE, updatedAt DATE NOT NULL);
+	CREATE TABLE if not EXISTS bookState (bookKey TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOL NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE, updatedAt DATE NOT NULL, kudosAttemptedAt DATE, kudosAttemptedAuthenticated BOOL NOT NULL DEFAULT 0);
 
 	CREATE INDEX if not EXISTS articles_feedID_datePublished_articleID on articles (feedID, datePublished, articleID);
 
@@ -778,6 +863,24 @@ private extension ArticlesDatabase {
 			return false
 		}
 		return columnMap["lastopenedat"] != nil
+	}
+
+	/// Same approach as `statusesTableContainsScrollPositionColumn` above, against
+	/// bookState instead. Task 6's two kudos-attempt columns.
+	nonisolated func bookStateTableContainsKudosAttemptedAtColumn(_ database: FMDatabase) -> Bool {
+		guard let resultSet = database.executeQuery("select * from bookState limit 1;", withArgumentsIn: nil),
+			  let columnMap = resultSet.columnNameToIndexMap else {
+			return false
+		}
+		return columnMap["kudosattemptedat"] != nil
+	}
+
+	nonisolated func bookStateTableContainsKudosAttemptedAuthenticatedColumn(_ database: FMDatabase) -> Bool {
+		guard let resultSet = database.executeQuery("select * from bookState limit 1;", withArgumentsIn: nil),
+			  let columnMap = resultSet.columnNameToIndexMap else {
+			return false
+		}
+		return columnMap["kudosattemptedauthenticated"] != nil
 	}
 
 	// MARK: - Operations

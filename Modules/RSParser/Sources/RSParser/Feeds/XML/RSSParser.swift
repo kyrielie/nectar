@@ -49,7 +49,13 @@ private final class RSSDelegate: XMLSAXParserDelegate {
 	// MARK: Building output
 
 	func buildParsedFeed() -> ParsedFeed {
-		let parsedItems = Set(items.map { $0.toParsedItem(feedURL: feedURLString) })
+		// Task 7 (ignore lists): filter here, at ParsedItem construction
+		// time, before anything reaches Account.updateAsync -- see
+		// AO3IgnoreList's header comment for why this single call site
+		// covers "don't show," "don't fetch," and "don't save" all at
+		// once. A no-op for anything not AO3-sourced or not matching an
+		// ignore rule.
+		let parsedItems = Set(items.map { $0.toParsedItem(feedURL: feedURLString) }.filter { !AO3IgnoreList.shouldExclude($0) })
 		return ParsedFeed(
 			type: .rss,
 			title: title,
