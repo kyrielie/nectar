@@ -21,6 +21,8 @@ struct AO3AccountSettingsView: View {
 	@State private var isShowingSignOutConfirmation = false
 	@State private var refetchInterval = AO3PrefaceRefetchPreference.current
 	@State private var isKudosOnLikeEnabled = AO3KudosOnLikePreference.isEnabled
+	@State private var isAmbrosiaContentUpdatesEnabled = AmbrosiaAO3NetworkPreference.contentUpdatesEnabled
+	@State private var isAmbrosiaStatsUpdatesEnabled = AmbrosiaAO3NetworkPreference.statsUpdatesEnabled
 
 	var body: some View {
 		List {
@@ -36,11 +38,25 @@ struct AO3AccountSettingsView: View {
 			}
 
 			Section {
+				Toggle(NSLocalizedString("Pull Chapter Updates for Library Works", comment: "Ambrosia AO3 content-updates toggle label"), isOn: $isAmbrosiaContentUpdatesEnabled)
+					.onChange(of: isAmbrosiaContentUpdatesEnabled) { _, newValue in
+						AmbrosiaAO3NetworkPreference.contentUpdatesEnabled = newValue
+					}
+				Toggle(NSLocalizedString("Fetch AO3 Stats for Library Works", comment: "Ambrosia AO3 stats-updates toggle label"), isOn: $isAmbrosiaStatsUpdatesEnabled)
+					.onChange(of: isAmbrosiaStatsUpdatesEnabled) { _, newValue in
+						AmbrosiaAO3NetworkPreference.statsUpdatesEnabled = newValue
+					}
+			} footer: {
+				Text(NSLocalizedString("Only affects works added to your library from Ambrosia/Calibre. Both are off by default so Nectar makes no AO3 requests for a purely local archive unless you turn one on. Works imported directly from an AO3 RSS feed always fetch live content -- there's no other way for them to get it.", comment: "Ambrosia AO3 network toggles footer"))
+			}
+
+			Section {
 				Picker(NSLocalizedString("Check for Updates", comment: "AO3 preface refetch cadence picker label"), selection: $refetchInterval) {
 					ForEach(AO3PrefaceRefetchInterval.allCases, id: \.self) { interval in
 						Text(interval.description).tag(interval)
 					}
 				}
+				.disabled(!isAmbrosiaContentUpdatesEnabled)
 				.onChange(of: refetchInterval) { _, newValue in
 					AO3PrefaceRefetchPreference.current = newValue
 				}

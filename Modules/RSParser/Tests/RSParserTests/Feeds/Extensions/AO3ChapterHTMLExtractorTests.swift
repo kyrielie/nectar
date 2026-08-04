@@ -226,7 +226,7 @@ import Testing
 		// Kudos: 113, Bookmarks: 14 (wrapped in an <a>, so this also
 		// confirms flattenedText is used rather than the dd's direct
 		// text), Hits: 1,776 (comma-formatted, parsed with commas
-		// stripped).
+		// stripped), Words: 50,038 (Task 8's regression-guard field).
 		let html = htmlFixtureString("ao3-work-multi-chapter.html")
 		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
 		guard case .success(let result) = outcome else {
@@ -238,6 +238,7 @@ import Testing
 		#expect(result.kudosCount == 113)
 		#expect(result.bookmarkCount == 14)
 		#expect(result.hitCount == 1776)
+		#expect(result.wordCount == 50038)
 	}
 
 	@Test func workHeaderStatsCountsNilWhenMetadataBlockAbsent() throws {
@@ -266,6 +267,7 @@ import Testing
 		#expect(result.kudosCount == nil)
 		#expect(result.bookmarkCount == nil)
 		#expect(result.hitCount == nil)
+		#expect(result.wordCount == nil)
 	}
 
 	@Test func seriesRowHandlesTwoCommaSeparatedSeries() throws {

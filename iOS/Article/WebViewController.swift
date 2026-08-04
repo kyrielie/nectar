@@ -244,6 +244,11 @@ final class WebViewController: UIViewController {
 			}
 			self.article = refetchedArticle
 			self.loadWebView(reason: "ao3ChapterFetchDidComplete(\(fetchedArticleID))")
+			// Task 8: this notification also fires when the fetch's result
+			// was a detected regression stashed as a pending update rather
+			// than written to contentHTML -- offer the "view what changed?"
+			// prompt in that case.
+			self.presentPendingContentUpdateAlertIfNeeded()
 		}
 	}
 
@@ -302,6 +307,11 @@ final class WebViewController: UIViewController {
 					// AO3ChapterFetcher.fetchIfNeeded and
 					// ao3ChapterFetchDidComplete(_:) above for the reload path.
 					AO3ChapterFetcher.shared.fetchIfNeeded(for: article)
+					// Task 8: if a prior fetch already flagged a pending
+					// content update for this article, offer the "view what
+					// changed?" prompt on open too, not just right after a
+					// fresh fetch completes.
+					self.presentPendingContentUpdateAlertIfNeeded()
 				}
 			}
 		}
@@ -408,6 +418,46 @@ final class WebViewController: UIViewController {
 		}
 	}
 
+	/// Task 8's "a newer version exists and looks smaller -- view what
+	/// changed?" prompt, shown whenever the current article has an
+	/// unresolved pendingUpdateContentHTML diff. Deliberately a lightweight
+	/// accept/keep/later choice rather than an inline diff view --
+	/// resolving either promotes the pending copy to contentHTML or
+	/// discards it, both via Account.resolvePendingContentUpdateAsync,
+	/// which also unblocks AO3ChapterFetcher.isStale's auto-fetch gate for
+	/// this article again.
+	func presentPendingContentUpdateAlertIfNeeded() {
+		guard let article, article.pendingUpdateContentHTML != nil, let account = article.account else {
+			return
+		}
+		let articleID = article.articleID
+		let alert = UIAlertController(
+			title: NSLocalizedString("Possible Content Change", comment: "Title"),
+			message: NSLocalizedString("A newer version of this work was fetched, but it looks smaller than what's archived -- this can happen on a real edit, or on a deleted/shrunk chapter. Use the new version, or keep what's archived?", comment: "Message"),
+			preferredStyle: .alert
+		)
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Use New Version", comment: "Command"), style: .default) { [weak self] _ in
+			self?.resolvePendingContentUpdate(accept: true, account: account, articleID: articleID)
+		})
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Keep Archived Version", comment: "Command"), style: .default) { [weak self] _ in
+			self?.resolvePendingContentUpdate(accept: false, account: account, articleID: articleID)
+		})
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Later", comment: "Command"), style: .cancel))
+		present(alert, animated: true)
+	}
+
+	private func resolvePendingContentUpdate(accept: Bool, account: Account, articleID: String) {
+		Task {
+			await account.resolvePendingContentUpdateAsync(forArticleID: articleID, accept: accept)
+			let refetchedArticles = await account.fetchArticlesAsync(.articleIDs([articleID]))
+			guard let refetchedArticle = refetchedArticles.first, self.article?.articleID == articleID else {
+				return
+			}
+			self.article = refetchedArticle
+			self.loadWebView(reason: "resolvePendingContentUpdate(\(articleID))")
+		}
+	}
+
 	func showActivityDialog(popOverBarButtonItem: UIBarButtonItem? = nil) {
 		guard let url = article?.preferredURL else { return }
 		let activityViewController = UIActivityViewController(url: url, title: article?.title, applicationActivities: [FindInArticleActivity(), OpenInBrowserActivity(), ShareAO3SeriesLinkActivity(seriesURL: article?.ao3SeriesURL)])
@@ -455,6 +505,10 @@ extension WebViewController: UIContextMenuInteractionDelegate {
 			menus.append(UIMenu(title: "", options: .displayInline, children: toggleActions))
 
 			if let action = self.nextUnreadArticleAction() {
+				menus.append(UIMenu(title: "", options: .displayInline, children: [action]))
+			}
+
+			if let action = self.checkForUpdatesAction() {
 				menus.append(UIMenu(title: "", options: .displayInline, children: [action]))
 			}
 
@@ -1192,6 +1246,30 @@ private extension WebViewController {
 		let title = NSLocalizedString("Next Unread Article", comment: "Next Unread Article")
 		return UIAction(title: title, image: Assets.Images.nextUnread) { [weak self] _ in
 			self?.coordinator.selectNextUnread()
+		}
+	}
+
+	/// Task 8's explicit per-article "Check for updates" action --
+	/// available for any single-AO3-work article (not an anthology/
+	/// combined-series bookKey) with no unresolved pending-update diff,
+	/// regardless of read state or how "settled" the article currently
+	/// looks. Deliberately no bulk "check all" equivalent.
+	///
+	/// For an Ambrosia-sourced article with both `AmbrosiaAO3NetworkPreference`
+	/// flags off, this still returns an action (per the plan: disabled with
+	/// an explanatory label, not removed) rather than nil, so the menu row
+	/// stays present and tells the person why it's inert instead of
+	/// silently vanishing.
+	func checkForUpdatesAction() -> UIAction? {
+		guard let article, AO3ChapterFetcher.shared.canCheckForUpdates(for: article) else { return nil }
+		guard AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article) else {
+			let title = NSLocalizedString("Check for Updates (Enable AO3 Updates in Settings)", comment: "Command, disabled: Ambrosia article with both AO3 network toggles off")
+			return UIAction(title: title, image: Assets.Images.checkForUpdates, attributes: .disabled) { _ in }
+		}
+		let title = NSLocalizedString("Check for Updates", comment: "Command")
+		return UIAction(title: title, image: Assets.Images.checkForUpdates) { [weak self] _ in
+			guard let article = self?.article else { return }
+			AO3ChapterFetcher.shared.checkForUpdates(for: article)
 		}
 	}
 
