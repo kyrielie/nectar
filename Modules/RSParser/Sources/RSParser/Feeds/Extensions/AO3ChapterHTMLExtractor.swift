@@ -68,7 +68,20 @@ public struct AO3ChapterExtractionResult: Sendable {
 	/// without it.
 	public let csrfToken: String?
 
-	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, wordCount: Int? = nil, csrfToken: String? = nil) {
+	/// Task 10 (prev/next/first navigation): the AO3-absolute URL of the
+	/// previous/next work in whichever series membership carries one,
+	/// read off `<a class="previous">`/`<a class="next">` inside the same
+	/// `<span class="series">` block `seriesEntries(fromDD:)` already
+	/// reads the position text out of -- see
+	/// `previousNextWorkURLs(fromDD:)`. Page-navigation chrome AO3 renders
+	/// on every work page regardless of whether the reader has series
+	/// grouping enabled; capturing it costs no additional request. `nil`
+	/// when the work has no series membership, or is the first/last work
+	/// in every series it belongs to (for that respective direction).
+	public let previousWorkURL: String?
+	public let nextWorkURL: String?
+
+	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, wordCount: Int? = nil, csrfToken: String? = nil, previousWorkURL: String? = nil, nextWorkURL: String? = nil) {
 		self.contentHTML = contentHTML
 		self.chapters = chapters
 		self.commentCount = commentCount
@@ -77,6 +90,8 @@ public struct AO3ChapterExtractionResult: Sendable {
 		self.hitCount = hitCount
 		self.wordCount = wordCount
 		self.csrfToken = csrfToken
+		self.previousWorkURL = previousWorkURL
+		self.nextWorkURL = nextWorkURL
 	}
 }
 
@@ -145,7 +160,7 @@ public enum AO3ChapterHTMLExtractor {
 				let chapters = chapterDivs.compactMap(extractedChapter)
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root)))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), previousWorkURL: assembled.previousWorkURL, nextWorkURL: assembled.nextWorkURL))
 			}
 
 			// Single-chapter works carry no per-chapter <div class="chapter">
@@ -164,7 +179,7 @@ public enum AO3ChapterHTMLExtractor {
 				let chapters = [AO3ExtractedChapter(id: "chapter-1", title: "Chapter 1")]
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root)))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), previousWorkURL: assembled.previousWorkURL, nextWorkURL: assembled.nextWorkURL))
 			}
 		}
 
@@ -348,21 +363,23 @@ private extension AO3ChapterHTMLExtractor {
 	/// Comments/Kudos/Bookmarks/Hits into structured data this function can
 	/// hand back to callers instead of leaving them buried in an opaque
 	/// HTML blob.
-	static func serializedContentHTML(root: HTMLLiteElement, workSkinParent: HTMLLiteElement, workSkinIndex: Int, workSkinDiv: HTMLLiteElement) -> (contentHTML: String, commentCount: Int?, kudosCount: Int?, bookmarkCount: Int?, hitCount: Int?, wordCount: Int?) {
+	static func serializedContentHTML(root: HTMLLiteElement, workSkinParent: HTMLLiteElement, workSkinIndex: Int, workSkinDiv: HTMLLiteElement) -> (contentHTML: String, commentCount: Int?, kudosCount: Int?, bookmarkCount: Int?, hitCount: Int?, wordCount: Int?, previousWorkURL: String?, nextWorkURL: String?) {
 		var contentHTML = ""
 		var counts = (commentCount: Int?.none, kudosCount: Int?.none, bookmarkCount: Int?.none, hitCount: Int?.none, wordCount: Int?.none)
+		var navigation = (previousWorkURL: String?.none, nextWorkURL: String?.none)
 
 		if let workHeader = parseWorkHeader(root: root) {
 			if let prefaceHTML = AO3PrefaceRenderer.html(id: "ao3Preface", data: workHeader.data) {
 				contentHTML += prefaceHTML
 			}
 			counts = (workHeader.commentCount, workHeader.kudosCount, workHeader.bookmarkCount, workHeader.hitCount, workHeader.wordCount)
+			navigation = (workHeader.previousWorkURL, workHeader.nextWorkURL)
 		}
 		if let styleElement = precedingStyleElement(parent: workSkinParent, beforeIndex: workSkinIndex) {
 			contentHTML += serializeHTMLLiteNodes([.element(styleElement)])
 		}
 		contentHTML += serializeHTMLLiteNodes([.element(workSkinDiv)])
-		return (contentHTML, counts.commentCount, counts.kudosCount, counts.bookmarkCount, counts.hitCount, counts.wordCount)
+		return (contentHTML, counts.commentCount, counts.kudosCount, counts.bookmarkCount, counts.hitCount, counts.wordCount, navigation.previousWorkURL, navigation.nextWorkURL)
 	}
 }
 
@@ -379,6 +396,8 @@ struct AO3WorkHeaderExtraction {
 	let bookmarkCount: Int?
 	let hitCount: Int?
 	let wordCount: Int?
+	let previousWorkURL: String?
+	let nextWorkURL: String?
 }
 
 private extension AO3ChapterHTMLExtractor {
@@ -411,6 +430,8 @@ private extension AO3ChapterHTMLExtractor {
 		var bookmarkCount: Int?
 		var hitCount: Int?
 		var wordCount: Int?
+		var previousWorkURL: String?
+		var nextWorkURL: String?
 
 		var pendingDT: HTMLLiteElement?
 		for element in directChildElements(of: metaGroup) {
@@ -448,6 +469,7 @@ private extension AO3ChapterHTMLExtractor {
 				let entries = seriesEntries(fromDD: dd)
 				guard !entries.isEmpty else { continue }
 				rows.append(AO3PrefaceRow(label: label, values: entries))
+				(previousWorkURL, nextWorkURL) = previousNextWorkURLs(fromDD: dd)
 			} else if classTokens.contains("collections") {
 				// Plain comma-separated <a> links directly in the dd, no
 				// <ul><li> wrapper -- confirmed a different shape from the
@@ -511,7 +533,9 @@ private extension AO3ChapterHTMLExtractor {
 			kudosCount: kudosCount,
 			bookmarkCount: bookmarkCount,
 			hitCount: hitCount,
-			wordCount: wordCount
+			wordCount: wordCount,
+			previousWorkURL: previousWorkURL,
+			nextWorkURL: nextWorkURL
 		)
 	}
 
@@ -554,6 +578,37 @@ private extension AO3ChapterHTMLExtractor {
 			let prefix = String(fullText[fullText.startIndex..<nameRange.lowerBound])
 			return AO3TagEntry(text: name, href: anchor.attributes["href"], prefix: prefix)
 		}
+	}
+
+	/// Task 10 (prev/next/first navigation): the same `<span class="series">`
+	/// blocks `seriesEntries(fromDD:)` reads the position text out of also
+	/// carry optional `<a class="previous">`/`<a class="next">` Work
+	/// navigation links -- previously discarded entirely (see
+	/// `seriesEntries(fromDD:)`'s own doc comment); now captured here.
+	///
+	/// A work in more than one series (confirmed: twoseries.html) gets one
+	/// `span.series` block per membership, each with its own
+	/// previous/next pair. The reader's prev/next buttons are singular,
+	/// though, so the first block that has a link for a given direction
+	/// wins for that direction -- in practice a work is almost always in
+	/// at most one series, so this only matters for the rare multi-series
+	/// case.
+	static func previousNextWorkURLs(fromDD dd: HTMLLiteElement) -> (previous: String?, next: String?) {
+		let spans = descendants(of: dd, where: { $0.tag == "span" && $0.attributes["class"] == "series" })
+		var previous: String?
+		var next: String?
+		for span in spans {
+			if previous == nil, let previousAnchor = firstDescendant(of: span, where: { $0.tag == "a" && $0.attributes["class"] == "previous" }) {
+				previous = AO3SearchResultsExtractor.absoluteURL(previousAnchor.attributes["href"])
+			}
+			if next == nil, let nextAnchor = firstDescendant(of: span, where: { $0.tag == "a" && $0.attributes["class"] == "next" }) {
+				next = AO3SearchResultsExtractor.absoluteURL(nextAnchor.attributes["href"])
+			}
+			if previous != nil && next != nil {
+				break
+			}
+		}
+		return (previous, next)
 	}
 
 	/// `element.children` filtered down to just the `.element` nodes, in

@@ -56,6 +56,11 @@ struct DatabaseKey {
 	static let kudosCount = "kudosCount"
 	static let bookmarkCount = "bookmarkCount"
 	static let hitCount = "hitCount"
+	// Task 10 ("Prev/next/first navigation") -- previous/next work in
+	// series, read off the same live work-page fetch as the four stats
+	// above.
+	static let previousWorkURL = "previousWorkURL"
+	static let nextWorkURL = "nextWorkURL"
 	static let lastPrefaceFetchDate = "lastPrefaceFetchDate"
 	static let isAmbrosiaItem = "isAmbrosiaItem"
 

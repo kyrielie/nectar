@@ -50,6 +50,14 @@ final class WebViewController: UIViewController {
 	// is not a safe way to identify it.
 	private var webView: PreloadedWebView?
 
+	// Task 10 ("Prev/next/first navigation"): per-button in-flight/error
+	// state for the three AO3SeriesNavigator actions below. Reset to nil
+	// whenever `article` changes (a different work has its own separate
+	// prev/next/first state) -- see `article` didSet.
+	private var seriesNavigationInFlight: Set<AO3SeriesNavigator.Direction> = []
+	private var isFetchingFirstWorkInSeries = false
+	private var seriesNavigationFailureMessage: String?
+
 	// Bumped at the top of every loadWebView() call. Captured by value into each
 	// dequeueWebView/ready completion so that a completion arriving after a newer
 	// loadWebView() call has started can recognize it's stale and bail out instead
@@ -73,7 +81,17 @@ final class WebViewController: UIViewController {
 
 	weak var coordinator: SceneCoordinator!
 
-	private(set) var article: Article?
+	private(set) var article: Article? {
+		didSet {
+			// A different work has its own separate prev/next/first state --
+			// don't carry over another article's in-flight/error state.
+			if article?.articleID != oldValue?.articleID {
+				seriesNavigationInFlight.removeAll()
+				isFetchingFirstWorkInSeries = false
+				seriesNavigationFailureMessage = nil
+			}
+		}
+	}
 
 	let scrollPositionQueue = CoalescingQueue(name: "Article Scroll Position", interval: 0.3, maxInterval: 0.3)
 
@@ -510,6 +528,11 @@ extension WebViewController: UIContextMenuInteractionDelegate {
 
 			if let action = self.checkForUpdatesAction() {
 				menus.append(UIMenu(title: "", options: .displayInline, children: [action]))
+			}
+
+			let seriesNavigationActions = [self.previousWorkAction(), self.nextWorkAction(), self.firstWorkInSeriesAction()].compactMap { $0 }
+			if !seriesNavigationActions.isEmpty {
+				menus.append(UIMenu(title: "", options: .displayInline, children: seriesNavigationActions))
 			}
 
 			menus.append(UIMenu(title: "", options: .displayInline, children: [self.shareAction()]))
@@ -1273,6 +1296,103 @@ private extension WebViewController {
 		return UIAction(title: title, image: Assets.Images.checkForUpdates) { [weak self] _ in
 			guard let article = self?.article else { return }
 			AO3ChapterFetcher.shared.checkForUpdates(for: article)
+		}
+	}
+
+	/// Task 10 ("Prev/next/first navigation"): AO3's own Previous/Next
+	/// Work links, captured on fetch -- see
+	/// `Article.previousWorkURL`/`nextWorkURL`'s doc comment. Hidden
+	/// entirely (nil) rather than shown-disabled when there's no
+	/// adjacent work in that direction, since "no previous work" isn't
+	/// an error state worth a menu row for -- unlike checkForUpdatesAction's
+	/// disabled-with-explanation case, there's no person-actionable fix
+	/// for "you're at the start of the series."
+	func previousWorkAction() -> UIAction? {
+		seriesNavigationAction(direction: .previous, url: article?.previousWorkURL, title: NSLocalizedString("Previous Work", comment: "Command"), loadingTitle: NSLocalizedString("Loading Previous Work…", comment: "Command, in progress"), image: Assets.Images.prevArticle)
+	}
+
+	func nextWorkAction() -> UIAction? {
+		seriesNavigationAction(direction: .next, url: article?.nextWorkURL, title: NSLocalizedString("Next Work", comment: "Command"), loadingTitle: NSLocalizedString("Loading Next Work…", comment: "Command, in progress"), image: Assets.Images.nextArticle)
+	}
+
+	private func seriesNavigationAction(direction: AO3SeriesNavigator.Direction, url: String?, title: String, loadingTitle: String, image: UIImage?) -> UIAction? {
+		guard url != nil else { return nil }
+		if seriesNavigationInFlight.contains(direction) {
+			return UIAction(title: loadingTitle, image: image, attributes: .disabled) { _ in }
+		}
+		if let seriesNavigationFailureMessage {
+			let failureTitle = String(format: NSLocalizedString("%@ (%@ -- Retry)", comment: "Command, previous attempt failed"), title, seriesNavigationFailureMessage)
+			return UIAction(title: failureTitle, image: image) { [weak self] _ in
+				self?.performSeriesNavigation(direction: direction)
+			}
+		}
+		return UIAction(title: title, image: image) { [weak self] _ in
+			self?.performSeriesNavigation(direction: direction)
+		}
+	}
+
+	private func performSeriesNavigation(direction: AO3SeriesNavigator.Direction) {
+		guard let article, let account = article.account else { return }
+		seriesNavigationFailureMessage = nil
+		seriesNavigationInFlight.insert(direction)
+		Task { @MainActor in
+			let result = await AO3SeriesNavigator.fetchAdjacentWork(direction: direction, from: article, account: account)
+			// The person may have navigated to a different article while
+			// this was in flight -- state belongs to whichever article is
+			// showing now, and this fetch's own article no longer exists
+			// to react against.
+			guard self.article?.articleID == article.articleID else { return }
+			self.seriesNavigationInFlight.remove(direction)
+			switch result {
+			case .success(let newArticleID):
+				self.coordinator.selectArticleInCurrentFeed(newArticleID)
+			case .failure(let error):
+				self.seriesNavigationFailureMessage = error.displayMessage
+				UIAccessibility.post(notification: .announcement, argument: error.displayMessage)
+			}
+		}
+	}
+
+	/// Task 10: unlike previous/next (data already in hand from the last
+	/// content fetch), reaching work #1 needs its own network request --
+	/// AO3's work page has no "first work in series" link, only
+	/// previous/next (see
+	/// `AO3ChapterHTMLExtractor.previousNextWorkURLs`'s doc comment) --
+	/// so this is fetched lazily, only on tap, via
+	/// `AO3SeriesNavigator.fetchFirstWorkInSeries`.
+	func firstWorkInSeriesAction() -> UIAction? {
+		guard let article, article.series?.contains(where: { $0.ao3ID != nil }) == true else { return nil }
+		if isFetchingFirstWorkInSeries {
+			let loadingTitle = NSLocalizedString("Loading First Work…", comment: "Command, in progress")
+			return UIAction(title: loadingTitle, image: Assets.Images.prevArticle, attributes: .disabled) { _ in }
+		}
+		if let seriesNavigationFailureMessage {
+			let failureTitle = String(format: NSLocalizedString("First Work (%@ -- Retry)", comment: "Command, previous attempt failed"), seriesNavigationFailureMessage)
+			return UIAction(title: failureTitle, image: Assets.Images.prevArticle) { [weak self] _ in
+				self?.performFirstWorkNavigation()
+			}
+		}
+		let title = NSLocalizedString("First Work in Series", comment: "Command")
+		return UIAction(title: title, image: Assets.Images.prevArticle) { [weak self] _ in
+			self?.performFirstWorkNavigation()
+		}
+	}
+
+	private func performFirstWorkNavigation() {
+		guard let article, let account = article.account else { return }
+		seriesNavigationFailureMessage = nil
+		isFetchingFirstWorkInSeries = true
+		Task { @MainActor in
+			let result = await AO3SeriesNavigator.fetchFirstWorkInSeries(from: article, account: account)
+			guard self.article?.articleID == article.articleID else { return }
+			self.isFetchingFirstWorkInSeries = false
+			switch result {
+			case .success(let newArticleID):
+				self.coordinator.selectArticleInCurrentFeed(newArticleID)
+			case .failure(let error):
+				self.seriesNavigationFailureMessage = error.displayMessage
+				UIAccessibility.post(notification: .announcement, argument: error.displayMessage)
+			}
 		}
 	}
 
