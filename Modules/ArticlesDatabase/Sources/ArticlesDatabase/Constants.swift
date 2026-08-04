@@ -59,6 +59,11 @@ struct DatabaseKey {
 	static let lastPrefaceFetchDate = "lastPrefaceFetchDate"
 	static let isAmbrosiaItem = "isAmbrosiaItem"
 
+	// Task 8 (content archival & destructive-update protection)
+	static let pendingUpdateContentHTML = "pendingUpdateContentHTML"
+	static let pendingUpdateDetectedAt = "pendingUpdateDetectedAt"
+	static let wordCountRegressionFlaggedAt = "wordCountRegressionFlaggedAt"
+
 	// ArticleStatus
 	static let read = "read"
 	static let starred = "starred"

@@ -986,6 +986,64 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
+	// MARK: - Pending content update (Task 8: content archival & destructive-update protection)
+	//
+	// A single pending-update slot on the article row (see the plan's "keep
+	// both" storage shape), written directly here rather than through the
+	// ordinary ParsedItem/changesFrom diff path -- ParsedItem has no field
+	// for it, since it only ever exists between AO3ChapterFetcher detecting
+	// a likely-destructive edit and the person resolving it. articleID-
+	// keyed, not bookKey-keyed like scroll position/loved/etc. above: this
+	// is a per-fetch artifact of one specific article's own contentHTML,
+	// not book-level read state.
+
+	func setPendingContentUpdate(_ contentHTML: String, detectedAt: Date, articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
+		queue.runInTransaction { database in
+			let d: DatabaseDictionary = [
+				DatabaseKey.pendingUpdateContentHTML: ContentHTMLCompression.compress(contentHTML) ?? "",
+				DatabaseKey.pendingUpdateDetectedAt: detectedAt
+			]
+			self.updateRowsWithDictionary(d, whereKey: DatabaseKey.articleID, matches: articleID, database: database)
+			self.removeArticleIDsFromCache(Set([articleID]))
+			DispatchQueue.main.async {
+				completion()
+			}
+		}
+	}
+
+	/// Resolving either promotes the pending copy to contentHTML (`accept
+	/// == true`) or discards it (`accept == false`) -- both clear the
+	/// pending slot back to nil/nil either way, which is what unblocks
+	/// AO3ChapterFetcher.isStale from treating the article as settled
+	/// again.
+	func resolvePendingContentUpdate(articleID: String, accept: Bool, _ completion: @escaping DatabaseCompletionBlock) {
+		queue.runInTransaction { database in
+			if accept, let pendingHTML = self.fetchPendingUpdateContentHTML(articleID: articleID, database) {
+				let d: DatabaseDictionary = [DatabaseKey.contentHTML: pendingHTML]
+				self.updateRowsWithDictionary(d, whereKey: DatabaseKey.articleID, matches: articleID, database: database)
+			}
+			database.executeUpdate("update articles set pendingUpdateContentHTML = NULL, pendingUpdateDetectedAt = NULL where articleID = ?", withArgumentsIn: [articleID])
+			self.removeArticleIDsFromCache(Set([articleID]))
+			DispatchQueue.main.async {
+				completion()
+			}
+		}
+	}
+
+	private func fetchPendingUpdateContentHTML(articleID: String, _ database: FMDatabase) -> String? {
+		guard let resultSet = database.executeQuery("select pendingUpdateContentHTML from articles where articleID = ?", withArgumentsIn: [articleID]) else {
+			return nil
+		}
+		defer { resultSet.close() }
+		guard resultSet.next() else {
+			return nil
+		}
+		// Stays compressed here -- it's written straight back into the
+		// contentHTML column, which is expected to hold the compressed
+		// form (see Article's row init decompressing it on read).
+		return resultSet.swiftString(forColumn: DatabaseKey.pendingUpdateContentHTML)
+	}
+
 	// MARK: - Last opened (Last Opened smart feed)
 	//
 	// Not part of the boolean ArticleStatus.Key/mark(_:_:_:_:) system above --

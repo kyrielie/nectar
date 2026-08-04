@@ -63,7 +63,13 @@ extension Article {
 		let lastPrefaceFetchDate = row.date(forColumn: DatabaseKey.lastPrefaceFetchDate)
 		let isAmbrosiaItem = row.columnIsNull(DatabaseKey.isAmbrosiaItem) ? false : row.bool(forColumn: DatabaseKey.isAmbrosiaItem)
 
-		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, series: series, commentCount: commentCount, kudosCount: kudosCount, bookmarkCount: bookmarkCount, hitCount: hitCount, lastPrefaceFetchDate: lastPrefaceFetchDate, isAmbrosiaItem: isAmbrosiaItem, bookKey: bookKey, status: status)
+		// Task 8: pendingUpdateContentHTML gets the same compression
+		// treatment as contentHTML above (see ContentHTMLCompression).
+		let pendingUpdateContentHTML = ContentHTMLCompression.decompress(row.swiftString(forColumn: DatabaseKey.pendingUpdateContentHTML))
+		let pendingUpdateDetectedAt = row.date(forColumn: DatabaseKey.pendingUpdateDetectedAt)
+		let wordCountRegressionFlaggedAt = row.date(forColumn: DatabaseKey.wordCountRegressionFlaggedAt)
+
+		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, series: series, commentCount: commentCount, kudosCount: kudosCount, bookmarkCount: bookmarkCount, hitCount: hitCount, lastPrefaceFetchDate: lastPrefaceFetchDate, pendingUpdateContentHTML: pendingUpdateContentHTML, pendingUpdateDetectedAt: pendingUpdateDetectedAt, wordCountRegressionFlaggedAt: wordCountRegressionFlaggedAt, isAmbrosiaItem: isAmbrosiaItem, bookKey: bookKey, status: status)
 	}
 
 	private static func authorsFromRow(_ row: FMResultSet) -> Set<Author>? {
@@ -182,8 +188,23 @@ extension Article {
 		// "only write when a new non-nil value shows up" rule as the dates
 		// above — a feed that stops sending `_ambrosia` shouldn't blank out
 		// data we already have.
+		// Task 8's metadata-level watch: still writes the new (smaller)
+		// wordCount through -- it's the best number the feed currently
+		// reports, and nothing is destroyed by writing a number -- but
+		// additionally flags wordCountRegressionFlaggedAt so
+		// AO3ChapterFetcher.isStale leaves contentHTML alone (skips both
+		// the background sweep and on-open fetching for unread articles)
+		// until "Check for updates" runs the real fetch through the
+		// content-level guard. Scoped to this diff path only -- it does
+		// not extend to the search-extractor/link-import paths, since
+		// there's no contentHTML in play there, only this same feed-
+		// reported number.
 		if wordCount != existingArticle.wordCount, let wordCount {
 			d[DatabaseKey.wordCount] = wordCount
+			if let existingWordCount = existingArticle.wordCount,
+			   AO3RegressionThreshold.isRegression(from: existingWordCount, to: wordCount) {
+				d[DatabaseKey.wordCountRegressionFlaggedAt] = Date()
+			}
 		}
 		if chapterCurrent != existingArticle.chapterCurrent, let chapterCurrent {
 			d[DatabaseKey.chapterCurrent] = chapterCurrent

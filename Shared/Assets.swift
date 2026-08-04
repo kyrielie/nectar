@@ -43,6 +43,9 @@ struct Assets {
 		static let faviconTemplate: RSImage = RSImage.symbolImage("book.closed.fill", pointSize: 120)!
 
 		static let share = RSImage(symbol: "square.and.arrow.up")!
+		// Task 8 ("Content archival & destructive-update protection") --
+		// the explicit per-article "Check for updates" action.
+		static let checkForUpdates = RSImage(symbol: "arrow.triangle.2.circlepath")!
 		static let folder = RSImage(symbol: "folder")!
 		static let starredFeed = IconImage(starClosed, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.star)
 

@@ -48,6 +48,17 @@ public struct AO3ChapterExtractionResult: Sendable {
 	public let bookmarkCount: Int?
 	public let hitCount: Int?
 
+	/// The Work Header stats block's Words count, read the same way as the
+	/// four counts above. Distinct from `Article.wordCount`, which stays
+	/// Workstream 1's (feed-derived) territory and is never overwritten by
+	/// a chapter fetch (see `AO3ChapterFetcher.rebuildParsedItem`, which
+	/// always passes `existingArticle.wordCount` through unchanged) --
+	/// this field exists purely for Task 8's content-regression guard
+	/// (`AO3ChapterFetcher.detectRegression`), which needs the fetched
+	/// page's own word count to compare against the stored content's
+	/// re-derived one, independent of whatever the feed last reported.
+	public let wordCount: Int?
+
 	/// The page's Rails CSRF token (`<meta name="csrf-token" content="...">`,
 	/// present on every AO3 page regardless of sign-in state), scraped for
 	/// Task 6 (kudos-on-like) -- see `AO3KudosManager`. `nil` only if the
@@ -57,13 +68,14 @@ public struct AO3ChapterExtractionResult: Sendable {
 	/// without it.
 	public let csrfToken: String?
 
-	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, csrfToken: String? = nil) {
+	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, wordCount: Int? = nil, csrfToken: String? = nil) {
 		self.contentHTML = contentHTML
 		self.chapters = chapters
 		self.commentCount = commentCount
 		self.kudosCount = kudosCount
 		self.bookmarkCount = bookmarkCount
 		self.hitCount = hitCount
+		self.wordCount = wordCount
 		self.csrfToken = csrfToken
 	}
 }
@@ -133,7 +145,7 @@ public enum AO3ChapterHTMLExtractor {
 				let chapters = chapterDivs.compactMap(extractedChapter)
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, csrfToken: csrfToken(root: root)))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root)))
 			}
 
 			// Single-chapter works carry no per-chapter <div class="chapter">
@@ -152,7 +164,7 @@ public enum AO3ChapterHTMLExtractor {
 				let chapters = [AO3ExtractedChapter(id: "chapter-1", title: "Chapter 1")]
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, csrfToken: csrfToken(root: root)))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root)))
 			}
 		}
 
@@ -336,21 +348,21 @@ private extension AO3ChapterHTMLExtractor {
 	/// Comments/Kudos/Bookmarks/Hits into structured data this function can
 	/// hand back to callers instead of leaving them buried in an opaque
 	/// HTML blob.
-	static func serializedContentHTML(root: HTMLLiteElement, workSkinParent: HTMLLiteElement, workSkinIndex: Int, workSkinDiv: HTMLLiteElement) -> (contentHTML: String, commentCount: Int?, kudosCount: Int?, bookmarkCount: Int?, hitCount: Int?) {
+	static func serializedContentHTML(root: HTMLLiteElement, workSkinParent: HTMLLiteElement, workSkinIndex: Int, workSkinDiv: HTMLLiteElement) -> (contentHTML: String, commentCount: Int?, kudosCount: Int?, bookmarkCount: Int?, hitCount: Int?, wordCount: Int?) {
 		var contentHTML = ""
-		var counts = (commentCount: Int?.none, kudosCount: Int?.none, bookmarkCount: Int?.none, hitCount: Int?.none)
+		var counts = (commentCount: Int?.none, kudosCount: Int?.none, bookmarkCount: Int?.none, hitCount: Int?.none, wordCount: Int?.none)
 
 		if let workHeader = parseWorkHeader(root: root) {
 			if let prefaceHTML = AO3PrefaceRenderer.html(id: "ao3Preface", data: workHeader.data) {
 				contentHTML += prefaceHTML
 			}
-			counts = (workHeader.commentCount, workHeader.kudosCount, workHeader.bookmarkCount, workHeader.hitCount)
+			counts = (workHeader.commentCount, workHeader.kudosCount, workHeader.bookmarkCount, workHeader.hitCount, workHeader.wordCount)
 		}
 		if let styleElement = precedingStyleElement(parent: workSkinParent, beforeIndex: workSkinIndex) {
 			contentHTML += serializeHTMLLiteNodes([.element(styleElement)])
 		}
 		contentHTML += serializeHTMLLiteNodes([.element(workSkinDiv)])
-		return (contentHTML, counts.commentCount, counts.kudosCount, counts.bookmarkCount, counts.hitCount)
+		return (contentHTML, counts.commentCount, counts.kudosCount, counts.bookmarkCount, counts.hitCount, counts.wordCount)
 	}
 }
 
@@ -366,6 +378,7 @@ struct AO3WorkHeaderExtraction {
 	let kudosCount: Int?
 	let bookmarkCount: Int?
 	let hitCount: Int?
+	let wordCount: Int?
 }
 
 private extension AO3ChapterHTMLExtractor {
@@ -397,6 +410,7 @@ private extension AO3ChapterHTMLExtractor {
 		var kudosCount: Int?
 		var bookmarkCount: Int?
 		var hitCount: Int?
+		var wordCount: Int?
 
 		var pendingDT: HTMLLiteElement?
 		for element in directChildElements(of: metaGroup) {
@@ -471,17 +485,22 @@ private extension AO3ChapterHTMLExtractor {
 					case "kudos": kudosCount = numeric
 					case "bookmarks": bookmarkCount = numeric
 					case "hits": hitCount = numeric
+					case "words": wordCount = numeric
 					default: break
 					}
 				}
 			}
 		}
 
-		// Words is deliberately not parsed out to a dedicated field here --
-		// it's still part of statsRows' display text (nothing is lost
-		// visually), but Article.wordCount stays Workstream 1's territory,
-		// same as chapterTotal/isComplete, so a chapter fetch can't
-		// silently override a value the feed parser already owns.
+		// Words is still part of statsRows' display text regardless (nothing
+		// is lost visually), and Article.wordCount itself stays Workstream
+		// 1's (feed-derived) territory, same as chapterTotal/isComplete --
+		// AO3ChapterFetcher.rebuildParsedItem always passes
+		// existingArticle.wordCount through unchanged, so this parsed value
+		// never silently overrides what the feed parser already owns. It's
+		// surfaced on AO3WorkHeaderExtraction/AO3ChapterExtractionResult
+		// purely for Task 8's content-regression guard to compare a fresh
+		// fetch's word count against the stored content's re-derived one.
 
 		guard !rows.isEmpty || !statsRows.isEmpty else {
 			return nil
@@ -491,7 +510,8 @@ private extension AO3ChapterHTMLExtractor {
 			commentCount: commentCount,
 			kudosCount: kudosCount,
 			bookmarkCount: bookmarkCount,
-			hitCount: hitCount
+			hitCount: hitCount,
+			wordCount: wordCount
 		)
 	}
 

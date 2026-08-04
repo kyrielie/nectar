@@ -41,6 +41,9 @@
     "A history of what the app has done over the web — feed refreshes, status syncs, favicon lookups, and more — with the result of each. Keeps the most recent 500 entries and clears when the app relaunches." : {
       "comment" : "Activity Log explainer"
     },
+    "A newer version of this work was fetched, but it looks smaller than what's archived -- this can happen on a real edit, or on a deleted/shrunk chapter. Use the new version, or keep what's archived?" : {
+      "comment" : "Message"
+    },
     "A to Z" : {
       "comment" : "Ascending sort direction — alphabetic"
     },
@@ -138,7 +141,10 @@
       "comment" : "Cancel\nCancel button"
     },
     "Check for Updates" : {
-      "comment" : "AO3 preface refetch cadence picker label"
+      "comment" : "AO3 preface refetch cadence picker label\nCommand"
+    },
+    "Check for Updates (Enable AO3 Updates in Settings)" : {
+      "comment" : "Command, disabled: Ambrosia article with both AO3 network toggles off"
     },
     "Choose an account to receive the imported feeds and folders" : {
       "comment" : "Import Account"
@@ -344,6 +350,9 @@
     "Feeds" : {
       "comment" : "Feeds"
     },
+    "Fetch AO3 Stats for Library Works" : {
+      "comment" : "Ambrosia AO3 stats-updates toggle label"
+    },
     "Fetching" : {
       "comment" : "Fetching"
     },
@@ -442,6 +451,9 @@
     "Invalid Address" : {
       "comment" : "Invalid Address"
     },
+    "Keep Archived Version" : {
+      "comment" : "Command"
+    },
     "Large" : {
       "comment" : "Large"
     },
@@ -453,6 +465,9 @@
     },
     "Last Response" : {
       "comment" : "Last HTTP Response"
+    },
+    "Later" : {
+      "comment" : "Command"
     },
     "Leave Kudos When You Love a Work" : {
       "comment" : "AO3 kudos-on-like toggle label"
@@ -651,6 +666,9 @@
     "Oldest First" : {
       "comment" : "Ascending sort direction — date"
     },
+    "Only affects works added to your library from Ambrosia/Calibre. Both are off by default so Nectar makes no AO3 requests for a purely local archive unless you turn one on. Works imported directly from an AO3 RSS feed always fetch live content -- there's no other way for them to get it." : {
+      "comment" : "Ambrosia AO3 network toggles footer"
+    },
     "Open" : {
       "comment" : "Open"
     },
@@ -693,11 +711,17 @@
     "Please enter a valid http:// or https:// address." : {
       "comment" : "Invalid address message"
     },
+    "Possible Content Change" : {
+      "comment" : "Title"
+    },
     "Preview" : {
       "comment" : "Preview\nPreview section header"
     },
     "Previous Article" : {
       "comment" : "Previous Article"
+    },
+    "Pull Chapter Updates for Library Works" : {
+      "comment" : "Ambrosia AO3 content-updates toggle label"
     },
     "Read Later" : {
       "comment" : "Command\nRead Later"
@@ -939,6 +963,9 @@
     },
     "Updating…" : {
       "comment" : "Updating…"
+    },
+    "Use New Version" : {
+      "comment" : "Command"
     },
     "Vacuum Databases" : {
       "comment" : "Vacuum databases button"

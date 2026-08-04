@@ -140,10 +140,80 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 			noteAnthologyUnsupportedIfNeeded(for: article)
 			return
 		}
+		// Task 8: once an article is read, it no longer auto-refetches on
+		// open -- only the explicit "Check for updates" action
+		// (checkForUpdates(for:)) fires a fetch for a read article now.
+		// Unread articles keep today's on-open-fetch behavior unchanged
+		// (that's what delivers first-read content), and the background
+		// sweep (sweepStaleUnreadArticles) was already scoped to unread
+		// only, so this mainly closes the one seam that didn't respect
+		// that: reopening an already-read article.
+		guard !article.status.read else {
+			return
+		}
 		guard isStale(article: article) else {
 			return
 		}
+		guard Self.isAO3NetworkRequestAllowed(for: article) else {
+			return
+		}
 		downloadIfNeeded(workID: workID, articleID: article.articleID, accountID: article.accountID, feedID: article.feedID)
+	}
+
+	/// True if `article` is a single AO3 work (not an anthology/combined-
+	/// series bookKey) that `checkForUpdates(for:)` could actually act on
+	/// right now -- i.e. no unresolved pending-update diff is blocking a
+	/// re-check. For UI use, to decide whether to show/enable the "Check
+	/// for updates" action at all.
+	public func canCheckForUpdates(for article: Article) -> Bool {
+		guard Self.ao3WorkID(fromBookKey: article.bookKey) != nil else {
+			return false
+		}
+		return article.pendingUpdateContentHTML == nil
+	}
+
+	/// Explicit "Check for updates" action -- always available per-article
+	/// regardless of read state, unlike `fetchIfNeeded`'s automatic paths.
+	/// There is deliberately no bulk "check all" equivalent (per the plan).
+	/// Still a no-op for an anthology/combined-series bookKey (same as
+	/// `fetchIfNeeded`), and still blocked while an unresolved
+	/// `pendingUpdateContentHTML` diff exists for this article -- a second
+	/// edit landing before the first pending diff is resolved must not
+	/// silently overwrite the pending slot, so re-checking is blocked
+	/// entirely until the person resolves it (see
+	/// `Account.resolvePendingContentUpdateAsync`). Unlike `fetchIfNeeded`,
+	/// this does not consult `isStale`'s settled-cadence/regression-flag
+	/// checks -- the whole point of an explicit user action is to check
+	/// regardless of whether the article "looks" settled.
+	public func checkForUpdates(for article: Article) {
+		guard let workID = Self.ao3WorkID(fromBookKey: article.bookKey) else {
+			noteAnthologyUnsupportedIfNeeded(for: article)
+			return
+		}
+		guard article.pendingUpdateContentHTML == nil else {
+			return
+		}
+		guard Self.isAO3NetworkRequestAllowed(for: article) else {
+			return
+		}
+		downloadIfNeeded(workID: workID, articleID: article.articleID, accountID: article.accountID, feedID: article.feedID)
+	}
+
+	/// True unless `article` is Ambrosia-sourced and both
+	/// `AmbrosiaAO3NetworkPreference` flags are off -- the pre-request guard
+	/// for keeping a local-archive-only reader off AO3 servers entirely. A
+	/// pre-request guard, not a post-fetch filter: when this is false, no
+	/// request is made at all, not just "result discarded." Native
+	/// (non-Ambrosia) AO3-RSS-sourced articles always return true here --
+	/// they have no other way to get content at all, so they're unaffected
+	/// by either flag. Public: WebViewController's checkForUpdatesAction()
+	/// uses this to decide whether to render the per-article action as
+	/// disabled with an explanatory label.
+	public static func isAO3NetworkRequestAllowed(for article: Article) -> Bool {
+		guard article.isAmbrosiaItem else {
+			return true
+		}
+		return AmbrosiaAO3NetworkPreference.contentUpdatesEnabled || AmbrosiaAO3NetworkPreference.statsUpdatesEnabled
 	}
 
 	/// True when the article has no stored content yet, when the stored
@@ -161,6 +231,19 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// interval from. Exposed internally for direct testing against
 	/// fixtures.
 	func isStale(article: Article) -> Bool {
+		// Task 8: an unresolved pending-update diff or a metadata-level
+		// regression flag both mean "leave contentHTML exactly as
+		// archived until the person acts" -- skip both the background
+		// sweep and on-open fetching for either state. checkForUpdates
+		// (the explicit per-article action) bypasses this function
+		// entirely for the flag case, but still separately blocks on
+		// pendingUpdateContentHTML itself -- see its own doc comment.
+		guard article.pendingUpdateContentHTML == nil else {
+			return false
+		}
+		guard article.wordCountRegressionFlaggedAt == nil else {
+			return false
+		}
 		guard let contentHTML = article.contentHTML, !contentHTML.isEmpty else {
 			return true
 		}
@@ -385,7 +468,38 @@ nonisolated private extension AO3ChapterFetcher {
 					return
 				}
 
-				let parsedItem = Self.rebuildParsedItem(from: existingArticle, workID: workID, extraction: extraction)
+				// Task 8's Ambrosia local-only toggles: gate what's applied
+				// from this one response, not whether a second request
+				// happens (there's only ever one -- content and stats come
+				// off the same fetch). Always true for a non-Ambrosia
+				// article. isAO3NetworkRequestAllowed already stopped this
+				// fetch from firing at all if both were false, so at least
+				// one of these two is true here.
+				let applyContentUpdate = !existingArticle.isAmbrosiaItem || AmbrosiaAO3NetworkPreference.contentUpdatesEnabled
+				let applyStatsUpdate = !existingArticle.isAmbrosiaItem || AmbrosiaAO3NetworkPreference.statsUpdatesEnabled
+
+				// Task 8's content-level regression guard: don't overwrite
+				// silently, and don't discard the new fetch either -- keep
+				// the currently-stored content as canonical and stash the
+				// new fetch as a pending update for the reader to review.
+				// Only relevant when the content write is actually being
+				// applied -- skip it entirely (and fall through to the
+				// stats-only write below) when contentUpdatesEnabled is off
+				// for this Ambrosia article.
+				if applyContentUpdate, let regressionDescription = Self.detectRegression(existingArticle: existingArticle, extraction: extraction) {
+					await account.setPendingContentUpdateAsync(extraction.contentHTML, forArticleID: articleID)
+					activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: "Possible content regression detected (\(regressionDescription)) -- kept existing content, flagged for review", returnedFromCache: downloadResponse.returnedFromCache)
+					failureMessages.withLock { $0[articleID] = nil }
+					postNotification(name: .ao3ChapterFetchDidComplete, articleID: articleID)
+					// The CSRF token this fetch obtained is still good for a
+					// kudos attempt even though the content write itself was
+					// held back -- see the non-regression path's identical
+					// call below for why this is safe/idempotent.
+					AO3KudosManager.attemptKudosIfNeeded(article: existingArticle, workID: workID, csrfToken: extraction.csrfToken)
+					return
+				}
+
+				let parsedItem = Self.rebuildParsedItem(from: existingArticle, workID: workID, extraction: extraction, applyContentUpdate: applyContentUpdate, applyStatsUpdate: applyStatsUpdate)
 				_ = await account.updateAsync(feedID: feedID, parsedItems: [parsedItem], deleteOlder: false)
 
 				activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: ActivityLog.dataSizeMessage(data), returnedFromCache: downloadResponse.returnedFromCache)
@@ -505,7 +619,56 @@ nonisolated private extension AO3ChapterFetcher {
 	/// `tags` and `language` have no persisted home on `Article` at all (see
 	/// ParsedItem/Article field lists), so both are passed through as nil --
 	/// this doesn't blank anything that was ever actually stored.
-	static func rebuildParsedItem(from existingArticle: Article, workID: String, extraction: AO3ChapterExtractionResult) -> ParsedItem {
+	/// Re-derives the currently stored content's chapter/word counts the
+	/// same way `isStale` re-derives chapter count -- walking the stored
+	/// `contentHTML`'s own `#workskin` wrapper back through
+	/// `AO3ChapterHTMLExtractor.extract`, since the stored contentHTML *is*
+	/// that wrapper -- and compares against this fetch's counts. Returns a
+	/// short human-readable description of what regressed (for the
+	/// Activity Log message), or nil if this fetch looks fine to write
+	/// through normally.
+	///
+	/// A fewer-chapters count is always a regression, independent of the
+	/// word-count threshold (full deletion is handled fine elsewhere --
+	/// `.notFound` leaves existing content alone -- this is specifically
+	/// for a legitimate-looking edit that shrinks a work). Word count only
+	/// counts as a regression once it clears `AO3RegressionThreshold`'s
+	/// 10%-and-300-word bar, using the identical threshold the metadata-
+	/// level watch in `Article+Database.changesFrom` uses.
+	static func detectRegression(existingArticle: Article, extraction: AO3ChapterExtractionResult) -> String? {
+		guard let storedHTML = existingArticle.contentHTML, !storedHTML.isEmpty,
+			  case .success(let storedExtraction) = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: storedHTML) else {
+			// Nothing stored yet, or the stored content can't be
+			// re-parsed -- nothing to regress against, so the first
+			// successful fetch for an article always writes through.
+			return nil
+		}
+
+		let oldChapterCount = storedExtraction.chapters.count
+		let newChapterCount = extraction.chapters.count
+		if newChapterCount < oldChapterCount {
+			return "chapter count \(oldChapterCount) -> \(newChapterCount)"
+		}
+
+		if let oldWordCount = storedExtraction.wordCount, let newWordCount = extraction.wordCount,
+		   AO3RegressionThreshold.isRegression(from: oldWordCount, to: newWordCount) {
+			return "word count \(oldWordCount) -> \(newWordCount)"
+		}
+
+		return nil
+	}
+
+	/// `applyContentUpdate`/`applyStatsUpdate` are Task 8's Ambrosia
+	/// local-only toggles (`AmbrosiaAO3NetworkPreference`) -- both always
+	/// true for a non-Ambrosia article, since those have no other way to
+	/// get content at all. When a flag is false, the corresponding fields
+	/// pass `existingArticle`'s own current values through unchanged
+	/// instead of this fetch's, so "I want live kudos counts but don't want
+	/// my archived text touched" (and the reverse) both work: unlike the
+	/// no-flags-off path, this doesn't leave those fields on the rebuilt
+	/// item at their old values by accident, it does so because the
+	/// corresponding fetch data was deliberately not eligible to apply.
+	static func rebuildParsedItem(from existingArticle: Article, workID: String, extraction: AO3ChapterExtractionResult, applyContentUpdate: Bool, applyStatsUpdate: Bool) -> ParsedItem {
 		let authors: Set<ParsedAuthor>? = existingArticle.authors.map { authorSet in
 			Set(authorSet.map { ParsedAuthor(name: $0.name, url: $0.url, avatarURL: $0.avatarURL, emailAddress: $0.emailAddress) })
 		}
@@ -519,7 +682,7 @@ nonisolated private extension AO3ChapterFetcher {
 			externalURL: existingArticle.rawExternalLink,
 			title: existingArticle.title,
 			language: nil,
-			contentHTML: extraction.contentHTML,
+			contentHTML: applyContentUpdate ? extraction.contentHTML : existingArticle.contentHTML,
 			contentText: existingArticle.contentText,
 			// existingArticle.markdown is expected nil for every AO3-sourced
 			// article (markdown is an Ambrosia/JSON-Feed-only concept, never
@@ -538,7 +701,7 @@ nonisolated private extension AO3ChapterFetcher {
 			attachments: nil,
 			isAmbrosiaItem: existingArticle.isAmbrosiaItem,
 			wordCount: existingArticle.wordCount,
-			chapterCurrent: extraction.chapters.count,
+			chapterCurrent: applyContentUpdate ? extraction.chapters.count : existingArticle.chapterCurrent,
 			chapterTotal: existingArticle.chapterTotal,
 			isComplete: existingArticle.isComplete,
 			fandoms: existingArticle.fandoms,
@@ -548,10 +711,10 @@ nonisolated private extension AO3ChapterFetcher {
 			warnings: existingArticle.warnings,
 			categories: existingArticle.categories,
 			series: series,
-			commentCount: extraction.commentCount,
-			kudosCount: extraction.kudosCount,
-			bookmarkCount: extraction.bookmarkCount,
-			hitCount: extraction.hitCount,
+			commentCount: applyStatsUpdate ? extraction.commentCount : existingArticle.commentCount,
+			kudosCount: applyStatsUpdate ? extraction.kudosCount : existingArticle.kudosCount,
+			bookmarkCount: applyStatsUpdate ? extraction.bookmarkCount : existingArticle.bookmarkCount,
+			hitCount: applyStatsUpdate ? extraction.hitCount : existingArticle.hitCount,
 			// rebuildParsedItem only runs on a successful extraction (it's
 			// handed the extraction.chapters/stats result), so "now" is
 			// correct here regardless of caller -- a failed fetch never
