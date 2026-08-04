@@ -296,6 +296,23 @@ import Testing
 		#expect(result.contentHTML.contains("Part 2 of"))
 	}
 
+	@Test func previousWorkURLCapturedNextNilWhenLastInBothSeries() throws {
+		// Task 10: ao3-work-two-series.html's two <span class="series">
+		// blocks each carry the same <a class="previous"
+		// href="/works/60379705"> and no <a class="next"> (this work is
+		// the last part in both series memberships) -- confirms
+		// previousNextWorkURLs(fromDD:) reads the first block's link for
+		// each direction and resolves it to an absolute URL.
+		let html = htmlFixtureString("ao3-work-two-series.html")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+		#expect(result.previousWorkURL == "https://archiveofourown.org/works/60379705")
+		#expect(result.nextWorkURL == nil)
+	}
+
 	@Test func metaGroupCollectionsRowRenderedForSingleChapterWork() throws {
 		// This fixture's Work Header includes a Collections row -- the only
 		// one of the four fixtures that does. Confirms a row this app

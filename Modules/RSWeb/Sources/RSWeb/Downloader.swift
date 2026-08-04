@@ -59,9 +59,9 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 		urlSession.invalidateAndCancel()
 	}
 
-	public func download(_ url: URL) async throws -> DownloadResponse {
+	public func download(_ url: URL, shouldCache: (@Sendable (Data?, URLResponse?) -> Bool)? = nil) async throws -> DownloadResponse {
 		try await withCheckedThrowingContinuation { continuation in
-			download(url) { downloadResponse, error in
+			download(url, shouldCache: shouldCache) { downloadResponse, error in
 				if let error {
 					continuation.resume(throwing: error)
 				} else {
@@ -82,9 +82,9 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 	/// case. Unlike that case, a passed Cloudflare challenge isn't
 	/// per-account -- caching a success under the plain URL key is correct
 	/// here, not a leak.
-	public func download(_ urlRequest: URLRequest) async throws -> DownloadResponse {
+	public func download(_ urlRequest: URLRequest, shouldCache: (@Sendable (Data?, URLResponse?) -> Bool)? = nil) async throws -> DownloadResponse {
 		try await withCheckedThrowingContinuation { continuation in
-			download(urlRequest) { downloadResponse, error in
+			download(urlRequest, shouldCache: shouldCache) { downloadResponse, error in
 				if let error {
 					continuation.resume(throwing: error)
 				} else {
@@ -94,12 +94,12 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 		}
 	}
 
-	public func download(_ url: URL, _ callback: @escaping DownloadCallback) {
+	public func download(_ url: URL, shouldCache: (@Sendable (Data?, URLResponse?) -> Bool)? = nil, _ callback: @escaping DownloadCallback) {
 		assert(Thread.isMainThread)
-		download(URLRequest(url: url), callback)
+		download(URLRequest(url: url), shouldCache: shouldCache, callback)
 	}
 
-	public func download(_ urlRequest: URLRequest, _ callback: @escaping DownloadCallback) {
+	public func download(_ urlRequest: URLRequest, shouldCache: (@Sendable (Data?, URLResponse?) -> Bool)? = nil, _ callback: @escaping DownloadCallback) {
 		assert(Thread.isMainThread)
 
 		guard let url = urlRequest.url else {
@@ -156,14 +156,22 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 		let task = urlSession.dataTask(with: urlRequestToUse) { (data, response, error) in
 
 			// Only cache a genuinely successful response. Caching a non-2xx
-			// response (a Cloudflare challenge page, a 5xx, a 404, etc.) would
-			// mean replaying that failure for the cache's full time-to-live --
-			// e.g. AO3SearchResultsFetcher's Cloudflare-challenge detection
-			// runs on whatever Downloader hands it, so a challenge page cached
-			// here would keep failing the same way on every retry for
-			// DownloadCache's 3-minute TTL, even once a fresh request would
-			// have gotten through.
-			if isCacheableRequest, error == nil, response?.statusIsOK == true {
+			// response (a 5xx, a 404, etc.) would mean replaying that failure
+			// for the cache's full time-to-live. That alone isn't enough for
+			// a Cloudflare challenge page, though -- those come back as an
+			// ordinary HTTP 200 (see AO3CloudflareChallenge), so they'd pass
+			// the statusIsOK check here and get cached as if they were the
+			// real page, then replayed as the same "success" on every later
+			// call to this URL for DownloadCache's 3-minute TTL, even after
+			// a fresh request would have gotten through -- AO3SearchResultsFetcher's
+			// own Cloudflare-challenge detection runs on whatever this hands
+			// it, and by the time it decides the body is a challenge page,
+			// the caching decision below has already been made. `shouldCache`
+			// gives a caller that can recognize its own bad-response bodies
+			// (a challenge page, an HTML error page from a normally-JSON
+			// endpoint, etc.) the chance to veto caching on top of the
+			// status-code check.
+			if isCacheableRequest, error == nil, response?.statusIsOK == true, shouldCache?(data, response) ?? true {
 				Self.logger.debug("Downloader: caching response for \(url)")
 				self.cache.add(url.absoluteString, data: data, response: response)
 			}

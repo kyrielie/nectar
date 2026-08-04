@@ -49,6 +49,15 @@ public final class Article: Hashable, Sendable {
 	public let kudosCount: Int?
 	public let bookmarkCount: Int?
 	public let hitCount: Int?
+	// Task 10 ("Prev/next/first navigation"): AO3-absolute URLs of the
+	// previous/next work in series, read off the same live work-page
+	// fetch as the four stats above -- see
+	// AO3ChapterHTMLExtractor.AO3ChapterExtractionResult's doc comment.
+	// Drives the reader's prev/next buttons directly; nil when the work
+	// has no series membership, or is first/last in every series it
+	// belongs to.
+	public let previousWorkURL: String?
+	public let nextWorkURL: String?
 	// The most recent successful AO3ChapterFetcher fetch's completion time
 	// for this article, if any -- distinct from datePublished/dateModified
 	// (feed-derived). Used to decide whether a "settled" (non-stale) AO3
@@ -90,7 +99,7 @@ public final class Article: Hashable, Sendable {
 	public let bookKey: String
 	public let status: ArticleStatus
 
-	public init(accountID: String, articleID: String?, feedID: String, uniqueID: String, title: String?, contentHTML: String?, contentText: String?, markdown: String?, url: String?, externalURL: String?, summary: String?, imageURL: String?, datePublished: Date?, dateModified: Date?, authors: Set<Author>?, wordCount: Int? = nil, chapterCurrent: Int? = nil, chapterTotal: Int? = nil, isComplete: Bool? = nil, fandoms: [String]? = nil, relationships: [String]? = nil, characters: [String]? = nil, ratings: [String]? = nil, warnings: [String]? = nil, categories: [String]? = nil, series: [ArticleSeriesEntry]? = nil, commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, lastPrefaceFetchDate: Date? = nil, pendingUpdateContentHTML: String? = nil, pendingUpdateDetectedAt: Date? = nil, wordCountRegressionFlaggedAt: Date? = nil, isAmbrosiaItem: Bool = false, bookKey: String? = nil, status: ArticleStatus) {
+	public init(accountID: String, articleID: String?, feedID: String, uniqueID: String, title: String?, contentHTML: String?, contentText: String?, markdown: String?, url: String?, externalURL: String?, summary: String?, imageURL: String?, datePublished: Date?, dateModified: Date?, authors: Set<Author>?, wordCount: Int? = nil, chapterCurrent: Int? = nil, chapterTotal: Int? = nil, isComplete: Bool? = nil, fandoms: [String]? = nil, relationships: [String]? = nil, characters: [String]? = nil, ratings: [String]? = nil, warnings: [String]? = nil, categories: [String]? = nil, series: [ArticleSeriesEntry]? = nil, commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, previousWorkURL: String? = nil, nextWorkURL: String? = nil, lastPrefaceFetchDate: Date? = nil, pendingUpdateContentHTML: String? = nil, pendingUpdateDetectedAt: Date? = nil, wordCountRegressionFlaggedAt: Date? = nil, isAmbrosiaItem: Bool = false, bookKey: String? = nil, status: ArticleStatus) {
 		self.accountID = accountID
 		self.feedID = feedID
 		self.uniqueID = uniqueID
@@ -120,6 +129,8 @@ public final class Article: Hashable, Sendable {
 		self.kudosCount = kudosCount
 		self.bookmarkCount = bookmarkCount
 		self.hitCount = hitCount
+		self.previousWorkURL = previousWorkURL
+		self.nextWorkURL = nextWorkURL
 		self.lastPrefaceFetchDate = lastPrefaceFetchDate
 		self.pendingUpdateContentHTML = pendingUpdateContentHTML
 		self.pendingUpdateDetectedAt = pendingUpdateDetectedAt
@@ -148,7 +159,7 @@ public final class Article: Hashable, Sendable {
 	// MARK: - Equatable
 
 	static public func ==(lhs: Article, rhs: Article) -> Bool {
-		return lhs.articleID == rhs.articleID && lhs.accountID == rhs.accountID && lhs.feedID == rhs.feedID && lhs.uniqueID == rhs.uniqueID && lhs.title == rhs.title && lhs.contentHTML == rhs.contentHTML && lhs.contentText == rhs.contentText && lhs.rawLink == rhs.rawLink && lhs.rawExternalLink == rhs.rawExternalLink && lhs.summary == rhs.summary && lhs.rawImageLink == rhs.rawImageLink && lhs.datePublished == rhs.datePublished && lhs.dateModified == rhs.dateModified && lhs.authors == rhs.authors && lhs.wordCount == rhs.wordCount && lhs.chapterCurrent == rhs.chapterCurrent && lhs.chapterTotal == rhs.chapterTotal && lhs.isComplete == rhs.isComplete && lhs.fandoms == rhs.fandoms && lhs.relationships == rhs.relationships && lhs.characters == rhs.characters && lhs.ratings == rhs.ratings && lhs.warnings == rhs.warnings && lhs.categories == rhs.categories && lhs.series == rhs.series && lhs.commentCount == rhs.commentCount && lhs.kudosCount == rhs.kudosCount && lhs.bookmarkCount == rhs.bookmarkCount && lhs.hitCount == rhs.hitCount && lhs.lastPrefaceFetchDate == rhs.lastPrefaceFetchDate && lhs.pendingUpdateContentHTML == rhs.pendingUpdateContentHTML && lhs.pendingUpdateDetectedAt == rhs.pendingUpdateDetectedAt && lhs.wordCountRegressionFlaggedAt == rhs.wordCountRegressionFlaggedAt && lhs.isAmbrosiaItem == rhs.isAmbrosiaItem && lhs.bookKey == rhs.bookKey
+		return lhs.articleID == rhs.articleID && lhs.accountID == rhs.accountID && lhs.feedID == rhs.feedID && lhs.uniqueID == rhs.uniqueID && lhs.title == rhs.title && lhs.contentHTML == rhs.contentHTML && lhs.contentText == rhs.contentText && lhs.rawLink == rhs.rawLink && lhs.rawExternalLink == rhs.rawExternalLink && lhs.summary == rhs.summary && lhs.rawImageLink == rhs.rawImageLink && lhs.datePublished == rhs.datePublished && lhs.dateModified == rhs.dateModified && lhs.authors == rhs.authors && lhs.wordCount == rhs.wordCount && lhs.chapterCurrent == rhs.chapterCurrent && lhs.chapterTotal == rhs.chapterTotal && lhs.isComplete == rhs.isComplete && lhs.fandoms == rhs.fandoms && lhs.relationships == rhs.relationships && lhs.characters == rhs.characters && lhs.ratings == rhs.ratings && lhs.warnings == rhs.warnings && lhs.categories == rhs.categories && lhs.series == rhs.series && lhs.commentCount == rhs.commentCount && lhs.kudosCount == rhs.kudosCount && lhs.bookmarkCount == rhs.bookmarkCount && lhs.hitCount == rhs.hitCount && lhs.previousWorkURL == rhs.previousWorkURL && lhs.nextWorkURL == rhs.nextWorkURL && lhs.lastPrefaceFetchDate == rhs.lastPrefaceFetchDate && lhs.pendingUpdateContentHTML == rhs.pendingUpdateContentHTML && lhs.pendingUpdateDetectedAt == rhs.pendingUpdateDetectedAt && lhs.wordCountRegressionFlaggedAt == rhs.wordCountRegressionFlaggedAt && lhs.isAmbrosiaItem == rhs.isAmbrosiaItem && lhs.bookKey == rhs.bookKey
 	}
 }
 

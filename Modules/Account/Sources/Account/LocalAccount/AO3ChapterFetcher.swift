@@ -733,6 +733,12 @@ nonisolated private extension AO3ChapterFetcher {
 			kudosCount: applyStatsUpdate ? extraction.kudosCount : existingArticle.kudosCount,
 			bookmarkCount: applyStatsUpdate ? extraction.bookmarkCount : existingArticle.bookmarkCount,
 			hitCount: applyStatsUpdate ? extraction.hitCount : existingArticle.hitCount,
+			// Prev/next Work navigation is page chrome captured on the same
+			// fetch as content/chapters, not a "stat" -- gated by
+			// applyContentUpdate, matching chapterCurrent above, not
+			// applyStatsUpdate.
+			previousWorkURL: applyContentUpdate ? extraction.previousWorkURL : existingArticle.previousWorkURL,
+			nextWorkURL: applyContentUpdate ? extraction.nextWorkURL : existingArticle.nextWorkURL,
 			// rebuildParsedItem only runs on a successful extraction (it's
 			// handed the extraction.chapters/stats result), so "now" is
 			// correct here regardless of caller -- a failed fetch never
