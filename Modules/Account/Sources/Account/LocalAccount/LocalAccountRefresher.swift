@@ -189,14 +189,28 @@ import os
 		// AmbrosiaSQLiteTransferFetcher uses its own dedicated URLSession with a
 		// 300s timeout instead. Route those feeds to it directly here and only
 		// hand the rest to DownloadSession.
+		// AO3 search-results feeds (Task 9) are a third bucket alongside
+		// sqliteFeeds/downloadFeeds, matched on host + path
+		// (archiveofourown.org/works + a work_search[...] query), not
+		// extension -- see Self.isAO3SearchResultsFeed(_:). Like sqliteFeeds,
+		// these bypass DownloadSession entirely: they go through
+		// Downloader.shared, the same one-shot path AO3ChapterFetcher already
+		// uses, since a search-results page is a single GET, not something
+		// DownloadSession's conditional-GET/feed-parsing machinery is built
+		// for. This checkpoint fetches page 1 only -- "load more"
+		// pagination is a later checkpoint (see nectar-ao3-features-plan-FINAL.md,
+		// Task 9).
 		var downloadFeeds = Set<Feed>()
 		var sqliteFeeds = Set<Feed>()
+		var ao3SearchResultFeeds = Set<Feed>()
 		for feed in filteredFeeds {
 			guard let url = Self.url(for: feed) else {
 				continue
 			}
 			if url.pathExtension.lowercased() == "sqlite" {
 				sqliteFeeds.insert(feed)
+			} else if Self.isAO3SearchResultsFeed(url) {
+				ao3SearchResultFeeds.insert(feed)
 			} else {
 				downloadFeeds.insert(feed)
 			}
@@ -209,6 +223,10 @@ import os
 
 		for feed in sqliteFeeds {
 			fetchAndImportAmbrosiaSQLiteTransfer(feed: feed)
+		}
+
+		for feed in ao3SearchResultFeeds {
+			fetchAndImportAO3SearchResults(feed: feed)
 		}
 
 		guard !downloadFeeds.isEmpty else {
@@ -295,6 +313,66 @@ import os
 				}
 			} catch {
 				Self.logger.error("LocalAccountRefresher: Ambrosia SQLite transfer failed for \(url.absoluteString): \(error.localizedDescription)")
+				self.reportFeedRefreshError(feed: feed, error: error, activityKind: activityKind)
+			}
+		}
+	}
+
+	/// Fetches page 1 of an AO3 search-results feed and imports whatever
+	/// works it lists, via `AO3SearchResultsFetcher` (retry/backoff for 5xx
+	/// and timeouts, plus Cloudflare-challenge detection -- see that type's
+	/// own doc comments).
+	///
+	/// `deleteOlder: false` on the `updateAsync` call below, deliberately --
+	/// page 1 is a partial view of the search, not the whole feed (pagination
+	/// is lazy per the plan), so treating it as authoritative for pruning
+	/// would delete every work that only shows up on page 2+.
+	@MainActor private func fetchAndImportAO3SearchResults(feed: Feed) {
+		guard let url = Self.url(for: feed), let account = feed.account else {
+			return
+		}
+
+		let activityKind = ActivityKind.refreshFeedContent(feedURL: feed.url)
+
+		outstandingParseTasks += 1
+		Task { @MainActor in
+			defer {
+				self.outstandingParseTasks -= 1
+				self.completeRefreshIfReady()
+			}
+
+			feed.lastCheckDate = Date()
+
+			do {
+				switch try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url) {
+				case .success(let parsedItems):
+					let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(parsedItems), deleteOlder: false)
+					account.sendNotificationAbout(articleChanges)
+					feed.ao3SearchLastFetchedPage = 1
+					if let activityOwner {
+						ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "\(parsedItems.count) work\(parsedItems.count == 1 ? "" : "s") found")
+					}
+				case .noResults:
+					if let activityOwner {
+						ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "No results")
+					}
+				case .registrationRequired:
+					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "Restricted to registered AO3 users"]), activityKind: activityKind)
+				case .rateLimited:
+					// Distinct message, not the generic catch-all below --
+					// Downloader.shared has already started its own per-host
+					// cooldown by the time this returns (see
+					// AO3SearchResultsFetcher's doc comment).
+					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "AO3 rate limit hit -- backing off before retrying"]), activityKind: activityKind)
+				case .cloudflareChallenge:
+					// Also distinct, per the plan's explicit call-out: this
+					// isn't AO3's own rate limit and shouldn't be read as one,
+					// nor folded into the generic parse-failure case, since a
+					// real markup change looks identical otherwise.
+					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "Blocked by a Cloudflare challenge -- try again later"]), activityKind: activityKind)
+				}
+			} catch {
+				Self.logger.error("LocalAccountRefresher: AO3 search-results fetch failed for \(url.absoluteString): \(error.localizedDescription)")
 				self.reportFeedRefreshError(feed: feed, error: error, activityKind: activityKind)
 			}
 		}
@@ -923,6 +1001,42 @@ private extension LocalAccountRefresher {
 	/// `.sqlite`-vs-`.json` handling (decompression, import) happens where
 	/// callers act on the fetched feed URL for Ambrosia-identified accounts,
 	/// not inside DownloadSession.
+	/// AO3's own search-results form URL:
+	/// `https://archiveofourown.org/works?work_search[...]&...`, or a
+	/// tag-listing works page, `https://archiveofourown.org/tags/<tag>/works`
+	/// (no `work_search[` query -- AO3 paginates these the same way as a
+	/// search-results page, just pre-filtered by tag instead of by form
+	/// params). Matched on host (reusing
+	/// `AO3LinkListImporter.permittedHosts`, the same AO3-domain allowlist
+	/// Task 3's paste-import already trusts, rather than a fresh
+	/// single-host check) + path, per the plan ("matched on host +
+	/// path... not extension"). For the `/works` form, also requires a
+	/// `work_search[` query key -- matched with `hasPrefix` rather than an
+	/// exact key, since AO3 search URLs carry many distinct bracketed keys
+	/// (`work_search[query]`, `work_search[sort_column]`, etc.), not one
+	/// fixed key name. The `/tags/.../works` form carries no such query key,
+	/// so path shape alone (`/tags/` prefix, `/works` suffix) is what
+	/// identifies it.
+	internal static func isAO3SearchResultsFeed(_ url: URL) -> Bool {
+		guard let host = url.host()?.lowercased(), AO3LinkListImporter.permittedHosts.contains(host) else {
+			return false
+		}
+
+		let path = url.path
+
+		if path.hasPrefix("/tags/") && path.hasSuffix("/works") {
+			return true
+		}
+
+		guard path == "/works" else {
+			return false
+		}
+		guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let queryItems = components.queryItems else {
+			return false
+		}
+		return queryItems.contains { $0.name.hasPrefix("work_search[") }
+	}
+
 	static func url(for feed: Feed) -> URL? {
 		guard let url = URL(string: feed.url) else {
 			return nil

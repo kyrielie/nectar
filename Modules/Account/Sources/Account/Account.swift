@@ -951,6 +951,30 @@ public enum FetchType {
 	func updateAsync(feedID: String, parsedItems: Set<ParsedItem>, deleteOlder: Bool = true) async -> ArticleChanges {
 		precondition(Thread.isMainThread)
 
+		// Bug fix (Task 8 audit, finding #3): JSONFeedParser reads
+		// comment/kudos/bookmark/hit counts straight off a feed's
+		// _ambrosia extension at parse time (Task 2, intentional --
+		// supports a friend's self-hosted Ambrosia server publishing its
+		// own already-scraped stats), with no reference to
+		// AmbrosiaAO3NetworkPreference at all. That's correct for
+		// contentUpdatesEnabled (feed-supplied stats aren't chapter
+		// content), but not for statsUpdatesEnabled: someone who turns
+		// off "fetch AO3 stats" expecting to never see AO3-derived
+		// numbers in a local archive reader would reasonably expect that
+		// to cover feed-supplied stats too, not just live-fetched ones.
+		// Stripped here, at the one place both ParsedItem (RSParser) and
+		// the preference (this module) are in scope, rather than in
+		// JSONFeedParser itself (which can't depend on Account) or in
+		// ArticlesDatabase (wrong dependency direction, and shared by
+		// every account type, not just this Ambrosia-toggle concern).
+		// Already-stored stats from an earlier sync are left alone --
+		// this only withholds newly incoming feed-supplied values while
+		// the toggle is off, and picks them back up on the next refresh
+		// once it's re-enabled.
+		let parsedItems: Set<ParsedItem> = AmbrosiaAO3NetworkPreference.statsUpdatesEnabled
+			? parsedItems
+			: Set(parsedItems.map { $0.isAmbrosiaItem ? $0.strippingAO3Stats() : $0 })
+
 		let articleChanges = await database.updateAsync(parsedItems: parsedItems, feedID: feedID, deleteOlder: deleteOlder)
 		sendNotificationAbout(articleChanges)
 		return articleChanges

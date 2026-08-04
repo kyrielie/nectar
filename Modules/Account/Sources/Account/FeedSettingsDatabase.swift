@@ -31,6 +31,7 @@ final class FeedSettingsDatabase: Sendable {
 		case folderRelationship
 		case lastCheckDate
 		case lastResponseCode
+		case ao3SearchLastFetchedPage
 	}
 
 	struct Row {
@@ -49,6 +50,7 @@ final class FeedSettingsDatabase: Sendable {
 		let folderRelationship: [String: String]?
 		let lastCheckDate: Date?
 		let lastResponseCode: Int?
+		let ao3SearchLastFetchedPage: Int?
 	}
 
 	let databasePath: String
@@ -65,6 +67,9 @@ final class FeedSettingsDatabase: Sendable {
 			database.runCreateStatements(Self.tableCreationStatements)
 			if !database.columnExists("lastResponseCode", inTableWithName: "feedSettings") {
 				database.executeStatements("ALTER TABLE feedSettings ADD COLUMN lastResponseCode INTEGER;")
+			}
+			if !database.columnExists("ao3SearchLastFetchedPage", inTableWithName: "feedSettings") {
+				database.executeStatements("ALTER TABLE feedSettings ADD COLUMN ao3SearchLastFetchedPage INTEGER;")
 			}
 		}
 		vacuumIfNeeded()
@@ -280,7 +285,7 @@ final class FeedSettingsDatabase: Sendable {
 private extension FeedSettingsDatabase {
 
 	static let tableCreationStatements = """
-	CREATE TABLE IF NOT EXISTS feedSettings (feedURL TEXT PRIMARY KEY, feedID TEXT NOT NULL DEFAULT '', homePageURL TEXT, iconURL TEXT, faviconURL TEXT, editedName TEXT, contentHash TEXT, newArticleNotificationsEnabled INTEGER NOT NULL DEFAULT 0, authors TEXT, conditionalGetInfoLastModified TEXT, conditionalGetInfoEtag TEXT, conditionalGetInfoDate REAL, cacheControlInfoDateCreated REAL, cacheControlInfoMaxAge REAL, externalID TEXT, folderRelationship TEXT, lastCheckDate REAL, lastResponseCode INTEGER);
+	CREATE TABLE IF NOT EXISTS feedSettings (feedURL TEXT PRIMARY KEY, feedID TEXT NOT NULL DEFAULT '', homePageURL TEXT, iconURL TEXT, faviconURL TEXT, editedName TEXT, contentHash TEXT, newArticleNotificationsEnabled INTEGER NOT NULL DEFAULT 0, authors TEXT, conditionalGetInfoLastModified TEXT, conditionalGetInfoEtag TEXT, conditionalGetInfoDate REAL, cacheControlInfoDateCreated REAL, cacheControlInfoMaxAge REAL, externalID TEXT, folderRelationship TEXT, lastCheckDate REAL, lastResponseCode INTEGER, ao3SearchLastFetchedPage INTEGER);
 	"""
 
 	func row(from resultSet: FMResultSet) -> Row {
@@ -319,6 +324,11 @@ private extension FeedSettingsDatabase {
 			lastResponseCode = Int(resultSet.int(forColumn: Column.lastResponseCode.rawValue))
 		}
 
+		var ao3SearchLastFetchedPage: Int?
+		if !resultSet.columnIsNull(Column.ao3SearchLastFetchedPage.rawValue) {
+			ao3SearchLastFetchedPage = Int(resultSet.int(forColumn: Column.ao3SearchLastFetchedPage.rawValue))
+		}
+
 		return Row(
 			feedID: resultSet.swiftString(forColumn: Column.feedID.rawValue) ?? "",
 			homePageURL: resultSet.swiftString(forColumn: Column.homePageURL.rawValue),
@@ -334,7 +344,8 @@ private extension FeedSettingsDatabase {
 			externalID: resultSet.swiftString(forColumn: Column.externalID.rawValue),
 			folderRelationship: folderRelationship,
 			lastCheckDate: lastCheckDate,
-			lastResponseCode: lastResponseCode
+			lastResponseCode: lastResponseCode,
+			ao3SearchLastFetchedPage: ao3SearchLastFetchedPage
 		)
 	}
 }

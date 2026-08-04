@@ -23,8 +23,16 @@
 
 import Foundation
 import RSWeb
+import os
 
 enum AO3AuthenticatedFetcher {
+
+	// Also bypasses Downloader.shared (see header comment) and so was also
+	// unlogged. This one is reached only after AO3ChapterFetcher's own
+	// isAO3NetworkRequestAllowed gate already let the original (now-gated)
+	// request through, so it's not a leak path -- logged for the same
+	// "every request to AO3 is visible in one place" reason as the others.
+	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Nectar", category: "AO3AuthenticatedFetcher")
 
 	/// Not a stored singleton -- this fetcher is used at most once per
 	/// AO3ChapterFetcher retry, so there's no benefit to keeping a
@@ -52,6 +60,8 @@ enum AO3AuthenticatedFetcher {
 
 		var request = URLRequest(url: url)
 		request.setValue(cookieHeaderValue, forHTTPHeaderField: "Cookie")
+
+		logger.debug("Requesting AO3: GET \(url.absoluteString, privacy: .public) (authenticated retry)")
 
 		let session = makeSession()
 		defer { session.invalidateAndCancel() }

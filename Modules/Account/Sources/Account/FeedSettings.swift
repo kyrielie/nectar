@@ -150,6 +150,22 @@ import Articles
 		}
 	}
 
+	/// The highest AO3 search-results page fetched so far for this feed
+	/// (Task 9). `nil` until the first successful fetch; a normal refresh
+	/// always (re)fetches page 1, so this exists purely for "load more" to
+	/// know which page to request next -- not to gate the initial fetch.
+	/// Deleting and re-adding the same search-feed URL starts back at page 1
+	/// by design (see nectar-ao3-features-plan-FINAL.md, Task 9): this is a
+	/// property of the feed subscription, not of any story's identity.
+	var ao3SearchLastFetchedPage: Int? {
+		didSet {
+			if ao3SearchLastFetchedPage != oldValue {
+				database.setInt(ao3SearchLastFetchedPage, for: feedURL, column: .ao3SearchLastFetchedPage)
+				postSettingDidChange(.ao3SearchLastFetchedPage)
+			}
+		}
+	}
+
 	/// Create from database row (bulk load at startup).
 	init(feedURL: String, row: FeedSettingsDatabase.Row, database: FeedSettingsDatabase) {
 		self.feedURL = feedURL
@@ -169,6 +185,7 @@ import Articles
 		self.folderRelationship = row.folderRelationship
 		self.lastCheckDate = row.lastCheckDate
 		self.lastResponseCode = row.lastResponseCode
+		self.ao3SearchLastFetchedPage = row.ao3SearchLastFetchedPage
 	}
 
 	/// Create for a new feed not yet in the database.

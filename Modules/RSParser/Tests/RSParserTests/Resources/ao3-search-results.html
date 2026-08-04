@@ -1,0 +1,97 @@
+<!--
+  Synthetic fixture, NOT a raw capture of a real AO3 page -- this session
+  had no way to obtain raw HTML (only markdown-extracted fetches; see
+  AO3SearchResultsExtractor.swift's header comment). Built from the plan's
+  ao3downloader-sourced selectors plus the page *shape* a live fetch did
+  confirm (byline links, Fandoms line, symbol row, Tags block, Summary
+  blockquote, one "Part <N> of <name>" <li> per series membership, and
+  Words/Chapters/.../Hits stat order). Treat this as a stand-in until a
+  real View Source capture is available -- see the plan's "What only the
+  user can do".
+-->
+<html>
+<body>
+<ol class="work index group">
+
+<li id="work_11111111" class="work blurb group work-11111111" role="article">
+  <h4 class="heading">
+    <a href="/works/11111111">A Single Work</a>
+    by
+    <a rel="author" href="/users/onlyauthor/pseuds/onlyauthor">onlyauthor</a>
+  </h4>
+  <h5 class="fandoms heading">
+    <a class="tag" href="/tags/Some%20Fandom/works">Some Fandom</a>
+  </h5>
+  <p class="datetime">01 Jan 2026</p>
+  <span class="rating rating-general-audiences">General Audiences</span>
+  <span class="warning warnings-none">No Archive Warnings Apply</span>
+  <span class="category multi">Gen</span>
+  <span class="iswip">Complete Work</span>
+  <ul class="tags commas">
+    <li class="warnings"><a class="tag" href="/tags/No%20Archive%20Warnings%20Apply/works">No Archive Warnings Apply</a></li>
+    <li class="freeforms"><a class="tag" href="/tags/Fluff/works">Fluff</a></li>
+    <li class="freeforms"><a class="tag" href="/tags/One%20Shot/works">One Shot</a></li>
+  </ul>
+  <blockquote class="summary userstuff">
+    <p>Two paragraphs of summary.</p>
+    <p>Second paragraph.</p>
+  </blockquote>
+  <dl class="stats">
+    <dt class="language">Language:</dt><dd class="language">English</dd>
+    <dt class="words">Words:</dt><dd class="words">1,234</dd>
+    <dt class="chapters">Chapters:</dt><dd class="chapters"><a href="/works/11111111/chapters/1">1</a>/1</dd>
+    <dt class="kudos">Kudos:</dt><dd class="kudos"><a href="/works/11111111?view_full_work=true#kudos">10</a></dd>
+    <dt class="hits">Hits:</dt><dd class="hits">200</dd>
+  </dl>
+</li>
+
+<li id="work_22222222" class="work blurb group work-22222222" role="article">
+  <h4 class="heading">
+    <a href="/works/22222222">A Co-Authored, Multi-Series Work</a>
+    by
+    <a rel="author" href="/users/firstauthor/pseuds/firstauthor">firstauthor</a>,
+    <a rel="author" href="/users/secondauthor/pseuds/secondauthor">secondauthor</a>
+  </h4>
+  <h5 class="fandoms heading">
+    <a class="tag" href="/tags/Fandom%20One/works">Fandom One</a>,
+    <a class="tag" href="/tags/Fandom%20Two/works">Fandom Two</a>
+  </h5>
+  <p class="datetime">02 Jan 2026</p>
+  <span class="rating rating-mature">Mature</span>
+  <span class="warning warnings-rapenoncon warnings-majorchardeath">Choose Not To Warn</span>
+  <span class="category multi">F/M</span>
+  <span class="category multi">Other</span>
+  <span class="iswip">Work in Progress</span>
+  <ul class="tags commas">
+    <li class="warnings"><a class="tag" href="/tags/Rape*s*Non-Con/works">Rape/Non-Con</a></li>
+    <li class="warnings"><a class="tag" href="/tags/Major%20Character%20Death/works">Major Character Death</a></li>
+    <li class="relationships"><a class="tag" href="/tags/Character%20A*s*Character%20B/works">Character A/Character B</a></li>
+    <li class="characters"><a class="tag" href="/tags/Character%20A/works">Character A</a></li>
+    <li class="characters"><a class="tag" href="/tags/Character%20B/works">Character B</a></li>
+    <li class="freeforms"><a class="tag" href="/tags/Angst/works">Angst</a></li>
+  </ul>
+  <blockquote class="summary userstuff">
+    <p>A summary with <b>inline markup</b>.</p>
+  </blockquote>
+  <ul class="series">
+    <li>
+      Part <strong>2</strong> of <a href="/series/333333">The First Series</a>
+    </li>
+    <li>
+      Part <strong>7</strong> of <a href="/series/444444">The Second Series</a>
+    </li>
+  </ul>
+  <dl class="stats">
+    <dt class="language">Language:</dt><dd class="language">English</dd>
+    <dt class="words">Words:</dt><dd class="words">45,678</dd>
+    <dt class="chapters">Chapters:</dt><dd class="chapters"><a href="/works/22222222/chapters/1">3</a>/?</dd>
+    <dt class="comments">Comments:</dt><dd class="comments"><a href="/works/22222222?show_comments=true#comments">5</a></dd>
+    <dt class="kudos">Kudos:</dt><dd class="kudos"><a href="/works/22222222?view_full_work=true#kudos">99</a></dd>
+    <dt class="bookmarks">Bookmarks:</dt><dd class="bookmarks"><a href="/works/22222222/bookmarks">3</a></dd>
+    <dt class="hits">Hits:</dt><dd class="hits">1,000</dd>
+  </dl>
+</li>
+
+</ol>
+</body>
+</html>
