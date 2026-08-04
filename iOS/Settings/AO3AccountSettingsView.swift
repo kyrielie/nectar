@@ -20,6 +20,7 @@ struct AO3AccountSettingsView: View {
 	@State private var isShowingLogin = false
 	@State private var isShowingSignOutConfirmation = false
 	@State private var refetchInterval = AO3PrefaceRefetchPreference.current
+	@State private var isKudosOnLikeEnabled = AO3KudosOnLikePreference.isEnabled
 
 	var body: some View {
 		List {
@@ -64,7 +65,18 @@ struct AO3AccountSettingsView: View {
 					}
 				}
 			} footer: {
-				Text(NSLocalizedString("Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Sign-in is for reading only -- Nectar can't post kudos, subscribe, bookmark, or comment.", comment: "AO3 account section footer"))
+				Text(NSLocalizedString("Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Nectar can leave kudos on your behalf if you turn that on below -- it still can't subscribe, bookmark, or comment.", comment: "AO3 account section footer"))
+			}
+
+			Section {
+				Toggle(NSLocalizedString("Leave Kudos When You Love a Work", comment: "AO3 kudos-on-like toggle label"), isOn: $isKudosOnLikeEnabled)
+					.onChange(of: isKudosOnLikeEnabled) { _, newValue in
+						AO3KudosOnLikePreference.isEnabled = newValue
+					}
+			} footer: {
+				Text(isSignedIn
+					 ? NSLocalizedString("When you love a work in Nectar, it also leaves a kudos on that work on AO3, using your signed-in AO3 account.", comment: "AO3 kudos-on-like footer, signed in")
+					 : NSLocalizedString("When you love a work in Nectar, it also leaves a kudos on that work on AO3. You're not signed in, so it's left as a guest kudos -- sign in above to leave it as yourself instead.", comment: "AO3 kudos-on-like footer, signed out"))
 			}
 
 			Section {

@@ -750,6 +750,14 @@ public enum FetchType {
 
 	// MARK: - Fetching Articles
 
+	/// Task 4 (SQLite export): pass-through to ArticlesDatabase.exportArticlesSQLite.
+	/// `feedIDs` nil/empty exports every article in this account; a non-empty
+	/// set scopes the export to those feeds only. `destinationPath` must not
+	/// already exist.
+	public func exportArticlesSQLite(feedIDs: Set<String>? = nil, toPath destinationPath: String) throws {
+		try database.exportArticlesSQLite(feedIDs: feedIDs, toPath: destinationPath)
+	}
+
 	public func fetchArticles(_ fetchType: FetchType) -> Set<Article> {
 		switch fetchType {
 		case .starred(let limit):
@@ -834,6 +842,31 @@ public enum FetchType {
 
 	public func fetchArticleCountsAsync() async -> ArticleCounts {
 		await database.fetchArticleCountsAsync(feedIDs: flattenedFeedsIDs)
+	}
+
+	/// Largest-N articles by stored `contentHTML` size, for the Manage
+	/// Storage screen.
+	public func fetchArticleStorageInfo(limit: Int) async -> [ArticleStorageInfo] {
+		await database.fetchArticleStorageInfo(limit: limit)
+	}
+
+	/// Total stored `contentHTML` size across all of this account's
+	/// articles, for the Manage Storage screen's total-size figure.
+	public func fetchTotalContentHTMLSize() async -> Int {
+		await database.fetchTotalContentHTMLSize()
+	}
+
+	// MARK: - Kudos-on-like (Task 6)
+
+	/// Whether/how a kudos POST has already been attempted for this book.
+	/// See ArticlesDatabase.kudosAttempt(bookKey:) for the re-attempt policy.
+	public func kudosAttempt(bookKey: String) async -> (attemptedAt: Date, authenticated: Bool)? {
+		await database.kudosAttempt(bookKey: bookKey)
+	}
+
+	/// Records that a kudos POST was attempted for this book.
+	public func setKudosAttempted(bookKey: String, authenticated: Bool) async {
+		await database.setKudosAttempted(bookKey: bookKey, authenticated: authenticated)
 	}
 
 	/// Returns a dictionary of feedID → latest article date for all feeds with articles.
@@ -1043,8 +1076,11 @@ public enum FetchType {
 		await markAndFetchNewAsync(articleIDs: articleIDs, statusKey: .starred, flag: false)
 	}
 
-	// Delete the articles associated with the given set of articleIDs
-	func delete(articleIDs: Set<String>) async {
+	// Delete the articles associated with the given set of articleIDs.
+	// Public: the Manage Storage screen (iOS/Settings) is, as of that
+	// screen's addition, the first app-UI caller of this -- previously only
+	// called from within the Account module itself.
+	public func delete(articleIDs: Set<String>) async {
 		guard !articleIDs.isEmpty else {
 			return
 		}

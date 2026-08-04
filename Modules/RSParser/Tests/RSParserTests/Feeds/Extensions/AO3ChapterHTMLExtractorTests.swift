@@ -37,6 +37,28 @@ import Testing
 		}
 	}
 
+	// MARK: - CSRF token (Task 6: kudos-on-like)
+
+	@Test func csrfTokenExtractedFromMetaTag() throws {
+		let html = htmlFixtureString("ao3-work-single-chapter.html")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+		#expect(result.csrfToken == "R05MDFtZglfVv9eV-g7azfaIvQ64LHUdTpj5R0-nVwUNXII-BLARRpIkU50mmpImCuMgPwZv46VR6RlBL3gjIg")
+	}
+
+	@Test func csrfTokenNilWhenMetaTagMissing() throws {
+		let html = htmlFixtureString("ao3-work-multi-chapter.html").replacingOccurrences(of: "<meta name=\"csrf-token\"", with: "<meta name=\"not-csrf-token\"")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+		#expect(result.csrfToken == nil)
+	}
+
 	// MARK: - Multi-chapter, no workskin (ao3-work-multi-chapter.html, from entire.html)
 
 	@Test func multiChapterCountAndOrder() throws {

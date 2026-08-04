@@ -44,8 +44,11 @@
     "A to Z" : {
       "comment" : "Ascending sort direction — alphabetic"
     },
+    "About Tag & User Feeds" : {
+      "comment" : "AO3 RSS limitations info row title"
+    },
     "Account" : {
-      "comment" : "Account"
+      "comment" : "Account\nImport destination account picker label"
     },
     "Account Error" : {
       "comment" : "Account Error"
@@ -85,6 +88,9 @@
     },
     "All Unread" : {
       "comment" : "All Unread pseudo-feed title"
+    },
+    "AO3's tag and user RSS feeds only cover canonical tags -- a feed for a synonym or an uncommonly-spelled tag will come back empty even if the tag itself has works. Feeds can't combine multiple tags the way AO3's own filtered search results can." : {
+      "comment" : "AO3 RSS limitations: canonical tags and combining"
     },
     "Are you sure you want to delete the “%@” feed?" : {
       "comment" : "Feed delete text"
@@ -137,8 +143,14 @@
     "Choose an account to receive the imported feeds and folders" : {
       "comment" : "Import Account"
     },
+    "Choose an account with the articles to export" : {
+      "comment" : "Export Account"
+    },
     "Choose an account with the subscriptions to export" : {
       "comment" : "Export Account"
+    },
+    "Choose an export format" : {
+      "comment" : "Export Format"
     },
     "Clean Up" : {
       "comment" : "Clean Up button"
@@ -184,6 +196,9 @@
     },
     "Copy Home Page URL" : {
       "comment" : "Command"
+    },
+    "CSV" : {
+      "comment" : "Export format"
     },
     "Current Activity" : {
       "comment" : "Current Activity"
@@ -314,6 +329,9 @@
     "Expanded" : {
       "comment" : "Expanded\nExpanded tag display mode"
     },
+    "Export Articles…" : {
+      "comment" : "Command"
+    },
     "Extra Extra Large" : {
       "comment" : "XX-Large"
     },
@@ -389,6 +407,15 @@
     "How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes." : {
       "comment" : "AO3 preface refetch cadence footer"
     },
+    "Import" : {
+      "comment" : "Import AO3 links button"
+    },
+    "Import AO3 Links" : {
+      "comment" : "Pasted AO3 link-list import sheet title"
+    },
+    "Import AO3 Links…" : {
+      "comment" : "Import pasted AO3 link list"
+    },
     "Import Failed" : {
       "comment" : "Import Failed"
     },
@@ -427,6 +454,9 @@
     "Last Response" : {
       "comment" : "Last HTTP Response"
     },
+    "Leave Kudos When You Love a Work" : {
+      "comment" : "AO3 kudos-on-like toggle label"
+    },
     "Light" : {
       "comment" : "Light"
     },
@@ -456,6 +486,9 @@
     },
     "Loved" : {
       "comment" : "Loved"
+    },
+    "Manage Storage" : {
+      "comment" : "Manage Storage"
     },
     "Manually" : {
       "comment" : "Manually"
@@ -584,6 +617,9 @@
     "No library connected yet." : {
       "comment" : "Empty state message"
     },
+    "No new AO3 work links found in the pasted text." : {
+      "comment" : "Pasted AO3 link-list import: nothing new found"
+    },
     "No results" : {
       "comment" : "No results"
     },
@@ -641,6 +677,12 @@
     },
     "Page Counter" : {
       "comment" : "Page counter picker title"
+    },
+    "Paste any text containing archiveofourown.org work links -- everything else is ignored. This is a one-time import, not a feed: pasted works won't refresh with new stats or chapters until you open them." : {
+      "comment" : "Pasted AO3 link-list import footer"
+    },
+    "Paste AO3 Links" : {
+      "comment" : "Pasted AO3 link-list import text box header"
     },
     "Pending" : {
       "comment" : "Pending"
@@ -777,7 +819,7 @@
     "Signed In" : {
       "comment" : "AO3 signed-in status"
     },
-    "Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Sign-in is for reading only -- Nectar can't post kudos, subscribe, bookmark, or comment." : {
+    "Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Nectar can leave kudos on your behalf if you turn that on below -- it still can't subscribe, bookmark, or comment." : {
       "comment" : "AO3 account section footer"
     },
     "Small" : {
@@ -788,6 +830,9 @@
     },
     "Sort Timeline By" : {
       "comment" : "Sort field picker title"
+    },
+    "SQLite" : {
+      "comment" : "Export format"
     },
     "Status" : {
       "comment" : "AO3 sign-in status row label"
@@ -825,6 +870,9 @@
     },
     "Theme installed" : {
       "comment" : "Theme installed"
+    },
+    "These are limits of AO3's existing RSS mechanism itself, not of Nectar." : {
+      "comment" : "AO3 RSS limitations section footer"
     },
     "This device cannot send emails." : {
       "comment" : "This device cannot send emails."
@@ -865,6 +913,9 @@
     "Toggle Sidebar" : {
       "comment" : "Toggle Sidebar"
     },
+    "Total Storage Used" : {
+      "comment" : "Manage Storage total row"
+    },
     "Totals" : {
       "comment" : "Totals section"
     },
@@ -878,7 +929,7 @@
       "comment" : "Unread"
     },
     "Untitled" : {
-      "comment" : "Feed name"
+      "comment" : "Article title\nFeed name"
     },
     "Updated %@" : {
       "comment" : "Updated"
@@ -901,11 +952,20 @@
     "We were unable to process the selected file.  Please ensure that it is a properly formatted OPML file." : {
       "comment" : "Import Failed Message"
     },
+    "When you love a work in Nectar, it also leaves a kudos on that work on AO3, using your signed-in AO3 account." : {
+      "comment" : "AO3 kudos-on-like footer, signed in"
+    },
+    "When you love a work in Nectar, it also leaves a kudos on that work on AO3. You're not signed in, so it's left as a guest kudos -- sign in above to leave it as yourself instead." : {
+      "comment" : "AO3 kudos-on-like footer, signed out"
+    },
     "WIP" : {
       "comment" : "Completion status"
     },
     "Word Count" : {
       "comment" : "Sort field"
+    },
+    "Works an author has archive-locked to registered users never appear in RSS at all, signed in or not -- RSS has no concept of an authenticated request. Nectar's AO3 sign-in above only helps once a locked work's link reaches Nectar some other way." : {
+      "comment" : "AO3 RSS limitations: archive-locked works"
     },
     "You must have at least one active account." : {
       "comment" : "Missing active account"

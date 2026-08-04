@@ -79,6 +79,18 @@ struct DatabaseKey {
 	// tier as scrollPosition/loved above.
 	static let lastOpenedAt = "lastOpenedAt"
 
+	// Kudos-on-like (Task 6 fork addition). kudosAttemptedAt is nil until a
+	// kudos POST has actually been attempted for this book;
+	// kudosAttemptedAuthenticated only means something once
+	// kudosAttemptedAt is non-nil -- it records whether that attempt was a
+	// logged-in (permanent, never re-attempted) or guest (retriable once an
+	// AO3 account is configured) kudos. bookState-only, no statuses-table
+	// mirror -- unlike loved/lastOpenedAt this isn't read per-articleID
+	// anywhere, only per-bookKey when deciding whether to fire a kudos
+	// attempt.
+	static let kudosAttemptedAt = "kudosAttemptedAt"
+	static let kudosAttemptedAuthenticated = "kudosAttemptedAuthenticated"
+
 	// BookReadState (Phase 6 fork addition)
 	static let state = "state"
 	static let updatedAt = "updatedAt"

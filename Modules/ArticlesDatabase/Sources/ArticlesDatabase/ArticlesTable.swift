@@ -170,6 +170,63 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
+	// MARK: - Fetching Article Storage Info (Manage Storage screen)
+
+	func fetchArticleStorageInfoAsync(limit: Int, _ completion: @escaping @Sendable ([ArticleStorageInfo]) -> Void) {
+		queue.runInDatabase { database in
+			let info = self.fetchArticleStorageInfo(limit: limit, database)
+			DispatchQueue.main.async {
+				completion(info)
+			}
+		}
+	}
+
+	func fetchArticleStorageInfo(limit: Int, _ database: FMDatabase) -> [ArticleStorageInfo] {
+		let query = "select articleID, title, bookKey, length(contentHTML) as storedSize from articles where contentHTML is not null order by storedSize desc limit ?;"
+		guard let resultSet = database.executeQuery(query, withArgumentsIn: [limit]) else {
+			return []
+		}
+		defer {
+			resultSet.close()
+		}
+
+		var result = [ArticleStorageInfo]()
+		while resultSet.next() {
+			guard let articleID = resultSet.string(forColumn: DatabaseKey.articleID) else {
+				continue
+			}
+			let title = resultSet.string(forColumn: DatabaseKey.title)
+			let bookKey = resultSet.string(forColumn: DatabaseKey.bookKey)
+			let storedSize = Int(resultSet.longLongInt(forColumn: "storedSize"))
+			result.append(ArticleStorageInfo(articleID: articleID, title: title, bookKey: bookKey, storedContentHTMLSize: storedSize))
+		}
+		return result
+	}
+
+	func fetchTotalContentHTMLSizeAsync(_ completion: @escaping @Sendable (Int) -> Void) {
+		queue.runInDatabase { database in
+			let size = self.fetchTotalContentHTMLSize(database)
+			DispatchQueue.main.async {
+				completion(size)
+			}
+		}
+	}
+
+	func fetchTotalContentHTMLSize(_ database: FMDatabase) -> Int {
+		// Same LENGTH() the per-row query above reads -- the compressed,
+		// base64-encoded size actually stored, not a decompressed estimate.
+		guard let resultSet = database.executeQuery("select sum(length(contentHTML)) as totalSize from articles;", withArgumentsIn: []) else {
+			return 0
+		}
+		defer {
+			resultSet.close()
+		}
+		if resultSet.next(), !resultSet.columnIsNull("totalSize") {
+			return Int(resultSet.longLongInt(forColumn: "totalSize"))
+		}
+		return 0
+	}
+
 	// MARK: - Fetching Search Articles
 
 	func fetchArticlesMatching(_ searchString: String) -> Set<Article> {
@@ -953,6 +1010,34 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			}
 			DispatchQueue.main.async {
 				completion()
+			}
+		}
+	}
+
+	// MARK: - Kudos-on-like (Task 6)
+	//
+	// Unlike recordBookOpened/saveReadingProgress above, callers here already
+	// have a resolved bookKey in hand (AO3ChapterFetcher.ao3WorkID(fromBookKey:)
+	// is the gate that produces it -- these are the same nil-for-anthology
+	// semantics reused, not re-derived here), so there's no articleID ->
+	// bookKey resolution step and no statuses-table fallback/propagation:
+	// this is bookState-only, read per-bookKey right before a kudos attempt,
+	// never per-articleID.
+
+	func kudosAttemptAsync(bookKey: String, _ completion: @escaping @Sendable ((attemptedAt: Date, authenticated: Bool)?) -> Void) {
+		queue.runInDatabase { database in
+			let result = self.bookStateTable.kudosAttempt(for: bookKey, database)
+			DispatchQueue.main.async {
+				completion(result)
+			}
+		}
+	}
+
+	func setKudosAttemptedAsync(bookKey: String, authenticated: Bool, _ completion: DatabaseCompletionBlock?) {
+		queue.runInDatabase { database in
+			self.bookStateTable.setKudosAttempted(at: Date(), authenticated: authenticated, bookKey: bookKey, database)
+			DispatchQueue.main.async {
+				completion?()
 			}
 		}
 	}

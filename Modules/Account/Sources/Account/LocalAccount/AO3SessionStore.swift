@@ -14,9 +14,13 @@
 //  for the app's one local account, no keychain access groups, no iCloud
 //  Keychain sync, no generic "store any credential" API.
 //
-//  Login unlocks reading only -- there is no kudos, subscribe, bookmark, or
-//  comment support anywhere in this app, so this store holds nothing beyond
-//  the session itself.
+//  Originally login unlocked reading only, with no kudos/subscribe/
+//  bookmark/comment support anywhere in this app. Task 6 (kudos-on-like)
+//  adds the first of those -- see AO3KudosManager, which reads
+//  cookieHeaderValue/isSignedIn here to decide guest vs. authenticated on
+//  each kudos attempt -- but this store itself is unchanged: it still holds
+//  nothing beyond the session, same Keychain-backed single-session shape
+//  as before.
 //
 
 import Foundation

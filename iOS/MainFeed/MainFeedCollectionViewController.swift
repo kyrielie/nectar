@@ -1204,6 +1204,10 @@ extension MainFeedCollectionViewController {
 				menuElements.append(UIMenu(title: "", options: .displayInline, children: [markAllAction]))
 			}
 
+			if let exportAction = self.exportArticlesAction(indexPath: indexPath) {
+				menuElements.append(UIMenu(title: "", options: .displayInline, children: [exportAction]))
+			}
+
 			if includeDeleteRename {
 				menuElements.append(UIMenu(title: "",
 										   options: .displayInline,
@@ -1465,6 +1469,107 @@ extension MainFeedCollectionViewController {
 		}
 
 		return action
+	}
+
+	func exportArticlesAction(indexPath: IndexPath) -> UIAction? {
+		guard let sidebarItem = dataSource.itemIdentifier(for: indexPath)?.node.representedObject as? SidebarItem,
+			  let contentView = self.collectionView.cellForItem(at: indexPath)?.contentView else {
+				  return nil
+			  }
+
+		let title = NSLocalizedString("Export Articles…", comment: "Command")
+		let action = UIAction(title: title, image: Assets.Images.share) { [weak self] _ in
+			self?.presentExportFormatPicker(sourceView: contentView, sourceRect: contentView.bounds, sidebarItem: sidebarItem)
+		}
+
+		return action
+	}
+
+	/// Feed/Folder sidebar items resolve to concrete feedIDs, so both CSV and
+	/// SQLite export are offered. Other SidebarItem kinds (smart feeds like
+	/// Unread/Starred/Today) have no feedID-scoped meaning for the SQLite
+	/// path's `WHERE feedID IN (...)` bulk copy, so only CSV is offered for
+	/// those -- same underlying export code either way, just a narrower
+	/// format choice.
+	private func feedIDs(for sidebarItem: SidebarItem) -> Set<String>? {
+		if let feed = sidebarItem as? Feed {
+			return [feed.feedID]
+		} else if let folder = sidebarItem as? Folder {
+			return Set(folder.flattenedFeeds().map { $0.feedID })
+		}
+		return nil
+	}
+
+	func presentExportFormatPicker(sourceView: UIView, sourceRect: CGRect, sidebarItem: SidebarItem) {
+		let feedIDs = self.feedIDs(for: sidebarItem)
+
+		guard feedIDs != nil else {
+			// No feedID scoping available for this sidebar item kind (e.g. a
+			// smart feed) -- CSV doesn't need one, so skip the format picker
+			// entirely rather than offering a SQLite option that can't work.
+			exportArticlesCSV(articles: Array(sidebarItem.fetchArticles()), nameForDisplay: sidebarItem.nameForDisplay)
+			return
+		}
+
+		let title = NSLocalizedString("Choose an export format", comment: "Export Format")
+		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+
+		if let popoverController = alert.popoverPresentationController {
+			popoverController.sourceView = sourceView
+			popoverController.sourceRect = sourceRect
+		}
+
+		let csvTitle = NSLocalizedString("CSV", comment: "Export format")
+		alert.addAction(UIAlertAction(title: csvTitle, style: .default) { [weak self] _ in
+			self?.exportArticlesCSV(articles: Array(sidebarItem.fetchArticles()), nameForDisplay: sidebarItem.nameForDisplay)
+		})
+
+		let sqliteTitle = NSLocalizedString("SQLite", comment: "Export format")
+		alert.addAction(UIAlertAction(title: sqliteTitle, style: .default) { [weak self] _ in
+			guard let account = sidebarItem.account else { return }
+			self?.exportArticlesSQLite(account: account, feedIDs: feedIDs, nameForDisplay: sidebarItem.nameForDisplay)
+		})
+
+		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
+		alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
+
+		self.present(alert, animated: true)
+	}
+
+	func exportArticlesCSV(articles: [Article], nameForDisplay: String) {
+		let name = nameForDisplay.replacingOccurrences(of: " ", with: "").trimmingCharacters(in: .whitespaces)
+		let filename = "Articles-\(name).csv"
+		let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+		do {
+			let csvString = ArticleCSVExporter.CSVString(with: articles)
+			try csvString.write(to: tempFile, atomically: true, encoding: String.Encoding.utf8)
+		} catch {
+			self.presentError(title: "CSV Export Error", message: error.localizedDescription)
+			return
+		}
+
+		let docPicker = UIDocumentPickerViewController(forExporting: [tempFile])
+		docPicker.modalPresentationStyle = .formSheet
+		self.present(docPicker, animated: true)
+	}
+
+	func exportArticlesSQLite(account: Account, feedIDs: Set<String>?, nameForDisplay: String) {
+		let name = nameForDisplay.replacingOccurrences(of: " ", with: "").trimmingCharacters(in: .whitespaces)
+		let filename = "Articles-\(name).sqlite"
+		let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+		// exportArticlesSQLite (ArticlesDatabase.ArticleSQLiteExportTable) ATTACHes
+		// destinationPath as a new database and requires it not already exist.
+		try? FileManager.default.removeItem(at: tempFile)
+		do {
+			try account.exportArticlesSQLite(feedIDs: feedIDs, toPath: tempFile.path)
+		} catch {
+			self.presentError(title: "SQLite Export Error", message: error.localizedDescription)
+			return
+		}
+
+		let docPicker = UIDocumentPickerViewController(forExporting: [tempFile])
+		docPicker.modalPresentationStyle = .formSheet
+		self.present(docPicker, animated: true)
 	}
 
 	func rename(indexPath: IndexPath) {

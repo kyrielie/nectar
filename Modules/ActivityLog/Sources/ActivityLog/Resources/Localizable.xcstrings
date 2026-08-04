@@ -15,6 +15,9 @@
     "AO3 Chapters" : {
       "comment" : "Activity owner name"
     },
+    "AO3 Kudos" : {
+      "comment" : "Activity owner name"
+    },
     "Avatars" : {
       "comment" : "Activity owner name",
       "localizations" : {
@@ -153,6 +156,9 @@
           }
         }
       }
+    },
+    "Leaving AO3 kudos for work %@" : {
+      "comment" : "Activity kind — posting a kudos to AO3 — %@ is the AO3 work id"
     },
     "Moving feed" : {
       "comment" : "Activity kind",

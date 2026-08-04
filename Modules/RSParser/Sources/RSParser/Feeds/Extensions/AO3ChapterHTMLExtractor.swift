@@ -48,13 +48,23 @@ public struct AO3ChapterExtractionResult: Sendable {
 	public let bookmarkCount: Int?
 	public let hitCount: Int?
 
-	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil) {
+	/// The page's Rails CSRF token (`<meta name="csrf-token" content="...">`,
+	/// present on every AO3 page regardless of sign-in state), scraped for
+	/// Task 6 (kudos-on-like) -- see `AO3KudosManager`. `nil` only if the
+	/// meta tag itself was missing, which shouldn't happen on a real AO3
+	/// page but isn't treated as an extraction failure by itself, since
+	/// everything else in `AO3ChapterExtractionResult` is still valid
+	/// without it.
+	public let csrfToken: String?
+
+	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, csrfToken: String? = nil) {
 		self.contentHTML = contentHTML
 		self.chapters = chapters
 		self.commentCount = commentCount
 		self.kudosCount = kudosCount
 		self.bookmarkCount = bookmarkCount
 		self.hitCount = hitCount
+		self.csrfToken = csrfToken
 	}
 }
 
@@ -123,7 +133,7 @@ public enum AO3ChapterHTMLExtractor {
 				let chapters = chapterDivs.compactMap(extractedChapter)
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, csrfToken: csrfToken(root: root)))
 			}
 
 			// Single-chapter works carry no per-chapter <div class="chapter">
@@ -142,7 +152,7 @@ public enum AO3ChapterHTMLExtractor {
 				let chapters = [AO3ExtractedChapter(id: "chapter-1", title: "Chapter 1")]
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, csrfToken: csrfToken(root: root)))
 			}
 		}
 
@@ -153,6 +163,24 @@ public enum AO3ChapterHTMLExtractor {
 			return .registrationRequired
 		}
 		return .notFound
+	}
+}
+
+// MARK: - CSRF token (Task 6: kudos-on-like)
+
+private extension AO3ChapterHTMLExtractor {
+
+	/// Scrapes the Rails CSRF token AO3 embeds on every page (gated or not,
+	/// signed in or not) as `<meta name="csrf-token" content="...">` --
+	/// confirmed against `ArmindoFlores/ao3_api`'s (MIT) `Work.authenticity_token`,
+	/// which reads the identical tag. Used by `AO3KudosManager` to leave a
+	/// kudos off the back of this same fetch rather than a dedicated
+	/// request -- see this file's header comment and the licensing note in
+	/// nectar-ao3-features-plan-FINAL.md. `nil` if the tag is missing
+	/// (shouldn't happen on a real page, but not fatal to the rest of the
+	/// extraction).
+	static func csrfToken(root: HTMLLiteElement) -> String? {
+		firstDescendant(of: root, where: { $0.tag == "meta" && $0.attributes["name"] == "csrf-token" })?.attributes["content"]
 	}
 }
 
