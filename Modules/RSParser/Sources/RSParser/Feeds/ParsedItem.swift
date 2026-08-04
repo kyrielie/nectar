@@ -68,6 +68,16 @@ public struct ParsedItem: Hashable, Sendable {
 	public let kudosCount: Int?
 	public let bookmarkCount: Int?
 	public let hitCount: Int?
+	// Task 10 (prev/next/first navigation): AO3-absolute URLs of the
+	// previous/next work in series, read off the work page's own
+	// Previous/Next Work navigation chrome -- same "fetcher-only, never
+	// feed-derived" precedent as the four stats above. Populated only by
+	// AO3ChapterFetcher.rebuildParsedItem, from
+	// AO3ChapterExtractionResult.previousWorkURL/nextWorkURL, on each
+	// successful chapter fetch. Independent of series grouping being
+	// enabled -- see AO3ChapterExtractionResult's own doc comment.
+	public let previousWorkURL: String?
+	public let nextWorkURL: String?
 	// Completion time of the AO3ChapterFetcher fetch that produced this
 	// ParsedItem, for the refetch-cadence setting. Same "fetcher-only,
 	// never feed-derived" precedent as the stats above: set only by
@@ -146,6 +156,8 @@ public struct ParsedItem: Hashable, Sendable {
 	            kudosCount: Int? = nil,
 	            bookmarkCount: Int? = nil,
 	            hitCount: Int? = nil,
+	            previousWorkURL: String? = nil,
+	            nextWorkURL: String? = nil,
 	            lastPrefaceFetchDate: Date? = nil,
 	            ao3WorkID: String? = nil,
 	            isAnthology: Bool? = nil,
@@ -184,6 +196,8 @@ public struct ParsedItem: Hashable, Sendable {
 		self.kudosCount = kudosCount
 		self.bookmarkCount = bookmarkCount
 		self.hitCount = hitCount
+		self.previousWorkURL = previousWorkURL
+		self.nextWorkURL = nextWorkURL
 		self.lastPrefaceFetchDate = lastPrefaceFetchDate
 		self.ao3WorkID = ao3WorkID
 		self.isAnthology = isAnthology
@@ -222,6 +236,6 @@ public struct ParsedItem: Hashable, Sendable {
 	/// `self.markdown` so the designated init doesn't re-render it from
 	/// scratch -- `contentHTML` below is already the final rendered value.
 	public func strippingAO3Stats() -> ParsedItem {
-		ParsedItem(syncServiceID: syncServiceID, uniqueID: uniqueID, feedURL: feedURL, url: url, externalURL: externalURL, title: title, language: language, contentHTML: contentHTML, contentText: contentText, markdown: nil, summary: summary, imageURL: imageURL, bannerImageURL: bannerImageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, tags: tags, attachments: attachments, isAmbrosiaItem: isAmbrosiaItem, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, series: series, commentCount: nil, kudosCount: nil, bookmarkCount: nil, hitCount: nil, lastPrefaceFetchDate: lastPrefaceFetchDate, ao3WorkID: ao3WorkID, isAnthology: isAnthology, ao3SeriesID: ao3SeriesID, seriesName: seriesName)
+		ParsedItem(syncServiceID: syncServiceID, uniqueID: uniqueID, feedURL: feedURL, url: url, externalURL: externalURL, title: title, language: language, contentHTML: contentHTML, contentText: contentText, markdown: nil, summary: summary, imageURL: imageURL, bannerImageURL: bannerImageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, tags: tags, attachments: attachments, isAmbrosiaItem: isAmbrosiaItem, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, series: series, commentCount: nil, kudosCount: nil, bookmarkCount: nil, hitCount: nil, previousWorkURL: previousWorkURL, nextWorkURL: nextWorkURL, lastPrefaceFetchDate: lastPrefaceFetchDate, ao3WorkID: ao3WorkID, isAnthology: isAnthology, ao3SeriesID: ao3SeriesID, seriesName: seriesName)
 	}
 }

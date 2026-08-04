@@ -145,6 +145,18 @@ public struct ArticleStorageInfo: Sendable {
 				}
 			}
 
+			// Task 10 ("Prev/next/first navigation") -- previous/next work
+			// URLs, read off the same live work-page fetch as the stats
+			// above, but stored as TEXT (URLs, not counts). Same additive,
+			// containsColumn-guarded pattern.
+			let ao3SeriesNavigationColumns = ["previousWorkURL", "nextWorkURL"]
+			for column in ao3SeriesNavigationColumns {
+				if !self.articlesTable.containsColumn(column, in: database) {
+					Self.logger.debug("ArticlesDatabase: adding \(column, privacy: .public) column \(accountID, privacy: .public)")
+					database.executeStatements("ALTER TABLE articles add column \(column) TEXT;")
+				}
+			}
+
 			// lastPrefaceFetchDate (AO3ChapterFetcher's own "when did this last
 			// succeed" bookkeeping, for the refetch-cadence setting) and
 			// isAmbrosiaItem (an Ambrosia-vs-native-AO3 marker, needed so

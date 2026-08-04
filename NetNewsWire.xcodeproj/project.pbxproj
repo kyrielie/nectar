@@ -13,6 +13,7 @@
 		047567E697676EC2560CA38A /* AddComboTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5EC3A464FBA86925E9E4C3C /* AddComboTableViewCell.swift */; };
 		057BD9C465F313B558B6521C /* AddFeedSelectFolderTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = D9CF9FA05BD676DCDB04BB7D /* AddFeedSelectFolderTableViewCell.xib */; };
 		08BFA0E4BEC0ECAF6534281B /* OPMLImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E99DF16E2818DD03F982E08 /* OPMLImportCoordinator.swift */; };
+		09F915C31580999C48FF4096 /* AO3ChallengeSolverViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03FA655E91A7DA58F5D44E0 /* AO3ChallengeSolverViewController.swift */; };
 		0C257B3C3DBCEC2DF3864D1F /* ArticleThemeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69C41E0B0165A72DC7F0E0C7 /* ArticleThemeListView.swift */; };
 		0C36E550FACBBAF7BDD93C4B /* CacheCleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2A5425DA3C15784F10FEAF4 /* CacheCleaner.swift */; };
 		0F772D9D5114AF9C11A782A8 /* AO3OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E62D76FFE81B4363E849E01E /* AO3OnboardingView.swift */; };
@@ -422,6 +423,7 @@
 		CD48DBC77EEC103B2847C0F7 /* ImageViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageViewController.swift; sourceTree = "<group>"; };
 		CD58868705C909D04DC16374 /* Node+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Node+Extensions.swift"; sourceTree = "<group>"; };
 		CF226A5ECF752BAE9EED574B /* ArticleSorter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleSorter.swift; sourceTree = "<group>"; };
+		D03FA655E91A7DA58F5D44E0 /* AO3ChallengeSolverViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3ChallengeSolverViewController.swift; sourceTree = "<group>"; };
 		D133E112B098068EC5B50D35 /* ArticleViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleViewController.swift; sourceTree = "<group>"; };
 		D17832F911B416F4391D0850 /* OpenInSafariActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenInSafariActivity.swift; sourceTree = "<group>"; };
 		D31FBDC8619C257400DD4395 /* WebViewConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewConfiguration.swift; sourceTree = "<group>"; };
@@ -781,6 +783,7 @@
 				A10D3A0ED63089797C27146A /* ActivityLogView.swift */,
 				9EE29BB228BD4D77C6613CAE /* AddAccountViewController.swift */,
 				A4FD081876054F057E1DFF4F /* AO3AccountSettingsView.swift */,
+				D03FA655E91A7DA58F5D44E0 /* AO3ChallengeSolverViewController.swift */,
 				E6F8CE2122A7A758C4A2F187 /* AO3LoginViewController.swift */,
 				3108BD305F30192D74F96693 /* ArticleThemeImporter.swift */,
 				69C41E0B0165A72DC7F0E0C7 /* ArticleThemeListView.swift */,
@@ -1182,6 +1185,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BE43C5ED1F77EEF08E709078 /* AO3AccountSettingsView.swift in Sources */,
+				09F915C31580999C48FF4096 /* AO3ChallengeSolverViewController.swift in Sources */,
 				9B0C9B5A28FAA99197FF0CE2 /* AO3LinkListImportView.swift in Sources */,
 				3DA20BFB7C763BE1E5A29D1E /* AO3LoginViewController.swift in Sources */,
 				0F772D9D5114AF9C11A782A8 /* AO3OnboardingView.swift in Sources */,

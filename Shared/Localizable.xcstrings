@@ -134,6 +134,9 @@
     "Badges" : {
       "comment" : "Badges tag display mode"
     },
+    "Browser Verification" : {
+      "comment" : "AO3 Cloudflare challenge status row label"
+    },
     "Can't reach %@ right now" : {
       "comment" : "Can't reach library right now"
     },
@@ -416,6 +419,9 @@
     "How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes." : {
       "comment" : "AO3 preface refetch cadence footer"
     },
+    "If an AO3 search-results feed reports a Cloudflare challenge, use this to prove to Cloudflare that Nectar is being used by a real person -- the same check AO3 shows in a regular browser sometimes. This isn't tied to your AO3 account and doesn't require being signed in; it usually needs re-doing periodically." : {
+      "comment" : "AO3 Cloudflare challenge section footer"
+    },
     "Import" : {
       "comment" : "Import AO3 links button"
     },
@@ -643,6 +649,9 @@
     },
     "Not Signed In" : {
       "comment" : "AO3 signed-out status"
+    },
+    "Not Verified" : {
+      "comment" : "AO3 Cloudflare challenge status: never verified"
     },
     "Notifications" : {
       "comment" : "Notifications"
@@ -972,6 +981,12 @@
     },
     "Vacuuming may make databases faster." : {
       "comment" : "Vacuum explanation"
+    },
+    "Verified %@" : {
+      "comment" : "AO3 Cloudflare challenge status: verified some time ago"
+    },
+    "Verify Browser Access" : {
+      "comment" : "AO3 Cloudflare challenge button\nAO3 Cloudflare challenge screen title"
     },
     "We reached the server, but couldn't process its feed list." : {
       "comment" : "OPML fetch import failed message"
