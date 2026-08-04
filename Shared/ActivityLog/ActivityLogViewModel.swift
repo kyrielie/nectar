@@ -78,7 +78,7 @@ private extension ActivityLogViewModel {
 		switch owner {
 		case .account(let accountID, _):
 			return .account(accountID: accountID)
-		case .app, .feedFinder, .feedImageDownloader, .faviconDownloader, .avatarDownloader, .htmlMetadataDownloader, .ao3ChapterFetcher:
+		case .app, .feedFinder, .feedImageDownloader, .faviconDownloader, .avatarDownloader, .htmlMetadataDownloader, .ao3ChapterFetcher, .ao3KudosManager:
 			return .secondary
 		}
 	}

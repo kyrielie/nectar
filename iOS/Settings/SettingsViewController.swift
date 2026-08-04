@@ -12,6 +12,7 @@ import SwiftUI
 import RSCore
 import Account
 import ActivityLog
+import Articles
 
 final class SettingsViewController: UITableViewController {
 
@@ -30,11 +31,13 @@ final class SettingsViewController: UITableViewController {
 		case activityLog = 1
 		case accountStats = 2
 		case dinosaurs = 3
+		case manageStorage = 4
 	}
 
 	private enum FeedsRow: Int {
 		case importSubscriptions = 0
 		case exportSubscriptions = 1
+		case exportArticles = 2
 	}
 
 	private enum TimelineRow: Int {
@@ -65,6 +68,7 @@ final class SettingsViewController: UITableViewController {
 	}
 
 	private weak var exportOPMLAccount: Account?
+	private weak var exportArticlesCSVAccount: Account?
 
 	@IBOutlet var timelineSortFieldDetailLabel: UILabel!
 	@IBOutlet var timelineSortDirectionDetailLabel: UILabel!
@@ -185,8 +189,10 @@ final class SettingsViewController: UITableViewController {
 			return ArticlesRow.allCases.count
 		case .troubleshooting:
 			// The storyboard's troubleshooting section still has a trailing
-			// cloudKit-zone-stats row; it's unreachable now that cloudKit
-			// accounts don't exist, so it's always excluded.
+			// cloudKit-zone-stats row after Manage Storage; it's unreachable
+			// now that cloudKit accounts don't exist, so it's always
+			// excluded (Manage Storage is inserted before it, not after, so
+			// this still only ever hides that one dead row).
 			return super.tableView(tableView, numberOfRowsInSection: section) - 1
 		default:
 			return super.tableView(tableView, numberOfRowsInSection: section)
@@ -209,6 +215,12 @@ final class SettingsViewController: UITableViewController {
 				if let sourceView = tableView.cellForRow(at: indexPath) {
 					let sourceRect = tableView.rectForRow(at: indexPath)
 					exportOPML(sourceView: sourceView, sourceRect: sourceRect)
+				}
+			case .exportArticles:
+				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
+				if let sourceView = tableView.cellForRow(at: indexPath) {
+					let sourceRect = tableView.rectForRow(at: indexPath)
+					exportArticlesCSV(sourceView: sourceView, sourceRect: sourceRect)
 				}
 			default:
 				break
@@ -270,6 +282,8 @@ final class SettingsViewController: UITableViewController {
 							}
 						}
 					}))
+				case .manageStorage:
+					return ManageStorageCollectionViewController()
 				default:
 					return nil
 				}
@@ -491,6 +505,109 @@ private extension SettingsViewController {
 		alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
 
 		self.present(alert, animated: true)
+	}
+
+	func exportArticlesCSV(sourceView: UIView, sourceRect: CGRect) {
+		if AccountManager.shared.accounts.count == 1 {
+			exportArticlesCSVAccount = AccountManager.shared.accounts.first!
+			presentExportArticlesFormatPicker(sourceView: sourceView, sourceRect: sourceRect)
+		} else {
+			exportArticlesCSVAccountPicker(sourceView: sourceView, sourceRect: sourceRect)
+		}
+	}
+
+	func exportArticlesCSVAccountPicker(sourceView: UIView, sourceRect: CGRect) {
+		let title = NSLocalizedString("Choose an account with the articles to export", comment: "Export Account")
+		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+
+		if let popoverController = alert.popoverPresentationController {
+			popoverController.sourceView = view
+			popoverController.sourceRect = sourceRect
+		}
+
+		for account in AccountManager.shared.sortedAccounts {
+			let action = UIAlertAction(title: account.nameForDisplay, style: .default) { [weak self] _ in
+				self?.exportArticlesCSVAccount = account
+				self?.presentExportArticlesFormatPicker(sourceView: sourceView, sourceRect: sourceRect)
+			}
+			alert.addAction(action)
+		}
+
+		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
+		alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
+
+		self.present(alert, animated: true)
+	}
+
+	// "Export All", so unlike MainFeedCollectionViewController's per-feed
+	// picker, SQLite is always offered here -- there's no smart-feed-shaped
+	// SidebarItem in play, just the account's every feedID (feedIDs: nil).
+	func presentExportArticlesFormatPicker(sourceView: UIView, sourceRect: CGRect) {
+		let title = NSLocalizedString("Choose an export format", comment: "Export Format")
+		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+
+		if let popoverController = alert.popoverPresentationController {
+			popoverController.sourceView = view
+			popoverController.sourceRect = sourceRect
+		}
+
+		let csvTitle = NSLocalizedString("CSV", comment: "Export format")
+		alert.addAction(UIAlertAction(title: csvTitle, style: .default) { [weak self] _ in
+			self?.exportArticlesCSVDocumentPicker()
+		})
+
+		let sqliteTitle = NSLocalizedString("SQLite", comment: "Export format")
+		alert.addAction(UIAlertAction(title: sqliteTitle, style: .default) { [weak self] _ in
+			self?.exportArticlesSQLiteDocumentPicker()
+		})
+
+		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
+		alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
+
+		self.present(alert, animated: true)
+	}
+
+	func exportArticlesCSVDocumentPicker() {
+		guard let account = exportArticlesCSVAccount else { return }
+
+		let accountName = account.nameForDisplay.replacingOccurrences(of: " ", with: "").trimmingCharacters(in: .whitespaces)
+		let filename = "Articles-\(accountName).csv"
+		let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+		do {
+			let articles = account.flattenedFeeds().reduce(into: Set<Article>()) { result, feed in
+				result.formUnion(feed.fetchArticles())
+			}
+			let csvString = ArticleCSVExporter.CSVString(with: Array(articles))
+			try csvString.write(to: tempFile, atomically: true, encoding: String.Encoding.utf8)
+		} catch {
+			self.presentError(title: "CSV Export Error", message: error.localizedDescription)
+			return
+		}
+
+		let docPicker = UIDocumentPickerViewController(forExporting: [tempFile])
+		docPicker.modalPresentationStyle = .formSheet
+		self.present(docPicker, animated: true)
+	}
+
+	func exportArticlesSQLiteDocumentPicker() {
+		guard let account = exportArticlesCSVAccount else { return }
+
+		let accountName = account.nameForDisplay.replacingOccurrences(of: " ", with: "").trimmingCharacters(in: .whitespaces)
+		let filename = "Articles-\(accountName).sqlite"
+		let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+		// exportArticlesSQLite ATTACHes destinationPath as a new database and
+		// requires it not already exist.
+		try? FileManager.default.removeItem(at: tempFile)
+		do {
+			try account.exportArticlesSQLite(feedIDs: nil, toPath: tempFile.path)
+		} catch {
+			self.presentError(title: "SQLite Export Error", message: error.localizedDescription)
+			return
+		}
+
+		let docPicker = UIDocumentPickerViewController(forExporting: [tempFile])
+		docPicker.modalPresentationStyle = .formSheet
+		self.present(docPicker, animated: true)
 	}
 
 	func exportOPMLDocumentPicker() {

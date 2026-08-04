@@ -1421,7 +1421,16 @@ struct SidebarItemNode: Hashable, Sendable {
 	}
 
 	func markAllAsLoved(_ articles: [Article], completion: (() -> Void)? = nil) {
-		markArticlesWithUndo(articles, statusKey: .loved, flag: true, completion: completion)
+		markArticlesWithUndo(articles, statusKey: .loved, flag: true) {
+			completion?()
+			// Task 6 (kudos-on-like), list-view trigger: loving from a
+			// list-view action (swipe/context menu) rather than by
+			// opening the article -- see the doc comment on
+			// AO3KudosManager.attemptImmediateKudosIfNeeded for why this
+			// needs its own dedicated fetch rather than piggybacking.
+			// Fire-and-forget; a no-op for anything not eligible.
+			AO3KudosManager.attemptImmediateKudosIfNeeded(for: articles)
+		}
 	}
 
 	func markAllAsUnloved(_ articles: [Article], completion: (() -> Void)? = nil) {
