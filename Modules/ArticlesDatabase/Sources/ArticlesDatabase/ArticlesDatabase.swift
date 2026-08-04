@@ -90,7 +90,13 @@ public struct ArticleStorageInfo: Sendable {
 		self.accountID = accountID
 
 		queue.runCreateStatements(ArticlesDatabase.tableCreationStatements)
-		queue.runInDatabase { database in
+		// Must run synchronously: runInDatabase dispatches asynchronously and
+		// returns immediately, so init() could return -- and callers could
+		// start querying articles/statuses -- before these ALTER TABLE
+		// migrations (e.g. pendingUpdateContentHTML/pendingUpdateDetectedAt/
+		// wordCountRegressionFlaggedAt below) have actually run, producing
+		// "no such column" warnings on every early read.
+		queue.runInDatabaseSync { database in
 			Self.logger.debug("ArticlesDatabase: creating tables \(accountID, privacy: .public)")
 			if !self.articlesTable.containsColumn("searchRowID", in: database) {
 				database.executeStatements("ALTER TABLE articles add column searchRowID INTEGER;")
@@ -152,6 +158,31 @@ public struct ArticleStorageInfo: Sendable {
 			if !self.articlesTable.containsColumn("isAmbrosiaItem", in: database) {
 				Self.logger.debug("ArticlesDatabase: adding isAmbrosiaItem column \(accountID, privacy: .public)")
 				database.executeStatements("ALTER TABLE articles add column isAmbrosiaItem BOOL;")
+			}
+
+			// Task 8 (pending-update diff/regression guard): read/written throughout
+			// ArticlesTable/Article+Database (setPendingContentUpdate,
+			// resolvePendingContentUpdate, changesFrom, row hydration in Article.init)
+			// but never migrated in here -- on a real pre-Task-8 database these three
+			// columns don't exist, so every read/write against them throws a SQLite
+			// "no such column" error, and Article.init reads all three unconditionally
+			// on every row hydration, so this broke on first launch after upgrade.
+			// Same additive, containsColumn-guarded ALTER TABLE pattern as
+			// lastPrefaceFetchDate/isAmbrosiaItem above. pendingUpdateContentHTML is
+			// TEXT (compressed via ContentHTMLCompression, same as contentHTML/
+			// contentText); the two *At columns are DATE, both nullable (nil = no
+			// pending diff / no regression flagged).
+			if !self.articlesTable.containsColumn(DatabaseKey.pendingUpdateContentHTML, in: database) {
+				Self.logger.debug("ArticlesDatabase: adding pendingUpdateContentHTML column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.pendingUpdateContentHTML) TEXT;")
+			}
+			if !self.articlesTable.containsColumn(DatabaseKey.pendingUpdateDetectedAt, in: database) {
+				Self.logger.debug("ArticlesDatabase: adding pendingUpdateDetectedAt column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.pendingUpdateDetectedAt) DATE;")
+			}
+			if !self.articlesTable.containsColumn(DatabaseKey.wordCountRegressionFlaggedAt, in: database) {
+				Self.logger.debug("ArticlesDatabase: adding wordCountRegressionFlaggedAt column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.wordCountRegressionFlaggedAt) DATE;")
 			}
 
 			// Phase 2 (reading behavior): per-article scroll position, replacing the old

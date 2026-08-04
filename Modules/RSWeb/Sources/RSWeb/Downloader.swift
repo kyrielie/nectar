@@ -71,6 +71,29 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 		}
 	}
 
+	/// Async wrapper for `download(_ urlRequest:_:)`, mirroring the
+	/// URL-only overload above. Needed by callers that must attach a
+	/// request header by hand (e.g. AO3SearchResultsFetcher attaching a
+	/// captured Cloudflare-clearance Cookie header) while still going
+	/// through Downloader.shared -- and so still getting its per-host
+	/// 429/Retry-After cooldown and (now-successful-only) response cache --
+	/// rather than standing up a second one-shot URLSession the way
+	/// AO3AuthenticatedFetcher deliberately does for the account-gated
+	/// case. Unlike that case, a passed Cloudflare challenge isn't
+	/// per-account -- caching a success under the plain URL key is correct
+	/// here, not a leak.
+	public func download(_ urlRequest: URLRequest) async throws -> DownloadResponse {
+		try await withCheckedThrowingContinuation { continuation in
+			download(urlRequest) { downloadResponse, error in
+				if let error {
+					continuation.resume(throwing: error)
+				} else {
+					continuation.resume(returning: downloadResponse)
+				}
+			}
+		}
+	}
+
 	public func download(_ url: URL, _ callback: @escaping DownloadCallback) {
 		assert(Thread.isMainThread)
 		download(URLRequest(url: url), callback)
@@ -132,7 +155,15 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 
 		let task = urlSession.dataTask(with: urlRequestToUse) { (data, response, error) in
 
-			if isCacheableRequest {
+			// Only cache a genuinely successful response. Caching a non-2xx
+			// response (a Cloudflare challenge page, a 5xx, a 404, etc.) would
+			// mean replaying that failure for the cache's full time-to-live --
+			// e.g. AO3SearchResultsFetcher's Cloudflare-challenge detection
+			// runs on whatever Downloader hands it, so a challenge page cached
+			// here would keep failing the same way on every retry for
+			// DownloadCache's 3-minute TTL, even once a fresh request would
+			// have gotten through.
+			if isCacheableRequest, error == nil, response?.statusIsOK == true {
 				Self.logger.debug("Downloader: caching response for \(url)")
 				self.cache.add(url.absoluteString, data: data, response: response)
 			}

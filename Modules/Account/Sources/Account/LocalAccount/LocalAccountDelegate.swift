@@ -345,18 +345,56 @@ private extension LocalAccountDelegate {
 			BatchUpdate.shared.end()
 		}
 
-		let feedSpecifiers = try await FeedFinder.find(url: url)
+		// AO3 search-results and tag-listing works pages (Task 9) always
+		// serve a feed.atom `<link rel="alternate">` in their HTML head,
+		// same as any other AO3 page. Running these through FeedFinder
+		// would discover that unrelated feed.atom instead of the
+		// search/tag URL the person actually pasted, silently resolving
+		// every such paste to whatever feed.atom the account is already
+		// subscribed to and getting rejected below as a duplicate. Skip
+		// autodiscovery entirely for these and use the pasted URL verbatim
+		// -- see LocalAccountRefresher.isAO3SearchResultsFeed(_:), which
+		// this reuses so create-time detection and refresh-time routing
+		// stay in sync.
+		let isAO3SearchOrTagURL = LocalAccountRefresher.isAO3SearchResultsFeed(url)
 
-		guard let bestFeedSpecifier = FeedSpecifier.bestFeed(in: feedSpecifiers),
-			  let url = URL(string: bestFeedSpecifier.urlString) else {
+		let feedURLString: String
+		if isAO3SearchOrTagURL {
+			feedURLString = url.absoluteString
+		} else {
+			let feedSpecifiers = try await FeedFinder.find(url: url)
+			guard let bestFeedSpecifier = FeedSpecifier.bestFeed(in: feedSpecifiers) else {
+				throw AccountError.createErrorNotFound
+			}
+			feedURLString = bestFeedSpecifier.urlString
+		}
+
+		guard let url = URL(string: feedURLString) else {
 			throw AccountError.createErrorNotFound
 		}
 
-		guard !account.hasFeed(withURL: bestFeedSpecifier.urlString) else {
+		guard !account.hasFeed(withURL: feedURLString) else {
 			throw AccountError.createErrorAlreadySubscribed
 		}
 
-		if let repairedFeed = repointIfAmbrosiaRepair(urlString: bestFeedSpecifier.urlString, account: account, container: container) {
+		if isAO3SearchOrTagURL {
+			// The URL itself is an HTML search/tag-listing page, not a feed
+			// document -- InitialFeedDownloader's FeedParser can't parse it,
+			// so don't try. Create the feed immediately and hand off to
+			// refresher.refreshFeeds, which routes AO3 search-results feeds
+			// through fetchAndImportAO3SearchResults (AO3SearchResultsFetcher)
+			// -- the same path an ordinary scheduled refresh uses, so outcome
+			// handling (rate limit, Cloudflare challenge, registration-required,
+			// activity log) isn't duplicated here.
+			let feed = account.createFeed(with: nil, url: feedURLString, feedID: feedURLString, homePageURL: nil)
+			feed.editedName = editedName
+			container.addFeedToTreeAtTopLevel(feed)
+			refresher.accountID = account.accountID
+			await refresher.refreshFeeds([feed])
+			return feed
+		}
+
+		if let repairedFeed = repointIfAmbrosiaRepair(urlString: feedURLString, account: account, container: container) {
 			refresher.accountID = account.accountID
 			await refresher.refreshFeeds([repairedFeed])
 			return repairedFeed

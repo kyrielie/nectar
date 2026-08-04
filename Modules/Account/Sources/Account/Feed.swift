@@ -184,6 +184,18 @@ import Articles
 		}
 	}
 
+	/// The highest AO3 search-results page fetched so far (Task 9) --
+	/// `nil` until the first fetch. See `FeedSettings.ao3SearchLastFetchedPage`
+	/// for why a normal refresh doesn't consult this (only "load more" does).
+	public var ao3SearchLastFetchedPage: Int? {
+		get {
+			settings.ao3SearchLastFetchedPage
+		}
+		set {
+			settings.ao3SearchLastFetchedPage = newValue
+		}
+	}
+
 	// MARK: - DisplayNameProvider
 
 	public var nameForDisplay: String {

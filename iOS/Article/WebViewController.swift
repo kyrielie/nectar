@@ -724,7 +724,10 @@ extension WebViewController: UIScrollViewDelegate {
 				self.maxObservedScrollHeight = max(self.maxObservedScrollHeight, scrollHeight)
 			}
 			self.windowScrollY = javascriptScrollY
-			Self.logger.debug("scrollPositionDidChange: articleID=\(self.article?.articleID ?? "nil", privacy: .public) scrollY=\(javascriptScrollY, privacy: .public)")
+			// (Routine per-sample log removed -- this fires on every scroll tick and
+			// was the single largest noise source in the console during normal
+			// reading. The three guards above still log the anomaly cases, which is
+			// where the diagnostic value actually is.)
 
 			// Scroll-percentage-gated read marking (Phase 2). scrollHeight includes the
 			// full document; innerHeight is the viewport. Once the bottom of the viewport

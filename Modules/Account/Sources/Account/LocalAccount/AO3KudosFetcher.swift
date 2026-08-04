@@ -16,8 +16,17 @@
 
 import Foundation
 import RSWeb
+import os
 
 enum AO3KudosFetcher {
+
+	// Doesn't go through Downloader.shared (see this file's header comment for
+	// why), so this is the only place that request gets logged -- kept in the
+	// same "Requesting AO3:" format as AO3KudosManager's CSRF fetch and
+	// Downloader's own "Downloader: downloading" lines so every actual
+	// outbound request to archiveofourown.org shows up under one greppable
+	// pattern in the console, regardless of which code path fired it.
+	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Nectar", category: "AO3KudosFetcher")
 
 	private static func makeSession() -> URLSession {
 		let configuration = URLSessionConfiguration.ephemeral
@@ -38,6 +47,8 @@ enum AO3KudosFetcher {
 	/// the returned AO3KudosOutcome instead, not as a thrown error.
 	static func leaveKudos(workID: String, csrfToken: String, cookieHeaderValue: String?) async throws -> AO3KudosOutcome {
 		let request = AO3KudosRequest.makeRequest(workID: workID, csrfToken: csrfToken, cookieHeaderValue: cookieHeaderValue)
+
+		logger.debug("Requesting AO3: POST \(AO3KudosRequest.url.absoluteString, privacy: .public) for workID=\(workID, privacy: .public) authenticated=\(cookieHeaderValue != nil, privacy: .public)")
 
 		let session = makeSession()
 		defer { session.invalidateAndCancel() }

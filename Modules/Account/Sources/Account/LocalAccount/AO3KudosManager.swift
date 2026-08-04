@@ -46,8 +46,19 @@ import RSParser
 import RSWeb
 import Articles
 import ActivityLog
+import os
 
 public enum AO3KudosManager {
+
+	// attemptWithFreshFetch below fires its own dedicated URLSession request
+	// rather than going through Downloader.shared, so it produced no console
+	// output at all until this was added -- see this file's header comment
+	// for why it needs its own fetch, and the Task 8 audit note on why that
+	// made this exact request invisible when diagnosing the Ambrosia-toggle
+	// leak. "Requesting AO3:" prefix matches AO3KudosFetcher's so both are
+	// greppable as one group, distinct from Downloader's own "Downloader:"
+	// lines.
+	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Nectar", category: "AO3KudosManager")
 
 	/// Piggyback path -- see this file's header comment. `csrfToken` comes
 	/// straight from `AO3ChapterHTMLExtractor`'s scrape of the same page
@@ -75,6 +86,14 @@ public enum AO3KudosManager {
 		for article in articles {
 			guard article.status.loved else { continue }
 			guard let workID = AO3ChapterFetcher.ao3WorkID(fromBookKey: article.bookKey) else { continue }
+			// Bug fix (Task 8 audit): this path fires its own dedicated request to
+			// AO3 (see attemptWithFreshFetch below) rather than piggybacking on an
+			// existing fetch, so it must independently respect the same
+			// Ambrosia-local-only-reader gate AO3ChapterFetcher.fetchIfNeeded/
+			// checkForUpdates already apply -- this was missing entirely, letting
+			// a swipe/context-menu love on an Ambrosia-sourced work reach AO3
+			// regardless of both AmbrosiaAO3NetworkPreference flags being off.
+			guard AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article) else { continue }
 
 			Task {
 				await attemptWithFreshFetch(article: article, workID: workID)
@@ -98,6 +117,8 @@ private extension AO3KudosManager {
 	/// token happened to be fetched.
 	static func attemptWithFreshFetch(article: Article, workID: String) async {
 		guard let url = URL(string: "https://archiveofourown.org/works/\(workID)") else { return }
+
+		logger.debug("Requesting AO3: GET \(url.absoluteString, privacy: .public) (list-view kudos CSRF fetch, articleID=\(article.articleID, privacy: .public))")
 
 		let request = URLRequest(url: url)
 		let configuration = URLSessionConfiguration.ephemeral
