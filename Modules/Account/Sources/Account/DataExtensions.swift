@@ -33,6 +33,7 @@ public extension Feed {
 		case folderRelationship
 		case lastCheckDate
 		case lastResponseCode
+		case ao3SearchLastFetchedPage
 	}
 }
 

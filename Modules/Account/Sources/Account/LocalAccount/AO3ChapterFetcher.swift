@@ -308,6 +308,7 @@ extension AO3ChapterFetcher {
 		let unread = await account.fetchArticlesAsync(.unread(nil))
 		let eligible = unread
 			.filter { Self.ao3WorkID(fromBookKey: $0.bookKey) != nil }
+			.filter { !isOwnedByAO3SearchFeed($0) }
 			.filter { isStale(article: $0) }
 			.prefix(Self.maxArticlesPerSweep)
 
@@ -315,6 +316,23 @@ extension AO3ChapterFetcher {
 			fetchIfNeeded(for: article)
 			try? await Task.sleep(nanoseconds: UInt64(Self.secondsBetweenSweepRequests * 1_000_000_000))
 		}
+	}
+
+	/// "No proactive content fetch for search-feed items" (Task 9's own
+	/// "Feed routing & pagination" section): `bookKey`/`ao3WorkID` look
+	/// identical whether an article came from a native AO3 tag/user RSS
+	/// feed or an AO3 search-results feed, so telling them apart here needs
+	/// an explicit feed-kind check, not just the bookKey scan above.
+	/// Reuses `LocalAccountRefresher.isAO3SearchResultsFeed(_:)` (same
+	/// module) rather than duplicating its host+path+query matching.
+	/// Only `WebViewController.setArticle` (open-time) triggers a fetch for
+	/// a search-feed-sourced article.
+	@MainActor
+	private func isOwnedByAO3SearchFeed(_ article: Article) -> Bool {
+		guard let feed = article.feed, let feedURL = URL(string: feed.url) else {
+			return false
+		}
+		return LocalAccountRefresher.isAO3SearchResultsFeed(feedURL)
 	}
 
 	/// Logs the anthology/combined-series case to the Activity Log once

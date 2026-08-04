@@ -19,6 +19,8 @@ struct AO3AccountSettingsView: View {
 	@State private var isSignedIn = AO3SessionStore.isSignedIn
 	@State private var isShowingLogin = false
 	@State private var isShowingSignOutConfirmation = false
+	@State private var challengeCapturedAt = AO3ChallengeSessionStore.capturedAt
+	@State private var isShowingChallengeSolver = false
 	@State private var refetchInterval = AO3PrefaceRefetchPreference.current
 	@State private var isKudosOnLikeEnabled = AO3KudosOnLikePreference.isEnabled
 	@State private var isAmbrosiaContentUpdatesEnabled = AmbrosiaAO3NetworkPreference.contentUpdatesEnabled
@@ -105,6 +107,23 @@ struct AO3AccountSettingsView: View {
 			} footer: {
 				Text(NSLocalizedString("These are limits of AO3's existing RSS mechanism itself, not of Nectar.", comment: "AO3 RSS limitations section footer"))
 			}
+
+			Section {
+				HStack {
+					Text(NSLocalizedString("Browser Verification", comment: "AO3 Cloudflare challenge status row label"))
+					Spacer()
+					Text(challengeStatusText)
+						.foregroundStyle(.secondary)
+				}
+				Button {
+					isShowingChallengeSolver = true
+				} label: {
+					Text(NSLocalizedString("Verify Browser Access", comment: "AO3 Cloudflare challenge button"))
+						.frame(maxWidth: .infinity)
+				}
+			} footer: {
+				Text(NSLocalizedString("If an AO3 search-results feed reports a Cloudflare challenge, use this to prove to Cloudflare that Nectar is being used by a real person -- the same check AO3 shows in a regular browser sometimes. This isn't tied to your AO3 account and doesn't require being signed in; it usually needs re-doing periodically.", comment: "AO3 Cloudflare challenge section footer"))
+			}
 		}
 		.navigationTitle(Text(verbatim: "Archive of Our Own"))
 		.sheet(isPresented: $isShowingLogin, onDismiss: {
@@ -128,6 +147,30 @@ struct AO3AccountSettingsView: View {
 			}
 			Button(NSLocalizedString("Cancel", comment: "Cancel button"), role: .cancel) {}
 		}
+		.sheet(isPresented: $isShowingChallengeSolver, onDismiss: {
+			// Covers both outcomes (cleared, or cancelled), same reasoning
+			// as the login sheet's onDismiss above.
+			challengeCapturedAt = AO3ChallengeSessionStore.capturedAt
+		}) {
+			AO3ChallengeSolverRepresentable()
+		}
+	}
+
+	/// "Not yet verified" / "Verified just now" / "Verified 12 minutes ago"
+	/// -- doesn't distinguish a stale (past AO3ChallengeSessionStore's
+	/// freshness window) cookie from no cookie at all, since both need the
+	/// same action from the person here; the freshness window itself is an
+	/// internal implementation detail, not something worth surfacing as a
+	/// countdown.
+	private var challengeStatusText: String {
+		guard let challengeCapturedAt else {
+			return NSLocalizedString("Not Verified", comment: "AO3 Cloudflare challenge status: never verified")
+		}
+		let formatter = RelativeDateTimeFormatter()
+		formatter.unitsStyle = .abbreviated
+		let relative = formatter.localizedString(for: challengeCapturedAt, relativeTo: Date())
+		let format = NSLocalizedString("Verified %@", comment: "AO3 Cloudflare challenge status: verified some time ago")
+		return String(format: format, relative)
 	}
 }
 
@@ -159,6 +202,47 @@ private struct AO3LoginRepresentable: UIViewControllerRepresentable {
 		}
 
 		func ao3LoginViewControllerDidFinish(_ viewController: AO3LoginViewController) {
+			dismiss()
+		}
+	}
+}
+
+/// Bridges AO3ChallengeSolverViewController into the sheet above, same
+/// wrapping-in-a-UINavigationController reasoning as AO3LoginRepresentable.
+///
+/// Uses AO3's general works listing rather than any one specific
+/// search-results URL: this screen is reached from Settings, not from a
+/// particular feed's error, so there's no single URL to verify against
+/// here. If it turns out Cloudflare gates specific query shapes
+/// differently from the general listing, this default may need
+/// revisiting -- unconfirmed either way from the available logs, which
+/// only show the challenge on one search-results query.
+private struct AO3ChallengeSolverRepresentable: UIViewControllerRepresentable {
+
+	@Environment(\.dismiss) private var dismiss
+
+	private static let defaultChallengeURL = URL(string: "https://archiveofourown.org/works")!
+
+	func makeUIViewController(context: Context) -> UINavigationController {
+		let solverViewController = AO3ChallengeSolverViewController(challengeURL: Self.defaultChallengeURL)
+		solverViewController.delegate = context.coordinator
+		return UINavigationController(rootViewController: solverViewController)
+	}
+
+	func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
+
+	func makeCoordinator() -> Coordinator {
+		Coordinator(dismiss: dismiss)
+	}
+
+	final class Coordinator: AO3ChallengeSolverViewControllerDelegate {
+		private let dismiss: DismissAction
+
+		init(dismiss: DismissAction) {
+			self.dismiss = dismiss
+		}
+
+		func ao3ChallengeSolverViewControllerDidFinish(_ viewController: AO3ChallengeSolverViewController) {
 			dismiss()
 		}
 	}

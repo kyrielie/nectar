@@ -164,24 +164,26 @@ private extension WebViewConfiguration {
 	/// has gone quiet for 250ms or a 3s hard cap (anchored to DOMContentLoaded, which fires
 	/// reliably regardless of how long images/fonts take) elapses.
 	static func scrollRestoreUserScript(windowScrollY: Int, generation: Int) -> WKUserScript {
+		// The per-lifecycle-event debugLog() calls that used to sit at every
+		// step below (script-parsed, before/after each restore point, reveal)
+		// were development-time scaffolding for building this feature -- 8-10
+		// unconditional console lines per single page load, which in practice
+		// buried everything else in the Xcode console. The feature is settled
+		// now; the one signal worth keeping is the terminal "did restore land
+		// correctly" state, which still reaches the native side via the
+		// scrollRestoreComplete message (see WebViewController's handler) --
+		// that's a structured, single-shot message per navigation, not a raw
+		// debug print, so it's kept. If step-by-step tracing is needed again
+		// for a specific scroll-restore bug, reintroduce debugLog() calls
+		// locally rather than leaving them on by default.
 		let source = """
 		(function() {
-			function debugLog(message) {
-				try {
-					window.webkit.messageHandlers.debugLog.postMessage(message);
-				} catch (e) {
-					// messageHandler not installed (e.g. print preview) -- ignore.
-				}
-			}
-
 			function scrollState(label) {
 				return label + ": target=\(windowScrollY) actualScrollY=" + window.scrollY +
 					" scrollHeight=" + (document.body ? document.body.scrollHeight : -1) +
 					" innerHeight=" + window.innerHeight +
 					" readyState=" + document.readyState;
 			}
-
-			debugLog("scroll-restore script parsed, generation=\(generation), readyState=" + document.readyState);
 
 			// §1b. Runs at .atDocumentStart, before first paint: hide the document
 			// immediately so WKWebView never paints it at its natural (0,0) scroll
@@ -195,7 +197,6 @@ private extension WebViewConfiguration {
 				if (revealed) { return; }
 				revealed = true;
 				document.documentElement.style.visibility = 'visible';
-				debugLog("scroll-restore reveal (" + reason + ")");
 			}
 			setTimeout(function() { reveal("reveal-hard-cap"); }, 500);
 
@@ -212,7 +213,6 @@ private extension WebViewConfiguration {
 				complete = true;
 				applyRestore();
 				clearTimeout(hardCapTimer);
-				debugLog(scrollState("scroll restore settled (" + reason + ")"));
 				try {
 					window.webkit.messageHandlers.scrollRestoreComplete.postMessage({
 						generation: \(generation),
@@ -232,10 +232,8 @@ private extension WebViewConfiguration {
 			}
 
 			document.addEventListener("DOMContentLoaded", function() {
-				debugLog(scrollState("before DOMContentLoaded restore"));
 				applyRestore();
 				reveal("DOMContentLoaded");
-				debugLog(scrollState("after DOMContentLoaded restore"));
 
 				if (window.ResizeObserver) {
 					var ro = new ResizeObserver(function() {
@@ -252,17 +250,13 @@ private extension WebViewConfiguration {
 			});
 
 			window.addEventListener("load", function() {
-				debugLog(scrollState("before load restore"));
 				applyRestore();
-				debugLog(scrollState("after load restore"));
 				scheduleSettleCheck();
 			});
 
 			if (document.fonts && document.fonts.ready) {
 				document.fonts.ready.then(function() {
-					debugLog(scrollState("before fonts.ready restore"));
 					applyRestore();
-					debugLog(scrollState("after fonts.ready restore"));
 					scheduleSettleCheck();
 				});
 			}

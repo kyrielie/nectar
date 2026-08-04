@@ -1408,14 +1408,24 @@ nonisolated private extension ArticlesTable {
 		Self.signposter.endInterval("Fetch articles", signpostState, "\(articles.count) articles")
 		Self.logger.info("ArticlesTable: fetched \(articles.count, privacy: .public) articles in \(elapsed, privacy: .public) seconds in account \(self.accountID, privacy: .public)")
 
-		// Diagnostic: this query joins articles to statuses, which silently
-		// drops any articles row that lacks a matching statuses row. If a
-		// merge inserted articles without corresponding status rows, the
-		// join-based fetch above will undercount even though the articles
-		// table itself has every row. Compare a raw, join-free count for
-		// the same articleIDs against what the join actually returned.
-		let joinedArticleIDs = Set(articles.map { $0.articleID })
-		if !joinedArticleIDs.isEmpty || sql.contains("natural join statuses") {
+		// Diagnostic (DEBUG only): this query joins articles to statuses,
+		// which silently drops any articles row that lacks a matching
+		// statuses row. If a merge inserted articles without corresponding
+		// status rows, the join-based fetch above will undercount even
+		// though the articles table itself has every row. Compare a raw,
+		// join-free count for the same articleIDs against what the join
+		// actually returned.
+		//
+		// The where-clause frequently filters on columns that live on
+		// statuses (read, starred, loved), which don't exist on articles
+		// alone -- running the full where-clause against a join-free
+		// "articles" query throws "no such column" and defeats the point
+		// of the check. Only run this when the where-clause is free of
+		// statuses-only columns.
+		#if DEBUG
+		let statusesOnlyColumns = ["read", "starred", "loved", "readingProgress"]
+		if sql.hasPrefix("select * from articles natural join statuses where "),
+			!statusesOnlyColumns.contains(where: { sql.contains($0) }) {
 			let rawWhereClause = sql
 				.replacingOccurrences(of: "select * from articles natural join statuses where ", with: "")
 				.replacingOccurrences(of: ";", with: "")
@@ -1431,6 +1441,7 @@ nonisolated private extension ArticlesTable {
 				}
 			}
 		}
+		#endif
 
 		return articles
 	}
