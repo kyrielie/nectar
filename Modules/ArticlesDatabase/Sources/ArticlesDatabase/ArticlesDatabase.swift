@@ -757,6 +757,24 @@ public struct ArticleStorageInfo: Sendable {
 		}
 	}
 
+	// MARK: - Pending content update (Task 8)
+
+	public func setPendingContentUpdateAsync(_ contentHTML: String, detectedAt: Date, articleID: String) async {
+		await withCheckedContinuation { continuation in
+			_setPendingContentUpdate(contentHTML, detectedAt: detectedAt, articleID: articleID) {
+				continuation.resume()
+			}
+		}
+	}
+
+	public func resolvePendingContentUpdateAsync(articleID: String, accept: Bool) async {
+		await withCheckedContinuation { continuation in
+			_resolvePendingContentUpdate(articleID: articleID, accept: accept) {
+				continuation.resume()
+			}
+		}
+	}
+
 	// MARK: - Caches
 
 	/// Call to free up some memory. Should be done when the app is backgrounded, for instance.
@@ -956,6 +974,16 @@ private extension ArticlesDatabase {
 	func _saveScrollPosition(_ scrollPosition: Double, articleID: String, completion: @escaping DatabaseCompletionBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.saveScrollPosition(scrollPosition, articleID: articleID, completion)
+	}
+
+	func _setPendingContentUpdate(_ contentHTML: String, detectedAt: Date, articleID: String, completion: @escaping DatabaseCompletionBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.setPendingContentUpdate(contentHTML, detectedAt: detectedAt, articleID: articleID, completion)
+	}
+
+	func _resolvePendingContentUpdate(articleID: String, accept: Bool, completion: @escaping DatabaseCompletionBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.resolvePendingContentUpdate(articleID: articleID, accept: accept, completion)
 	}
 
 	func _recordBookOpened(articleID: String, completion: @escaping DatabaseCompletionBlock) {

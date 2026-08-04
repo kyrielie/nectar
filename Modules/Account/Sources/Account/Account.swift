@@ -1021,6 +1021,24 @@ public enum FetchType {
 		await database.fetchScrollPositionAsync(articleID: articleID)
 	}
 
+	// MARK: - Pending content update (Task 8: content archival & destructive-update protection)
+
+	/// Stashes a freshly fetched contentHTML as a pending update instead of
+	/// writing it straight to contentHTML -- called by
+	/// AO3ChapterFetcher.download when its regression guard flags the fetch
+	/// as a likely destructive edit. See ArticlesTable.setPendingContentUpdate.
+	public func setPendingContentUpdateAsync(_ contentHTML: String, forArticleID articleID: String) async {
+		await database.setPendingContentUpdateAsync(contentHTML, detectedAt: Date(), articleID: articleID)
+	}
+
+	/// Resolves an article's pending content update: `accept == true`
+	/// promotes the pending copy to contentHTML, `accept == false` discards
+	/// it. Either way clears the pending slot, unblocking
+	/// AO3ChapterFetcher.isStale's auto-fetch gate for this article again.
+	public func resolvePendingContentUpdateAsync(forArticleID articleID: String, accept: Bool) async {
+		await database.resolvePendingContentUpdateAsync(articleID: articleID, accept: accept)
+	}
+
 	// MARK: - Last Opened (Last Opened smart feed)
 
 	/// Records that this book was just opened into the reader. bookKey-keyed and
