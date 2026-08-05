@@ -509,8 +509,17 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 			self.callUpdateArticlesCompletionBlock(newArticles, updatedArticles, articlesToDelete, completion) // 7
 
+			// Only cache newArticles here -- newArticles' incoming Article *is*
+			// what saveNewArticles just persisted (full-row .orReplace), so it's
+			// safe to cache directly. updatedArticles is the incoming Article
+			// built from the ParsedItem, which can carry nil fields (e.g. a
+			// refresh with no wordCount in the feed) that changesFrom correctly
+			// declined to write to the row. Caching it here would overwrite the
+			// cache eviction saveUpdatedArticle already did for exactly that
+			// reason, handing back a stale/incomplete Article on the next fetch
+			// instead of the real persisted row. Let the next fetch re-read from
+			// the database and repopulate the cache correctly.
 			self.addArticlesToCache(newArticles)
-			self.addArticlesToCache(updatedArticles)
 
 			// 8. Delete articles no longer in feed.
 			let articleIDsToDelete = articlesToDelete.articleIDs()
@@ -608,8 +617,9 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 			self.callUpdateArticlesCompletionBlock(newArticles, updatedArticles, nil, completion) // 7
 
+			// See the matching comment in update(_:_:_:_:) above: only
+			// newArticles is safe to cache directly here, for the same reason.
 			self.addArticlesToCache(newArticles)
-			self.addArticlesToCache(updatedArticles)
 
 			// 8. Update search index.
 			if let newArticles = newArticles {

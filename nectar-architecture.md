@@ -115,11 +115,16 @@ now the *primary* store for read/starred/loved and scroll position:
   across every feed's copy of the same book. `StatusesTable`'s own
   `scrollPosition` column remains only as a last-resort fallback for an
   `articleID` that doesn't resolve to any key at all.
-- `readingProgress`, by contrast, is still read/written only through
-  `StatusesTable` per `articleID` — it is not yet part of the
-  `BookStateTable` write-through despite `BookState` carrying a
-  `readingProgress` field, and is not shared across duplicate copies of a
-  book the way read/starred/loved/scrollPosition are.
+- `readingProgress` is also part of `BookStateTable`'s write-through:
+  `ArticlesTable.saveReadingProgress` looks up the `articleID`'s `bookKey`,
+  writes through `BookStateTable.setReadingProgress`, and propagates the
+  same value to every other `articleID` sharing that `bookKey` via
+  `StatusesTable`, the same pattern as read/starred/loved/scrollPosition
+  above. Two copies of the same book reached through different feeds are
+  the same book to read -- if you're partway through one feed's copy,
+  opening the other feed's copy should show the same position rather than
+  resetting to 0 and risking a stale overwrite on the next scroll-position
+  write.
 
 `StatusesTable`'s parallel read/starred/loved/scrollPosition columns remain
 as the fallback path for the rare row with no resolvable `bookKey`; these
@@ -207,9 +212,8 @@ the feed list.
    overwrite the one global slot), distinct from the same-session
    reopen race that has since been fixed via `isAwaitingInitialScrollFetch`
    and `pendingLoadResets` above.
-5. `readingProgress` is a separate, still per-`articleID`-only value (not
-   `bookKey`-shared like scroll position/read/starred/loved) — see Book
-   identity above.
+5. `readingProgress` is `bookKey`-shared the same way scroll
+   position/read/starred/loved are — see Book identity above.
 
 ## AO3 preface rendering and on-demand chapter fetch
 
