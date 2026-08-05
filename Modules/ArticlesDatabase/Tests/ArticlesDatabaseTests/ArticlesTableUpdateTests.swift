@@ -114,15 +114,19 @@ struct ArticlesTableUpdateTests {
 		#expect(articles.first?.status.read == true)
 	}
 
-	// d. readingProgress write-through. Per nectar-architecture.md's Book
-	// identity section, readingProgress is deliberately still per-articleID
-	// only -- not bookKey-shared like read/starred/loved/scrollPosition --
-	// so a sibling articleID sharing the same bookKey should NOT pick up the
-	// write. (This test previously asserted the opposite; that assertion
-	// was wrong against the documented, deliberate non-goal, not against a
-	// product bug -- corrected here rather than changing the product.)
-	@Test("saveReadingProgress round-trips for its own articleID and does not propagate to a sibling")
-	func readingProgressRoundTripsWithoutPropagating() async throws {
+	// b2. saveReadingProgress propagates to a sibling articleID sharing the
+	// same bookKey, the same way mark() does for read/starred/loved -- see
+	// ArticleStatus.readingProgress's doc comment. (This test previously
+	// asserted the opposite. That assertion matched nectar-architecture.md's
+	// "Book identity" section, which describes readingProgress as "not yet"
+	// part of BookStateTable's write-through -- but ArticlesTable.
+	// saveReadingProgress already calls bookStateTable.setReadingProgress and
+	// unions in sibling articleIDs, so that doc is stale relative to the
+	// code, not the other way around: the "not yet" migration it describes
+	// has already happened. Flagging the doc as needing an update rather
+	// than silently leaving it wrong -- see nectar-architecture.md:118-122.)
+	@Test("saveReadingProgress propagates to a sibling articleID sharing the same bookKey")
+	func readingProgressPropagatesToSiblingArticleIDs() async throws {
 		let db = TestFixtures.makeDatabase()
 
 		let first = TestFixtures.makeParsedItem(
@@ -146,11 +150,11 @@ struct ArticlesTableUpdateTests {
 
 		let changed = await db.saveReadingProgressAsync(0.42, articleID: firstArticleID)
 		#expect(changed.contains(firstArticleID))
-		#expect(!changed.contains(secondArticleID))
+		#expect(changed.contains(secondArticleID))
 
 		let firstArticles = await db.fetchArticlesAsync(articleIDs: [firstArticleID])
 		let secondArticles = await db.fetchArticlesAsync(articleIDs: [secondArticleID])
 		#expect(firstArticles.first?.status.readingProgress == 0.42)
-		#expect(secondArticles.first?.status.readingProgress == nil)
+		#expect(secondArticles.first?.status.readingProgress == 0.42)
 	}
 }
