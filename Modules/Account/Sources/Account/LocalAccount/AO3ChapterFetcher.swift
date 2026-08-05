@@ -686,7 +686,12 @@ nonisolated private extension AO3ChapterFetcher {
 	/// no-flags-off path, this doesn't leave those fields on the rebuilt
 	/// item at their old values by accident, it does so because the
 	/// corresponding fetch data was deliberately not eligible to apply.
-	static func rebuildParsedItem(from existingArticle: Article, workID: String, extraction: AO3ChapterExtractionResult, applyContentUpdate: Bool, applyStatsUpdate: Bool) -> ParsedItem {
+	/// `internal` rather than the enclosing `private extension`'s default
+	/// fileprivate -- AO3ChapterFetcherTests exercises this directly
+	/// (`@testable import Account` reaches `internal`, not `fileprivate`,
+	/// across file boundaries within the same module). `detectRegression`
+	/// above stays fileprivate; only this one needs the wider access.
+	internal static func rebuildParsedItem(from existingArticle: Article, workID: String, extraction: AO3ChapterExtractionResult, applyContentUpdate: Bool, applyStatsUpdate: Bool) -> ParsedItem {
 		let authors: Set<ParsedAuthor>? = existingArticle.authors.map { authorSet in
 			Set(authorSet.map { ParsedAuthor(name: $0.name, url: $0.url, avatarURL: $0.avatarURL, emailAddress: $0.emailAddress) })
 		}

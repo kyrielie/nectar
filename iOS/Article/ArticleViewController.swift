@@ -337,9 +337,11 @@ final class ArticleViewController: UIViewController {
 		return items
 	}
 
-	@objc func userDefaultsDidChange(_ note: Notification) {
-		coordinator.applyArticleBackSwipeGating()
-		navigationItem.rightBarButtonItems = rightBarButtonItems()
+	@objc nonisolated func userDefaultsDidChange(_ note: Notification) {
+		Task { @MainActor in
+			coordinator.applyArticleBackSwipeGating()
+			navigationItem.rightBarButtonItems = rightBarButtonItems()
+		}
 	}
 
 	@objc func willEnterForeground(_ note: Notification) {

@@ -175,6 +175,7 @@ schemes:
       testPlans:
         - path: NetNewsWire-iOS.xctestplan
           defaultPlan: true
+        - path: Nectar-CI.xctestplan
       commandLineArguments: {}
     run:
       config: Debug

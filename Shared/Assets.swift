@@ -115,8 +115,28 @@ struct Assets {
 	}
 
 	@MainActor struct Colors {
-		static let primaryAccent = RSColor(named: "primaryAccentColor")!
-		static let secondaryAccent = RSColor(named: "secondaryAccentColor")!
+		// Catalog defaults, kept as the .default fallback and as the base every
+		// other accent choice is computed relative to -- unlike BadgeColorTable's
+		// palette (fixed hex swatches with no user "off" state), accent color's
+		// .default case must keep resolving to whatever these named colors are,
+		// not a hardcoded hex duplicate of them, so a catalog update to these
+		// colorset entries doesn't silently drift from what .default shows.
+		private static let defaultPrimaryAccent = RSColor(named: "primaryAccentColor")!
+		private static let defaultSecondaryAccent = RSColor(named: "secondaryAccentColor")!
+
+		/// Live per-read, not cached -- reflects `AppDefaults.shared.accentColor`
+		/// immediately. Every call site already goes through `Assets.Colors.*`
+		/// rather than a hardcoded literal, so most consumers (tintColor
+		/// assignments, updateColors()-style methods) repaint for free on the
+		/// next draw once `AccentColor`'s doc comment note on `static let
+		/// IconImage`s aside.
+		static var primaryAccent: RSColor {
+			AppDefaults.shared.accentColor.primaryHex.flatMap { RSColor(cssHex: $0) } ?? defaultPrimaryAccent
+		}
+		static var secondaryAccent: RSColor {
+			AppDefaults.shared.accentColor.secondaryHex.flatMap { RSColor(cssHex: $0) } ?? defaultSecondaryAccent
+		}
+
 		static let star = RSColor(named: "starColor")!
 		static let vibrantText = RSColor(named: "vibrantTextColor")!
 		static let controlBackground = RSColor(named: "controlBackgroundColor")!
