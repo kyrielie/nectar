@@ -354,11 +354,16 @@ final class AO3ChapterFetcherTests: XCTestCase {
 	}
 
 	private static func makeArticle(contentHTML: String?, chapterCurrent: Int?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false, lastPrefaceFetchDate: Date? = nil, bookKeyOverride: String? = nil) -> Article {
-		let status = ArticleStatus(articleID: "test-article-id", read: false, starred: false, dateArrived: Date())
+		// Unique per call -- AO3ChapterFetcher.shared.attemptDates is a
+		// process-lifetime singleton cache keyed by articleID, so reusing a
+		// fixed ID across tests leaks already-noted/already-attempted state
+		// from one test into another depending on run order.
+		let articleID = "test-article-id-\(UUID().uuidString)"
+		let status = ArticleStatus(articleID: articleID, read: false, starred: false, dateArrived: Date())
 		let bookKey: String? = bookKeyOverride ?? ao3WorkID.map { "ao3-work:\($0)" }
 		return Article(
 			accountID: "test-account-id",
-			articleID: "test-article-id",
+			articleID: articleID,
 			feedID: "test-feed-id",
 			uniqueID: "test-unique-id",
 			title: "Test Work",
@@ -383,7 +388,7 @@ final class AO3ChapterFetcherTests: XCTestCase {
 	/// test2.json's real `content_html` verbatim -- Ambrosia's own
 	/// epub-derived preface for a book with no AO3 chapter fetch yet.
 	private static let ambrosiaPrefaceFixture: String = {
-		let fileURL = Bundle.module.resourceURL!.appendingPathComponent("Resources/ambrosia_preface_fixture.html")
+		let fileURL = Bundle.module.resourceURL!.appendingPathComponent("ambrosia_preface_fixture.html")
 		guard let contents = try? String(contentsOf: fileURL, encoding: .utf8) else {
 			XCTFail("Unable to read ambrosia_preface_fixture.html at \(fileURL)")
 			return ""

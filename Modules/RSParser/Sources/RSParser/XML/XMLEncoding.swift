@@ -98,9 +98,13 @@ enum XMLEncoding {
 		// Simplified Chinese
 		// Real-world files labelled gb2312 are usually GBK (which is a superset),
 		// and libxml2 treats them as such. Using the stricter GB_2312_80 table
-		// loses characters in common feeds; fall through to GBK to match.
-		"gb2312": cf(.GBK_95),
-		"gbk": cf(.GBK_95),
+		// loses characters in common feeds. GBK_95 itself doesn't round-trip
+		// reliably through Foundation's String(data:encoding:)/data(using:)
+		// bridging, so use GB18030 instead -- a strict superset of GBK that
+		// Foundation decodes/encodes correctly and covers every character GBK
+		// does.
+		"gb2312": cf(.GB_18030_2000),
+		"gbk": cf(.GB_18030_2000),
 		"gb18030": cf(.GB_18030_2000),
 
 		// Traditional Chinese

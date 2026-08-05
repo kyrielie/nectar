@@ -295,7 +295,7 @@ extension Article {
 		var feedArticles = Set<Article>()
 		for (feedID, parsedItems) in feedIDsAndItems {
 			for parsedItem in parsedItems {
-				let status = statusesDictionary[parsedItem.articleID]!
+				let status = statusesDictionary[parsedItem.articleID(feedID: feedID)]!
 				let article = Article(parsedItem: parsedItem, maximumDateAllowed: maximumDateAllowed, accountID: accountID, feedID: feedID, status: status)
 				feedArticles.insert(article)
 			}
@@ -305,7 +305,7 @@ extension Article {
 
 	static func articlesWithParsedItems(_ parsedItems: Set<ParsedItem>, _ feedID: String, _ accountID: String, _ statusesDictionary: [String: ArticleStatus]) -> Set<Article> {
 		let maximumDateAllowed = _maximumDateAllowed()
-		return Set(parsedItems.map { Article(parsedItem: $0, maximumDateAllowed: maximumDateAllowed, accountID: accountID, feedID: feedID, status: statusesDictionary[$0.articleID]!) })
+		return Set(parsedItems.map { Article(parsedItem: $0, maximumDateAllowed: maximumDateAllowed, accountID: accountID, feedID: feedID, status: statusesDictionary[$0.articleID(feedID: feedID)]!) })
 	}
 }
 
