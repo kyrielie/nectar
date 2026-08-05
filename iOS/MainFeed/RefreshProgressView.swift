@@ -44,13 +44,20 @@ final class RefreshProgressView: UIView {
 		label.font = UIFont.preferredFont(forTextStyle: .footnote)
 	}
 
-	@objc func userDefaultsDidChange(_ note: Notification) {
-		// Only the "Updated X ago" text is gated by showLastUpdatedLabel; the
-		// progress bar during an active refresh is a different signal and
-		// isn't affected. Calling updateRefreshLabel() unconditionally here is
-		// harmless when a refresh is in progress -- update() will overwrite
-		// the label the next time progressChanged(animated:) completes.
-		updateRefreshLabel()
+	nonisolated @objc func userDefaultsDidChange(_ note: Notification) {
+		// NotificationCenter doesn't guarantee this fires on the main
+		// thread -- UserDefaults.didChangeNotification can be posted from
+		// a background thread (observed during XCTest's own bootstrap).
+		// Hop to the main actor explicitly rather than asserting
+		// isolation synchronously at this @objc entry point.
+		Task { @MainActor in
+			// Only the "Updated X ago" text is gated by showLastUpdatedLabel; the
+			// progress bar during an active refresh is a different signal and
+			// isn't affected. Calling updateRefreshLabel() unconditionally here is
+			// harmless when a refresh is in progress -- update() will overwrite
+			// the label the next time progressChanged(animated:) completes.
+			self.updateRefreshLabel()
+		}
 	}
 
 	deinit {

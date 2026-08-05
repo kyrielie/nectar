@@ -599,16 +599,35 @@ private extension AO3ChapterHTMLExtractor {
 		var next: String?
 		for span in spans {
 			if previous == nil, let previousAnchor = firstDescendant(of: span, where: { $0.tag == "a" && $0.attributes["class"] == "previous" }) {
-				previous = AO3SearchResultsExtractor.absoluteURL(previousAnchor.attributes["href"])
+				previous = absoluteURL(previousAnchor.attributes["href"])
 			}
 			if next == nil, let nextAnchor = firstDescendant(of: span, where: { $0.tag == "a" && $0.attributes["class"] == "next" }) {
-				next = AO3SearchResultsExtractor.absoluteURL(nextAnchor.attributes["href"])
+				next = absoluteURL(nextAnchor.attributes["href"])
 			}
 			if previous != nil && next != nil {
 				break
 			}
 		}
 		return (previous, next)
+	}
+
+	private static let baseURL = "https://archiveofourown.org"
+
+	/// Identical to `AO3SearchResultsExtractor.absoluteURL` -- not
+	/// reused directly to avoid a cross-file dependency for one
+	/// three-line helper; keep both in sync if AO3's link shape ever
+	/// changes.
+	static func absoluteURL(_ href: String?) -> String? {
+		guard let href, !href.isEmpty else {
+			return nil
+		}
+		if href.hasPrefix("http://") || href.hasPrefix("https://") {
+			return href
+		}
+		if href.hasPrefix("/") {
+			return baseURL + href
+		}
+		return baseURL + "/" + href
 	}
 
 	/// `element.children` filtered down to just the `.element` nodes, in

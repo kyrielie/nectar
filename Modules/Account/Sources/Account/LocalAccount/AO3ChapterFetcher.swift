@@ -395,7 +395,7 @@ nonisolated private extension AO3ChapterFetcher {
 		}
 	}
 
-	func download(workID: String, articleID: String, accountID: String, feedID: String) {
+	internal func download(workID: String, articleID: String, accountID: String, feedID: String) {
 		guard let url = URL(string: "https://archiveofourown.org/works/\(workID)?view_full_work=true&view_adult=true") else {
 			return
 		}
