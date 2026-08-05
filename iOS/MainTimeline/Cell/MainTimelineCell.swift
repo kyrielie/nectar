@@ -320,6 +320,11 @@ private extension MainTimelineCell {
 		}
 		dateView.textColor = .secondaryLabel
 		feedNameView.textColor = .secondaryLabel
+		// Only set once in commonInit() otherwise -- accent color can change
+		// live via Settings, and this cell instance may be reused (not
+		// reconstructed) across that change, so it needs to be re-applied on
+		// every cellData set the same way the other colors on this method are.
+		progressFillView.backgroundColor = Assets.Colors.secondaryAccent
 	}
 
 	func updateIndicatorView() {

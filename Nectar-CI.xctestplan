@@ -1,0 +1,85 @@
+{
+  "configurations" : [
+    {
+      "id" : "46DF7BE7-2FD7-4D94-A536-30BB8603C906",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:NetNewsWire.xcodeproj",
+      "identifier" : "E918341AC3D5C53E25D90D02",
+      "name" : "Nectar-iOS"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:NetNewsWire.xcodeproj",
+        "identifier" : "71E4DF0D7156CA167F27D7F2",
+        "name" : "Nectar-iOSTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/RSParser",
+        "identifier" : "RSParserTests",
+        "name" : "RSParserTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/Account",
+        "identifier" : "AccountTests",
+        "name" : "AccountTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/RSWeb",
+        "identifier" : "RSWebTests",
+        "name" : "RSWebTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/Articles",
+        "identifier" : "ArticlesTests",
+        "name" : "ArticlesTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/RSCore",
+        "identifier" : "RSCoreTests",
+        "name" : "RSCoreTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/RSDatabase",
+        "identifier" : "RSDatabaseTests",
+        "name" : "RSDatabaseTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/ActivityLog",
+        "identifier" : "ActivityLogTests",
+        "name" : "ActivityLogTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/ErrorLog",
+        "identifier" : "ErrorLogTests",
+        "name" : "ErrorLogTests"
+      }
+    }
+  ],
+  "version" : 1
+}

@@ -727,6 +727,39 @@
                                             <outlet property="label" destination="2Fp-li-dGP" id="gyE-t6-U2X"/>
                                         </connections>
                                     </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" accessoryType="disclosureIndicator" indentationWidth="10" id="AcC-nT-clR" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="1203" width="374" height="51"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="AcC-nT-clR" id="AcC-cV-wBN">
+                                            <rect key="frame" x="0.0" y="0.0" width="343.5" height="51"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Accent Color" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="AcC-lb-2Fp">
+                                                    <rect key="frame" x="20" y="15.5" width="98" height="20.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Default" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="AcC-lb-16m">
+                                                    <rect key="frame" x="258" y="15.5" width="77.5" height="20.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="AcC-lb-16m" firstAttribute="trailing" secondItem="AcC-cV-wBN" secondAttribute="trailingMargin" id="AcC-cn-R1e"/>
+                                                <constraint firstItem="AcC-lb-16m" firstAttribute="centerY" secondItem="AcC-cV-wBN" secondAttribute="centerY" id="AcC-cn-SXW"/>
+                                                <constraint firstItem="AcC-lb-2Fp" firstAttribute="leading" secondItem="AcC-cV-wBN" secondAttribute="leadingMargin" id="AcC-cn-g40"/>
+                                                <constraint firstItem="AcC-lb-2Fp" firstAttribute="centerY" secondItem="AcC-cV-wBN" secondAttribute="centerY" id="AcC-cn-geh"/>
+                                                <constraint firstItem="AcC-lb-16m" firstAttribute="leading" secondItem="AcC-lb-2Fp" secondAttribute="trailing" constant="8" symbolic="YES" id="AcC-cn-tOP"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                        <connections>
+                                            <outlet property="detail" destination="AcC-lb-16m" id="AcC-oc-Z0c"/>
+                                            <outlet property="label" destination="AcC-lb-2Fp" id="AcC-oc-gyE"/>
+                                        </connections>
+                                    </tableViewCell>
                                 </cells>
                             </tableViewSection>
                             <tableViewSection headerTitle="Troubleshooting" id="Trb-eL-9xZ">
@@ -896,6 +929,7 @@
                         <outlet property="backSwipeEnabledSwitch" destination="Nct-bk-Swt" id="Nct-oc-Bk1"/>
                         <outlet property="pagingSwipeEnabledSwitch" destination="Nct-pg-Swt" id="Nct-oc-Pg1"/>
                         <outlet property="colorPaletteDetailLabel" destination="16m-Ns-Y8V" id="zdj-Ag-ZUw"/>
+                        <outlet property="accentColorDetailLabel" destination="AcC-lb-16m" id="AcC-oc-zdj01"/>
                         <outlet property="showLastUpdatedLabelSwitch" destination="Upd-a4-Lbl" id="Upd-oa-Lbl"/>
                         <outlet property="groupByFeedSwitch" destination="JNi-Wz-RbU" id="TwH-Kd-o6N"/>
                         <outlet property="openLinksInNetNewsWire" destination="dhR-L2-PX3" id="z1b-pX-bwG"/>
@@ -1106,6 +1140,45 @@
                 <placeholder placeholderIdentifier="IBFirstResponder" id="yl7-jL-bYF" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="4403" y="151"/>
+        </scene>
+        <!--Accent Color-->
+        <scene sceneID="AcC-Sc-nE01">
+            <objects>
+                <tableViewController storyboardIdentifier="AccentColorTableViewController" title="Accent Color" id="AcC-vc-Tb01" customClass="AccentColorTableViewController" customModule="NetNewsWire" customModuleProvider="target" sceneMemberID="viewController">
+                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="insetGrouped" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="18" sectionFooterHeight="18" id="AcC-tv-nt401">
+                        <rect key="frame" x="0.0" y="0.0" width="414" height="746"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <color key="backgroundColor" systemColor="groupTableViewBackgroundColor"/>
+                        <prototypes>
+                            <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="Cell" textLabel="AcC-lb-lFx01" style="IBUITableViewCellStyleDefault" id="AcC-cl-Dzq01" customClass="VibrantTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                <rect key="frame" x="20" y="55.5" width="374" height="51"/>
+                                <autoresizingMask key="autoresizingMask"/>
+                                <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="AcC-cl-Dzq01" id="AcC-cv-eAg01">
+                                    <rect key="frame" x="0.0" y="0.0" width="374" height="51"/>
+                                    <autoresizingMask key="autoresizingMask"/>
+                                    <subviews>
+                                        <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" insetsLayoutMarginsFromSafeArea="NO" text="Title" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" id="AcC-lb-lFx01">
+                                            <rect key="frame" x="20" y="0.0" width="334" height="51"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                            <nil key="textColor"/>
+                                            <nil key="highlightedColor"/>
+                                        </label>
+                                    </subviews>
+                                </tableViewCellContentView>
+                            </tableViewCell>
+                        </prototypes>
+                        <sections/>
+                        <connections>
+                            <outlet property="dataSource" destination="AcC-vc-Tb01" id="AcC-oc-Dhv01"/>
+                            <outlet property="delegate" destination="AcC-vc-Tb01" id="AcC-oc-SQg01"/>
+                        </connections>
+                    </tableView>
+                    <simulatedNavigationBarMetrics key="simulatedTopBarMetrics" translucent="NO" prompted="NO"/>
+                </tableViewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="AcC-fr-yl701" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="4403" y="700"/>
         </scene>
     </scenes>
     <resources>

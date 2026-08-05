@@ -734,6 +734,8 @@ private extension MainTimelineModernViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(timelineIconSizeDidChange(_:)), name: .timelineIconSizeDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(timelineNumberOfLinesDidChange(_:)), name: .timelineNumberOfLinesDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(timelineTagDisplayModeDidChange(_:)), name: .timelineTagDisplayModeDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(badgeColorModeDidChange(_:)), name: .badgeColorModeDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange(_:)), name: .accentColorDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(contentSizeCategoryDidChange), name: UIContentSizeCategory.didChangeNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(displayNameDidChange), name: .DisplayNameDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground(_:)), name: UIApplication.willEnterForegroundNotification, object: nil)
@@ -1157,6 +1159,25 @@ private extension MainTimelineModernViewController {
 			tagDisplayMode = AppDefaults.shared.timelineTagDisplayMode
 			reloadVisibleCells()
 		}
+	}
+
+	@objc func badgeColorModeDidChange(_ note: Notification) {
+		Self.logger.debug("MainTimelineModernViewController: badgeColorModeDidChange")
+		// Unlike tagDisplayMode/numberOfLines/iconSize, badgeColorMode isn't cached on
+		// self -- updateMetadataBadges() reads AppDefaults.shared.badgeColorMode fresh
+		// each call, so there's no local value to compare/update here, just a repaint
+		// to trigger. It doesn't affect row height (unlike tagDisplayMode, which can
+		// add/remove rows), so a repaint is correct without a layout invalidation.
+		reloadVisibleCells()
+	}
+
+	@objc func accentColorDidChange(_ note: Notification) {
+		Self.logger.debug("MainTimelineModernViewController: accentColorDidChange")
+		// Same shape as badgeColorModeDidChange: no local cached value, just a
+		// repaint so progressFillView/indicatorView pick up the new
+		// Assets.Colors.secondaryAccent on their next updateColors()/
+		// updateIndicatorView() call.
+		reloadVisibleCells()
 	}
 
 	@objc func contentSizeCategoryDidChange(_ note: Notification) {
