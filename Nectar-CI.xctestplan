@@ -68,6 +68,13 @@
     },
     {
       "target" : {
+        "containerPath" : "container:Modules/ArticlesDatabase",
+        "identifier" : "ArticlesDatabaseTests",
+        "name" : "ArticlesDatabaseTests"
+      }
+    },
+    {
+      "target" : {
         "containerPath" : "container:Modules/ActivityLog",
         "identifier" : "ActivityLogTests",
         "name" : "ActivityLogTests"

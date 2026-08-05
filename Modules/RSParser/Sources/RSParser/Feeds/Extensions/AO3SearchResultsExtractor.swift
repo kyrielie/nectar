@@ -269,15 +269,20 @@ private extension AO3SearchResultsExtractor {
 
 private extension AO3SearchResultsExtractor {
 
-	/// `<h5 class="fandoms">...<a>...</a></h5>` or
-	/// `<li class="warnings">...<a>...</a>...</li>` (and the character/
-	/// relationship/freeform siblings of the latter) -- every `<a>`
-	/// descendant's flattened, trimmed text, in document order.
+	/// `<h5 class="fandoms">...<a>...</a></h5>` -- fandoms are grouped in
+	/// one container -- or `<li class="warnings">...</li>` (and the
+	/// character/relationship/freeform siblings of the latter), which AO3
+	/// instead renders as one `<li>` *per tag*, not one container with
+	/// multiple `<a>`s inside. Collecting every matching element (not just
+	/// the first) handles both shapes: every `<a>` descendant's flattened,
+	/// trimmed text, in document order.
 	static func tagTexts(in li: HTMLLiteElement, tag: String, classToken: String) -> [String] {
-		guard let container = firstDescendant(of: li, where: { $0.tag == tag && classTokens(of: $0).contains(classToken) }) else {
+		let containers = descendants(of: li, where: { $0.tag == tag && classTokens(of: $0).contains(classToken) })
+		guard !containers.isEmpty else {
 			return []
 		}
-		return descendants(of: container, where: { $0.tag == "a" })
+		return containers
+			.flatMap { descendants(of: $0, where: { $0.tag == "a" }) }
 			.map { flattenedText($0).trimmingCharacters(in: .whitespacesAndNewlines) }
 			.filter { !$0.isEmpty }
 	}

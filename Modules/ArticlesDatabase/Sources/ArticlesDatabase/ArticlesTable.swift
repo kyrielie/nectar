@@ -17,22 +17,39 @@ import Articles
 final class ArticlesTable: DatabaseTable, Sendable {
 	let name: String
 
-	private let accountID: String
-	private let queue: DatabaseQueue
-	private let statusesTable: StatusesTable
-	private let bookStateTable: BookStateTable
-	private let searchTable: SearchTable
-	private let retentionStyle: ArticlesDatabase.RetentionStyle
-	private let articlesCache = OSAllocatedUnfairLock(initialState: [String: Article]())
+	// Not private: visible from other files' `extension ArticlesTable` in
+	// this module (Phase 3 file split). `private` in Swift is file-scoped,
+	// not type-scoped, so an extension in a different file can't see a
+	// `private` member of the type it's extending. `ArticlesTable` itself
+	// is not `public`, so this changes nothing about what's visible
+	// outside the module.
+	let accountID: String
+	let queue: DatabaseQueue
+	let statusesTable: StatusesTable
+	let bookStateTable: BookStateTable
+	let searchTable: SearchTable
+	let retentionStyle: ArticlesDatabase.RetentionStyle
+	let articlesCache = OSAllocatedUnfairLock(initialState: [String: Article]())
 
-	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticlesTable")
-	private static let signposter = OSSignposter(subsystem: Bundle.main.bundleIdentifier!, category: .pointsOfInterest)
+	// Not private -- used from every MARK region in this file (23 call
+	// sites across "Self.logger"/"Self.signposter"), several of which
+	// move to their own files below. Not called out explicitly in the
+	// cleanup plan's 3.1 list (which only names the seven stored
+	// properties and the two bookKey helpers), but the same file-scoped-
+	// `private` reasoning applies here just as much.
+	static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticlesTable")
+	static let signposter = OSSignposter(subsystem: Bundle.main.bundleIdentifier!, category: .pointsOfInterest)
 
 	// TODO: update articleCutoffDate as time passes and based on user preferences.
 	let articleCutoffDate = Date().bySubtracting(days: 90)
 
-	private typealias ArticlesFetchMethod = @Sendable (FMDatabase) -> Set<Article>
-	private typealias ArticlesCountFetchMethod = @Sendable (FMDatabase) -> Int
+	// Not private -- used both by the public fetch wrappers above (which
+	// move to ArticlesTable+Fetching.swift) and by the private
+	// implementations in the "MARK: - Private" extension below (which
+	// moves to ArticlesTable+Persistence.swift). Same reasoning as
+	// logger/signposter above.
+	typealias ArticlesFetchMethod = @Sendable (FMDatabase) -> Set<Article>
+	typealias ArticlesCountFetchMethod = @Sendable (FMDatabase) -> Int
 
 	init(name: String, accountID: String, queue: DatabaseQueue, retentionStyle: ArticlesDatabase.RetentionStyle) {
 		self.name = name
@@ -325,7 +342,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 		self.queue.runInTransaction { database in
 
-			let articleIDs = parsedItems.articleIDs()
+			let articleIDs = parsedItems.articleIDs(feedID: feedID)
 
 			// Diagnostic: `articleIDs` is a Set<String> built from parsedItems'
 			// computed `articleID` (calculatedArticleID(feedID:uniqueID:)). If two
@@ -353,7 +370,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			// afterward for whichever articleIDs need it true).
 			var bookKeysByArticleID = [String: String]()
 			for parsedItem in parsedItems {
-				bookKeysByArticleID[parsedItem.articleID] = parsedItem.bookKey
+				bookKeysByArticleID[parsedItem.articleID(feedID: feedID)] = parsedItem.bookKey
 			}
 			let bookStateByBookKey = self.bookStateTable.state(for: Set(bookKeysByArticleID.values), database)
 
@@ -563,8 +580,8 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		self.queue.runInTransaction { database in
 
 			var articleIDs = Set<String>()
-			for (_, parsedItems) in feedIDsAndItems {
-				articleIDs.formUnion(parsedItems.articleIDs())
+			for (feedID, parsedItems) in feedIDsAndItems {
+				articleIDs.formUnion(parsedItems.articleIDs(feedID: feedID))
 			}
 
 			let (statusesDictionary, _) = self.statusesTable.ensureStatusesForArticleIDs(articleIDs, read, database) // 1
@@ -910,7 +927,11 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	/// bookKey values for a set of articleIDs. Small helper for the write-through
 	/// in `mark(_:_:_:_:)` above -- StatusesTable has no access to `bookKey`,
 	/// since that column lives on `articles`, not `statuses`.
-	private func bookKeysForArticleIDs(_ articleIDs: Set<String>, _ database: FMDatabase) -> Set<String> {
+	// Not private, per the same file-scoped-`private` reasoning as the
+	// stored properties above: called from Statuses (this file),
+	// Scroll position, Last opened, and Reading progress, which move to
+	// their own files below.
+	func bookKeysForArticleIDs(_ articleIDs: Set<String>, _ database: FMDatabase) -> Set<String> {
 		guard let resultSet = self.selectRowsWhere(key: DatabaseKey.articleID, inValues: Array(articleIDs), in: database) else {
 			return []
 		}
@@ -935,7 +956,8 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	/// starred/loved/read toggle on one copy can be live-propagated to the
 	/// rest, not just persisted to the book-level state table for the next
 	/// import to pick up.
-	private func articleIDsForBookKeys(_ bookKeys: Set<String>, excluding: Set<String>, _ database: FMDatabase) -> Set<String> {
+	// Not private -- see bookKeysForArticleIDs above.
+	func articleIDsForBookKeys(_ bookKeys: Set<String>, excluding: Set<String>, _ database: FMDatabase) -> Set<String> {
 		guard !bookKeys.isEmpty else {
 			return []
 		}
@@ -1854,7 +1876,7 @@ nonisolated private extension ArticlesTable {
 }
 
 private extension Set where Element == ParsedItem {
-	func articleIDs() -> Set<String> {
-		return Set<String>(map { $0.articleID })
+	func articleIDs(feedID: String) -> Set<String> {
+		return Set<String>(map { $0.articleID(feedID: feedID) })
 	}
 }

@@ -1,0 +1,102 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "B24A1515-F9C1-4A99-A9F7-D2D6D89BE848",
+        "deviceName" : "iPhone 17",
+        "modelName" : "iPhone 17",
+        "osBuildNumber" : "23D8133",
+        "osVersion" : "26.3.1",
+        "platform" : "iOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 5,
+      "passedTests" : 856,
+      "skippedTests" : 0,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Configuration 1"
+      }
+    }
+  ],
+  "environmentDescription" : "Nectar-CI · Built with macOS 15.7.8",
+  "expectedFailures" : 0,
+  "failedTests" : 5,
+  "finishTime" : 1785917155.402,
+  "passedTests" : 608,
+  "result" : "Failed",
+  "skippedTests" : 0,
+  "startTime" : 1785917009.421,
+  "statistics" : [
+    {
+      "subtitle" : "292 test runs",
+      "title" : "44 tests ran with dynamic parameters"
+    },
+    {
+      "subtitle" : "31 test runs",
+      "title" : "31 tests collected performance metrics"
+    }
+  ],
+  "testFailures" : [
+    {
+      "failureText" : "Caught error: Ambrosia SQLite transfer: import failed (articles insert: no such column: t.url)",
+      "targetName" : "ArticlesDatabaseTests",
+      "testIdentifier" : 567,
+      "testIdentifierString" : "AmbrosiaSQLiteImportTableTests/contentHTMLRoundTripsThroughCompression()",
+      "testIdentifierURL" : "test://com.apple.xcode/ArticlesDatabase/ArticlesDatabaseTests/AmbrosiaSQLiteImportTableTests/contentHTMLRoundTripsThroughCompression()",
+      "testName" : "imported contentHTML round-trips through compression and back via fetchArticles"
+    },
+    {
+      "failureText" : "Caught error: Ambrosia SQLite transfer: import failed (articles insert: no such column: t.url)",
+      "targetName" : "ArticlesDatabaseTests",
+      "testIdentifier" : 564,
+      "testIdentifierString" : "AmbrosiaSQLiteImportTableTests/newVsUpdatedSplit()",
+      "testIdentifierURL" : "test://com.apple.xcode/ArticlesDatabase/ArticlesDatabaseTests/AmbrosiaSQLiteImportTableTests/newVsUpdatedSplit()",
+      "testName" : "re-importing one repeated id and one new id splits correctly, with no overlap"
+    },
+    {
+      "failureText" : "Expectation failed: (articles.first?.wordCount → nil) == 5000",
+      "targetName" : "ArticlesDatabaseTests",
+      "testIdentifier" : 579,
+      "testIdentifierString" : "ArticlesTableUpdateTests/nilRefreshDoesNotBlankExistingData()",
+      "testIdentifierURL" : "test://com.apple.xcode/ArticlesDatabase/ArticlesDatabaseTests/ArticlesTableUpdateTests/nilRefreshDoesNotBlankExistingData()",
+      "testName" : "a nil field on re-import does not overwrite the previously stored value"
+    },
+    {
+      "failureText" : "Expectation failed: !((changed → [\"889eae2ebc37f27770517902c65f4bca\", \"2ee28480c61a24961bc2b998b8a174c9\"]).contains(secondArticleID → \"2ee28480c61a24961bc2b998b8a174c9\") → true)",
+      "targetName" : "ArticlesDatabaseTests",
+      "testIdentifier" : 578,
+      "testIdentifierString" : "ArticlesTableUpdateTests/readingProgressRoundTripsWithoutPropagating()",
+      "testIdentifierURL" : "test://com.apple.xcode/ArticlesDatabase/ArticlesDatabaseTests/ArticlesTableUpdateTests/readingProgressRoundTripsWithoutPropagating()",
+      "testName" : "saveReadingProgress round-trips for its own articleID and does not propagate to a sibling"
+    },
+    {
+      "failureText" : "Caught error: Ambrosia SQLite transfer: import failed (articles insert: no such column: t.url)",
+      "targetName" : "ArticlesDatabaseTests",
+      "testIdentifier" : 565,
+      "testIdentifierString" : "AmbrosiaSQLiteImportTableTests/reimportOverwritesChangedFields()",
+      "testIdentifierURL" : "test://com.apple.xcode/ArticlesDatabase/ArticlesDatabaseTests/AmbrosiaSQLiteImportTableTests/reimportOverwritesChangedFields()",
+      "testName" : "re-importing the same id with a changed title/word count overwrites those fields"
+    }
+  ],
+  "title" : "Test - Nectar-iOS",
+  "topInsights" : [
+    {
+      "category" : "Common Failures",
+      "impact" : "60% of failures",
+      "text" : "3 runs of 3 tests failed with Caught error: Ambrosia SQLite transfer: import failed (articles insert: no such column: t.url)"
+    },
+    {
+      "category" : "Longest Test Runs",
+      "impact" : "35% of duration",
+      "text" : "4 longest test runs with outlier durations exceeding 4.97s (three standard deviations)"
+    },
+    {
+      "category" : "Longest Test Runs",
+      "impact" : "70% of duration",
+      "text" : "1 longest test run with outlier durations exceeding 4.02s (three standard deviations)"
+    }
+  ],
+  "totalTestCount" : 613
+}
