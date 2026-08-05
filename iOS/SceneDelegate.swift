@@ -40,6 +40,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		updateUserInterfaceStyle()
 
 		NotificationCenter.default.addObserver(self, selector: #selector(handleUserInterfaceColorPaletteDidUpdate(_:)), name: .userInterfaceColorPaletteDidUpdate, object: AppDefaults.self)
+		NotificationCenter.default.addObserver(self, selector: #selector(handleAccentColorDidChange(_:)), name: .accentColorDidChange, object: nil)
 
 		if connectionOptions.urlContexts.first?.url != nil {
 			self.scene(scene, openURLContexts: connectionOptions.urlContexts)
@@ -191,6 +192,19 @@ private extension SceneDelegate {
 		Task {
 			updateUserInterfaceStyle()
 		}
+	}
+
+	/// `window.tintColor` is set once from `Assets.Colors.primaryAccent` at
+	/// scene connection (line 22) and not read again on its own -- unlike
+	/// most `Assets.Colors.primaryAccent`/`.secondaryAccent` call sites,
+	/// which are tintColor assignments re-evaluated on every draw/appearance
+	/// change, `window.tintColor` only changes when explicitly reassigned.
+	/// This mirrors `handleUserInterfaceColorPaletteDidUpdate` for the same
+	/// reason: a property set once needs an explicit update path when its
+	/// source value changes after the fact.
+	@objc func handleAccentColorDidChange(_ notification: Notification) {
+		assert(Thread.isMainThread)
+		window?.tintColor = Assets.Colors.primaryAccent
 	}
 
 	@MainActor func updateUserInterfaceStyle() {

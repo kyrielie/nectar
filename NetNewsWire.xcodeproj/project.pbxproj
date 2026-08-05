@@ -74,6 +74,7 @@
 		487CE57C318F285533E23CE9 /* ActivityType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566733B2D147DFF3EF472230 /* ActivityType.swift */; };
 		4ACD98DC91B56F842A4CC55B /* stylesheet.css in Resources */ = {isa = PBXBuildFile; fileRef = 30ED27154B94D45D159B5733 /* stylesheet.css */; };
 		4AD629C184EA750051FC78D9 /* ArticleStringFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04172445165E83F14A9A4D00 /* ArticleStringFormatter.swift */; };
+		4C5777BD38CD4B3CF4BEAB2E /* AccentColorTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD95AF6A5995BE98B14E2940 /* AccentColorTableViewController.swift */; };
 		4D6D01DD5E23AD2CEBC8D8BE /* SmartFeedsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D59DE360433A9E706D1F8AA7 /* SmartFeedsController.swift */; };
 		4DBF15DF1511F6638C973C81 /* ManageStorageViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E2F778291B96C0F1887747A /* ManageStorageViewModel.swift */; };
 		4E7362661B0643809D41364A /* OpenInSafariActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D17832F911B416F4391D0850 /* OpenInSafariActivity.swift */; };
@@ -181,6 +182,7 @@
 		D10F387F3F59B90BE9F3C76A /* MainFeedCollectionViewController+Drag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 340E099F7150CB50B8FBC5C9 /* MainFeedCollectionViewController+Drag.swift */; };
 		D24385C1CFDA8187B239CD4F /* MainTimelineDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59AF7CC16EB713B75FA9E683 /* MainTimelineDataSource.swift */; };
 		D3B2FBDDFF0C50EDA4501B3B /* ArticlesDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 7AA7C6FF61201945FA287D24 /* ArticlesDatabase */; };
+		D3BFB5D446A6BC4F432FB8B9 /* BadgeColorModeCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61BFEB0949148424C02DC93 /* BadgeColorModeCell.swift */; };
 		D511641F9BA660F0D97A23B6 /* ReadFeedDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48955878779452CF41F91954 /* ReadFeedDelegate.swift */; };
 		D7A9196D479E3D835905654B /* RSCore in Embed Frameworks */ = {isa = PBXBuildFile; productRef = EB4746274BF6B6EBC374053C /* RSCore */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D813B750265C259394B4A912 /* ArticleThemeDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 517FE64424DC1187871B25C5 /* ArticleThemeDownloader.swift */; };
@@ -189,6 +191,7 @@
 		DA634D3C75477A6467872838 /* NSAttributedString+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EB78BFA707577156D4AAB9D /* NSAttributedString+Extensions.swift */; };
 		DA8A7BE427DA9DB1C3C87E32 /* ArticleThemesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7274C9602D13A4B0EF420321 /* ArticleThemesManager.swift */; };
 		DCABF51CBA46331097D9F21F /* ImageTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = F502449414B28CC8609B62FC /* ImageTransition.swift */; };
+		DE717CF540395E1CBC64DEA6 /* BadgeColorTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DC1BC8906EFD78B8DDC7C87 /* BadgeColorTable.swift */; };
 		DF3F6786AE648A1E85898845 /* SettingsComboTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 239E3A2E214B7ADB1813F3F4 /* SettingsComboTableViewCell.swift */; };
 		DFC1142B9D6BBA23F66D8550 /* ManageStorageCollectionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58DD787FD23F8CE9B951A23E /* ManageStorageCollectionViewController.swift */; };
 		E0CFD853361806ABA5CEABF3 /* IconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 068E82C6329A25AC92B31B1C /* IconView.swift */; };
@@ -369,6 +372,7 @@
 		8C057CA46815F27888066771 /* Images */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Images; path = Modules/Images; sourceTree = SOURCE_ROOT; };
 		8CB3642DC7A3A654C2C59EB7 /* core.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = core.css; sourceTree = "<group>"; };
 		8D17F33EFF7E202EA0E4B2D6 /* AccountInspectorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountInspectorViewController.swift; sourceTree = "<group>"; };
+		8DC1BC8906EFD78B8DDC7C87 /* BadgeColorTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgeColorTable.swift; sourceTree = "<group>"; };
 		8F85897E4F6D1161866E1071 /* Nectar-iOSTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "Nectar-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FD8A9552D28058672B186BC /* UIActivityViewController+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIActivityViewController+Extras.swift"; sourceTree = "<group>"; };
 		9048A16F604F87A5D1967AC8 /* MarkStatusCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkStatusCommand.swift; sourceTree = "<group>"; };
@@ -445,6 +449,7 @@
 		E374143FB4FA6BAC5F0D2DA9 /* ContextMenuPreviewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextMenuPreviewViewController.swift; sourceTree = "<group>"; };
 		E450A8024C9EC703FB69324B /* AppDelegate+Shared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+Shared.swift"; sourceTree = "<group>"; };
 		E4DABD7FB5DCD099429D9D7F /* VibrantButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VibrantButton.swift; sourceTree = "<group>"; };
+		E61BFEB0949148424C02DC93 /* BadgeColorModeCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgeColorModeCell.swift; sourceTree = "<group>"; };
 		E62D76FFE81B4363E849E01E /* AO3OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3OnboardingView.swift; sourceTree = "<group>"; };
 		E6F8CE2122A7A758C4A2F187 /* AO3LoginViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3LoginViewController.swift; sourceTree = "<group>"; };
 		E6F948669EADAE079116F0C3 /* ArticleTheme+Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ArticleTheme+Notifications.swift"; sourceTree = "<group>"; };
@@ -458,6 +463,7 @@
 		F786753E4D2A1B8926DC47BB /* AccountStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStatsView.swift; sourceTree = "<group>"; };
 		F8E7A9D222B2E9794D52A03B /* AddFeedSelectFolderTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFeedSelectFolderTableViewCell.swift; sourceTree = "<group>"; };
 		FCF1C72C8F04830B0695D3CF /* UnreadFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnreadFeed.swift; sourceTree = "<group>"; };
+		FD95AF6A5995BE98B14E2940 /* AccentColorTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColorTableViewController.swift; sourceTree = "<group>"; };
 		FE0E55EECD7D9E39899A599B /* ArticleSpecifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleSpecifier.swift; sourceTree = "<group>"; };
 		FE60AD3DFCB945E8A8E31218 /* AccountNotificationInspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountNotificationInspectorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -781,6 +787,7 @@
 				03C308B9583C626190542515 /* AboutContributor.swift */,
 				CA4C66C869290F6EDA7F3E70 /* AboutCreditView.swift */,
 				AAEAF0FF77BBE87180FB32D9 /* AboutView.swift */,
+				FD95AF6A5995BE98B14E2940 /* AccentColorTableViewController.swift */,
 				A10D3A0ED63089797C27146A /* ActivityLogView.swift */,
 				9EE29BB228BD4D77C6613CAE /* AddAccountViewController.swift */,
 				A4FD081876054F057E1DFF4F /* AO3AccountSettingsView.swift */,
@@ -789,6 +796,7 @@
 				3108BD305F30192D74F96693 /* ArticleThemeImporter.swift */,
 				69C41E0B0165A72DC7F0E0C7 /* ArticleThemeListView.swift */,
 				BBBC5386FE8A011F4426330E /* ArticleThemePreviewWebView.swift */,
+				E61BFEB0949148424C02DC93 /* BadgeColorModeCell.swift */,
 				BFA195669F7F9AFCF2C21506 /* ColorPaletteTableViewController.swift */,
 				4820776BEC859D8546D325EC /* DinosaurRowView.swift */,
 				582127E86C4807B8A27FAD41 /* DinosaursView.swift */,
@@ -968,6 +976,7 @@
 		F19FC3F7CFA9F5C1D8A0F815 /* Cell */ = {
 			isa = PBXGroup;
 			children = (
+				8DC1BC8906EFD78B8DDC7C87 /* BadgeColorTable.swift */,
 				CC6F37C80EFDA49A967EB1D4 /* MainTimelineCell.swift */,
 				06EBDDA41D63CE3D2FF87785 /* MainTimelineCellData.swift */,
 				8AD1F1DEE29D5AC5F3AF3280 /* MainTimelineCellLayout.swift */,
@@ -1194,6 +1203,7 @@
 				2BA4B293F8F08024211727E1 /* AboutContributor.swift in Sources */,
 				E1AD853F02A9448990E8CB92 /* AboutCreditView.swift in Sources */,
 				107E5EF06F2AB15102DA6497 /* AboutView.swift in Sources */,
+				4C5777BD38CD4B3CF4BEAB2E /* AccentColorTableViewController.swift in Sources */,
 				CB9F96DC519B7E630593C813 /* AccountInspectorViewController.swift in Sources */,
 				98CFFD3E273890E57EEB014F /* AccountNotificationInspectorView.swift in Sources */,
 				1DA2AC8DEFE8740B50FD9FB5 /* AccountStatsView.swift in Sources */,
@@ -1240,6 +1250,8 @@
 				FA8CDAF71BB21BF13D4E43B5 /* ArticleUtilities.swift in Sources */,
 				35ABAA14B41EF11D49CDF39B /* ArticleViewController.swift in Sources */,
 				BB5B08305FC9A2AE0B7AE30B /* Assets.swift in Sources */,
+				D3BFB5D446A6BC4F432FB8B9 /* BadgeColorModeCell.swift in Sources */,
+				DE717CF540395E1CBC64DEA6 /* BadgeColorTable.swift in Sources */,
 				0C36E550FACBBAF7BDD93C4B /* CacheCleaner.swift in Sources */,
 				F7FE77CCA4E1D6B8C16881DF /* ColorPaletteTableViewController.swift in Sources */,
 				8C28380B3660064273040340 /* ContextMenuPreviewViewController.swift in Sources */,

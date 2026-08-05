@@ -92,8 +92,24 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 
     // MARK: UICollectionViewDataSource
 
+	/// "Badge Colors" (colored-badge toggle) only has any visible effect in
+	/// `.badges` tag display mode -- `.compact`/`.expanded` never render
+	/// `metadataBadges` pills at all (see `MainTimelineCellData.metadataBadges`),
+	/// so showing the toggle there would look actionable while doing nothing.
+	private var showsBadgeColorSection: Bool {
+		AppDefaults.shared.timelineTagDisplayMode == .badges
+	}
+
+	/// Section indices are dynamic: Number of Lines (0), Tag Display (1),
+	/// Badge Colors (2, only when `showsBadgeColorSection`), then Preview
+	/// last. Centralized here rather than hardcoded per-method so every
+	/// switch below stays in sync when the badge section is hidden.
+	private var previewSection: Int {
+		showsBadgeColorSection ? 3 : 2
+	}
+
     override func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return 4
+		return showsBadgeColorSection ? 4 : 3
     }
 
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -115,13 +131,13 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 			return cell
 		}
 
-		if indexPath.section == 2 {
+		if showsBadgeColorSection && indexPath.section == 2 {
 			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: BadgeColorModeCell.reuseIdentifier, for: indexPath) as! BadgeColorModeCell
 			cell.configure()
 			return cell
 		}
 
-		if indexPath.section == 3 {
+		if indexPath.section == previewSection {
 			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath) as! MainTimelineCell
 			cell.cellData = MainTimelineCellData(article: previewArticle,
 												 showFeedName: .byline,
@@ -160,9 +176,9 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 			header.label.text = NSLocalizedString("Number of Lines", comment: "Number of Lines")
 		case 1:
 			header.label.text = NSLocalizedString("Tag Display", comment: "Tag Display")
-		case 2:
+		case 2 where showsBadgeColorSection:
 			header.label.text = NSLocalizedString("Badge Colors", comment: "Badge Colors")
-		case 3:
+		case previewSection:
 			header.label.text = NSLocalizedString("Preview", comment: "Preview")
 		default:
 			header.label.text = NSLocalizedString("", comment: "")
@@ -176,16 +192,21 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 	}
 
 	override func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
-		if indexPath.section > 1 {
-			return false
-		}
-		return true
+		// Only the Number of Lines (0) and Tag Display (1) slider rows respond to
+		// selection; the badge-color toggle handles its own touches via UISwitch,
+		// and the preview row isn't interactive.
+		return indexPath.section == 0 || indexPath.section == 1
 	}
 
 	// MARK: Notifications
 
 	func userDefaultsDidChange() {
-		collectionView.reloadSections([3])
+		// Tag display mode changes can add/remove the Badge Colors section
+		// (showsBadgeColorSection), which shifts every subsequent section
+		// index including the preview -- a full reload is required rather
+		// than reloading a fixed section index, since that index is no
+		// longer stable once section count itself changes.
+		collectionView.reloadData()
 	}
 
 }

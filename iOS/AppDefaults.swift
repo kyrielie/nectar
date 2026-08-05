@@ -73,6 +73,77 @@ enum BadgeColorMode: Int, CaseIterable, Sendable {
 	}
 }
 
+/// App-wide accent hue (Settings → Appearance), independent of light/dark.
+/// `.default` preserves today's fixed primaryAccentColor/secondaryAccentColor
+/// asset-catalog values exactly; the other cases are a fixed palette rather
+/// than a free color picker, so every choice stays legible against both
+/// .label/.secondaryLabel text and system backgrounds in both appearances.
+///
+/// Scope note: `Assets.Colors.primaryAccent`/`.secondaryAccent` are read live
+/// by most call sites (tintColor assignments, updateColors()-style methods),
+/// so those repaint immediately via `accentColorDidChange`. A handful of
+/// `Assets.Images` entries (mainFolder, unreadFeed, readFeed, lastOpenedFeed,
+/// unreadCellIndicator) are `static let IconImage`s that capture
+/// `preferredColor` once at process launch rather than reading it per-draw --
+/// those five continue showing the color that was active at launch until the
+/// app restarts. Making them fully live would mean changing IconImage's
+/// `preferredColor` from a stored `let` to something recomputed per use,
+/// which is a larger change than this setting justifies on its own.
+enum AccentColor: Int, CaseIterable, Sendable {
+	case `default` = 0
+	case rosePine = 1
+	case sepia = 2
+	case forest = 3
+	case slate = 4
+	case berry = 5
+
+	var description: String {
+		switch self {
+		case .default:
+			return NSLocalizedString("Default", comment: "Default accent color")
+		case .rosePine:
+			return NSLocalizedString("Rosé Pine", comment: "Rosé Pine accent color")
+		case .sepia:
+			return NSLocalizedString("Sepia", comment: "Sepia accent color")
+		case .forest:
+			return NSLocalizedString("Forest", comment: "Forest accent color")
+		case .slate:
+			return NSLocalizedString("Slate", comment: "Slate accent color")
+		case .berry:
+			return NSLocalizedString("Berry", comment: "Berry accent color")
+		}
+	}
+
+	/// nil for `.default`, meaning "fall back to the existing asset-catalog
+	/// color" -- these hex values aren't independently chosen, they're the
+	/// same swatches BadgeColorTable already uses for the AO3-derived palette
+	/// (see that file's header comment for why hex-via-UIColor(cssHex:)
+	/// rather than colorset entries), reused here so the accent choices read
+	/// as part of one consistent palette rather than a second unrelated set
+	/// of hues.
+	var primaryHex: String? {
+		switch self {
+		case .default: return nil
+		case .rosePine: return "#3e8fb0"
+		case .sepia: return "#b5835a"
+		case .forest: return "#5a8a6b"
+		case .slate: return "#5f7a8a"
+		case .berry: return "#c4507a"
+		}
+	}
+
+	var secondaryHex: String? {
+		switch self {
+		case .default: return nil
+		case .rosePine: return "#9ccfd8"
+		case .sepia: return "#d4a574"
+		case .forest: return "#8fb89c"
+		case .slate: return "#8ea3b0"
+		case .berry: return "#eb6f92"
+		}
+	}
+}
+
 enum PageCounterDisplayMode: String, CaseIterable, Sendable {
 	case off
 	case percentage
@@ -85,6 +156,7 @@ extension Notification.Name {
 	public static let timelineNumberOfLinesDidChange = Notification.Name("TimelineNumberOfLinesDidChangeNotification")
 	public static let timelineTagDisplayModeDidChange = Notification.Name("TimelineTagDisplayModeDidChangeNotification")
 	public static let badgeColorModeDidChange = Notification.Name("BadgeColorModeDidChangeNotification")
+	public static let accentColorDidChange = Notification.Name("AccentColorDidChangeNotification")
 	public static let articleThemeOverridesDidChange = Notification.Name("ArticleThemeOverridesDidChangeNotification")
 }
 
@@ -108,6 +180,7 @@ final class AppDefaults: Sendable {
 		static let timelineIconDimension = "timelineIconSize"
 		static let timelineTagDisplayMode = "timelineTagDisplayMode"
 		static let badgeColorMode = "badgeColorMode"
+		static let accentColor = "accentColor"
 		static let timelineSortDirection = "timelineSortDirection"
 		static let timelineSortField = "timelineSortField"
 		static let articleFullscreenAvailable = "articleFullscreenAvailable"
@@ -487,6 +560,17 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	var accentColor: AccentColor {
+		get {
+			let rawValue = AppDefaults.store.integer(forKey: Key.accentColor)
+			return AccentColor(rawValue: rawValue) ?? .default
+		}
+		set {
+			AppDefaults.store.set(newValue.rawValue, forKey: Key.accentColor)
+			NotificationCenter.default.post(name: .accentColorDidChange, object: nil)
+		}
+	}
+
 	var currentThemeName: String? {
 		get {
 			return AppDefaults.string(for: Key.currentThemeName)
@@ -606,6 +690,7 @@ final class AppDefaults: Sendable {
 										Key.timelineIconDimension: IconSize.medium.rawValue,
 										Key.timelineTagDisplayMode: TagDisplayMode.compact.rawValue,
 									Key.badgeColorMode: BadgeColorMode.neutral.rawValue,
+										Key.accentColor: AccentColor.default.rawValue,
 										Key.timelineSortDirection: ComparisonResult.orderedDescending.rawValue,
 								Key.timelineSortField: ArticleSorter.SortField.date.rawValue,
 										Key.articleFullscreenAvailable: false,

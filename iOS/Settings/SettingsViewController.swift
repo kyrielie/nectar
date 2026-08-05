@@ -26,6 +26,11 @@ final class SettingsViewController: UITableViewController {
 		case ao3Account = 6
 	}
 
+	private enum AppearanceRow: Int, CaseIterable {
+		case colorPalette = 0
+		case accentColor = 1
+	}
+
 	private enum TroubleshootingRow: Int {
 		case errorLog = 0
 		case activityLog = 1
@@ -87,6 +92,7 @@ final class SettingsViewController: UITableViewController {
 	@IBOutlet var pageCounterDisplayModeDetailLabel: UILabel!
 	@IBOutlet var disableArticleLinksSwitch: UISwitch!
 	@IBOutlet var colorPaletteDetailLabel: UILabel!
+	@IBOutlet var accentColorDetailLabel: UILabel!
 	@IBOutlet var openLinksInNetNewsWire: UISwitch!
 
 	var scrollToArticlesSection = false
@@ -147,6 +153,7 @@ final class SettingsViewController: UITableViewController {
 		disableArticleLinksSwitch.isOn = AppDefaults.shared.disableArticleLinks
 
 		colorPaletteDetailLabel.text = String(describing: AppDefaults.userInterfaceColorPalette)
+		accentColorDetailLabel.text = AppDefaults.shared.accentColor.description
 
 		openLinksInNetNewsWire.isOn = !AppDefaults.shared.useSystemBrowser
 
@@ -260,8 +267,16 @@ final class SettingsViewController: UITableViewController {
 				break
 			}
 		case .appearance:
-			let colorPalette = UIStoryboard.settings.instantiateController(ofType: ColorPaletteTableViewController.self)
-			self.navigationController?.pushViewController(colorPalette, animated: true)
+			switch AppearanceRow(rawValue: indexPath.row) {
+			case .colorPalette:
+				let colorPalette = UIStoryboard.settings.instantiateController(ofType: ColorPaletteTableViewController.self)
+				self.navigationController?.pushViewController(colorPalette, animated: true)
+			case .accentColor:
+				let accentColor = UIStoryboard.settings.instantiateController(ofType: AccentColorTableViewController.self)
+				self.navigationController?.pushViewController(accentColor, animated: true)
+			case nil:
+				break
+			}
 		case .troubleshooting:
 			let viewController: UIViewController? = {
 				switch TroubleshootingRow(rawValue: indexPath.row) {
