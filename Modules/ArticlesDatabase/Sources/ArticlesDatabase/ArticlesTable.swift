@@ -613,6 +613,47 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
+	/// Clears an article's content while leaving its row -- and every other
+	/// column (title, tags, status, bookKey, Ambrosia metadata) -- intact.
+	/// This is the Manage Storage screen's "Clear Content" action: unlike
+	/// `delete(articleIDs:completion:)`, which does a hard row delete and
+	/// loses the article's metadata entirely, this targets only the
+	/// content-bearing columns.
+	///
+	/// pendingUpdateContentHTML/pendingUpdateDetectedAt/
+	/// wordCountRegressionFlaggedAt are nulled in the same operation: a
+	/// staged pending-update diff has nothing left to be relative to once
+	/// contentHTML is gone, and leaving wordCountRegressionFlaggedAt set
+	/// would permanently block AO3ChapterFetcher's isStale check from ever
+	/// refetching this article -- silently locking a content-cleared row
+	/// out of ever being repopulated.
+	///
+	/// No dictionary+multi-articleID (IN-clause) update helper exists in
+	/// RSDatabase today -- only single-column-multi-row
+	/// (updateRowsWithValue(_:valueKey:whereKey:matches:)) and
+	/// multi-column-single-row (updateRowsWithDictionary(_:whereKey:matches:)).
+	/// This runs one multi-column UPDATE per articleID inside a single
+	/// transaction rather than adding new low-level plumbing for what's a
+	/// user-initiated, batch-sized (not library-sized) operation.
+	public func clearContentHTML(articleIDs: Set<String>, completion: DatabaseCompletionBlock?) {
+		self.queue.runInTransaction { database in
+			let clearedColumns: DatabaseDictionary = [
+				DatabaseKey.contentHTML: NSNull(),
+				DatabaseKey.contentText: NSNull(),
+				DatabaseKey.pendingUpdateContentHTML: NSNull(),
+				DatabaseKey.pendingUpdateDetectedAt: NSNull(),
+				DatabaseKey.wordCountRegressionFlaggedAt: NSNull()
+			]
+			for articleID in articleIDs {
+				self.updateRowsWithDictionary(clearedColumns, whereKey: DatabaseKey.articleID, matches: articleID, database: database)
+			}
+			self.removeArticleIDsFromCache(articleIDs)
+			DispatchQueue.main.async {
+				completion?()
+			}
+		}
+	}
+
 	// MARK: - Unread Counts
 
 	func fetchUnreadCounts(_ feedIDs: Set<String>, _ completion: @escaping UnreadCountDictionaryCompletionBlock) {

@@ -44,7 +44,7 @@ final class RefreshProgressView: UIView {
 		label.font = UIFont.preferredFont(forTextStyle: .footnote)
 	}
 
-	nonisolated @objc func userDefaultsDidChange(_ note: Notification) {
+	@objc nonisolated func userDefaultsDidChange(_ note: Notification) {
 		// NotificationCenter doesn't guarantee this fires on the main
 		// thread -- UserDefaults.didChangeNotification can be posted from
 		// a background thread (observed during XCTest's own bootstrap).

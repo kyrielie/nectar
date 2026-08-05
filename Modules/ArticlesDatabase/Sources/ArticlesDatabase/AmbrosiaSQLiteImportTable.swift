@@ -205,13 +205,16 @@ enum AmbrosiaSQLiteImportTable {
 	}
 
 	/// bookKey precedence, mirrored from ParsedItem.bookKey exactly:
-	/// 1. isAnthology && ao3_series_id non-empty -> "ao3-series:<id>"
+	/// 1. ao3_series_id non-empty                  -> "ao3-series:<id>"
+	///    (routes on ao3_series_id's presence, not is_anthology -- a series-group
+	///    row sets ao3_series_id without is_anthology, and needs the same
+	///    single-pre-merged-row keying an anthology-with-a-series-id gets)
 	/// 2. isAnthology && series_name non-null     -> "calibre-series:<name>"
 	/// 3. ao3_work_id non-empty                   -> "ao3-work:<id>"
 	/// 4. fallback                                -> the wire row's own id
 	private static let bookKeySQLExpression = """
 	CASE
-	  WHEN is_anthology = 1 AND ao3_series_id IS NOT NULL AND ao3_series_id != '' THEN 'ao3-series:' || ao3_series_id
+	  WHEN ao3_series_id IS NOT NULL AND ao3_series_id != '' THEN 'ao3-series:' || ao3_series_id
 	  WHEN is_anthology = 1 AND series_name IS NOT NULL THEN 'calibre-series:' || series_name
 	  WHEN ao3_work_id IS NOT NULL AND ao3_work_id != '' THEN 'ao3-work:' || ao3_work_id
 	  ELSE id

@@ -1129,6 +1129,20 @@ public enum FetchType {
 		await database.deleteAsync(articleIDs: articleIDs)
 	}
 
+	/// Clear the given articles' content -- title, tags, status, bookKey,
+	/// and every other Ambrosia metadata field stay intact, only content and
+	/// content-dependent staged state are cleared. This is the Manage
+	/// Storage screen's "Clear Content" action, which used to call
+	/// `delete(articleIDs:)` above and silently lose the article's metadata
+	/// along with its content -- see ArticlesTable.clearContentHTML's doc
+	/// comment.
+	public func clearContent(articleIDs: Set<String>) async {
+		guard !articleIDs.isEmpty else {
+			return
+		}
+		await database.clearContentHTMLAsync(articleIDs: articleIDs)
+	}
+
 	/// Empty caches that can reasonably be emptied. Call when the app goes in the background, for instance.
 	func emptyCaches() {
 		database.emptyCaches()

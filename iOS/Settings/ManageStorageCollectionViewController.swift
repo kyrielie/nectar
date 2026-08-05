@@ -104,7 +104,7 @@ final class ManageStorageCollectionViewController: UICollectionViewController {
 		dataSource.apply(snapshot, animatingDifferences: true)
 	}
 
-	// MARK: Swipe to delete
+	// MARK: Swipe to clear content
 
 	private func trailingSwipeActionsConfiguration(forRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
 		guard let item = dataSource.itemIdentifier(for: indexPath),
@@ -113,23 +113,23 @@ final class ManageStorageCollectionViewController: UICollectionViewController {
 			return UISwipeActionsConfiguration(actions: [])
 		}
 
-		let deleteTitle = NSLocalizedString("Delete", comment: "Delete button")
-		let deleteAction = UIContextualAction(style: .destructive, title: nil) { [weak self] _, _, completion in
+		let clearContentTitle = NSLocalizedString("Clear Content", comment: "Clear Content button")
+		let clearContentAction = UIContextualAction(style: .destructive, title: nil) { [weak self] _, _, completion in
 			guard let self else {
 				completion(false)
 				return
 			}
 			Task {
-				await self.viewModel.delete(row)
+				await self.viewModel.clearContent(row)
 				self.applySnapshot()
 				completion(true)
 			}
 		}
-		deleteAction.image = UIImage(systemName: "trash")
-		deleteAction.accessibilityLabel = deleteTitle
-		deleteAction.backgroundColor = UIColor.systemRed
+		clearContentAction.image = UIImage(systemName: "trash")
+		clearContentAction.accessibilityLabel = clearContentTitle
+		clearContentAction.backgroundColor = UIColor.systemRed
 
-		return UISwipeActionsConfiguration(actions: [deleteAction])
+		return UISwipeActionsConfiguration(actions: [clearContentAction])
 	}
 
 	private func formattedSize(_ bytes: Int) -> String {

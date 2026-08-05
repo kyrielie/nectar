@@ -260,6 +260,43 @@ public struct ArticleStorageInfo: Sendable {
 				database.executeStatements("ALTER TABLE articles add column bookKey TEXT;")
 			}
 
+			// One-time data fix for the ParsedItem.bookKey routing change (series-group
+			// items now route to "ao3-series:<id>" like an anthology-with-a-series-id
+			// does, instead of falling through to the bare uniqueID -- see
+			// ParsedItem.swift's bookKey doc comment). Only bookKey itself is a stored
+			// column here; ao3SeriesID/isAnthology/seriesName are ParsedItem-only
+			// fields consumed at parse/import time and never persisted to `articles`,
+			// so this can't be driven off an ao3SeriesID column the way the plan for
+			// this fix originally assumed. Instead it's driven off Ambrosia's own wire
+			// id scheme for a series-group item, "ambrosia-series-ao3:<id>" (confirmed
+			// against Ambrosia's LocalFeedServer output, not against anything in this
+			// repo) -- a pre-fix row still sitting on its old bookKey == uniqueID
+			// fallback is recognized by that prefix and repointed directly, since it
+			// would otherwise only self-heal on that feed's next refresh (which
+			// ArticlesTable.update's diff-and-update path already handles for the
+			// articles.bookKey column, per Article's == including bookKey -- this
+			// block exists only because BookStateTable has no such self-heal: it's
+			// keyed by value with no relationship to article identity). Self-limiting/
+			// idempotent via the WHERE clause below, same as AuthorsSchemaMigration's
+			// approach elsewhere in this init -- no separate one-shot flag needed,
+			// since a row this UPDATE has already fixed no longer matches it.
+			let seriesGroupUniqueIDPrefix = "ambrosia-series-ao3:"
+			database.executeStatements("""
+				INSERT OR IGNORE INTO bookState (bookKey, read, starred, loved, scrollPosition, readingProgress, lastOpenedAt, updatedAt, kudosAttemptedAt, kudosAttemptedAuthenticated)
+				SELECT 'ao3-series:' || substr(a.uniqueID, \(seriesGroupUniqueIDPrefix.count + 1)), b.read, b.starred, b.loved, b.scrollPosition, b.readingProgress, b.lastOpenedAt, b.updatedAt, b.kudosAttemptedAt, b.kudosAttemptedAuthenticated
+				FROM articles a
+				JOIN bookState b ON b.bookKey = a.uniqueID
+				WHERE a.isAmbrosiaItem = 1 AND a.bookKey = a.uniqueID AND a.uniqueID LIKE '\(seriesGroupUniqueIDPrefix)%';
+
+				DELETE FROM bookState WHERE bookKey IN (
+				  SELECT a.uniqueID FROM articles a
+				  WHERE a.isAmbrosiaItem = 1 AND a.bookKey = a.uniqueID AND a.uniqueID LIKE '\(seriesGroupUniqueIDPrefix)%'
+				);
+
+				UPDATE articles SET bookKey = 'ao3-series:' || substr(uniqueID, \(seriesGroupUniqueIDPrefix.count + 1))
+				WHERE isAmbrosiaItem = 1 AND bookKey = uniqueID AND uniqueID LIKE '\(seriesGroupUniqueIDPrefix)%';
+				""")
+
 			// nectarfixes #3: bookKeysForArticleIDs/articleIDsForBookKeys (ArticlesTable)
 			// run a WHERE bookKey IN (...) and a WHERE uniqueID IN (...) lookup on every
 			// single read/starred/loved toggle now, to write through to the book-level
@@ -690,6 +727,16 @@ public struct ArticleStorageInfo: Sendable {
 		}
 	}
 
+	/// Clear an article's content while leaving its row (and every other
+	/// column) intact -- see ArticlesTable.clearContentHTML's doc comment.
+	public func clearContentHTMLAsync(articleIDs: Set<String>) async {
+		await withCheckedContinuation { continuation in
+			_clearContentHTML(articleIDs: articleIDs) {
+				continuation.resume()
+			}
+		}
+	}
+
 	// MARK: - ArticleIDs
 
 	/// Fetch the articleIDs of unread articles.
@@ -1015,7 +1062,6 @@ private extension ArticlesDatabase {
 	}
 
 	func _saveScrollPosition(_ scrollPosition: Double, articleID: String, completion: @escaping DatabaseCompletionBlock) {
-		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.saveScrollPosition(scrollPosition, articleID: articleID, completion)
 	}
 
@@ -1039,7 +1085,6 @@ private extension ArticlesDatabase {
 	}
 
 	func _saveReadingProgress(_ readingProgress: Double, articleID: String, completion: @escaping @Sendable (Set<String>) -> Void) {
-		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.saveReadingProgress(readingProgress, articleID: articleID, completion)
 	}
 
@@ -1113,6 +1158,11 @@ private extension ArticlesDatabase {
 	func _delete(articleIDs: Set<String>, completion: DatabaseCompletionBlock?) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.delete(articleIDs: articleIDs, completion: completion)
+	}
+
+	func _clearContentHTML(articleIDs: Set<String>, completion: DatabaseCompletionBlock?) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.clearContentHTML(articleIDs: articleIDs, completion: completion)
 	}
 
 	func _fetchUnreadArticleIDsAsync(completion: @escaping ArticleIDsCompletionBlock) {

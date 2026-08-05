@@ -94,27 +94,38 @@ public struct ParsedItem: Hashable, Sendable {
 	// "Anthology containing:" comment -- this book IS an entire compiled
 	// series, not a normal work that happens to belong to one.
 	public let isAnthology: Bool?
-	// Populated only when isAnthology is true. ao3SeriesID is preferred;
-	// seriesName is the Calibre-derived fallback when no AO3 series id exists.
+	// Populated when isAnthology is true (an anthology's own AO3 series id),
+	// and also on series-group items (Ambrosia's own runtime grouping of
+	// multiple Calibre books sharing an AO3 series), which set ao3SeriesID
+	// from the group's series key without setting isAnthology at all.
+	// seriesName is the Calibre-derived fallback for an anthology with no
+	// AO3 series id -- series-group items never need it, since they always
+	// carry ao3SeriesID.
 	public let ao3SeriesID: String?
 	public let seriesName: String?
 
 	/// Book-level identity key for read-state dedup across feeds/re-subscriptions.
-	/// Precedence: anthology series id/name, then AO3 work id, then the bare
-	/// stable `uniqueID` ("ambrosia-book-<calibre_id>") as last resort. Mirrors
-	/// the client-side `book_key()` precedence finalized against Ambrosia's
-	/// LocalFeedServer output -- do not reorder without re-checking that
-	/// source, since the precedence exists specifically to survive Calibre
-	/// re-imports and late AO3 extraction without treating either as a new
-	/// article.
+	/// Precedence: AO3 series id (anthology or series-group), then anthology
+	/// series name, then AO3 work id, then the bare stable `uniqueID`
+	/// ("ambrosia-book-<calibre_id>") as last resort. Mirrors the client-side
+	/// `book_key()` precedence finalized against Ambrosia's LocalFeedServer
+	/// output -- do not reorder without re-checking that source, since the
+	/// precedence exists specifically to survive Calibre re-imports and late
+	/// AO3 extraction without treating either as a new article.
 	public var bookKey: String {
-		if isAnthology == true {
-			if let sid = ao3SeriesID, !sid.isEmpty {
-				return "ao3-series:\(sid)"
-			}
-			if let name = seriesName {
-				return "calibre-series:\(name)"
-			}
+		// Routes on ao3SeriesID's presence, not isAnthology -- an
+		// Ambrosia series-group item (multiple Calibre books sharing an
+		// AO3 series, merged at request time) sets ao3SeriesID but never
+		// isAnthology, and needs the same single-pre-merged-row keying an
+		// anthology-with-a-series-id gets. seriesName stays anthology-gated:
+		// it's the Calibre-derived fallback for an anthology with no AO3
+		// series id, not a fallback series-group items ever need, since a
+		// series group always has ao3SeriesID set from group.seriesKey.
+		if let sid = ao3SeriesID, !sid.isEmpty {
+			return "ao3-series:\(sid)"
+		}
+		if isAnthology == true, let name = seriesName {
+			return "calibre-series:\(name)"
 		}
 		if let wid = ao3WorkID, !wid.isEmpty {
 			return "ao3-work:\(wid)"
