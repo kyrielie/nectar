@@ -101,8 +101,6 @@ struct DatabaseKey {
 	static let kudosAttemptedAt = "kudosAttemptedAt"
 	static let kudosAttemptedAuthenticated = "kudosAttemptedAuthenticated"
 
-	// BookReadState (Phase 6 fork addition)
-	static let state = "state"
 	static let updatedAt = "updatedAt"
 
 	// Author

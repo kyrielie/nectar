@@ -14,7 +14,7 @@ import Foundation
 import Testing
 @testable import RSParser
 
-@Suite struct AO3IgnoreListTests {
+@Suite(.serialized) struct AO3IgnoreListTests {
 
 	init() {
 		AO3IgnoreList.ignoredWorkIDs = []

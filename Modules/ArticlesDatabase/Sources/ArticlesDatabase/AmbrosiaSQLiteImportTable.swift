@@ -212,7 +212,15 @@ enum AmbrosiaSQLiteImportTable {
 	/// 2. isAnthology && series_name non-null     -> "calibre-series:<name>"
 	/// 3. ao3_work_id non-empty                   -> "ao3-work:<id>"
 	/// 4. fallback                                -> the wire row's own id
-	private static let bookKeySQLExpression = """
+	/// `internal`-by-default (not `public`): nothing outside the module
+	/// gains access, but this widening lets `@testable import
+	/// ArticlesDatabase` see it from `ArticlesDatabaseTests` so a parity
+	/// test can run this exact SQL and compare it against
+	/// `ParsedItem.bookKey`, rather than trusting the two stay in sync by
+	/// convention alone. `AmbrosiaSQLiteImportTable` is itself a
+	/// non-public `enum`, so this does not change the framework's public
+	/// API surface described at the top of ArticlesDatabase.swift.
+	static let bookKeySQLExpression = """
 	CASE
 	  WHEN ao3_series_id IS NOT NULL AND ao3_series_id != '' THEN 'ao3-series:' || ao3_series_id
 	  WHEN is_anthology = 1 AND series_name IS NOT NULL THEN 'calibre-series:' || series_name
@@ -276,17 +284,28 @@ enum AmbrosiaSQLiteImportTable {
 		// column NULL/default would be wrong here, not just harmlessly
 		// absent, since it's what lets AO3ChapterFetcher/ArticleRenderer
 		// tell an Ambrosia-sourced row from a native AO3 one.
+		// No `tags`/`t.tags_json` column here: `articles` has never had a `tags`
+		// column (confirmed against the schema in ArticlesDatabase.swift -- the
+		// only `tags` this database ever had was upstream NetNewsWire's separate
+		// relational tags table, dropped entirely, see the `DROP TABLE if EXISTS
+		// tags` migration). `Article` itself has no `tags` property either.
+		// `ParsedItem.tags` (the standard JSON Feed field) is parsed but never
+		// persisted anywhere on the ordinary feed-import path -- this bulk
+		// INSERT previously referenced a `tags` column that has never existed,
+		// which made every `.sqlite` transfer import throw. Dropping it here
+		// matches the ordinary path's existing (silent) behavior rather than
+		// adding a new column for a field nothing else in the app reads.
 		let insertArticlesSQL = """
 		INSERT OR REPLACE INTO articles (
 		  articleID, feedID, uniqueID, title, url, externalURL, summary,
-		  datePublished, dateModified, authors, tags,
+		  datePublished, dateModified, authors,
 		  wordCount, chapterCurrent, chapterTotal, isComplete,
 		  fandoms, relationships, characters, ratings, warnings, categories, series,
 		  isAmbrosiaItem, bookKey
 		)
 		SELECT
 		  t.id, ?, t.id, t.title, t.url, t.url, t.summary,
-		  t.date_published, t.date_modified, t.authors_json, t.tags_json,
+		  t.date_published, t.date_modified, t.authors_json,
 		  t.word_count, t.chapter_current, t.chapter_total, t.is_complete,
 		  t.fandoms_json, t.relationships_json, t.characters_json, t.ratings_json,
 		  t.warnings_json, t.categories_json, t.series_json,
