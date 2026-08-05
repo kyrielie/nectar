@@ -1,22 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-# This script is for checking that both Mac and iOS targets build and that tests pass.
+# Same as build_and_test.sh, but quieter (xcbeautify --quiet, and Core Data/
+# persistence log noise filtered from the test output).
 # Note: depends on xcbeautify: <https://github.com/cpisciotta/xcbeautify>
+# (brew install xcbeautify)
 
 # === CONFIGURABLE VARIABLES ===
 PROJECT_PATH="NetNewsWire.xcodeproj"
-SCHEME_MAC="NetNewsWire"
-SCHEME_IOS="NetNewsWire-iOS"
-DESTINATION_MAC="platform=macOS,arch=arm64"
+SCHEME_IOS="Nectar-iOS"
 DESTINATION_IOS="platform=iOS Simulator,name=iPhone 17"
-
-echo "🛠 Building macOS target..."
-xcodebuild \
-  -project "$PROJECT_PATH" \
-  -scheme "$SCHEME_MAC" \
-  -destination "$DESTINATION_MAC" \
-  clean build | xcbeautify --quiet
 
 echo "🛠 Building iOS target..."
 OS_ACTIVITY_MODE=disable xcodebuild \
@@ -25,13 +18,13 @@ OS_ACTIVITY_MODE=disable xcodebuild \
   -destination "$DESTINATION_IOS" \
   clean build | xcbeautify --quiet
 
-echo "✅ Builds completed."
+echo "✅ Build completed."
 
-echo "🧪 Running tests for macOS target..."
+echo "🧪 Running tests for iOS target..."
 OS_ACTIVITY_MODE=disable xcodebuild \
   -project "$PROJECT_PATH" \
-  -scheme "$SCHEME_MAC" \
-  -destination "$DESTINATION_MAC" \
+  -scheme "$SCHEME_IOS" \
+  -destination "$DESTINATION_IOS" \
   test 2>&1 | xcbeautify --quiet | sed '/CoreData/d;/persistence/d'
 
-echo "🎉 All builds and tests completed successfully."
+echo "🎉 Build and tests completed successfully."

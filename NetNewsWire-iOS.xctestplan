@@ -12,16 +12,16 @@
     "codeCoverage" : false,
     "targetForVariableExpansion" : {
       "containerPath" : "container:NetNewsWire.xcodeproj",
-      "identifier" : "840D617B2029031C009BC708",
-      "name" : "NetNewsWire-iOS"
+      "identifier" : "E918341AC3D5C53E25D90D02",
+      "name" : "Nectar-iOS"
     }
   },
   "testTargets" : [
     {
       "target" : {
         "containerPath" : "container:NetNewsWire.xcodeproj",
-        "identifier" : "518B2ED12351B3DD00400001",
-        "name" : "NetNewsWire-iOSTests"
+        "identifier" : "71E4DF0D7156CA167F27D7F2",
+        "name" : "Nectar-iOSTests"
       }
     }
   ],

@@ -1,22 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-# This script is for checking that both Mac and iOS targets build and that tests pass.
+# This script builds the iOS target and runs its tests.
 # Note: depends on xcbeautify: <https://github.com/cpisciotta/xcbeautify>
+# (brew install xcbeautify)
 
 # === CONFIGURABLE VARIABLES ===
 PROJECT_PATH="NetNewsWire.xcodeproj"
-SCHEME_MAC="NetNewsWire"
-SCHEME_IOS="NetNewsWire-iOS"
-DESTINATION_MAC="platform=macOS,arch=arm64"
+SCHEME_IOS="Nectar-iOS"
 DESTINATION_IOS="platform=iOS Simulator,name=iPhone 17"
-
-echo "🛠 Building macOS target..."
-xcodebuild \
-  -project "$PROJECT_PATH" \
-  -scheme "$SCHEME_MAC" \
-  -destination "$DESTINATION_MAC" \
-  clean build | xcbeautify
 
 echo "🛠 Building iOS target..."
 xcodebuild \
@@ -25,13 +17,13 @@ xcodebuild \
   -destination "$DESTINATION_IOS" \
   clean build | xcbeautify
 
-echo "✅ Builds completed."
+echo "✅ Build completed."
 
-echo "🧪 Running tests for macOS target..."
+echo "🧪 Running tests for iOS target..."
 xcodebuild \
   -project "$PROJECT_PATH" \
-  -scheme "$SCHEME_MAC" \
-  -destination "$DESTINATION_MAC" \
+  -scheme "$SCHEME_IOS" \
+  -destination "$DESTINATION_IOS" \
   test | xcbeautify
 
-echo "🎉 All builds and tests completed successfully."
+echo "🎉 Build and tests completed successfully."
