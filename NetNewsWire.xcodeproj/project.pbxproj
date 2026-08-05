@@ -358,6 +358,7 @@
 		761A68844AC002DB804F5BA0 /* TimelineHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineHeaderView.swift; sourceTree = "<group>"; };
 		765E43D31787235BA44D6247 /* WrapperScriptMessageHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrapperScriptMessageHandler.swift; sourceTree = "<group>"; };
 		784CE2613B17D0CE900FEADC /* StarredFeedDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarredFeedDelegate.swift; sourceTree = "<group>"; };
+		7BAE10E60861568C8E559341 /* NetNewsWire-iOS.xctestplan */ = {isa = PBXFileReference; path = "NetNewsWire-iOS.xctestplan"; sourceTree = "<group>"; };
 		7CE6D393FC4AFCF322513FB2 /* FetchRequestOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchRequestOperation.swift; sourceTree = "<group>"; };
 		7F4665A8DDB114A0CD115297 /* ErrorHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorHandler.swift; sourceTree = "<group>"; };
 		8521720A8BD99B7FE4C42704 /* ActivityLogViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogViewModel.swift; sourceTree = "<group>"; };
@@ -896,6 +897,7 @@
 		C0D574B5194C23A72D49E235 = {
 			isa = PBXGroup;
 			children = (
+				7BAE10E60861568C8E559341 /* NetNewsWire-iOS.xctestplan */,
 				DE329D42C6A358AFD17A8D9E /* Themes */,
 				4C05422B03FE4730BE04BC37 /* iOS */,
 				AF15F42AD3179CB9560F5692 /* Packages */,

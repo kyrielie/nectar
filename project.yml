@@ -11,6 +11,17 @@
 
 name: NetNewsWire
 
+# Registers loose top-level files (not part of any target's sources) as
+# proper file references in the generated project. Without this,
+# NetNewsWire-iOS.xctestplan only exists as a path referenced from the
+# scheme's <TestPlanReference> XML, not as a PBXFileReference in the
+# project itself. Recent xcodebuild (Xcode 26) enforces that a test plan
+# must be a real project member to be read, and fails with "Tests cannot
+# be run because the test plan ... could not be read" if it's only
+# reachable via the scheme's on-disk path rather than the project graph.
+fileGroups:
+  - NetNewsWire-iOS.xctestplan
+
 options:
   createIntermediateGroups: true
   usesTabs: true
