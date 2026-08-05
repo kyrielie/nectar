@@ -168,7 +168,7 @@ a.footnote {
 #ao3Preface {
 	margin: 0 0 1.5em 0;
 	padding-bottom: 1em;
-	border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+	border-bottom: 1px solid var(--ao3-preface-border-color, rgba(0, 0, 0, 0.15));
 	font-size: 0.9em;
 }
 #ao3SyntheticPreface dl.tags,

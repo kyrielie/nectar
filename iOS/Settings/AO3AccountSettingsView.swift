@@ -210,21 +210,24 @@ private struct AO3LoginRepresentable: UIViewControllerRepresentable {
 /// Bridges AO3ChallengeSolverViewController into the sheet above, same
 /// wrapping-in-a-UINavigationController reasoning as AO3LoginRepresentable.
 ///
-/// Uses AO3's general works listing rather than any one specific
-/// search-results URL: this screen is reached from Settings, not from a
-/// particular feed's error, so there's no single URL to verify against
-/// here. If it turns out Cloudflare gates specific query shapes
-/// differently from the general listing, this default may need
-/// revisiting -- unconfirmed either way from the available logs, which
-/// only show the challenge on one search-results query.
+/// Defaults to `AO3ChallengeSessionStore.lastChallengedURL` -- the actual
+/// URL a feed most recently got challenged on -- falling back to AO3's
+/// general works listing only if no challenge has been recorded yet (e.g.
+/// the very first time someone opens this screen before ever seeing the
+/// error). Confirmed necessary, not just theoretical: the generic listing
+/// loaded fine with no challenge at all in testing, while the specific
+/// `work_search[...]` query for the same account kept getting one -- so a
+/// fixed generic URL here could report "cleared" without ever having
+/// exercised the gate that actually matters.
 private struct AO3ChallengeSolverRepresentable: UIViewControllerRepresentable {
 
 	@Environment(\.dismiss) private var dismiss
 
-	private static let defaultChallengeURL = URL(string: "https://archiveofourown.org/works")!
+	private static let fallbackChallengeURL = URL(string: "https://archiveofourown.org/works")!
 
 	func makeUIViewController(context: Context) -> UINavigationController {
-		let solverViewController = AO3ChallengeSolverViewController(challengeURL: Self.defaultChallengeURL)
+		let challengeURL = AO3ChallengeSessionStore.lastChallengedURL ?? Self.fallbackChallengeURL
+		let solverViewController = AO3ChallengeSolverViewController(challengeURL: challengeURL)
 		solverViewController.delegate = context.coordinator
 		return UINavigationController(rootViewController: solverViewController)
 	}

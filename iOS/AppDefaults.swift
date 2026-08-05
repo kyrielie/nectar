@@ -55,6 +55,24 @@ enum TagDisplayMode: Int, CaseIterable, Sendable {
 	}
 }
 
+/// Whether `.badges` mode's rating/warning/category pills render with their
+/// own tint or stay neutral. `.neutral` is the default (today's rendering);
+/// fandom pills stay neutral in both modes -- see MainTimelineCellData's
+/// BadgeCategory doc comment for why.
+enum BadgeColorMode: Int, CaseIterable, Sendable {
+	case neutral = 1
+	case colored = 2
+
+	var description: String {
+		switch self {
+		case .neutral:
+			return NSLocalizedString("Neutral", comment: "Neutral badge color mode")
+		case .colored:
+			return NSLocalizedString("Colored", comment: "Colored badge color mode")
+		}
+	}
+}
+
 enum PageCounterDisplayMode: String, CaseIterable, Sendable {
 	case off
 	case percentage
@@ -66,6 +84,7 @@ extension Notification.Name {
 	public static let timelineIconSizeDidChange = Notification.Name("TimelineIconSizeDidChangeNotification")
 	public static let timelineNumberOfLinesDidChange = Notification.Name("TimelineNumberOfLinesDidChangeNotification")
 	public static let timelineTagDisplayModeDidChange = Notification.Name("TimelineTagDisplayModeDidChangeNotification")
+	public static let badgeColorModeDidChange = Notification.Name("BadgeColorModeDidChangeNotification")
 	public static let articleThemeOverridesDidChange = Notification.Name("ArticleThemeOverridesDidChangeNotification")
 }
 
@@ -88,6 +107,7 @@ final class AppDefaults: Sendable {
 		static let timelineNumberOfLines = "timelineNumberOfLines"
 		static let timelineIconDimension = "timelineIconSize"
 		static let timelineTagDisplayMode = "timelineTagDisplayMode"
+		static let badgeColorMode = "badgeColorMode"
 		static let timelineSortDirection = "timelineSortDirection"
 		static let timelineSortField = "timelineSortField"
 		static let articleFullscreenAvailable = "articleFullscreenAvailable"
@@ -456,6 +476,17 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	var badgeColorMode: BadgeColorMode {
+		get {
+			let rawValue = AppDefaults.store.integer(forKey: Key.badgeColorMode)
+			return BadgeColorMode(rawValue: rawValue) ?? .neutral
+		}
+		set {
+			AppDefaults.store.set(newValue.rawValue, forKey: Key.badgeColorMode)
+			NotificationCenter.default.post(name: .badgeColorModeDidChange, object: nil)
+		}
+	}
+
 	var currentThemeName: String? {
 		get {
 			return AppDefaults.string(for: Key.currentThemeName)
@@ -574,6 +605,7 @@ final class AppDefaults: Sendable {
 										Key.timelineNumberOfLines: 2,
 										Key.timelineIconDimension: IconSize.medium.rawValue,
 										Key.timelineTagDisplayMode: TagDisplayMode.compact.rawValue,
+									Key.badgeColorMode: BadgeColorMode.neutral.rawValue,
 										Key.timelineSortDirection: ComparisonResult.orderedDescending.rawValue,
 								Key.timelineSortField: ArticleSorter.SortField.date.rawValue,
 										Key.articleFullscreenAvailable: false,

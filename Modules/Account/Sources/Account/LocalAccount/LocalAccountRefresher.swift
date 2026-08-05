@@ -369,6 +369,13 @@ import os
 					// isn't AO3's own rate limit and shouldn't be read as one,
 					// nor folded into the generic parse-failure case, since a
 					// real markup change looks identical otherwise.
+					//
+					// Recorded so Settings' "Verify Browser Access" solver
+					// (AO3ChallengeSolverViewController) can default to the
+					// actual URL that got challenged, rather than a generic
+					// AO3 page that may not exercise the same gate -- see
+					// AO3ChallengeSessionStore.lastChallengedURL's doc comment.
+					AO3ChallengeSessionStore.lastChallengedURL = url
 					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "Blocked by a Cloudflare challenge -- try again later"]), activityKind: activityKind)
 				}
 			} catch {

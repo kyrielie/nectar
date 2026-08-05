@@ -10,6 +10,19 @@ import UIKit
 import Articles
 import Images
 
+/// Which controlled vocabulary a `.badges`-mode pill's text came from, for
+/// `BadgeColorMode.colored` tinting. Fandom carries `.fandom` for shape
+/// consistency even though it always renders neutral -- there's no AO3-wide
+/// color convention for fandom the way there is for rating/warning/category,
+/// and picking arbitrary per-fandom colors would read as meaningful when it
+/// isn't (or collide once a timeline mixes many fandoms).
+enum BadgeCategory: Sendable {
+	case rating
+	case warning
+	case category
+	case fandom
+}
+
 @MainActor struct MainTimelineCellData {
 
 	private static let noText = NSLocalizedString("(No Text)", comment: "No Text")
@@ -63,13 +76,19 @@ import Images
 
 	/// nil when completion status is unknown (not "confirmed incomplete").
 	let isComplete: Bool?
-
 	/// nil when no rating was extracted. An empty array (rating extracted,
 	/// explicitly zero warnings) is distinct from nil and both are valid —
 	/// callers must render nil as "not available," never as "confirmed
 	/// none," per the fork plan's correctness requirement for this field.
 	let ratings: [String]?
 	let warnings: [String]?
+
+	/// Raw (untruncated) fandom/category lists, kept alongside the
+	/// display-truncated `fandomString`/`categoryString` specifically for
+	/// `metadataBadges`, which renders one pill per element rather than the
+	/// joined/truncated form `.compact`/`.expanded` want.
+	let fandoms: [String]?
+	let categories: [String]?
 
 	/// Plain-text metadata line(s) to render, depending on `tagDisplayMode`.
 	/// `.compact` yields at most one combined line (word count, completion,
@@ -120,20 +139,28 @@ import Images
 		}
 	}
 
-	/// Fandom/rating/warnings as individual pill badges. Non-empty only in
-	/// `.badges` mode -- `.compact` and `.expanded` fold this same data into
-	/// `metadataLines` instead.
-	var metadataBadges: [String] {
+	/// Fandom/rating/warnings/categories as individual pill badges, each
+	/// tagged with the `BadgeCategory` its text came from so the cell can
+	/// tint it under `BadgeColorMode.colored`. Reads `article.ratings`/
+	/// `.warnings`/`.categories`/`.fandoms` directly (array-typed, one pill
+	/// per element) rather than re-splitting the already-joined
+	/// `fandomString`/`categoryString`, which stay as-is for `.compact`/
+	/// `.expanded`. Non-empty only in `.badges` mode -- `.compact` and
+	/// `.expanded` fold this same data into `metadataLines` instead.
+	var metadataBadges: [(text: String, category: BadgeCategory?)] {
 		guard tagDisplayMode == .badges else { return [] }
-		var badges: [String] = []
-		if !fandomString.isEmpty {
-			badges.append(fandomString)
+		var badges: [(text: String, category: BadgeCategory?)] = []
+		if let fandoms {
+			badges.append(contentsOf: fandoms.map { ($0, .fandom) })
 		}
 		if let ratings {
-			badges.append(contentsOf: ratings)
+			badges.append(contentsOf: ratings.map { ($0, .rating) })
 		}
 		if let warnings {
-			badges.append(contentsOf: warnings)
+			badges.append(contentsOf: warnings.map { ($0, .warning) })
+		}
+		if let categories {
+			badges.append(contentsOf: categories.map { ($0, .category) })
 		}
 		return badges
 	}
@@ -215,6 +242,8 @@ import Images
 		self.isComplete = article.isComplete
 		self.ratings = article.ratings
 		self.warnings = article.warnings
+		self.fandoms = article.fandoms
+		self.categories = article.categories
 
 	}
 
@@ -245,6 +274,8 @@ import Images
 		self.isComplete = nil
 		self.ratings = nil
 		self.warnings = nil
+		self.fandoms = nil
+		self.categories = nil
 	}
 
 }
