@@ -62,15 +62,18 @@ struct ManageStorageRowData {
 		totalStoredContentHTMLSize = total
 	}
 
-	/// Deletes the article (same as any existing per-article delete path --
-	/// removes the row entirely) and removes it from `rows`/adjusts the
-	/// total so the screen doesn't need a full `refresh()` after every
-	/// delete.
-	func delete(_ row: ManageStorageRowData) async {
+	/// Clears the article's content (title/tags/status/bookKey/metadata stay
+	/// intact -- see Account.clearContent's doc comment) and removes it from
+	/// `rows`/adjusts the total so the screen doesn't need a full
+	/// `refresh()` after every clear. Previously called account.delete(articleIDs:),
+	/// a full row delete that silently lost the article's metadata along
+	/// with its content -- renamed alongside the fix so a method named
+	/// "delete" doesn't quietly do something other than delete.
+	func clearContent(_ row: ManageStorageRowData) async {
 		guard let account = AccountManager.shared.existingAccount(accountID: row.accountID) else {
 			return
 		}
-		await account.delete(articleIDs: [row.articleID])
+		await account.clearContent(articleIDs: [row.articleID])
 
 		rows.removeAll { $0.articleID == row.articleID && $0.accountID == row.accountID }
 		totalStoredContentHTMLSize -= row.storedContentHTMLSize

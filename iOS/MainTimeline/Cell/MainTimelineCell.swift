@@ -302,10 +302,13 @@ private extension MainTimelineCell {
 	func updateMetadataBadges() {
 		let badges = cellData.metadataBadges
 		ensureViewCount(badges.count, in: &metadataBadgeViews, makeView: MainTimelineCell.badgeLabel)
+		let mode = AppDefaults.shared.badgeColorMode
 		for (index, badge) in badges.enumerated() {
 			let label = metadataBadgeViews[index]
-			label.textColor = .secondaryLabel
-			label.text = badge
+			let colors = BadgeColorTable.colors(for: badge.text, category: badge.category, mode: mode)
+			label.backgroundColor = colors.background
+			label.textColor = colors.text
+			label.text = badge.text
 		}
 	}
 

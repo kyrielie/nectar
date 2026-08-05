@@ -1091,8 +1091,6 @@ private extension MainTimelineModernViewController {
 	// changes -- reloading a cell on every tick while the user is actively scrolling the
 	// currently-open article would be wasteful.
 	@objc func readingProgressDidChange(_ note: Notification) {
-		Self.logger.debug("MainTimelineModernViewController: readingProgressDidChange")
-
 		guard isViewLoaded, let dataSource, let collectionView else {
 			return
 		}

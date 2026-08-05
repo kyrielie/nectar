@@ -86,6 +86,35 @@ public enum AO3ChallengeSessionStore {
 		return ISO8601DateFormatter().date(from: string)
 	}
 
+	private static let lastChallengedURLDefaultsKey = "AO3ChallengeSessionStore.lastChallengedURL"
+
+	/// The most recent AO3 search-results URL AO3SearchResultsFetcher saw
+	/// challenged -- recorded by LocalAccountRefresher's `.cloudflareChallenge`
+	/// case, read by Settings to default the solver screen (below) to the
+	/// actual gated URL. Plain UserDefaults rather than Keychain: this is a
+	/// public AO3 URL, not a credential, and needing to survive a device
+	/// wipe/restore the way a Keychain item with `.afterFirstUnlock` would
+	/// isn't warranted for something this disposable -- it's overwritten by
+	/// the next challenge anyway.
+	///
+	/// Exists because the generic `archiveofourown.org/works` listing turned
+	/// out not to be a reliable stand-in: verified against real usage, AO3's
+	/// Cloudflare rule (or AO3's own WAF) gates specific `work_search[...]`
+	/// queries in a way the bare listing page didn't trigger at all -- so a
+	/// solver screen defaulting to the generic listing could report "cleared"
+	/// without ever having exercised the actual gate a feed hit.
+	public static var lastChallengedURL: URL? {
+		get {
+			guard let string = UserDefaults.standard.string(forKey: lastChallengedURLDefaultsKey) else {
+				return nil
+			}
+			return URL(string: string)
+		}
+		set {
+			UserDefaults.standard.set(newValue?.absoluteString, forKey: lastChallengedURLDefaultsKey)
+		}
+	}
+
 	private static func readKeychainData(account: String) -> Data? {
 		let query: [String: Any] = [
 			kSecClass as String: kSecClassGenericPassword,

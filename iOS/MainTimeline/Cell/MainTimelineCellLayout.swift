@@ -159,8 +159,8 @@ extension MainTimelineCellLayout {
 		var isFirstOnRow = true
 
 		for badge in cellData.metadataBadges {
-			guard !badge.isEmpty else { continue }
-			let textSize = SingleLineUILabelSizer.size(for: badge, font: MainTimelineDefaultCellLayout.badgeFont)
+			guard !badge.text.isEmpty else { continue }
+			let textSize = SingleLineUILabelSizer.size(for: badge.text, font: MainTimelineDefaultCellLayout.badgeFont)
 			let cappedTextWidth = min(textSize.width, textAreaWidth - MainTimelineDefaultCellLayout.badgeHorizontalPadding * 2)
 			let badgeWidth = cappedTextWidth + MainTimelineDefaultCellLayout.badgeHorizontalPadding * 2
 			let badgeHeight = textSize.height + MainTimelineDefaultCellLayout.badgeVerticalPadding * 2

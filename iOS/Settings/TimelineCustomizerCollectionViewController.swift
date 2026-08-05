@@ -62,6 +62,12 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 			}
 		}
 
+		NotificationCenter.default.addObserver(forName: .badgeColorModeDidChange, object: nil, queue: .main) { [weak self] _ in
+			Task { @MainActor in
+				self?.userDefaultsDidChange()
+			}
+		}
+
 		configureCollectionView()
     }
 
@@ -73,6 +79,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 		)
 
 		collectionView.register(MainTimelineCell.self, forCellWithReuseIdentifier: MainTimelineCell.reuseIdentifier)
+		collectionView.register(BadgeColorModeCell.self, forCellWithReuseIdentifier: BadgeColorModeCell.reuseIdentifier)
 
 		var config = UICollectionLayoutListConfiguration(appearance: .insetGrouped)
 		config.showsSeparators = false
@@ -86,7 +93,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
     // MARK: UICollectionViewDataSource
 
     override func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return 3
+        return 4
     }
 
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -109,6 +116,12 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 		}
 
 		if indexPath.section == 2 {
+			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: BadgeColorModeCell.reuseIdentifier, for: indexPath) as! BadgeColorModeCell
+			cell.configure()
+			return cell
+		}
+
+		if indexPath.section == 3 {
 			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath) as! MainTimelineCell
 			cell.cellData = MainTimelineCellData(article: previewArticle,
 												 showFeedName: .byline,
@@ -148,6 +161,8 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 		case 1:
 			header.label.text = NSLocalizedString("Tag Display", comment: "Tag Display")
 		case 2:
+			header.label.text = NSLocalizedString("Badge Colors", comment: "Badge Colors")
+		case 3:
 			header.label.text = NSLocalizedString("Preview", comment: "Preview")
 		default:
 			header.label.text = NSLocalizedString("", comment: "")
@@ -170,7 +185,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 	// MARK: Notifications
 
 	func userDefaultsDidChange() {
-		collectionView.reloadSections([2])
+		collectionView.reloadSections([3])
 	}
 
 }
