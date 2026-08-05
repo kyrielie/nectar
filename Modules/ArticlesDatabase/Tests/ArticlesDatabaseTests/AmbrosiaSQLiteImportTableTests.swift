@@ -69,12 +69,29 @@ struct AmbrosiaSQLiteImportTableTests {
 
 		database.executeStatements("PRAGMA user_version = \(wireFormatVersion);")
 
-		let contentHTMLColumn = omitContentHTMLColumn ? "" : ", content_html TEXT"
+		let contentHTMLColumn = omitContentHTMLColumn ? "" : ", content_html TEXT NOT NULL"
+		// Full Wire Contract schema (docs/nectar-implementation-plan.md's "Wire
+		// schema" section) -- copyItems' INSERT...SELECT references every one
+		// of these columns by name (t.url, t.summary, t.date_published, etc.),
+		// so a fixture missing any of them throws "no such column" the moment
+		// that SQL runs, not just the ones a given test cares about checking.
+		// Only id/title/ao3_work_id/word_count/is_finished/is_read_later/
+		// is_liked/content_html are ever given real values below -- everything
+		// else stays NULL/default, which is fine since copyItems' SELECT
+		// passes columns straight through with no NOT NULL constraint on the
+		// articles side for any of them except what's already covered by
+		// ItemRow's existing required fields.
 		database.executeStatements("""
 		CREATE TABLE items (
-		  id TEXT PRIMARY KEY, title TEXT, ao3_work_id TEXT, word_count INTEGER,
-		  is_finished INTEGER, is_read_later INTEGER, is_liked INTEGER,
-		  reading_progress REAL\(contentHTMLColumn)
+		  id TEXT PRIMARY KEY, ao3_work_id TEXT, is_anthology INTEGER NOT NULL DEFAULT 0,
+		  ao3_series_id TEXT, series_name TEXT,
+		  url TEXT, title TEXT, summary TEXT, date_published TEXT, date_modified TEXT,
+		  authors_json TEXT, tags_json TEXT,
+		  word_count INTEGER, chapter_current INTEGER, chapter_total INTEGER, is_complete INTEGER,
+		  fandoms_json TEXT, relationships_json TEXT, characters_json TEXT, ratings_json TEXT,
+		  warnings_json TEXT, categories_json TEXT, series_json TEXT,
+		  is_read_later INTEGER NOT NULL DEFAULT 0, is_liked INTEGER NOT NULL DEFAULT 0,
+		  is_finished INTEGER NOT NULL DEFAULT 0, reading_progress REAL\(contentHTMLColumn)
 		);
 		""")
 		database.executeStatements("""

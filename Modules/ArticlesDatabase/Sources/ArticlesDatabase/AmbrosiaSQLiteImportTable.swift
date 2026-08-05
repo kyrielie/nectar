@@ -180,7 +180,26 @@ enum AmbrosiaSQLiteImportTable {
 				return
 			}
 			defer {
-				database.executeUpdate("DETACH DATABASE \(attachedSchemaName);", withArgumentsIn: [])
+				// DatabaseQueue opens every connection with
+				// setShouldCacheStatements(true), so the SELECT/UPDATE statements
+				// copyItems/copyCompressedContentHTML just ran against
+				// `attachedSchemaName` weren't finalized when their result sets
+				// were closed -- FMDB just sqlite3_reset() them and parks the
+				// compiled sqlite3_stmt in its cache, keyed by SQL text, for
+				// reuse on the next call with the same SQL. SQLite refuses to
+				// DETACH a database that any prepared statement still
+				// references, even one that's merely reset and not currently
+				// stepping. Left uncleared, DETACH below fails silently (its
+				// result was never checked), the alias stays attached, and the
+				// *next* importAmbrosiaSQLiteTransfer call's ATTACH under the
+				// same alias fails with attachFailed -- reproducible any time
+				// two imports run against the same DatabaseQueue in one
+				// process. Clearing the cache finalizes those statements first
+				// so DETACH actually succeeds.
+				database.clearCachedStatements()
+				if !database.executeUpdate("DETACH DATABASE \(attachedSchemaName);", withArgumentsIn: []) {
+					Self.logger.error("AmbrosiaSQLiteImportTable: DETACH DATABASE \(attachedSchemaName, privacy: .public) failed -- \(database.lastErrorMessage(), privacy: .public)")
+				}
 			}
 
 			do {

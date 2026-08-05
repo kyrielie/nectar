@@ -53,9 +53,14 @@ public final class ArticleStatus: Hashable, Sendable {
 
 	/// Fraction (0...1) of the article read, derived from scroll position. nil means
 	/// never computed (article never opened, or opened before this feature existed) --
-	/// distinct from 0, which means computed and confirmed at the very top. Unlike
-	/// `read`/`starred`, this isn't part of the `ArticleStatus.Key` mark/sync system --
-	/// it's local UI state, same treatment as scroll position (Phase 2).
+	/// distinct from 0, which means computed and confirmed at the very top. Not part of
+	/// the `ArticleStatus.Key` mark/sync system (unlike `read`/`starred`/`loved`, it has
+	/// no `.Key` case), but it does propagate across sibling articleIDs sharing a bookKey,
+	/// the same way `read`/`starred`/`loved` do -- see ArticlesTable.saveReadingProgress
+	/// and BookStateTable.setReadingProgress. Two copies of the same book reached through
+	/// different feeds are the same book to read; if you're 60% through it via one feed's
+	/// copy, opening the other feed's copy should show that same 60%, not silently reset
+	/// to 0 and risk clobbering the real position on the next scroll-position write.
 	public var readingProgress: Double? {
 		get {
 			state.withLock { $0.readingProgress }
@@ -74,9 +79,9 @@ public final class ArticleStatus: Hashable, Sendable {
 		}
 	}
 
-	/// When this book was last opened into the reader. Local UI state, same
-	/// treatment as scrollPosition/readingProgress -- not part of the syncable
-	/// ArticleStatus.Key set. Backs LastOpenedFeedDelegate's fixed sort order
+	/// When this book was last opened into the reader. Not part of the syncable
+	/// ArticleStatus.Key set (see readingProgress above for what that does and doesn't
+	/// mean in practice). Backs LastOpenedFeedDelegate's fixed sort order
 	/// (see SceneCoordinator.replaceArticles) without a second DB round-trip.
 	public var lastOpenedAt: Date? {
 		get {
