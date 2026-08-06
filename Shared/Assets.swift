@@ -87,20 +87,29 @@ struct Assets {
 		static let lovedFeed = IconImage(heartClosed, isSymbol: true, isBackgroundSuppressed: true, preferredColor: RSColor.systemRed)
 
 		static let searchFeed = IconImage(RSImage(symbol: "magnifyingglass")!, isSymbol: true)
-		static let mainFolder = IconImage(folder, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent)
+		// mainFolder/unreadFeed/readFeed/lastOpenedFeed/unreadCellIndicator were
+		// `static let`s that captured Assets.Colors.secondaryAccent's value once,
+		// at first access -- Swift only evaluates a struct's `static let` a single
+		// time per process, so AccentColor picker changes never reached these five
+		// (see AccentColor's doc comment, and the personalization plan's item 3,
+		// which flagged this exact gap). Recomputed as `static var`s instead: each
+		// access re-reads the live accent color and builds a fresh IconImage.
+		// IconImage.init is cheap (no image processing beyond an async luminance
+		// preload), so recomputing per access is fine.
+		static var mainFolder: IconImage { IconImage(folder, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent) }
 		static let todayFeed = IconImage(RSImage(symbol: "tray.and.arrow.down.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: UIColor.systemOrange)
-		static let unreadFeed = IconImage(RSImage(symbol: "largecircle.fill.circle")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent)
-		static let readFeed = IconImage(RSImage(symbol: "checkmark.circle.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent)
+		static var unreadFeed: IconImage { IconImage(RSImage(symbol: "largecircle.fill.circle")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent) }
+		static var readFeed: IconImage { IconImage(RSImage(symbol: "checkmark.circle.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent) }
 		// Last Opened smart feed icon. Placeholder symbol choice -- swap for
 		// whatever SF Symbol fits the icon set; not cross-checked against the
 		// app's actual icon conventions beyond "recently opened" being a
 		// reasonable read for it.
-		static let lastOpenedFeed = IconImage(RSImage(symbol: "clock.arrow.circlepath")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent)
+		static var lastOpenedFeed: IconImage { IconImage(RSImage(symbol: "clock.arrow.circlepath")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent) }
 		static var timelineStar: RSImage {
 			let image = RSImage(symbol: "star.fill")!
 			return image.withTintColor(Assets.Colors.star, renderingMode: .alwaysOriginal)
 		}
-		static let unreadCellIndicator = IconImage(RSImage(symbol: "circle.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent)
+		static var unreadCellIndicator: IconImage { IconImage(RSImage(symbol: "circle.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent) }
 	}
 
 	@MainActor static func accountImage(_ accountType: AccountType) -> RSImage {

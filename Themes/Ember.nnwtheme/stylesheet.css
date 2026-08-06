@@ -66,6 +66,14 @@ body {
 	--ao3-preface-border-color: #666;
 }
 
+/* ArticleThemeColorExtractor.exactSelectorValue only matches an exact `a` or
+   `.articleBody a` selector in a comma-split selector list -- `body a, ...`
+   alone is invisible to it. Additive-only: higher-specificity `body a` below
+   still wins the cascade, this just gives the extractor something to find. */
+a {
+	color: var(--secondary-accent-color);
+}
+
 body a,
 body a:visited,
 body a * {

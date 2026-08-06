@@ -1281,15 +1281,15 @@ private extension WebViewController {
 	/// regardless of read state or how "settled" the article currently
 	/// looks. Deliberately no bulk "check all" equivalent.
 	///
-	/// For an Ambrosia-sourced article with both `AmbrosiaAO3NetworkPreference`
-	/// flags off, this still returns an action (per the plan: disabled with
+	/// For an Ambrosia-sourced article with `AmbrosiaAO3NetworkPreference.updatesEnabled`
+	/// off, this still returns an action (per the plan: disabled with
 	/// an explanatory label, not removed) rather than nil, so the menu row
 	/// stays present and tells the person why it's inert instead of
 	/// silently vanishing.
 	func checkForUpdatesAction() -> UIAction? {
 		guard let article, AO3ChapterFetcher.shared.canCheckForUpdates(for: article) else { return nil }
 		guard AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article) else {
-			let title = NSLocalizedString("Check for Updates (Enable AO3 Updates in Settings)", comment: "Command, disabled: Ambrosia article with both AO3 network toggles off")
+			let title = NSLocalizedString("Check for Updates (Enable AO3 Updates in Settings)", comment: "Command, disabled: Ambrosia article with the AO3 network toggle off")
 			return UIAction(title: title, image: Assets.Images.checkForUpdates, attributes: .disabled) { _ in }
 		}
 		let title = NSLocalizedString("Check for Updates", comment: "Command")

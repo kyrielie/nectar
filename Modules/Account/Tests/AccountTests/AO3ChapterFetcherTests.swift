@@ -223,7 +223,7 @@ final class AO3ChapterFetcherTests: XCTestCase {
 			XCTFail("Expected .success extracting the minimal work page fixture")
 			return
 		}
-		let parsedItem = AO3ChapterFetcher.rebuildParsedItem(from: existingArticle, workID: "999", extraction: extraction, applyContentUpdate: true, applyStatsUpdate: true)
+		let parsedItem = AO3ChapterFetcher.rebuildParsedItem(from: existingArticle, workID: "999", extraction: extraction, applyStatsUpdate: true)
 		XCTAssertTrue(parsedItem.isAmbrosiaItem)
 		XCTAssertNotNil(parsedItem.lastPrefaceFetchDate)
 	}
@@ -240,76 +240,50 @@ final class AO3ChapterFetcherTests: XCTestCase {
 			XCTFail("Expected .success extracting the minimal work page fixture")
 			return
 		}
-		let parsedItem = AO3ChapterFetcher.rebuildParsedItem(from: existingArticle, workID: "999", extraction: extraction, applyContentUpdate: true, applyStatsUpdate: true)
+		let parsedItem = AO3ChapterFetcher.rebuildParsedItem(from: existingArticle, workID: "999", extraction: extraction, applyStatsUpdate: true)
 		XCTAssertFalse(parsedItem.isAmbrosiaItem)
 	}
 
-	// MARK: - isAO3NetworkRequestAllowed(for:) (Task 8, Ambrosia toggles)
+	// MARK: - isAO3NetworkRequestAllowed(for:) (Task 8, Ambrosia toggle)
 
-	func testNetworkRequestAllowedForNativeArticleRegardlessOfToggles() {
+	func testNetworkRequestAllowedForNativeArticleRegardlessOfToggle() {
 		let article = Self.makeArticle(contentHTML: nil, chapterCurrent: 1, isAmbrosiaItem: false)
-		let originalContent = AmbrosiaAO3NetworkPreference.contentUpdatesEnabled
-		let originalStats = AmbrosiaAO3NetworkPreference.statsUpdatesEnabled
-		defer {
-			AmbrosiaAO3NetworkPreference.contentUpdatesEnabled = originalContent
-			AmbrosiaAO3NetworkPreference.statsUpdatesEnabled = originalStats
-		}
-		AmbrosiaAO3NetworkPreference.contentUpdatesEnabled = false
-		AmbrosiaAO3NetworkPreference.statsUpdatesEnabled = false
+		let original = AmbrosiaAO3NetworkPreference.updatesEnabled
+		defer { AmbrosiaAO3NetworkPreference.updatesEnabled = original }
+		AmbrosiaAO3NetworkPreference.updatesEnabled = false
 		XCTAssertTrue(AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article))
 	}
 
-	func testNetworkRequestBlockedForAmbrosiaArticleWithBothTogglesOff() {
+	func testNetworkRequestBlockedForAmbrosiaArticleWithUpdatesOff() {
 		let article = Self.makeArticle(contentHTML: nil, chapterCurrent: 1, isAmbrosiaItem: true)
-		let originalContent = AmbrosiaAO3NetworkPreference.contentUpdatesEnabled
-		let originalStats = AmbrosiaAO3NetworkPreference.statsUpdatesEnabled
-		defer {
-			AmbrosiaAO3NetworkPreference.contentUpdatesEnabled = originalContent
-			AmbrosiaAO3NetworkPreference.statsUpdatesEnabled = originalStats
-		}
-		AmbrosiaAO3NetworkPreference.contentUpdatesEnabled = false
-		AmbrosiaAO3NetworkPreference.statsUpdatesEnabled = false
+		let original = AmbrosiaAO3NetworkPreference.updatesEnabled
+		defer { AmbrosiaAO3NetworkPreference.updatesEnabled = original }
+		AmbrosiaAO3NetworkPreference.updatesEnabled = false
 		XCTAssertFalse(AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article))
 	}
 
-	func testNetworkRequestAllowedForAmbrosiaArticleWithEitherToggleOn() {
+	func testNetworkRequestAllowedForAmbrosiaArticleWithUpdatesOn() {
 		let article = Self.makeArticle(contentHTML: nil, chapterCurrent: 1, isAmbrosiaItem: true)
-		let originalContent = AmbrosiaAO3NetworkPreference.contentUpdatesEnabled
-		let originalStats = AmbrosiaAO3NetworkPreference.statsUpdatesEnabled
-		defer {
-			AmbrosiaAO3NetworkPreference.contentUpdatesEnabled = originalContent
-			AmbrosiaAO3NetworkPreference.statsUpdatesEnabled = originalStats
-		}
-		AmbrosiaAO3NetworkPreference.contentUpdatesEnabled = false
-		AmbrosiaAO3NetworkPreference.statsUpdatesEnabled = true
-		XCTAssertTrue(AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article))
-
-		AmbrosiaAO3NetworkPreference.contentUpdatesEnabled = true
-		AmbrosiaAO3NetworkPreference.statsUpdatesEnabled = false
+		let original = AmbrosiaAO3NetworkPreference.updatesEnabled
+		defer { AmbrosiaAO3NetworkPreference.updatesEnabled = original }
+		AmbrosiaAO3NetworkPreference.updatesEnabled = true
 		XCTAssertTrue(AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article))
 	}
 
-	// MARK: - rebuildParsedItem applyContentUpdate/applyStatsUpdate (Task 8)
-
-	func testRebuildParsedItemSkipsContentWhenApplyContentUpdateFalse() {
-		// Simulates an Ambrosia article with contentUpdatesEnabled off but
-		// statsUpdatesEnabled on: the fetch happened (extraction reflects
-		// new, larger content/counts), but contentHTML/chapterCurrent must
-		// come back as whatever existingArticle already had, not the new
-		// fetch's.
-		let existingArticle = Self.makeArticle(
-			contentHTML: Self.workPageFixture(chapterCount: 1),
-			chapterCurrent: 1,
-			isAmbrosiaItem: true
-		)
-		guard case .success(let extraction) = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: Self.workPageFixture(chapterCount: 2)) else {
-			XCTFail("Expected .success extracting the two-chapter work page fixture")
-			return
-		}
-		let parsedItem = AO3ChapterFetcher.rebuildParsedItem(from: existingArticle, workID: "999", extraction: extraction, applyContentUpdate: false, applyStatsUpdate: true)
-		XCTAssertEqual(parsedItem.contentHTML, existingArticle.contentHTML)
-		XCTAssertEqual(parsedItem.chapterCurrent, existingArticle.chapterCurrent)
-	}
+	// MARK: - rebuildParsedItem applyStatsUpdate (Task 8)
+	//
+	// There is no longer an applyContentUpdate parameter/test: content is
+	// always applied from an allowed fetch now, protected only by
+	// Self.detectRegression (checked by the caller, download(for:...)'s
+	// completion handler, before rebuildParsedItem is ever reached -- not
+	// by a separate content toggle here). Nothing in this file currently
+	// tests detectRegression directly; it's exercised only indirectly
+	// through the fixtures above. That gap predates this change and isn't
+	// introduced by it, but is now the only thing standing between a bad
+	// AO3 fetch and a silent content overwrite, so it's worth a real test
+	// on its own. The content-always-applies half of this change is
+	// exercised implicitly below (parsedItem.contentHTML is asserted
+	// against the new extraction, not the existing article).
 
 	func testRebuildParsedItemSkipsStatsWhenApplyStatsUpdateFalse() {
 		let existingArticle = Self.makeArticle(
@@ -321,7 +295,7 @@ final class AO3ChapterFetcherTests: XCTestCase {
 			XCTFail("Expected .success extracting the minimal work page fixture")
 			return
 		}
-		let parsedItem = AO3ChapterFetcher.rebuildParsedItem(from: existingArticle, workID: "999", extraction: extraction, applyContentUpdate: true, applyStatsUpdate: false)
+		let parsedItem = AO3ChapterFetcher.rebuildParsedItem(from: existingArticle, workID: "999", extraction: extraction, applyStatsUpdate: false)
 		XCTAssertEqual(parsedItem.commentCount, existingArticle.commentCount)
 		XCTAssertEqual(parsedItem.kudosCount, existingArticle.kudosCount)
 		XCTAssertEqual(parsedItem.bookmarkCount, existingArticle.bookmarkCount)

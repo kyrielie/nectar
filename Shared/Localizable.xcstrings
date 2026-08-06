@@ -890,6 +890,9 @@
     "Show feeds that haven’t updated in…" : {
       "comment" : "Show stale feeds text"
     },
+    "Show Stats" : {
+      "comment" : "Stats visibility toggle"
+    },
     "Show Website" : {
       "comment" : "Show Website"
     },
@@ -928,6 +931,9 @@
     },
     "SQLite" : {
       "comment" : "Export format"
+    },
+    "Stats Visibility" : {
+      "comment" : "Stats Visibility"
     },
     "Status" : {
       "comment" : "AO3 sign-in status row label"
