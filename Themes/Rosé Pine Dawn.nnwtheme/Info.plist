@@ -12,5 +12,9 @@
 	<string>Ported from the "Rosé Pine Dawn" variant of BlackBatCat's AO3 workskin "Rosé Pine — Closer to Home" (MIT licensed)</string>
 	<key>Version</key>
 	<integer>1</integer>
+	<key>Family</key>
+	<string>Rosé Pine</string>
+	<key>FamilyVariant</key>
+	<string>Dawn</string>
 </dict>
 </plist>

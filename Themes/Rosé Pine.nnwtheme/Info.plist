@@ -12,5 +12,9 @@
 	<string>BlackBatCat (color palette; ported to NetNewsWire theme format for Nectar)</string>
 	<key>Version</key>
 	<integer>1</integer>
+	<key>Family</key>
+	<string>Rosé Pine</string>
+	<key>FamilyVariant</key>
+	<string>Main</string>
 </dict>
 </plist>

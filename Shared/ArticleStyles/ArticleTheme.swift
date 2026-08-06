@@ -39,11 +39,22 @@ struct ArticleTheme: Equatable, Sendable {
 		return String(describing: info?.version ?? 0)
 	}
 
+	/// Purely presentational grouping for the theme gallery. nil for the large
+	/// majority of themes, which aren't part of a multi-variant family.
+	var family: String? {
+		info?.family
+	}
+
+	/// This bundle's variant label within `family`. Meaningless when `family` is nil.
+	var familyVariant: String? {
+		info?.familyVariant
+	}
+
 	private let info: ArticleThemePlist?
 
 	init() {
 		self.url = nil
-		self.info = ArticleThemePlist(name: "Article Theme", themeIdentifier: "com.ranchero.netnewswire.theme.article", creatorHomePage: "https://netnewswire.com/", creatorName: "Ranchero Software", version: 1)
+		self.info = ArticleThemePlist(name: "Article Theme", themeIdentifier: "com.ranchero.netnewswire.theme.article", creatorHomePage: "https://netnewswire.com/", creatorName: "Ranchero Software", version: 1, family: nil, familyVariant: nil)
 
 		let corePath = Bundle.main.path(forResource: "core", ofType: "css")!
 		let stylesheetPath = Bundle.main.path(forResource: "stylesheet", ofType: "css")!
