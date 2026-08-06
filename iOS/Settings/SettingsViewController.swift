@@ -258,12 +258,7 @@ final class SettingsViewController: UITableViewController {
 		case .articles:
 			switch ArticlesRow(rawValue: indexPath.row) {
 			case .theme:
-				var gallery = ArticleThemeGalleryView()
-				gallery.onCustomizeCurrentTheme = { [weak self] in
-					let customize = UIHostingController(rootView: ArticleThemeCustomizeView())
-					self?.navigationController?.pushViewController(customize, animated: true)
-				}
-				let hostingController = UIHostingController(rootView: gallery)
+				let hostingController = UIHostingController(rootView: ArticleThemeListView())
 				self.navigationController?.pushViewController(hostingController, animated: true)
 			case .pageCounterDisplayMode:
 				if let sourceView = tableView.cellForRow(at: indexPath) {

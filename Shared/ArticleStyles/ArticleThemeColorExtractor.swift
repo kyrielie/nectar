@@ -34,6 +34,19 @@ enum ArticleThemeColorExtractor {
 		var backgroundColorDark: UIColor
 		var linkColor: UIColor
 		var linkColorDark: UIColor
+
+		/// Whether the theme's own stylesheet declares an
+		/// `@media (prefers-color-scheme: dark)` block at all -- i.e. whether it
+		/// ships genuinely different colors for light and dark, as opposed to a
+		/// single palette applied unconditionally in both system appearances
+		/// (Sepia, Tiqoe Dark, and the individual Rosé Pine variants, which handle
+		/// "dark" by being a separate theme bundle entirely rather than a media
+		/// query within one). This only reflects presence of the block, not
+		/// whether every color actually differs inside it -- a theme that opens
+		/// the block but only overrides one property still counts as having a
+		/// dark variant, same as `darkTextFound`/`darkBackgroundFound`/etc. above
+		/// already treat it.
+		var hasDarkModeVariant: Bool
 	}
 
 	/// Falls back to black-on-white (light) / white-on-black (dark) per selector,
@@ -102,7 +115,8 @@ enum ArticleThemeColorExtractor {
 			backgroundColor: backgroundColor,
 			backgroundColorDark: backgroundColorDark,
 			linkColor: linkColor,
-			linkColorDark: linkColorDark
+			linkColorDark: linkColorDark,
+			hasDarkModeVariant: darkBlock != nil
 		)
 	}
 
@@ -324,7 +338,7 @@ private extension UIColor {
 
 // MARK: - Color <-> hex
 
-/// Shared with `ArticleThemeCustomizeView`'s color pickers, which also need hex parsing
+/// Shared with `ArticleThemeListView`'s color pickers, which also need hex parsing
 /// for round-tripping `Color` <-> hex string -- kept internal (not private) so both call
 /// sites can use it.
 extension UIColor {

@@ -15,6 +15,7 @@
 		057BD9C465F313B558B6521C /* AddFeedSelectFolderTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = D9CF9FA05BD676DCDB04BB7D /* AddFeedSelectFolderTableViewCell.xib */; };
 		08BFA0E4BEC0ECAF6534281B /* OPMLImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E99DF16E2818DD03F982E08 /* OPMLImportCoordinator.swift */; };
 		09F915C31580999C48FF4096 /* AO3ChallengeSolverViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03FA655E91A7DA58F5D44E0 /* AO3ChallengeSolverViewController.swift */; };
+		0C257B3C3DBCEC2DF3864D1F /* ArticleThemeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69C41E0B0165A72DC7F0E0C7 /* ArticleThemeListView.swift */; };
 		0C36E550FACBBAF7BDD93C4B /* CacheCleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2A5425DA3C15784F10FEAF4 /* CacheCleaner.swift */; };
 		0F772D9D5114AF9C11A782A8 /* AO3OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E62D76FFE81B4363E849E01E /* AO3OnboardingView.swift */; };
 		107E5EF06F2AB15102DA6497 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAEAF0FF77BBE87180FB32D9 /* AboutView.swift */; };
@@ -68,7 +69,6 @@
 		3D4BF8CBAED291FB88F4FFA8 /* TimelineCustomizerCollectionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 516CE8D79FF31B2F9EC5EDD7 /* TimelineCustomizerCollectionViewController.swift */; };
 		3D84BD9543B24E4EF32DC769 /* Account in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 48ED867E9337AD663BC9862D /* Account */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		3DA20BFB7C763BE1E5A29D1E /* AO3LoginViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F8CE2122A7A758C4A2F187 /* AO3LoginViewController.swift */; };
-		3F2CCEF4F7B0D35D74B22AC3 /* ArticleThemeGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ECBD8D2111D683E82674927 /* ArticleThemeGalleryView.swift */; };
 		40A2D7BAF98A3C69E20E06A0 /* PseudoFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 138A81C39C635A84A3FBA3C2 /* PseudoFeed.swift */; };
 		419591A8A19FC7CDF0D8D604 /* SearchTimelineFeedDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311EE70B912DAC45FDB832D1 /* SearchTimelineFeedDelegate.swift */; };
 		46760DEB140945380E11FF6C /* ErrorHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F4665A8DDB114A0CD115297 /* ErrorHandler.swift */; };
@@ -162,7 +162,6 @@
 		B5E1D34E27561E94864C41D6 /* AccountType+Helpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F1EC490DA48B954E2754FED /* AccountType+Helpers.swift */; };
 		B8BF35D77117124EECF85D47 /* IconImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 284D7F04184ACFBB99984BDC /* IconImageCache.swift */; };
 		B969EB6D6447E0689D0096E0 /* ArticleCSVExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A44B1DC23B3CF47E3C80D76 /* ArticleCSVExporterTests.swift */; };
-		B998C548C5C1FCE1FC808F4A /* ArticleThemeCustomizeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7113BBFD2D3B260EEF20EFDD /* ArticleThemeCustomizeView.swift */; };
 		BA14531CF0B4CBD917A91DDC /* SFSafariViewController+Extras.m in Sources */ = {isa = PBXBuildFile; fileRef = D98FEEC37A686C5E1E9746E3 /* SFSafariViewController+Extras.m */; };
 		BB5B08305FC9A2AE0B7AE30B /* Assets.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEBCD4DBABA707F65EBDB4D7 /* Assets.swift */; };
 		BBA040401872559CC1C4DB6B /* AppDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B01F678B6AA138FBCDC1D0C /* AppDefaults.swift */; };
@@ -331,7 +330,6 @@
 		4C461FF055BF15DAFFC554BE /* Nectar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Nectar.entitlements; sourceTree = "<group>"; };
 		4EB78BFA707577156D4AAB9D /* NSAttributedString+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSAttributedString+Extensions.swift"; sourceTree = "<group>"; };
 		4EC8F675BDAC7097AD92EE79 /* SmallIconProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallIconProvider.swift; sourceTree = "<group>"; };
-		4ECBD8D2111D683E82674927 /* ArticleThemeGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeGalleryView.swift; sourceTree = "<group>"; };
 		50DC1CC4F968AB7E92801AF9 /* FeedInspectorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedInspectorViewController.swift; sourceTree = "<group>"; };
 		5166F0CA06F91706F124A446 /* WebViewProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewProvider.swift; sourceTree = "<group>"; };
 		516CE8D79FF31B2F9EC5EDD7 /* TimelineCustomizerCollectionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineCustomizerCollectionViewController.swift; sourceTree = "<group>"; };
@@ -361,13 +359,13 @@
 		632662E7A1CC49A18C4E6751 /* SFSafariViewController+Extras.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SFSafariViewController+Extras.h"; sourceTree = "<group>"; };
 		634024D7DB275B29230F60F5 /* AppNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNotifications.swift; sourceTree = "<group>"; };
 		67DA9E3DE55F00F8FDBD9AA6 /* LastOpenedFeedDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastOpenedFeedDelegate.swift; sourceTree = "<group>"; };
+		69C41E0B0165A72DC7F0E0C7 /* ArticleThemeListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeListView.swift; sourceTree = "<group>"; };
 		69F0C8FAC7D57E8F867B28D3 /* SceneCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneCoordinator.swift; sourceTree = "<group>"; };
 		6B0BB76AA9AF689160D5B231 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		6BD16CAF251AF57E68B82168 /* Nectar-dev.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Nectar-dev.entitlements"; sourceTree = "<group>"; };
 		6C7B99107A73BC3141F4F0B9 /* CSSImportExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSSImportExtractorTests.swift; sourceTree = "<group>"; };
 		6DC22D7E9A6467F54770E524 /* HTMLMetadata */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HTMLMetadata; path = Modules/HTMLMetadata; sourceTree = SOURCE_ROOT; };
 		6E2F778291B96C0F1887747A /* ManageStorageViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageStorageViewModel.swift; sourceTree = "<group>"; };
-		7113BBFD2D3B260EEF20EFDD /* ArticleThemeCustomizeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeCustomizeView.swift; sourceTree = "<group>"; };
 		7274C9602D13A4B0EF420321 /* ArticleThemesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemesManager.swift; sourceTree = "<group>"; };
 		74203E5D0371E05B8F1C0045 /* UIViewController+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIViewController+Extras.swift"; sourceTree = "<group>"; };
 		761A68844AC002DB804F5BA0 /* TimelineHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineHeaderView.swift; sourceTree = "<group>"; };
@@ -817,9 +815,8 @@
 				A4FD081876054F057E1DFF4F /* AO3AccountSettingsView.swift */,
 				D03FA655E91A7DA58F5D44E0 /* AO3ChallengeSolverViewController.swift */,
 				E6F8CE2122A7A758C4A2F187 /* AO3LoginViewController.swift */,
-				7113BBFD2D3B260EEF20EFDD /* ArticleThemeCustomizeView.swift */,
-				4ECBD8D2111D683E82674927 /* ArticleThemeGalleryView.swift */,
 				3108BD305F30192D74F96693 /* ArticleThemeImporter.swift */,
+				69C41E0B0165A72DC7F0E0C7 /* ArticleThemeListView.swift */,
 				BBBC5386FE8A011F4426330E /* ArticleThemePreviewWebView.swift */,
 				E61BFEB0949148424C02DC93 /* BadgeColorModeCell.swift */,
 				BFA195669F7F9AFCF2C21506 /* ColorPaletteTableViewController.swift */,
@@ -1267,10 +1264,9 @@
 				64C0F734060FE9776A7DCC49 /* ArticleTheme+Notifications.swift in Sources */,
 				7FDAD79A93AD50283CA86DFA /* ArticleTheme.swift in Sources */,
 				E7B682DAE0BAE82E357CFC6C /* ArticleThemeColorExtractor.swift in Sources */,
-				B998C548C5C1FCE1FC808F4A /* ArticleThemeCustomizeView.swift in Sources */,
 				D813B750265C259394B4A912 /* ArticleThemeDownloader.swift in Sources */,
-				3F2CCEF4F7B0D35D74B22AC3 /* ArticleThemeGalleryView.swift in Sources */,
 				367BAA7CB425C1079495AFB0 /* ArticleThemeImporter.swift in Sources */,
+				0C257B3C3DBCEC2DF3864D1F /* ArticleThemeListView.swift in Sources */,
 				657EC62E1D67AF5E35606BCD /* ArticleThemeOverrides.swift in Sources */,
 				E3EA872D7681E3EFD87C7642 /* ArticleThemePlist.swift in Sources */,
 				A77B43D4A983A234308F375F /* ArticleThemePreviewWebView.swift in Sources */,
