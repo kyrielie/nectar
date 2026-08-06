@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Name</key>
+	<string>Kelmscott</string>
+	<key>ThemeIdentifier</key>
+	<string>com.nectar.themes.rosarivo</string>
+	<key>CreatorHomePage</key>
+	<string>https://github.com/kyrielie/nectar</string>
+	<key>CreatorName</key>
+	<string>Inspired by the Kelmscott Press books of William Morris (1891-1898, public domain); set in Cinzel (Natanael Gama, SIL OFL) and EB Garamond (Georg Duffner/Octavio Pardo, SIL OFL), original CSS design for Nectar -- not a reproduction of any specific Kelmscott page</string>
+	<key>Version</key>
+	<integer>2</integer>
+</dict>
+</plist>

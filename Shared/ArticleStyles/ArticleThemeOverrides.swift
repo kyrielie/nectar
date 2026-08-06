@@ -213,6 +213,12 @@ struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		var articleBodyDeclarations = [String]()
 		if justifyText == true {
 			articleBodyDeclarations.append("text-align: justify !important;")
+		} else if justifyText == false {
+			// Explicit off beats any theme (bundled or imported) whose own stylesheet.css
+			// sets text-align: justify directly on .articleBody -- without this, "off"
+			// only ever meant "don't add justify," never "remove it," so a theme that
+			// justifies natively couldn't be overridden to ragged-right at all.
+			articleBodyDeclarations.append("text-align: left !important;")
 		}
 		if hyphenate == true {
 			articleBodyDeclarations.append("hyphens: auto !important;")
