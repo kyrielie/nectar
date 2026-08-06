@@ -431,6 +431,16 @@ private extension ArticleRenderer {
 		guard article.contentHTML == nil else {
 			return nil
 		}
+		// Personalization plan item 6 ("Stats-visibility toggles"): this
+		// entire function exists to synthesize the same rating/warning/
+		// category/fandom/relationships/characters/series/stats block the
+		// toggle is meant to hide, so when it's off there's nothing left
+		// here worth rendering -- same shared AppDefaults.shared.statsVisible
+		// gate MainTimelineCellData.init(article:...) uses, so hiding stats
+		// in the timeline and hiding them in the reader always agree.
+		guard AppDefaults.shared.statsVisible else {
+			return nil
+		}
 		guard article.fandoms != nil || article.ratings != nil || article.warnings != nil || article.categories != nil else {
 			return nil
 		}

@@ -68,6 +68,12 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 			}
 		}
 
+		NotificationCenter.default.addObserver(forName: .statsVisibilityDidChange, object: nil, queue: .main) { [weak self] _ in
+			Task { @MainActor in
+				self?.userDefaultsDidChange()
+			}
+		}
+
 		configureCollectionView()
     }
 
@@ -80,6 +86,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 
 		collectionView.register(MainTimelineCell.self, forCellWithReuseIdentifier: MainTimelineCell.reuseIdentifier)
 		collectionView.register(BadgeColorModeCell.self, forCellWithReuseIdentifier: BadgeColorModeCell.reuseIdentifier)
+		collectionView.register(StatsVisibilityCell.self, forCellWithReuseIdentifier: StatsVisibilityCell.reuseIdentifier)
 
 		var config = UICollectionLayoutListConfiguration(appearance: .insetGrouped)
 		config.showsSeparators = false
@@ -101,15 +108,22 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 	}
 
 	/// Section indices are dynamic: Number of Lines (0), Tag Display (1),
-	/// Badge Colors (2, only when `showsBadgeColorSection`), then Preview
-	/// last. Centralized here rather than hardcoded per-method so every
-	/// switch below stays in sync when the badge section is hidden.
+	/// Stats Visibility (2, always present), Badge Colors (3, only when
+	/// showsBadgeColorSection), then Preview last. Centralized here rather
+	/// than hardcoded per-method so every switch below stays in sync when
+	/// the badge section is hidden.
+	private var statsVisibilitySection: Int { 2 }
+
+	private var badgeColorSection: Int? {
+		showsBadgeColorSection ? 3 : nil
+	}
+
 	private var previewSection: Int {
-		showsBadgeColorSection ? 3 : 2
+		showsBadgeColorSection ? 4 : 3
 	}
 
     override func numberOfSections(in collectionView: UICollectionView) -> Int {
-		return showsBadgeColorSection ? 4 : 3
+		return showsBadgeColorSection ? 5 : 4
     }
 
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -131,7 +145,13 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 			return cell
 		}
 
-		if showsBadgeColorSection && indexPath.section == 2 {
+		if indexPath.section == statsVisibilitySection {
+			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: StatsVisibilityCell.reuseIdentifier, for: indexPath) as! StatsVisibilityCell
+			cell.configure()
+			return cell
+		}
+
+		if let badgeColorSection, indexPath.section == badgeColorSection {
 			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: BadgeColorModeCell.reuseIdentifier, for: indexPath) as! BadgeColorModeCell
 			cell.configure()
 			return cell
@@ -176,7 +196,9 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 			header.label.text = NSLocalizedString("Number of Lines", comment: "Number of Lines")
 		case 1:
 			header.label.text = NSLocalizedString("Tag Display", comment: "Tag Display")
-		case 2 where showsBadgeColorSection:
+		case statsVisibilitySection:
+			header.label.text = NSLocalizedString("Stats Visibility", comment: "Stats Visibility")
+		case _ where indexPath.section == badgeColorSection:
 			header.label.text = NSLocalizedString("Badge Colors", comment: "Badge Colors")
 		case previewSection:
 			header.label.text = NSLocalizedString("Preview", comment: "Preview")
@@ -193,8 +215,8 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 
 	override func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
 		// Only the Number of Lines (0) and Tag Display (1) slider rows respond to
-		// selection; the badge-color toggle handles its own touches via UISwitch,
-		// and the preview row isn't interactive.
+		// selection; the stats-visibility and badge-color toggles handle their
+		// own touches via UISwitch, and the preview row isn't interactive.
 		return indexPath.section == 0 || indexPath.section == 1
 	}
 

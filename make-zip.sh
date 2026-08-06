@@ -2,9 +2,23 @@
 #
 # make-claude-zip.sh — package the Nectar repo for upload to Claude.
 #
-# Excludes: .git history, the generated .xcodeproj, binary/image assets,
+# Excludes: .git history, the generated .xcodeproj, binary image files,
 # provisioning profiles/certs, and other build noise that isn't useful
 # context for code review or debugging.
+#
+# Deliberately NOT excluded: .xcassets folders and .nnwtheme CSS/HTML.
+# Asset catalogs are mostly Contents.json (colorset hex values, imageset
+# file references, app icon slot config) -- small text files that are
+# genuinely useful for reviewing color/theme code, not build noise. The
+# actual binary images inside them (imageset PNGs, etc.) are still
+# stripped by the extension-based excludes below, so this doesn't bloat
+# the archive -- it just stops silently deleting the metadata that
+# describes what those images are. Previously this dropped the entire
+# .xcassets tree (see the exclusions below this comment in prior
+# versions of this script), which meant no AI session working from this
+# zip could ever see what accent/theme colors or icon slots existed --
+# confirmed as an active blind spot in iOS/MainTimeline/Cell/BadgeColorTable.swift's
+# header comment before this fix.
 #
 # Usage:
 #   ./make-claude-zip.sh [source_dir] [output_zip]
@@ -48,8 +62,6 @@ zip -r -q "$OUT" . \
   -x '*.mov' \
   -x '*.mp4' \
   -x '*.heic' \
-  -x '*.xcassets/*' \
-  -x '*.xcassets' \
   -x '*.cer' \
   -x '*.cer.enc' \
   -x '*.p12' \
@@ -63,9 +75,7 @@ zip -r -q "$OUT" . \
   -x '.build/*' \
   -x '.swiftpm/*' \
   -x '*/DerivedData/*' \
-  -x 'appstore/screenshots/*' \
-  -x '*.nnwtheme/*.css' \
-  -x '*.nnwtheme/*.html'
+  -x 'appstore/screenshots/*'
 
 echo "Wrote $OUT"
 unzip -l "$OUT" | tail -1
