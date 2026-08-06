@@ -18,6 +18,7 @@ import WebKit
 /// stylesheet.css, not in anything Swift can introspect.
 struct ArticleThemePreviewWebView: UIViewRepresentable {
 
+	let importCSS: String?
 	let css: String
 
 	private static let sampleBody = """
@@ -43,6 +44,7 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 		<html>
 		<head>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+		\(importStyle)
 		<style>
 		body { margin: 0; padding: 16px 0; -webkit-text-size-adjust: none; box-sizing: border-box; }
 		\(css)
@@ -54,5 +56,17 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 		</html>
 		"""
 		webView.loadHTMLString(html, baseURL: nil)
+	}
+
+	private var importStyle: String {
+		guard let importCSS, !importCSS.isEmpty else {
+			return ""
+		}
+
+		return """
+		<style>
+		\(importCSS)
+		</style>
+		"""
 	}
 }

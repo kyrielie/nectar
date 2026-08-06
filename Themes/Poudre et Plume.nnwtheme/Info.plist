@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Name</key>
+	<string>Poudre et Plume</string>
+	<key>ThemeIdentifier</key>
+	<string>com.nectar.themes.poudreetplume</string>
+	<key>CreatorHomePage</key>
+	<string>https://github.com/intothisshadow/AO3-SiteSkin_PeacockFlare</string>
+	<key>CreatorName</key>
+	<string>Palette inspired by intothisshadow's "Poudre et Plume" recolor of their Peacock Flare AO3 site skin (no LICENSE file in source repo -- values reimplemented independently from the published :root palette, not copied verbatim; credited by name/repo rather than relying on a license grant)</string>
+	<key>Version</key>
+	<integer>1</integer>
+</dict>
+</plist>

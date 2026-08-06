@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Name</key>
+	<string>Marigold Press</string>
+	<key>ThemeIdentifier</key>
+	<string>com.nectar.themes.marigoldpress</string>
+	<key>CreatorHomePage</key>
+	<string>https://github.com/kyrielie/nectar</string>
+	<key>CreatorName</key>
+	<string>Set in Fraunces (Untitled Type Foundry, SIL OFL); ported to NetNewsWire theme format for Nectar</string>
+	<key>Version</key>
+	<integer>1</integer>
+</dict>
+</plist>

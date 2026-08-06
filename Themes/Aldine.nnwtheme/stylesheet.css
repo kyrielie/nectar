@@ -1,0 +1,245 @@
+/* Aldine — set in Cardo (David Perry, 2006), a digitization modeled on
+   Monotype Bembo (1929), itself a revival of the roman cut Francesco Griffo
+   made for Aldus Manutius's Venice press in 1495 — the type that gave
+   Renaissance humanist letterforms their standard shape. */
+
+@import url('https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root {
+	--font-serif: 'Cardo', Palatino, "Iowan Old Style", Georgia, serif;
+	--font-sans: -apple-system, Helvetica, Arial, sans-serif;
+	--font-code: "SF Mono", Menlo, monospace;
+
+	--background-color: #f7f0dc;
+	--text-color: #2b1f14;
+	--link-color: #7b1e1e;
+	--visited-link-color: #8a6a2f;
+	--attribution-color: #7a6a4d;
+	--article-title-color: #241a10;
+	--body-code-color: #4a3c28;
+	--body-code-background: rgba(0, 0, 0, 0.05);
+	--system-message-color: #b6a883;
+	--separator-color: #ddd0a8;
+	--table-cell-border-color: #ddd0a8;
+	--blockquote-border-color: #b8860b;
+	--blockquote-text-color: rgba(43, 31, 20, 0.75);
+	--blockquote-background: rgba(184, 134, 11, 0.06);
+	--footer-color: #7a6a4d;
+	--pre-background: rgba(0, 0, 0, 0.04);
+	--header-top: #8a2323;
+	--header-bottom: #6b1a1a;
+	--dateline-bar-top: #b8860b;
+	--dateline-bar-bottom: #9c7209;
+	--flower-color: #b8860b;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--background-color: #241c12;
+		--text-color: #e8dcc0;
+		--link-color: #d68a8a;
+		--visited-link-color: #d4af37;
+		--attribution-color: #b3a480;
+		--article-title-color: #f2e8cc;
+		--body-code-color: #cbbd98;
+		--body-code-background: rgba(255, 255, 255, 0.08);
+		--system-message-color: #6b5f45;
+		--separator-color: rgba(255, 255, 255, 0.14);
+		--table-cell-border-color: rgba(255, 255, 255, 0.16);
+		--blockquote-border-color: #d4af37;
+		--blockquote-text-color: rgba(232, 220, 192, 0.78);
+		--blockquote-background: rgba(212, 175, 55, 0.08);
+		--footer-color: #b3a480;
+		--pre-background: rgba(255, 255, 255, 0.06);
+		--header-top: #5c1717;
+		--header-bottom: #431010;
+		--dateline-bar-top: #8a6614;
+		--dateline-bar-bottom: #6e4f0f;
+		--flower-color: #d4af37;
+	}
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--background-color);
+	color: var(--text-color);
+	font-family: var(--font-serif);
+	word-wrap: break-word;
+}
+
+body a, body a * {
+	color: var(--link-color);
+}
+
+body a:visited {
+	color: var(--visited-link-color);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+/* Header bar — deep venetian red gradient */
+
+.headerBar {
+	background: linear-gradient(to bottom, var(--header-top), var(--header-bottom));
+	padding: 14px 0;
+	font-family: var(--font-sans);
+	font-size: 1em;
+	font-weight: bold;
+	line-height: 1.4;
+	color: #f7f0dc;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+.headerBarInner {
+	display: flex;
+	align-items: center;
+}
+
+.avatar {
+	vertical-align: middle;
+	border-radius: 3px;
+	height: 1.8em !important;
+	width: 1.8em;
+	min-width: 1.8em;
+	margin: 0 !important;
+	margin-right: 0.5em !important;
+}
+
+.headerBar a:link, .headerBar a:visited, .headerBar a, .feedlink {
+	color: #f7f0dc !important;
+	font-weight: bold;
+}
+
+.byline {
+	color: rgba(247, 240, 220, 0.75);
+	margin-left: 0.5em;
+}
+
+body .byline a:link, .byline a:visited, .byline a {
+	color: rgba(247, 240, 220, 0.75) !important;
+}
+
+/* Content containers */
+
+.barContent, .articleContent {
+	max-width: 42rem;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.articleContent {
+	margin-top: 2em;
+}
+
+/* Dateline bar — gold gradient */
+
+.datelineBar {
+	background: linear-gradient(to bottom, var(--dateline-bar-top), var(--dateline-bar-bottom));
+	padding: 8px 0;
+	font-family: var(--font-sans);
+	font-size: 0.85em;
+	font-weight: bold;
+	line-height: 1.4;
+	color: #241a10;
+}
+
+.datelineBarInner {
+	display: flex;
+	align-items: center;
+}
+
+.datelineDate a:link, .datelineDate a:visited, .datelineDate a {
+	color: #241a10 !important;
+	font-weight: bold;
+}
+
+/* Article title */
+
+.articleTitle {
+	font-size: 1.7em;
+	font-weight: bold;
+	font-style: italic;
+	line-height: 1.25;
+	margin-top: 0;
+	margin-bottom: 6px;
+	color: var(--article-title-color);
+}
+
+.articleTitle a:link, .articleTitle a:visited, .articleTitle a {
+	color: var(--article-title-color);
+}
+
+.articleTitle a:hover {
+	text-decoration: underline;
+}
+
+.printersFlower {
+	text-align: center;
+	color: var(--flower-color);
+	font-size: 1.1em;
+	margin-bottom: 18px;
+}
+
+/* Article body */
+
+.articleBody {
+	margin-top: 8px;
+	font-size: 1.08em;
+	line-height: 1.75em;
+}
+
+.articleBody a {
+	text-decoration: underline;
+}
+
+.articleBody p {
+	margin-bottom: 1em;
+}
+
+.articleBody blockquote {
+	border-left: 3px solid var(--blockquote-border-color);
+	background: var(--blockquote-background);
+	color: var(--blockquote-text-color);
+	padding: 0.4em 1em;
+	margin-left: 0;
+	font-style: italic;
+}
+
+.articleBody code, .articleBody pre {
+	font-family: var(--font-code);
+	color: var(--body-code-color);
+	background: var(--body-code-background);
+}
+
+.articleBody pre {
+	background: var(--pre-background);
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.articleBody table {
+	border-collapse: collapse;
+}
+
+.articleBody td, .articleBody th {
+	border: 1px solid var(--table-cell-border-color);
+	padding: 0.4em 0.6em;
+}
+
+/* Footer */
+
+body .footer {
+	margin-top: 28px;
+	margin-bottom: 2em;
+	font-family: var(--font-sans);
+	color: var(--footer-color);
+	font-size: 0.85em;
+	font-style: italic;
+}
+
+body .footer a:link, .footer a:visited {
+	color: var(--link-color);
+	text-decoration: underline;
+}
