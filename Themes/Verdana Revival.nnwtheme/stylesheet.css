@@ -201,7 +201,9 @@ body .byline a:link, .byline a:visited, .byline a {
 }
 
 .articleBody p {
-	margin-bottom: 1em;
+	margin-top: 0;
+	margin-bottom: var(--paragraph-spacing, 1em);
+	text-indent: var(--paragraph-indent, 0);
 }
 
 /* Footer */

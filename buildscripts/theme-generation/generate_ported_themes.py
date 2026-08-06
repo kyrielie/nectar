@@ -720,6 +720,141 @@ themes = [
     ),
 ]
 
+# §7 additions (nnwtheme-porter skill, Round 3 plan): Dracula's 7 hue variants and
+# the three site-skin ports (Moonlit Wisteria, Pastel Whimsy, Poudre et Plume). All
+# palette/font values below were read directly from the source repos in the AO3-skins
+# repomix dump, not guessed -- see .claude/skills/nnwtheme-porter/SKILL.md for the
+# extraction method.
+DRACULA_HUES = [
+    ("Cyan", "cyan", "#8be9fd"),
+    ("Green", "green", "#50fa7b"),
+    ("Orange", "orange", "#ffb86c"),
+    ("Pink", "pink", "#ff79c6"),
+    ("Purple", "purple", "#bd93f9"),
+    ("Red", "red", "#ff5555"),
+    ("Yellow", "yellow", "#f1fa8c"),
+]
+
+for hue_name, hue_slug, accent in DRACULA_HUES:
+    themes.append(dict(
+        name=f"Dracula {hue_name}",
+        identifier=f"dracula{hue_slug}",
+        homepage="https://github.com/dracula/ao3",
+        creator=f'Ported from the {hue_name} variant of the official Dracula Theme AO3 port (MIT licensed, Dracula Theme)',
+        credit_comment=f"ported from dracula_{hue_slug}_ao3.css in the official Dracula Theme AO3 repo (MIT). Standard Dracula dark palette (#282a36 background, #f8f8f2 foreground) with the {hue_name.lower()} accent ({accent}) used for links, code, and the preface border. The muted #6272a4 \"Comment\" tone is Dracula's own published palette value (draculatheme.com), not read from this particular AO3 port, which doesn't need a distinct muted color.",
+        differentiation_comment=f"Differentiation: monospace header-chrome font (this is a developer-tool-derived palette; the header table/dateline read like a terminal even though the article body itself stays serif for readability), square-ish 4px avatar corners, and the {hue_name.lower()} accent distinguishing this variant from the other six Dracula hues -- same structure, only the accent hex changes.",
+        bg="#282a36", text="#f8f8f2", link=accent,
+        header_border="#44475a", table_border="#44475a", header_text="#6272a4",
+        code_color=accent, preface_border=accent,
+        link_underline_color="color-mix(in hsl, currentColor, transparent 40%)",
+        link_underline_special="color-mix(in hsl, currentColor, transparent 80%)",
+        blockquote_border="#44475a", blockquote_width="3px", blockquote_style="solid", blockquote_extra="",
+        header_font='"SF Mono", Menlo, "Courier New", Courier, monospace', header_extra="", avatar_radius="4px",
+        title_extra="", dateline_extra="",
+        code_font='"SF Mono", Menlo, "Courier New", Courier, monospace',
+        table_extra="", hr_style="\tborder: 1.5px solid var(--table-cell-border-color);\n",
+        popover_bg="#21222c", popover_shadow="0 2px 4px rgba(0, 0, 0, 0.6), 0 3px 6px rgba(0, 0, 0, 0.35)",
+        popover_arrow_bg="#191a21", popover_extra="",
+        preface_extra="\tborder-bottom: none;\n\tborder-left: 3px solid var(--ao3-preface-border-color);\n\tpadding-left: 1em;\n",
+        preface_dt_extra="\tcolor: var(--primary-accent-color);\n",
+        notice_extra=f"\tborder-left: 3px solid {accent};\n\tbackground: rgba(0, 0, 0, 0.15);\n",
+        body_font="Charter, Georgia, sans-serif", ios_title_transform="",
+        link_underline_css="\ttext-decoration-line: underline;\n\ttext-decoration-style: solid;\n\ttext-decoration-color: var(--link-underline-color);\n\ttext-decoration-thickness: 1px;\n\ttext-underline-offset: 0.15em;",
+        link_hover_css="\topacity: 0.85;",
+    ))
+
+themes.append(dict(
+    name="Moonlit Wisteria",
+    identifier="moonlitwisteria",
+    homepage="https://github.com/intothisshadow",
+    creator="Palette inspired by intothisshadow's \"Moonlit Wisteria\" AO3 site skin (no LICENSE file in source repo -- values reimplemented independently from the published :root palette, not copied verbatim; credited by name/author page rather than relying on a license grant)",
+    credit_comment="palette *inspired by* intothisshadow's Moonlit Wisteria AO3 skin (so-obsessed.com) -- that source has no explicit license, so this reimplements the documented :root palette (Starlight Cream background, Ink Stem text, the skin's own \"a11y replacement\" Deep Violet for links) from scratch. The skin's decorative display font (\"Admiration Pains\") isn't on Google Fonts, so it's dropped rather than substituted; only the skin's own body serif (Lora, confirmed on Google Fonts) is carried over.",
+    differentiation_comment="Differentiation: warm cream-and-violet pastel palette (the only bundled theme in this hue family besides Rosé Pine, and lighter/warmer than it), a soft dotted link underline in the skin's own lavender-soft tone, and fully rounded (50%) avatar corners matching the skin's floral, soft-edged visual language.",
+    bg="#F5EDE8", text="#5C4F6B", link="#6B5A90",
+    header_border="#F2C4BE", table_border="#C9BFD8", header_text="#A89EC0",
+    code_color="#8B7AA8", preface_border="#C9BFD8",
+    link_underline_color="color-mix(in hsl, currentColor, transparent 40%)",
+    link_underline_special="color-mix(in hsl, currentColor, transparent 80%)",
+    blockquote_border="#C9BFD8", blockquote_width="3px", blockquote_style="solid", blockquote_extra="",
+    header_font="-apple-system, sans-serif", header_extra="", avatar_radius="50%",
+    title_extra="", dateline_extra="\tfont-variant: small-caps;\n\tletter-spacing: 0.04em;\n",
+    code_font='"SF Mono", Menlo, "Courier New", Courier, monospace',
+    table_extra="\tborder-radius: 8px;\n", hr_style="\tborder: none;\n\tborder-top: 1px solid var(--table-cell-border-color);\n",
+    popover_bg="#FFFAF8", popover_shadow="0 2px 4px rgba(107, 90, 144, 0.15), 0 3px 6px rgba(107, 90, 144, 0.08)",
+    popover_arrow_bg="#FAF5F2", popover_extra="\tborder-radius: 8px;\n",
+    preface_extra="\tborder: 1px solid var(--ao3-preface-border-color);\n\tborder-radius: 12px;\n\tpadding: 0.8em 1em 1em 1em;\n\tbackground: #FAF5F2;\n",
+    preface_dt_extra="\tcolor: var(--primary-accent-color);\n",
+    notice_extra="\tborder-left: 3px solid rgba(107, 90, 144, 0.4);\n\tbackground: rgba(107, 90, 144, 0.06);\n",
+    body_font="'Lora', Georgia, serif", ios_title_transform="",
+    link_underline_css="\ttext-decoration-line: underline;\n\ttext-decoration-style: dotted;\n\ttext-decoration-color: var(--link-underline-color);\n\ttext-decoration-thickness: 1px;\n\ttext-underline-offset: 0.15em;",
+    link_hover_css="\topacity: 0.8;",
+))
+
+themes.append(dict(
+    name="Pastel Whimsy",
+    identifier="pastelwhimsy",
+    homepage="https://github.com/intothisshadow",
+    creator="Palette inspired by intothisshadow's \"Pastel Whimsy\" AO3 site skin (no LICENSE file in source repo -- values reimplemented independently from the published :root palette, not copied verbatim; credited by name/author page rather than relying on a license grant)",
+    credit_comment="palette *inspired by* intothisshadow's Pastel Whimsy AO3 skin -- reimplemented from the documented :root palette (pale pink/lavender background, deep purple ink, saturated purple link accent) rather than copied. This is the cleanest test of the three-font-role convention: the source skin itself already splits Lora (body) / Playfair Display (headings) / JetBrains Mono (code), all three confirmed on Google Fonts.",
+    differentiation_comment="Differentiation: the only bundled theme with all three font roles genuinely distinct (serif body, display-serif headings, monospace code) rather than one face doing double duty, plus a thick solid link underline in the skin's own accent lavender -- visually the most maximalist of the bundled pastel themes.",
+    bg="#fff7fb", text="#3f3747", link="#7b5fa3",
+    header_border="#e1d7f2", table_border="#e6dbf5", header_text="#5a4a78",
+    code_color="#3a2d5c", preface_border="#d9cdee",
+    link_underline_color="color-mix(in hsl, currentColor, transparent 20%)",
+    link_underline_special="color-mix(in hsl, currentColor, transparent 70%)",
+    blockquote_border="#e6dbf5", blockquote_width="3px", blockquote_style="solid", blockquote_extra="",
+    header_font="'Playfair Display', Georgia, serif", header_extra="", avatar_radius="50%",
+    title_extra="", dateline_extra="",
+    code_font='"JetBrains Mono", "SF Mono", Menlo, monospace',
+    table_extra="\tborder-radius: 8px;\n", hr_style="\tborder: none;\n\tborder-top: 1px solid var(--table-cell-border-color);\n",
+    popover_bg="#faf7ff", popover_shadow="0 2px 4px rgba(90, 60, 130, 0.12), 0 3px 6px rgba(90, 60, 130, 0.06)",
+    popover_arrow_bg="#f3ecff", popover_extra="\tborder-radius: 8px;\n",
+    preface_extra="\tborder: 1px solid var(--ao3-preface-border-color);\n\tborder-radius: 12px;\n\tpadding: 0.8em 1em 1em 1em;\n\tbackground: #faf7ff;\n",
+    preface_dt_extra="\tfont-family: 'Playfair Display', Georgia, serif;\n\tcolor: var(--primary-accent-color);\n",
+    notice_extra="\tborder-left: 3px solid rgba(123, 95, 163, 0.4);\n\tbackground: rgba(123, 95, 163, 0.06);\n",
+    body_font="'Lora', Georgia, serif", ios_title_transform="",
+    link_underline_css="\ttext-decoration-line: underline;\n\ttext-decoration-style: solid;\n\ttext-decoration-color: var(--link-underline-color);\n\ttext-decoration-thickness: 2px;\n\ttext-underline-offset: 0.15em;",
+    link_hover_css="\topacity: 0.8;",
+))
+
+themes.append(dict(
+    name="Poudre et Plume",
+    identifier="poudreetplume",
+    homepage="https://github.com/intothisshadow/AO3-SiteSkin_PeacockFlare",
+    creator="Palette inspired by intothisshadow's \"Poudre et Plume\" recolor of their Peacock Flare AO3 site skin (no LICENSE file in source repo -- values reimplemented independently from the published :root palette, not copied verbatim; credited by name/repo rather than relying on a license grant)",
+    credit_comment="palette *inspired by* intothisshadow's Poudre et Plume AO3 skin, itself a recolor of their own Peacock Flare skin -- reimplemented from the documented :root palette (antique ivory background, warm umber ink, faded-indigo link accent) rather than copied. Fonts (EB Garamond body, Cormorant Garamond headings) confirmed on Google Fonts from the source's own header-comment credits. Link color is the source's --clr-teal-deep (#6A8FAA) darkened to #4d6c85 -- the source value is only 3.3:1 against this background, below WCAG AA (4.5:1) for body text; the darkened value keeps the same hue at 5.3:1.",
+    differentiation_comment="Differentiation: warm antique-paper palette (ivory/umber/dusty-rose, no other bundled theme shares this warmth), Cormorant Garamond small-caps preface labels for a letterpress feel, and 8px rounded corners throughout -- softer than Vintage Letter Green's sharp letter framing but in the same antique-correspondence spirit.",
+    bg="#fdfaf6", text="#3a2a22", link="#4d6c85",
+    header_border="#D7979F", table_border="#BAC2C0", header_text="#8A8AA8",
+    code_color="#4a3830", preface_border="#D87884",
+    link_underline_color="color-mix(in hsl, currentColor, transparent 30%)",
+    link_underline_special="color-mix(in hsl, currentColor, transparent 75%)",
+    blockquote_border="#BAC2C0", blockquote_width="3px", blockquote_style="solid", blockquote_extra="",
+    header_font="'Cormorant Garamond', Georgia, serif", header_extra="", avatar_radius="8px",
+    title_extra="", dateline_extra="\tfont-variant: small-caps;\n\tletter-spacing: 0.05em;\n",
+    code_font='"Source Code Pro", "SF Mono", Menlo, monospace',
+    table_extra="\tborder-radius: 6px;\n", hr_style="\tborder: none;\n\tborder-top: 1px solid var(--table-cell-border-color);\n",
+    popover_bg="#F3E1D6", popover_shadow="0 2px 4px rgba(58, 42, 34, 0.15), 0 3px 6px rgba(58, 42, 34, 0.08)",
+    popover_arrow_bg="#EDD8CC", popover_extra="\tborder-radius: 6px;\n",
+    preface_extra="\tborder: 1px solid var(--ao3-preface-border-color);\n\tborder-radius: 10px;\n\tpadding: 0.8em 1em 1em 1em;\n\tbackground: #F3E1D6;\n",
+    preface_dt_extra="\tfont-family: 'Cormorant Garamond', Georgia, serif;\n\tfont-variant: small-caps;\n\tletter-spacing: 0.03em;\n\tcolor: var(--primary-accent-color);\n",
+    notice_extra="\tborder-left: 3px solid rgba(106, 143, 170, 0.4);\n\tbackground: rgba(106, 143, 170, 0.08);\n",
+    body_font="'EB Garamond', Georgia, serif", ios_title_transform="",
+    link_underline_css="\ttext-decoration-line: underline;\n\ttext-decoration-style: dotted;\n\ttext-decoration-color: var(--link-underline-color);\n\ttext-decoration-thickness: 1px;\n\ttext-underline-offset: 0.15em;",
+    link_hover_css="\topacity: 0.85;",
+))
+
+# Font-carrying themes among the above get a Google Fonts CDN @import prepended to
+# their generated stylesheet.css after generation (see the font_imports loop below --
+# not a template field, since only these four of the full theme list need one and
+# every other dict in `themes` would otherwise need an empty font_import="" added).
+FONT_IMPORTS = {
+    "Moonlit Wisteria": "@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap');\n",
+    "Pastel Whimsy": "@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;700&display=swap');\n",
+    "Poudre et Plume": "@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..700;1,400..700&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400;1,700&family=Source+Code+Pro:wght@400;700&display=swap');\n",
+}
+
+
 for t in themes:
     dirname = os.path.join(BASE_DIR, f"{t['name']}.nnwtheme")
     os.makedirs(dirname, exist_ok=True)
@@ -735,6 +870,8 @@ for t in themes:
         f.write(plist)
 
     css = STYLESHEET_TEMPLATE.format(**t)
+    if t["name"] in FONT_IMPORTS:
+        css = FONT_IMPORTS[t["name"]] + css
     with open(os.path.join(dirname, "stylesheet.css"), "w") as f:
         f.write(css)
 

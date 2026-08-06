@@ -169,7 +169,13 @@ a.footnote {
 	margin: 0 0 1.5em 0;
 	padding-bottom: 1em;
 	border-bottom: 1px solid var(--ao3-preface-border-color, rgba(0, 0, 0, 0.15));
+	background-color: var(--ao3-preface-background-color, transparent);
 	font-size: 0.9em;
+}
+.articleBody p {
+	margin-top: 0;
+	margin-bottom: var(--paragraph-spacing, 1em);
+	text-indent: var(--paragraph-indent, 0);
 }
 #ao3SyntheticPreface dl.tags,
 #ao3Preface dl.tags {

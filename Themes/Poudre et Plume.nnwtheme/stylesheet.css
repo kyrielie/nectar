@@ -1,39 +1,36 @@
-/* Beetlejuice -- ported from the AO3 workskin "Beetlejuice" (BJ1.css,
-   github.com/NCFC-Wiki/Beetlejuice-theme-for-AO3, MIT licensed). Structure
-   follows the bundled Sepia.nnwtheme (same selectors, same iOS/macOS
-   @supports split); values pulled from that skin's site-wide palette:
-     body background     <- #111111 (its .region/fieldset/table background)
-     body text            <- #eee
-     link                 <- #646464 muted gray link, with the source's
-                             `text-shadow: 1px 1px 2px black` carried over --
-                             on a near-black page that shadow just deepens
-                             the ink rather than reading as a glow
-     link hover            <- #2bac04 acid green (source's #header a color /
-                             .actions color), with the brighter #1fbd00 used
-                             for the hover background elsewhere in the skin
-                             borrowed here as hover text color instead, since
-                             pill backgrounds don't have an article analog
-     visited                <- #999 (source's a:visited)
-     borders/rules           <- #555 / #222 (source's border-color values)
-   No separate dark variant -- the source skin has no light mode either,
-   this *is* its one mode, single-mode like Sepia/Ember/Tiqoe Dark. */
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..700;1,400..700&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400;1,700&family=Source+Code+Pro:wght@400;700&display=swap');
+/* Poudre et Plume -- palette *inspired by* intothisshadow's Poudre et Plume AO3 skin, itself a recolor of their own Peacock Flare skin -- reimplemented from the documented :root palette (antique ivory background, warm umber ink, faded-indigo link accent) rather than copied. Fonts (EB Garamond body, Cormorant Garamond headings) confirmed on Google Fonts from the source's own header-comment credits. Link color is the source's --clr-teal-deep (#6A8FAA) darkened to #4d6c85 -- the source value is only 3.3:1 against this background, below WCAG AA (4.5:1) for body text; the darkened value keeps the same hue at 5.3:1.
+   Palette:
+     body background   <- #fdfaf6
+     body text          <- #3a2a22
+     link                <- #4d6c85
+     header border        <- #D7979F
+     table/rule border     <- #BAC2C0
+   Differentiation: warm antique-paper palette (ivory/umber/dusty-rose, no other bundled theme shares this warmth), Cormorant Garamond small-caps preface labels for a letterpress feel, and 8px rounded corners throughout -- softer than Vintage Letter Green's sharp letter framing but in the same antique-correspondence spirit.
+   Structure follows the bundled Sepia.nnwtheme (same selectors, same
+   iOS/macOS @supports split); shared iOS/macOS structural rules (max-width,
+   hyphens, footnote popover, table borders, etc.) are the same base every
+   bundled theme needs so embeds/footnotes/tables don't fall back to
+   unstyled defaults. */
 
 body {
 	margin-left: auto;
 	margin-right: auto;
 	word-wrap: break-word;
 	max-width: 44em;
-	background-color: #111111;
-	color: #eeeeee;
+	background-color: #fdfaf6;
+	color: #3a2a22;
 }
 
 [href] {
-	text-decoration: none;
-	font-weight: 600;
+	text-decoration-line: underline;
+	text-decoration-style: dotted;
+	text-decoration-color: var(--link-underline-color);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.15em;
 }
 [href]:hover {
-	color: var(--link-hover-color);
-	text-shadow: 0 0 6px rgba(43, 172, 4, 0.55);
+	opacity: 0.85;
 }
 
 #nnwImageIcon {
@@ -52,36 +49,34 @@ body {
 }
 
 :root {
-	--header-table-border-color: #555555;
-	--header-color: #999999;
-	--body-code-color: #2bac04;
-	--system-message-color: #999999;
-	--feedlink-color: #eeeeee;
-	--article-title-color: #eeeeee;
-	--article-date-color: #999999;
-	--table-cell-border-color: #222222;
-	--primary-accent-color: #2bac04;
-	--secondary-accent-color: #646464;
-	--link-hover-color: #2bac04;
-	--block-quote-border-color: #555555;
+	--header-table-border-color: #D7979F;
+	--header-color: #8A8AA8;
+	--body-code-color: #4a3830;
+	--system-message-color: #8A8AA8;
+	--feedlink-color: #3a2a22;
+	--article-title-color: #3a2a22;
+	--article-date-color: #8A8AA8;
+	--table-cell-border-color: #BAC2C0;
+	--primary-accent-color: #4d6c85;
+	--secondary-accent-color: #4d6c85;
+	--block-quote-border-color: #BAC2C0;
 	--link-underline-color: color-mix(in hsl, currentColor, transparent 30%);
-	--link-underline-special: color-mix(in hsl, currentColor, transparent 70%);
+	--link-underline-special: color-mix(in hsl, currentColor, transparent 75%);
 	/* Consumed by core.css's #ao3SyntheticPreface/#ao3Preface rules. */
-	--ao3-preface-border-color: #555555;
+	--ao3-preface-border-color: #D87884;
 }
 
-/* Exact-selector fallback for ArticleThemeColorExtractor (see the fix
-   applied to Ember/Sepia/Tiqoe Dark/Rose Pine for why this is additive and
-   harmless -- higher-specificity 'body a' below still wins the cascade). */
+/* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
+   higher-specificity 'body a' below still wins the cascade. See the fix
+   applied to Ember/Sepia/Tiqoe Dark/Rose Pine for why this is needed. */
 a {
-	color: var(--secondary-accent-color);
+	color: #4d6c85;
 }
 
 body a,
 body a:visited,
 body a * {
-	color: var(--secondary-accent-color);
-	text-shadow: 1px 1px 2px black;
+	color: #4d6c85;
 }
 
 body > header {
@@ -102,7 +97,7 @@ body > header .headerTable th {
 	color: var(--header-color);
 	padding: 0.2em;
 	border: none;
-	font-family: sans-serif;
+	font-family: 'Cormorant Garamond', Georgia, serif;
 	font-size: 0.9rem;
 }
 body > header .headerTable td.avatar {
@@ -124,12 +119,11 @@ body > .systemMessage {
 }
 
 .avatar img {
-	border-radius: 4px;
-	filter: grayscale(15%) contrast(1.05);
+	border-radius: 8px;
 }
 
 .feedIcon {
-	border-radius: 4px;
+	border-radius: 8px;
 }
 
 .rightAlign {
@@ -144,15 +138,13 @@ body > .systemMessage {
 	text-decoration-color: transparent;
 	color: var(--article-title-color);
 	margin-top: 26px;
-	letter-spacing: 0.02em;
 }
 
 .articleDateline {
 	margin-bottom: 5px;
 	font-weight: bold;
-	text-transform: uppercase;
-	font-size: 0.85em;
-	letter-spacing: 0.04em;
+	font-variant: small-caps;
+	letter-spacing: 0.05em;
 }
 
 .articleDateline [href] {
@@ -202,7 +194,7 @@ pre {
 
 code,
 pre {
-	font-family: "SF Mono", Menlo, "Courier New", Courier, monospace;
+	font-family: "Source Code Pro", "SF Mono", Menlo, monospace;
 	font-size: 0.85rem;
 	letter-spacing: -0.027em;
 	-webkit-hyphens: none;
@@ -217,6 +209,7 @@ pre {
 	border-spacing: 0;
 	border: 1px solid var(--table-cell-border-color);
 	font-size: inherit;
+	border-radius: 6px;
 }
 
 .nnw-overflow table table {
@@ -297,7 +290,8 @@ sub {
 }
 
 hr {
-	border: 1.5px solid var(--table-cell-border-color);
+	border: none;
+	border-top: 1px solid var(--table-cell-border-color);
 }
 
 .iframeWrap {
@@ -318,7 +312,7 @@ blockquote {
 	margin-inline-start: 0;
 	margin-inline-end: 0;
 	padding-inline-start: 15px;
-	border-inline-start: 3px solid var(--primary-accent-color);
+	border-inline-start: 3px solid var(--block-quote-border-color);
 }
 
 /* Feed Specific */
@@ -353,64 +347,63 @@ blockquote {
 
 /* Newsfoot theme */
 .newsfoot-footnote-popover {
-	background: #1a1a1a;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 3px 6px rgba(0, 0, 0, 0.35);
-	color: #eeeeee;
+	background: #F3E1D6;
+	box-shadow: 0 2px 4px rgba(58, 42, 34, 0.15), 0 3px 6px rgba(58, 42, 34, 0.08);
+	color: #3a2a22;
 	padding: 1px;
+	border-radius: 6px;
 }
 
 .newsfoot-footnote-popover-arrow {
-	background: #111111;
-	border: 1px solid #222222;
+	background: #EDD8CC;
+	border: 1px solid var(--table-cell-border-color);
 }
 
 .newsfoot-footnote-popover-inner {
-	background: #111111;
+	background: #EDD8CC;
+	border-radius: 6px;
 }
 
 body a.footnote,
 body a.footnote:visited,
 .newsfoot-footnote-popover + a.footnote:hover {
-	background: #222222;
-	color: #eeeeee;
-	text-shadow: none;
+	background: var(--table-cell-border-color);
+	color: #3a2a22;
 	transition: background-color 200ms ease-out;
 }
 
 a.footnote:hover,
 .newsfoot-footnote-popover + a.footnote {
-	background: #2bac04;
-	color: #111111;
-	text-shadow: none;
+	background: #4d6c85;
+	color: #fdfaf6;
 	transition: background-color 200ms ease-out;
 }
 
-/* AO3 direct-reading preface (#ao3SyntheticPreface/#ao3Preface, defined
-   structurally in core.css -- see this repo's iOS/AppDefaults.swift-adjacent
-   ArticleThemeOverrides doc for why core.css owns layout and themes only
-   own appearance). Dashed acid-green rule and small-caps labels instead of
-   Sepia's plain divider, matching the source skin's terminal/marquee feel. */
+/* AO3 direct-reading preface (#ao3SyntheticPreface/#ao3Preface structural
+   rules live in core.css -- this theme only supplies appearance). */
 #ao3SyntheticPreface,
 #ao3Preface {
-	border-bottom-style: dashed;
+	border: 1px solid var(--ao3-preface-border-color);
+	border-radius: 10px;
+	padding: 0.8em 1em 1em 1em;
+	background: #F3E1D6;
 }
 #ao3SyntheticPreface dt,
 #ao3Preface dt {
+	font-family: 'Cormorant Garamond', Georgia, serif;
 	font-variant: small-caps;
+	letter-spacing: 0.03em;
 	color: var(--primary-accent-color);
 }
 
-/* Chapter-fetch-in-progress notice -- styled per theme since core.css
-   doesn't carry this rule (it lives in the default theme's own
-   stylesheet.css, which non-default themes don't inherit). */
 .ao3ChapterFetchNotice {
 	margin: 0 0 1em 0;
 	padding: 0.6em 0.8em;
-	border-left: 3px solid var(--primary-accent-color);
-	background: rgba(43, 172, 4, 0.08);
+	border-left: 3px solid rgba(106, 143, 170, 0.4);
+	background: rgba(106, 143, 170, 0.08);
 	font-size: 0.9em;
 	font-style: italic;
-	color: #cccccc;
+	color: var(--header-color);
 }
 
 /* iOS Specific */
@@ -424,7 +417,7 @@ a.footnote:hover,
 		word-break: break-word;
 		-webkit-hyphens: auto;
 		-webkit-text-size-adjust: none;
-		font-family: Charter, Georgia, sans-serif;
+		font-family: 'EB Garamond', Georgia, serif;
 		font-size: [[font-size]]px;
 	}
 
@@ -449,7 +442,7 @@ a.footnote:hover,
 		margin-bottom: 64px;
 		padding-left: 48px;
 		padding-right: 48px;
-		font-family: Charter, Georgia, sans-serif;
+		font-family: 'EB Garamond', Georgia, serif;
 	}
 
 	.smallText {
@@ -473,11 +466,11 @@ a.footnote:hover,
 	}
 
 	pre {
-		border: 1px solid var(--primary-accent-color);
+		border: 1px solid #4d6c85;
 		padding: 10px;
 	}
 
 	.nnw-overflow table {
-		border: 1px solid var(--primary-accent-color);
+		border: 1px solid #4d6c85;
 	}
 }

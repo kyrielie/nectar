@@ -1,0 +1,257 @@
+/* Kennerley — set in Sorts Mill Goudy, a digitization drawing on Frederic
+   Goudy's Kennerley Old Style and Goudy Old Style. Goudy was America's most
+   prolific type designer of the early 1900s, and his faces defined the
+   look of American Arts & Crafts-era book printing and advertising. */
+
+@import url('https://fonts.googleapis.com/css2?family=Sorts+Mill+Goudy:ital@0;1&display=swap');
+
+:root {
+	--font-main: "Iowan Old Style", Palatino, Georgia, serif;
+	--font-body: 'Sorts Mill Goudy', "Iowan Old Style", Palatino, serif;
+	--font-code: "SF Mono", Menlo, monospace;
+
+	--background-color: #f2e9d6;
+	--text-color: #3c2f1e;
+	--link-color: #6b4a23;
+	--visited-link-color: #82784f;
+	--attribution-color: #8a7a5c;
+	--article-title-color: #2e2313;
+	--body-code-color: #4a3c24;
+	--body-code-background: rgba(0, 0, 0, 0.05);
+	--system-message-color: #c4b48f;
+	--separator-color: #ddccA4;
+	--table-cell-border-color: #ddccA4;
+	--blockquote-border-color: #6b4a23;
+	--blockquote-text-color: rgba(60, 47, 30, 0.75);
+	--blockquote-background: rgba(107, 74, 35, 0.06);
+	--footer-color: #8a7a5c;
+	--pre-background: rgba(0, 0, 0, 0.04);
+	--header-top: #7a5a2e;
+	--header-bottom: #644823;
+	--dateline-bar-top: #4f5e3f;
+	--dateline-bar-bottom: #3f4b32;
+	--press-mark-color: #7a5a2e;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--background-color: #241d12;
+		--text-color: #e8dcc2;
+		--link-color: #c9a468;
+		--visited-link-color: #a6a17c;
+		--attribution-color: #b0a184;
+		--article-title-color: #f2e6cc;
+		--body-code-color: #d1c2a0;
+		--body-code-background: rgba(255, 255, 255, 0.08);
+		--system-message-color: #6b5f44;
+		--separator-color: rgba(255, 255, 255, 0.14);
+		--table-cell-border-color: rgba(255, 255, 255, 0.16);
+		--blockquote-border-color: #c9a468;
+		--blockquote-text-color: rgba(232, 220, 194, 0.78);
+		--blockquote-background: rgba(201, 164, 104, 0.08);
+		--footer-color: #b0a184;
+		--pre-background: rgba(255, 255, 255, 0.06);
+		--header-top: #4a3719;
+		--header-bottom: #392a13;
+		--dateline-bar-top: #303a27;
+		--dateline-bar-bottom: #262e1e;
+		--press-mark-color: #c9a468;
+	}
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--background-color);
+	color: var(--text-color);
+	font-family: var(--font-body);
+	word-wrap: break-word;
+}
+
+/* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
+   the higher-specificity 'body a' rule below still wins the cascade. */
+a {
+	color: var(--link-color);
+}
+
+.articleBody a {
+	color: var(--link-color);
+}
+
+body a, body a * {
+	color: var(--link-color);
+}
+
+body a:visited {
+	color: var(--visited-link-color);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+/* Header bar — walnut-brown gradient */
+
+.headerBar {
+	background: linear-gradient(to bottom, var(--header-top), var(--header-bottom));
+	padding: 14px 0;
+	font-family: var(--font-main);
+	font-size: 1em;
+	font-weight: bold;
+	line-height: 1.4;
+	color: #f2e9d6;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+}
+
+.headerBarInner {
+	display: flex;
+	align-items: center;
+}
+
+.avatar {
+	vertical-align: middle;
+	border-radius: 3px;
+	height: 1.8em !important;
+	width: 1.8em;
+	min-width: 1.8em;
+	margin: 0 !important;
+	margin-right: 0.5em !important;
+}
+
+.headerBar a:link, .headerBar a:visited, .headerBar a, .feedlink {
+	color: #f2e9d6 !important;
+	font-weight: bold;
+}
+
+.byline {
+	color: rgba(242, 233, 214, 0.78);
+	margin-left: 0.5em;
+}
+
+body .byline a:link, .byline a:visited, .byline a {
+	color: rgba(242, 233, 214, 0.78) !important;
+}
+
+/* Content containers */
+
+.barContent, .articleContent {
+	max-width: 42rem;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.articleContent {
+	margin-top: 2em;
+}
+
+/* Dateline bar — moss green gradient */
+
+.datelineBar {
+	background: linear-gradient(to bottom, var(--dateline-bar-top), var(--dateline-bar-bottom));
+	padding: 8px 0;
+	font-family: var(--font-main);
+	font-size: 0.85em;
+	font-weight: bold;
+	line-height: 1.4;
+	color: #f2e9d6;
+}
+
+.datelineBarInner {
+	display: flex;
+	align-items: center;
+}
+
+.datelineDate a:link, .datelineDate a:visited, .datelineDate a {
+	color: #f2e9d6 !important;
+	font-weight: bold;
+}
+
+/* Article title */
+
+.articleTitle {
+	font-family: var(--font-body);
+	font-size: 1.8em;
+	font-weight: bold;
+	line-height: 1.2;
+	margin-top: 0;
+	margin-bottom: 6px;
+	color: var(--article-title-color);
+}
+
+.articleTitle a:link, .articleTitle a:visited, .articleTitle a {
+	color: var(--article-title-color);
+}
+
+.articleTitle a:hover {
+	text-decoration: underline;
+}
+
+.pressMark {
+	text-align: center;
+	color: var(--press-mark-color);
+	font-size: 1.2em;
+	margin-bottom: 18px;
+}
+
+/* Article body */
+
+.articleBody {
+	margin-top: 8px;
+	font-size: 1.1em;
+	line-height: 1.7em;
+}
+
+.articleBody a {
+	text-decoration: underline;
+}
+
+.articleBody p {
+	margin-top: 0;
+	margin-bottom: var(--paragraph-spacing, 1em);
+	text-indent: var(--paragraph-indent, 0);
+}
+
+.articleBody blockquote {
+	border-left: 3px solid var(--blockquote-border-color);
+	background: var(--blockquote-background);
+	color: var(--blockquote-text-color);
+	padding: 0.4em 1em;
+	margin-left: 0;
+	font-style: italic;
+}
+
+.articleBody code, .articleBody pre {
+	font-family: var(--font-code);
+	color: var(--body-code-color);
+	background: var(--body-code-background);
+}
+
+.articleBody pre {
+	background: var(--pre-background);
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.articleBody table {
+	border-collapse: collapse;
+}
+
+.articleBody td, .articleBody th {
+	border: 1px solid var(--table-cell-border-color);
+	padding: 0.4em 0.6em;
+}
+
+/* Footer */
+
+body .footer {
+	margin-top: 28px;
+	margin-bottom: 2em;
+	font-family: var(--font-main);
+	color: var(--footer-color);
+	font-size: 0.85em;
+	font-style: italic;
+}
+
+body .footer a:link, .footer a:visited {
+	color: var(--link-color);
+	text-decoration: underline;
+}

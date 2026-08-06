@@ -18,6 +18,7 @@ struct ArticleTheme: Equatable, Sendable {
 
 	let url: URL?
 	let template: String?
+	let importCSS: String?
 	let css: String?
 	let isAppTheme: Bool
 
@@ -46,7 +47,9 @@ struct ArticleTheme: Equatable, Sendable {
 
 		let corePath = Bundle.main.path(forResource: "core", ofType: "css")!
 		let stylesheetPath = Bundle.main.path(forResource: "stylesheet", ofType: "css")!
-		self.css = Self.stringAtPath(corePath)! + "\n" + Self.stringAtPath(stylesheetPath)!
+		let extraction = CSSImportExtractor.extract(from: Self.stringAtPath(stylesheetPath)!)
+		self.importCSS = extraction.importCSS.nilIfEmpty
+		self.css = Self.stringAtPath(corePath)! + "\n" + extraction.remainingCSS
 
 		let templatePath = Bundle.main.path(forResource: "template", ofType: "html")!
 		self.template = Self.stringAtPath(templatePath)!
@@ -65,8 +68,11 @@ struct ArticleTheme: Equatable, Sendable {
 		let coreURL = Bundle.main.url(forResource: "core", withExtension: "css")!
 		let styleSheetURL = url.appendingPathComponent("stylesheet.css")
 		if let stylesheetCSS = Self.stringAtPath(styleSheetURL.path) {
-			self.css = Self.stringAtPath(coreURL.path)! + "\n" + stylesheetCSS
+			let extraction = CSSImportExtractor.extract(from: stylesheetCSS)
+			self.importCSS = extraction.importCSS.nilIfEmpty
+			self.css = Self.stringAtPath(coreURL.path)! + "\n" + extraction.remainingCSS
 		} else {
+			self.importCSS = nil
 			self.css = nil
 		}
 
@@ -104,5 +110,11 @@ struct ArticleTheme: Equatable, Sendable {
 	static func pathIsPathForThemeName(_ themeName: String, path: String) -> Bool {
 		let filename = (path as NSString).lastPathComponent
 		return filenameWithThemeSuffixRemoved(filename) == themeName
+	}
+}
+
+private extension String {
+	var nilIfEmpty: String? {
+		isEmpty ? nil : self
 	}
 }

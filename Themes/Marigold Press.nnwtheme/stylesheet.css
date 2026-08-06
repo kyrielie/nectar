@@ -1,0 +1,246 @@
+/* Marigold Press — set in Fraunces (Untitled Type Foundry, 2019), a
+   deliberately "wonky" old-style revival referencing early-20th-century
+   American transitional/display faces (Cheltenham, Souvenir) with soft,
+   ink-trap curves — the warm, buttery look of hand-set advertising and
+   letterpress print shops circa 1900-1930. */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&display=swap');
+
+:root {
+	--font-serif: 'Fraunces', Georgia, "Iowan Old Style", serif;
+	--font-sans: -apple-system, Helvetica, Arial, sans-serif;
+	--font-code: "SF Mono", Menlo, monospace;
+
+	--background-color: #faf3e6;
+	--text-color: #3a2a1c;
+	--link-color: #c1633b;
+	--visited-link-color: #7a8f5f;
+	--attribution-color: #8a7660;
+	--article-title-color: #2e2013;
+	--body-code-color: #52402c;
+	--body-code-background: rgba(0, 0, 0, 0.05);
+	--system-message-color: #c7b89c;
+	--separator-color: #e6d8bd;
+	--table-cell-border-color: #e6d8bd;
+	--blockquote-border-color: #3f5c44;
+	--blockquote-text-color: rgba(58, 42, 28, 0.75);
+	--blockquote-background: rgba(63, 92, 68, 0.06);
+	--footer-color: #8a7660;
+	--pre-background: rgba(0, 0, 0, 0.04);
+	--header-top: #d4763f;
+	--header-bottom: #c1633b;
+	--dateline-bar-top: #3f5c44;
+	--dateline-bar-bottom: #324a37;
+	--sunburst-color: #c1633b;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--background-color: #241a12;
+		--text-color: #f0e4d0;
+		--link-color: #e08a5c;
+		--visited-link-color: #9bbf85;
+		--attribution-color: #bda98a;
+		--article-title-color: #f6ecd8;
+		--body-code-color: #d9c7a8;
+		--body-code-background: rgba(255, 255, 255, 0.08);
+		--system-message-color: #6b5c46;
+		--separator-color: rgba(255, 255, 255, 0.14);
+		--table-cell-border-color: rgba(255, 255, 255, 0.16);
+		--blockquote-border-color: #6b8f6f;
+		--blockquote-text-color: rgba(240, 228, 208, 0.78);
+		--blockquote-background: rgba(107, 143, 111, 0.1);
+		--footer-color: #bda98a;
+		--pre-background: rgba(255, 255, 255, 0.06);
+		--header-top: #a4522c;
+		--header-bottom: #8a4223;
+		--dateline-bar-top: #2c4030;
+		--dateline-bar-bottom: #223226;
+		--sunburst-color: #e08a5c;
+	}
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--background-color);
+	color: var(--text-color);
+	font-family: var(--font-serif);
+	font-optical-sizing: auto;
+	word-wrap: break-word;
+}
+
+body a, body a * {
+	color: var(--link-color);
+}
+
+body a:visited {
+	color: var(--visited-link-color);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+/* Header bar — warm marigold gradient */
+
+.headerBar {
+	background: linear-gradient(to bottom, var(--header-top), var(--header-bottom));
+	padding: 14px 0;
+	font-family: var(--font-sans);
+	font-size: 1em;
+	font-weight: bold;
+	line-height: 1.4;
+	color: #faf3e6;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.headerBarInner {
+	display: flex;
+	align-items: center;
+}
+
+.avatar {
+	vertical-align: middle;
+	border-radius: 4px;
+	height: 1.8em !important;
+	width: 1.8em;
+	min-width: 1.8em;
+	margin: 0 !important;
+	margin-right: 0.5em !important;
+}
+
+.headerBar a:link, .headerBar a:visited, .headerBar a, .feedlink {
+	color: #faf3e6 !important;
+	font-weight: bold;
+}
+
+.byline {
+	color: rgba(250, 243, 230, 0.8);
+	margin-left: 0.5em;
+}
+
+body .byline a:link, .byline a:visited, .byline a {
+	color: rgba(250, 243, 230, 0.8) !important;
+}
+
+/* Content containers */
+
+.barContent, .articleContent {
+	max-width: 42rem;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.articleContent {
+	margin-top: 2em;
+}
+
+/* Dateline bar — forest green gradient */
+
+.datelineBar {
+	background: linear-gradient(to bottom, var(--dateline-bar-top), var(--dateline-bar-bottom));
+	padding: 8px 0;
+	font-family: var(--font-sans);
+	font-size: 0.85em;
+	font-weight: bold;
+	line-height: 1.4;
+	color: #faf3e6;
+}
+
+.datelineBarInner {
+	display: flex;
+	align-items: center;
+}
+
+.datelineDate a:link, .datelineDate a:visited, .datelineDate a {
+	color: #faf3e6 !important;
+	font-weight: bold;
+}
+
+/* Article title */
+
+.articleTitle {
+	font-size: 2em;
+	font-weight: 600;
+	font-variation-settings: "SOFT" 60, "opsz" 40;
+	line-height: 1.15;
+	margin-top: 0;
+	margin-bottom: 4px;
+	color: var(--article-title-color);
+}
+
+.articleTitle a:link, .articleTitle a:visited, .articleTitle a {
+	color: var(--article-title-color);
+}
+
+.articleTitle a:hover {
+	text-decoration: underline;
+}
+
+.sunburst {
+	text-align: center;
+	color: var(--sunburst-color);
+	font-size: 1em;
+	margin-bottom: 18px;
+}
+
+/* Article body */
+
+.articleBody {
+	margin-top: 8px;
+	font-size: 1.06em;
+	line-height: 1.7em;
+}
+
+.articleBody a {
+	text-decoration: underline;
+}
+
+.articleBody p {
+	margin-bottom: 1em;
+}
+
+.articleBody blockquote {
+	border-left: 3px solid var(--blockquote-border-color);
+	background: var(--blockquote-background);
+	color: var(--blockquote-text-color);
+	padding: 0.4em 1em;
+	margin-left: 0;
+}
+
+.articleBody code, .articleBody pre {
+	font-family: var(--font-code);
+	color: var(--body-code-color);
+	background: var(--body-code-background);
+}
+
+.articleBody pre {
+	background: var(--pre-background);
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.articleBody table {
+	border-collapse: collapse;
+}
+
+.articleBody td, .articleBody th {
+	border: 1px solid var(--table-cell-border-color);
+	padding: 0.4em 0.6em;
+}
+
+/* Footer */
+
+body .footer {
+	margin-top: 28px;
+	margin-bottom: 2em;
+	font-family: var(--font-sans);
+	color: var(--footer-color);
+	font-size: 0.85em;
+	font-style: italic;
+}
+
+body .footer a:link, .footer a:visited {
+	color: var(--link-color);
+	text-decoration: underline;
+}

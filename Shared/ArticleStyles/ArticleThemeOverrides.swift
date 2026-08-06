@@ -28,6 +28,8 @@ struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 	var fontFamilyName: String?
 	var fontSize: Double?
 	var lineHeight: Double?
+	var paragraphSpacing: Double?  // em
+	var paragraphIndent: Double?   // em
 	var textColorHex: String?
 	var textColorDarkHex: String?
 	var backgroundColorHex: String?
@@ -35,10 +37,12 @@ struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 	var linkColorHex: String?
 	var linkColorDarkHex: String?
 
-	init(fontFamilyName: String? = nil, fontSize: Double? = nil, lineHeight: Double? = nil, textColorHex: String? = nil, textColorDarkHex: String? = nil, backgroundColorHex: String? = nil, backgroundColorDarkHex: String? = nil, linkColorHex: String? = nil, linkColorDarkHex: String? = nil) {
+	init(fontFamilyName: String? = nil, fontSize: Double? = nil, lineHeight: Double? = nil, paragraphSpacing: Double? = nil, paragraphIndent: Double? = nil, textColorHex: String? = nil, textColorDarkHex: String? = nil, backgroundColorHex: String? = nil, backgroundColorDarkHex: String? = nil, linkColorHex: String? = nil, linkColorDarkHex: String? = nil) {
 		self.fontFamilyName = fontFamilyName
 		self.fontSize = fontSize
 		self.lineHeight = lineHeight
+		self.paragraphSpacing = paragraphSpacing
+		self.paragraphIndent = paragraphIndent
 		self.textColorHex = textColorHex
 		self.textColorDarkHex = textColorDarkHex
 		self.backgroundColorHex = backgroundColorHex
@@ -48,7 +52,7 @@ struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 	}
 
 	var isEmpty: Bool {
-		fontFamilyName == nil && fontSize == nil && lineHeight == nil
+		fontFamilyName == nil && fontSize == nil && lineHeight == nil && paragraphSpacing == nil && paragraphIndent == nil
 			&& textColorHex == nil && textColorDarkHex == nil
 			&& backgroundColorHex == nil && backgroundColorDarkHex == nil
 			&& linkColorHex == nil && linkColorDarkHex == nil
@@ -58,6 +62,8 @@ struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 	/// either becomes unreadable or the layout breaks down (long lines, clipped chrome).
 	static let fontSizeRange: ClosedRange<Double> = 12...32
 	static let lineHeightRange: ClosedRange<Double> = 1.0...2.2
+	static let paragraphSpacingRange: ClosedRange<Double> = 0...3.0
+	static let paragraphIndentRange: ClosedRange<Double> = 0...3.0
 
 	/// CSS appended after the current theme's own stylesheet. `!important` is required
 	/// here, not just convenient: this has to win regardless of the specificity or
@@ -100,6 +106,16 @@ struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		var css = ""
 		if !bodyDeclarations.isEmpty {
 			css += "body, .articleBody {\n\t\(bodyDeclarations.joined(separator: "\n\t"))\n}\n"
+		}
+		var paragraphDeclarations = [String]()
+		if let paragraphSpacing {
+			paragraphDeclarations.append("margin-bottom: \(paragraphSpacing)em !important;")
+		}
+		if let paragraphIndent {
+			paragraphDeclarations.append("text-indent: \(paragraphIndent)em !important;")
+		}
+		if !paragraphDeclarations.isEmpty {
+			css += ".articleBody p {\n\t\(paragraphDeclarations.joined(separator: "\n\t"))\n}\n"
 		}
 		if let linkColorHex {
 			css += "a, a:link, a:visited, .articleBody a, .articleBody a:link, .articleBody a:visited {\n\tcolor: \(linkColorHex) !important;\n}\n"

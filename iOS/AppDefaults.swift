@@ -144,6 +144,69 @@ enum AccentColor: Int, CaseIterable, Sendable {
 	}
 }
 
+/// Tints the five native-chrome surface colors (bar/control/fullScreen/sectionHeader
+/// backgrounds, plus the vibrant-text tint) as a set, independent of AccentColor --
+/// this affects UIKit chrome backgrounds, never the WKWebView article content, and
+/// deliberately stays a separate picker rather than merging into AccentColor's
+/// contract (which today only tints icons/progress fill, never backgrounds). See
+/// Technotes/Themes.md's native-surface-color section for the reasoning.
+///
+/// `.default` preserves the existing colorset values unchanged, same contract as
+/// AccentColor.default. Starts with a single alternative (.slate) rather than a full
+/// palette -- grow this the same incremental way AccentColor grew from its own
+/// starting set, once there's a second real design to validate against.
+enum SurfaceTint: Int, CaseIterable, Sendable {
+	case `default` = 0
+	case slate = 1
+
+	var description: String {
+		switch self {
+		case .default:
+			return NSLocalizedString("Default", comment: "Default surface tint")
+		case .slate:
+			return NSLocalizedString("Slate", comment: "Slate surface tint")
+		}
+	}
+
+	struct HexSet {
+		var barBackground: String
+		var controlBackground: String
+		var fullScreenBackground: String
+		var sectionHeader: String
+		var vibrantText: String
+	}
+
+	/// nil for `.default` -- same "fall back to the asset catalog" contract as
+	/// AccentColor.primaryHex/secondaryHex.
+	var lightHexSet: HexSet? {
+		switch self {
+		case .default: return nil
+		case .slate:
+			return HexSet(
+				barBackground: "#E4E7EB",
+				controlBackground: "#EEF0F3",
+				fullScreenBackground: "#1C2128",
+				sectionHeader: "#5A6472",
+				vibrantText: "#F5F6F8"
+			)
+		}
+	}
+
+	var darkHexSet: HexSet? {
+		switch self {
+		case .default: return nil
+		case .slate:
+			return HexSet(
+				barBackground: "#20242B",
+				controlBackground: "#262B33",
+				fullScreenBackground: "#0B0D10",
+				sectionHeader: "#8A94A3",
+				vibrantText: "#F5F6F8"
+			)
+		}
+	}
+}
+
 enum PageCounterDisplayMode: String, CaseIterable, Sendable {
 	case off
 	case percentage
@@ -157,6 +220,7 @@ extension Notification.Name {
 	public static let timelineTagDisplayModeDidChange = Notification.Name("TimelineTagDisplayModeDidChangeNotification")
 	public static let badgeColorModeDidChange = Notification.Name("BadgeColorModeDidChangeNotification")
 	public static let accentColorDidChange = Notification.Name("AccentColorDidChangeNotification")
+	public static let surfaceTintDidChange = Notification.Name("SurfaceTintDidChangeNotification")
 	public static let statsVisibilityDidChange = Notification.Name("StatsVisibilityDidChangeNotification")
 	public static let articleThemeOverridesDidChange = Notification.Name("ArticleThemeOverridesDidChangeNotification")
 }
@@ -182,6 +246,7 @@ final class AppDefaults: Sendable {
 		static let timelineTagDisplayMode = "timelineTagDisplayMode"
 		static let badgeColorMode = "badgeColorMode"
 		static let accentColor = "accentColor"
+		static let surfaceTint = "surfaceTint"
 		static let statsVisible = "statsVisible"
 		static let timelineSortDirection = "timelineSortDirection"
 		static let timelineSortField = "timelineSortField"
@@ -570,6 +635,17 @@ final class AppDefaults: Sendable {
 		set {
 			AppDefaults.store.set(newValue.rawValue, forKey: Key.accentColor)
 			NotificationCenter.default.post(name: .accentColorDidChange, object: nil)
+		}
+	}
+
+	var surfaceTint: SurfaceTint {
+		get {
+			let rawValue = AppDefaults.store.integer(forKey: Key.surfaceTint)
+			return SurfaceTint(rawValue: rawValue) ?? .default
+		}
+		set {
+			AppDefaults.store.set(newValue.rawValue, forKey: Key.surfaceTint)
+			NotificationCenter.default.post(name: .surfaceTintDidChange, object: nil)
 		}
 	}
 

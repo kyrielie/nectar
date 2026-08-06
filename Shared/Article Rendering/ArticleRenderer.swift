@@ -18,7 +18,7 @@ import os
 
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticleRenderer")
 
-	typealias Rendering = (style: String, html: String, title: String, baseURL: String)
+	typealias Rendering = (importStyle: String, style: String, html: String, title: String, baseURL: String)
 
 	struct Page {
 		let url: URL
@@ -148,27 +148,27 @@ import os
 
 	static func articleHTML(article: Article, theme: ArticleTheme, timelineFeed: SidebarItem? = nil) -> Rendering {
 		let renderer = ArticleRenderer(article: article, theme: theme, timelineFeed: timelineFeed)
-		return (renderer.articleCSS, renderer.articleHTML, renderer.title, renderer.baseURL ?? "")
+		return (renderer.importStyle, renderer.articleCSS, renderer.articleHTML, renderer.title, renderer.baseURL ?? "")
 	}
 
 	static func multipleSelectionHTML(theme: ArticleTheme) -> Rendering {
 		let renderer = ArticleRenderer(article: nil, theme: theme)
-		return (renderer.articleCSS, renderer.multipleSelectionHTML, renderer.title, renderer.baseURL ?? "")
+		return (renderer.importStyle, renderer.articleCSS, renderer.multipleSelectionHTML, renderer.title, renderer.baseURL ?? "")
 	}
 
 	static func loadingHTML(theme: ArticleTheme) -> Rendering {
 		let renderer = ArticleRenderer(article: nil, theme: theme)
-		return (renderer.articleCSS, renderer.loadingHTML, renderer.title, renderer.baseURL ?? "")
+		return (renderer.importStyle, renderer.articleCSS, renderer.loadingHTML, renderer.title, renderer.baseURL ?? "")
 	}
 
 	static func noSelectionHTML(theme: ArticleTheme) -> Rendering {
 		let renderer = ArticleRenderer(article: nil, theme: theme)
-		return (renderer.articleCSS, renderer.noSelectionHTML, renderer.title, renderer.baseURL ?? "")
+		return (renderer.importStyle, renderer.articleCSS, renderer.noSelectionHTML, renderer.title, renderer.baseURL ?? "")
 	}
 
 	static func noContentHTML(theme: ArticleTheme) -> Rendering {
 		let renderer = ArticleRenderer(article: nil, theme: theme)
-		return (renderer.articleCSS, renderer.noContentHTML, renderer.title, renderer.baseURL ?? "")
+		return (renderer.importStyle, renderer.articleCSS, renderer.noContentHTML, renderer.title, renderer.baseURL ?? "")
 	}
 }
 
@@ -201,6 +201,18 @@ private extension ArticleRenderer {
 
 	private var articleCSS: String {
 		return try! MacroProcessor.renderedText(withTemplate: styleString(), substitutions: styleSubstitutions())
+	}
+
+	private var importStyle: String {
+		guard let importCSS = articleTheme.importCSS, !importCSS.isEmpty else {
+			return ""
+		}
+
+		return """
+		<style>
+			\(importCSS)
+		</style>
+		"""
 	}
 
 	static var defaultStyleSheet: String = {
@@ -507,4 +519,3 @@ private extension ArticleRenderer {
 		return AO3PrefaceRenderer.html(id: "ao3SyntheticPreface", data: AO3PrefaceData(rows: rows, statsRows: statsRows))
 	}
 }
-

@@ -29,6 +29,7 @@ final class SettingsViewController: UITableViewController {
 	private enum AppearanceRow: Int, CaseIterable {
 		case colorPalette = 0
 		case accentColor = 1
+		case surfaceTint = 2
 	}
 
 	private enum TroubleshootingRow: Int {
@@ -93,6 +94,7 @@ final class SettingsViewController: UITableViewController {
 	@IBOutlet var disableArticleLinksSwitch: UISwitch!
 	@IBOutlet var colorPaletteDetailLabel: UILabel!
 	@IBOutlet var accentColorDetailLabel: UILabel!
+	@IBOutlet var surfaceTintDetailLabel: UILabel!
 	@IBOutlet var openLinksInNetNewsWire: UISwitch!
 
 	var scrollToArticlesSection = false
@@ -154,6 +156,7 @@ final class SettingsViewController: UITableViewController {
 
 		colorPaletteDetailLabel.text = String(describing: AppDefaults.userInterfaceColorPalette)
 		accentColorDetailLabel.text = AppDefaults.shared.accentColor.description
+		surfaceTintDetailLabel.text = AppDefaults.shared.surfaceTint.description
 
 		openLinksInNetNewsWire.isOn = !AppDefaults.shared.useSystemBrowser
 
@@ -274,6 +277,9 @@ final class SettingsViewController: UITableViewController {
 			case .accentColor:
 				let accentColor = UIStoryboard.settings.instantiateController(ofType: AccentColorTableViewController.self)
 				self.navigationController?.pushViewController(accentColor, animated: true)
+			case .surfaceTint:
+				let surfaceTint = UIStoryboard.settings.instantiateController(ofType: SurfaceTintTableViewController.self)
+				self.navigationController?.pushViewController(surfaceTint, animated: true)
 			case nil:
 				break
 			}

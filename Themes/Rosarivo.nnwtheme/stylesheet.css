@@ -1,0 +1,258 @@
+/* Rosarivo — designed by Nicolás Silva (Argentina), an oldstyle serif with
+   the low-contrast, slightly bouncy warmth of mid-20th-century Latin
+   American small-press book typography. --font-main is UI chrome
+   (headerBar/datelineBar/byline/footer); --font-body is .articleBody prose;
+   --font-code is code/pre, following the Hyperlegible convention. */
+
+@import url('https://fonts.googleapis.com/css2?family=Rosarivo:ital@0;1&display=swap');
+
+:root {
+	--font-main: 'Rosarivo', Palatino, Georgia, serif;
+	--font-body: 'Rosarivo', Palatino, Georgia, serif;
+	--font-code: "SF Mono", Menlo, monospace;
+
+	--background-color: #f6ede2;
+	--text-color: #3a2418;
+	--link-color: #a4442a;
+	--visited-link-color: #7a5a3a;
+	--attribution-color: #8a7160;
+	--article-title-color: #2c1b10;
+	--body-code-color: #4a3324;
+	--body-code-background: rgba(0, 0, 0, 0.05);
+	--system-message-color: #c2ab92;
+	--separator-color: #e2d0b8;
+	--table-cell-border-color: #e2d0b8;
+	--blockquote-border-color: #a4442a;
+	--blockquote-text-color: rgba(58, 36, 24, 0.75);
+	--blockquote-background: rgba(164, 68, 42, 0.06);
+	--footer-color: #8a7160;
+	--pre-background: rgba(0, 0, 0, 0.04);
+	--header-top: #b4522f;
+	--header-bottom: #983f24;
+	--dateline-bar-top: #6e5133;
+	--dateline-bar-bottom: #5a4128;
+	--colophon-rule-color: #a4442a;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--background-color: #221810;
+		--text-color: #ecdfcd;
+		--link-color: #e0916f;
+		--visited-link-color: #c4a980;
+		--attribution-color: #b3a088;
+		--article-title-color: #f4e9d8;
+		--body-code-color: #d6c4a8;
+		--body-code-background: rgba(255, 255, 255, 0.08);
+		--system-message-color: #6b5b47;
+		--separator-color: rgba(255, 255, 255, 0.14);
+		--table-cell-border-color: rgba(255, 255, 255, 0.16);
+		--blockquote-border-color: #e0916f;
+		--blockquote-text-color: rgba(236, 223, 205, 0.78);
+		--blockquote-background: rgba(224, 145, 111, 0.08);
+		--footer-color: #b3a088;
+		--pre-background: rgba(255, 255, 255, 0.06);
+		--header-top: #6e3520;
+		--header-bottom: #582a19;
+		--dateline-bar-top: #453423;
+		--dateline-bar-bottom: #362a1b;
+		--colophon-rule-color: #e0916f;
+	}
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--background-color);
+	color: var(--text-color);
+	font-family: var(--font-body);
+	word-wrap: break-word;
+}
+
+/* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
+   the higher-specificity 'body a' rule below still wins the cascade. */
+a {
+	color: var(--link-color);
+}
+
+.articleBody a {
+	color: var(--link-color);
+}
+
+body a, body a * {
+	color: var(--link-color);
+}
+
+body a:visited {
+	color: var(--visited-link-color);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+/* Header bar — terracotta gradient */
+
+.headerBar {
+	background: linear-gradient(to bottom, var(--header-top), var(--header-bottom));
+	padding: 14px 0;
+	font-family: var(--font-main);
+	font-size: 1em;
+	font-weight: bold;
+	line-height: 1.4;
+	color: #f6ede2;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+}
+
+.headerBarInner {
+	display: flex;
+	align-items: center;
+}
+
+.avatar {
+	vertical-align: middle;
+	border-radius: 3px;
+	height: 1.8em !important;
+	width: 1.8em;
+	min-width: 1.8em;
+	margin: 0 !important;
+	margin-right: 0.5em !important;
+}
+
+.headerBar a:link, .headerBar a:visited, .headerBar a, .feedlink {
+	color: #f6ede2 !important;
+	font-weight: bold;
+}
+
+.byline {
+	color: rgba(246, 237, 226, 0.78);
+	margin-left: 0.5em;
+}
+
+body .byline a:link, .byline a:visited, .byline a {
+	color: rgba(246, 237, 226, 0.78) !important;
+}
+
+/* Content containers */
+
+.barContent, .articleContent {
+	max-width: 42rem;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.articleContent {
+	margin-top: 2em;
+}
+
+/* Dateline bar — muted brown gradient */
+
+.datelineBar {
+	background: linear-gradient(to bottom, var(--dateline-bar-top), var(--dateline-bar-bottom));
+	padding: 8px 0;
+	font-family: var(--font-main);
+	font-size: 0.85em;
+	font-weight: bold;
+	line-height: 1.4;
+	color: #f6ede2;
+}
+
+.datelineBarInner {
+	display: flex;
+	align-items: center;
+}
+
+.datelineDate a:link, .datelineDate a:visited, .datelineDate a {
+	color: #f6ede2 !important;
+	font-weight: bold;
+}
+
+/* Article title */
+
+.articleTitle {
+	font-family: var(--font-body);
+	font-size: 1.8em;
+	font-weight: bold;
+	line-height: 1.2;
+	margin-top: 0;
+	margin-bottom: 10px;
+	color: var(--article-title-color);
+}
+
+.articleTitle a:link, .articleTitle a:visited, .articleTitle a {
+	color: var(--article-title-color);
+}
+
+.articleTitle a:hover {
+	text-decoration: underline;
+}
+
+.colophonRule {
+	height: 1px;
+	background: var(--colophon-rule-color);
+	opacity: 0.5;
+	margin-bottom: 20px;
+}
+
+/* Article body */
+
+.articleBody {
+	margin-top: 8px;
+	font-size: 1.08em;
+	line-height: 1.7em;
+}
+
+.articleBody a {
+	text-decoration: underline;
+}
+
+.articleBody p {
+	margin-top: 0;
+	margin-bottom: var(--paragraph-spacing, 1em);
+	text-indent: var(--paragraph-indent, 0);
+}
+
+.articleBody blockquote {
+	border-left: 3px solid var(--blockquote-border-color);
+	background: var(--blockquote-background);
+	color: var(--blockquote-text-color);
+	padding: 0.4em 1em;
+	margin-left: 0;
+	font-style: italic;
+}
+
+.articleBody code, .articleBody pre {
+	font-family: var(--font-code);
+	color: var(--body-code-color);
+	background: var(--body-code-background);
+}
+
+.articleBody pre {
+	background: var(--pre-background);
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.articleBody table {
+	border-collapse: collapse;
+}
+
+.articleBody td, .articleBody th {
+	border: 1px solid var(--table-cell-border-color);
+	padding: 0.4em 0.6em;
+}
+
+/* Footer */
+
+body .footer {
+	margin-top: 28px;
+	margin-bottom: 2em;
+	font-family: var(--font-main);
+	color: var(--footer-color);
+	font-size: 0.85em;
+	font-style: italic;
+}
+
+body .footer a:link, .footer a:visited {
+	color: var(--link-color);
+	text-decoration: underline;
+}

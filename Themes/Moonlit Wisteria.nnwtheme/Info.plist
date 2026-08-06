@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Name</key>
+	<string>Moonlit Wisteria</string>
+	<key>ThemeIdentifier</key>
+	<string>com.nectar.themes.moonlitwisteria</string>
+	<key>CreatorHomePage</key>
+	<string>https://github.com/intothisshadow</string>
+	<key>CreatorName</key>
+	<string>Palette inspired by intothisshadow's "Moonlit Wisteria" AO3 site skin (no LICENSE file in source repo -- values reimplemented independently from the published :root palette, not copied verbatim; credited by name/author page rather than relying on a license grant)</string>
+	<key>Version</key>
+	<integer>1</integer>
+</dict>
+</plist>
