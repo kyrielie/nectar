@@ -56,6 +56,14 @@ hr {
 	border: 1.5px solid dimgrey;
 }
 
+/* ArticleThemeColorExtractor.exactSelectorValue only matches an exact `a` or
+   `.articleBody a` selector in a comma-split selector list -- `body a, ...`
+   alone is invisible to it. Additive-only: higher-specificity `body a` below
+   still wins the cascade, this just gives the extractor something to find. */
+a {
+	color: #bbb8b7;
+}
+
 body a,
 body a:visited {
 	color:  #bbb8b7;

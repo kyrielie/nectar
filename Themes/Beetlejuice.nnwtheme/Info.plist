@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Name</key>
+	<string>Beetlejuice</string>
+	<key>ThemeIdentifier</key>
+	<string>com.nectar.themes.beetlejuice</string>
+	<key>CreatorHomePage</key>
+	<string>https://github.com/NCFC-Wiki/Beetlejuice-theme-for-AO3</string>
+	<key>CreatorName</key>
+	<string>Ported from the AO3 skin "Beetlejuice" (MIT licensed)</string>
+	<key>Version</key>
+	<integer>1</integer>
+</dict>
+</plist>

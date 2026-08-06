@@ -1,0 +1,508 @@
+/* Vintage Letter Green -- ported from the AO3 workskin "Vintage Letter
+   Green" (github.com/Wolfbatcat/Vintage-Letter-Green-AO3-Skin, MIT
+   licensed). That skin is a whole-site overlay built around a fixed
+   background photograph and cream (#fdfaec) card panels floating on it;
+   there's no article-reading-page equivalent of a floating photo backdrop
+   here, so what's ported is its actual palette and character -- warm
+   cream paper, brown "ink" text and links, sage-green trim, small-caps
+   section labels, soft rounded corners -- rather than a literal recolor.
+
+   Unlike Sepia/Ember/Beetlejuice (single-mode), this one follows
+   Biblioteca's pattern: real light/dark split via
+   `@media (prefers-color-scheme: dark)`, since ArticleThemeColorExtractor
+   specifically knows how to read that block for a theme's dark colors.
+   The source skin is light-only; the dark variant here is this theme's own
+   invention (aged parchment-on-ink instead of cream-on-white), keeping the
+   same brown/sage character rather than falling back to a generic dark
+   palette.
+
+   Custom template.html: this theme uses its own header/title/dateline/body
+   markup (letter-header/letter-seal/letter-source/letter-byline/
+   letter-title/letter-dateline/letter-flourish/letter-body) instead of
+   Sepia's headerTable layout or Biblioteca's header-container -- it's
+   framed as a letter rather than an article: return-address-style header,
+   an ornamental flourish standing in for a wax-seal divider, and a drop
+   cap opening the body. #bodyContainer keeps the plain `articleBody` class
+   (not letter-body alone) so it stays inside ArticleThemeOverrides' and
+   ArticleThemeColorExtractor's `.articleBody`-targeted selectors. */
+
+:root {
+	--paper-color: #fdfaec;
+	--ink-color: #3b2a13;
+	--ink-muted: #6b5a3a;
+	--link-color: #57310d;
+	--link-hover-color: #6b7c2e;
+	--sage-color: #8a9e5e;
+	--sage-border: #cadab2;
+	--rule-color: #cadab2;
+	--code-color: #4a5c22;
+	--font-serif: Georgia, "Iowan Old Style", Charter, serif;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper-color: #1b1a13;
+		--ink-color: #e8e2c9;
+		--ink-muted: #b9ae8a;
+		--link-color: #cddba0;
+		--link-hover-color: #f2e6b8;
+		--sage-color: #9db56e;
+		--sage-border: #3c4a2c;
+		--rule-color: #3c4a2c;
+		--code-color: #cddba0;
+	}
+}
+
+body {
+	margin-left: auto;
+	margin-right: auto;
+	word-wrap: break-word;
+	max-width: 42em;
+	background-color: var(--paper-color);
+	color: var(--ink-color);
+	font-family: var(--font-serif);
+}
+
+a {
+	color: var(--link-color);
+}
+[href] {
+	text-decoration-line: underline;
+	text-decoration-style: dotted;
+	text-decoration-color: var(--sage-color);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.15em;
+}
+[href]:hover {
+	color: var(--link-hover-color);
+	text-decoration-style: solid;
+}
+
+#nnwImageIcon {
+	width: 32px;
+	height: 32px;
+	margin-right: 0.2em;
+}
+
+.systemMessage {
+	position: absolute;
+	top: 45%;
+	left: 50%;
+	transform: translateX(-55%) translateY(-50%);
+	-webkit-user-select: none;
+	cursor: default;
+	font-family: var(--font-serif);
+	color: var(--ink-muted);
+}
+
+/* Header, framed as a return address rather than a feed byline row. */
+.letter-header {
+	display: flex;
+	align-items: center;
+	gap: 0.6em;
+	border-bottom: 1px dashed var(--rule-color);
+	padding-bottom: 0.6em;
+	margin-bottom: 0.4em;
+	font-variant: small-caps;
+	letter-spacing: 0.03em;
+	color: var(--ink-muted);
+}
+.letter-seal {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	border: 1px solid var(--sage-border);
+	flex-shrink: 0;
+}
+.letter-source {
+	text-decoration: none;
+	color: var(--ink-muted);
+	font-weight: bold;
+}
+.letter-source:hover {
+	color: var(--link-hover-color);
+}
+.letter-byline {
+	color: var(--ink-muted);
+	font-size: 0.85em;
+}
+.letter-byline::before {
+	content: "\2014 ";
+}
+.letter-byline:empty::before {
+	content: "";
+}
+
+.letter-title {
+	margin-top: 22px;
+}
+.letter-title h1 {
+	line-height: 1.2em;
+	font-weight: bold;
+	margin-bottom: 4px;
+}
+.letter-title [href] {
+	text-decoration-color: transparent;
+	color: var(--ink-color);
+}
+
+.letter-dateline {
+	margin-bottom: 5px;
+	font-variant: small-caps;
+	letter-spacing: 0.03em;
+	color: var(--ink-muted);
+}
+.letter-dateline [href] {
+	text-decoration-color: transparent;
+	color: var(--ink-muted);
+}
+
+.externalLink {
+	margin-bottom: 5px;
+	font-style: italic;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: var(--ink-muted);
+}
+
+/* Stands in for the wax-seal divider the source skin's decorative header
+   images did -- a plain Unicode flourish keeps this dependency-free (no
+   network image fetch a theme bundle can't ship). */
+.letter-flourish {
+	text-align: center;
+	color: var(--sage-color);
+	font-size: 1.1em;
+	margin: 14px 0 18px 0;
+}
+
+.articleBody {
+	margin-top: 4px;
+	line-height: 1.65em;
+}
+
+/* Drop cap on the body's opening letter -- the one purely typographic
+   flourish that has no equivalent in any bundled theme yet. Scoped to the
+   body's first direct-child paragraph only, so it doesn't fire again on
+   quoted/blockquoted text or after an inline image. */
+.articleBody > p:first-of-type::first-letter {
+	font-family: var(--font-serif);
+	font-size: 2.6em;
+	font-weight: bold;
+	float: left;
+	line-height: 0.85;
+	padding-right: 0.08em;
+	padding-top: 0.05em;
+	color: var(--sage-color);
+}
+
+h1 {
+	line-height: 1.15em;
+	font-weight: bold;
+	padding-bottom: 0;
+	margin-bottom: 5px;
+}
+
+pre {
+	max-width: 100%;
+	margin: 0;
+	overflow: auto;
+	overflow-y: hidden;
+	word-wrap: normal;
+	word-break: normal;
+	line-height: 1.4286em;
+}
+
+code,
+pre {
+	font-family: "SF Mono", Menlo, "Courier New", Courier, monospace;
+	font-size: 0.85rem;
+	letter-spacing: -0.027em;
+	-webkit-hyphens: none;
+	color: var(--code-color);
+}
+
+.nnw-overflow {
+	overflow-x: auto;
+}
+
+.nnw-overflow table {
+	margin-bottom: 1px;
+	border-spacing: 0;
+	border: 1px solid var(--sage-border);
+	font-size: inherit;
+	border-radius: 6px;
+}
+
+.nnw-overflow table table {
+	margin-bottom: 0;
+	border: none;
+}
+
+.nnw-overflow td,
+.nnw-overflow th {
+	-webkit-hyphens: none;
+	word-break: normal;
+	border: 1px solid var(--sage-border);
+	border-top: none;
+	border-left: none;
+	padding: 5px;
+}
+
+.nnw-overflow tr :matches(td, th):last-child {
+	border-right: none;
+}
+
+.nnw-overflow
+	:matches(thead, tbody, tfoot):last-child
+	> tr:last-child
+	:matches(td, th) {
+	border-bottom: none;
+}
+
+.nnw-overflow td pre {
+	border: none;
+	padding: 0;
+}
+
+.nnw-overflow table[border="0"] {
+	border-width: 0;
+}
+
+img,
+figure,
+video,
+div,
+object {
+	max-width: 100%;
+	height: auto !important;
+	margin: 0 auto;
+}
+
+iframe {
+	max-width: 100%;
+	margin: 0 auto;
+}
+
+iframe.nnw-constrained {
+	max-height: 50vw;
+}
+
+figure {
+	margin-bottom: 1em;
+	margin-top: 1em;
+}
+
+figcaption {
+	font-size: 14px;
+	line-height: 1.3em;
+	color: var(--ink-muted);
+	font-style: italic;
+}
+
+sup {
+	vertical-align: top;
+	position: relative;
+	bottom: 0.2rem;
+}
+
+sub {
+	vertical-align: bottom;
+	position: relative;
+	top: 0.2rem;
+}
+
+hr {
+	border: none;
+	border-top: 1px dashed var(--rule-color);
+}
+
+.iframeWrap {
+	position: relative;
+	display: block;
+	padding-top: 56.25%;
+}
+
+.iframeWrap iframe {
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 100% !important;
+	width: 100% !important;
+}
+
+/* Rounded "pasted-in card" look for quoted letters-within-letters, echoing
+   the source skin's rounded-card modules (.news.index.group li.post.group
+   etc.) rather than a plain rule border. */
+blockquote {
+	margin: 0 0 1em 0;
+	padding: 0.6em 1em;
+	background: color-mix(in srgb, var(--paper-color), var(--sage-color) 6%);
+	border: 1px solid var(--sage-border);
+	border-radius: 8px;
+}
+
+/* Feed Specific */
+
+.feedbin--article-wrap {
+	border-top: 1px dashed var(--rule-color);
+}
+
+/* Twitter */
+
+.twitterAvatar {
+	vertical-align: middle;
+	border-radius: 4px;
+	height: 1.7em;
+	width: 1.7em;
+}
+
+.twitterUsername {
+	line-height: 1.2;
+	margin-left: 4px;
+	display: inline-block;
+	vertical-align: middle;
+}
+
+.twitterScreenName {
+	font-size: 66%;
+}
+
+.twitterTimestamp {
+	font-size: 66%;
+}
+
+/* Newsfoot theme */
+.newsfoot-footnote-popover {
+	background: var(--paper-color);
+	box-shadow: 0 2px 4px rgba(87, 49, 13, 0.2), 0 3px 6px rgba(87, 49, 13, 0.1);
+	color: var(--ink-color);
+	padding: 1px;
+	border-radius: 6px;
+}
+
+.newsfoot-footnote-popover-arrow {
+	background: var(--paper-color);
+	border: 1px solid var(--sage-border);
+}
+
+.newsfoot-footnote-popover-inner {
+	background: var(--paper-color);
+	border-radius: 6px;
+}
+
+body a.footnote,
+body a.footnote:visited,
+.newsfoot-footnote-popover + a.footnote:hover {
+	background: var(--sage-border);
+	color: var(--ink-color);
+	text-decoration: none;
+	border-radius: 3px;
+	transition: background-color 200ms ease-out;
+}
+
+a.footnote:hover,
+.newsfoot-footnote-popover + a.footnote {
+	background: var(--sage-color);
+	color: var(--paper-color);
+	text-decoration: none;
+	border-radius: 3px;
+	transition: background-color 200ms ease-out;
+}
+
+/* AO3 direct-reading preface -- rounded cream card with a dashed sage
+   border and small-caps labels instead of core.css's plain bottom rule,
+   echoing the source skin's rounded panel-on-paper look. */
+#ao3SyntheticPreface,
+#ao3Preface {
+	border: 1px dashed var(--rule-color);
+	border-radius: 8px;
+	padding: 0.8em 1em 1em 1em;
+	background: color-mix(in srgb, var(--paper-color), var(--sage-color) 4%);
+}
+#ao3SyntheticPreface dt,
+#ao3Preface dt {
+	font-variant: small-caps;
+	letter-spacing: 0.02em;
+	color: var(--ink-muted);
+}
+
+.ao3ChapterFetchNotice {
+	margin: 0 0 1em 0;
+	padding: 0.6em 0.8em;
+	border: 1px dashed var(--rule-color);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--paper-color), var(--sage-color) 4%);
+	font-size: 0.9em;
+	font-style: italic;
+	color: var(--ink-muted);
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+
+		word-break: break-word;
+		-webkit-hyphens: auto;
+		-webkit-text-size-adjust: none;
+		font-size: [[font-size]]px;
+	}
+
+	.letter-title h1 {
+		font-size: 1.5em;
+	}
+
+	pre {
+		border: 1px solid var(--sage-border);
+		padding: 5px;
+		border-radius: 6px;
+	}
+
+	.nnw-overflow table {
+		border: 1px solid var(--sage-border);
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+	}
+
+	.smallText {
+		font-size: 14px;
+	}
+
+	.mediumText {
+		font-size: 16px;
+	}
+
+	.largeText {
+		font-size: 18px;
+	}
+
+	.xlargeText {
+		font-size: 20px;
+	}
+
+	.xxlargeText {
+		font-size: 22px;
+	}
+
+	pre {
+		border: 1px solid var(--sage-border);
+		padding: 10px;
+		border-radius: 6px;
+	}
+
+	.nnw-overflow table {
+		border: 1px solid var(--sage-border);
+	}
+}

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Name</key>
+	<string>Constellations</string>
+	<key>ThemeIdentifier</key>
+	<string>com.nectar.themes.constellations</string>
+	<key>CreatorHomePage</key>
+	<string>https://github.com/lolisleepy/constellations-ao3-skin</string>
+	<key>CreatorName</key>
+	<string>Palette inspired by lolisleepy's "Constellations" AO3 workskin (unlicensed -- values reimplemented independently, not copied verbatim; credited by name/link rather than relying on a license grant)</string>
+	<key>Version</key>
+	<integer>1</integer>
+</dict>
+</plist>

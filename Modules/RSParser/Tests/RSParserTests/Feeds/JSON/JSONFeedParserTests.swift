@@ -146,7 +146,7 @@ import RSParser
 
 	// Bug fix (Task 8 audit, finding #3): strippingAO3Stats() is what
 	// Account.updateAsync uses to withhold feed-supplied stats while
-	// AmbrosiaAO3NetworkPreference.statsUpdatesEnabled is off -- see that
+	// AmbrosiaAO3NetworkPreference.updatesEnabled is off -- see that
 	// method's doc comment. Verified here at the RSParser level since
 	// that's a plain ParsedItem→ParsedItem transform with no Account
 	// dependency; Account's own test suite covers the toggle wiring.
@@ -163,7 +163,7 @@ import RSParser
 		#expect(stripped.hitCount == nil)
 
 		// Everything else -- including the other Task 2 fields that are
-		// unaffected by statsUpdatesEnabled -- survives unchanged.
+		// unaffected by updatesEnabled -- survives unchanged.
 		#expect(stripped.uniqueID == withExtension.uniqueID)
 		#expect(stripped.wordCount == withExtension.wordCount)
 		#expect(stripped.chapterCurrent == withExtension.chapterCurrent)

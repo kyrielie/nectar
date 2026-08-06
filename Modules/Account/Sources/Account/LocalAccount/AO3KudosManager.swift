@@ -92,7 +92,7 @@ public enum AO3KudosManager {
 			// Ambrosia-local-only-reader gate AO3ChapterFetcher.fetchIfNeeded/
 			// checkForUpdates already apply -- this was missing entirely, letting
 			// a swipe/context-menu love on an Ambrosia-sourced work reach AO3
-			// regardless of both AmbrosiaAO3NetworkPreference flags being off.
+			// regardless of AmbrosiaAO3NetworkPreference.updatesEnabled being off.
 			guard AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article) else { continue }
 
 			Task {

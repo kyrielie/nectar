@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Name</key>
+	<string>Charcoal Rose</string>
+	<key>ThemeIdentifier</key>
+	<string>com.nectar.themes.charcoalrose</string>
+	<key>CreatorHomePage</key>
+	<string>https://github.com/ZerafinaCSS/neos</string>
+	<key>CreatorName</key>
+	<string>Ported from the "Charcoal Rose" variant of ZerafinaCSS's "neos" AO3 workskin family (MIT licensed)</string>
+	<key>Version</key>
+	<integer>1</integer>
+</dict>
+</plist>

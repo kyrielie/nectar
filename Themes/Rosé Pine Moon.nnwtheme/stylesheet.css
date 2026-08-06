@@ -1,37 +1,29 @@
-/* Rosé Pine -- ported from the AO3 workskin "Rosé Pine — Closer to Home" by
-   BlackBatCat (github.com/Wolfbatcat/ao3-rose-pine, MIT licensed). Structure
-   follows the bundled Sepia.nnwtheme exactly (same selectors, same
-   iOS/macOS @supports split); only the color values are ported, pulled from
-   that skin's :root palette (theme_rosepine_cth.css) rather than invented
-   fresh, so this reads as an extension of the same palette AO3 readers of
-   that skin would already recognize:
-     body background  <- --bg1  (#191724)
-     body text         <- --txt-main (#e0def4)
-     link              <- --link (#eb6f92)
-     link, visited      <- --link-visited (#9ccfd8)
-     header/date text  <- --border4-adjacent muted lavender-gray, not a
-                          direct --header-color equivalent in the source
-                          skin (AO3's header chrome has no analog here);
-                          picked to sit between --txt-main and --border1
-                          for the same "quieter than body text" role
-                          Sepia's --header-color plays.
-     preface border    <- --border1 (#2c283d)
-   Shared iOS/macOS structural rules (max-width, hyphens, footnote popover,
-   table borders, etc.) are copied verbatim from Sepia.nnwtheme -- none of
-   that is theme-specific, it's the same base every bundled theme needs to
-   not fall back to unstyled defaults for footnotes/tables/embeds. */
+/* Rosé Pine Moon -- ported from the Rosé Pine Moon variant of the ao3-rose-pine workskin (BlackBatCat, MIT). Same family as the bundled Rosé Pine theme, one step darker/more saturated -- its own standalone theme rather than a dark-mode variant of Rosé Pine, matching how the source skin ships it.
+   Palette:
+     body background   <- #232136
+     body text          <- #e0def4
+     link                <- #eb6f92
+     header border        <- #36324e
+     table/rule border     <- #36324e
+   Differentiation from Rosé Pine: dotted (not solid) link underline, and italicized article titles -- Moon leans slightly more literary/nocturnal than the base theme.
+   Structure follows the bundled Sepia.nnwtheme (same selectors, same
+   iOS/macOS @supports split); shared iOS/macOS structural rules (max-width,
+   hyphens, footnote popover, table borders, etc.) are the same base every
+   bundled theme needs so embeds/footnotes/tables don't fall back to
+   unstyled defaults. */
 
 body {
 	margin-left: auto;
 	margin-right: auto;
 	word-wrap: break-word;
 	max-width: 44em;
-	background-color: #191724;
+	background-color: #232136;
 	color: #e0def4;
 }
 
 [href] {
-	text-decoration-style: underline;
+	text-decoration-line: underline;
+	text-decoration-style: dotted;
 	text-decoration-color: var(--link-underline-color);
 	text-decoration-thickness: 1px;
 	text-underline-offset: 0.15em;
@@ -58,40 +50,34 @@ body {
 }
 
 :root {
-	--header-table-border-color: #2c283d;
+	--header-table-border-color: #36324e;
 	--header-color: #908caa;
 	--body-code-color: #ebbcba;
-	--system-message-color: #9ccfd8;
+	--system-message-color: #908caa;
 	--feedlink-color: #e0def4;
 	--article-title-color: #e0def4;
 	--article-date-color: #908caa;
-	--table-cell-border-color: #332e45;
+	--table-cell-border-color: #36324e;
 	--primary-accent-color: #eb6f92;
-	--secondary-accent-color: #9ccfd8;
-	--block-quote-border-color: #332e45;
+	--secondary-accent-color: #eb6f92;
+	--block-quote-border-color: #36324e;
 	--link-underline-color: color-mix(in hsl, currentColor, transparent 40%);
 	--link-underline-special: color-mix(in hsl, currentColor, transparent 80%);
-	/* Consumed by core.css's #ao3SyntheticPreface/#ao3Preface rules -- the
-	   one theme-overridable hook that shared, non-theme-specific file
-	   exposes (see core.css's comment on why the preface layout itself
-	   lives there instead of here). */
-	--ao3-preface-border-color: #2c283d;
+	/* Consumed by core.css's #ao3SyntheticPreface/#ao3Preface rules. */
+	--ao3-preface-border-color: rgba(224, 222, 244, 0.15);
 }
 
-/* ArticleThemeColorExtractor.exactSelectorValue only matches an exact `a` or
-   `.articleBody a` selector in a comma-split selector list -- `body a, body
-   a:visited, body a *` alone is invisible to it (the same pre-existing gap
-   flagged in Sepia.nnwtheme). This rule is redundant with the one below for
-   rendering (higher-specificity `body a` still wins the cascade regardless
-   of source order) but gives the extractor something to find. */
+/* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
+   higher-specificity 'body a' below still wins the cascade. See the fix
+   applied to Ember/Sepia/Tiqoe Dark/Rose Pine for why this is needed. */
 a {
-	color: var(--secondary-accent-color);
+	color: #eb6f92;
 }
 
 body a,
 body a:visited,
 body a * {
-	color: var(--secondary-accent-color);
+	color: #eb6f92;
 }
 
 body > header {
@@ -153,6 +139,7 @@ body > .systemMessage {
 	text-decoration-color: transparent;
 	color: var(--article-title-color);
 	margin-top: 26px;
+	font-style: italic;
 }
 
 .articleDateline {
@@ -183,7 +170,6 @@ body > .systemMessage {
 	text-overflow: ellipsis;
 }
 
-
 .articleBody {
 	margin-top: 20px;
 	line-height: 1.6em;
@@ -203,9 +189,6 @@ pre {
 	overflow-y: hidden;
 	word-wrap: normal;
 	word-break: normal;
-}
-
-pre {
 	line-height: 1.4286em;
 }
 
@@ -224,7 +207,7 @@ pre {
 .nnw-overflow table {
 	margin-bottom: 1px;
 	border-spacing: 0;
-	border: 1px solid var(--secondary-accent-color);
+	border: 1px solid var(--table-cell-border-color);
 	font-size: inherit;
 }
 
@@ -290,6 +273,7 @@ figure {
 figcaption {
 	font-size: 14px;
 	line-height: 1.3em;
+	color: var(--header-color);
 }
 
 sup {
@@ -359,8 +343,7 @@ blockquote {
 	font-size: 66%;
 }
 
-/* Newsfoot theme -- dark-mode-appropriate colors, unlike Sepia's light-only
-   set, since this theme has no separate dark variant of its own. */
+/* Newsfoot theme */
 .newsfoot-footnote-popover {
 	background: #26233a;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 3px 6px rgba(0, 0, 0, 0.25);
@@ -370,7 +353,7 @@ blockquote {
 
 .newsfoot-footnote-popover-arrow {
 	background: #1f1d2e;
-	border: 1px solid #332e45;
+	border: 1px solid var(--table-cell-border-color);
 }
 
 .newsfoot-footnote-popover-inner {
@@ -380,7 +363,7 @@ blockquote {
 body a.footnote,
 body a.footnote:visited,
 .newsfoot-footnote-popover + a.footnote:hover {
-	background: #332e45;
+	background: var(--table-cell-border-color);
 	color: #e0def4;
 	transition: background-color 200ms ease-out;
 }
@@ -388,8 +371,28 @@ body a.footnote:visited,
 a.footnote:hover,
 .newsfoot-footnote-popover + a.footnote {
 	background: #eb6f92;
-	color: #191724;
+	color: #232136;
 	transition: background-color 200ms ease-out;
+}
+
+/* AO3 direct-reading preface (#ao3SyntheticPreface/#ao3Preface structural
+   rules live in core.css -- this theme only supplies appearance). */
+#ao3SyntheticPreface,
+#ao3Preface {
+	border-bottom-style: dotted;
+}
+#ao3SyntheticPreface dt,
+#ao3Preface dt {
+}
+
+.ao3ChapterFetchNotice {
+	margin: 0 0 1em 0;
+	padding: 0.6em 0.8em;
+	border-left: 3px solid rgba(0, 0, 0, 0.3);
+	background: rgba(0, 0, 0, 0.15);
+	font-size: 0.9em;
+	font-style: italic;
+	color: var(--header-color);
 }
 
 /* iOS Specific */
@@ -412,12 +415,12 @@ a.footnote:hover,
 	}
 
 	pre {
-		border: 1px solid var(--secondary-accent-color);
+		border: 1px solid var(--table-cell-border-color);
 		padding: 5px;
 	}
 
 	.nnw-overflow table {
-		border: 1px solid var(--secondary-accent-color);
+		border: 1px solid var(--table-cell-border-color);
 	}
 }
 
@@ -452,11 +455,11 @@ a.footnote:hover,
 	}
 
 	pre {
-		border: 1px solid var(--primary-accent-color);
+		border: 1px solid #eb6f92;
 		padding: 10px;
 	}
 
 	.nnw-overflow table {
-		border: 1px solid var(--primary-accent-color);
+		border: 1px solid #eb6f92;
 	}
 }

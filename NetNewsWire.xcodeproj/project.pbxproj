@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		012A7F03BC89290F149C2EF4 /* About.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 61EF96CF17922970575AAA96 /* About.rtf */; };
 		020523D0002AD92A7C4914FE /* SidebarKeyboardShortcuts.plist in Resources */ = {isa = PBXBuildFile; fileRef = 344041F3CCFC892F35436407 /* SidebarKeyboardShortcuts.plist */; };
+		03BB10C63EBB6682AE758D17 /* StatsVisibilityCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A668DF87CBAB972204DAB988 /* StatsVisibilityCell.swift */; };
 		043291147B3052FD66395025 /* FindInArticleActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2594B99073E3744C3DCD2F2B /* FindInArticleActivity.swift */; };
 		047567E697676EC2560CA38A /* AddComboTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5EC3A464FBA86925E9E4C3C /* AddComboTableViewCell.swift */; };
 		057BD9C465F313B558B6521C /* AddFeedSelectFolderTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = D9CF9FA05BD676DCDB04BB7D /* AddFeedSelectFolderTableViewCell.xib */; };
@@ -391,6 +392,7 @@
 		A41A67C71540DE45997625FE /* ArticleRenderingSpecialCases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleRenderingSpecialCases.swift; sourceTree = "<group>"; };
 		A41F57E3BEE70260170C3D17 /* AddFeedDefaultContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFeedDefaultContainer.swift; sourceTree = "<group>"; };
 		A4FD081876054F057E1DFF4F /* AO3AccountSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3AccountSettingsView.swift; sourceTree = "<group>"; };
+		A668DF87CBAB972204DAB988 /* StatsVisibilityCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsVisibilityCell.swift; sourceTree = "<group>"; };
 		A717FA6334C142D41B535687 /* Thanks.rtf */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; path = Thanks.rtf; sourceTree = "<group>"; };
 		A76D25654EA755DDA2BA82DF /* ShareAO3SeriesLinkActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareAO3SeriesLinkActivity.swift; sourceTree = "<group>"; };
 		A7E4182681904059C4FDC62C /* RSWeb */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RSWeb; path = Modules/RSWeb; sourceTree = SOURCE_ROOT; };
@@ -807,6 +809,7 @@
 				F5B44A2A2AE20EB1E6D599F0 /* SettingsComboTableViewCell.xib */,
 				408CF200893FD78B61028BCD /* SettingsTableViewCell.xib */,
 				1DC9E81A26EF709D33F254C6 /* SettingsViewController.swift */,
+				A668DF87CBAB972204DAB988 /* StatsVisibilityCell.swift */,
 				0C3F719F3FC24AAE7F0B920F /* TickMarkSlider.swift */,
 				D5F588710EF6C2E7DE25DF90 /* TimelineCustomizerCell.swift */,
 				516CE8D79FF31B2F9EC5EDD7 /* TimelineCustomizerCollectionViewController.swift */,
@@ -1326,6 +1329,7 @@
 				3BC861282328B4DD81A98CF7 /* SmartFeedDelegate.swift in Sources */,
 				4D6D01DD5E23AD2CEBC8D8BE /* SmartFeedsController.swift in Sources */,
 				27FF4DD68F2839BFAE1795B1 /* StarredFeedDelegate.swift in Sources */,
+				03BB10C63EBB6682AE758D17 /* StatsVisibilityCell.swift in Sources */,
 				161EEF7A10D39FFDE099F82C /* StringSize+Extensions.swift in Sources */,
 				FD0CD1ABD3EA4D7B18949EF0 /* TableOfContentsViewController.swift in Sources */,
 				772DDEFAD789846202A76844 /* TickMarkSlider.swift in Sources */,
