@@ -17,6 +17,7 @@ final class ManageStorageCollectionViewController: UICollectionViewController {
 
 	private enum Item: Hashable {
 		case summary
+		case footerNote
 		case article(String) // articleID
 	}
 
@@ -73,6 +74,24 @@ final class ManageStorageCollectionViewController: UICollectionViewController {
 			cell.accessories = []
 		}
 
+		// nectar-combined-plan-2.md §3.4: clearing content here only nulls
+		// the cleared rows' columns -- it doesn't shrink the on-disk
+		// database file, since SQLite only reclaims freed page space on
+		// VACUUM, which this screen never runs (an explicit, infrequent
+		// operation, not something to trigger on every swipe-to-clear).
+		// Account Statistics' database-size figure is therefore expected
+		// to stay flat immediately after a clear here; this note exists so
+		// that isn't read as the clear having silently failed.
+		let footerNoteCellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { cell, _, _ in
+			var content = cell.defaultContentConfiguration()
+			content.text = NSLocalizedString("Clearing content here frees space inside the database file, but the file itself won't shrink until it's compacted -- so the size shown in Account Statistics won't drop right away.", comment: "Manage Storage VACUUM explanation")
+			content.textProperties.font = .preferredFont(forTextStyle: .caption1)
+			content.textProperties.color = .secondaryLabel
+			content.textProperties.numberOfLines = 0
+			cell.contentConfiguration = content
+			cell.accessories = []
+		}
+
 		let articleCellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { [weak self] cell, _, item in
 			guard case .article(let articleID) = item, let row = self?.rowsByArticleID[articleID] else {
 				return
@@ -88,6 +107,8 @@ final class ManageStorageCollectionViewController: UICollectionViewController {
 			switch item {
 			case .summary:
 				return collectionView.dequeueConfiguredReusableCell(using: summaryCellRegistration, for: indexPath, item: item)
+			case .footerNote:
+				return collectionView.dequeueConfiguredReusableCell(using: footerNoteCellRegistration, for: indexPath, item: item)
 			case .article:
 				return collectionView.dequeueConfiguredReusableCell(using: articleCellRegistration, for: indexPath, item: item)
 			}
@@ -99,7 +120,7 @@ final class ManageStorageCollectionViewController: UICollectionViewController {
 
 		var snapshot = NSDiffableDataSourceSnapshot<Int, Item>()
 		snapshot.appendSections([0, 1])
-		snapshot.appendItems([.summary], toSection: 0)
+		snapshot.appendItems([.summary, .footerNote], toSection: 0)
 		snapshot.appendItems(viewModel.rows.map { .article($0.articleID) }, toSection: 1)
 		dataSource.apply(snapshot, animatingDifferences: true)
 	}

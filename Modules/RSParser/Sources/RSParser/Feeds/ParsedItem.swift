@@ -240,7 +240,7 @@ public struct ParsedItem: Hashable, Sendable {
 	/// unchanged. Used by callers that need to respect a "don't apply
 	/// AO3-derived stats" preference for feed-supplied values (as opposed
 	/// to the fetcher-only stats this type's own doc comment describes) --
-	/// see AmbrosiaAO3NetworkPreference.statsUpdatesEnabled in the Account
+	/// see AmbrosiaAO3NetworkPreference.updatesEnabled in the Account
 	/// module, which this type can't reference directly (RSParser doesn't
 	/// depend on Account), so the decision of *when* to call this lives
 	/// with the caller. `markdown` is passed as `nil` here rather than

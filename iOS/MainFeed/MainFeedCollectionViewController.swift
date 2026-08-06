@@ -224,6 +224,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		NotificationCenter.default.addObserver(self, selector: #selector(faviconDidBecomeAvailable(_:)), name: .htmlMetadataAvailable, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(feedIconDidBecomeAvailable(_:)), name: .feedIconDidBecomeAvailable, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(feedSettingDidChange(_:)), name: .feedSettingDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange(_:)), name: .accentColorDidChange, object: nil)
 
 		registerForTraitChanges([UITraitPreferredContentSizeCategory.self], target: self, action: #selector(preferredContentSizeCategoryDidChange))
 	}
@@ -914,6 +915,18 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 	// MARK: - Notifications
 
 	@objc func preferredContentSizeCategoryDidChange() {
+		IconImageCache.shared.emptyCache()
+		reloadAllVisibleCells()
+	}
+
+	// IconImageCache keys smart-feed icons (mainFolder/unreadFeed/readFeed/
+	// lastOpenedFeed) by SidebarItemIdentifier and holds onto whatever
+	// IconImage it built the first time each was requested. Assets.Images'
+	// accent-tinted icons became live-recomputing `static var`s (see
+	// Assets.swift), but that alone doesn't help here -- this cache would
+	// keep returning the stale pre-change IconImage until emptied. Same
+	// empty-then-reload pattern as preferredContentSizeCategoryDidChange above.
+	@objc func accentColorDidChange(_ note: Notification) {
 		IconImageCache.shared.emptyCache()
 		reloadAllVisibleCells()
 	}

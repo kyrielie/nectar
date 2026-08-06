@@ -206,14 +206,14 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// request is made at all, not just "result discarded." Native
 	/// (non-Ambrosia) AO3-RSS-sourced articles always return true here --
 	/// they have no other way to get content at all, so they're unaffected
-	/// by either flag. Public: WebViewController's checkForUpdatesAction()
+	/// by this flag. Public: WebViewController's checkForUpdatesAction()
 	/// uses this to decide whether to render the per-article action as
 	/// disabled with an explanatory label.
 	public static func isAO3NetworkRequestAllowed(for article: Article) -> Bool {
 		guard article.isAmbrosiaItem else {
 			return true
 		}
-		return AmbrosiaAO3NetworkPreference.contentUpdatesEnabled || AmbrosiaAO3NetworkPreference.statsUpdatesEnabled
+		return AmbrosiaAO3NetworkPreference.updatesEnabled
 	}
 
 	/// True when the article has no stored content yet, when the stored
@@ -486,25 +486,21 @@ nonisolated private extension AO3ChapterFetcher {
 					return
 				}
 
-				// Task 8's Ambrosia local-only toggles: gate what's applied
-				// from this one response, not whether a second request
-				// happens (there's only ever one -- content and stats come
-				// off the same fetch). Always true for a non-Ambrosia
-				// article. isAO3NetworkRequestAllowed already stopped this
-				// fetch from firing at all if both were false, so at least
-				// one of these two is true here.
-				let applyContentUpdate = !existingArticle.isAmbrosiaItem || AmbrosiaAO3NetworkPreference.contentUpdatesEnabled
-				let applyStatsUpdate = !existingArticle.isAmbrosiaItem || AmbrosiaAO3NetworkPreference.statsUpdatesEnabled
+				// Task 8's Ambrosia local-only toggle: gates whether this
+				// fetch happened at all (isAO3NetworkRequestAllowed, above
+				// download), not what gets applied from it -- content and
+				// stats are always applied together from a fetch that was
+				// allowed to happen. Always true for a non-Ambrosia
+				// article. Content is still protected independently by the
+				// regression guard directly below, same as before this
+				// flag was collapsed to one.
+				let applyStatsUpdate = !existingArticle.isAmbrosiaItem || AmbrosiaAO3NetworkPreference.updatesEnabled
 
 				// Task 8's content-level regression guard: don't overwrite
 				// silently, and don't discard the new fetch either -- keep
 				// the currently-stored content as canonical and stash the
 				// new fetch as a pending update for the reader to review.
-				// Only relevant when the content write is actually being
-				// applied -- skip it entirely (and fall through to the
-				// stats-only write below) when contentUpdatesEnabled is off
-				// for this Ambrosia article.
-				if applyContentUpdate, let regressionDescription = Self.detectRegression(existingArticle: existingArticle, extraction: extraction) {
+				if let regressionDescription = Self.detectRegression(existingArticle: existingArticle, extraction: extraction) {
 					await account.setPendingContentUpdateAsync(extraction.contentHTML, forArticleID: articleID)
 					activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: "Possible content regression detected (\(regressionDescription)) -- kept existing content, flagged for review", returnedFromCache: downloadResponse.returnedFromCache)
 					failureMessages.withLock { $0[articleID] = nil }
@@ -517,7 +513,7 @@ nonisolated private extension AO3ChapterFetcher {
 					return
 				}
 
-				let parsedItem = Self.rebuildParsedItem(from: existingArticle, workID: workID, extraction: extraction, applyContentUpdate: applyContentUpdate, applyStatsUpdate: applyStatsUpdate)
+				let parsedItem = Self.rebuildParsedItem(from: existingArticle, workID: workID, extraction: extraction, applyStatsUpdate: applyStatsUpdate)
 				_ = await account.updateAsync(feedID: feedID, parsedItems: [parsedItem], deleteOlder: false)
 
 				activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: ActivityLog.dataSizeMessage(data), returnedFromCache: downloadResponse.returnedFromCache)
@@ -676,22 +672,23 @@ nonisolated private extension AO3ChapterFetcher {
 		return nil
 	}
 
-	/// `applyContentUpdate`/`applyStatsUpdate` are Task 8's Ambrosia
-	/// local-only toggles (`AmbrosiaAO3NetworkPreference`) -- both always
-	/// true for a non-Ambrosia article, since those have no other way to
-	/// get content at all. When a flag is false, the corresponding fields
-	/// pass `existingArticle`'s own current values through unchanged
-	/// instead of this fetch's, so "I want live kudos counts but don't want
-	/// my archived text touched" (and the reverse) both work: unlike the
-	/// no-flags-off path, this doesn't leave those fields on the rebuilt
-	/// item at their old values by accident, it does so because the
-	/// corresponding fetch data was deliberately not eligible to apply.
-	/// `internal` rather than the enclosing `private extension`'s default
-	/// fileprivate -- AO3ChapterFetcherTests exercises this directly
-	/// (`@testable import Account` reaches `internal`, not `fileprivate`,
-	/// across file boundaries within the same module). `detectRegression`
-	/// above stays fileprivate; only this one needs the wider access.
-	internal static func rebuildParsedItem(from existingArticle: Article, workID: String, extraction: AO3ChapterExtractionResult, applyContentUpdate: Bool, applyStatsUpdate: Bool) -> ParsedItem {
+	/// `applyStatsUpdate` is Task 8's Ambrosia local-only toggle
+	/// (`AmbrosiaAO3NetworkPreference.updatesEnabled`) -- always true for
+	/// a non-Ambrosia article, since those have no other way to get
+	/// content at all. When false, the stats fields
+	/// (comment/kudos/bookmark/hit count) pass `existingArticle`'s own
+	/// current values through unchanged instead of this fetch's. There is
+	/// no equivalent content-side flag any more: content, chapter count,
+	/// and prev/next-work navigation are always taken from `extraction`
+	/// once a fetch has been allowed to happen at all, protected instead
+	/// by `Self.detectRegression` at the call site, before this function
+	/// is ever reached. `internal` rather than the enclosing `private
+	/// extension`'s default fileprivate -- AO3ChapterFetcherTests
+	/// exercises this directly (`@testable import Account` reaches
+	/// `internal`, not `fileprivate`, across file boundaries within the
+	/// same module). `detectRegression` above stays fileprivate; only
+	/// this one needs the wider access.
+	internal static func rebuildParsedItem(from existingArticle: Article, workID: String, extraction: AO3ChapterExtractionResult, applyStatsUpdate: Bool) -> ParsedItem {
 		let authors: Set<ParsedAuthor>? = existingArticle.authors.map { authorSet in
 			Set(authorSet.map { ParsedAuthor(name: $0.name, url: $0.url, avatarURL: $0.avatarURL, emailAddress: $0.emailAddress) })
 		}
@@ -705,7 +702,7 @@ nonisolated private extension AO3ChapterFetcher {
 			externalURL: existingArticle.rawExternalLink,
 			title: existingArticle.title,
 			language: nil,
-			contentHTML: applyContentUpdate ? extraction.contentHTML : existingArticle.contentHTML,
+			contentHTML: extraction.contentHTML,
 			contentText: existingArticle.contentText,
 			// existingArticle.markdown is expected nil for every AO3-sourced
 			// article (markdown is an Ambrosia/JSON-Feed-only concept, never
@@ -724,7 +721,7 @@ nonisolated private extension AO3ChapterFetcher {
 			attachments: nil,
 			isAmbrosiaItem: existingArticle.isAmbrosiaItem,
 			wordCount: existingArticle.wordCount,
-			chapterCurrent: applyContentUpdate ? extraction.chapters.count : existingArticle.chapterCurrent,
+			chapterCurrent: extraction.chapters.count,
 			chapterTotal: existingArticle.chapterTotal,
 			isComplete: existingArticle.isComplete,
 			fandoms: existingArticle.fandoms,
@@ -739,11 +736,12 @@ nonisolated private extension AO3ChapterFetcher {
 			bookmarkCount: applyStatsUpdate ? extraction.bookmarkCount : existingArticle.bookmarkCount,
 			hitCount: applyStatsUpdate ? extraction.hitCount : existingArticle.hitCount,
 			// Prev/next Work navigation is page chrome captured on the same
-			// fetch as content/chapters, not a "stat" -- gated by
-			// applyContentUpdate, matching chapterCurrent above, not
-			// applyStatsUpdate.
-			previousWorkURL: applyContentUpdate ? extraction.previousWorkURL : existingArticle.previousWorkURL,
-			nextWorkURL: applyContentUpdate ? extraction.nextWorkURL : existingArticle.nextWorkURL,
+			// fetch as content/chapters, not a "stat" -- always applied now,
+			// matching chapterCurrent/contentHTML above (there is no longer
+			// a content-specific toggle to gate this on; see this
+			// function's doc comment).
+			previousWorkURL: extraction.previousWorkURL,
+			nextWorkURL: extraction.nextWorkURL,
 			// rebuildParsedItem only runs on a successful extraction (it's
 			// handed the extraction.chapters/stats result), so "now" is
 			// correct here regardless of caller -- a failed fetch never

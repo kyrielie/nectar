@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Name</key>
+	<string>Rosé Pine Moon</string>
+	<key>ThemeIdentifier</key>
+	<string>com.nectar.themes.rosepinemoon</string>
+	<key>CreatorHomePage</key>
+	<string>https://github.com/Wolfbatcat/ao3-rose-pine</string>
+	<key>CreatorName</key>
+	<string>Ported from the "Rosé Pine Moon" variant of BlackBatCat's AO3 workskin "Rosé Pine — Closer to Home" (MIT licensed)</string>
+	<key>Version</key>
+	<integer>1</integer>
+</dict>
+</plist>
