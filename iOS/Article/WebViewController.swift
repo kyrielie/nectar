@@ -931,7 +931,16 @@ private extension WebViewController {
 			"baseURL": rendering.baseURL,
 			"importStyle": rendering.importStyle,
 			"style": rendering.style,
-			"body": rendering.html
+			"body": rendering.html,
+			// Device-locale fallback, not per-article language -- no per-feed/
+			// per-article language field exists anywhere in Modules/Articles or
+			// Modules/Account today (RSS/JSON Feed language isn't parsed), so this
+			// is the best available value without a separate, larger feed-parsing
+			// change. Needed for hyphens: auto (see ArticleThemeOverrides.hyphenate)
+			// to pick the correct hyphenation dictionary in WebKit, which is
+			// unreliable without a lang attribute on <html> -- confirmed
+			// page.html shipped with none before this change (dir="auto" only).
+			"lang": Locale.current.language.languageCode?.identifier ?? "en"
 		]
 		Self.logger.debug("renderPage: articleID=\(self.article?.articleID ?? "nil", privacy: .public) windowScrollY=\(self.windowScrollY, privacy: .public) bodyLength=\(rendering.html.count, privacy: .public)")
 		// WKWebView fires a scrollViewDidScroll with contentOffset reset to (0,0)

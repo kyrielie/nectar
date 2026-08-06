@@ -154,6 +154,9 @@
     "Browser Verification" : {
       "comment" : "AO3 Cloudflare challenge status row label"
     },
+    "Built-in" : {
+      "comment" : "Built-in gallery section header"
+    },
     "Can't reach %@ right now" : {
       "comment" : "Can't reach library right now"
     },
@@ -244,11 +247,11 @@
     "Custom Background Color" : {
       "comment" : "Custom Background Color toggle"
     },
-    "Custom Font" : {
-      "comment" : "Custom Font toggle"
-    },
     "Custom Font Size" : {
       "comment" : "Custom Font Size toggle"
+    },
+    "Custom Interface Font" : {
+      "comment" : "Custom Interface Font toggle"
     },
     "Custom Line Height" : {
       "comment" : "Custom Line Height toggle"
@@ -256,14 +259,23 @@
     "Custom Link Color" : {
       "comment" : "Custom Link Color toggle"
     },
+    "Custom Margins" : {
+      "comment" : "Custom Margins toggle"
+    },
     "Custom Paragraph Indent" : {
       "comment" : "Custom Paragraph Indent toggle"
     },
     "Custom Paragraph Spacing" : {
       "comment" : "Custom Paragraph Spacing toggle"
     },
+    "Custom Reading Font" : {
+      "comment" : "Custom Reading Font toggle"
+    },
     "Custom Text Color" : {
       "comment" : "Custom Text Color toggle"
+    },
+    "Customize" : {
+      "comment" : "Customize current theme button\nCustomize navigation title"
     },
     "Dark" : {
       "comment" : "Dark"
@@ -425,7 +437,7 @@
 
     },
     "Font" : {
-      "comment" : "Font picker label\nFont section header"
+      "comment" : "Font section header"
     },
     "Font Size" : {
       "comment" : "Font Size section header"
@@ -463,6 +475,12 @@
     "How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes." : {
       "comment" : "AO3 preface refetch cadence footer"
     },
+    "Hyphenate" : {
+      "comment" : "Hyphenate toggle"
+    },
+    "Hyphenation works best paired with justified text on narrow screens." : {
+      "comment" : "Justification/hyphenation footer"
+    },
     "If an AO3 search-results feed reports a Cloudflare challenge, use this to prove to Cloudflare that Nectar is being used by a real person -- the same check AO3 shows in a regular browser sometimes. This isn't tied to your AO3 account and doesn't require being signed in; it usually needs re-doing periodically." : {
       "comment" : "AO3 Cloudflare challenge section footer"
     },
@@ -498,8 +516,14 @@
         }
       }
     },
+    "Interface Font" : {
+      "comment" : "Interface Font picker label"
+    },
     "Invalid Address" : {
       "comment" : "Invalid Address"
+    },
+    "Justify Text" : {
+      "comment" : "Justify Text toggle"
     },
     "Keep Archived Version" : {
       "comment" : "Command"
@@ -521,6 +545,9 @@
     },
     "Leave Kudos When You Love a Work" : {
       "comment" : "AO3 kudos-on-like toggle label"
+    },
+    "Left & Right" : {
+      "comment" : "Left & Right margin label"
     },
     "Light" : {
       "comment" : "Light"
@@ -645,6 +672,9 @@
     "Most Words First" : {
       "comment" : "Descending sort direction — word count"
     },
+    "My Themes" : {
+      "comment" : "My Themes gallery section header"
+    },
     "Name" : {
       "comment" : "Name"
     },
@@ -764,6 +794,9 @@
     "Page Counter" : {
       "comment" : "Page counter picker title"
     },
+    "Page Margins" : {
+      "comment" : "Page Margins section header"
+    },
     "Paragraph Indent" : {
       "comment" : "Paragraph Indent section header"
     },
@@ -799,6 +832,12 @@
     },
     "Read Later" : {
       "comment" : "Command\nRead Later"
+    },
+    "Reading Font" : {
+      "comment" : "Reading Font picker label"
+    },
+    "Reading Font applies to the article text. Interface Font applies to the byline, dateline, and other chrome." : {
+      "comment" : "Font section footer explaining serif/sans split"
     },
     "Recent errors from syncing, feed downloads, keychain access, and other operations, with the account, operation, and error message for each." : {
       "comment" : "Error Log explainer"
@@ -1025,6 +1064,9 @@
     },
     "Toggle Sidebar" : {
       "comment" : "Toggle Sidebar"
+    },
+    "Top" : {
+      "comment" : "Top margin label"
     },
     "Total Storage Used" : {
       "comment" : "Manage Storage total row"

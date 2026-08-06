@@ -1,34 +1,32 @@
 //
-//  ArticleThemeListView.swift
+//  ArticleThemeCustomizeView.swift
 //  NetNewsWire-iOS
 //
-//  Created for Settings → Theme.
+//  Created for Settings → Theme → Customize. Split from the former single
+//  ArticleThemeListView.swift per theme-settings-implementation-plan.md:
+//  ArticleThemeGalleryView picks a theme; this screen adjusts overrides
+//  for whichever theme is current.
 //  Copyright © 2026 Ranchero Software. All rights reserved.
 //
 
 import SwiftUI
-import UniformTypeIdentifiers
 import RSCore
 
-extension UTType {
-	static var netNewsWireTheme: UTType { UTType(importedAs: "com.ranchero.netnewswire.theme") }
-}
-
-/// Replaces the former pair of screens (a UIKit theme-picker list that pushed to a
-/// separate SwiftUI overrides screen) with a single scrolling list: picking a theme
-/// and adjusting its font/color overrides now happen in the same place, with one
-/// shared live preview reflecting both.
-struct ArticleThemeListView: View {
+/// Adjusts `ArticleThemeOverrides` for whichever theme `ArticleThemesManager` reports
+/// as current, with one shared live preview reflecting every change immediately. Does
+/// not pick the theme itself -- that's `ArticleThemeGalleryView`, pushed one level up
+/// the navigation stack.
+struct ArticleThemeCustomizeView: View {
 
 	@Environment(\.dismiss) private var dismiss
 
-	@State private var isImporterPresented = false
 	@State private var themeNamesRefreshToken = false
-	@State private var themeToDelete: String?
-	@State private var isDeleteAlertPresented = false
 
-	@State private var useCustomFont: Bool
-	@State private var fontFamilyName: String
+	@State private var useCustomSerifFont: Bool
+	@State private var serifFontFamilyName: String
+
+	@State private var useCustomSansFont: Bool
+	@State private var sansFontFamilyName: String
 
 	@State private var useCustomFontSize: Bool
 	@State private var fontSize: Double
@@ -40,6 +38,13 @@ struct ArticleThemeListView: View {
 	@State private var paragraphSpacing: Double
 	@State private var useCustomParagraphIndent: Bool
 	@State private var paragraphIndent: Double
+
+	@State private var useCustomMargins: Bool
+	@State private var marginHorizontal: Double
+	@State private var marginTop: Double
+
+	@State private var justifyText: Bool
+	@State private var hyphenate: Bool
 
 	@State private var useCustomTextColor: Bool
 	@State private var textColor: Color
@@ -61,7 +66,9 @@ struct ArticleThemeListView: View {
 	/// will silently fall back to its default serif/sans-serif for those -- they're
 	/// kept in the list anyway to match Books' menu, and the live preview below
 	/// makes that fallback immediately visible rather than surprising in the
-	/// rendered article.
+	/// rendered article. Reused for both the serif (prose) and sans (chrome)
+	/// pickers -- Books' own font menu already spans both categories, so no second
+	/// font list is needed.
 	private static let availableFonts: [(displayName: String, cssFontFamily: String)] = [
 		("Athelas", "Athelas"),
 		("Avenir Next", "Avenir Next"),
@@ -78,21 +85,27 @@ struct ArticleThemeListView: View {
 		("Times New Roman", "Times New Roman")
 	]
 
-	/// `ArticleThemeOverrides.fontFamilyName` is nil whenever the "Custom Font" toggle
-	/// is off, since nil is exactly what tells `cssOverrideBlock` not to touch
-	/// font-family. That means the override itself can't also remember which font was
-	/// last picked while the toggle is off -- turning the toggle off and back on would
-	/// otherwise always land back on the first font in the list. This key stores just
-	/// that last choice, independent of whether it's currently applied.
-	private static let lastFontFamilyNameDefaultsKey = "ArticleThemeListView.lastFontFamilyName"
+	/// `ArticleThemeOverrides.serifFontFamilyName`/`sansFontFamilyName` are nil
+	/// whenever their "Custom Font" toggle is off, since nil is exactly what tells
+	/// `cssOverrideBlock` not to touch that property. That means the override itself
+	/// can't also remember which font was last picked while the toggle is off --
+	/// turning the toggle off and back on would otherwise always land back on the
+	/// first font in the list. These keys store just that last choice, independent
+	/// of whether it's currently applied.
+	private static let lastSerifFontFamilyNameDefaultsKey = "ArticleThemeCustomizeView.lastSerifFontFamilyName"
+	private static let lastSansFontFamilyNameDefaultsKey = "ArticleThemeCustomizeView.lastSansFontFamilyName"
 
 	init() {
 		let overrides = AppDefaults.shared.articleThemeOverrides
 		let themeColors = ArticleThemeColorExtractor.colors(for: ArticleThemesManager.shared.currentTheme)
-		let lastFontFamilyName = UserDefaults.standard.string(forKey: Self.lastFontFamilyNameDefaultsKey)
+		let lastSerifFontFamilyName = UserDefaults.standard.string(forKey: Self.lastSerifFontFamilyNameDefaultsKey)
+		let lastSansFontFamilyName = UserDefaults.standard.string(forKey: Self.lastSansFontFamilyNameDefaultsKey)
 
-		_useCustomFont = State(initialValue: overrides.fontFamilyName != nil)
-		_fontFamilyName = State(initialValue: overrides.fontFamilyName ?? lastFontFamilyName ?? Self.availableFonts.first!.cssFontFamily)
+		_useCustomSerifFont = State(initialValue: overrides.serifFontFamilyName != nil)
+		_serifFontFamilyName = State(initialValue: overrides.serifFontFamilyName ?? lastSerifFontFamilyName ?? Self.availableFonts.first!.cssFontFamily)
+
+		_useCustomSansFont = State(initialValue: overrides.sansFontFamilyName != nil)
+		_sansFontFamilyName = State(initialValue: overrides.sansFontFamilyName ?? lastSansFontFamilyName ?? Self.availableFonts.first!.cssFontFamily)
 
 		_useCustomFontSize = State(initialValue: overrides.fontSize != nil)
 		_fontSize = State(initialValue: overrides.fontSize ?? UIFont.preferredFont(forTextStyle: .body).pointSize)
@@ -104,6 +117,18 @@ struct ArticleThemeListView: View {
 		_paragraphSpacing = State(initialValue: overrides.paragraphSpacing ?? 1.0)
 		_useCustomParagraphIndent = State(initialValue: overrides.paragraphIndent != nil)
 		_paragraphIndent = State(initialValue: overrides.paragraphIndent ?? 0.0)
+
+		_useCustomMargins = State(initialValue: overrides.marginHorizontal != nil || overrides.marginTop != nil)
+		_marginHorizontal = State(initialValue: overrides.marginHorizontal ?? 20)
+		_marginTop = State(initialValue: overrides.marginTop ?? 0)
+
+		// nil vs false both mean "off" for a plain Bool toggle, so unlike the
+		// useCustom-prefixed properties above, these don't need a separate enable
+		// flag -- liveOverrides below only emits true/nil (never a forced false) so
+		// a theme that doesn't set text-align/hyphens at all isn't pinned to "off"
+		// by an override the person never touched.
+		_justifyText = State(initialValue: overrides.justifyText ?? false)
+		_hyphenate = State(initialValue: overrides.hyphenate ?? false)
 
 		// Seeded from the theme's own colors (not `.primary`/`.accentColor`/`systemBackground`)
 		// so that turning a custom-color toggle on doesn't itself change anything visually --
@@ -124,64 +149,37 @@ struct ArticleThemeListView: View {
 
 	var body: some View {
 		Form {
-			themesSection
 			previewSection
 			fontSection
 			fontSizeSection
 			lineHeightSection
 			paragraphSpacingSection
 			paragraphIndentSection
+			marginsSection
+			justificationSection
 			colorsSection
 			resetSection
 		}
-		.navigationTitle(Text("Theme", comment: "Theme navigation title"))
-		.toolbar {
-			ToolbarItem(placement: .primaryAction) {
-				Button {
-					isImporterPresented = true
-				} label: {
-					Image(systemName: "plus")
-				}
-				.accessibilityLabel(Text("Import Theme", comment: "Import Theme"))
-			}
-		}
-		.fileImporter(isPresented: $isImporterPresented, allowedContentTypes: [UTType.netNewsWireTheme]) { result in
-			guard case .success(let url) = result else { return }
-			importTheme(url: url)
-		}
-		.alert(Text("Delete Theme?", comment: "Delete Theme"), isPresented: $isDeleteAlertPresented, presenting: themeToDelete) { themeName in
-			Button(role: .cancel) { } label: {
-				Text("Cancel", comment: "Cancel button")
-			}
-			Button(role: .destructive) {
-				ArticleThemesManager.shared.deleteTheme(themeName: themeName)
-			} label: {
-				Text("Delete", comment: "Delete button")
-			}
-		} message: { themeName in
-			let localizedMessageText = NSLocalizedString("Are you sure you want to delete the theme “%@”?.", comment: "Delete Theme Message")
-			Text(NSString.localizedStringWithFormat(localizedMessageText as NSString, themeName) as String)
-		}
-		.onReceive(NotificationCenter.default.publisher(for: .ArticleThemeNamesDidChangeNotification)) { _ in
-			themeNamesRefreshToken.toggle()
-		}
+		.navigationTitle(Text("Customize", comment: "Customize navigation title"))
 		.onReceive(NotificationCenter.default.publisher(for: .CurrentArticleThemeDidChangeNotification)) { _ in
 			themeNamesRefreshToken.toggle()
 		}
 		.onChange(of: snapshot) { _, _ in save() }
 	}
 
-	/// Chaining a dozen separate `.onChange` modifiers onto `body` (one per
+	/// Chaining a dozen-plus separate `.onChange` modifiers onto `body` (one per
 	/// @State property) was itself a significant chunk of what made `body` too
 	/// slow to type-check, on top of the Form contents -- each modifier adds
 	/// another generic `ModifiedContent` layer the compiler has to solve for in
 	/// the same expression. Bundling every tracked field into one Equatable
-	/// value and reacting to that with a single `.onChange` collapses all
-	/// twelve into one, and is behaviorally identical: `save()` still runs
+	/// value and reacting to that with a single `.onChange` collapses all of
+	/// them into one, and is behaviorally identical: `save()` still runs
 	/// whenever any of them changes.
 	private struct FormSnapshot: Equatable {
-		var useCustomFont: Bool
-		var fontFamilyName: String
+		var useCustomSerifFont: Bool
+		var serifFontFamilyName: String
+		var useCustomSansFont: Bool
+		var sansFontFamilyName: String
 		var useCustomFontSize: Bool
 		var fontSize: Double
 		var useCustomLineHeight: Bool
@@ -190,6 +188,11 @@ struct ArticleThemeListView: View {
 		var paragraphSpacing: Double
 		var useCustomParagraphIndent: Bool
 		var paragraphIndent: Double
+		var useCustomMargins: Bool
+		var marginHorizontal: Double
+		var marginTop: Double
+		var justifyText: Bool
+		var hyphenate: Bool
 		var useCustomTextColor: Bool
 		var textColor: Color
 		var textColorDark: Color
@@ -203,8 +206,10 @@ struct ArticleThemeListView: View {
 
 	private var snapshot: FormSnapshot {
 		FormSnapshot(
-			useCustomFont: useCustomFont,
-			fontFamilyName: fontFamilyName,
+			useCustomSerifFont: useCustomSerifFont,
+			serifFontFamilyName: serifFontFamilyName,
+			useCustomSansFont: useCustomSansFont,
+			sansFontFamilyName: sansFontFamilyName,
 			useCustomFontSize: useCustomFontSize,
 			fontSize: fontSize,
 			useCustomLineHeight: useCustomLineHeight,
@@ -213,6 +218,11 @@ struct ArticleThemeListView: View {
 			paragraphSpacing: paragraphSpacing,
 			useCustomParagraphIndent: useCustomParagraphIndent,
 			paragraphIndent: paragraphIndent,
+			useCustomMargins: useCustomMargins,
+			marginHorizontal: marginHorizontal,
+			marginTop: marginTop,
+			justifyText: justifyText,
+			hyphenate: hyphenate,
 			useCustomTextColor: useCustomTextColor,
 			textColor: textColor,
 			textColorDark: textColorDark,
@@ -235,62 +245,14 @@ struct ArticleThemeListView: View {
 	/// `some View` property lets the compiler solve each in isolation instead of
 	/// all at once.
 	@ViewBuilder
-	private var themesSection: some View {
+	private var previewSection: some View {
 		// Reading themeNamesRefreshToken here (even though it isn't otherwise used)
 		// forces this section to be re-evaluated when the notification observer
-		// above flips it, since ArticleThemesManager itself isn't ObservableObject.
+		// above flips it -- e.g. the person went back to Gallery, picked a
+		// different theme, and came back here.
 		// swiftlint:disable:next redundant_discardable_let
 		let _ = themeNamesRefreshToken
 
-		Section {
-			ForEach(themeNames, id: \.self) { themeName in
-				themeRow(themeName)
-			}
-		}
-	}
-
-	private var themeNames: [String] {
-		[ArticleTheme.defaultTheme.name] + ArticleThemesManager.shared.themeNames
-	}
-
-	@ViewBuilder
-	private func themeRow(_ themeName: String) -> some View {
-		let isCurrent = themeName == ArticleThemesManager.shared.currentTheme.name
-		let isAppTheme = ArticleThemesManager.shared.articleThemeWithThemeName(themeName)?.isAppTheme ?? true
-
-		Button {
-			ArticleThemesManager.shared.currentThemeName = themeName
-		} label: {
-			HStack {
-				Text(themeName)
-					.foregroundStyle(.primary)
-				Spacer()
-				if isCurrent {
-					Image(systemName: "checkmark")
-						.foregroundStyle(.tint)
-				}
-			}
-			.contentShape(Rectangle())
-		}
-		.buttonStyle(.plain)
-		.swipeActions(edge: .trailing) {
-			if !isAppTheme {
-				Button(role: .destructive) {
-					themeToDelete = themeName
-					isDeleteAlertPresented = true
-				} label: {
-					Label {
-						Text("Delete", comment: "Delete button")
-					} icon: {
-						Image(systemName: "trash")
-					}
-				}
-			}
-		}
-	}
-
-	@ViewBuilder
-	private var previewSection: some View {
 		Section {
 			ArticleThemePreviewWebView(importCSS: ArticleThemesManager.shared.currentTheme.importCSS, css: previewCSS)
 				.frame(height: 320)
@@ -305,20 +267,45 @@ struct ArticleThemeListView: View {
 	@ViewBuilder
 	private var fontSection: some View {
 		Section {
-			Toggle(isOn: $useCustomFont) {
-				Text("Custom Font", comment: "Custom Font toggle")
+			Toggle(isOn: $useCustomSerifFont) {
+				Text("Custom Reading Font", comment: "Custom Reading Font toggle")
 			}
-			if useCustomFont {
-				Picker(selection: $fontFamilyName) {
+			if useCustomSerifFont {
+				Picker(selection: $serifFontFamilyName) {
 					ForEach(Self.availableFonts, id: \.cssFontFamily) { font in
 						Text(font.displayName).tag(font.cssFontFamily)
 					}
 				} label: {
-					Text("Font", comment: "Font picker label")
+					Text("Reading Font", comment: "Reading Font picker label")
+				}
+			}
+
+			Toggle(isOn: $useCustomSansFont) {
+				Text("Custom Interface Font", comment: "Custom Interface Font toggle")
+			}
+			if useCustomSansFont {
+				Picker(selection: $sansFontFamilyName) {
+					ForEach(Self.availableFonts, id: \.cssFontFamily) { font in
+						Text(font.displayName).tag(font.cssFontFamily)
+					}
+				} label: {
+					Text("Interface Font", comment: "Interface Font picker label")
 				}
 			}
 		} header: {
 			Text("Font", comment: "Font section header")
+		} footer: {
+			Text("Reading Font applies to the article text. Interface Font applies to the byline, dateline, and other chrome.", comment: "Font section footer explaining serif/sans split")
+		}
+	}
+
+	private var fontSizeRow: some View {
+		HStack {
+			Slider(value: $fontSize, in: ArticleThemeOverrides.fontSizeRange, step: 1)
+			Text(fontSize, format: .number.precision(.fractionLength(0)))
+				.monospacedDigit()
+				.frame(width: 32, alignment: .trailing)
+				.foregroundStyle(.secondary)
 		}
 	}
 
@@ -336,10 +323,10 @@ struct ArticleThemeListView: View {
 		}
 	}
 
-	private var fontSizeRow: some View {
+	private var lineHeightRow: some View {
 		HStack {
-			Slider(value: $fontSize, in: ArticleThemeOverrides.fontSizeRange, step: 1)
-			Text(fontSize, format: .number.precision(.fractionLength(0)))
+			Slider(value: $lineHeight, in: ArticleThemeOverrides.lineHeightRange, step: 0.1)
+			Text(lineHeight, format: .number.precision(.fractionLength(1)))
 				.monospacedDigit()
 				.frame(width: 32, alignment: .trailing)
 				.foregroundStyle(.secondary)
@@ -360,10 +347,10 @@ struct ArticleThemeListView: View {
 		}
 	}
 
-	private var lineHeightRow: some View {
+	private var paragraphSpacingRow: some View {
 		HStack {
-			Slider(value: $lineHeight, in: ArticleThemeOverrides.lineHeightRange, step: 0.1)
-			Text(lineHeight, format: .number.precision(.fractionLength(1)))
+			Slider(value: $paragraphSpacing, in: ArticleThemeOverrides.paragraphSpacingRange, step: 0.1)
+			Text(paragraphSpacing, format: .number.precision(.fractionLength(1)))
 				.monospacedDigit()
 				.frame(width: 32, alignment: .trailing)
 				.foregroundStyle(.secondary)
@@ -384,10 +371,10 @@ struct ArticleThemeListView: View {
 		}
 	}
 
-	private var paragraphSpacingRow: some View {
+	private var paragraphIndentRow: some View {
 		HStack {
-			Slider(value: $paragraphSpacing, in: ArticleThemeOverrides.paragraphSpacingRange, step: 0.1)
-			Text(paragraphSpacing, format: .number.precision(.fractionLength(1)))
+			Slider(value: $paragraphIndent, in: ArticleThemeOverrides.paragraphIndentRange, step: 0.1)
+			Text(paragraphIndent, format: .number.precision(.fractionLength(1)))
 				.monospacedDigit()
 				.frame(width: 32, alignment: .trailing)
 				.foregroundStyle(.secondary)
@@ -408,13 +395,43 @@ struct ArticleThemeListView: View {
 		}
 	}
 
-	private var paragraphIndentRow: some View {
+	private func marginRow(title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
 		HStack {
-			Slider(value: $paragraphIndent, in: ArticleThemeOverrides.paragraphIndentRange, step: 0.1)
-			Text(paragraphIndent, format: .number.precision(.fractionLength(1)))
+			Text(title)
+			Slider(value: value, in: range, step: 1)
+			Text(value.wrappedValue, format: .number.precision(.fractionLength(0)))
 				.monospacedDigit()
 				.frame(width: 32, alignment: .trailing)
 				.foregroundStyle(.secondary)
+		}
+	}
+
+	@ViewBuilder
+	private var marginsSection: some View {
+		Section {
+			Toggle(isOn: $useCustomMargins) {
+				Text("Custom Margins", comment: "Custom Margins toggle")
+			}
+			if useCustomMargins {
+				marginRow(title: NSLocalizedString("Left & Right", comment: "Left & Right margin label"), value: $marginHorizontal, range: ArticleThemeOverrides.marginHorizontalRange)
+				marginRow(title: NSLocalizedString("Top", comment: "Top margin label"), value: $marginTop, range: ArticleThemeOverrides.marginTopRange)
+			}
+		} header: {
+			Text("Page Margins", comment: "Page Margins section header")
+		}
+	}
+
+	@ViewBuilder
+	private var justificationSection: some View {
+		Section {
+			Toggle(isOn: $justifyText) {
+				Text("Justify Text", comment: "Justify Text toggle")
+			}
+			Toggle(isOn: $hyphenate) {
+				Text("Hyphenate", comment: "Hyphenate toggle")
+			}
+		} footer: {
+			Text("Hyphenation works best paired with justified text on narrow screens.", comment: "Justification/hyphenation footer")
 		}
 	}
 
@@ -503,11 +520,16 @@ struct ArticleThemeListView: View {
 	/// adjusts controls, and also what actually gets persisted in `save()`.
 	private var liveOverrides: ArticleThemeOverrides {
 		ArticleThemeOverrides(
-			fontFamilyName: useCustomFont ? fontFamilyName : nil,
+			serifFontFamilyName: useCustomSerifFont ? serifFontFamilyName : nil,
+			sansFontFamilyName: useCustomSansFont ? sansFontFamilyName : nil,
 			fontSize: useCustomFontSize ? fontSize : nil,
 			lineHeight: useCustomLineHeight ? lineHeight : nil,
 			paragraphSpacing: useCustomParagraphSpacing ? paragraphSpacing : nil,
 			paragraphIndent: useCustomParagraphIndent ? paragraphIndent : nil,
+			marginHorizontal: useCustomMargins ? marginHorizontal : nil,
+			marginTop: useCustomMargins ? marginTop : nil,
+			justifyText: justifyText ? true : nil,
+			hyphenate: hyphenate ? true : nil,
 			textColorHex: useCustomTextColor ? textColor.hexString : nil,
 			textColorDarkHex: useCustomTextColor ? textColorDark.hexString : nil,
 			backgroundColorHex: useCustomBackgroundColor ? backgroundColor.hexString : nil,
@@ -530,17 +552,20 @@ struct ArticleThemeListView: View {
 
 	private func save() {
 		AppDefaults.shared.articleThemeOverrides = liveOverrides
-		UserDefaults.standard.set(fontFamilyName, forKey: Self.lastFontFamilyNameDefaultsKey)
+		UserDefaults.standard.set(serifFontFamilyName, forKey: Self.lastSerifFontFamilyNameDefaultsKey)
+		UserDefaults.standard.set(sansFontFamilyName, forKey: Self.lastSansFontFamilyNameDefaultsKey)
 	}
 
 	private func resetToThemeDefaults() {
 		let themeColors = ArticleThemeColorExtractor.colors(for: ArticleThemesManager.shared.currentTheme)
 
-		useCustomFont = false
+		useCustomSerifFont = false
+		useCustomSansFont = false
 		useCustomFontSize = false
 		useCustomLineHeight = false
 		useCustomParagraphSpacing = false
 		useCustomParagraphIndent = false
+		useCustomMargins = false
 		useCustomTextColor = false
 		useCustomBackgroundColor = false
 		useCustomLinkColor = false
@@ -548,6 +573,10 @@ struct ArticleThemeListView: View {
 		lineHeight = 1.4
 		paragraphSpacing = 1.0
 		paragraphIndent = 0.0
+		marginHorizontal = 20
+		marginTop = 0
+		justifyText = false
+		hyphenate = false
 		textColor = Color(themeColors.textColor)
 		textColorDark = Color(themeColors.textColorDark)
 		backgroundColor = Color(themeColors.backgroundColor)
@@ -555,33 +584,6 @@ struct ArticleThemeListView: View {
 		linkColor = Color(themeColors.linkColor)
 		linkColorDark = Color(themeColors.linkColorDark)
 		save()
-	}
-
-	// MARK: - Import
-
-	private func importTheme(url: URL) {
-		guard let controller = UIApplication.shared.firstKeyWindow?.topViewController else { return }
-
-		if url.startAccessingSecurityScopedResource() {
-			defer {
-				url.stopAccessingSecurityScopedResource()
-			}
-
-			do {
-				try ArticleThemeImporter.importTheme(controller: controller, url: url)
-			} catch {
-				NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
-			}
-		}
-	}
-}
-
-private extension UIApplication {
-	var firstKeyWindow: UIWindow? {
-		connectedScenes
-			.compactMap { $0 as? UIWindowScene }
-			.flatMap { $0.windows }
-			.first { $0.isKeyWindow }
 	}
 }
 
@@ -602,11 +604,11 @@ private extension Color {
 	}
 }
 
-// `UIColor(cssHex:)` / `cssHexString` now live in ArticleThemeColorExtractor.swift,
+// `UIColor(cssHex:)` / `cssHexString` live in ArticleThemeColorExtractor.swift,
 // shared with the theme color extractor.
 
 #Preview {
 	NavigationStack {
-		ArticleThemeListView()
+		ArticleThemeCustomizeView()
 	}
 }
