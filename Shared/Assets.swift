@@ -147,11 +147,43 @@ struct Assets {
 		}
 
 		static let star = RSColor(named: "starColor")!
-		static let vibrantText = RSColor(named: "vibrantTextColor")!
-		static let controlBackground = RSColor(named: "controlBackgroundColor")!
-		static let iconBackground = RSColor(named: "iconBackgroundColor")!
-		static let fullScreenBackground = RSColor(named: "fullScreenBackgroundColor")!
-		static let sectionHeader = RSColor(named: "sectionHeaderColor")!
+
+		/// Live per-read, not cached -- reflects `AppDefaults.shared.surfaceTint`
+		/// rather than a hardcoded literal, same live-update contract as
+		/// `primaryAccent`/`secondaryAccent` above. `.default` falls back to the
+		/// asset catalog's colorset value, unchanged from before `SurfaceTint`
+		/// existed.
+		static var barBackground: RSColor {
+			let hex = UITraitCollection.current.userInterfaceStyle == .dark
+				? AppDefaults.shared.surfaceTint.darkHexSet?.barBackground
+				: AppDefaults.shared.surfaceTint.lightHexSet?.barBackground
+			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "barBackgroundColor")!
+		}
+		static var vibrantText: RSColor {
+			let hex = UITraitCollection.current.userInterfaceStyle == .dark
+				? AppDefaults.shared.surfaceTint.darkHexSet?.vibrantText
+				: AppDefaults.shared.surfaceTint.lightHexSet?.vibrantText
+			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "vibrantTextColor")!
+		}
+		static var controlBackground: RSColor {
+			let hex = UITraitCollection.current.userInterfaceStyle == .dark
+				? AppDefaults.shared.surfaceTint.darkHexSet?.controlBackground
+				: AppDefaults.shared.surfaceTint.lightHexSet?.controlBackground
+			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "controlBackgroundColor")!
+		}
+		static var iconBackground: RSColor { RSColor(named: "iconBackgroundColor")! }
+		static var fullScreenBackground: RSColor {
+			let hex = UITraitCollection.current.userInterfaceStyle == .dark
+				? AppDefaults.shared.surfaceTint.darkHexSet?.fullScreenBackground
+				: AppDefaults.shared.surfaceTint.lightHexSet?.fullScreenBackground
+			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "fullScreenBackgroundColor")!
+		}
+		static var sectionHeader: RSColor {
+			let hex = UITraitCollection.current.userInterfaceStyle == .dark
+				? AppDefaults.shared.surfaceTint.darkHexSet?.sectionHeader
+				: AppDefaults.shared.surfaceTint.lightHexSet?.sectionHeader
+			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "sectionHeaderColor")!
+		}
 	}
 }
 

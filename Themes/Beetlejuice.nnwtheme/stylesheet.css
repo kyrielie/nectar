@@ -28,10 +28,8 @@ body {
 }
 
 [href] {
-	text-decoration-style: underline;
-	text-decoration-color: var(--link-underline-color);
-	text-decoration-thickness: 1px;
-	text-underline-offset: 0.15em;
+	text-decoration: none;
+	font-weight: 600;
 }
 [href]:hover {
 	color: var(--link-hover-color);

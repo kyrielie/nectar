@@ -36,6 +36,11 @@ struct ArticleThemeListView: View {
 	@State private var useCustomLineHeight: Bool
 	@State private var lineHeight: Double
 
+	@State private var useCustomParagraphSpacing: Bool
+	@State private var paragraphSpacing: Double
+	@State private var useCustomParagraphIndent: Bool
+	@State private var paragraphIndent: Double
+
 	@State private var useCustomTextColor: Bool
 	@State private var textColor: Color
 	@State private var textColorDark: Color
@@ -95,6 +100,11 @@ struct ArticleThemeListView: View {
 		_useCustomLineHeight = State(initialValue: overrides.lineHeight != nil)
 		_lineHeight = State(initialValue: overrides.lineHeight ?? 1.4)
 
+		_useCustomParagraphSpacing = State(initialValue: overrides.paragraphSpacing != nil)
+		_paragraphSpacing = State(initialValue: overrides.paragraphSpacing ?? 1.0)
+		_useCustomParagraphIndent = State(initialValue: overrides.paragraphIndent != nil)
+		_paragraphIndent = State(initialValue: overrides.paragraphIndent ?? 0.0)
+
 		// Seeded from the theme's own colors (not `.primary`/`.accentColor`/`systemBackground`)
 		// so that turning a custom-color toggle on doesn't itself change anything visually --
 		// the picker starts out showing exactly what's already on screen, and only actually
@@ -119,6 +129,8 @@ struct ArticleThemeListView: View {
 			fontSection
 			fontSizeSection
 			lineHeightSection
+			paragraphSpacingSection
+			paragraphIndentSection
 			colorsSection
 			resetSection
 		}
@@ -174,6 +186,10 @@ struct ArticleThemeListView: View {
 		var fontSize: Double
 		var useCustomLineHeight: Bool
 		var lineHeight: Double
+		var useCustomParagraphSpacing: Bool
+		var paragraphSpacing: Double
+		var useCustomParagraphIndent: Bool
+		var paragraphIndent: Double
 		var useCustomTextColor: Bool
 		var textColor: Color
 		var textColorDark: Color
@@ -193,6 +209,10 @@ struct ArticleThemeListView: View {
 			fontSize: fontSize,
 			useCustomLineHeight: useCustomLineHeight,
 			lineHeight: lineHeight,
+			useCustomParagraphSpacing: useCustomParagraphSpacing,
+			paragraphSpacing: paragraphSpacing,
+			useCustomParagraphIndent: useCustomParagraphIndent,
+			paragraphIndent: paragraphIndent,
 			useCustomTextColor: useCustomTextColor,
 			textColor: textColor,
 			textColorDark: textColorDark,
@@ -272,7 +292,7 @@ struct ArticleThemeListView: View {
 	@ViewBuilder
 	private var previewSection: some View {
 		Section {
-			ArticleThemePreviewWebView(css: previewCSS)
+			ArticleThemePreviewWebView(importCSS: ArticleThemesManager.shared.currentTheme.importCSS, css: previewCSS)
 				.frame(height: 320)
 				.listRowInsets(EdgeInsets())
 		} header: {
@@ -344,6 +364,54 @@ struct ArticleThemeListView: View {
 		HStack {
 			Slider(value: $lineHeight, in: ArticleThemeOverrides.lineHeightRange, step: 0.1)
 			Text(lineHeight, format: .number.precision(.fractionLength(1)))
+				.monospacedDigit()
+				.frame(width: 32, alignment: .trailing)
+				.foregroundStyle(.secondary)
+		}
+	}
+
+	@ViewBuilder
+	private var paragraphSpacingSection: some View {
+		Section {
+			Toggle(isOn: $useCustomParagraphSpacing) {
+				Text("Custom Paragraph Spacing", comment: "Custom Paragraph Spacing toggle")
+			}
+			if useCustomParagraphSpacing {
+				paragraphSpacingRow
+			}
+		} header: {
+			Text("Paragraph Spacing", comment: "Paragraph Spacing section header")
+		}
+	}
+
+	private var paragraphSpacingRow: some View {
+		HStack {
+			Slider(value: $paragraphSpacing, in: ArticleThemeOverrides.paragraphSpacingRange, step: 0.1)
+			Text(paragraphSpacing, format: .number.precision(.fractionLength(1)))
+				.monospacedDigit()
+				.frame(width: 32, alignment: .trailing)
+				.foregroundStyle(.secondary)
+		}
+	}
+
+	@ViewBuilder
+	private var paragraphIndentSection: some View {
+		Section {
+			Toggle(isOn: $useCustomParagraphIndent) {
+				Text("Custom Paragraph Indent", comment: "Custom Paragraph Indent toggle")
+			}
+			if useCustomParagraphIndent {
+				paragraphIndentRow
+			}
+		} header: {
+			Text("Paragraph Indent", comment: "Paragraph Indent section header")
+		}
+	}
+
+	private var paragraphIndentRow: some View {
+		HStack {
+			Slider(value: $paragraphIndent, in: ArticleThemeOverrides.paragraphIndentRange, step: 0.1)
+			Text(paragraphIndent, format: .number.precision(.fractionLength(1)))
 				.monospacedDigit()
 				.frame(width: 32, alignment: .trailing)
 				.foregroundStyle(.secondary)
@@ -438,6 +506,8 @@ struct ArticleThemeListView: View {
 			fontFamilyName: useCustomFont ? fontFamilyName : nil,
 			fontSize: useCustomFontSize ? fontSize : nil,
 			lineHeight: useCustomLineHeight ? lineHeight : nil,
+			paragraphSpacing: useCustomParagraphSpacing ? paragraphSpacing : nil,
+			paragraphIndent: useCustomParagraphIndent ? paragraphIndent : nil,
 			textColorHex: useCustomTextColor ? textColor.hexString : nil,
 			textColorDarkHex: useCustomTextColor ? textColorDark.hexString : nil,
 			backgroundColorHex: useCustomBackgroundColor ? backgroundColor.hexString : nil,
@@ -469,11 +539,15 @@ struct ArticleThemeListView: View {
 		useCustomFont = false
 		useCustomFontSize = false
 		useCustomLineHeight = false
+		useCustomParagraphSpacing = false
+		useCustomParagraphIndent = false
 		useCustomTextColor = false
 		useCustomBackgroundColor = false
 		useCustomLinkColor = false
 		fontSize = UIFont.preferredFont(forTextStyle: .body).pointSize
 		lineHeight = 1.4
+		paragraphSpacing = 1.0
+		paragraphIndent = 0.0
 		textColor = Color(themeColors.textColor)
 		textColorDark = Color(themeColors.textColorDark)
 		backgroundColor = Color(themeColors.backgroundColor)

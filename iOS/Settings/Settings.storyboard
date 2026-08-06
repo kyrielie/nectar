@@ -760,6 +760,39 @@
                                             <outlet property="label" destination="AcC-lb-2Fp" id="AcC-oc-gyE"/>
                                         </connections>
                                     </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" accessoryType="disclosureIndicator" indentationWidth="10" id="SrT-nT-clR" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="1254" width="374" height="51"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="SrT-nT-clR" id="SrT-cV-wBN">
+                                            <rect key="frame" x="0.0" y="0.0" width="343.5" height="51"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Surface Tint" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="SrT-lb-2Fp">
+                                                    <rect key="frame" x="20" y="15.5" width="98" height="20.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Default" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="SrT-lb-16m">
+                                                    <rect key="frame" x="258" y="15.5" width="77.5" height="20.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="SrT-lb-16m" firstAttribute="trailing" secondItem="SrT-cV-wBN" secondAttribute="trailingMargin" id="SrT-cn-R1e"/>
+                                                <constraint firstItem="SrT-lb-16m" firstAttribute="centerY" secondItem="SrT-cV-wBN" secondAttribute="centerY" id="SrT-cn-SXW"/>
+                                                <constraint firstItem="SrT-lb-2Fp" firstAttribute="leading" secondItem="SrT-cV-wBN" secondAttribute="leadingMargin" id="SrT-cn-g40"/>
+                                                <constraint firstItem="SrT-lb-2Fp" firstAttribute="centerY" secondItem="SrT-cV-wBN" secondAttribute="centerY" id="SrT-cn-geh"/>
+                                                <constraint firstItem="SrT-lb-16m" firstAttribute="leading" secondItem="SrT-lb-2Fp" secondAttribute="trailing" constant="8" symbolic="YES" id="SrT-cn-tOP"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                        <connections>
+                                            <outlet property="detail" destination="SrT-lb-16m" id="SrT-oc-Z0c"/>
+                                            <outlet property="label" destination="SrT-lb-2Fp" id="SrT-oc-gyE"/>
+                                        </connections>
+                                    </tableViewCell>
                                 </cells>
                             </tableViewSection>
                             <tableViewSection headerTitle="Troubleshooting" id="Trb-eL-9xZ">
@@ -930,6 +963,7 @@
                         <outlet property="pagingSwipeEnabledSwitch" destination="Nct-pg-Swt" id="Nct-oc-Pg1"/>
                         <outlet property="colorPaletteDetailLabel" destination="16m-Ns-Y8V" id="zdj-Ag-ZUw"/>
                         <outlet property="accentColorDetailLabel" destination="AcC-lb-16m" id="AcC-oc-zdj01"/>
+                        <outlet property="surfaceTintDetailLabel" destination="SrT-lb-16m" id="SrT-oc-zdj01"/>
                         <outlet property="showLastUpdatedLabelSwitch" destination="Upd-a4-Lbl" id="Upd-oa-Lbl"/>
                         <outlet property="groupByFeedSwitch" destination="JNi-Wz-RbU" id="TwH-Kd-o6N"/>
                         <outlet property="openLinksInNetNewsWire" destination="dhR-L2-PX3" id="z1b-pX-bwG"/>

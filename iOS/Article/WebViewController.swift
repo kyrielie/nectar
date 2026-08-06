@@ -929,6 +929,7 @@ private extension WebViewController {
 		let substitutions = [
 			"title": rendering.title,
 			"baseURL": rendering.baseURL,
+			"importStyle": rendering.importStyle,
 			"style": rendering.style,
 			"body": rendering.html
 		]

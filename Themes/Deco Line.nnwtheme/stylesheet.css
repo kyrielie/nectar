@@ -1,0 +1,285 @@
+/* Deco Line — set in Raleway, a geometric sans with the clean stepped
+   verticals and wide, confident capitals of 1920s-30s Art Deco signage and
+   travel-poster lettering. --font-main is UI chrome (headerBar/datelineBar/
+   byline/footer); --font-body is .articleBody prose; --font-code is
+   code/pre, following the Hyperlegible convention. */
+
+@import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+
+:root {
+	--font-main: 'Raleway', -apple-system, "Helvetica Neue", sans-serif;
+	--font-body: 'Raleway', -apple-system, "Helvetica Neue", sans-serif;
+	--font-code: "SF Mono", Menlo, monospace;
+
+	--background-color: #f4f1ea;
+	--text-color: #23282b;
+	--link-color: #0f6e5c;
+	--visited-link-color: #6a6558;
+	--attribution-color: #6f6a5c;
+	--article-title-color: #17201f;
+	--body-code-color: #2e3532;
+	--body-code-background: rgba(0, 0, 0, 0.05);
+	--system-message-color: #b8ac8f;
+	--separator-color: #ddd3ba;
+	--table-cell-border-color: #ddd3ba;
+	--blockquote-border-color: #c9a13b;
+	--blockquote-text-color: rgba(35, 40, 43, 0.75);
+	--blockquote-background: rgba(201, 161, 59, 0.08);
+	--footer-color: #6f6a5c;
+	--pre-background: rgba(0, 0, 0, 0.04);
+	--header-top: #1b3934;
+	--header-bottom: #122622;
+	--dateline-bar-top: #c9a13b;
+	--dateline-bar-bottom: #a5822c;
+	--step-lines-color: #c9a13b;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--background-color: #14181a;
+		--text-color: #e7e2d4;
+		--link-color: #4fd7bb;
+		--visited-link-color: #a39d87;
+		--attribution-color: #a8a290;
+		--article-title-color: #f2eee0;
+		--body-code-color: #d3cdba;
+		--body-code-background: rgba(255, 255, 255, 0.08);
+		--system-message-color: #5c5644;
+		--separator-color: rgba(255, 255, 255, 0.14);
+		--table-cell-border-color: rgba(255, 255, 255, 0.16);
+		--blockquote-border-color: #e0b957;
+		--blockquote-text-color: rgba(231, 226, 212, 0.78);
+		--blockquote-background: rgba(224, 185, 87, 0.08);
+		--footer-color: #a8a290;
+		--pre-background: rgba(255, 255, 255, 0.06);
+		--header-top: #0d1f1c;
+		--header-bottom: #081512;
+		--dateline-bar-top: #7a611f;
+		--dateline-bar-bottom: #61501f;
+		--step-lines-color: #e0b957;
+	}
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--background-color);
+	color: var(--text-color);
+	font-family: var(--font-body);
+	word-wrap: break-word;
+}
+
+/* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
+   the higher-specificity 'body a' rule below still wins the cascade. */
+a {
+	color: var(--link-color);
+}
+
+.articleBody a {
+	color: var(--link-color);
+}
+
+body a, body a * {
+	color: var(--link-color);
+}
+
+body a:visited {
+	color: var(--visited-link-color);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+/* Header bar — deep emerald gradient */
+
+.headerBar {
+	background: linear-gradient(to bottom, var(--header-top), var(--header-bottom));
+	padding: 14px 0;
+	font-family: var(--font-main);
+	font-size: 1em;
+	font-weight: 700;
+	line-height: 1.4;
+	color: #f4f1ea;
+	letter-spacing: 0.02em;
+}
+
+.headerBarInner {
+	display: flex;
+	align-items: center;
+}
+
+.avatar {
+	vertical-align: middle;
+	border-radius: 3px;
+	height: 1.8em !important;
+	width: 1.8em;
+	min-width: 1.8em;
+	margin: 0 !important;
+	margin-right: 0.5em !important;
+}
+
+.headerBar a:link, .headerBar a:visited, .headerBar a, .feedlink {
+	color: #f4f1ea !important;
+	font-weight: 700;
+}
+
+.byline {
+	color: rgba(244, 241, 234, 0.78);
+	margin-left: 0.5em;
+}
+
+body .byline a:link, .byline a:visited, .byline a {
+	color: rgba(244, 241, 234, 0.78) !important;
+}
+
+/* Content containers */
+
+.barContent, .articleContent {
+	max-width: 42rem;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.articleContent {
+	margin-top: 2em;
+}
+
+/* Dateline bar — brass/gold gradient */
+
+.datelineBar {
+	background: linear-gradient(to bottom, var(--dateline-bar-top), var(--dateline-bar-bottom));
+	padding: 8px 0;
+	font-family: var(--font-main);
+	font-size: 0.85em;
+	font-weight: 700;
+	line-height: 1.4;
+	color: #23282b;
+}
+
+.datelineBarInner {
+	display: flex;
+	align-items: center;
+}
+
+.datelineDate a:link, .datelineDate a:visited, .datelineDate a {
+	color: #23282b !important;
+	font-weight: 700;
+}
+
+/* Article title */
+
+.articleTitle {
+	font-family: var(--font-body);
+	font-size: 1.7em;
+	font-weight: 700;
+	line-height: 1.25;
+	letter-spacing: 0.01em;
+	margin-top: 0;
+	margin-bottom: 12px;
+	color: var(--article-title-color);
+}
+
+.articleTitle a:link, .articleTitle a:visited, .articleTitle a {
+	color: var(--article-title-color);
+}
+
+.articleTitle a:hover {
+	text-decoration: underline;
+}
+
+/* Stepped-line divider -- the Deco "step" motif this theme is named for,
+   three descending bars echoing a ziggurat/skyscraper setback profile. */
+.stepLines {
+	display: flex;
+	align-items: flex-end;
+	gap: 4px;
+	height: 10px;
+	margin-bottom: 20px;
+}
+
+.stepLines span {
+	display: block;
+	background: var(--step-lines-color);
+	opacity: 0.7;
+	height: 4px;
+}
+
+.stepLines span:nth-child(1) {
+	width: 36px;
+	height: 4px;
+}
+
+.stepLines span:nth-child(2) {
+	width: 24px;
+	height: 7px;
+}
+
+.stepLines span:nth-child(3) {
+	width: 14px;
+	height: 10px;
+}
+
+/* Article body */
+
+.articleBody {
+	margin-top: 8px;
+	font-size: 1.05em;
+	line-height: 1.65em;
+}
+
+.articleBody a {
+	text-decoration: underline;
+}
+
+.articleBody p {
+	margin-top: 0;
+	margin-bottom: var(--paragraph-spacing, 1em);
+	text-indent: var(--paragraph-indent, 0);
+}
+
+.articleBody blockquote {
+	border-left: 3px solid var(--blockquote-border-color);
+	background: var(--blockquote-background);
+	color: var(--blockquote-text-color);
+	padding: 0.4em 1em;
+	margin-left: 0;
+	font-style: italic;
+}
+
+.articleBody code, .articleBody pre {
+	font-family: var(--font-code);
+	color: var(--body-code-color);
+	background: var(--body-code-background);
+}
+
+.articleBody pre {
+	background: var(--pre-background);
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.articleBody table {
+	border-collapse: collapse;
+}
+
+.articleBody td, .articleBody th {
+	border: 1px solid var(--table-cell-border-color);
+	padding: 0.4em 0.6em;
+}
+
+/* Footer */
+
+body .footer {
+	margin-top: 28px;
+	margin-bottom: 2em;
+	font-family: var(--font-main);
+	color: var(--footer-color);
+	font-size: 0.85em;
+	font-style: italic;
+	letter-spacing: 0.02em;
+}
+
+body .footer a:link, .footer a:visited {
+	color: var(--link-color);
+	text-decoration: underline;
+}

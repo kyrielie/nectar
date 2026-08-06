@@ -164,7 +164,7 @@
       "comment" : "AO3 preface refetch cadence picker label\nCommand"
     },
     "Check for Updates (Enable AO3 Updates in Settings)" : {
-      "comment" : "Command, disabled: Ambrosia article with both AO3 network toggles off"
+      "comment" : "Command, disabled: Ambrosia article with the AO3 network toggle off"
     },
     "Choose an account to receive the imported feeds and folders" : {
       "comment" : "Import Account"
@@ -183,6 +183,9 @@
     },
     "Clear Content" : {
       "comment" : "Clear Content button"
+    },
+    "Clearing content here frees space inside the database file, but the file itself won't shrink until it's compacted -- so the size shown in Account Statistics won't drop right away." : {
+      "comment" : "Manage Storage VACUUM explanation"
     },
     "Close" : {
       "comment" : "Close"
@@ -253,6 +256,12 @@
     "Custom Link Color" : {
       "comment" : "Custom Link Color toggle"
     },
+    "Custom Paragraph Indent" : {
+      "comment" : "Custom Paragraph Indent toggle"
+    },
+    "Custom Paragraph Spacing" : {
+      "comment" : "Custom Paragraph Spacing toggle"
+    },
     "Custom Text Color" : {
       "comment" : "Custom Text Color toggle"
     },
@@ -272,7 +281,7 @@
       "comment" : "Deactivate"
     },
     "Default" : {
-      "comment" : "Default\nDefault accent color"
+      "comment" : "Default\nDefault accent color\nDefault surface tint"
     },
     "Delete" : {
       "comment" : "Delete button"
@@ -379,8 +388,8 @@
     "Feeds" : {
       "comment" : "Feeds"
     },
-    "Fetch AO3 Stats for Library Works" : {
-      "comment" : "Ambrosia AO3 stats-updates toggle label"
+    "Fetch AO3 Updates for Library Works" : {
+      "comment" : "Ambrosia AO3 updates toggle label"
     },
     "Fetching" : {
       "comment" : "Fetching"
@@ -725,8 +734,8 @@
     "Oldest First" : {
       "comment" : "Ascending sort direction — date"
     },
-    "Only affects works added to your library from Ambrosia/Calibre. Both are off by default so Nectar makes no AO3 requests for a purely local archive unless you turn one on. Works imported directly from an AO3 RSS feed always fetch live content -- there's no other way for them to get it." : {
-      "comment" : "Ambrosia AO3 network toggles footer"
+    "Only affects works added to your library from Ambrosia/Calibre. Off by default so Nectar makes no AO3 requests for a purely local archive unless you turn this on. When on, both chapter text and stats (kudos/comments/hits) stay in sync with the live AO3 version; a fetch that looks like it removed chapters or lost a large amount of text is held back for review instead of applied automatically. Works imported directly from an AO3 RSS feed always fetch live content -- there's no other way for them to get it." : {
+      "comment" : "Ambrosia AO3 network toggle footer"
     },
     "Open" : {
       "comment" : "Open"
@@ -755,6 +764,12 @@
     "Page Counter" : {
       "comment" : "Page counter picker title"
     },
+    "Paragraph Indent" : {
+      "comment" : "Paragraph Indent section header"
+    },
+    "Paragraph Spacing" : {
+      "comment" : "Paragraph Spacing section header"
+    },
     "Paste any text containing archiveofourown.org work links -- everything else is ignored. This is a one-time import, not a feed: pasted works won't refresh with new stats or chapters until you open them." : {
       "comment" : "Pasted AO3 link-list import footer"
     },
@@ -781,9 +796,6 @@
     },
     "Previous Work" : {
       "comment" : "Command"
-    },
-    "Pull Chapter Updates for Library Works" : {
-      "comment" : "Ambrosia AO3 content-updates toggle label"
     },
     "Read Later" : {
       "comment" : "Command\nRead Later"
@@ -918,7 +930,7 @@
       "comment" : "AO3 account section footer"
     },
     "Slate" : {
-      "comment" : "Slate accent color"
+      "comment" : "Slate accent color\nSlate surface tint"
     },
     "Small" : {
       "comment" : "Small"

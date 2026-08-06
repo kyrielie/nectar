@@ -88,6 +88,13 @@ a {
 	color: var(--secondary-accent-color);
 }
 
+/* §2: preface/body link-color split -- tag/meta links in the preface use
+   the palette's iris hue, distinct from the prose link color above. */
+#ao3Preface a,
+#ao3SyntheticPreface a {
+	color: #c4a7e7;
+}
+
 body a,
 body a:visited,
 body a * {
