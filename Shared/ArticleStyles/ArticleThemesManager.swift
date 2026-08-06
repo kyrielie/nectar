@@ -115,6 +115,14 @@ final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 		try FileManager.default.copyItem(atPath: filename, toPath: toFilename)
 	}
 
+	/// A silent lookup: returns nil for a theme name that can't be resolved or
+	/// whose package fails to load, without reporting anything. Used for display
+	/// purposes (e.g. the theme picker's row labels), which may re-evaluate this
+	/// for every theme on every SwiftUI re-render -- posting a failure
+	/// notification from here would show a duplicate "couldn't be opened" alert
+	/// per broken theme per render, rather than only on an actual import attempt.
+	/// Callers that perform a user-initiated import already report their own
+	/// failures at the call site.
 	func articleThemeWithThemeName(_ themeName: String) -> ArticleTheme? {
 		if themeName == AppDefaults.defaultThemeName {
 			return ArticleTheme.defaultTheme
@@ -132,12 +140,7 @@ final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 			return nil
 		}
 
-		do {
-			return try ArticleTheme(url: url, isAppTheme: isAppTheme)
-		} catch {
-			NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
-			return nil
-		}
+		return try? ArticleTheme(url: url, isAppTheme: isAppTheme)
 	}
 
 	func deleteTheme(themeName: String) {

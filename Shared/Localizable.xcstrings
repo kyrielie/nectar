@@ -154,6 +154,9 @@
     "Badges" : {
       "comment" : "Badges tag display mode"
     },
+    "Below 20px, text can run edge-to-edge on some devices. Most themes treat 20px as the minimum comfortable margin." : {
+      "comment" : "Margin below recommended floor footer warning"
+    },
     "Berry" : {
       "comment" : "Berry accent color"
     },
@@ -481,9 +484,6 @@
     "Hyphenate" : {
       "comment" : "Hyphenate toggle"
     },
-    "Hyphenation works best paired with justified text on narrow screens." : {
-      "comment" : "Justification/hyphenation footer"
-    },
     "If an AO3 search-results feed reports a Cloudflare challenge, use this to prove to Cloudflare that Nectar is being used by a real person -- the same check AO3 shows in a regular browser sometimes. This isn't tied to your AO3 account and doesn't require being signed in; it usually needs re-doing periodically." : {
       "comment" : "AO3 Cloudflare challenge section footer"
     },
@@ -554,9 +554,6 @@
     },
     "Light" : {
       "comment" : "Light"
-    },
-    "Light & Dark" : {
-      "comment" : "Theme supports both light and dark mode"
     },
     "Line Height" : {
       "comment" : "Line Height section header"
@@ -788,6 +785,9 @@
     "Order" : {
       "comment" : "Sort direction picker title"
     },
+    "Override Justification" : {
+      "comment" : "Override Justification toggle"
+    },
     "Overwrite" : {
       "comment" : "Overwrite"
     },
@@ -826,6 +826,9 @@
     },
     "Preview" : {
       "comment" : "Preview\nPreview section header"
+    },
+    "Preview Dark Mode" : {
+      "comment" : "Preview dark mode toggle label"
     },
     "Previous Article" : {
       "comment" : "Previous Article"
@@ -971,9 +974,6 @@
     "Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Nectar can leave kudos on your behalf if you turn that on below -- it still can't subscribe, bookmark, or comment." : {
       "comment" : "AO3 account section footer"
     },
-    "Single Palette" : {
-      "comment" : "Theme has one color palette regardless of system appearance"
-    },
     "Slate" : {
       "comment" : "Slate accent color\nSlate surface tint"
     },
@@ -982,6 +982,9 @@
     },
     "Smart Feeds" : {
       "comment" : "Smart Feeds group title"
+    },
+    "Some themes justify text on their own. Turn on Override Justification to force it on or off regardless of the theme. Hyphenation works best paired with justified text on narrow screens." : {
+      "comment" : "Justification/hyphenation footer"
     },
     "Sort Timeline By" : {
       "comment" : "Sort field picker title"
