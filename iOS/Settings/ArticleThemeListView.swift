@@ -1,26 +1,33 @@
 //
-//  ArticleThemeCustomizeView.swift
+//  ArticleThemeListView.swift
 //  NetNewsWire-iOS
 //
-//  Created for Settings → Theme → Customize. Split from the former single
-//  ArticleThemeListView.swift per theme-settings-implementation-plan.md:
-//  ArticleThemeGalleryView picks a theme; this screen adjusts overrides
-//  for whichever theme is current.
+//  Created for Settings → Theme.
+//  Reverts the Gallery/Customize split (theme-settings-implementation-plan.md):
+//  back to a single screen. Theme selection is a plain dropdown Picker instead
+//  of a swatch-grid gallery -- no per-theme WKWebView or color-swatch preview
+//  cells, just the theme's name plus a short light/dark-vs-single-palette tag
+//  so that disclosure doesn't require opening each theme to find out. Font,
+//  size, and color overrides for whichever theme is current still live here
+//  too, with one shared live preview reflecting every change immediately.
 //  Copyright © 2026 Ranchero Software. All rights reserved.
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 import RSCore
 
-/// Adjusts `ArticleThemeOverrides` for whichever theme `ArticleThemesManager` reports
-/// as current, with one shared live preview reflecting every change immediately. Does
-/// not pick the theme itself -- that's `ArticleThemeGalleryView`, pushed one level up
-/// the navigation stack.
-struct ArticleThemeCustomizeView: View {
+extension UTType {
+	static var netNewsWireTheme: UTType { UTType(importedAs: "com.ranchero.netnewswire.theme") }
+}
+
+struct ArticleThemeListView: View {
 
 	@Environment(\.dismiss) private var dismiss
 
+	@State private var isImporterPresented = false
 	@State private var themeNamesRefreshToken = false
+	@State private var isDeleteCurrentThemeAlertPresented = false
 
 	@State private var useCustomSerifFont: Bool
 	@State private var serifFontFamilyName: String
@@ -92,8 +99,8 @@ struct ArticleThemeCustomizeView: View {
 	/// turning the toggle off and back on would otherwise always land back on the
 	/// first font in the list. These keys store just that last choice, independent
 	/// of whether it's currently applied.
-	private static let lastSerifFontFamilyNameDefaultsKey = "ArticleThemeCustomizeView.lastSerifFontFamilyName"
-	private static let lastSansFontFamilyNameDefaultsKey = "ArticleThemeCustomizeView.lastSansFontFamilyName"
+	private static let lastSerifFontFamilyNameDefaultsKey = "ArticleThemeListView.lastSerifFontFamilyName"
+	private static let lastSansFontFamilyNameDefaultsKey = "ArticleThemeListView.lastSansFontFamilyName"
 
 	init() {
 		let overrides = AppDefaults.shared.articleThemeOverrides
@@ -149,6 +156,7 @@ struct ArticleThemeCustomizeView: View {
 
 	var body: some View {
 		Form {
+			themeSection
 			previewSection
 			fontSection
 			fontSizeSection
@@ -160,7 +168,37 @@ struct ArticleThemeCustomizeView: View {
 			colorsSection
 			resetSection
 		}
-		.navigationTitle(Text("Customize", comment: "Customize navigation title"))
+		.navigationTitle(Text("Theme", comment: "Theme navigation title"))
+		.toolbar {
+			ToolbarItem(placement: .primaryAction) {
+				Button {
+					isImporterPresented = true
+				} label: {
+					Image(systemName: "plus")
+				}
+				.accessibilityLabel(Text("Import Theme", comment: "Import Theme"))
+			}
+		}
+		.fileImporter(isPresented: $isImporterPresented, allowedContentTypes: [UTType.netNewsWireTheme]) { result in
+			guard case .success(let url) = result else { return }
+			importTheme(url: url)
+		}
+		.alert(Text("Delete Theme?", comment: "Delete Theme"), isPresented: $isDeleteCurrentThemeAlertPresented) {
+			Button(role: .cancel) { } label: {
+				Text("Cancel", comment: "Cancel button")
+			}
+			Button(role: .destructive) {
+				deleteCurrentTheme()
+			} label: {
+				Text("Delete", comment: "Delete button")
+			}
+		} message: {
+			let localizedMessageText = NSLocalizedString("Are you sure you want to delete the theme “%@”?.", comment: "Delete Theme Message")
+			Text(NSString.localizedStringWithFormat(localizedMessageText as NSString, ArticleThemesManager.shared.currentTheme.name) as String)
+		}
+		.onReceive(NotificationCenter.default.publisher(for: .ArticleThemeNamesDidChangeNotification)) { _ in
+			themeNamesRefreshToken.toggle()
+		}
 		.onReceive(NotificationCenter.default.publisher(for: .CurrentArticleThemeDidChangeNotification)) { _ in
 			themeNamesRefreshToken.toggle()
 		}
@@ -244,15 +282,80 @@ struct ArticleThemeCustomizeView: View {
 	/// took Xms to type-check"). Giving each section its own explicitly-typed
 	/// `some View` property lets the compiler solve each in isolation instead of
 	/// all at once.
+	///
+	/// A plain dropdown `Picker`, not the swatch-grid gallery this replaces --
+	/// no per-theme `WKWebView` or color-swatch cell, just the theme's name.
+	/// Each option's label appends a short "Light & Dark" / "Single Palette" tag
+	/// (from `ArticleThemeColorExtractor.colors(for:).hasDarkModeVariant`) so
+	/// that disclosure doesn't require opening a theme to find out, and the
+	/// footer repeats it in full for whichever theme is currently selected.
 	@ViewBuilder
-	private var previewSection: some View {
+	private var themeSection: some View {
 		// Reading themeNamesRefreshToken here (even though it isn't otherwise used)
-		// forces this section to be re-evaluated when the notification observer
-		// above flips it -- e.g. the person went back to Gallery, picked a
-		// different theme, and came back here.
+		// forces this section to be re-evaluated when the notification observers
+		// below flip it, since ArticleThemesManager itself isn't ObservableObject.
 		// swiftlint:disable:next redundant_discardable_let
 		let _ = themeNamesRefreshToken
 
+		let currentTheme = ArticleThemesManager.shared.currentTheme
+
+		Section {
+			Picker(selection: themeNameBinding) {
+				ForEach(themeNames, id: \.self) { themeName in
+					Text(themeDisplayLabel(themeName)).tag(themeName)
+				}
+			} label: {
+				Text("Theme", comment: "Theme picker label")
+			}
+
+			if !currentTheme.isAppTheme {
+				Button(role: .destructive) {
+					isDeleteCurrentThemeAlertPresented = true
+				} label: {
+					Text("Delete This Theme", comment: "Delete current imported theme button")
+				}
+			}
+		} footer: {
+			Text(themeAppearanceDescription(for: currentTheme))
+		}
+	}
+
+	private var themeNames: [String] {
+		[ArticleTheme.defaultTheme.name] + ArticleThemesManager.shared.themeNames
+	}
+
+	private var themeNameBinding: Binding<String> {
+		Binding(
+			get: { ArticleThemesManager.shared.currentTheme.name },
+			set: { ArticleThemesManager.shared.currentThemeName = $0 }
+		)
+	}
+
+	/// "ThemeName (Light & Dark)" / "ThemeName (Single Palette)" -- the tag a
+	/// dropdown row can fit on one line, since a menu-style `Picker` has no room
+	/// for a subtitle the way a list row would.
+	private func themeDisplayLabel(_ themeName: String) -> String {
+		guard let theme = ArticleThemesManager.shared.articleThemeWithThemeName(themeName) else {
+			return themeName
+		}
+		let tag = ArticleThemeColorExtractor.colors(for: theme).hasDarkModeVariant
+			? NSLocalizedString("Light & Dark", comment: "Theme supports both light and dark mode")
+			: NSLocalizedString("Single Palette", comment: "Theme has one color palette regardless of system appearance")
+		return "\(themeName) (\(tag))"
+	}
+
+	private func themeAppearanceDescription(for theme: ArticleTheme) -> String {
+		if ArticleThemeColorExtractor.colors(for: theme).hasDarkModeVariant {
+			let format = NSLocalizedString("“%@” has separate light and dark mode colors and follows your system appearance setting.", comment: "Theme appearance footer, light+dark theme")
+			return NSString.localizedStringWithFormat(format as NSString, theme.name) as String
+		} else {
+			let format = NSLocalizedString("“%@” uses a single color palette in both light and dark mode.", comment: "Theme appearance footer, single-palette theme")
+			return NSString.localizedStringWithFormat(format as NSString, theme.name) as String
+		}
+	}
+
+	@ViewBuilder
+	private var previewSection: some View {
 		Section {
 			ArticleThemePreviewWebView(importCSS: ArticleThemesManager.shared.currentTheme.importCSS, css: previewCSS)
 				.frame(height: 320)
@@ -585,6 +688,29 @@ struct ArticleThemeCustomizeView: View {
 		linkColorDark = Color(themeColors.linkColorDark)
 		save()
 	}
+
+	// MARK: - Import / delete
+
+	private func importTheme(url: URL) {
+		guard let controller = UIApplication.shared.firstKeyWindow?.topViewController else { return }
+
+		if url.startAccessingSecurityScopedResource() {
+			defer {
+				url.stopAccessingSecurityScopedResource()
+			}
+
+			do {
+				try ArticleThemeImporter.importTheme(controller: controller, url: url)
+			} catch {
+				NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
+			}
+		}
+	}
+
+	private func deleteCurrentTheme() {
+		let themeName = ArticleThemesManager.shared.currentTheme.name
+		ArticleThemesManager.shared.deleteTheme(themeName: themeName)
+	}
 }
 
 // MARK: - Color <-> hex
@@ -605,10 +731,19 @@ private extension Color {
 }
 
 // `UIColor(cssHex:)` / `cssHexString` live in ArticleThemeColorExtractor.swift,
-// shared with the theme color extractor.
+// shared with this file's color pickers.
+
+private extension UIApplication {
+	var firstKeyWindow: UIWindow? {
+		connectedScenes
+			.compactMap { $0 as? UIWindowScene }
+			.flatMap { $0.windows }
+			.first { $0.isKeyWindow }
+	}
+}
 
 #Preview {
 	NavigationStack {
-		ArticleThemeCustomizeView()
+		ArticleThemeListView()
 	}
 }
