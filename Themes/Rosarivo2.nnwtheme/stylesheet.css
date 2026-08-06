@@ -1,0 +1,344 @@
+/* Kelmscott -- an original design inspired by the look of William Morris's
+   Kelmscott Press books (1891-1898, public domain), not a reproduction of
+   any specific page or the Golden Type/Troy Type/Chaucer Type faces
+   themselves (those aren't available as web fonts). The translation to
+   screen:
+     - the press's dense, dark-set roman body text -> EB Garamond, a
+       Renaissance-humanist revival from the same broad tradition as
+       Morris's own Jenson-derived Golden Type, justified and set tight
+     - the press's engraved/versal display capitals (book title, chapter
+       headings) -> Cinzel, a roman-inscription capitals face, used
+       uppercase throughout for header chrome and the article title
+     - the press's rubrication (chapter headings printed in red ink) ->
+       the article title in --rubric
+     - the press's woodcut-ruled page frames -> a plain double-line CSS
+       border (border-style: double), since reproducing actual Kelmscott
+       woodcut ornament isn't something a stylesheet can do (or should try
+       to pass off as) without copying specific art
+   --font-main is UI chrome (header/byline/dateline/footer); --font-body is
+   .articleBody prose; --font-code is code/pre, per the Hyperlegible
+   convention documented in Technotes/Themes.md. */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
+
+:root {
+	--font-main: 'Cinzel', Georgia, serif;
+	--font-body: 'EB Garamond', Palatino, Georgia, serif;
+	--font-code: "SF Mono", Menlo, monospace;
+
+	--paper: #f2e9d7;
+	--ink: #1c1710;
+	--ink-muted: rgba(28, 23, 16, 0.62);
+	--rubric: #a4231a;
+	--rule: #1c1710;
+	--link: #a4231a;
+	--visited-link: #7a4a3a;
+	--preface-bg: rgba(28, 23, 16, 0.035);
+	--preface-border: #1c1710;
+	--table-border: rgba(28, 23, 16, 0.35);
+	--code-color: #3a2f22;
+	--code-bg: rgba(28, 23, 16, 0.05);
+	--blockquote-bg: rgba(164, 35, 26, 0.05);
+	--header-bg: rgba(28, 23, 16, 0.03);
+	--system-message-color: var(--ink-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper: #14110c;
+		--ink: #ece2cc;
+		--ink-muted: rgba(236, 226, 204, 0.62);
+		--rubric: #d97a63;
+		--rule: #ece2cc;
+		--link: #d97a63;
+		--visited-link: #c2a077;
+		--preface-bg: rgba(236, 226, 204, 0.05);
+		--preface-border: #ece2cc;
+		--table-border: rgba(236, 226, 204, 0.3);
+		--code-color: #e4d9c0;
+		--code-bg: rgba(236, 226, 204, 0.07);
+		--blockquote-bg: rgba(217, 122, 99, 0.08);
+		--header-bg: rgba(236, 226, 204, 0.04);
+	}
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-body);
+	word-wrap: break-word;
+}
+
+/* Exact-selector fallbacks for ArticleThemeColorExtractor -- additive
+   only, the higher-specificity rules below still win the cascade. */
+a {
+	color: var(--link);
+}
+.articleBody a {
+	color: var(--link);
+}
+body a, body a * {
+	color: var(--link);
+}
+body a:visited {
+	color: var(--visited-link);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+/* Header chrome -- rendered in capitals (Cinzel) to read like a printed
+   colophon line: the "book" this fic belongs to, not a live navigation
+   bar. */
+
+.kelmscottHeader {
+	background: var(--header-bg);
+	border-bottom: 3px double var(--rule);
+	padding: 0.9em 0;
+}
+
+.kelmscottHeaderInner {
+	max-width: 40rem;
+	margin: 0 auto;
+	padding: 0 1.2em;
+	display: flex;
+	align-items: center;
+	font-family: var(--font-main);
+	font-size: 0.8em;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--ink);
+}
+
+.kelmscottAvatar {
+	height: 1.6em !important;
+	width: 1.6em;
+	min-width: 1.6em;
+	margin: 0 0.6em 0 0 !important;
+	border-radius: 2px;
+}
+
+.kelmscottFeedlink, .kelmscottFeedlink:link, .kelmscottFeedlink:visited {
+	color: var(--ink) !important;
+	font-weight: 600;
+}
+
+.kelmscottByline {
+	margin-left: 0.6em;
+	color: var(--ink-muted);
+	font-weight: 400;
+	letter-spacing: 0.05em;
+}
+
+.kelmscottByline a, .kelmscottByline a:link, .kelmscottByline a:visited {
+	color: var(--ink-muted) !important;
+}
+
+/* Page frame -- a double-ruled border stands in for the woodcut-framed
+   Kelmscott page without attempting to reproduce actual ornament. */
+
+.kelmscottFrame {
+	max-width: 40rem;
+	margin: 2.5em auto;
+	padding: 2.2em 2.4em;
+	border: 10px double var(--rule);
+}
+
+/* Title block -- rubricated: Kelmscott chapter headings were printed in
+   red ink where the rest of the page was black. Capitalized in the same
+   engraved-caps face as the header chrome. */
+
+.kelmscottTitle {
+	font-family: var(--font-main);
+	font-size: 1.5em;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	line-height: 1.3;
+	color: var(--rubric);
+}
+
+.kelmscottTitle a, .kelmscottTitle a:link, .kelmscottTitle a:visited {
+	color: var(--rubric);
+}
+.kelmscottTitle a:hover {
+	text-decoration: underline;
+}
+
+.kelmscottDateline {
+	margin-top: 0.4em;
+	font-family: var(--font-main);
+	font-size: 0.7em;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ink-muted);
+}
+.kelmscottDateline a, .kelmscottDateline a:link, .kelmscottDateline a:visited {
+	color: var(--ink-muted);
+}
+
+.kelmscottRule {
+	height: 0;
+	border-top: 3px double var(--rule);
+	margin: 1.2em 0 1.6em 0;
+}
+
+/* AO3 preface (rating/warning/fandom/etc.) -- a dark, bold, standalone
+   box rather than core.css's default hairline underline. The extra
+   box-shadow line echoes the page frame's double-rule treatment at a
+   smaller scale without needing a second nested element. */
+
+#ao3SyntheticPreface,
+#ao3Preface {
+	margin: 0 0 1.8em 0;
+	padding: 1em 1.2em;
+	border: 3px solid var(--preface-border);
+	box-shadow: 0 0 0 2px var(--paper), 0 0 0 5px var(--preface-border);
+	background-color: var(--preface-bg);
+	font-size: 0.85em;
+}
+#ao3SyntheticPreface dt,
+#ao3Preface dt {
+	font-family: var(--font-main);
+	font-weight: 600;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	font-size: 0.85em;
+}
+
+/* Article body -- justified, tightly leaded, hyphenated to keep the
+   justified rag from gapping badly at narrow widths. Golden Type reads
+   dense and dark on the page; EB Garamond's default weight is lighter, so
+   text-rendering stays at browser default rather than faking extra
+   boldness, which tends to look muddy at body sizes on screen. */
+
+.kelmscottBody {
+	margin-top: 0;
+	font-size: 1.08em;
+	line-height: 1.55;
+	text-align: justify;
+	hyphens: auto;
+	-webkit-hyphens: auto;
+}
+
+.kelmscottBody p {
+	margin-top: 0;
+	margin-bottom: var(--paragraph-spacing, 1em);
+	text-indent: var(--paragraph-indent, 0);
+}
+
+/* Drop cap on the very first letter of the chapter. Applies through the
+   .kelmscottVersal wrapper the template's script inserts, since
+   ::first-letter still targets the block's true first letter even when
+   it's inside a leading inline element. */
+.kelmscottBody p:first-of-type::first-letter {
+	font-family: var(--font-main);
+	font-weight: 700;
+	font-size: 3.2em;
+	line-height: 0.78;
+	float: left;
+	padding: 0.03em 0.08em 0 0;
+	color: var(--rubric);
+}
+
+/* Versal treatment: the rest of the opening sentence (after the dropped
+   initial) set in tracked small caps, echoing Kelmscott's convention of
+   capitalizing the first word or two following a decorated initial. */
+.kelmscottVersal {
+	font-variant: small-caps;
+	letter-spacing: 0.03em;
+}
+
+.kelmscottBody a {
+	text-decoration: underline;
+	text-decoration-color: var(--link);
+}
+
+.kelmscottBody blockquote {
+	border-left: 4px solid var(--rubric);
+	background: var(--blockquote-bg);
+	color: var(--ink);
+	padding: 0.5em 1.1em;
+	margin-left: 0;
+	font-style: italic;
+}
+
+.kelmscottBody code, .kelmscottBody pre {
+	font-family: var(--font-code);
+	color: var(--code-color);
+	background: var(--code-bg);
+}
+.kelmscottBody pre {
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.kelmscottBody table {
+	border-collapse: collapse;
+}
+.kelmscottBody td, .kelmscottBody th {
+	border: 1px solid var(--table-border);
+	padding: 0.4em 0.6em;
+}
+
+/* Footer */
+
+.kelmscottFooter {
+	margin-top: 2em;
+	padding-top: 1em;
+	border-top: 1px solid var(--table-border);
+	font-family: var(--font-main);
+	font-size: 0.75em;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--ink-muted);
+}
+.kelmscottFooter a, .kelmscottFooter a:link, .kelmscottFooter a:visited {
+	color: var(--link);
+}
+
+/* Text-size classes -- iOS reads [[font-size]] from Dynamic Type directly
+   (see the @supports block below); macOS has no equivalent system value,
+   so it switches on the [[text_size_class]] class applied to
+   #bodyContainer, matching the convention in the default stylesheet and
+   Sepia.nnwtheme. */
+.smallText { font-size: 14px; }
+.mediumText { font-size: 16px; }
+.largeText { font-size: 18px; }
+.xlargeText { font-size: 20px; }
+.xxlargeText { font-size: 22px; }
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+		word-break: break-word;
+		-webkit-text-size-adjust: none;
+		font-size: [[font-size]]px;
+	}
+
+	.kelmscottFrame {
+		padding: 1.4em 1.4em;
+		border-width: 6px;
+	}
+
+	.kelmscottTitle {
+		font-size: 1.3em;
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+	}
+}

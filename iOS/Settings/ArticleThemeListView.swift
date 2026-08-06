@@ -29,6 +29,13 @@ struct ArticleThemeListView: View {
 	@State private var themeNamesRefreshToken = false
 	@State private var isDeleteCurrentThemeAlertPresented = false
 
+	/// Preview-only -- not part of `ArticleThemeOverrides`, doesn't get saved. Lets the
+	/// preview show either appearance of a light+dark theme regardless of the device's
+	/// actual current appearance. Fixed at `.light` for single-palette themes (the slider
+	/// is disabled in that case; see `previewSection`), since toggling it would show the
+	/// same colors either way and just be confusing to interact with.
+	@State private var previewColorScheme: ColorScheme = .light
+
 	@State private var useCustomSerifFont: Bool
 	@State private var serifFontFamilyName: String
 
@@ -50,6 +57,7 @@ struct ArticleThemeListView: View {
 	@State private var marginHorizontal: Double
 	@State private var marginTop: Double
 
+	@State private var useCustomJustifyText: Bool
 	@State private var justifyText: Bool
 	@State private var hyphenate: Bool
 
@@ -129,12 +137,17 @@ struct ArticleThemeListView: View {
 		_marginHorizontal = State(initialValue: overrides.marginHorizontal ?? 20)
 		_marginTop = State(initialValue: overrides.marginTop ?? 0)
 
-		// nil vs false both mean "off" for a plain Bool toggle, so unlike the
-		// useCustom-prefixed properties above, these don't need a separate enable
-		// flag -- liveOverrides below only emits true/nil (never a forced false) so
-		// a theme that doesn't set text-align/hyphens at all isn't pinned to "off"
-		// by an override the person never touched.
+		// justifyText now follows the same useCustom-gated pattern as every other
+		// override below: nil ("no override") and false ("override to not-justified")
+		// are different things, since some themes justify text in their own stylesheet
+		// and a person needs a way to force that off, not just decline to force it on.
+		_useCustomJustifyText = State(initialValue: overrides.justifyText != nil)
 		_justifyText = State(initialValue: overrides.justifyText ?? false)
+
+		// hyphenate keeps the older nil-vs-false-both-mean-"off" model: liveOverrides
+		// below only ever emits true/nil for it (never a forced false), so a theme that
+		// doesn't set hyphens at all isn't pinned to "off" by an override the person
+		// never touched.
 		_hyphenate = State(initialValue: overrides.hyphenate ?? false)
 
 		// Seeded from the theme's own colors (not `.primary`/`.accentColor`/`systemBackground`)
@@ -229,6 +242,7 @@ struct ArticleThemeListView: View {
 		var useCustomMargins: Bool
 		var marginHorizontal: Double
 		var marginTop: Double
+		var useCustomJustifyText: Bool
 		var justifyText: Bool
 		var hyphenate: Bool
 		var useCustomTextColor: Bool
@@ -259,6 +273,7 @@ struct ArticleThemeListView: View {
 			useCustomMargins: useCustomMargins,
 			marginHorizontal: marginHorizontal,
 			marginTop: marginTop,
+			useCustomJustifyText: useCustomJustifyText,
 			justifyText: justifyText,
 			hyphenate: hyphenate,
 			useCustomTextColor: useCustomTextColor,
@@ -285,10 +300,9 @@ struct ArticleThemeListView: View {
 	///
 	/// A plain dropdown `Picker`, not the swatch-grid gallery this replaces --
 	/// no per-theme `WKWebView` or color-swatch cell, just the theme's name.
-	/// Each option's label appends a short "Light & Dark" / "Single Palette" tag
-	/// (from `ArticleThemeColorExtractor.colors(for:).hasDarkModeVariant`) so
-	/// that disclosure doesn't require opening a theme to find out, and the
-	/// footer repeats it in full for whichever theme is currently selected.
+	/// Whether a theme supports light/dark or is single-palette is left to the
+	/// footer, which spells it out in full for whichever theme is currently
+	/// selected, rather than being abbreviated into every row's label.
 	@ViewBuilder
 	private var themeSection: some View {
 		// Reading themeNamesRefreshToken here (even though it isn't otherwise used)
@@ -302,7 +316,7 @@ struct ArticleThemeListView: View {
 		Section {
 			Picker(selection: themeNameBinding) {
 				ForEach(themeNames, id: \.self) { themeName in
-					Text(themeDisplayLabel(themeName)).tag(themeName)
+					Text(themeName).tag(themeName)
 				}
 			} label: {
 				Text("Theme", comment: "Theme picker label")
@@ -331,19 +345,6 @@ struct ArticleThemeListView: View {
 		)
 	}
 
-	/// "ThemeName (Light & Dark)" / "ThemeName (Single Palette)" -- the tag a
-	/// dropdown row can fit on one line, since a menu-style `Picker` has no room
-	/// for a subtitle the way a list row would.
-	private func themeDisplayLabel(_ themeName: String) -> String {
-		guard let theme = ArticleThemesManager.shared.articleThemeWithThemeName(themeName) else {
-			return themeName
-		}
-		let tag = ArticleThemeColorExtractor.colors(for: theme).hasDarkModeVariant
-			? NSLocalizedString("Light & Dark", comment: "Theme supports both light and dark mode")
-			: NSLocalizedString("Single Palette", comment: "Theme has one color palette regardless of system appearance")
-		return "\(themeName) (\(tag))"
-	}
-
 	private func themeAppearanceDescription(for theme: ArticleTheme) -> String {
 		if ArticleThemeColorExtractor.colors(for: theme).hasDarkModeVariant {
 			let format = NSLocalizedString("“%@” has separate light and dark mode colors and follows your system appearance setting.", comment: "Theme appearance footer, light+dark theme")
@@ -354,12 +355,43 @@ struct ArticleThemeListView: View {
 		}
 	}
 
+	private var currentThemeHasDarkModeVariant: Bool {
+		ArticleThemeColorExtractor.colors(for: ArticleThemesManager.shared.currentTheme).hasDarkModeVariant
+	}
+
+	/// Disabled (and left off) for a single-palette theme, since that theme's CSS
+	/// doesn't branch on `prefers-color-scheme` at all -- the toggle would flip but
+	/// nothing in the preview below it would change, which is worse than not
+	/// offering it.
+	@ViewBuilder
+	private var previewColorSchemeToggle: some View {
+		Toggle(isOn: Binding(
+			get: { previewColorScheme == .dark },
+			set: { previewColorScheme = $0 ? .dark : .light }
+		)) {
+			Label {
+				Text("Preview Dark Mode", comment: "Preview dark mode toggle label")
+			} icon: {
+				Image(systemName: previewColorScheme == .dark ? "moon" : "sun.max")
+			}
+		}
+		.disabled(!currentThemeHasDarkModeVariant)
+		.foregroundStyle(currentThemeHasDarkModeVariant ? .primary : .secondary)
+	}
+
 	@ViewBuilder
 	private var previewSection: some View {
 		Section {
-			ArticleThemePreviewWebView(importCSS: ArticleThemesManager.shared.currentTheme.importCSS, css: previewCSS)
-				.frame(height: 320)
-				.listRowInsets(EdgeInsets())
+			previewColorSchemeToggle
+			ArticleThemePreviewWebView(
+				importCSS: ArticleThemesManager.shared.currentTheme.importCSS,
+				css: previewCSS,
+				template: ArticleThemesManager.shared.currentTheme.template,
+				showFeedName: AppDefaults.shared.showFeedNameInReaderView,
+				colorScheme: currentThemeHasDarkModeVariant ? previewColorScheme : .light
+			)
+			.frame(height: 320)
+			.listRowInsets(EdgeInsets())
 		} header: {
 			Text("Preview", comment: "Preview section header")
 		} footer: {
@@ -521,20 +553,29 @@ struct ArticleThemeListView: View {
 			}
 		} header: {
 			Text("Page Margins", comment: "Page Margins section header")
+		} footer: {
+			if useCustomMargins && marginHorizontal < 20 {
+				Text("Below 20px, text can run edge-to-edge on some devices. Most themes treat 20px as the minimum comfortable margin.", comment: "Margin below recommended floor footer warning")
+			}
 		}
 	}
 
 	@ViewBuilder
 	private var justificationSection: some View {
 		Section {
-			Toggle(isOn: $justifyText) {
-				Text("Justify Text", comment: "Justify Text toggle")
+			Toggle(isOn: $useCustomJustifyText) {
+				Text("Override Justification", comment: "Override Justification toggle")
+			}
+			if useCustomJustifyText {
+				Toggle(isOn: $justifyText) {
+					Text("Justify Text", comment: "Justify Text toggle")
+				}
 			}
 			Toggle(isOn: $hyphenate) {
 				Text("Hyphenate", comment: "Hyphenate toggle")
 			}
 		} footer: {
-			Text("Hyphenation works best paired with justified text on narrow screens.", comment: "Justification/hyphenation footer")
+			Text("Some themes justify text on their own. Turn on Override Justification to force it on or off regardless of the theme. Hyphenation works best paired with justified text on narrow screens.", comment: "Justification/hyphenation footer")
 		}
 	}
 
@@ -631,7 +672,7 @@ struct ArticleThemeListView: View {
 			paragraphIndent: useCustomParagraphIndent ? paragraphIndent : nil,
 			marginHorizontal: useCustomMargins ? marginHorizontal : nil,
 			marginTop: useCustomMargins ? marginTop : nil,
-			justifyText: justifyText ? true : nil,
+			justifyText: useCustomJustifyText ? justifyText : nil,
 			hyphenate: hyphenate ? true : nil,
 			textColorHex: useCustomTextColor ? textColor.hexString : nil,
 			textColorDarkHex: useCustomTextColor ? textColorDark.hexString : nil,
@@ -669,6 +710,7 @@ struct ArticleThemeListView: View {
 		useCustomParagraphSpacing = false
 		useCustomParagraphIndent = false
 		useCustomMargins = false
+		useCustomJustifyText = false
 		useCustomTextColor = false
 		useCustomBackgroundColor = false
 		useCustomLinkColor = false
