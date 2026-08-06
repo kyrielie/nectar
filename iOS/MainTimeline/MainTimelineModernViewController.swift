@@ -736,6 +736,7 @@ private extension MainTimelineModernViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(timelineTagDisplayModeDidChange(_:)), name: .timelineTagDisplayModeDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(badgeColorModeDidChange(_:)), name: .badgeColorModeDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange(_:)), name: .accentColorDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(statsVisibilityDidChange(_:)), name: .statsVisibilityDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(contentSizeCategoryDidChange), name: UIContentSizeCategory.didChangeNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(displayNameDidChange), name: .DisplayNameDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground(_:)), name: UIApplication.willEnterForegroundNotification, object: nil)
@@ -1177,6 +1178,17 @@ private extension MainTimelineModernViewController {
 		// repaint so progressFillView/indicatorView pick up the new
 		// Assets.Colors.secondaryAccent on their next updateColors()/
 		// updateIndicatorView() call.
+		reloadVisibleCells()
+	}
+
+	@objc func statsVisibilityDidChange(_ note: Notification) {
+		Self.logger.debug("MainTimelineModernViewController: statsVisibilityDidChange")
+		// Same shape as badgeColorModeDidChange: MainTimelineCellData reads
+		// AppDefaults.shared.statsVisible fresh on each init, so there's no
+		// local cached value to compare here. reloadVisibleCells() is the
+		// same call timelineTagDisplayModeDidChange uses above, which also
+		// changes row count/height, so it's already known to handle layout
+		// invalidation correctly, not just a repaint.
 		reloadVisibleCells()
 	}
 

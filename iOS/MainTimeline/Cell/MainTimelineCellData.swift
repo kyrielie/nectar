@@ -206,13 +206,22 @@ enum BadgeCategory: Sendable {
 		self.tagDisplayMode = tagDisplayMode
 		self.readingProgress = article.status.readingProgress
 
-		if let wordCount = article.wordCount {
+		// Personalization plan item 6 ("Stats-visibility toggles"): when
+		// off, every Ambrosia-derived stat field below collapses to its
+		// already-established "not available" representation (empty
+		// string / nil) rather than the article's real value -- this is
+		// the single shared gate consumed by both this row-building path
+		// and AO3PrefaceRenderer/ao3SyntheticPrefaceHTML in the reader, so
+		// hiding stats here and hiding them in the preface always agree.
+		let statsVisible = AppDefaults.shared.statsVisible
+
+		if statsVisible, let wordCount = article.wordCount {
 			self.wordCountString = Self.wordCountFormatter.string(from: NSNumber(value: wordCount)) ?? String(wordCount)
 		} else {
 			self.wordCountString = ""
 		}
 
-		if let fandoms = article.fandoms, !fandoms.isEmpty {
+		if statsVisible, let fandoms = article.fandoms, !fandoms.isEmpty {
 			self.fandomString = Self.truncatedJoinedList(fandoms)
 		} else {
 			self.fandomString = ""
@@ -221,29 +230,29 @@ enum BadgeCategory: Sendable {
 		// Not yet read by metadataLines/metadataBadges -- see the property
 		// doc comments above. Populated now so the data is ready whenever
 		// Tag Display rendering is extended to include them.
-		if let relationships = article.relationships, !relationships.isEmpty {
+		if statsVisible, let relationships = article.relationships, !relationships.isEmpty {
 			self.relationshipString = Self.truncatedJoinedList(relationships)
 		} else {
 			self.relationshipString = ""
 		}
 
-		if let characters = article.characters, !characters.isEmpty {
+		if statsVisible, let characters = article.characters, !characters.isEmpty {
 			self.characterString = Self.truncatedJoinedList(characters)
 		} else {
 			self.characterString = ""
 		}
 
-		if let categories = article.categories, !categories.isEmpty {
+		if statsVisible, let categories = article.categories, !categories.isEmpty {
 			self.categoryString = Self.truncatedJoinedList(categories)
 		} else {
 			self.categoryString = ""
 		}
 
-		self.isComplete = article.isComplete
-		self.ratings = article.ratings
-		self.warnings = article.warnings
-		self.fandoms = article.fandoms
-		self.categories = article.categories
+		self.isComplete = statsVisible ? article.isComplete : nil
+		self.ratings = statsVisible ? article.ratings : nil
+		self.warnings = statsVisible ? article.warnings : nil
+		self.fandoms = statsVisible ? article.fandoms : nil
+		self.categories = statsVisible ? article.categories : nil
 
 	}
 
