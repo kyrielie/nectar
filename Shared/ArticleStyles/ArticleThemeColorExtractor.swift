@@ -324,8 +324,8 @@ private extension UIColor {
 
 // MARK: - Color <-> hex
 
-/// Shared with `ArticleThemeListView`'s color pickers, which also need hex parsing for
-/// round-tripping `Color` <-> hex string -- kept internal (not private) so both call
+/// Shared with `ArticleThemeCustomizeView`'s color pickers, which also need hex parsing
+/// for round-tripping `Color` <-> hex string -- kept internal (not private) so both call
 /// sites can use it.
 extension UIColor {
 

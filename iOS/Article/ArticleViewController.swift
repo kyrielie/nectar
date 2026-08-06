@@ -405,8 +405,13 @@ final class ArticleViewController: UIViewController {
 	}
 
 	@objc func showThemePicker(_ sender: Any) {
-		let articleThemes = UIHostingController(rootView: ArticleThemeListView())
-		navigationController?.pushViewController(articleThemes, animated: true)
+		var gallery = ArticleThemeGalleryView()
+		gallery.onCustomizeCurrentTheme = { [weak self] in
+			let customize = UIHostingController(rootView: ArticleThemeCustomizeView())
+			self?.navigationController?.pushViewController(customize, animated: true)
+		}
+		let hostingController = UIHostingController(rootView: gallery)
+		navigationController?.pushViewController(hostingController, animated: true)
 	}
 
 	@objc func showTableOfContents(_ sender: Any) {
