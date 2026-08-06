@@ -157,6 +157,7 @@ extension Notification.Name {
 	public static let timelineTagDisplayModeDidChange = Notification.Name("TimelineTagDisplayModeDidChangeNotification")
 	public static let badgeColorModeDidChange = Notification.Name("BadgeColorModeDidChangeNotification")
 	public static let accentColorDidChange = Notification.Name("AccentColorDidChangeNotification")
+	public static let statsVisibilityDidChange = Notification.Name("StatsVisibilityDidChangeNotification")
 	public static let articleThemeOverridesDidChange = Notification.Name("ArticleThemeOverridesDidChangeNotification")
 }
 
@@ -181,6 +182,7 @@ final class AppDefaults: Sendable {
 		static let timelineTagDisplayMode = "timelineTagDisplayMode"
 		static let badgeColorMode = "badgeColorMode"
 		static let accentColor = "accentColor"
+		static let statsVisible = "statsVisible"
 		static let timelineSortDirection = "timelineSortDirection"
 		static let timelineSortField = "timelineSortField"
 		static let articleFullscreenAvailable = "articleFullscreenAvailable"
@@ -571,6 +573,23 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	/// Personalization plan item 6 ("Stats-visibility toggles"): one shared
+	/// boolean consumed by both `MainTimelineCellData` (list) and
+	/// `AO3PrefaceRenderer`/`ao3SyntheticPrefaceHTML` (reader), since both
+	/// already route the same Ambrosia-derived fields (word count,
+	/// completion, fandoms, ratings, warnings) through one shared
+	/// row-building path. Default `true` -- today's behavior, unchanged
+	/// until someone opts out.
+	var statsVisible: Bool {
+		get {
+			return AppDefaults.bool(for: Key.statsVisible)
+		}
+		set {
+			AppDefaults.setBool(for: Key.statsVisible, newValue)
+			NotificationCenter.default.post(name: .statsVisibilityDidChange, object: nil)
+		}
+	}
+
 	var currentThemeName: String? {
 		get {
 			return AppDefaults.string(for: Key.currentThemeName)
@@ -700,6 +719,7 @@ final class AppDefaults: Sendable {
 										Key.showFeedNameInReaderView: false,
 									Key.showPrevNextArticleButtons: true,
 									Key.showLastUpdatedLabel: true,
+									Key.statsVisible: true,
 										Key.currentThemeName: Self.defaultThemeName,
 									   Key.splitViewPreferredDisplayMode: UISplitViewController.DisplayMode.oneBesideSecondary.rawValue]
 		AppDefaults.store.register(defaults: defaults)
