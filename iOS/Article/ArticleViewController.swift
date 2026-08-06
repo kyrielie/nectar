@@ -405,12 +405,7 @@ final class ArticleViewController: UIViewController {
 	}
 
 	@objc func showThemePicker(_ sender: Any) {
-		var gallery = ArticleThemeGalleryView()
-		gallery.onCustomizeCurrentTheme = { [weak self] in
-			let customize = UIHostingController(rootView: ArticleThemeCustomizeView())
-			self?.navigationController?.pushViewController(customize, animated: true)
-		}
-		let hostingController = UIHostingController(rootView: gallery)
+		let hostingController = UIHostingController(rootView: ArticleThemeListView())
 		navigationController?.pushViewController(hostingController, animated: true)
 	}
 

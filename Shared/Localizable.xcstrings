@@ -4,6 +4,12 @@
     "" : {
 
     },
+    "“%@” has separate light and dark mode colors and follows your system appearance setting." : {
+      "comment" : "Theme appearance footer, light+dark theme"
+    },
+    "“%@” uses a single color palette in both light and dark mode." : {
+      "comment" : "Theme appearance footer, single-palette theme"
+    },
     "(last downloaded %@)" : {
       "comment" : "Activity log — when HTML metadata for a URL was last downloaded — %@ is a date"
     },
@@ -154,9 +160,6 @@
     "Browser Verification" : {
       "comment" : "AO3 Cloudflare challenge status row label"
     },
-    "Built-in" : {
-      "comment" : "Built-in gallery section header"
-    },
     "Can't reach %@ right now" : {
       "comment" : "Can't reach library right now"
     },
@@ -274,9 +277,6 @@
     "Custom Text Color" : {
       "comment" : "Custom Text Color toggle"
     },
-    "Customize" : {
-      "comment" : "Customize current theme button\nCustomize navigation title"
-    },
     "Dark" : {
       "comment" : "Dark"
     },
@@ -315,6 +315,9 @@
     },
     "Delete Theme?" : {
       "comment" : "Delete Theme"
+    },
+    "Delete This Theme" : {
+      "comment" : "Delete current imported theme button"
     },
     "Dismiss" : {
       "comment" : "Dismiss"
@@ -552,6 +555,9 @@
     "Light" : {
       "comment" : "Light"
     },
+    "Light & Dark" : {
+      "comment" : "Theme supports both light and dark mode"
+    },
     "Line Height" : {
       "comment" : "Line Height section header"
     },
@@ -671,9 +677,6 @@
     },
     "Most Words First" : {
       "comment" : "Descending sort direction — word count"
-    },
-    "My Themes" : {
-      "comment" : "My Themes gallery section header"
     },
     "Name" : {
       "comment" : "Name"
@@ -968,6 +971,9 @@
     "Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Nectar can leave kudos on your behalf if you turn that on below -- it still can't subscribe, bookmark, or comment." : {
       "comment" : "AO3 account section footer"
     },
+    "Single Palette" : {
+      "comment" : "Theme has one color palette regardless of system appearance"
+    },
     "Slate" : {
       "comment" : "Slate accent color\nSlate surface tint"
     },
@@ -1018,7 +1024,7 @@
       "comment" : "Theme installed"
     },
     "Theme" : {
-      "comment" : "Theme navigation title"
+      "comment" : "Theme navigation title\nTheme picker label"
     },
     "Theme installed" : {
       "comment" : "Theme installed"
