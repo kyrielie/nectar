@@ -345,7 +345,12 @@ import os
 
 			do {
 				switch try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url) {
-				case .success(let parsedItems):
+				case .success(let parsedItems, let hasNextPage):
+					// hasNextPage isn't consumed here -- a routine/add-time
+					// fetch always writes page 1 (below) regardless; only
+					// AO3SearchResultsPaginator's "load more" UI needs the
+					// signal, and it calls AO3SearchResultsFetcher directly.
+					_ = hasNextPage
 					let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(parsedItems), deleteOlder: false)
 					account.sendNotificationAbout(articleChanges)
 					feed.ao3SearchLastFetchedPage = 1
@@ -364,7 +369,7 @@ import os
 					// cooldown by the time this returns (see
 					// AO3SearchResultsFetcher's doc comment).
 					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "AO3 rate limit hit -- backing off before retrying"]), activityKind: activityKind)
-				case .cloudflareChallenge:
+				case .cloudflareChallenge(let challengedURL):
 					// Also distinct, per the plan's explicit call-out: this
 					// isn't AO3's own rate limit and shouldn't be read as one,
 					// nor folded into the generic parse-failure case, since a
@@ -375,7 +380,7 @@ import os
 					// actual URL that got challenged, rather than a generic
 					// AO3 page that may not exercise the same gate -- see
 					// AO3ChallengeSessionStore.lastChallengedURL's doc comment.
-					AO3ChallengeSessionStore.lastChallengedURL = url
+					AO3ChallengeSessionStore.lastChallengedURL = challengedURL
 					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "Blocked by a Cloudflare challenge -- try again later"]), activityKind: activityKind)
 				}
 			} catch {
@@ -941,11 +946,34 @@ private extension LocalAccountRefresher {
 		if skipForDisallowedHost {
 			return (true, disallowedHostReason)
 		}
+		let (skipForAO3Search, ao3SearchReason) = feedShouldBeSkippedForAO3SearchResultsReasons(feed)
+		if skipForAO3Search {
+			return (true, ao3SearchReason)
+		}
 		let (skipForReddit, redditReason) = feedShouldBeSkippedForRedditReasons(feed, redditURLToRefresh)
 		if skipForReddit {
 			return (true, redditReason)
 		}
 		return (false, nil)
+	}
+
+	/// AO3 search-results feeds are a deliberate, permanent exception to
+	/// this file's stated "no minimum time between checks" design (see this
+	/// function's siblings below, and the `nectar-import://` scheme's
+	/// permanent exclusion in feedShouldBeSkippedForDisallowedHostReasons,
+	/// which this cross-references). A normal scheduled/background/
+	/// pull-to-refresh pass never re-fetches an AO3 search feed's page 1 --
+	/// only the one-off add-time fetch (lastCheckDate == nil) and the
+	/// explicit "load more" / future "check for new results" paths
+	/// (AO3SearchResultsPaginator) touch it after that.
+	static func feedShouldBeSkippedForAO3SearchResultsReasons(_ feed: Feed) -> (Bool, String?) {
+		guard let url = url(for: feed), Self.isAO3SearchResultsFeed(url) else {
+			return (false, nil)
+		}
+		guard feed.lastCheckDate != nil else {
+			return (false, nil) // first fetch (add-time) always goes through
+		}
+		return (true, "Skipped — AO3 search results only refresh when added, checked manually, or paginated")
 	}
 
 	/// Reddit rate-limits to one feed per minute, so we

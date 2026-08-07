@@ -31,6 +31,12 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 	private var dataSource: UICollectionViewDiffableDataSource<Int, Article>?
 	var didPushArticleViewController = false
 
+	// MARK: - AO3 "load more results" footer (Workstream D)
+
+	private weak var ao3LoadMoreFooterView: AO3LoadMoreFooterView?
+	private var ao3LoadMoreState: AO3LoadMoreFooterView.State = .hidden
+	private var isAO3LoadMoreInFlight = false
+
 	private var timelineFeed: SidebarItem? {
 		assert(coordinator != nil)
 		return coordinator?.timelineFeed
@@ -772,6 +778,12 @@ private extension MainTimelineModernViewController {
 		var config = UICollectionLayoutListConfiguration(appearance: .plain)
 		config.showsSeparators = false
 		config.headerMode = .none
+		// Always set, not conditional on the current feed -- the footer
+		// registered below (see makeDataSource's supplementaryViewProvider)
+		// decides for itself whether to render "load more" content or
+		// collapse to zero height, based on whether coordinator?.timelineFeed
+		// is an AO3 search-results feed. See AO3LoadMoreFooterView.
+		config.footerMode = .supplementary
 		config.trailingSwipeActionsConfigurationProvider = { [weak self] indexPath in
 			guard let self else {
 				return nil
@@ -933,6 +945,14 @@ private extension MainTimelineModernViewController {
 	private func makeDataSource(_ collectionView: UICollectionView) -> UICollectionViewDiffableDataSource<Int, Article> {
 		collectionView.register(MainTimelineCell.self, forCellWithReuseIdentifier: MainTimelineCell.reuseIdentifier)
 
+		let footerRegistration = UICollectionView.SupplementaryRegistration<AO3LoadMoreFooterView>(elementKind: UICollectionView.elementKindSectionFooter) { [weak self] footerView, _, _ in
+			self?.ao3LoadMoreFooterView = footerView
+			footerView.onLoadMoreTapped = { [weak self] in
+				self?.loadMoreAO3SearchResults()
+			}
+			self?.updateAO3LoadMoreFooter()
+		}
+
 		let dataSource: UICollectionViewDiffableDataSource<Int, Article> =
 			MainTimelineCollectionViewDataSource(collectionView: collectionView, cellProvider: { [weak self] collectionView, indexPath, article in
 				guard let self else {
@@ -942,6 +962,9 @@ private extension MainTimelineModernViewController {
 				cell.cellData = self.configure(article: article)
 				return cell
 			})
+		dataSource.supplementaryViewProvider = { collectionView2, _, indexPath in
+			collectionView2.dequeueConfiguredReusableSupplementary(using: footerRegistration, for: indexPath)
+		}
 
 		return dataSource
 	}
@@ -1056,13 +1079,215 @@ private extension MainTimelineModernViewController {
 
 		dataSource.apply(snapshot, animatingDifferences: animated) { [weak self] in
 			self?.restoreSelectionIfNecessary(adjustScroll: false)
+			// Re-derive footer visibility/state on every snapshot apply --
+			// this fires on ordinary article updates as well as on a feed
+			// switch (traced here rather than assumed, per the plan's own
+			// "needs verification" note on where updateUI() vs applyChanges
+			// actually gets called when timelineFeed changes). A feed
+			// switch always ends in an applyChanges call (the new feed's
+			// articles are re-fetched and re-applied), so this is the
+			// single reliable hook rather than duplicating the check in
+			// updateUI() too.
+			self?.updateAO3LoadMoreFooter()
 			completion?()
 		}
 	}
 
 }
 
-// MARK: - Notifications API
+// MARK: - AO3 "load more results" footer (Workstream D)
+
+extension MainTimelineModernViewController {
+
+	/// Recomputes the footer's visibility/content for the current
+	/// `coordinator?.timelineFeed`. Called from `applyChanges`'s
+	/// completion, which fires on every article-list reload -- including a
+	/// feed switch, since switching feeds always ends in a fresh
+	/// `applyChanges` call for the new feed's articles.
+	fileprivate func updateAO3LoadMoreFooter() {
+		guard let feed = timelineFeed as? Feed, feed.isAO3SearchResultsFeed else {
+			ao3LoadMoreState = .hidden
+			ao3LoadMoreFooterView?.state = .hidden
+			return
+		}
+
+		if isAO3LoadMoreInFlight {
+			ao3LoadMoreState = .loading
+		} else if ao3LoadMoreState == .hidden {
+			// First time this footer is shown for this feed this session --
+			// hasNextPage isn't persisted (see AO3SearchResultsPaginator's
+			// own doc comment on why), so default to the enabled
+			// "Load more results" state rather than guessing "no more".
+			ao3LoadMoreState = .loadMore
+		}
+		ao3LoadMoreFooterView?.state = ao3LoadMoreState
+	}
+
+	fileprivate func loadMoreAO3SearchResults() {
+		guard let feed = timelineFeed as? Feed, let account = feed.account, !isAO3LoadMoreInFlight else {
+			return
+		}
+
+		isAO3LoadMoreInFlight = true
+		ao3LoadMoreState = .loading
+		ao3LoadMoreFooterView?.state = .loading
+
+		Task { @MainActor [weak self] in
+			guard let self else { return }
+			let outcome = await AO3SearchResultsPaginator.loadNextPage(for: feed, account: account)
+			self.isAO3LoadMoreInFlight = false
+
+			switch outcome {
+			case .loaded(_, let hasNextPage):
+				self.ao3LoadMoreState = hasNextPage ? .loadMore : .noMoreResults
+			case .noResults:
+				self.ao3LoadMoreState = .noMoreResults
+			case .registrationRequired:
+				self.ao3LoadMoreState = .error(NSLocalizedString("Restricted to registered AO3 users", comment: "AO3 load more error"))
+			case .rateLimited:
+				self.ao3LoadMoreState = .error(NSLocalizedString("AO3 rate limit hit -- backing off before retrying", comment: "AO3 load more error"))
+			case .cloudflareChallenge(let challengedURL):
+				// Opt-in prompt (Workstream C), same as the add-feed flow --
+				// never presents the WKWebView automatically.
+				self.presentAO3LoadMoreVerificationPrompt(challengedURL: challengedURL, feed: feed, account: account)
+				self.ao3LoadMoreState = .error(NSLocalizedString("Blocked by a Cloudflare challenge -- try again later", comment: "AO3 load more error"))
+			}
+			self.ao3LoadMoreFooterView?.state = self.ao3LoadMoreState
+		}
+	}
+
+	private func presentAO3LoadMoreVerificationPrompt(challengedURL: URL, feed: Feed, account: Account) {
+		let alert = UIAlertController(
+			title: NSLocalizedString("AO3 Needs Verification", comment: "AO3 Cloudflare challenge prompt title"),
+			message: NSLocalizedString("AO3 needs you to verify you're not a bot before more results can load. Verify now?", comment: "AO3 Cloudflare challenge prompt message"),
+			preferredStyle: .alert
+		)
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Not Now", comment: "Decline AO3 verification"), style: .cancel))
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Verify", comment: "Accept AO3 verification"), style: .default) { [weak self] _ in
+			guard let self else { return }
+			self.isAO3LoadMoreInFlight = true
+			self.ao3LoadMoreState = .loading
+			self.ao3LoadMoreFooterView?.state = .loading
+			Task { @MainActor in
+				let coordinator = AO3SearchResultsFetchCoordinator()
+				let nextPage = (feed.ao3SearchLastFetchedPage ?? 1) + 1
+				let outcome = await coordinator.presentSolverAndRetry(challengedURL: challengedURL, feedURL: feed.url, feed: feed, account: account, advancePageTo: nextPage, presentingViewController: self)
+				self.isAO3LoadMoreInFlight = false
+				switch outcome {
+				case .imported(_, let hasNextPage):
+					self.ao3LoadMoreState = hasNextPage ? .loadMore : .noMoreResults
+				case .noResults:
+					self.ao3LoadMoreState = .noMoreResults
+				case .registrationRequired:
+					self.ao3LoadMoreState = .error(NSLocalizedString("Restricted to registered AO3 users", comment: "AO3 load more error"))
+				case .rateLimited:
+					self.ao3LoadMoreState = .error(NSLocalizedString("AO3 rate limit hit -- backing off before retrying", comment: "AO3 load more error"))
+				case .needsVerification, .cancelled:
+					self.ao3LoadMoreState = .loadMore
+				case .failed(let message):
+					self.ao3LoadMoreState = .error(message)
+				}
+				self.ao3LoadMoreFooterView?.state = self.ao3LoadMoreState
+			}
+		})
+		present(alert, animated: true)
+	}
+}
+
+/// Footer states: hidden (non-AO3-search feed), "Load more results"
+/// (enabled -- hasNextPage true or unknown, since hasNextPage isn't
+/// persisted across relaunches), spinner (fetch in flight), "No more
+/// results" (disabled, last outcome had hasNextPage false or .noResults),
+/// error (reuses the same message strings
+/// LocalAccountRefresher.fetchAndImportAO3SearchResults already produces
+/// for rate-limit/registration/Cloudflare, per the plan's own call-out not
+/// to write new copy).
+private final class AO3LoadMoreFooterView: UICollectionReusableView {
+
+	enum State: Equatable {
+		case hidden
+		case loadMore
+		case loading
+		case noMoreResults
+		case error(String)
+	}
+
+	var onLoadMoreTapped: (() -> Void)?
+
+	var state: State = .hidden {
+		didSet {
+			guard state != oldValue else { return }
+			configure(for: state)
+		}
+	}
+
+	private let label = UILabel()
+	private let spinner = UIActivityIndicatorView(style: .medium)
+	private let button = UIButton(type: .system)
+
+	override init(frame: CGRect) {
+		super.init(frame: frame)
+
+		label.font = .preferredFont(forTextStyle: .footnote)
+		label.textColor = .secondaryLabel
+		label.textAlignment = .center
+
+		button.setTitle(NSLocalizedString("Load more results", comment: "AO3 load more results button"), for: .normal)
+		button.addTarget(self, action: #selector(tapped), for: .touchUpInside)
+
+		spinner.hidesWhenStopped = true
+
+		for view in [label, spinner, button] {
+			view.translatesAutoresizingMaskIntoConstraints = false
+			addSubview(view)
+			NSLayoutConstraint.activate([
+				view.centerXAnchor.constraint(equalTo: centerXAnchor),
+				view.centerYAnchor.constraint(equalTo: centerYAnchor),
+				view.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: 8),
+				view.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -8),
+			])
+		}
+
+		configure(for: .hidden)
+	}
+
+	required init?(coder: NSCoder) {
+		fatalError("init(coder:) has not been implemented")
+	}
+
+	@objc private func tapped() {
+		onLoadMoreTapped?()
+	}
+
+	private func configure(for state: State) {
+		label.isHidden = true
+		spinner.stopAnimating()
+		button.isHidden = true
+
+		switch state {
+		case .hidden:
+			break
+		case .loadMore:
+			button.isHidden = false
+			button.isEnabled = true
+		case .loading:
+			spinner.startAnimating()
+		case .noMoreResults:
+			label.isHidden = false
+			label.text = NSLocalizedString("No more results", comment: "AO3 load more: no more results")
+		case .error(let message):
+			label.isHidden = false
+			label.text = message
+		}
+
+		invalidateIntrinsicContentSize()
+	}
+
+	override var intrinsicContentSize: CGSize {
+		state == .hidden ? .zero : CGSize(width: UIView.noIntrinsicMetric, height: 44)
+	}
+}
+
 private extension MainTimelineModernViewController {
 	@objc dynamic func unreadCountDidChange(_ notification: Notification) {
 		Self.logger.debug("MainTimelineModernViewController: unreadCountDidChange")

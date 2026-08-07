@@ -58,8 +58,17 @@ import Foundation
 /// case), add a case here then, backed by a real captured sample -- not
 /// guessed now.
 public enum AO3SearchResultsOutcome: Sendable {
-	/// At least one recognizable work row was found.
-	case success([ParsedItem])
+	/// At least one recognizable work row was found. `hasNextPage` is
+	/// derived from the pagination widget's `li.next` element: true only
+	/// when a live `<a href>` is present inside it. Its absence -- whether
+	/// `li.next` is missing entirely, or present but only wrapping a
+	/// disabled `<span>` the way `li.previous` does on page 1 (only the
+	/// disabled-`previous` shape is directly confirmed against a captured
+	/// page; the disabled-`next` shape on an actual last page is not, see
+	/// `hasNextPage(_:)`'s own doc comment) -- safely resolves to false
+	/// either way: worst case "load more" disables one page early, it
+	/// never loops past the real last page.
+	case success([ParsedItem], hasNextPage: Bool)
 	/// The page parsed as a real AO3 search-results page but listed no
 	/// work rows -- a legitimate zero-result search, not a parse failure.
 	case noResults
@@ -94,9 +103,13 @@ public enum AO3SearchResultsExtractor {
 		let items = workLis.compactMap { parsedItem(fromWorkLI: $0, feedURL: feedURL) }
 			.filter { !AO3IgnoreList.shouldExclude($0) }
 		guard !items.isEmpty else {
+			// An ignore-list-filtered-to-empty page has no "next" concept
+			// worth reporting -- stays .noResults, same as a genuine
+			// zero-result search, rather than carrying a hasNextPage value
+			// nothing would use.
 			return .noResults
 		}
-		return .success(items)
+		return .success(items, hasNextPage: hasNextPage(root))
 	}
 }
 
@@ -114,6 +127,28 @@ private extension AO3SearchResultsExtractor {
 			return false
 		}
 		return flattenedText(signinDiv).contains("This work is only available to registered users of the Archive.")
+	}
+}
+
+// MARK: - Pagination
+
+private extension AO3SearchResultsExtractor {
+
+	/// `li.next` containing a real `<a href>` -- present and enabled when
+	/// another page exists. Confirmed against a captured page-1-of-4601
+	/// results page where `li.next` wrapped a live `<a>`; the disabled
+	/// shape on an actual last page (by symmetry with `li.previous`'s
+	/// confirmed `<span class="disabled">` shape on page 1) is not
+	/// independently confirmed from a captured last-page sample -- treat
+	/// as plausible-but-unverified per the project's own rule about not
+	/// guessing markup. Either way this resolves safely: absence of a
+	/// live anchor (missing `<li>`, or `<li>` present but only wrapping a
+	/// disabled `<span>`) both read as `false`.
+	static func hasNextPage(_ root: HTMLLiteElement) -> Bool {
+		guard let nextLI = firstDescendant(of: root, where: { $0.tag == "li" && classTokens(of: $0).contains("next") }) else {
+			return false
+		}
+		return firstDescendant(of: nextLI, where: { $0.tag == "a" && $0.attributes["href"] != nil }) != nil
 	}
 }
 
