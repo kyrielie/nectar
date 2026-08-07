@@ -27,6 +27,11 @@ time_long: Long version of the publish time.
 time_medium: Medium version of the publish time.
 time_short: Long version of the publish time.
 
+text_size_class is upstream-inherited and currently always the literal
+  string "[[text_size_class]]" (see nectar-architecture.md, "Article text
+  size" section) -- MacroProcessor leaves it unsubstituted since no Swift
+  code sets d["text_size_class"]. Harmless. Not wired to remove without a
+  dedicated cleanup pass across all 32 theme bundles.
 text_size_class: The size class that the user has selected in Preferences for article text.
 body: The body of the article.
 

@@ -59,6 +59,7 @@ struct ArticleThemeListView: View {
 
 	@State private var useCustomJustifyText: Bool
 	@State private var justifyText: Bool
+	@State private var useCustomHyphenate: Bool
 	@State private var hyphenate: Bool
 
 	@State private var useCustomTextColor: Bool
@@ -144,10 +145,7 @@ struct ArticleThemeListView: View {
 		_useCustomJustifyText = State(initialValue: overrides.justifyText != nil)
 		_justifyText = State(initialValue: overrides.justifyText ?? false)
 
-		// hyphenate keeps the older nil-vs-false-both-mean-"off" model: liveOverrides
-		// below only ever emits true/nil for it (never a forced false), so a theme that
-		// doesn't set hyphens at all isn't pinned to "off" by an override the person
-		// never touched.
+		_useCustomHyphenate = State(initialValue: overrides.hyphenate != nil)
 		_hyphenate = State(initialValue: overrides.hyphenate ?? false)
 
 		// Seeded from the theme's own colors (not `.primary`/`.accentColor`/`systemBackground`)
@@ -244,6 +242,7 @@ struct ArticleThemeListView: View {
 		var marginTop: Double
 		var useCustomJustifyText: Bool
 		var justifyText: Bool
+		var useCustomHyphenate: Bool
 		var hyphenate: Bool
 		var useCustomTextColor: Bool
 		var textColor: Color
@@ -275,6 +274,7 @@ struct ArticleThemeListView: View {
 			marginTop: marginTop,
 			useCustomJustifyText: useCustomJustifyText,
 			justifyText: justifyText,
+			useCustomHyphenate: useCustomHyphenate,
 			hyphenate: hyphenate,
 			useCustomTextColor: useCustomTextColor,
 			textColor: textColor,
@@ -571,8 +571,13 @@ struct ArticleThemeListView: View {
 					Text("Justify Text", comment: "Justify Text toggle")
 				}
 			}
-			Toggle(isOn: $hyphenate) {
-				Text("Hyphenate", comment: "Hyphenate toggle")
+			Toggle(isOn: $useCustomHyphenate) {
+				Text("Override Hyphenation", comment: "Override Hyphenation toggle")
+			}
+			if useCustomHyphenate {
+				Toggle(isOn: $hyphenate) {
+					Text("Hyphenate", comment: "Hyphenate toggle")
+				}
 			}
 		} footer: {
 			Text("Some themes justify text on their own. Turn on Override Justification to force it on or off regardless of the theme. Hyphenation works best paired with justified text on narrow screens.", comment: "Justification/hyphenation footer")
@@ -673,7 +678,7 @@ struct ArticleThemeListView: View {
 			marginHorizontal: useCustomMargins ? marginHorizontal : nil,
 			marginTop: useCustomMargins ? marginTop : nil,
 			justifyText: useCustomJustifyText ? justifyText : nil,
-			hyphenate: hyphenate ? true : nil,
+			hyphenate: useCustomHyphenate ? hyphenate : nil,
 			textColorHex: useCustomTextColor ? textColor.hexString : nil,
 			textColorDarkHex: useCustomTextColor ? textColorDark.hexString : nil,
 			backgroundColorHex: useCustomBackgroundColor ? backgroundColor.hexString : nil,
@@ -711,6 +716,7 @@ struct ArticleThemeListView: View {
 		useCustomParagraphIndent = false
 		useCustomMargins = false
 		useCustomJustifyText = false
+		useCustomHyphenate = false
 		useCustomTextColor = false
 		useCustomBackgroundColor = false
 		useCustomLinkColor = false
