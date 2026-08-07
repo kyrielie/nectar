@@ -78,6 +78,98 @@ not a base64-embedded `@font-face`. `Hyperlegible.nnwtheme` is the reference pat
 - Only reference font families genuinely published on Google Fonts -- confirm on
   fonts.google.com before writing the `@import`, don't guess a family name.
 
+#### Drop caps / versal treatments
+
+A theme that wants a real drop cap (a large decorative first letter, optionally
+followed by small-caps for the rest of the opening sentence -- a "versal") should
+**not** ship its own inline `<script>` in `template.html` to do this. The real
+article reader (`WebViewController`) loads with
+`WKWebpagePreferences.allowsContentJavaScript = false`
+(`Shared/Article Rendering/WebViewConfiguration.swift`), which silently blocks any
+inline `<script>` a theme's own `template.html` contains -- only `WKUserScript`s
+(`main.js`/`main_ios.js`/`newsfoot.js`, injected outside that restriction) run.
+The Settings → Theme preview (`ArticleThemePreviewWebView`) uses a plain `WKWebView`
+with no such restriction, so a theme carrying its own inline script for this will
+render a drop cap correctly there and never in the real reader -- a confusing,
+easy-to-miss gap between the two surfaces.
+
+Instead, opt in to the shared, theme-agnostic implementation already in
+`main.js` (`applyVersalCaps`):
+
+1. Add `data-versal-target` to the `#bodyContainer` element in `template.html`:
+   `<div id="bodyContainer" class="articleBody yourThemeBody [[text_size_class]]" data-versal-target>`.
+   Without this attribute the function no-ops immediately, so it's safe for every
+   other theme to leave unset.
+2. `applyVersalCaps` wraps the opening sentence of the work's first paragraph, and
+   of the first paragraph following each chapter heading (`h2.heading`/`h3.title`),
+   in `<span class="versalCap">`.
+3. Style off that span and its parent paragraph in the theme's own `stylesheet.css`,
+   e.g.:
+   ```css
+   .yourThemeBody p:has(> .versalCap:first-child)::first-letter {
+   	font-family: var(--font-main);
+   	font-weight: 700;
+   	font-size: 3.2em;
+   	float: left;
+   }
+   .versalCap {
+   	font-variant: small-caps;
+   	letter-spacing: 0.03em;
+   }
+   ```
+
+`Kelmscott.nnwtheme` is the reference theme for this pattern.
+
+**Two gotchas that broke this in practice, both worth knowing before writing
+theme-side selectors/logic against "the opening paragraph":**
+
+1. **Book apparatus can contain an earlier `<p>` than the real prose.**
+   `.summary.module`/`.notes.module` (and `.end.notes.module`) wrap their text
+   in `<blockquote class="userstuff"><p>...</p></blockquote>`, which sits
+   earlier in document order than the work's actual opening paragraph. A naive
+   "first `<p>` in the container" search (`container.querySelector("p")`) will
+   silently grab the Summary's `<p>` instead. `applyVersalCaps` in `main.js`
+   guards against this explicitly (`isApparatus`, checking `.closest(".summary,
+   .notes, .preface, #ao3SyntheticPreface, #ao3Preface")`) -- reuse that
+   exclusion rather than re-deriving it if you're writing something else that
+   needs to find "the real opening paragraph."
+2. **Real AO3 chapter prose is never a direct child of `#bodyContainer`.**
+   `AO3ChapterHTMLExtractor` always nests it one level deeper, inside
+   `div.userstuff.module[role="article"]` (multi-chapter) or
+   `div#chapters[role="article"]` (single-chapter). A pure-CSS selector that
+   assumes direct-child position (`.articleBody > p:first-of-type`) will never
+   match real content -- only the Settings theme preview's sample body, which
+   (before this was caught and fixed) didn't reproduce that wrapper and so
+   looked correct there while being wrong for every real article. If a
+   drop-cap/versal rule needs the paragraph reliably located regardless of
+   nesting depth, use the shared `data-versal-target` JS mechanism above
+   rather than a positional CSS selector.
+
+#### Chapter dividers / decorative elements before each chapter heading
+
+The same reader-vs-preview split above (inline `<script>` silently not running
+in the real article view) applies to any theme-owned script, not just versal
+caps. A theme that wants to insert a decorative element ahead of every chapter
+heading (`h2.heading`/`h3.title`) -- Vintage Letter Green's flourish divider is
+the reference case -- should use the shared, generic `applyChapterDividers()`
+in `main.js` instead of its own inline `<script>`:
+
+```html
+<div id="bodyContainer" class="articleBody yourThemeBody [[text_size_class]]"
+	data-chapter-divider
+	data-chapter-divider-char="&#10087;"
+	data-chapter-divider-class="yourThemeFlourish yourThemeFlourish--chapter">[[body]]</div>
+```
+
+`data-chapter-divider-char` is the divider's text content; `data-chapter-
+divider-class` is the class applied to the inserted `<div>`, so the theme's
+own CSS can style it however it needs. Both attributes are required -- the
+function no-ops if either is missing, so it's safe for every other theme to
+leave the `data-chapter-divider*` attributes unset entirely.
+
+`Vintage Letter Green.nnwtheme` is the reference theme for this pattern.
+
+
 ## Theme families
 
 Two or more `.nnwtheme` bundles that are the same design with different accents or

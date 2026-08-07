@@ -27,9 +27,6 @@
 	--footer-color: #8a7a5c;
 	--pre-background: rgba(0, 0, 0, 0.04);
 	--header-top: #7a5a2e;
-	--header-bottom: #644823;
-	--dateline-bar-top: #4f5e3f;
-	--dateline-bar-bottom: #3f4b32;
 	--press-mark-color: #7a5a2e;
 	--summary-background: rgba(122, 90, 46, 0.07);
 	--summary-border: #7a5a2e;
@@ -56,9 +53,6 @@
 		--footer-color: #b0a184;
 		--pre-background: rgba(255, 255, 255, 0.06);
 		--header-top: #4a3719;
-		--header-bottom: #392a13;
-		--dateline-bar-top: #303a27;
-		--dateline-bar-bottom: #262e1e;
 		--press-mark-color: #c9a468;
 		--summary-background: rgba(201, 164, 104, 0.09);
 		--summary-border: #c9a468;
@@ -97,17 +91,26 @@ body > .systemMessage {
 	color: var(--system-message-color);
 }
 
-/* Header bar — walnut-brown gradient */
+/* Header — a private-press title page, not a colored banner. Goudy's own
+   Village Press colophons framed source/byline chrome between a pair of
+   hairline rules on the plain page stock, in ink, not a printed block of
+   color -- flat spot-color letterpress ink coverage on a printing block
+   was reserved for the ornament/press-mark, not for running chrome text.
+   Two 1px rules (--header-top) bracket the feed/byline line; the paper
+   background shows through, matching the rest of the page. */
 
 .headerBar {
-	background: linear-gradient(to bottom, var(--header-top), var(--header-bottom));
-	padding: 14px 0;
+	background: var(--background-color);
+	border-top: 1px solid var(--header-top);
+	border-bottom: 1px solid var(--header-top);
+	padding: 10px 0;
 	font-family: var(--font-main);
-	font-size: 1em;
-	font-weight: bold;
+	font-size: 0.82em;
+	font-weight: normal;
+	font-variant: small-caps;
+	letter-spacing: 0.06em;
 	line-height: 1.4;
-	color: #f2e9d6;
-	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+	color: var(--attribution-color);
 }
 
 .headerBarInner {
@@ -118,25 +121,27 @@ body > .systemMessage {
 .avatar {
 	vertical-align: middle;
 	border-radius: 3px;
-	height: 1.8em !important;
-	width: 1.8em;
-	min-width: 1.8em;
+	height: 1.5em !important;
+	width: 1.5em;
+	min-width: 1.5em;
 	margin: 0 !important;
 	margin-right: 0.5em !important;
+	filter: grayscale(1) contrast(1.1);
+	opacity: 0.85;
 }
 
 .headerBar a:link, .headerBar a:visited, .headerBar a, .feedlink {
-	color: #f2e9d6 !important;
+	color: var(--header-top) !important;
 	font-weight: bold;
 }
 
 .byline {
-	color: rgba(242, 233, 214, 0.78);
+	color: var(--attribution-color);
 	margin-left: 0.5em;
 }
 
 body .byline a:link, .byline a:visited, .byline a {
-	color: rgba(242, 233, 214, 0.78) !important;
+	color: var(--attribution-color) !important;
 }
 
 /* Content containers */
@@ -151,26 +156,33 @@ body .byline a:link, .byline a:visited, .byline a {
 	margin-top: 2em;
 }
 
-/* Dateline bar — moss green gradient */
+/* Dateline — a single centered small-caps line under its own hairline,
+   the same rule weight as the headerBar's, echoing a title page's
+   printer's imprint line rather than a second banner in a second color. */
 
 .datelineBar {
-	background: linear-gradient(to bottom, var(--dateline-bar-top), var(--dateline-bar-bottom));
-	padding: 8px 0;
+	background: var(--background-color);
+	border-bottom: 1px solid var(--separator-color);
+	padding: 6px 0;
 	font-family: var(--font-main);
-	font-size: 0.85em;
-	font-weight: bold;
+	font-size: 0.78em;
+	font-weight: normal;
+	font-variant: small-caps;
+	letter-spacing: 0.08em;
 	line-height: 1.4;
-	color: #f2e9d6;
+	color: var(--attribution-color);
+	text-align: center;
 }
 
 .datelineBarInner {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 }
 
 .datelineDate a:link, .datelineDate a:visited, .datelineDate a {
-	color: #f2e9d6 !important;
-	font-weight: bold;
+	color: var(--attribution-color) !important;
+	font-weight: normal;
 }
 
 /* Article title */
@@ -218,6 +230,28 @@ body .byline a:link, .byline a:visited, .byline a {
 	text-indent: var(--paragraph-indent, 0);
 }
 
+/* Drop cap / versal — applied by the shared applyVersalCaps() script
+   (Shared/Article Rendering/main.js, opted into via the bodyContainer's
+   data-versal-target attribute in template.html) to the opening paragraph
+   of the work and of every chapter, echoing the decorated-initial
+   convention of Goudy-era Arts & Crafts book printing. See
+   Technotes/Themes.md for the general pattern. */
+
+.kennerleyBody p:has(> .versalCap:first-child)::first-letter {
+	font-family: var(--font-body);
+	font-weight: bold;
+	font-size: 3.1em;
+	line-height: 0.8;
+	float: left;
+	padding: 0.03em 0.08em 0 0;
+	color: var(--header-top);
+}
+
+.versalCap {
+	font-variant: small-caps;
+	letter-spacing: 0.03em;
+}
+
 .articleBody blockquote {
 	border-left: 3px solid var(--blockquote-border-color);
 	background: var(--blockquote-background);
@@ -252,7 +286,8 @@ body .byline a:link, .byline a:visited, .byline a {
 
 #ao3SyntheticPreface,
 #ao3Preface {
-	border-bottom-color: var(--summary-border);
+	--ao3-preface-border-color: var(--summary-border);
+	--ao3-preface-background-color: var(--summary-background);
 }
 
 /* Summary and Notes labels use wide-letter-spaced small caps, a common
