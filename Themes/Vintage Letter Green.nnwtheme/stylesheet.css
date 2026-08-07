@@ -427,6 +427,77 @@ a.footnote:hover,
 	color: var(--ink-muted);
 }
 
+/* Summary -- reads as the letter's own opening line: no card, just the
+   author's pitch set slightly larger and in the sage accent, as if it
+   were the first sentence you'd read on unfolding the page. */
+.summary.module {
+	margin: 0 0 1.2em 0;
+}
+.summary.module h3.heading {
+	font-variant: small-caps;
+	letter-spacing: 0.02em;
+	color: var(--ink-muted);
+	margin-bottom: 0.2em;
+}
+.summary.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--ink-color);
+	font-size: 1.05em;
+}
+
+/* Notes -- a postscript, matching how a real letter appends its P.S.
+   below the signature rather than boxing it as separate content. Shared
+   by opening notes and the end-of-work afterword. */
+.notes.module,
+.end.notes.module {
+	margin: 1.4em 0 0 0;
+	padding-top: 0.8em;
+	border-top: 1px dashed var(--rule-color);
+}
+.notes.module h3.heading::before,
+.end.notes.module h3.heading::before {
+	content: "P.S. \2014 ";
+}
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	font-variant: small-caps;
+	letter-spacing: 0.02em;
+	color: var(--ink-muted);
+	margin-bottom: 0.2em;
+}
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--ink-color);
+	font-style: italic;
+}
+
+/* Chapter heading -- a new dated letter page: the flourish the template
+   script now inserts ahead of it stands in for turning to a fresh sheet. */
+.letter-flourish--chapter {
+	margin-top: 28px;
+}
+.articleBody h2.heading,
+.articleBody h3.title {
+	text-align: center;
+	font-variant: small-caps;
+	letter-spacing: 0.03em;
+	font-weight: bold;
+	color: var(--ink-color);
+	margin: 0 0 14px 0;
+}
+.articleBody h2.heading a,
+.articleBody h3.title a {
+	color: var(--ink-color);
+	text-decoration: none;
+}
+
 .ao3ChapterFetchNotice {
 	margin: 0 0 1em 0;
 	padding: 0.6em 0.8em;

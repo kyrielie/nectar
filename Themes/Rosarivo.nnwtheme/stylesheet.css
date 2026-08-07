@@ -1,5 +1,9 @@
-/* Rosarivo — designed by Nicolás Silva (Argentina), an oldstyle serif with
-   the low-contrast, slightly bouncy warmth of mid-20th-century Latin
+/* Rosarivo — designed by Pablo Ugerman (Universidad de Buenos Aires
+   postgraduate typeface-design course, 2011), named for Argentine
+   typographer Raúl Rosarivo (1903–1966), whose Divina proporción
+   tipográfica (1947) argued that Jenson's, Gutenberg's, and Schöffer's
+   page margins follow a 2:3 golden-number progression. An oldstyle serif
+   with the low-contrast, slightly bouncy warmth of mid-20th-century Latin
    American small-press book typography. --font-main is UI chrome
    (headerBar/datelineBar/byline/footer); --font-body is .articleBody prose;
    --font-code is code/pre, following the Hyperlegible convention. */
@@ -32,6 +36,8 @@
 	--dateline-bar-top: #6e5133;
 	--dateline-bar-bottom: #5a4128;
 	--colophon-rule-color: #a4442a;
+	--summary-background: rgba(164, 68, 42, 0.07);
+	--chapter-heading-color: #2c1b10;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -57,6 +63,8 @@
 		--dateline-bar-top: #453423;
 		--dateline-bar-bottom: #362a1b;
 		--colophon-rule-color: #e0916f;
+		--summary-background: rgba(224, 145, 111, 0.09);
+		--chapter-heading-color: #f4e9d8;
 	}
 }
 
@@ -241,6 +249,97 @@ body .byline a:link, .byline a:visited, .byline a {
 	padding: 0.4em 0.6em;
 }
 
+/* AO3 preface (rating/warning/fandom/stats) */
+
+#ao3SyntheticPreface,
+#ao3Preface {
+	border-bottom-color: var(--colophon-rule-color);
+}
+
+/* Summary — padding kept in the same 2:3 ratio (16px:24px) as
+   .articleContent's top margin and .footer's bottom margin, continuing
+   Raúl Rosarivo's golden-number page-proportion argument (Divina
+   proporción tipográfica, 1947) into this one card rather than treating
+   it as a one-off layout choice. */
+
+.summary.module {
+	margin: 0 0 1.5em 0;
+	padding: 16px 24px;
+	background: var(--summary-background);
+	border-left: 3px solid var(--colophon-rule-color);
+}
+
+.summary.module h3.heading {
+	margin: 0 0 0.3em 0;
+	font-family: var(--font-main);
+	font-size: 0.82em;
+	font-weight: bold;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	color: var(--attribution-color);
+}
+
+.summary.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--text-color);
+	font-size: 0.98em;
+}
+
+.notes.module,
+.end.notes.module {
+	margin: 0 0 1.5em 0;
+	padding-left: 1em;
+	border-left: 1px solid var(--separator-color);
+}
+
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	margin: 0 0 0.2em 0;
+	font-family: var(--font-main);
+	font-size: 0.78em;
+	font-weight: bold;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	color: var(--attribution-color);
+}
+
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--blockquote-text-color);
+	font-style: italic;
+	font-size: 0.95em;
+}
+
+/* Chapter heading — reuses the colophonRule treatment (a plain rule, not
+   an ornament glyph, matching how it already marks the work's own title)
+   ahead of every chapter. h2.heading is what AO3ChapterHTMLExtractor
+   rewrites a fetched chapter's h3.title into; h3.title is kept as a
+   fallback for Ambrosia-embedded HTML. */
+
+.articleBody h2.heading,
+.articleBody h3.title {
+	margin-top: 2em;
+	padding-top: 1em;
+	border-top: 1px solid var(--colophon-rule-color);
+	font-family: var(--font-body);
+	font-size: 1.3em;
+	font-weight: bold;
+	color: var(--chapter-heading-color);
+}
+
+.articleBody h2.heading a,
+.articleBody h3.title a {
+	color: var(--chapter-heading-color);
+	text-decoration: none;
+}
+
 /* Footer */
 
 body .footer {
@@ -255,4 +354,51 @@ body .footer {
 body .footer a:link, .footer a:visited {
 	color: var(--link-color);
 	text-decoration: underline;
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+
+		word-break: break-word;
+		-webkit-hyphens: auto;
+		-webkit-text-size-adjust: none;
+		font-family: var(--font-body);
+		font-size: [[font-size]]px;
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+		font-family: var(--font-body);
+	}
+
+	.smallText {
+		font-size: 14px;
+	}
+
+	.mediumText {
+		font-size: 16px;
+	}
+
+	.largeText {
+		font-size: 18px;
+	}
+
+	.xlargeText {
+		font-size: 20px;
+	}
+
+	.xxlargeText {
+		font-size: 22px;
+	}
 }
