@@ -31,7 +31,7 @@ import RSWeb
 ///   arrive as a 200, 403, or overlapping a 429 -- sniffed from the body
 ///   independently of status code, per the plan's explicit call-out that
 ///   this needs its own detection separate from AO3's own 429 handling.
-enum AO3SearchResultsFetchOutcome {
+public enum AO3SearchResultsFetchOutcome {
 	case success([ParsedItem], hasNextPage: Bool)
 	case noResults
 	case registrationRequired
@@ -39,13 +39,13 @@ enum AO3SearchResultsFetchOutcome {
 	case cloudflareChallenge(challengedURL: URL)
 }
 
-enum AO3SearchResultsFetchError: Error {
+public enum AO3SearchResultsFetchError: Error {
 	/// A 5xx status or timeout that kept recurring past `maxAttempts`, or a
 	/// response with no usable body after every attempt.
 	case exhaustedRetries
 }
 
-enum AO3SearchResultsFetcher {
+public enum AO3SearchResultsFetcher {
 
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AO3SearchResultsFetcher")
 
@@ -78,7 +78,7 @@ enum AO3SearchResultsFetcher {
 	/// what this store considered a fresh cookie, the cookie is stale
 	/// (expired early / revoked) and is cleared so the next attempt
 	/// doesn't keep sending it.
-	static func fetch(url: URL, feedURL: String) async throws -> AO3SearchResultsFetchOutcome {
+	public static func fetch(url: URL, feedURL: String) async throws -> AO3SearchResultsFetchOutcome {
 		let clearanceCookieHeaderValue = AO3ChallengeSessionStore.cookieHeaderValueIfFresh
 
 		for attempt in 1...maxAttempts {
