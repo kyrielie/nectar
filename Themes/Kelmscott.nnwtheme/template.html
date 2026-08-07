@@ -1,0 +1,96 @@
+<div class="fontSize [[text_size_class]] kelmscott-page">
+
+	<header class="kelmscottHeader">
+		<div class="kelmscottHeaderInner">
+			<img class="kelmscottAvatar nnw-nozoom" id="nnwImageIcon" src="[[avatar_src]]" />
+			<a class="kelmscottFeedlink" href="[[feed_link]]">[[feed_link_title]]</a>
+			<span class="kelmscottByline">[[byline]]</span>
+		</div>
+	</header>
+
+	<div class="kelmscottFrame">
+
+		<div class="kelmscottTitleBlock">
+			<div class="kelmscottTitle"><a href="[[preferred_link]]">[[title]]</a></div>
+			<div class="[[dateline_style]] kelmscottDateline"><a href="[[preferred_link]]">[[date_long]]</a></div>
+		</div>
+
+		<div class="kelmscottRule" aria-hidden="true"></div>
+
+		<article>
+			<div id="bodyContainer" class="articleBody kelmscottBody [[text_size_class]]">[[body]]</div>
+		</article>
+
+		<div id="nnwFooter" class="kelmscottFooter">
+			<div class="externalLink singleLine">[[external_link_label]] <a href="[[external_link]]">[[external_link_stripped]]</a></div>
+		</div>
+
+	</div>
+
+</div>
+
+<script type="text/javascript">
+	/* Kelmscott versal treatment: wraps the opening sentence of a body
+	   paragraph in a span so it can be styled as tracked small caps,
+	   echoing Kelmscott Press's convention of setting the first few words
+	   after a decorated initial in caps. Operates on actual DOM nodes (via
+	   TreeWalker + Text.splitText) rather than rewriting textContent, so any
+	   inline markup already in that first sentence -- an <em>, a link -- is
+	   moved into the wrapper intact instead of being discarded. If no
+	   sentence-ending punctuation is found (very short paragraph), that
+	   paragraph is left untouched; the ::first-letter drop cap in the
+	   stylesheet still applies either way.
+	   Kelmscott Press books decorated an initial to open every chapter, not
+	   just the work, so this now fires on the work's opening paragraph AND
+	   on the first paragraph following each chapter heading
+	   (h2.heading -- what AO3ChapterHTMLExtractor rewrites a fetched
+	   chapter's h3.title into -- with h3.title kept as a fallback in case
+	   Ambrosia's embedded HTML doesn't carry the same rewrite).
+	   #ao3SyntheticPreface/#ao3Preface never contain a <p>, so the work's
+	   opening paragraph is always the first real paragraph of the chapter,
+	   not the preface. */
+	document.addEventListener("DOMContentLoaded", function () {
+		var container = document.getElementById("bodyContainer");
+		if (!container) return;
+
+		function applyVersal(paragraph) {
+			if (!paragraph || paragraph.querySelector(".kelmscottVersal")) return;
+			var sentenceEnd = /[.!?]["'\u201d\u2019)\]]*(\s|$)/;
+			var walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT, null);
+			var endNode = null;
+			var node;
+			while ((node = walker.nextNode())) {
+				var match = sentenceEnd.exec(node.textContent);
+				if (match) {
+					node.splitText(match.index + match[0].length);
+					endNode = node;
+					break;
+				}
+			}
+			if (!endNode) return;
+
+			var span = document.createElement("span");
+			span.className = "kelmscottVersal";
+			var child = paragraph.firstChild;
+			while (child) {
+				var next = child.nextSibling;
+				span.appendChild(child);
+				if (child === endNode) break;
+				child = next;
+			}
+			paragraph.insertBefore(span, paragraph.firstChild);
+		}
+
+		var firstParagraph = container.querySelector("p");
+		applyVersal(firstParagraph);
+
+		var headings = container.querySelectorAll("h2.heading, h3.title");
+		headings.forEach(function (heading) {
+			var sibling = heading.nextElementSibling;
+			while (sibling && sibling.tagName !== "P") {
+				sibling = sibling.nextElementSibling;
+			}
+			applyVersal(sibling);
+		});
+	});
+</script>

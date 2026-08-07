@@ -32,6 +32,10 @@
 	--dateline-bar-top: #c9a13b;
 	--dateline-bar-bottom: #a5822c;
 	--step-lines-color: #c9a13b;
+	--summary-background: rgba(201, 161, 59, 0.08);
+	--summary-border: #c9a13b;
+	--notes-border: #ddd3ba;
+	--chapter-heading-color: #17201f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -57,6 +61,10 @@
 		--dateline-bar-top: #7a611f;
 		--dateline-bar-bottom: #61501f;
 		--step-lines-color: #e0b957;
+		--summary-background: rgba(224, 185, 87, 0.1);
+		--summary-border: #e0b957;
+		--notes-border: rgba(255, 255, 255, 0.16);
+		--chapter-heading-color: #f2eee0;
 	}
 }
 
@@ -267,6 +275,97 @@ body .byline a:link, .byline a:visited, .byline a {
 	padding: 0.4em 0.6em;
 }
 
+/* AO3 preface (rating/warning/fandom/stats) */
+
+#ao3SyntheticPreface,
+#ao3Preface {
+	border-bottom-color: var(--summary-border);
+}
+
+/* Summary and Notes — "ticket window" treatment: a thin double rule and
+   generous letter-spacing, the same signage-lettering logic the header
+   bars already use, rather than a new visual language for these blocks. */
+
+.summary.module {
+	margin: 0 0 1.5em 0;
+	padding: 0.9em 1.1em;
+	background: var(--summary-background);
+	border-top: 1px solid var(--summary-border);
+	border-bottom: 1px solid var(--summary-border);
+}
+
+.summary.module h3.heading {
+	margin: 0 0 0.4em 0;
+	font-family: var(--font-main);
+	font-size: 0.78em;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--attribution-color);
+}
+
+.summary.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--text-color);
+	font-size: 0.98em;
+}
+
+.notes.module,
+.end.notes.module {
+	margin: 0 0 1.5em 0;
+	padding-left: 1em;
+	border-left: 1px solid var(--notes-border);
+}
+
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	margin: 0 0 0.2em 0;
+	font-family: var(--font-main);
+	font-size: 0.75em;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--attribution-color);
+}
+
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--blockquote-text-color);
+	font-size: 0.95em;
+}
+
+/* Chapter heading — numbered-plate treatment: bold, wide tracking, thin
+   rules above and below, echoing signage-plate lettering rather than the
+   stepLines motif (which stays reserved for the work's own title). */
+
+.articleBody h2.heading,
+.articleBody h3.title {
+	margin-top: 2.2em;
+	padding: 0.5em 0;
+	font-family: var(--font-main);
+	font-size: 1.05em;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	text-align: center;
+	color: var(--chapter-heading-color);
+	border-top: 1px solid var(--step-lines-color);
+	border-bottom: 1px solid var(--step-lines-color);
+}
+
+.articleBody h2.heading a,
+.articleBody h3.title a {
+	color: var(--chapter-heading-color);
+	text-decoration: none;
+}
+
 /* Footer */
 
 body .footer {
@@ -282,4 +381,51 @@ body .footer {
 body .footer a:link, .footer a:visited {
 	color: var(--link-color);
 	text-decoration: underline;
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+
+		word-break: break-word;
+		-webkit-hyphens: auto;
+		-webkit-text-size-adjust: none;
+		font-family: var(--font-body);
+		font-size: [[font-size]]px;
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+		font-family: var(--font-body);
+	}
+
+	.smallText {
+		font-size: 14px;
+	}
+
+	.mediumText {
+		font-size: 16px;
+	}
+
+	.largeText {
+		font-size: 18px;
+	}
+
+	.xlargeText {
+		font-size: 20px;
+	}
+
+	.xxlargeText {
+		font-size: 22px;
+	}
 }

@@ -15,3 +15,25 @@
 	<div class="letter-flourish" aria-hidden="true">&#10087;</div>
 	<div id="bodyContainer" class="articleBody letter-body [[text_size_class]]">[[body]]</div>
 </article>
+
+<script type="text/javascript">
+	/* Extends the letter-flourish divider -- currently only placed once,
+	   between the title block and the body -- to also open every chapter,
+	   so a multi-chapter work reads as a new dated letter page each time
+	   rather than one continuous sheet. h2.heading is what
+	   AO3ChapterHTMLExtractor rewrites a fetched chapter's h3.title into;
+	   h3.title is kept as a fallback in case Ambrosia's embedded HTML
+	   doesn't carry the same rewrite. */
+	document.addEventListener("DOMContentLoaded", function () {
+		var container = document.getElementById("bodyContainer");
+		if (!container) return;
+		var headings = container.querySelectorAll("h2.heading, h3.title");
+		headings.forEach(function (heading) {
+			var flourish = document.createElement("div");
+			flourish.className = "letter-flourish letter-flourish--chapter";
+			flourish.setAttribute("aria-hidden", "true");
+			flourish.textContent = "\u2767";
+			heading.parentNode.insertBefore(flourish, heading);
+		});
+	});
+</script>

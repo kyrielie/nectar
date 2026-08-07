@@ -62,14 +62,26 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 	/// (`TimelineCustomizerCollectionViewController.previewArticle`), so the two
 	/// settings screens don't show two different fictional excerpts side by side.
 	///
-	/// Ordered the way AO3 itself lays out a work's preface -- Summary, then
-	/// Notes, then (for a multi-chapter work) each chapter's own heading --
-	/// confirmed against a real fetched/exported work: `.summary.module`
-	/// precedes `.notes.module`, both above the chapters themselves. A theme
-	/// that only styles one of `.summary.module`/`.notes.module` (both are
-	/// vanishingly rare to omit, but themes vary) would otherwise look
-	/// identical in this preview to one that styles both.
+	/// Ordered the way AO3 itself lays out a work's preface -- the tag/stats
+	/// preface block first, then Summary, then Notes, then (for a
+	/// multi-chapter work) each chapter's own heading -- confirmed against a
+	/// real fetched/exported work: `#ao3SyntheticPreface`'s `dl.tags` sits
+	/// above `.summary.module`, which precedes `.notes.module`, both above
+	/// the chapters themselves. A theme that only styles one of
+	/// `.summary.module`/`.notes.module` (both are vanishingly rare to omit,
+	/// but themes vary) would otherwise look identical in this preview to one
+	/// that styles both.
+	///
+	/// The preface block itself only carries Warnings and Chapters -- not the
+	/// full AO3 row set (Rating/Category/Fandom/Relationships/Characters/
+	/// Additional Tags/etc) -- since this screen is demonstrating `dl.tags`
+	/// grid styling (see `AO3PrefaceRenderer`/core.css), not standing in for
+	/// fandom chrome the way a full tag block would.
 	internal static let sampleBodyForTesting = """
+	<div id="ao3SyntheticPreface"><dl class="tags">
+	<dt>Warnings:</dt><dd>No Archive Warnings Apply</dd>
+	<dt>Chapters:</dt><dd>2/2</dd>
+	</dl></div>
 	<div class="summary module">
 	<h3 class="heading">Summary:</h3>
 	<blockquote class="userstuff">

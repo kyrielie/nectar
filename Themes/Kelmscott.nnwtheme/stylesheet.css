@@ -209,6 +209,66 @@ body > .systemMessage {
 	font-size: 0.85em;
 }
 
+/* Summary, Notes, chapter headings -- labels/headings set in the same
+   rubric-red small caps already used for the article title, continuing
+   the "printed in red ink" rubrication conceit rather than introducing a
+   second color language for these blocks. */
+
+.summary.module,
+.notes.module,
+.end.notes.module {
+	margin: 0 0 1.5em 0;
+	padding-left: 1.1em;
+	border-left: 3px double var(--rule);
+}
+
+.summary.module h3.heading,
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	margin: 0 0 0.3em 0;
+	font-family: var(--font-main);
+	font-variant: small-caps;
+	letter-spacing: 0.04em;
+	font-weight: 600;
+	font-size: 0.85em;
+	color: var(--rubric);
+}
+
+.summary.module blockquote.userstuff,
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--ink);
+	font-size: 0.98em;
+}
+
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	font-style: italic;
+	color: var(--ink-muted);
+}
+
+.kelmscottBody h2.heading,
+.kelmscottBody h3.title {
+	margin-top: 2.2em;
+	font-family: var(--font-main);
+	font-variant: small-caps;
+	letter-spacing: 0.04em;
+	font-size: 1.15em;
+	font-weight: 600;
+	color: var(--rubric);
+	text-align: center;
+}
+
+.kelmscottBody h2.heading a,
+.kelmscottBody h3.title a {
+	color: var(--rubric);
+	text-decoration: none;
+}
+
 /* Article body -- justified, tightly leaded, hyphenated to keep the
    justified rag from gapping badly at narrow widths. Golden Type reads
    dense and dark on the page; EB Garamond's default weight is lighter, so
@@ -230,11 +290,15 @@ body > .systemMessage {
 	text-indent: var(--paragraph-indent, 0);
 }
 
-/* Drop cap on the very first letter of the chapter. Applies through the
-   .kelmscottVersal wrapper the template's script inserts, since
-   ::first-letter still targets the block's true first letter even when
-   it's inside a leading inline element. */
-.kelmscottBody p:first-of-type::first-letter {
+/* Drop cap on the first letter of every chapter's opening paragraph, not
+   just the work's. Selects any paragraph the template's script has
+   wrapped in .kelmscottVersal (fires once for the work's own opening
+   paragraph, then again for the first paragraph after each h2.heading/
+   h3.title chapter boundary) rather than :first-of-type, which would only
+   ever match the very first paragraph in the container. ::first-letter
+   still targets the block's true first letter even when it's inside a
+   leading inline element. */
+.kelmscottBody p:has(> .kelmscottVersal:first-child)::first-letter {
 	font-family: var(--font-main);
 	font-weight: 700;
 	font-size: 3.2em;

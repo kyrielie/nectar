@@ -32,6 +32,10 @@
 	--dateline-bar-top: #3f5c44;
 	--dateline-bar-bottom: #324a37;
 	--sunburst-color: #c1633b;
+	--summary-background: rgba(193, 99, 59, 0.08);
+	--summary-border: #c1633b;
+	--notes-border: #e6d8bd;
+	--chapter-heading-color: #2e2013;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -57,6 +61,10 @@
 		--dateline-bar-top: #2c4030;
 		--dateline-bar-bottom: #223226;
 		--sunburst-color: #e08a5c;
+		--summary-background: rgba(224, 138, 92, 0.1);
+		--summary-border: #e08a5c;
+		--notes-border: rgba(255, 255, 255, 0.16);
+		--chapter-heading-color: #f6ecd8;
 	}
 }
 
@@ -229,6 +237,102 @@ body .byline a:link, .byline a:visited, .byline a {
 	padding: 0.4em 0.6em;
 }
 
+/* AO3 preface (rating/warning/fandom/stats) */
+
+#ao3SyntheticPreface,
+#ao3Preface {
+	border-bottom-color: var(--summary-border);
+}
+
+/* Summary — the marigold-orange ink already used for links/header, not a
+   new hue, framing it as the shop's own pitch card. */
+
+.summary.module {
+	margin: 0 0 1.5em 0;
+	padding: 0.8em 1.1em;
+	background: var(--summary-background);
+	border-left: 3px solid var(--summary-border);
+	border-radius: 2px;
+}
+
+.summary.module h3.heading {
+	margin: 0 0 0.3em 0;
+	font-family: var(--font-sans);
+	font-size: 0.8em;
+	font-weight: bold;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--attribution-color);
+}
+
+.summary.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--text-color);
+	font-size: 0.98em;
+}
+
+/* Notes — reads as a hand-set shop notice pinned to the margin: warm,
+   unboxed, ink-toned rule only. */
+
+.notes.module,
+.end.notes.module {
+	margin: 0 0 1.5em 0;
+	padding-left: 1em;
+	border-left: 1px solid var(--notes-border);
+}
+
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	margin: 0 0 0.2em 0;
+	font-family: var(--font-sans);
+	font-size: 0.78em;
+	font-weight: bold;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--attribution-color);
+}
+
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--blockquote-text-color);
+	font-size: 0.95em;
+}
+
+/* Chapter heading — sunburst ornament bookends each chapter opening,
+   the same device already marking the work's own title. */
+
+.articleBody h2.heading,
+.articleBody h3.title {
+	margin-top: 2em;
+	font-family: var(--font-serif);
+	font-size: 1.3em;
+	font-weight: 600;
+	color: var(--chapter-heading-color);
+	text-align: center;
+}
+
+.articleBody h2.heading::before,
+.articleBody h3.title::before {
+	content: "\2600";
+	display: block;
+	color: var(--sunburst-color);
+	font-size: 0.7em;
+	margin-bottom: 0.3em;
+}
+
+.articleBody h2.heading a,
+.articleBody h3.title a {
+	color: var(--chapter-heading-color);
+	text-decoration: none;
+}
+
 /* Footer */
 
 body .footer {
@@ -243,4 +347,51 @@ body .footer {
 body .footer a:link, .footer a:visited {
 	color: var(--link-color);
 	text-decoration: underline;
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+
+		word-break: break-word;
+		-webkit-hyphens: auto;
+		-webkit-text-size-adjust: none;
+		font-family: var(--font-serif);
+		font-size: [[font-size]]px;
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+		font-family: var(--font-serif);
+	}
+
+	.smallText {
+		font-size: 14px;
+	}
+
+	.mediumText {
+		font-size: 16px;
+	}
+
+	.largeText {
+		font-size: 18px;
+	}
+
+	.xlargeText {
+		font-size: 20px;
+	}
+
+	.xxlargeText {
+		font-size: 22px;
+	}
 }

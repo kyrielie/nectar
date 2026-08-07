@@ -31,6 +31,10 @@
 	--dateline-bar-top: #4f5e3f;
 	--dateline-bar-bottom: #3f4b32;
 	--press-mark-color: #7a5a2e;
+	--summary-background: rgba(122, 90, 46, 0.07);
+	--summary-border: #7a5a2e;
+	--notes-border: #ddccA4;
+	--chapter-heading-color: #2e2313;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -56,6 +60,10 @@
 		--dateline-bar-top: #303a27;
 		--dateline-bar-bottom: #262e1e;
 		--press-mark-color: #c9a468;
+		--summary-background: rgba(201, 164, 104, 0.09);
+		--summary-border: #c9a468;
+		--notes-border: rgba(255, 255, 255, 0.16);
+		--chapter-heading-color: #f2e6cc;
 	}
 }
 
@@ -240,6 +248,103 @@ body .byline a:link, .byline a:visited, .byline a {
 	padding: 0.4em 0.6em;
 }
 
+/* AO3 preface (rating/warning/fandom/stats) */
+
+#ao3SyntheticPreface,
+#ao3Preface {
+	border-bottom-color: var(--summary-border);
+}
+
+/* Summary and Notes labels use wide-letter-spaced small caps, a common
+   Arts-and-Crafts-era private-press convention (Goudy's own Village Press
+   colophons among them) for marking a section as book apparatus rather
+   than the running text itself. */
+
+.summary.module {
+	margin: 0 0 1.5em 0;
+	padding: 0.8em 1.1em;
+	background: var(--summary-background);
+	border-left: 3px solid var(--summary-border);
+}
+
+.summary.module h3.heading {
+	margin: 0 0 0.3em 0;
+	font-family: var(--font-main);
+	font-variant: small-caps;
+	letter-spacing: 0.08em;
+	font-size: 0.85em;
+	font-weight: bold;
+	color: var(--attribution-color);
+}
+
+.summary.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--text-color);
+	font-size: 0.98em;
+}
+
+.notes.module,
+.end.notes.module {
+	margin: 0 0 1.5em 0;
+	padding-left: 1em;
+	border-left: 1px solid var(--notes-border);
+}
+
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	margin: 0 0 0.2em 0;
+	font-family: var(--font-main);
+	font-variant: small-caps;
+	letter-spacing: 0.08em;
+	font-size: 0.8em;
+	font-weight: bold;
+	color: var(--attribution-color);
+}
+
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--blockquote-text-color);
+	font-style: italic;
+	font-size: 0.95em;
+}
+
+/* Chapter heading — reuses the press-mark ornament that already marks the
+   work's own title, repeated ahead of every chapter. h2.heading is what
+   AO3ChapterHTMLExtractor rewrites a fetched chapter's h3.title into;
+   h3.title is kept as a fallback for Ambrosia-embedded HTML. */
+
+.articleBody h2.heading,
+.articleBody h3.title {
+	margin-top: 2em;
+	font-family: var(--font-body);
+	font-size: 1.35em;
+	font-weight: bold;
+	color: var(--chapter-heading-color);
+	text-align: center;
+}
+
+.articleBody h2.heading::before,
+.articleBody h3.title::before {
+	content: "\2058";
+	display: block;
+	color: var(--press-mark-color);
+	font-size: 1.2em;
+	margin-bottom: 0.3em;
+}
+
+.articleBody h2.heading a,
+.articleBody h3.title a {
+	color: var(--chapter-heading-color);
+	text-decoration: none;
+}
+
 /* Footer */
 
 body .footer {
@@ -254,4 +359,51 @@ body .footer {
 body .footer a:link, .footer a:visited {
 	color: var(--link-color);
 	text-decoration: underline;
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+
+		word-break: break-word;
+		-webkit-hyphens: auto;
+		-webkit-text-size-adjust: none;
+		font-family: var(--font-body);
+		font-size: [[font-size]]px;
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+		font-family: var(--font-body);
+	}
+
+	.smallText {
+		font-size: 14px;
+	}
+
+	.mediumText {
+		font-size: 16px;
+	}
+
+	.largeText {
+		font-size: 18px;
+	}
+
+	.xlargeText {
+		font-size: 20px;
+	}
+
+	.xxlargeText {
+		font-size: 22px;
+	}
 }
