@@ -127,13 +127,29 @@ enum ArticleThemeColorExtractor {
 	}
 
 	/// Removes every top-level `@supports (...) { ... }` block (brace-matched) from
-	/// `css`, leaving everything else in place.
-	private static func stripBraceBlocks(_ css: String) -> String {
+	/// `css`, leaving everything else in place. Also matches the `@supports not
+	/// (...)` form -- `\s+` (not `\s*`) is required after `@supports` in both the
+	/// `not` and non-`not` case, since real CSS always has that space and
+	/// `@supports(` with zero space is invalid CSS anyway; requiring it also
+	/// guarantees `@supportsnot(...)` (which must never match) can't slip through
+	/// via the optional-`not` branch. A compound condition (`@supports (color:
+	/// red) and (not (color: green))`) still matches on the outer `@supports`
+	/// keyword regardless of what's inside the parens -- `[^)]*` only handles one
+	/// paren-depth, which is already how this behaved for compound conditions
+	/// before this fix, not a regression introduced by it.
+	///
+	/// Internal rather than private specifically so
+	/// `ArticleThemeColorExtractorTests` can exercise it directly with
+	/// synthetic CSS fragments, rather than needing to construct a full
+	/// on-disk `ArticleTheme` bundle (`init(url:isAppTheme:)` requires a
+	/// `core.css` resource from `Bundle.main`, which isn't available in the
+	/// test target) just to reach this string transform.
+	static func stripBraceBlocks(_ css: String) -> String {
 		var result = ""
 		var searchStart = css.startIndex
 
 		while searchStart < css.endIndex,
-			  let openerRange = css.range(of: #"@supports\s*\([^)]*\)\s*\{"#, options: .regularExpression, range: searchStart..<css.endIndex) {
+			  let openerRange = css.range(of: #"@supports\s+(?:not\s+)?\([^)]*\)\s*\{"#, options: .regularExpression, range: searchStart..<css.endIndex) {
 			result += css[searchStart..<openerRange.lowerBound]
 
 			guard let openBraceIndex = css[openerRange].lastIndex(of: "{") else { break }

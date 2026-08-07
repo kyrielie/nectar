@@ -83,6 +83,7 @@
 		4DBF15DF1511F6638C973C81 /* ManageStorageViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E2F778291B96C0F1887747A /* ManageStorageViewModel.swift */; };
 		4E7362661B0643809D41364A /* OpenInSafariActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D17832F911B416F4391D0850 /* OpenInSafariActivity.swift */; };
 		4F234E9911A2A59B972EF6BF /* ShareAO3SeriesLinkActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A76D25654EA755DDA2BA82DF /* ShareAO3SeriesLinkActivity.swift */; };
+		5359FE92B04870B0444E56BA /* ArticleRendererStripFakeParagraphIndentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BD2C21916AA07DB85053663 /* ArticleRendererStripFakeParagraphIndentsTests.swift */; };
 		5434B26FC005C3ABF52FE77D /* ArticlesDatabase in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 7AA7C6FF61201945FA287D24 /* ArticlesDatabase */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5623CC063ADFC775FA3A1B4E /* Articles in Frameworks */ = {isa = PBXBuildFile; productRef = D34FA5E60B8151B92073CAE0 /* Articles */; };
 		566CF32D39E1EF9D5FCF70F4 /* MainTimelineCellData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06EBDDA41D63CE3D2FF87785 /* MainTimelineCellData.swift */; };
@@ -115,12 +116,12 @@
 		7CAA2A034C48057DB61628F3 /* Themes in Resources */ = {isa = PBXBuildFile; fileRef = DE329D42C6A358AFD17A8D9E /* Themes */; };
 		7E992E050D160023AB1C089B /* AddAccountViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EE29BB228BD4D77C6613CAE /* AddAccountViewController.swift */; };
 		7E9FFF4255FCC8E1A296FB94 /* ArticleRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16041D264569E10AB01010A0 /* ArticleRenderer.swift */; };
-		7F4BAAA307A3F5F2CAC8E194 /* ArticleTextSize.swift in Sources */ = {isa = PBXBuildFile; fileRef = B33D6BD2F833CA38A0CCE669 /* ArticleTextSize.swift */; };
 		7FDAD79A93AD50283CA86DFA /* ArticleTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = C23829D0D655C1886F0FCF65 /* ArticleTheme.swift */; };
 		802BECB7A5B88F51E2516901 /* AppDelegate+Shared.swift in Sources */ = {isa = PBXBuildFile; fileRef = E450A8024C9EC703FB69324B /* AppDelegate+Shared.swift */; };
 		8113698697265C48AF939FAC /* LocalAccountViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D87BF3298ABA3C74A6B2B435 /* LocalAccountViewController.swift */; };
 		81513FD075E07F07A297824A /* WebViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56202096205203279B7A7E70 /* WebViewController.swift */; };
 		8222CEB4C7C3F06117C6C538 /* SearchFeedDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F4E8089B7BBA0E2BC04A499 /* SearchFeedDelegate.swift */; };
+		833EEF3FA1E0C63BF64D3547 /* ArticleThemeColorExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E512053E9572D65A8EA03583 /* ArticleThemeColorExtractorTests.swift */; };
 		8380CE029D7212A70F0BAA28 /* ArticleArray.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFFAD6AD8478A79651BD81DA /* ArticleArray.swift */; };
 		84FAFC9805E40877662B2523 /* SmartFeedArticleGrouping.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E35397FAEA4725E263E0F4B /* SmartFeedArticleGrouping.swift */; };
 		850252DB89670C0897AE7C62 /* LovedFeedDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56B5AEC3BF212A00A58A16AA /* LovedFeedDelegate.swift */; };
@@ -297,6 +298,7 @@
 		28B8C62B8D992405EA625769 /* Inspector.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = Inspector.storyboard; sourceTree = "<group>"; };
 		2958B2416F45CCEE57580A8E /* NetNewsWire_project_debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = NetNewsWire_project_debug.xcconfig; sourceTree = "<group>"; };
 		2A2CEA9E5E12154C49D84EF1 /* SidebarTreeControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarTreeControllerDelegate.swift; sourceTree = "<group>"; };
+		2BD2C21916AA07DB85053663 /* ArticleRendererStripFakeParagraphIndentsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleRendererStripFakeParagraphIndentsTests.swift; sourceTree = "<group>"; };
 		2EDC270642BF19D867FF0D76 /* ArticleActivityItemSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleActivityItemSource.swift; sourceTree = "<group>"; };
 		2F619363B7BB3ECB98B4F29F /* main_ios.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = main_ios.js; sourceTree = "<group>"; };
 		30ED27154B94D45D159B5733 /* stylesheet.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = stylesheet.css; sourceTree = "<group>"; };
@@ -414,7 +416,6 @@
 		B147CEBBBC65514A864B1183 /* RootSplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootSplitViewController.swift; sourceTree = "<group>"; };
 		B1F38D77657ECF9BB2FF29DD /* FolderTreeControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderTreeControllerDelegate.swift; sourceTree = "<group>"; };
 		B20E5BC5E6761AB2BB5DC3C8 /* MainFeedCollectionHeaderReusableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFeedCollectionHeaderReusableView.swift; sourceTree = "<group>"; };
-		B33D6BD2F833CA38A0CCE669 /* ArticleTextSize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleTextSize.swift; sourceTree = "<group>"; };
 		B37850C27976FA93983E67A3 /* Credits.rtf */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; path = Credits.rtf; sourceTree = "<group>"; };
 		B4AA5C3AF2D66603B137286C /* AccountStatsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStatsViewModel.swift; sourceTree = "<group>"; };
 		B7EF8AEC62BAFF8805D52EC6 /* IconImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconImageView.swift; sourceTree = "<group>"; };
@@ -462,6 +463,7 @@
 		E374143FB4FA6BAC5F0D2DA9 /* ContextMenuPreviewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextMenuPreviewViewController.swift; sourceTree = "<group>"; };
 		E450A8024C9EC703FB69324B /* AppDelegate+Shared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+Shared.swift"; sourceTree = "<group>"; };
 		E4DABD7FB5DCD099429D9D7F /* VibrantButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VibrantButton.swift; sourceTree = "<group>"; };
+		E512053E9572D65A8EA03583 /* ArticleThemeColorExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeColorExtractorTests.swift; sourceTree = "<group>"; };
 		E61BFEB0949148424C02DC93 /* BadgeColorModeCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgeColorModeCell.swift; sourceTree = "<group>"; };
 		E62D76FFE81B4363E849E01E /* AO3OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3OnboardingView.swift; sourceTree = "<group>"; };
 		E6F8CE2122A7A758C4A2F187 /* AO3LoginViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3LoginViewController.swift; sourceTree = "<group>"; };
@@ -658,6 +660,8 @@
 			children = (
 				C8A6E7B6A2FCD1F653F1FE71 /* ActivityItemSourceTests.swift */,
 				9A44B1DC23B3CF47E3C80D76 /* ArticleCSVExporterTests.swift */,
+				2BD2C21916AA07DB85053663 /* ArticleRendererStripFakeParagraphIndentsTests.swift */,
+				E512053E9572D65A8EA03583 /* ArticleThemeColorExtractorTests.swift */,
 				26B7C99C4ABA370226735E19 /* ArticleThemePlistFamilyTests.swift */,
 				7DE280DE15D62A0E4A8F6B8B /* ArticleThemePreviewSampleTests.swift */,
 				FEA8F54E669A0B16741176F6 /* ArticleThemeSelectorCoverageTests.swift */,
@@ -751,7 +755,6 @@
 			children = (
 				16041D264569E10AB01010A0 /* ArticleRenderer.swift */,
 				A41A67C71540DE45997625FE /* ArticleRenderingSpecialCases.swift */,
-				B33D6BD2F833CA38A0CCE669 /* ArticleTextSize.swift */,
 				8CB3642DC7A3A654C2C59EB7 /* core.css */,
 				31CBD810D281D864C5D110E0 /* main.js */,
 				F69991CA984B6577E16A688F /* newsfoot.js */,
@@ -1260,7 +1263,6 @@
 				C3388B70A405402A635D0503 /* ArticleSpecifier.swift in Sources */,
 				C3FA3D92D5F7385CB8C5AB73 /* ArticleStatusSyncTimer.swift in Sources */,
 				4AD629C184EA750051FC78D9 /* ArticleStringFormatter.swift in Sources */,
-				7F4BAAA307A3F5F2CAC8E194 /* ArticleTextSize.swift in Sources */,
 				64C0F734060FE9776A7DCC49 /* ArticleTheme+Notifications.swift in Sources */,
 				7FDAD79A93AD50283CA86DFA /* ArticleTheme.swift in Sources */,
 				E7B682DAE0BAE82E357CFC6C /* ArticleThemeColorExtractor.swift in Sources */,
@@ -1382,6 +1384,8 @@
 			files = (
 				E5559C48B3DCA17AFE420F34 /* ActivityItemSourceTests.swift in Sources */,
 				B969EB6D6447E0689D0096E0 /* ArticleCSVExporterTests.swift in Sources */,
+				5359FE92B04870B0444E56BA /* ArticleRendererStripFakeParagraphIndentsTests.swift in Sources */,
+				833EEF3FA1E0C63BF64D3547 /* ArticleThemeColorExtractorTests.swift in Sources */,
 				C20C0E058FE3B0E9D852FC28 /* ArticleThemePlistFamilyTests.swift in Sources */,
 				C6FC9492B7C4CFFFBEB2381A /* ArticleThemePreviewSampleTests.swift in Sources */,
 				46A03584715658D3B0EF7AD5 /* ArticleThemeSelectorCoverageTests.swift in Sources */,

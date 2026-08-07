@@ -315,6 +315,117 @@ and produces a generic "Could not reach AO3 (HTTP `<code>`)" message; only
 the 429 case gets the distinct "AO3 rate limit hit — backing off before
 retrying" message and the per-host cooldown.
 
+## Article background/notch color pipeline
+
+`ArticleThemeColorExtractor.colors(for:)` resolves the text/background/link
+colors a theme's own stylesheet declares, so the webview background, the
+notch cover, and the page-counter text can default to what the theme
+actually looks like instead of a generic system color. It's a small
+regex-based scanner, not a full CSS parser: it understands literal
+`#hex`/`rgb()`/`rgba()` colors, a modest set of named CSS colors, and
+`var(--custom-property)` resolved against that theme's own `:root`
+declarations (scoped separately for light/dark so a dark-mode redefinition
+of a variable doesn't leak into the light-mode result). It does not
+understand CSS-4 system color keywords (`Canvas`, `CanvasText`, etc. — these
+fall through to "not found" like anything else unparseable) or selector
+specificity beyond exact-string matching. `@supports (...)` blocks are
+excluded from consideration entirely before scanning starts
+(`stripBraceBlocks`), on the basis that they carry platform-specific
+overrides this scanner isn't equipped to reason about correctly — as of a
+later fix, this also covers the `@supports not (...)` form, which the
+original regex missed (`stylesheet.css`'s own macOS-only rules block uses
+exactly that form).
+
+Precedence, resolved once per render in
+`WebViewController.renderPage()`/`applyResolvedBackgroundColors()` and
+applied to the webview, scroll view, and `notchCoverView` together so all
+three always agree: override background
+(`ArticleThemeOverrides.backgroundColorHex`/`backgroundColorDarkHex`, if
+set) → the theme's own extracted background → a black/white fallback if
+neither is present.
+
+`applyResolvedBackgroundColors()` also re-runs on its own, without a full
+page reload, from a `registerForTraitChanges` handler installed in
+`WebViewController.viewDidLoad` (the deployment target is iOS 17+, so this
+uses the non-deprecated API rather than overriding
+`traitCollectionDidChange`). This is the fix for a "notch cover / webview
+background go stale on live appearance change" bug: the webview's own CSS
+already updates live via `@media prefers-color-scheme` when the app's
+Appearance setting changes or the system trait changes, but
+`webView.backgroundColor` and the notch/page-counter colors were previously
+resolved only once per `renderPage()` call, off a snapshot of
+`webView.traitCollection.userInterfaceStyle` — they stayed wrong until the
+next full render (theme change, article change, and so on). Upstream
+NetNewsWire doesn't have this problem because it assigns the dynamic system
+color `.systemBackground` via storyboard, which tracks trait changes for
+free; Nectar's per-theme colors can't be expressed that way, since custom
+themes need their own light/dark colors, so this pipeline needs its own
+live-invalidation hook that the dynamic-color approach got automatically.
+
+## App chrome color pipeline (Accent Color / Surface Tint)
+
+Two independent systems tint native UIKit chrome, deliberately separate
+from the article-reader theme pipeline above — a "Slate" surface tint and a
+light article theme can legitimately show different chrome colors at the
+same time, that's intended, not a bug to reconcile:
+
+- **Accent Color** (`Assets.Colors.primaryAccent`/`.secondaryAccent`) tints
+  icons and progress indicators.
+- **Surface Tint** (`Assets.Colors.barBackground`/`.vibrantText`/
+  `.fullScreenBackground`) tints chrome surface backgrounds. `.default`
+  falls back to the existing asset-catalog colorset value for each, same
+  contract `AccentColor.default` uses.
+
+Pipeline shape: setting `AppDefaults.shared.accentColor`/`.surfaceTint`
+posts `.accentColorDidChange`/`.surfaceTintDidChange` respectively, an
+observer forces a repaint, and the repaint reads `Assets.Colors.*` fresh —
+these are deliberately non-cached, live per-read properties, not resolved
+once and stored.
+
+Current observer list for each notification, kept here explicitly so the
+next person adding a Surface-Tint-consuming view knows to add an observer
+too: **Accent Color** has `SceneDelegate`,
+`MainFeedCollectionViewController`, `MainTimelineModernViewController`.
+**Surface Tint** has `ArticleSearchBar`, which bakes `barBackground` into a
+`CGColor` once in `didMoveToSuperview()` and so needs its own observer to
+repaint on a live Surface Tint change (added as part of the same fix that
+gave the article pipeline above its own live-invalidation hook — same
+underlying shape, "new machinery added without the free live-update
+behavior a dynamic system color would have given it"). `Vibrant*` views
+(`VibrantLabel`/`VibrantButton`/`VibrantTableViewCell`) deliberately don't
+observe it, since they already re-read `.vibrantText` on every
+highlight/selection state toggle, which happens far more often than a
+Surface Tint change — the staleness window is bounded by the next
+interaction, not indefinite the way `ArticleSearchBar`'s baked `CGColor`
+was. `ImageTransition` deliberately doesn't observe it either, since it
+reads `.fullScreenBackground` fresh at the start of each transition, which
+is already "live" for practical purposes.
+
+`SurfaceTint.HexSet` originally also carried `controlBackground` and
+`sectionHeader` fields; both were removed (along with the corresponding
+`Assets.Colors` properties) once grep confirmed zero non-definition call
+sites for either — dead fields from early in Surface Tint's design, never
+wired to an actual consumer. If a future engineer finds this file compared
+against an old planning doc and wonders why `HexSet` looks incomplete,
+that's why.
+
+`Assets.Colors`'s existing dark/light-branching properties
+(`barBackground`, `vibrantText`, `fullScreenBackground`) resolve their
+branch via `UITraitCollection.current`, which Apple documents as valid only
+inside specific framework-invoked callbacks (drawing methods,
+dynamic-color/image resolution, trait-change handlers) — undefined
+elsewhere, and `Assets.Colors` is a bare `static var` namespace with no
+view/window reference, called from places like
+`ArticleSearchBar.didMoveToSuperview()` that aren't among those blessed
+contexts. This is flagged as theoretical fragility in a doc comment on
+`barBackground`, not yet confirmed as a reproducing bug on-device. The
+article-background pipeline above avoids the same trap by reading a real
+view's `.traitCollection` (`WebViewController.applyResolvedBackgroundColors`
+reads `webView.traitCollection`) rather than the ambient current one — any
+*new* `Assets.Colors` property should follow that pattern, taking an
+explicit trait collection parameter, rather than copying the existing
+three properties' pattern.
+
 ## Settings screen structure
 
 `TimelineCustomizerCollectionViewController` is a 4-section
@@ -325,9 +436,12 @@ retrying" message and the per-host cooldown.
 
 ## Planning notes
 
-`docs/` (gitignored, not present in this source tree) holds working notes
-for in-progress and completed fork work (`nectar-plan-v3.md`,
-`nectar-fixes-plan.md`, `nectar-loved-icon-heart-plan.md`,
+`docs/` is gitignored, but is present in this working tree (a previous
+version of this note said it wasn't — that was stale, or was written
+before these files were checked in as an exception to the ignore rule).
+It holds working notes for in-progress and completed fork work
+(`nectar-plan-v3.md`, `nectar-fixes-plan.md`, `nectar-fixes-plan-2.md`,
+`nectar-bug-report.md`, `nectar-loved-icon-heart-plan.md`,
 `netnewswire-fork-plan.md`, `feed-api.md`). These are design/debugging
 scratch documents, not guaranteed to reflect the shipped state — this file
 is the source of truth for current architecture.

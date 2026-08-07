@@ -144,8 +144,8 @@ enum AccentColor: Int, CaseIterable, Sendable {
 	}
 }
 
-/// Tints the five native-chrome surface colors (bar/control/fullScreen/sectionHeader
-/// backgrounds, plus the vibrant-text tint) as a set, independent of AccentColor --
+/// Tints the native-chrome surface colors (bar/fullScreen backgrounds, plus the
+/// vibrant-text tint) as a set, independent of AccentColor --
 /// this affects UIKit chrome backgrounds, never the WKWebView article content, and
 /// deliberately stays a separate picker rather than merging into AccentColor's
 /// contract (which today only tints icons/progress fill, never backgrounds). See
@@ -170,9 +170,7 @@ enum SurfaceTint: Int, CaseIterable, Sendable {
 
 	struct HexSet {
 		var barBackground: String
-		var controlBackground: String
 		var fullScreenBackground: String
-		var sectionHeader: String
 		var vibrantText: String
 	}
 
@@ -184,9 +182,7 @@ enum SurfaceTint: Int, CaseIterable, Sendable {
 		case .slate:
 			return HexSet(
 				barBackground: "#E4E7EB",
-				controlBackground: "#EEF0F3",
 				fullScreenBackground: "#1C2128",
-				sectionHeader: "#5A6472",
 				vibrantText: "#F5F6F8"
 			)
 		}
@@ -198,9 +194,7 @@ enum SurfaceTint: Int, CaseIterable, Sendable {
 		case .slate:
 			return HexSet(
 				barBackground: "#20242B",
-				controlBackground: "#262B33",
 				fullScreenBackground: "#0B0D10",
-				sectionHeader: "#8A94A3",
 				vibrantText: "#F5F6F8"
 			)
 		}

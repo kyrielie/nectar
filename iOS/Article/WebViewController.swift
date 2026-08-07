@@ -167,6 +167,19 @@ final class WebViewController: UIViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidComplete(_:)), name: .ao3ChapterFetchDidComplete, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidFail(_:)), name: .ao3ChapterFetchDidFail, object: nil)
 
+		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,
+		// IPHONEOS_DEPLOYMENT_TARGET = 17.0), so use registerForTraitChanges rather
+		// than the traitCollectionDidChange override it deprecated. Without this,
+		// webView.backgroundColor / notchCoverView / pageCounterLabel stay resolved
+		// off a stale trait snapshot when the person flips Settings -> Appearance (or
+		// the system auto-switches) while an article is open -- the article body's
+		// own CSS repaints live via @media prefers-color-scheme, but these native
+		// colors previously only re-resolved on the next full renderPage.
+		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: WebViewController, previousTraitCollection: UITraitCollection) in
+			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
+			self.applyResolvedBackgroundColors()
+		}
+
 		// Configure the tap zones
 		configureTopShowBarsView()
 		configureBottomShowBarsView()
@@ -981,11 +994,28 @@ private extension WebViewController {
 		WebViewConfiguration.addContentBlockingRules(to: webView)
 		WebViewConfiguration.installArticleScripts(in: webView, windowScrollY: windowScrollY, generation: loadWebViewGeneration)
 
-		// §1a. WKWebView defaults to .systemBackground (see PreloadedWebView.init) until
-		// this runs, which is near-black in dark mode -- resolve the theme's actual
-		// background before loadHTMLString commits the navigation, so there's no flash
-		// of the wrong color. Precedence: override background (if set) -> theme's own
-		// background -> ArticleThemeColorExtractor's black/white fallback.
+		applyResolvedBackgroundColors()
+
+		webView.loadHTMLString(html, baseURL: URL(string: rendering.baseURL))
+	}
+
+	// §1a. WKWebView defaults to .systemBackground (see PreloadedWebView.init) until
+	// this runs, which is near-black in dark mode -- resolve the theme's actual
+	// background before loadHTMLString commits the navigation, so there's no flash
+	// of the wrong color. Precedence: override background (if set) -> theme's own
+	// background -> ArticleThemeColorExtractor's black/white fallback.
+	//
+	// Also re-run on its own, without a full renderPage/HTML reload, from the
+	// registerForTraitChanges handler installed in viewDidLoad: the webview's own
+	// CSS already updates live via @media prefers-color-scheme when the app's
+	// Appearance setting or the system trait changes, but these native UIKit-side
+	// colors were previously only resolved once per renderPage call and went stale
+	// until the article was reopened or the theme changed. See nectar-architecture.md,
+	// "Article background/notch color pipeline."
+	private func applyResolvedBackgroundColors() {
+		guard let webView else { return }
+
+		let theme = ArticleThemesManager.shared.currentTheme
 		let themeColors = ArticleThemeColorExtractor.colors(for: theme)
 		let overrides = AppDefaults.shared.articleThemeOverrides
 		let isDark = webView.traitCollection.userInterfaceStyle == .dark
@@ -1005,8 +1035,6 @@ private extension WebViewController {
 		// text color on every render, not just on the next bars-toggle -- otherwise they
 		// keep showing whatever was last set, stale, through an article/theme change.
 		updateNotchAndPageCounterVisibility(resolvedBackground: resolvedBackground, resolvedText: isDark ? themeColors.textColorDark : themeColors.textColor)
-
-		webView.loadHTMLString(html, baseURL: URL(string: rendering.baseURL))
 	}
 
 	func finalScrollPosition(scrollingUp: Bool) -> CGFloat {
