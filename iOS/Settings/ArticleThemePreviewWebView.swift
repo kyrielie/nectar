@@ -77,6 +77,18 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 	/// Additional Tags/etc) -- since this screen is demonstrating `dl.tags`
 	/// grid styling (see `AO3PrefaceRenderer`/core.css), not standing in for
 	/// fandom chrome the way a full tag block would.
+	/// Wraps the sample chapter's paragraphs in the same
+	/// `div.userstuff.module[role="article"]` structure
+	/// `AO3ChapterHTMLExtractor` produces for real fetched/imported chapter
+	/// text (see `AO3ChapterHTMLExtractor.swift`), rather than leaving them
+	/// as bare direct children of `#bodyContainer`. A theme's own CSS/JS that
+	/// locates "the opening paragraph" by direct-child position (e.g.
+	/// `.articleBody > p:first-of-type`) or by naive first-`<p>`-in-document
+	/// selection (which would otherwise match the Summary's `<p>` above,
+	/// document-order-earlier than the real chapter text) looked correct
+	/// against a flatter sample body here but broke against real content --
+	/// this wrapper is what makes that class of bug visible in this preview
+	/// instead of only in a real article.
 	internal static let sampleBodyForTesting = """
 	<div id="ao3SyntheticPreface"><dl class="tags">
 	<dt>Warnings:</dt><dd>No Archive Warnings Apply</dd>
@@ -97,8 +109,10 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 	<div class="chapter preface group">
 	<h3 class="title">Chapter 2: A Sample Heading</h3>
 	</div>
+	<div class="userstuff module" role="article">
 	<p>Bree was the chief village of Bree-land, a small country a few miles broad whose chief claim to fame was its aluminum siding industry.</p>
 	<p>The Men of Bree were cheerful and independent: they belonged to nobody but themselves. In the lands beyond Bree there were mysterious wanderers.</p>
+	</div>
 	"""
 
 	private static var sampleBody: String { sampleBodyForTesting }
@@ -175,6 +189,95 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 	</script>
 	"""
 
+	/// Mirrors `applyVersalCaps()`/`applyChapterDividers()` from
+	/// `Shared/Article Rendering/main.js`, so this preview -- which loads with
+	/// content JS enabled and doesn't install `main.js` as a `WKUserScript` the
+	/// way the real reader does -- still demonstrates a theme's drop-cap/versal
+	/// and chapter-divider treatment rather than silently showing neither.
+	/// Deliberately not just embedding the whole of `main.js` here: that file's
+	/// `processPage()` unconditionally strips `#nnwImageIcon`
+	/// (`removeArticleIconAvatar()`), which would fight this preview's own,
+	/// intentionally different, icon-visibility behavior above (kept when
+	/// `showFeedName` is true, to demonstrate a theme's icon styling -- the real
+	/// reader never shows a per-feed icon at all, preview does on purpose).
+	/// Keep this in sync with `applyVersalCaps`/`applyChapterDividers` in
+	/// `main.js` if either changes -- see Technotes/Themes.md.
+	private static let versalAndDividerScript = """
+	<script>
+	function applyVersalCaps() {
+		var container = document.getElementById("bodyContainer");
+		if (!container || !container.hasAttribute("data-versal-target")) return;
+		var sentenceEnd = /[.!?]["'\\u201d\\u2019)\\]]*(\\s|$)/;
+		function isApparatus(paragraph) {
+			return !!paragraph.closest(".summary, .notes, .preface, #ao3SyntheticPreface, #ao3Preface");
+		}
+		function firstRealParagraph(scope) {
+			var paragraphs = scope.querySelectorAll("p");
+			for (var i = 0; i < paragraphs.length; i++) {
+				if (!isApparatus(paragraphs[i])) { return paragraphs[i]; }
+			}
+			return null;
+		}
+		function firstRealParagraphAfter(heading) {
+			var walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT, null);
+			walker.currentNode = heading;
+			var node;
+			while ((node = walker.nextNode())) {
+				if (node.tagName === "H2" && node.classList.contains("heading")) return null;
+				if (node.tagName === "H3" && node.classList.contains("title")) return null;
+				if (node.tagName === "P" && !isApparatus(node)) return node;
+			}
+			return null;
+		}
+		function applyVersal(paragraph) {
+			if (!paragraph || paragraph.querySelector(".versalCap")) return;
+			var walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT, null);
+			var endNode = null;
+			var node;
+			while ((node = walker.nextNode())) {
+				var match = sentenceEnd.exec(node.textContent);
+				if (match) {
+					node.splitText(match.index + match[0].length);
+					endNode = node;
+					break;
+				}
+			}
+			if (!endNode) return;
+			var span = document.createElement("span");
+			span.className = "versalCap";
+			var child = paragraph.firstChild;
+			while (child) {
+				var next = child.nextSibling;
+				span.appendChild(child);
+				if (child === endNode) break;
+				child = next;
+			}
+			paragraph.insertBefore(span, paragraph.firstChild);
+		}
+		applyVersal(firstRealParagraph(container));
+		container.querySelectorAll("h2.heading, h3.title").forEach(function (heading) {
+			applyVersal(firstRealParagraphAfter(heading));
+		});
+	}
+	function applyChapterDividers() {
+		var container = document.getElementById("bodyContainer");
+		if (!container || !container.hasAttribute("data-chapter-divider")) return;
+		var dividerChar = container.getAttribute("data-chapter-divider-char");
+		var dividerClass = container.getAttribute("data-chapter-divider-class");
+		if (!dividerChar || !dividerClass) return;
+		container.querySelectorAll("h2.heading, h3.title").forEach(function (heading) {
+			var divider = document.createElement("div");
+			divider.className = dividerClass;
+			divider.setAttribute("aria-hidden", "true");
+			divider.textContent = dividerChar;
+			heading.parentNode.insertBefore(divider, heading);
+		});
+	}
+	document.addEventListener("DOMContentLoaded", applyVersalCaps);
+	document.addEventListener("DOMContentLoaded", applyChapterDividers);
+	</script>
+	"""
+
 	func makeUIView(context: Context) -> WKWebView {
 		let configuration = WKWebViewConfiguration()
 		configuration.userContentController = WKUserContentController()
@@ -210,6 +313,7 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 		<body>
 		\(renderedBody)
 		\(showFeedName ? "" : Self.removeFeedNameLinkScript)
+		\(Self.versalAndDividerScript)
 		</body>
 		</html>
 		"""

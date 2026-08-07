@@ -279,7 +279,8 @@ body .byline a:link, .byline a:visited, .byline a {
 
 #ao3SyntheticPreface,
 #ao3Preface {
-	border-bottom-color: var(--summary-border);
+	--ao3-preface-border-color: var(--summary-border);
+	--ao3-preface-background-color: var(--summary-background);
 }
 
 /* Summary and Notes — "ticket window" treatment: a thin double rule and

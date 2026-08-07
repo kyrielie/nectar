@@ -505,7 +505,7 @@ body a.footnote:visited,
 
 #ao3SyntheticPreface,
 #ao3Preface {
-	border-bottom-color: var(--secondary-accent-color);
+	--ao3-preface-border-color: var(--secondary-accent-color);
 }
 
 .summary.module {
