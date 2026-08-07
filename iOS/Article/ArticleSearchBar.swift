@@ -56,6 +56,13 @@ import UIKit
 		layer.backgroundColor = Assets.Colors.barBackground.cgColor
 		isOpaque = true
 		NotificationCenter.default.addObserver(self, selector: #selector(textDidChange(_:)), name: UITextField.textDidChangeNotification, object: searchField)
+		// barBackground is baked into layer.backgroundColor once above rather than
+		// read live on every draw, so it needs its own observer to repaint when
+		// Surface Tint changes while this search bar is already on screen --
+		// compare Assets.Colors.vibrantText's consumers, which re-read on every
+		// state toggle and so don't need one. See nectar-architecture.md, "App
+		// chrome color pipeline."
+		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
 	}
 
 	private func updateUI() {
@@ -165,6 +172,10 @@ private extension ArticleSearchBar {
 
 	@objc func donePressed(_ _: Any? = nil) {
 		delegate?.doneWasPressed?(self)
+	}
+
+	@objc func surfaceTintDidChange(_ note: Notification) {
+		layer.backgroundColor = Assets.Colors.barBackground.cgColor
 	}
 }
 

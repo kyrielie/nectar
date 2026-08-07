@@ -394,12 +394,6 @@
     "Export Articles…" : {
       "comment" : "Command"
     },
-    "Extra Extra Large" : {
-      "comment" : "XX-Large"
-    },
-    "Extra Large" : {
-      "comment" : "X-Large"
-    },
     "Failed" : {
       "comment" : "Failed"
     },
@@ -531,9 +525,6 @@
     "Keep Archived Version" : {
       "comment" : "Command"
     },
-    "Large" : {
-      "comment" : "Large"
-    },
     "Last Article" : {
       "comment" : "Last Article Date"
     },
@@ -663,9 +654,6 @@
     "Marked as Unread" : {
       "comment" : "Accessibility announcement"
     },
-    "Medium" : {
-      "comment" : "Medium"
-    },
     "Menu: Go to Feed, Open Home Page, Copy Feed URL" : {
 
     },
@@ -784,6 +772,9 @@
     },
     "Order" : {
       "comment" : "Sort direction picker title"
+    },
+    "Override Hyphenation" : {
+      "comment" : "Override Hyphenation toggle"
     },
     "Override Justification" : {
       "comment" : "Override Justification toggle"
@@ -976,9 +967,6 @@
     },
     "Slate" : {
       "comment" : "Slate accent color\nSlate surface tint"
-    },
-    "Small" : {
-      "comment" : "Small"
     },
     "Smart Feeds" : {
       "comment" : "Smart Feeds group title"
