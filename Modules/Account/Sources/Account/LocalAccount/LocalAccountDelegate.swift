@@ -380,17 +380,48 @@ private extension LocalAccountDelegate {
 		if isAO3SearchOrTagURL {
 			// The URL itself is an HTML search/tag-listing page, not a feed
 			// document -- InitialFeedDownloader's FeedParser can't parse it,
-			// so don't try. Create the feed immediately and hand off to
-			// refresher.refreshFeeds, which routes AO3 search-results feeds
-			// through fetchAndImportAO3SearchResults (AO3SearchResultsFetcher)
-			// -- the same path an ordinary scheduled refresh uses, so outcome
-			// handling (rate limit, Cloudflare challenge, registration-required,
-			// activity log) isn't duplicated here.
+			// so don't try. Create the feed immediately and fetch page 1
+			// directly (not via refresher.refreshFeeds) so a Cloudflare
+			// challenge on this very first fetch can be surfaced back to
+			// the add-feed UI as a thrown error, rather than only reaching
+			// ActivityLog the way a routine refresh's challenge does --
+			// required so the add-feed screen can offer the WKWebView
+			// fallback immediately instead of leaving a newly-added feed
+			// silently empty until the person separately notices and
+			// retries. This does not consolidate onto
+			// AO3SearchResultsPaginator.refreshFirstPage(for:account:) --
+			// that stays a separate cleanup, since this call site needs to
+			// propagate .cloudflareChallenge as a thrown error rather than
+			// a PageOutcome the caller has to unwrap.
 			let feed = account.createFeed(with: nil, url: feedURLString, feedID: feedURLString, homePageURL: nil)
 			feed.editedName = editedName
 			container.addFeedToTreeAtTopLevel(feed)
-			refresher.accountID = account.accountID
-			await refresher.refreshFeeds([feed])
+			feed.lastCheckDate = Date()
+
+			do {
+				switch try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url) {
+				case .success(let parsedItems, _):
+					let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(parsedItems), deleteOlder: false)
+					account.sendNotificationAbout(articleChanges)
+					feed.ao3SearchLastFetchedPage = 1
+				case .noResults, .registrationRequired, .rateLimited:
+					// Not thrown -- the feed is still validly added, same
+					// as today's behavior via refresher.refreshFeeds;
+					// these outcomes are visible via a subsequent manual
+					// "load more" / paginator call, not blocking here.
+					break
+				case .cloudflareChallenge(let challengedURL):
+					AO3ChallengeSessionStore.lastChallengedURL = challengedURL
+					throw AccountError.ao3CloudflareChallenge(challengedURL: challengedURL, feed: feed)
+				}
+			} catch let error as AccountError {
+				throw error
+			} catch {
+				// Fetch-level failure (exhausted retries, etc.) -- feed
+				// stays added, same as above; surfaced through the usual
+				// refresh/ActivityLog path on the next manual retry.
+			}
+
 			return feed
 		}
 

@@ -117,11 +117,52 @@ final class AddFeedViewController: UITableViewController {
 				self.addButton.isEnabled = true
 				self.activityIndicator.stopAnimating()
 				self.addButton.customView = nil
+
+				// AO3 search-results feeds: the feed was already created
+				// and added (see LocalAccountDelegate.createFeed's AO3
+				// branch) even though this specific fetch came back
+				// Cloudflare-challenged. Offer the WKWebView fallback as
+				// an opt-in prompt (Workstream C) rather than the generic
+				// error alert, since retrying "for real" is one tap away
+				// and the feed the person just added is otherwise stuck
+				// empty until they separately notice and retry.
+				if case AccountError.ao3CloudflareChallenge(let challengedURL, let addedFeed) = error {
+					self.presentAO3VerificationPrompt(challengedURL: challengedURL, feed: addedFeed, account: account!)
+					return
+				}
+
 				self.presentError(error)
 			}
 
 		}
 
+	}
+
+	/// Opt-in prompt for Workstream C's WKWebView fallback -- shown instead
+	/// of presenting the challenge solver automatically. Declining leaves
+	/// the feed added-but-empty, same as today's pre-fallback behavior;
+	/// the person can retry later (e.g. once "load more"/paginator UI
+	/// exists) without losing the subscription.
+	private func presentAO3VerificationPrompt(challengedURL: URL, feed: Feed, account: Account) {
+		let alert = UIAlertController(
+			title: NSLocalizedString("AO3 Needs Verification", comment: "AO3 Cloudflare challenge prompt title"),
+			message: NSLocalizedString("The feed was added, but AO3 needs you to verify you're not a bot before its results can load. Verify now?", comment: "AO3 Cloudflare challenge prompt message"),
+			preferredStyle: .alert
+		)
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Not Now", comment: "Decline AO3 verification"), style: .cancel) { [weak self] _ in
+			self?.dismiss(animated: true)
+			NotificationCenter.default.post(name: .UserDidAddFeed, object: self, userInfo: [UserInfoKey.feed: feed])
+		})
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Verify", comment: "Accept AO3 verification"), style: .default) { [weak self] _ in
+			guard let self else { return }
+			Task { @MainActor in
+				let coordinator = AO3SearchResultsFetchCoordinator()
+				_ = await coordinator.presentSolverAndRetry(challengedURL: challengedURL, feedURL: feed.url, feed: feed, account: account, advancePageTo: 1, presentingViewController: self)
+				self.dismiss(animated: true)
+				NotificationCenter.default.post(name: .UserDidAddFeed, object: self, userInfo: [UserInfoKey.feed: feed])
+			}
+		})
+		present(alert, animated: true)
 	}
 
 	@objc func textDidChange(_ note: Notification) {

@@ -50,8 +50,18 @@ final class AO3ChallengeSolverViewController: UIViewController {
 	/// Cloudflare may gate independently, or not gate at all).
 	private let challengeURL: URL
 
-	init(challengeURL: URL) {
+	/// Optional harvest callback (Workstream C, WKWebView HTML-harvest
+	/// fallback): invoked with the already-cleared page's rendered HTML,
+	/// once, right before `delegate?.ao3ChallengeSolverViewControllerDidFinish`.
+	/// The Settings entrypoint (`AO3AccountSettingsView` /
+	/// `AO3ChallengeSolverRepresentable`) keeps working unchanged since it
+	/// simply doesn't pass this parameter -- cookie capture there stays
+	/// the only side effect.
+	private let onHTMLHarvested: ((String) -> Void)?
+
+	init(challengeURL: URL, onHTMLHarvested: ((String) -> Void)? = nil) {
 		self.challengeURL = challengeURL
+		self.onHTMLHarvested = onHTMLHarvested
 		super.init(nibName: nil, bundle: nil)
 	}
 
@@ -122,11 +132,13 @@ extension AO3ChallengeSolverViewController: WKNavigationDelegate {
 				return
 			}
 			self.didCaptureSession = true
-			self.captureSessionAndFinish()
+			self.captureSessionAndFinish(html: html)
 		}
 	}
 
-	private func captureSessionAndFinish() {
+	/// `html` is the already-evaluated `outerHTML` from `didFinish` above
+	/// (threaded through rather than re-evaluating JS a second time).
+	private func captureSessionAndFinish(html: String) {
 		webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { [weak self] cookies in
 			guard let self else {
 				return
@@ -143,6 +155,7 @@ extension AO3ChallengeSolverViewController: WKNavigationDelegate {
 
 			let cookieHeaderValue = ao3Cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
 			AO3ChallengeSessionStore.saveSession(cookieHeaderValue: cookieHeaderValue)
+			self.onHTMLHarvested?(html)
 			self.delegate?.ao3ChallengeSolverViewControllerDidFinish(self)
 		}
 	}

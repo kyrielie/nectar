@@ -32,11 +32,11 @@ import RSWeb
 ///   independently of status code, per the plan's explicit call-out that
 ///   this needs its own detection separate from AO3's own 429 handling.
 enum AO3SearchResultsFetchOutcome {
-	case success([ParsedItem])
+	case success([ParsedItem], hasNextPage: Bool)
 	case noResults
 	case registrationRequired
 	case rateLimited
-	case cloudflareChallenge
+	case cloudflareChallenge(challengedURL: URL)
 }
 
 enum AO3SearchResultsFetchError: Error {
@@ -129,12 +129,12 @@ enum AO3SearchResultsFetcher {
 						logger.info("AO3SearchResultsFetcher: stored clearance cookie didn't satisfy Cloudflare for \(url.absoluteString, privacy: .public) -- clearing it")
 						AO3ChallengeSessionStore.clearSession()
 					}
-					return .cloudflareChallenge
+					return .cloudflareChallenge(challengedURL: url)
 				}
 
 				switch AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL) {
-				case .success(let items):
-					return .success(items)
+				case .success(let items, let hasNextPage):
+					return .success(items, hasNextPage: hasNextPage)
 				case .noResults:
 					return .noResults
 				case .registrationRequired:
@@ -186,9 +186,16 @@ private extension AO3SearchResultsFetcher {
 /// so there's exactly one copy of the marker list.
 public enum AO3CloudflareChallenge {
 
+	// "cdn-cgi/challenge-platform" was previously included here but was
+	// dropped: it's Cloudflare's routine bot-management/JS-challenge
+	// beacon, embedded on ordinary rendered pages under Bot Management,
+	// not just interstitials -- it false-positived on real, fully-rendered
+	// AO3 search-results pages (confirmed against a captured results page
+	// with no "Just a moment..." title and no #signin wall). Both markers
+	// below are specific to an actual interstitial: the literal title text
+	// Cloudflare's block page uses, and a challenge-bypass link.
 	private static let challengeMarkers = [
 		"Just a moment...",
-		"cdn-cgi/challenge-platform",
 		"cf-chl-bypass",
 	]
 
