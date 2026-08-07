@@ -32,9 +32,6 @@
 	--footer-color: #8a7160;
 	--pre-background: rgba(0, 0, 0, 0.04);
 	--header-top: #b4522f;
-	--header-bottom: #983f24;
-	--dateline-bar-top: #6e5133;
-	--dateline-bar-bottom: #5a4128;
 	--colophon-rule-color: #a4442a;
 	--summary-background: rgba(164, 68, 42, 0.07);
 	--chapter-heading-color: #2c1b10;
@@ -59,9 +56,6 @@
 		--footer-color: #b3a088;
 		--pre-background: rgba(255, 255, 255, 0.06);
 		--header-top: #6e3520;
-		--header-bottom: #582a19;
-		--dateline-bar-top: #453423;
-		--dateline-bar-bottom: #362a1b;
 		--colophon-rule-color: #e0916f;
 		--summary-background: rgba(224, 145, 111, 0.09);
 		--chapter-heading-color: #f4e9d8;
@@ -98,17 +92,25 @@ body > .systemMessage {
 	color: var(--system-message-color);
 }
 
-/* Header bar — terracotta gradient */
+/* Header — Rosarivo's own conceit (Divina proporción tipográfica, 1947)
+   is a page built on a 2:3 margin progression, not a banded color banner;
+   two rules in --colophon-rule-color, spaced 16px/24px (the same 2:3
+   figure the summary block and article spacing already use below) frame
+   the feed/byline line against the plain page color instead of a gradient
+   block, matching the light, low-contrast warmth of the typeface itself. */
 
 .headerBar {
-	background: linear-gradient(to bottom, var(--header-top), var(--header-bottom));
-	padding: 14px 0;
+	background: var(--background-color);
+	border-top: 1px solid var(--colophon-rule-color);
+	border-bottom: 1px solid var(--colophon-rule-color);
+	padding: 16px 0;
 	font-family: var(--font-main);
-	font-size: 1em;
-	font-weight: bold;
+	font-size: 0.85em;
+	font-weight: normal;
+	font-style: italic;
+	letter-spacing: 0.02em;
 	line-height: 1.4;
-	color: #f6ede2;
-	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+	color: var(--attribution-color);
 }
 
 .headerBarInner {
@@ -119,25 +121,27 @@ body > .systemMessage {
 .avatar {
 	vertical-align: middle;
 	border-radius: 3px;
-	height: 1.8em !important;
-	width: 1.8em;
-	min-width: 1.8em;
+	height: 1.6em !important;
+	width: 1.6em;
+	min-width: 1.6em;
 	margin: 0 !important;
 	margin-right: 0.5em !important;
+	opacity: 0.85;
 }
 
 .headerBar a:link, .headerBar a:visited, .headerBar a, .feedlink {
-	color: #f6ede2 !important;
+	color: var(--link-color) !important;
 	font-weight: bold;
+	font-style: normal;
 }
 
 .byline {
-	color: rgba(246, 237, 226, 0.78);
+	color: var(--attribution-color);
 	margin-left: 0.5em;
 }
 
 body .byline a:link, .byline a:visited, .byline a {
-	color: rgba(246, 237, 226, 0.78) !important;
+	color: var(--attribution-color) !important;
 }
 
 /* Content containers */
@@ -152,26 +156,31 @@ body .byline a:link, .byline a:visited, .byline a {
 	margin-top: 2em;
 }
 
-/* Dateline bar — muted brown gradient */
+/* Dateline — a plain 24px line under the header, uppercase and
+   letter-spaced rather than a second gradient band in a second color. */
 
 .datelineBar {
-	background: linear-gradient(to bottom, var(--dateline-bar-top), var(--dateline-bar-bottom));
-	padding: 8px 0;
+	background: var(--background-color);
+	padding: 10px 0;
 	font-family: var(--font-main);
-	font-size: 0.85em;
-	font-weight: bold;
+	font-size: 0.72em;
+	font-weight: normal;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
 	line-height: 1.4;
-	color: #f6ede2;
+	color: var(--attribution-color);
+	text-align: center;
 }
 
 .datelineBarInner {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 }
 
 .datelineDate a:link, .datelineDate a:visited, .datelineDate a {
-	color: #f6ede2 !important;
-	font-weight: bold;
+	color: var(--attribution-color) !important;
+	font-weight: normal;
 }
 
 /* Article title */
@@ -219,6 +228,27 @@ body .byline a:link, .byline a:visited, .byline a {
 	text-indent: var(--paragraph-indent, 0);
 }
 
+/* Drop cap / versal — applied by the shared applyVersalCaps() script
+   (Shared/Article Rendering/main.js, opted into via the bodyContainer's
+   data-versal-target attribute in template.html) to the opening paragraph
+   of the work and of every chapter. See Technotes/Themes.md. */
+
+.rosarivoBody p:has(> .versalCap:first-child)::first-letter {
+	font-family: var(--font-body);
+	font-style: italic;
+	font-weight: bold;
+	font-size: 3em;
+	line-height: 0.8;
+	float: left;
+	padding: 0.02em 0.08em 0 0;
+	color: var(--link-color);
+}
+
+.versalCap {
+	font-variant: small-caps;
+	letter-spacing: 0.02em;
+}
+
 .articleBody blockquote {
 	border-left: 3px solid var(--blockquote-border-color);
 	background: var(--blockquote-background);
@@ -253,7 +283,8 @@ body .byline a:link, .byline a:visited, .byline a {
 
 #ao3SyntheticPreface,
 #ao3Preface {
-	border-bottom-color: var(--colophon-rule-color);
+	--ao3-preface-border-color: var(--colophon-rule-color);
+	--ao3-preface-background-color: var(--summary-background);
 }
 
 /* Summary — padding kept in the same 2:3 ratio (16px:24px) as

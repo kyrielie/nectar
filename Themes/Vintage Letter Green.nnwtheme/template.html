@@ -13,27 +13,25 @@
 	</div>
 	<div class="externalLink">[[external_link_label]] <a href="[[external_link]]">[[external_link_stripped]]</a></div>
 	<div class="letter-flourish" aria-hidden="true">&#10087;</div>
-	<div id="bodyContainer" class="articleBody letter-body [[text_size_class]]">[[body]]</div>
+	<div id="bodyContainer" class="articleBody letter-body [[text_size_class]]"
+		data-versal-target
+		data-chapter-divider
+		data-chapter-divider-char="&#10087;"
+		data-chapter-divider-class="letter-flourish letter-flourish--chapter">[[body]]</div>
 </article>
 
-<script type="text/javascript">
-	/* Extends the letter-flourish divider -- currently only placed once,
-	   between the title block and the body -- to also open every chapter,
-	   so a multi-chapter work reads as a new dated letter page each time
-	   rather than one continuous sheet. h2.heading is what
-	   AO3ChapterHTMLExtractor rewrites a fetched chapter's h3.title into;
-	   h3.title is kept as a fallback in case Ambrosia's embedded HTML
-	   doesn't carry the same rewrite. */
-	document.addEventListener("DOMContentLoaded", function () {
-		var container = document.getElementById("bodyContainer");
-		if (!container) return;
-		var headings = container.querySelectorAll("h2.heading, h3.title");
-		headings.forEach(function (heading) {
-			var flourish = document.createElement("div");
-			flourish.className = "letter-flourish letter-flourish--chapter";
-			flourish.setAttribute("aria-hidden", "true");
-			flourish.textContent = "\u2767";
-			heading.parentNode.insertBefore(flourish, heading);
-		});
-	});
-</script>
+<!-- The chapter-flourish divider and the drop cap below are both applied by
+     the shared applyChapterDividers()/applyVersalCaps() steps in
+     Shared/Article Rendering/main.js (WKUserScripts, so they run in the real
+     article reader as well as the Settings theme preview), driven by the
+     data-* attributes above. This theme previously carried its own inline
+     <script> for the flourish, and a pure-CSS `.articleBody > p:first-of-type`
+     rule for the drop cap; neither worked against real article content:
+     the inline <script> never ran in the real reader (WebViewController loads
+     with allowsContentJavaScript = false; only WKUserScripts are exempt), and
+     the direct-child CSS selector never matched real AO3 chapter prose, which
+     AO3ChapterHTMLExtractor always nests one level deeper inside a
+     div.userstuff.module[role="article"] wrapper -- a structure the flat
+     Settings-preview sample body didn't reproduce, which is why the old
+     selector looked correct there and was wrong for every real article.
+     See Technotes/Themes.md. -->

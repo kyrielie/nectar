@@ -181,11 +181,20 @@ a {
 	line-height: 1.65em;
 }
 
-/* Drop cap on the body's opening letter -- the one purely typographic
-   flourish that has no equivalent in any bundled theme yet. Scoped to the
-   body's first direct-child paragraph only, so it doesn't fire again on
-   quoted/blockquoted text or after an inline image. */
-.articleBody > p:first-of-type::first-letter {
+/* Drop cap on the opening letter of the work AND of every chapter -- the
+   one purely typographic flourish that has no equivalent in any bundled
+   theme yet. Applied by the shared applyVersalCaps() script (Shared/Article
+   Rendering/main.js, opted into via the bodyContainer's data-versal-target
+   attribute in template.html), which wraps the opening sentence of the
+   right paragraph in .versalCap. This used to be a pure-CSS
+   `.articleBody > p:first-of-type::first-letter` rule with no JS
+   dependency, which was simpler but wrong: it required the paragraph to be
+   a *direct child* of .articleBody, and real AO3 chapter prose is always
+   nested one level deeper inside a div.userstuff.module[role="article"]
+   wrapper (see AO3ChapterHTMLExtractor.swift), so that selector never
+   matched a real article, only the Settings preview's flatter sample body.
+   See Technotes/Themes.md. */
+.letter-body p:has(> .versalCap:first-child)::first-letter {
 	font-family: var(--font-serif);
 	font-size: 2.6em;
 	font-weight: bold;
@@ -194,6 +203,11 @@ a {
 	padding-right: 0.08em;
 	padding-top: 0.05em;
 	color: var(--sage-color);
+}
+
+.versalCap {
+	font-variant: small-caps;
+	letter-spacing: 0.02em;
 }
 
 h1 {
@@ -478,8 +492,10 @@ a.footnote:hover,
 	font-style: italic;
 }
 
-/* Chapter heading -- a new dated letter page: the flourish the template
-   script now inserts ahead of it stands in for turning to a fresh sheet. */
+/* Chapter heading -- a new dated letter page: the flourish (applied by the
+   shared applyChapterDividers() script, opted into via the
+   data-chapter-divider attribute in template.html) ahead of it stands in
+   for turning to a fresh sheet. */
 .letter-flourish--chapter {
 	margin-top: 28px;
 }

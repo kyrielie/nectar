@@ -291,14 +291,14 @@ body > .systemMessage {
 }
 
 /* Drop cap on the first letter of every chapter's opening paragraph, not
-   just the work's. Selects any paragraph the template's script has
-   wrapped in .kelmscottVersal (fires once for the work's own opening
-   paragraph, then again for the first paragraph after each h2.heading/
-   h3.title chapter boundary) rather than :first-of-type, which would only
-   ever match the very first paragraph in the container. ::first-letter
-   still targets the block's true first letter even when it's inside a
-   leading inline element. */
-.kelmscottBody p:has(> .kelmscottVersal:first-child)::first-letter {
+   just the work's. Selects any paragraph the shared applyVersalCaps()
+   script (Shared/Article Rendering/main.js) has wrapped in .versalCap
+   (fires once for the work's own opening paragraph, then again for the
+   first paragraph after each h2.heading/h3.title chapter boundary) rather
+   than :first-of-type, which would only ever match the very first
+   paragraph in the container. ::first-letter still targets the block's
+   true first letter even when it's inside a leading inline element. */
+.kelmscottBody p:has(> .versalCap:first-child)::first-letter {
 	font-family: var(--font-main);
 	font-weight: 700;
 	font-size: 3.2em;
@@ -311,7 +311,7 @@ body > .systemMessage {
 /* Versal treatment: the rest of the opening sentence (after the dropped
    initial) set in tracked small caps, echoing Kelmscott's convention of
    capitalizing the first word or two following a decorated initial. */
-.kelmscottVersal {
+.versalCap {
 	font-variant: small-caps;
 	letter-spacing: 0.03em;
 }

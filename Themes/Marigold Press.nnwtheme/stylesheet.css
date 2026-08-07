@@ -28,9 +28,6 @@
 	--footer-color: #8a7660;
 	--pre-background: rgba(0, 0, 0, 0.04);
 	--header-top: #d4763f;
-	--header-bottom: #c1633b;
-	--dateline-bar-top: #3f5c44;
-	--dateline-bar-bottom: #324a37;
 	--sunburst-color: #c1633b;
 	--summary-background: rgba(193, 99, 59, 0.08);
 	--summary-border: #c1633b;
@@ -57,9 +54,6 @@
 		--footer-color: #bda98a;
 		--pre-background: rgba(255, 255, 255, 0.06);
 		--header-top: #a4522c;
-		--header-bottom: #8a4223;
-		--dateline-bar-top: #2c4030;
-		--dateline-bar-bottom: #223226;
 		--sunburst-color: #e08a5c;
 		--summary-background: rgba(224, 138, 92, 0.1);
 		--summary-border: #e08a5c;
@@ -89,17 +83,25 @@ body > .systemMessage {
 	color: var(--system-message-color);
 }
 
-/* Header bar — warm marigold gradient */
+/* Header — letterpress doesn't do smooth gradients: a hand-set forme
+   inks a flat, even block of solid color, not a soft blend from one hue
+   to another, so the previous linear-gradient bars were the one thing in
+   this theme that couldn't have come off a press. Flat --header-top
+   ink coverage instead, the masthead text in Fraunces' display weight
+   (the one genuinely load-bearing type choice here), edge-to-edge the
+   way a printer's flat tint block would run across an advertising card. */
 
 .headerBar {
-	background: linear-gradient(to bottom, var(--header-top), var(--header-bottom));
+	background: var(--header-top);
 	padding: 14px 0;
-	font-family: var(--font-sans);
-	font-size: 1em;
-	font-weight: bold;
+	font-family: var(--font-serif);
+	font-optical-sizing: auto;
+	font-variation-settings: "SOFT" 40, "opsz" 30;
+	font-size: 1.05em;
+	font-weight: 600;
+	letter-spacing: 0.01em;
 	line-height: 1.4;
 	color: #faf3e6;
-	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
 }
 
 .headerBarInner {
@@ -119,16 +121,19 @@ body > .systemMessage {
 
 .headerBar a:link, .headerBar a:visited, .headerBar a, .feedlink {
 	color: #faf3e6 !important;
-	font-weight: bold;
+	font-weight: 600;
 }
 
 .byline {
-	color: rgba(250, 243, 230, 0.8);
+	color: rgba(250, 243, 230, 0.82);
 	margin-left: 0.5em;
+	font-family: var(--font-sans);
+	font-weight: normal;
+	font-size: 0.85em;
 }
 
 body .byline a:link, .byline a:visited, .byline a {
-	color: rgba(250, 243, 230, 0.8) !important;
+	color: rgba(250, 243, 230, 0.82) !important;
 }
 
 /* Content containers */
@@ -143,25 +148,32 @@ body .byline a:link, .byline a:visited, .byline a {
 	margin-top: 2em;
 }
 
-/* Dateline bar — forest green gradient */
+/* Dateline — a plain ruled line under the masthead, ink-colored text on
+   the paper itself rather than a second flat-color band; a printer's
+   imprint line, not a second poster panel. */
 
 .datelineBar {
-	background: linear-gradient(to bottom, var(--dateline-bar-top), var(--dateline-bar-bottom));
-	padding: 8px 0;
+	background: var(--background-color);
+	border-bottom: 2px solid var(--header-top);
+	padding: 6px 0;
 	font-family: var(--font-sans);
-	font-size: 0.85em;
+	font-size: 0.78em;
 	font-weight: bold;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
 	line-height: 1.4;
-	color: #faf3e6;
+	color: var(--attribution-color);
+	text-align: center;
 }
 
 .datelineBarInner {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 }
 
 .datelineDate a:link, .datelineDate a:visited, .datelineDate a {
-	color: #faf3e6 !important;
+	color: var(--attribution-color) !important;
 	font-weight: bold;
 }
 
@@ -208,6 +220,29 @@ body .byline a:link, .byline a:visited, .byline a {
 	margin-bottom: 1em;
 }
 
+/* Drop cap / versal — applied by the shared applyVersalCaps() script
+   (Shared/Article Rendering/main.js, opted into via the bodyContainer's
+   data-versal-target attribute in template.html) to the opening paragraph
+   of the work and of every chapter, in Fraunces' display optical size to
+   read as a hand-set advertising capital. See Technotes/Themes.md. */
+
+.marigoldBody p:has(> .versalCap:first-child)::first-letter {
+	font-family: var(--font-serif);
+	font-optical-sizing: auto;
+	font-variation-settings: "SOFT" 60, "opsz" 144;
+	font-weight: 600;
+	font-size: 3.2em;
+	line-height: 0.78;
+	float: left;
+	padding: 0.03em 0.08em 0 0;
+	color: var(--header-top);
+}
+
+.versalCap {
+	font-variant: small-caps;
+	letter-spacing: 0.02em;
+}
+
 .articleBody blockquote {
 	border-left: 3px solid var(--blockquote-border-color);
 	background: var(--blockquote-background);
@@ -241,7 +276,8 @@ body .byline a:link, .byline a:visited, .byline a {
 
 #ao3SyntheticPreface,
 #ao3Preface {
-	border-bottom-color: var(--summary-border);
+	--ao3-preface-border-color: var(--summary-border);
+	--ao3-preface-background-color: var(--summary-background);
 }
 
 /* Summary — the marigold-orange ink already used for links/header, not a
