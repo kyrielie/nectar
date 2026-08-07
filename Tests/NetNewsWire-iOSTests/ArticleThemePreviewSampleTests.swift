@@ -23,6 +23,11 @@
 //  see sampleBodyForTesting's own doc comment for why this still isn't
 //  fandom chrome.
 //
+//  It also carries a preface block (#ao3SyntheticPreface / dl.tags), but
+//  pared down to just Warnings and Chapters -- enough to exercise the
+//  preface's own dt/dd grid styling without turning the preview into a
+//  full fandom-tag showcase.
+//
 
 import Testing
 import Foundation
@@ -30,10 +35,36 @@ import Foundation
 
 @Suite struct ArticleThemePreviewSampleTests {
 
+	@Test func sampleBodyHasPrefaceWithWarningsAndChaptersOnly() {
+		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
+		#expect(sample.contains("ao3SyntheticPreface"))
+		#expect(sample.contains("dl class=\"tags\""))
+		#expect(sample.contains("Warnings:"))
+		#expect(sample.contains("Chapters:"))
+	}
+
 	@Test func sampleBodyIsFreeOfFandomChrome() {
 		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
-		#expect(!sample.contains("ao3SyntheticPreface"))
 		#expect(!sample.contains("Fandom"))
+		#expect(!sample.contains("Rating:"))
+		#expect(!sample.contains("Category:"))
+	}
+
+	/// The preface block precedes Summary, which precedes Notes, which
+	/// precedes the chapter heading -- matching AO3's own preface order (see
+	/// sampleBodyForTesting's doc comment).
+	@Test func prefacePrecedesSummaryPrecedesNotesPrecedesChapterHeading() {
+		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
+		let prefaceRange = sample.range(of: "ao3SyntheticPreface")
+		let summaryRange = sample.range(of: "summary module")
+		let notesRange = sample.range(of: "notes module")
+		let chapterRange = sample.range(of: "chapter preface group")
+		#expect(prefaceRange != nil && summaryRange != nil && notesRange != nil && chapterRange != nil)
+		if let prefaceRange, let summaryRange, let notesRange, let chapterRange {
+			#expect(prefaceRange.lowerBound < summaryRange.lowerBound)
+			#expect(summaryRange.lowerBound < notesRange.lowerBound)
+			#expect(notesRange.lowerBound < chapterRange.lowerBound)
+		}
 	}
 
 	@Test func sampleBodyHasChapterHeading() {
@@ -50,20 +81,6 @@ import Foundation
 	@Test func sampleBodyHasSummary() {
 		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
 		#expect(sample.contains("summary module"))
-	}
-
-	/// Summary comes before Notes, which comes before the chapter heading --
-	/// matching AO3's own preface order (see sampleBodyForTesting's doc comment).
-	@Test func summaryPrecedesNotesPrecedesChapterHeading() {
-		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
-		let summaryRange = sample.range(of: "summary module")
-		let notesRange = sample.range(of: "notes module")
-		let chapterRange = sample.range(of: "chapter preface group")
-		#expect(summaryRange != nil && notesRange != nil && chapterRange != nil)
-		if let summaryRange, let notesRange, let chapterRange {
-			#expect(summaryRange.lowerBound < notesRange.lowerBound)
-			#expect(notesRange.lowerBound < chapterRange.lowerBound)
-		}
 	}
 
 	/// Two separate <p> body paragraphs (outside the summary/notes blockquotes) are
