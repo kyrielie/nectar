@@ -196,6 +196,22 @@ import Articles
 		}
 	}
 
+	/// Whether this feed's URL is an AO3 search-results / tag-listing
+	/// works page (Task 9 direct-reading). Wraps
+	/// `LocalAccountRefresher.isAO3SearchResultsFeed(_:)`, which stays
+	/// `internal` to `Account` -- exposed here the same way
+	/// `ao3SearchLastFetchedPage` above already crosses the module
+	/// boundary, so the routing predicate itself stays an implementation
+	/// detail of `Account` rather than becoming `public` on
+	/// `LocalAccountRefresher`. Used by iOS to decide whether to show the
+	/// "load more results" timeline footer for the current feed.
+	public var isAO3SearchResultsFeed: Bool {
+		guard let url = URL(string: url) else {
+			return false
+		}
+		return LocalAccountRefresher.isAO3SearchResultsFeed(url)
+	}
+
 	// MARK: - DisplayNameProvider
 
 	public var nameForDisplay: String {

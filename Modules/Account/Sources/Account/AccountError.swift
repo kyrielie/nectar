@@ -19,6 +19,15 @@ public enum AccountError: LocalizedError {
 	case urlNotFound
 	case unknown
 	case wrappedError(error: Error, accountID: String, accountName: String)
+	/// Add-time fetch of a newly-created AO3 search-results feed came back
+	/// Cloudflare-challenged. Unlike an ordinary error, the feed itself
+	/// was already created and added to the account (see
+	/// `LocalAccountDelegate.createFeed`'s AO3 branch) -- this case exists
+	/// so the add-feed UI can present the WKWebView challenge-solver
+	/// against `challengedURL`, harvest the cleared page, and import it
+	/// into `feed` via `AO3SearchResultsImporter`, rather than leaving a
+	/// newly-added feed silently empty.
+	case ao3CloudflareChallenge(challengedURL: URL, feed: Feed)
 
 	public var isCredentialsError: Bool {
 		if case .wrappedError(let error, _, _) = self {
@@ -68,6 +77,8 @@ public enum AccountError: LocalizedError {
 			default:
 				return unknownError(error, accountName)
 			}
+		case .ao3CloudflareChallenge:
+			return NSLocalizedString("Blocked by a Cloudflare challenge -- try again later", comment: "AO3 Cloudflare challenge")
 		}
 	}
 
