@@ -240,6 +240,12 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
 			self.applyListBackground()
 			self.applySurfacePaletteNavigationBarAppearance()
+			// See surfaceTintDidChange(_:) below: rows bake
+			// settingsCellBackground into backgroundConfiguration.backgroundColor
+			// once, in updateConfiguration(using:), so a light/dark switch
+			// needs the same explicit reload a palette switch already gets,
+			// or already-visible rows keep the old appearance's color.
+			self.collectionView.reloadData()
 		}
 
 		applySurfacePaletteNavigationBarAppearance()

@@ -51,10 +51,43 @@ final class ManageStorageCollectionViewController: UICollectionViewController, S
 		configureDataSource()
 		configureSettingsPaletteBackground()
 
+		// SettingsPaletteBackgroundHosting's applySettingsCellBackground(to:)
+		// is typed to UITableViewCell, so it can't reach this screen's plain
+		// UICollectionViewListCells -- refreshPaletteCellBackgrounds() below
+		// reloads instead, forcing collectionView(_:willDisplay:forItemAt:)
+		// to run again with the live color. Covers both a palette switch
+		// (via the observer below) and a light/dark trait change (via
+		// configureSettingsPaletteBackground()'s own trait-change handler).
+		NotificationCenter.default.addObserver(forName: .surfaceTintDidChange, object: nil, queue: .main) { [weak self] _ in
+			Task { @MainActor in
+				self?.refreshPaletteCellBackgrounds()
+			}
+		}
+
 		Task {
 			await viewModel.refresh()
 			applySnapshot()
 		}
+	}
+
+	// SettingsPaletteBackgroundHosting -- also called on a light/dark trait
+	// change now, not just a palette switch; see SettingsBackgroundPalette.swift.
+	func refreshPaletteCellBackgrounds() {
+		collectionView.reloadData()
+	}
+
+	// MARK: - Cell background
+
+	/// UICollectionViewListCells built via CellRegistration never get a
+	/// palette-aware background on their own -- unlike a UITableViewCell,
+	/// there's no SettingsPaletteBackgroundHosting helper for them.
+	/// Applying Assets.Colors.settingsCellBackground(for:) here on
+	/// willDisplay matches SettingsViewController/AccentColorTableViewController's
+	/// UITableViewCell equivalent (applySettingsCellBackground(to:)).
+	override func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+		var backgroundConfig = cell.backgroundConfiguration ?? UIBackgroundConfiguration.listGroupedCell()
+		backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
+		cell.backgroundConfiguration = backgroundConfig
 	}
 
 	private func configureCollectionView() {
