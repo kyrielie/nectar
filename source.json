@@ -34,11 +34,11 @@
             "versions": [
                 {
                     "version": "7.1.1",
-                    "buildVersion": "7108.18",
-                    "date": "2026-08-08T05:37:36Z",
+                    "buildVersion": "7108.19",
+                    "date": "2026-08-08T06:59:59Z",
                     "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.0.8...v0.0.9",
                     "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.0.9/Nectar-unsigned.ipa",
-                    "size": 4450957,
+                    "size": 4452101,
                     "minOSVersion": "17.0"
                 }
             ]
