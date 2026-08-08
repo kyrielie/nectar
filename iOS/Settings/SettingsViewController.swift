@@ -14,7 +14,9 @@ import Account
 import ActivityLog
 import Articles
 
-final class SettingsViewController: UITableViewController {
+final class SettingsViewController: UITableViewController, SettingsPaletteBackgroundHosting {
+
+	var paletteBackgroundView: UIView { tableView }
 
 	private enum Section: Int {
 		case feeds = 0
@@ -29,7 +31,6 @@ final class SettingsViewController: UITableViewController {
 	private enum AppearanceRow: Int, CaseIterable {
 		case colorPalette = 0
 		case accentColor = 1
-		case surfaceTint = 2
 	}
 
 	private enum TroubleshootingRow: Int {
@@ -94,7 +95,6 @@ final class SettingsViewController: UITableViewController {
 	@IBOutlet var disableArticleLinksSwitch: UISwitch!
 	@IBOutlet var colorPaletteDetailLabel: UILabel!
 	@IBOutlet var accentColorDetailLabel: UILabel!
-	@IBOutlet var surfaceTintDetailLabel: UILabel!
 	@IBOutlet var openLinksInNetNewsWire: UISwitch!
 
 	var scrollToArticlesSection = false
@@ -108,12 +108,26 @@ final class SettingsViewController: UITableViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(accountsDidChange), name: .UserDidAddAccount, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(accountsDidChange), name: .UserDidDeleteAccount, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(displayNameDidChange), name: .DisplayNameDidChange, object: nil)
+		// Bug fix: this screen never observed .accentColorDidChange, so picking a
+		// new accent color on AccentColorTableViewController (which no longer pops --
+		// see that controller's didSelectRowAt) left accentColorDetailLabel showing
+		// the old name, and every switch below still tinted with the color that was
+		// live when this screen's nib last loaded, until the whole Settings sheet was
+		// dismissed and re-presented from scratch. Applying it here, live, removes
+		// the need to close and reopen Settings to see the change take effect.
+		NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange(_:)), name: .accentColorDidChange, object: nil)
+		// willDisplay only fires for cells newly scrolling on screen, so a
+		// palette change while this screen is already visible needs an
+		// explicit repaint of the rows already on screen.
+		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
 
 		tableView.register(UINib(nibName: "SettingsComboTableViewCell", bundle: nil), forCellReuseIdentifier: "SettingsComboTableViewCell")
 		tableView.register(UINib(nibName: "SettingsTableViewCell", bundle: nil), forCellReuseIdentifier: "SettingsTableViewCell")
 
 		tableView.rowHeight = UITableView.automaticDimension
 		tableView.estimatedRowHeight = 44
+
+		configureSettingsPaletteBackground()
 	}
 
 	override func viewWillAppear(_ animated: Bool) {
@@ -155,8 +169,7 @@ final class SettingsViewController: UITableViewController {
 		disableArticleLinksSwitch.isOn = AppDefaults.shared.disableArticleLinks
 
 		colorPaletteDetailLabel.text = String(describing: AppDefaults.userInterfaceColorPalette)
-		accentColorDetailLabel.text = AppDefaults.shared.accentColor.description
-		surfaceTintDetailLabel.text = AppDefaults.shared.surfaceTint.description
+		applyAccentColorTinting()
 
 		openLinksInNetNewsWire.isOn = !AppDefaults.shared.useSystemBrowser
 
@@ -277,9 +290,6 @@ final class SettingsViewController: UITableViewController {
 			case .accentColor:
 				let accentColor = UIStoryboard.settings.instantiateController(ofType: AccentColorTableViewController.self)
 				self.navigationController?.pushViewController(accentColor, animated: true)
-			case .surfaceTint:
-				let surfaceTint = UIStoryboard.settings.instantiateController(ofType: SurfaceTintTableViewController.self)
-				self.navigationController?.pushViewController(surfaceTint, animated: true)
 			case nil:
 				break
 			}
@@ -326,6 +336,10 @@ final class SettingsViewController: UITableViewController {
 		default:
 			tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
 		}
+	}
+
+	override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+		applySettingsCellBackground(to: cell)
 	}
 
 	override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
@@ -471,6 +485,37 @@ final class SettingsViewController: UITableViewController {
 
 	@objc func displayNameDidChange() {
 		tableView.reloadData()
+	}
+
+	@objc func accentColorDidChange(_ note: Notification) {
+		applyAccentColorTinting()
+	}
+
+	@objc func surfaceTintDidChange(_ note: Notification) {
+		for cell in tableView.visibleCells {
+			applySettingsCellBackground(to: cell)
+		}
+	}
+
+	/// Refreshes everything on this screen that depends on
+	/// `AppDefaults.shared.accentColor`: the detail label showing the current
+	/// choice, and every switch's `onTintColor`, which `Settings.storyboard`
+	/// binds to the static `primaryAccentColor` asset rather than the live,
+	/// accent-aware `Assets.Colors.primaryAccent` -- so that static binding is
+	/// only ever a first-launch placeholder; this call is what actually keeps
+	/// switches in sync with the person's accent choice, both on initial
+	/// appearance and on every subsequent change.
+	private func applyAccentColorTinting() {
+		accentColorDetailLabel.text = AppDefaults.shared.accentColor.description
+
+		let liveTint = Assets.Colors.primaryAccent
+		for toggle in [groupByFeedSwitch, ambrosiaSQLiteTransferSwitch, refreshClearsReadArticlesSwitch,
+					   showLastUpdatedLabelSwitch, showFullscreenArticlesSwitch, backSwipeEnabledSwitch,
+					   pagingSwipeEnabledSwitch, showFeedNameInReaderViewSwitch, showPrevNextArticleButtonsSwitch,
+					   showTableOfContentsAndFindSwitch, hideNotchInFullScreenSwitch, disableArticleLinksSwitch,
+					   openLinksInNetNewsWire] {
+			toggle?.onTintColor = liveTint
+		}
 	}
 
 	@objc func browserPreferenceDidChange() {

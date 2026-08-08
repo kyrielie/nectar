@@ -22,9 +22,22 @@ final class VibrantButton: UIButton {
 	}
 
 	private func commonInit() {
-		setTitleColor(Assets.Colors.vibrantText, for: .highlighted)
+		updateVibrantTextColor()
 		let disabledColor = Assets.Colors.secondaryAccent.withAlphaComponent(0.5)
 		setTitleColor(disabledColor, for: .disabled)
+	}
+
+	// commonInit() runs from init(), before this button is in a window, so
+	// traitCollection there reflects the default/unspecified trait
+	// collection rather than the one this button will actually be drawn
+	// with -- re-resolve once the button joins a real window/view hierarchy.
+	override func didMoveToWindow() {
+		super.didMoveToWindow()
+		updateVibrantTextColor()
+	}
+
+	private func updateVibrantTextColor() {
+		setTitleColor(Assets.Colors.vibrantText(for: traitCollection), for: .highlighted)
 	}
 
 	override var isHighlighted: Bool {

@@ -154,6 +154,9 @@ class MainFeedCollectionViewFolderCell: UICollectionViewCell {
 			unreadCountLabel.textColor = Assets.Colors.primaryAccent
 			unreadCountLabel.font = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .semibold)
 		default:
+			// See MainFeedCollectionViewCell's matching fix -- same
+			// SurfacePalette listBackground wiring, same reason.
+			backgroundConfig.backgroundColor = Assets.Colors.listBackground(for: traitCollection)
 			folderTitle.textColor = .label
 			faviconView.tintColor = Assets.Colors.primaryAccent
 			folderTitle.font = UIFont.preferredFont(forTextStyle: .body)

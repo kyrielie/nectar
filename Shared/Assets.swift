@@ -47,7 +47,14 @@ struct Assets {
 		// the explicit per-article "Check for updates" action.
 		static let checkForUpdates = RSImage(symbol: "arrow.triangle.2.circlepath")!
 		static let folder = RSImage(symbol: "folder")!
-		static let starredFeed = IconImage(starClosed, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.star)
+		// Was `static let ... preferredColor: Assets.Colors.star`. Now a
+		// computed var reading Assets.Colors.iconColor(\.star, ...) so it
+		// repaints live when AccentColor changes, same as mainFolder/
+		// unreadFeed/etc. below (see IconHexSet's doc comment in
+		// AppDefaults.swift for why star was folded into that type).
+		static var starredFeed: IconImage {
+			IconImage(starClosed, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.iconColor(\.star, fallback: Assets.Colors.star))
+		}
 
 		static var accountLocalPadImage: RSImage { RSImage(named: "accountLocalPad")! }
 		static var accountLocalPhoneImage: RSImage { RSImage(named: "accountLocalPhone")! }
@@ -82,9 +89,15 @@ struct Assets {
 		static let findInArticle = RSImage(symbol: "magnifyingglass")!
 		static let tableOfContents = RSImage(symbol: "list.bullet")!
 
-		// Loved smart feed icon: filled heart, system red -- replaces the
-		// starredFeed-borrowed placeholder in LovedFeedDelegate.swift.
-		static let lovedFeed = IconImage(heartClosed, isSymbol: true, isBackgroundSuppressed: true, preferredColor: RSColor.systemRed)
+		// Loved smart feed icon: filled heart, system red by default --
+		// replaces the starredFeed-borrowed placeholder in
+		// LovedFeedDelegate.swift. Was a hardcoded `static let ...
+		// RSColor.systemRed`; now reads IconHexSet.loved so non-default
+		// AccentColor palettes can override it, falling back to systemRed
+		// unchanged for `.default`.
+		static var lovedFeed: IconImage {
+			IconImage(heartClosed, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.iconColor(\.loved, fallback: RSColor.systemRed))
+		}
 
 		static let searchFeed = IconImage(RSImage(symbol: "magnifyingglass")!, isSymbol: true)
 		// mainFolder/unreadFeed/readFeed/lastOpenedFeed/unreadCellIndicator were
@@ -96,20 +109,23 @@ struct Assets {
 		// access re-reads the live accent color and builds a fresh IconImage.
 		// IconImage.init is cheap (no image processing beyond an async luminance
 		// preload), so recomputing per access is fine.
-		static var mainFolder: IconImage { IconImage(folder, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent) }
-		static let todayFeed = IconImage(RSImage(symbol: "tray.and.arrow.down.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: UIColor.systemOrange)
-		static var unreadFeed: IconImage { IconImage(RSImage(symbol: "largecircle.fill.circle")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent) }
-		static var readFeed: IconImage { IconImage(RSImage(symbol: "checkmark.circle.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent) }
+		static var mainFolder: IconImage { IconImage(folder, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.iconColor(\.folder, fallback: Assets.Colors.secondaryAccent)) }
+		// Was `static let ... preferredColor: UIColor.systemOrange`. Now
+		// reads IconHexSet.today, falling back to systemOrange unchanged
+		// for `.default`.
+		static var todayFeed: IconImage { IconImage(RSImage(symbol: "tray.and.arrow.down.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.iconColor(\.today, fallback: UIColor.systemOrange)) }
+		static var unreadFeed: IconImage { IconImage(RSImage(symbol: "largecircle.fill.circle")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.iconColor(\.unreadFeed, fallback: Assets.Colors.secondaryAccent)) }
+		static var readFeed: IconImage { IconImage(RSImage(symbol: "checkmark.circle.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.iconColor(\.readFeed, fallback: Assets.Colors.secondaryAccent)) }
 		// Last Opened smart feed icon. Placeholder symbol choice -- swap for
 		// whatever SF Symbol fits the icon set; not cross-checked against the
 		// app's actual icon conventions beyond "recently opened" being a
 		// reasonable read for it.
-		static var lastOpenedFeed: IconImage { IconImage(RSImage(symbol: "clock.arrow.circlepath")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent) }
+		static var lastOpenedFeed: IconImage { IconImage(RSImage(symbol: "clock.arrow.circlepath")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.iconColor(\.lastOpenedFeed, fallback: Assets.Colors.secondaryAccent)) }
 		static var timelineStar: RSImage {
 			let image = RSImage(symbol: "star.fill")!
-			return image.withTintColor(Assets.Colors.star, renderingMode: .alwaysOriginal)
+			return image.withTintColor(Assets.Colors.iconColor(\.star, fallback: Assets.Colors.star), renderingMode: .alwaysOriginal)
 		}
-		static var unreadCellIndicator: IconImage { IconImage(RSImage(symbol: "circle.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.secondaryAccent) }
+		static var unreadCellIndicator: IconImage { IconImage(RSImage(symbol: "circle.fill")!, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.iconColor(\.unreadCellIndicator, fallback: Assets.Colors.secondaryAccent)) }
 	}
 
 	@MainActor static func accountImage(_ accountType: AccountType) -> RSImage {
@@ -146,50 +162,73 @@ struct Assets {
 			AppDefaults.shared.accentColor.secondaryHex.flatMap { RSColor(cssHex: $0) } ?? defaultSecondaryAccent
 		}
 
+		/// Per-icon accent override. `AppDefaults.shared.accentColor.iconHexSet`
+		/// is nil for `.default`, in which case `fallback` (today's
+		/// asset-catalog color or hardcoded literal) is used -- same
+		/// "nil means don't override" contract as primaryAccent/secondaryAccent's
+		/// use of defaultPrimaryAccent/defaultSecondaryAccent above. Callers
+		/// pass a KeyPath literal (e.g. \.unreadFeed) so adding a new slot to
+		/// IconHexSet needs no change here.
+		static func iconColor(_ keyPath: KeyPath<AccentColor.IconHexSet, String>, fallback: @autoclosure () -> RSColor) -> RSColor {
+			guard let hexSet = AppDefaults.shared.accentColor.iconHexSet else { return fallback() }
+			return RSColor(cssHex: hexSet[keyPath: keyPath]) ?? fallback()
+		}
+
 		static let star = RSColor(named: "starColor")!
 
-		/// Live per-read, not cached -- reflects `AppDefaults.shared.surfaceTint`
-		/// rather than a hardcoded literal, same live-update contract as
-		/// `primaryAccent`/`secondaryAccent` above. `.default` falls back to the
-		/// asset catalog's colorset value, unchanged from before `SurfaceTint`
-		/// existed.
-		///
-		/// NOTE: the dark/light branch below reads `UITraitCollection.current`,
-		/// which Apple documents as a thread-local value the system sets
-		/// automatically only inside specific framework-invoked callbacks
-		/// (drawing methods, dynamic-color/image resolution, trait-change
-		/// handlers) -- its value is explicitly undefined elsewhere, and this is
-		/// a bare `static var` namespace with no view/window reference, called
-		/// from places like `ArticleSearchBar.didMoveToSuperview()` that aren't
-		/// among the blessed contexts. This is theoretical fragility, not a
-		/// confirmed bug -- flagged and unverified on-device as of this writing
-		/// (see nectar-theme-pipeline-fixes-plan.md item #4); the article-theme
-		/// pipeline avoids the same trap by reading a real view's
-		/// `.traitCollection` (see `WebViewController.applyResolvedBackgroundColors`).
-		/// Any *new* `Assets.Colors` property should follow that pattern --
-		/// take an explicit trait collection parameter -- rather than copying
-		/// this one's, even though the two existing dark/light-branching
-		/// properties here (this one and `vibrantText`; `fullScreenBackground`
-		/// also branches the same way) are left as-is pending on-device
-		/// verification.
-		static var barBackground: RSColor {
-			let hex = UITraitCollection.current.userInterfaceStyle == .dark
+		/// Takes an explicit trait collection rather than reading
+		/// `UITraitCollection.current` -- Apple documents `.current` as a
+		/// thread-local value the system sets automatically only inside
+		/// specific framework-invoked callbacks (drawing methods,
+		/// dynamic-color/image resolution, trait-change handlers), undefined
+		/// elsewhere. Upstream NetNewsWire's own dark/light-branching call
+		/// sites (`IconView.iconImage.didSet`,
+		/// `WebViewController.applyResolvedBackgroundColors`) never read
+		/// `.current`; they always read a real view's own `.traitCollection`.
+		/// This property follows that same idiom -- callers pass their own
+		/// `traitCollection` (see `ArticleSearchBar.updateBarBackground()`).
+		/// `.default` falls back to the asset catalog's colorset value,
+		/// unchanged from before `SurfacePalette` existed.
+		static func barBackground(for traitCollection: UITraitCollection) -> RSColor {
+			let hex = traitCollection.userInterfaceStyle == .dark
 				? AppDefaults.shared.surfaceTint.darkHexSet?.barBackground
 				: AppDefaults.shared.surfaceTint.lightHexSet?.barBackground
 			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "barBackgroundColor")!
 		}
-		static var vibrantText: RSColor {
-			let hex = UITraitCollection.current.userInterfaceStyle == .dark
+		static func vibrantText(for traitCollection: UITraitCollection) -> RSColor {
+			let hex = traitCollection.userInterfaceStyle == .dark
 				? AppDefaults.shared.surfaceTint.darkHexSet?.vibrantText
 				: AppDefaults.shared.surfaceTint.lightHexSet?.vibrantText
 			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "vibrantTextColor")!
 		}
 		static var iconBackground: RSColor { RSColor(named: "iconBackgroundColor")! }
-		static var fullScreenBackground: RSColor {
-			let hex = UITraitCollection.current.userInterfaceStyle == .dark
+		static func fullScreenBackground(for traitCollection: UITraitCollection) -> RSColor {
+			let hex = traitCollection.userInterfaceStyle == .dark
 				? AppDefaults.shared.surfaceTint.darkHexSet?.fullScreenBackground
 				: AppDefaults.shared.surfaceTint.lightHexSet?.fullScreenBackground
 			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "fullScreenBackgroundColor")!
+		}
+		/// surface-palette-and-badge-colors-plan, section 2.2. Backdrop for
+		/// settings/list table and collection views.
+		static func settingsBackground(for traitCollection: UITraitCollection) -> RSColor {
+			let hex = traitCollection.userInterfaceStyle == .dark
+				? AppDefaults.shared.surfaceTint.darkHexSet?.settingsBackground
+				: AppDefaults.shared.surfaceTint.lightHexSet?.settingsBackground
+			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "settingsBackgroundColor")!
+		}
+		/// Individual settings-cell fill, distinct from `settingsBackground`.
+		static func settingsCellBackground(for traitCollection: UITraitCollection) -> RSColor {
+			let hex = traitCollection.userInterfaceStyle == .dark
+				? AppDefaults.shared.surfaceTint.darkHexSet?.settingsCellBackground
+				: AppDefaults.shared.surfaceTint.lightHexSet?.settingsCellBackground
+			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "settingsCellBackgroundColor")!
+		}
+		/// Feed list + timeline backdrop.
+		static func listBackground(for traitCollection: UITraitCollection) -> RSColor {
+			let hex = traitCollection.userInterfaceStyle == .dark
+				? AppDefaults.shared.surfaceTint.darkHexSet?.listBackground
+				: AppDefaults.shared.surfaceTint.lightHexSet?.listBackground
+			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "listBackgroundColor")!
 		}
 	}
 }

@@ -177,6 +177,11 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 
 		assert(dataSource != nil)
 		configureCollectionView(dataSource!)
+		applyListBackground()
+		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: MainTimelineModernViewController, previousTraitCollection: UITraitCollection) in
+			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
+			self.applyListBackground()
+		}
 
 		configureSearchController()
 		definesPresentationContext = true
@@ -670,7 +675,7 @@ extension MainTimelineModernViewController: UICollectionViewDelegate {
 		let previewView = cell.contentView
 		var bounds = previewView.bounds
 		let parameters = UIPreviewParameters()
-		parameters.backgroundColor = cell.isSelected ? cell.backgroundConfiguration?.backgroundColor : .tertiarySystemBackground
+		parameters.backgroundColor = cell.isSelected ? cell.backgroundConfiguration?.backgroundColor : Assets.Colors.listBackground(for: traitCollection)
 		if let insets = cell.backgroundConfiguration?.backgroundInsets {
 			bounds = bounds.inset(by: UIEdgeInsets(top: insets.top,
 												   left: -insets.leading - 4,
@@ -692,7 +697,7 @@ extension MainTimelineModernViewController: UICollectionViewDelegate {
 		let previewView = cell.contentView
 		var bounds = previewView.bounds
 		let parameters = UIPreviewParameters()
-		parameters.backgroundColor = cell.isSelected ? cell.backgroundConfiguration?.backgroundColor : .tertiarySystemBackground
+		parameters.backgroundColor = cell.isSelected ? cell.backgroundConfiguration?.backgroundColor : Assets.Colors.listBackground(for: traitCollection)
 		if let insets = cell.backgroundConfiguration?.backgroundInsets {
 			bounds = bounds.inset(by: UIEdgeInsets(top: insets.top,
 												   left: -insets.leading - 4,
@@ -742,6 +747,13 @@ private extension MainTimelineModernViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(timelineTagDisplayModeDidChange(_:)), name: .timelineTagDisplayModeDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(badgeColorModeDidChange(_:)), name: .badgeColorModeDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange(_:)), name: .accentColorDidChange, object: nil)
+		// Bug fix: this collection view's background was never set from
+		// Assets.Colors.listBackground(for:) at all -- it stayed the plain
+		// system background regardless of SurfacePalette, which is why a
+		// non-default palette (e.g. Slate) never colored the timeline. See
+		// MainFeedCollectionViewController's applyListBackground()/
+		// surfaceTintDidChange(_:), the working reference this mirrors.
+		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(statsVisibilityDidChange(_:)), name: .statsVisibilityDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(contentSizeCategoryDidChange), name: UIContentSizeCategory.didChangeNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(displayNameDidChange), name: .DisplayNameDidChange, object: nil)
@@ -1404,6 +1416,20 @@ private extension MainTimelineModernViewController {
 		// Assets.Colors.secondaryAccent on their next updateColors()/
 		// updateIndicatorView() call.
 		reloadVisibleCells()
+	}
+
+	@objc func surfaceTintDidChange(_ note: Notification) {
+		Self.logger.debug("MainTimelineModernViewController: surfaceTintDidChange")
+		applyListBackground()
+		// Rows paint their own settingsCellBackground fill in the default
+		// (non-selected/non-preview) state -- see
+		// MainTimelineCell.updateConfiguration(using:) -- so a palette
+		// change requires repainting the rows too, not just the container.
+		reloadVisibleCells()
+	}
+
+	private func applyListBackground() {
+		collectionView?.backgroundColor = Assets.Colors.listBackground(for: traitCollection)
 	}
 
 	@objc func statsVisibilityDidChange(_ note: Notification) {

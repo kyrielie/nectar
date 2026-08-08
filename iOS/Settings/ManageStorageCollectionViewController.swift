@@ -13,7 +13,9 @@ import UIKit
 import Account
 import ArticlesDatabase
 
-final class ManageStorageCollectionViewController: UICollectionViewController {
+final class ManageStorageCollectionViewController: UICollectionViewController, SettingsPaletteBackgroundHosting {
+
+	var paletteBackgroundView: UIView { collectionView }
 
 	private enum Item: Hashable {
 		case summary
@@ -47,6 +49,7 @@ final class ManageStorageCollectionViewController: UICollectionViewController {
 
 		configureCollectionView()
 		configureDataSource()
+		configureSettingsPaletteBackground()
 
 		Task {
 			await viewModel.refresh()

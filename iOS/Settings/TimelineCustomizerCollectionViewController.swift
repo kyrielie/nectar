@@ -5,13 +5,29 @@
 //  Created by Stuart Breckenridge on 27/01/2026.
 //  Copyright © 2026 Ranchero Software. All rights reserved.
 //
+//  surface-palette-and-badge-colors-plan, section 3.4: the Badge Colors
+//  toggle section is removed from this screen -- badge palette selection
+//  now lives on AccentColorTableViewController instead, with its own live
+//  preview. Every push of this screen is a fresh instance
+//  (UIStoryboard.settings.instantiateController, SettingsViewController.swift),
+//  so there's no live-staleness case to worry about from removing the
+//  .badgeColorModeDidChange observer here. Section layout is now fixed
+//  (Number of Lines 0, Tag Display 1, Stats Visibility 2, Preview 3)
+//  rather than the previous conditional 4/5-section toggle.
+//
 
 import UIKit
 import Articles
 import Images
 
-class TimelineCustomizerCollectionViewController: UICollectionViewController {
-	private var previewArticle: Article {
+class TimelineCustomizerCollectionViewController: UICollectionViewController, SettingsPaletteBackgroundHosting {
+
+	var paletteBackgroundView: UIView { collectionView }
+	/// Static rather than merely internal: this fixture article carries no
+	/// instance state, and BadgeColorPalettePreviewCell (surface-palette-
+	/// and-badge-colors-plan, section 3.3) needs to reach it without
+	/// instantiating this whole view controller just to read one property.
+	static var previewArticle: Article {
 		var components = DateComponents()
 		components.year = 1954
 		components.month = 7
@@ -62,21 +78,25 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 			}
 		}
 
-		NotificationCenter.default.addObserver(forName: .badgeColorModeDidChange, object: nil, queue: .main) { [weak self] _ in
-			Task { @MainActor in
-				self?.userDefaultsDidChange()
-			}
-		}
-
 		NotificationCenter.default.addObserver(forName: .statsVisibilityDidChange, object: nil, queue: .main) { [weak self] _ in
 			Task { @MainActor in
 				self?.userDefaultsDidChange()
 			}
 		}
 
-		configureCollectionView()
-    }
+		// Reload so TimelineCustomizerCell's sliders re-run their
+		// sliderConfiguration didSet and pick up the new
+		// Assets.Colors.primaryAccent -- otherwise the thumb tint stays
+		// whatever it was when this screen was last opened.
+		NotificationCenter.default.addObserver(forName: .accentColorDidChange, object: nil, queue: .main) { [weak self] _ in
+			Task { @MainActor in
+				self?.userDefaultsDidChange()
+			}
+		}
 
+		configureCollectionView()
+		configureSettingsPaletteBackground()
+    }
 	private func configureCollectionView() {
 		collectionView.register(
 			TimelineHeaderView.self,
@@ -85,7 +105,6 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 		)
 
 		collectionView.register(MainTimelineCell.self, forCellWithReuseIdentifier: MainTimelineCell.reuseIdentifier)
-		collectionView.register(BadgeColorModeCell.self, forCellWithReuseIdentifier: BadgeColorModeCell.reuseIdentifier)
 		collectionView.register(StatsVisibilityCell.self, forCellWithReuseIdentifier: StatsVisibilityCell.reuseIdentifier)
 
 		var config = UICollectionLayoutListConfiguration(appearance: .insetGrouped)
@@ -99,31 +118,15 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 
     // MARK: UICollectionViewDataSource
 
-	/// "Badge Colors" (colored-badge toggle) only has any visible effect in
-	/// `.badges` tag display mode -- `.compact`/`.expanded` never render
-	/// `metadataBadges` pills at all (see `MainTimelineCellData.metadataBadges`),
-	/// so showing the toggle there would look actionable while doing nothing.
-	private var showsBadgeColorSection: Bool {
-		AppDefaults.shared.timelineTagDisplayMode == .badges
-	}
-
-	/// Section indices are dynamic: Number of Lines (0), Tag Display (1),
-	/// Stats Visibility (2, always present), Badge Colors (3, only when
-	/// showsBadgeColorSection), then Preview last. Centralized here rather
-	/// than hardcoded per-method so every switch below stays in sync when
-	/// the badge section is hidden.
+	/// Fixed section layout: Number of Lines (0), Tag Display (1),
+	/// Stats Visibility (2), Preview (3). Badge Colors moved to
+	/// AccentColorTableViewController (section 3.2 of the
+	/// surface-palette-and-badge-colors-plan).
 	private var statsVisibilitySection: Int { 2 }
-
-	private var badgeColorSection: Int? {
-		showsBadgeColorSection ? 3 : nil
-	}
-
-	private var previewSection: Int {
-		showsBadgeColorSection ? 4 : 3
-	}
+	private var previewSection: Int { 3 }
 
     override func numberOfSections(in collectionView: UICollectionView) -> Int {
-		return showsBadgeColorSection ? 5 : 4
+		return 4
     }
 
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -151,15 +154,9 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 			return cell
 		}
 
-		if let badgeColorSection, indexPath.section == badgeColorSection {
-			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: BadgeColorModeCell.reuseIdentifier, for: indexPath) as! BadgeColorModeCell
-			cell.configure()
-			return cell
-		}
-
 		if indexPath.section == previewSection {
 			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath) as! MainTimelineCell
-			cell.cellData = MainTimelineCellData(article: previewArticle,
+			cell.cellData = MainTimelineCellData(article: Self.previewArticle,
 												 showFeedName: .byline,
 												 feedName: "The Fellowship of the Ring",
 												 byline: "J. R. R. Tolkien",
@@ -198,8 +195,6 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 			header.label.text = NSLocalizedString("Tag Display", comment: "Tag Display")
 		case statsVisibilitySection:
 			header.label.text = NSLocalizedString("Stats Visibility", comment: "Stats Visibility")
-		case _ where indexPath.section == badgeColorSection:
-			header.label.text = NSLocalizedString("Badge Colors", comment: "Badge Colors")
 		case previewSection:
 			header.label.text = NSLocalizedString("Preview", comment: "Preview")
 		default:
@@ -215,19 +210,14 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 
 	override func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
 		// Only the Number of Lines (0) and Tag Display (1) slider rows respond to
-		// selection; the stats-visibility and badge-color toggles handle their
-		// own touches via UISwitch, and the preview row isn't interactive.
+		// selection; the stats-visibility toggle handles its own touches via
+		// UISwitch, and the preview row isn't interactive.
 		return indexPath.section == 0 || indexPath.section == 1
 	}
 
 	// MARK: Notifications
 
 	func userDefaultsDidChange() {
-		// Tag display mode changes can add/remove the Badge Colors section
-		// (showsBadgeColorSection), which shifts every subsequent section
-		// index including the preview -- a full reload is required rather
-		// than reloading a fixed section index, since that index is no
-		// longer stable once section count itself changes.
 		collectionView.reloadData()
 	}
 

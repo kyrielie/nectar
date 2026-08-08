@@ -101,6 +101,14 @@ final class MainFeedCollectionViewCell: UICollectionViewCell {
 			unreadCountLabel.textColor = Assets.Colors.primaryAccent
 			unreadCountLabel.font = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .semibold)
 		default:
+			// Was left at UIBackgroundConfiguration's own default (systemBackground),
+			// which meant a non-default SurfacePalette (e.g. Slate) tinted the
+			// collection view's own background via MainFeedCollectionViewController's
+			// applyListBackground(), but every row on top of it stayed the system's
+			// plain white/black -- the exact "rows... remain white in light mode"
+			// report. Rows now match the same listBackground the container behind
+			// them uses.
+			backgroundConfig.backgroundColor = Assets.Colors.listBackground(for: traitCollection)
 			feedTitle.textColor = .label
 			feedTitle.font = UIFont.preferredFont(forTextStyle: .body)
 			unreadCountLabel.font = UIFont.preferredFont(forTextStyle: .body)
