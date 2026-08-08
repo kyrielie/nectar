@@ -148,7 +148,9 @@ class MainFeedCollectionViewFolderCell: UICollectionViewCell {
 
 		switch (state.isHighlighted || state.isSelected || state.isFocused, traitCollection.userInterfaceIdiom) {
 		case (true, .pad):
-			backgroundConfig.backgroundColor = .tertiarySystemFill
+			// Palette-aware pressed fill -- see MainFeedCollectionViewCell's
+			// matching case.
+			backgroundConfig.backgroundColor = Assets.Colors.pressedCellBackground(for: traitCollection)
 			folderTitle.textColor = Assets.Colors.primaryAccent
 			folderTitle.font = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .semibold)
 			unreadCountLabel.textColor = Assets.Colors.primaryAccent
