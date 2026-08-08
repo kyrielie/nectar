@@ -43,6 +43,8 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 	private weak var ao3LoadMoreFooterView: AO3LoadMoreFooterView?
 	private var ao3LoadMoreState: AO3LoadMoreFooterView.State = .hidden
 	private var isAO3LoadMoreInFlight = false
+	// Slop so "at the bottom" doesn't require pixel-perfect scrolling.
+	private let ao3LoadMoreBottomProximityThreshold: CGFloat = 24
 
 	private var timelineFeed: SidebarItem? {
 		assert(coordinator != nil)
@@ -632,6 +634,14 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 // MARK: - UICollectionViewDelegate
 
 extension MainTimelineModernViewController: UICollectionViewDelegate {
+	// Re-derives the AO3 "load more" footer's visibility on every scroll
+	// tick -- see applyAO3LoadMoreFooterVisibility's doc comment. Cheap:
+	// no work happens unless ao3LoadMoreState != .hidden (non-AO3-search
+	// feeds bail out immediately).
+	func scrollViewDidScroll(_ scrollView: UIScrollView) {
+		applyAO3LoadMoreFooterVisibility()
+	}
+
 	func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
 		becomeFirstResponder()
 		if let dataSource {
@@ -1164,7 +1174,33 @@ extension MainTimelineModernViewController {
 			// "Load more results" state rather than guessing "no more".
 			ao3LoadMoreState = .loadMore
 		}
-		ao3LoadMoreFooterView?.state = ao3LoadMoreState
+		applyAO3LoadMoreFooterVisibility()
+	}
+
+	/// Withholds the footer's real state (loadMore/loading/noMoreResults/
+	/// error) from the footer view itself until the collection view is
+	/// actually scrolled to (or within
+	/// ao3LoadMoreBottomProximityThreshold of) its own bottom. The footer
+	/// is a genuine in-flow section footer, not a floating overlay -- on a
+	/// results page short enough to fit on screen without scrolling, it
+	/// would otherwise render immediately below the last card with
+	/// nothing to scroll past, reachable (and easy to tap by accident)
+	/// before the user has actually gotten to the end of the list. This
+	/// is called both from updateAO3LoadMoreFooter (state changes) and
+	/// from scrollViewDidScroll (position changes), since either can flip
+	/// whether the real state should be showing.
+	fileprivate func applyAO3LoadMoreFooterVisibility() {
+		guard ao3LoadMoreState != .hidden else {
+			ao3LoadMoreFooterView?.state = .hidden
+			return
+		}
+		ao3LoadMoreFooterView?.state = isCollectionViewScrolledNearBottom ? ao3LoadMoreState : .hidden
+	}
+
+	private var isCollectionViewScrolledNearBottom: Bool {
+		guard let collectionView else { return false }
+		let bottomEdge = collectionView.contentOffset.y + collectionView.bounds.height - collectionView.adjustedContentInset.bottom
+		return bottomEdge >= collectionView.contentSize.height - ao3LoadMoreBottomProximityThreshold
 	}
 
 	fileprivate func loadMoreAO3SearchResults() {
