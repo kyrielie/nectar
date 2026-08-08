@@ -173,22 +173,31 @@ public enum AO3ChapterHTMLExtractor {
 			if let chaptersDiv = firstDescendant(of: workSkinDiv, where: {
 				$0.tag == "div" && $0.attributes["id"] == "chapters"
 			}) {
-				// Unlike the multi-chapter branch, there's no per-chapter
-				// heading to rewrite into an h2.heading here -- a
-				// single-chapter work has exactly one heading in the whole
-				// document, the work's own title. Stripping its "heading"
-				// class (as stripPhantomTitleHeadingClass does for the
-				// multi-chapter branch, where real h2.heading chapter
-				// entries exist to take its place) would leave tocNodes()
-				// (main_ios.js: `h1, h2.heading, h2.toc-heading`) with
-				// nothing to find at all, and TableOfContentsViewController
-				// would render an empty screen. Promoting it to <h1>
-				// instead mirrors Calibre's own convention (a lone <h1> is
-				// the book's own title, not a selectable chapter row --
-				// see tocNodes()'s doc comment in main_ios.js), which keeps
-				// TableOfContentsViewController's flat/non-anthology
-				// handling of a single-<h1>-only entries array correct.
-				promoteTitleHeadingToH1(inWorkSkin: workSkinDiv)
+				// Same as the multi-chapter branch: strip the work's own
+				// title heading down to a plain, non-heading <h2
+				// class="title"> so it isn't double-counted by tocNodes()
+				// (main_ios.js: `h1, h2.heading, h2.toc-heading`).
+				//
+				// A single-chapter work has no per-chapter heading to take
+				// its place, but that's fine -- template.html already
+				// wraps every article's own title in a top-level <h1>
+				// (`<div class="articleTitle"><h1>...`), independent of
+				// anything parsed here, and that's what tocNodes() is
+				// meant to find for a single-chapter work.
+				// TableOfContentsViewController's flat/non-anthology case
+				// falls back to that lone <h1> entry when there are no
+				// <h2> chapters (see its own comment).
+				//
+				// This used to call promoteTitleHeadingToH1 to rewrite
+				// this heading to <h1> instead of stripping it, on the
+				// theory that tocNodes() would otherwise find nothing.
+				// That doubled up with template.html's own <h1>: the
+				// document had two <h1>s, bookEntries.count became 2,
+				// isAnthology went true, and the ToC rendered two
+				// un-collapsible rows for a single-chapter work instead of
+				// one. Do not reintroduce that without also accounting
+				// for template.html's own heading.
+				stripPhantomTitleHeadingClass(inWorkSkin: workSkinDiv)
 				stripLandmarkHeading(from: chaptersDiv)
 
 				let chapters = [AO3ExtractedChapter(id: "chapter-1", title: "Chapter 1")]
@@ -340,26 +349,6 @@ private extension AO3ChapterHTMLExtractor {
 		guard let titleHeading = firstDescendant(of: workPreface, where: { $0.tag == "h2" }) else {
 			return
 		}
-		titleHeading.attributes["class"] = "title"
-	}
-
-	/// Single-chapter counterpart to `stripPhantomTitleHeadingClass` above:
-	/// same element (`<h2 class="title heading">`, first h2 inside
-	/// `div.preface.group`), but rewritten to `<h1>` instead of stripped
-	/// bare, since a single-chapter work has no per-chapter heading to
-	/// leave behind as tocNodes()'s sole match. See the call site's comment
-	/// for why this needs to remain a real tocNodes() match rather than
-	/// disappearing entirely.
-	static func promoteTitleHeadingToH1(inWorkSkin workSkinDiv: HTMLLiteElement) {
-		guard let workPreface = firstDescendant(of: workSkinDiv, where: {
-			$0.tag == "div" && $0.attributes["class"] == "preface group"
-		}) else {
-			return
-		}
-		guard let titleHeading = firstDescendant(of: workPreface, where: { $0.tag == "h2" }) else {
-			return
-		}
-		titleHeading.tag = "h1"
 		titleHeading.attributes["class"] = "title"
 	}
 }
