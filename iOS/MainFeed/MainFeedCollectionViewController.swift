@@ -24,7 +24,13 @@ private let reuseIdentifier = "FeedCell"
 private let folderIdentifier = "Folder"
 private let containerReuseIdentifier = "Container"
 
-final class MainFeedCollectionViewController: UICollectionViewController, UndoableCommandRunner {
+final class MainFeedCollectionViewController: UICollectionViewController, UndoableCommandRunner, SurfacePaletteNavigationBarAware {
+
+	// This screen's large title collapses over a scrolling list of cells --
+	// keep the scroll-edge bar transparent so it matches whatever's drawn
+	// beneath it (see SurfacePaletteNavigationBarAware's doc comment).
+	var wantsTransparentScrollEdgeAppearance: Bool { true }
+
 	@IBOutlet var filterButton: UIBarButtonItem!
 	@IBOutlet var addNewItemButton: UIBarButtonItem! {
 		didSet {
@@ -233,11 +239,15 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: MainFeedCollectionViewController, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
 			self.applyListBackground()
+			self.applySurfacePaletteNavigationBarAppearance()
 		}
+
+		applySurfacePaletteNavigationBarAppearance()
 	}
 
 	@objc func surfaceTintDidChange(_ note: Notification) {
 		applyListBackground()
+		applySurfacePaletteNavigationBarAppearance()
 		// The container's own background updates above, but each row's
 		// backgroundConfiguration.backgroundColor (MainFeedCollectionViewCell /
 		// MainFeedCollectionViewFolderCell) is only computed in

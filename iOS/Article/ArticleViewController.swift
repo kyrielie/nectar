@@ -15,7 +15,7 @@ import RSCore
 import Account
 import Articles
 
-final class ArticleViewController: UIViewController {
+final class ArticleViewController: UIViewController, SurfacePaletteNavigationBarAware {
 
 	@IBOutlet private weak var nextUnreadBarButtonItem: UIBarButtonItem!
 	// Strong, unlike the other bar-button outlets here: these two are now
@@ -356,33 +356,11 @@ final class ArticleViewController: UIViewController {
 	}
 
 	// Section 3 of color-palette-plan.md ("Wire the two new nav-bar
-	// properties"). Re-applies on top of the configureWithDefaultBackground()
-	// appearance set in viewDidLoad -- SurfacePalette.HexSet.navigationBarBackground/
-	// navigationBarTint are nil-equivalent (.default returns nil hex sets), so
-	// .default leaves the system appearance untouched, same fallback contract
-	// as every other SurfacePalette-driven color. Uses the explicit-trait-collection
-	// pattern (self.traitCollection, not UITraitCollection.current) established
-	// for Assets.Colors.barBackground/vibrantText/fullScreenBackground.
-	private func applySurfacePaletteNavigationBarAppearance() {
-		let isDark = traitCollection.userInterfaceStyle == .dark
-		let palette = AppDefaults.shared.surfaceTint
-		let hexSet = isDark ? palette.darkHexSet : palette.lightHexSet
-		guard let hexSet else { return }
-
-		let appearance = UINavigationBarAppearance()
-		appearance.configureWithDefaultBackground()
-		if let backgroundColor = UIColor(cssHex: hexSet.navigationBarBackground) {
-			appearance.backgroundColor = backgroundColor
-		}
-		if let tintColor = UIColor(cssHex: hexSet.navigationBarTint) {
-			appearance.titleTextAttributes = [.foregroundColor: tintColor]
-			appearance.largeTitleTextAttributes = [.foregroundColor: tintColor]
-			navigationController?.navigationBar.tintColor = tintColor
-		}
-		navigationItem.standardAppearance = appearance
-		navigationItem.scrollEdgeAppearance = appearance
-		navigationItem.compactAppearance = appearance
-	}
+	// properties"). applySurfacePaletteNavigationBarAppearance() now comes
+	// from the shared SurfacePaletteNavigationBarAware protocol (see
+	// Shared/Extensions/SurfacePaletteNavigationBarAware.swift) so
+	// MainTimelineModernViewController/MainFeedCollectionViewController can
+	// reuse the exact same nav-bar wiring this screen already had.
 
 	@objc func willEnterForeground(_ note: Notification) {
 		// The toolbar will come back on you if you don't hide it again

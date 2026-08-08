@@ -27,15 +27,22 @@ protocol SmallIconProvider {
 @MainActor extension Feed: SmallIconProvider {
 	var smallIcon: IconImage? {
 		// Feature request: AO3 feeds get the bundled high-resolution vector
-		// mark instead of whatever low-res favicon.ico the site serves --
-		// takes priority over both FaviconDownloader and FaviconGenerator,
-		// the same way a downloaded favicon already takes priority over the
-		// generated placeholder below.
-		if isArchiveOfOurOwnFeed, let icon = Self.archiveOfOurOwnIcon {
+		// mark instead of whatever low-res favicon.ico the site serves.
+		// This only applies when the feed has no icon of its own -- a
+		// locally/feed-provided icon (feed.faviconURL, set from the feed's
+		// own <icon>/favicon metadata during parsing, or a favicon already
+		// resolved via FaviconDownloader) must still take priority over the
+		// bundled mark. Otherwise the bundled AO3 icon would unconditionally
+		// shadow a real icon the feed declares. The bundled icon still
+		// takes priority over the generated placeholder below.
+		if isArchiveOfOurOwnFeed, faviconURL == nil, let icon = Self.archiveOfOurOwnIcon {
 			return icon
 		}
 		if let iconImage = FaviconDownloader.shared.favicon(for: self) {
 			return iconImage
+		}
+		if isArchiveOfOurOwnFeed, let icon = Self.archiveOfOurOwnIcon {
+			return icon
 		}
 		return FaviconGenerator.shared.favicon(self)
 	}

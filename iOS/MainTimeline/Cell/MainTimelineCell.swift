@@ -126,7 +126,7 @@ final class MainTimelineCell: UICollectionViewCell {
 		let isActive = state.isSwiped || state.isSelected
 
 		if isPreview {
-			backgroundConfig.backgroundColor = traitCollection.userInterfaceStyle == .dark ? .secondarySystemBackground : .white
+			backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
 		}
 		backgroundConfiguration = backgroundConfig
 
