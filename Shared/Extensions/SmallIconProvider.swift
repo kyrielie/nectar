@@ -28,23 +28,35 @@ protocol SmallIconProvider {
 	var smallIcon: IconImage? {
 		// Feature request: AO3 feeds get the bundled high-resolution vector
 		// mark instead of whatever low-res favicon.ico the site serves.
-		// This only applies when the feed has no icon of its own -- a
-		// locally/feed-provided icon (feed.faviconURL, set from the feed's
-		// own <icon>/favicon metadata during parsing, or a favicon already
-		// resolved via FaviconDownloader) must still take priority over the
-		// bundled mark. Otherwise the bundled AO3 icon would unconditionally
-		// shadow a real icon the feed declares. The bundled icon still
-		// takes priority over the generated placeholder below.
-		if isArchiveOfOurOwnFeed, faviconURL == nil, let icon = Self.archiveOfOurOwnIcon {
+		// AO3's own feeds don't declare a meaningful per-feed icon -- every
+		// AO3 feed's resolved favicon is the same generic, low-res site mark
+		// -- so the bundled icon always wins for an AO3 feed, unconditionally,
+		// rather than being gated behind "only if the feed has no icon of its
+		// own." (An earlier version of this gated on `faviconURL == nil`;
+		// that check never actually excluded AO3 feeds in practice --
+		// RSSParser never populates faviconURL from feed XML -- so it wasn't
+		// the cause of AO3 feeds showing the low-res icon. The real cause was
+		// IconImageCache.imageForFeed(_:_:) never calling this property at
+		// all for Feed sidebar items; see archiveOfOurOwnBundledIcon below.)
+		if let icon = archiveOfOurOwnBundledIcon {
 			return icon
 		}
 		if let iconImage = FaviconDownloader.shared.favicon(for: self) {
 			return iconImage
 		}
-		if isArchiveOfOurOwnFeed, let icon = Self.archiveOfOurOwnIcon {
-			return icon
-		}
 		return FaviconGenerator.shared.favicon(self)
+	}
+
+	/// The bundled AO3 mark, if this feed is an AO3 feed -- `nil` for every
+	/// other feed. Split out from `smallIcon` so `IconImageCache.imageForFeed`
+	/// can check it directly: that method has its own icon-resolution order
+	/// for `Feed` and never calls `smallIcon` (that's only reached for
+	/// non-`Feed` `SmallIconProvider`s, e.g. `PseudoFeed`/`Folder`), so
+	/// without this, AO3's bundled icon was unreachable from the feed
+	/// list/timeline rows that actually render feed icons.
+	var archiveOfOurOwnBundledIcon: IconImage? {
+		guard isArchiveOfOurOwnFeed else { return nil }
+		return Self.archiveOfOurOwnIcon
 	}
 
 	/// Exact-match host check, deliberately narrower than

@@ -116,21 +116,23 @@ final class MainTimelineCell: UICollectionViewCell {
 			backgroundConfig.cornerRadius = 0
 		}
 
-		// Resting-state cards are intentionally transparent, same as upstream
-		// NetNewsWire: the card shows whatever's drawn behind it
-		// (MainTimelineModernViewController's own listBackground, itself
-		// palette-aware) rather than painting a second, separate fill on top.
-		// This was briefly changed to an opaque settingsCellBackground fill to
-		// work around a bug where a non-default SurfacePalette left rows
-		// looking flatly wrong -- that bug was actually the *container* never
-		// picking up listBackground (fixed in
-		// MainTimelineModernViewController.applyListBackground()); painting
-		// the cards opaque was the wrong fix for it and is reverted here.
-		// Selected cells keep the standard system selection color from
-		// updated(for: state).
-		if state.isSwiped {
-			backgroundConfig.backgroundColor = .secondarySystemFill
-		} else if !state.isSelected {
+		// Resting-state cards are transparent, showing the collection view's
+		// own listBackground straight through -- same token that's already
+		// visible behind the transparent scroll-edge nav bar at the top of
+		// the timeline, so the card and the surrounding chrome read as one
+		// continuous surface instead of two different tones under a strongly-
+		// tinted palette (Berry, Slate). (Previously this was an opaque
+		// settingsCellBackground fill, matching MainFeedCollectionViewCell's
+		// rows -- reverted per request; feed rows still use the opaque fill,
+		// this is a deliberate difference between the two screens now.)
+		// Swiped/selected states keep a tinted variant of settingsCellBackground
+		// (Assets.Colors.pressedCellBackground) rather than a plain,
+		// palette-blind system fill, so pressing a card under a
+		// strongly-tinted palette doesn't flash back to plain system gray --
+		// that part is unaffected by the revert above.
+		if state.isSwiped || state.isSelected {
+			backgroundConfig.backgroundColor = Assets.Colors.pressedCellBackground(for: traitCollection)
+		} else {
 			backgroundConfig.backgroundColor = .clear
 		}
 

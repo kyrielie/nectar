@@ -230,6 +230,37 @@ struct Assets {
 				: AppDefaults.shared.surfaceTint.lightHexSet?.listBackground
 			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "listBackgroundColor")!
 		}
+
+		/// A palette-aware fill for a card/row's "pressed" state -- swiped or
+		/// selected -- so those states read as a variant of the same surface
+		/// (`settingsCellBackground`) instead of falling back to a plain,
+		/// palette-blind system fill like `.secondarySystemFill`/
+		/// `.tertiarySystemFill`. Used by `MainTimelineCell` (swipe/select) and
+		/// `MainFeedCollectionViewCell` (iPad highlighted/selected/focused row).
+		/// Blends a small amount of black (light mode) or white (dark mode)
+		/// into `settingsCellBackground` so it stays visibly distinct from the
+		/// resting-state fill under every palette, including `.default`.
+		static func pressedCellBackground(for traitCollection: UITraitCollection) -> RSColor {
+			let base = settingsCellBackground(for: traitCollection)
+			let overlay: RSColor = traitCollection.userInterfaceStyle == .dark ? .white : .black
+			return base.blended(withFraction: 0.12, of: overlay)
+		}
+	}
+}
+
+private extension RSColor {
+	/// Simple linear RGBA blend, used only for deriving a "pressed" variant
+	/// of a palette color. Not a general-purpose color-mixing utility --
+	/// keep it private to this file.
+	func blended(withFraction fraction: CGFloat, of other: RSColor) -> RSColor {
+		var r1: CGFloat = 0, g1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0
+		var r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
+		getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
+		other.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+		return RSColor(red: r1 + (r2 - r1) * fraction,
+					   green: g1 + (g2 - g1) * fraction,
+					   blue: b1 + (b2 - b1) * fraction,
+					   alpha: a1 + (a2 - a1) * fraction)
 	}
 }
 

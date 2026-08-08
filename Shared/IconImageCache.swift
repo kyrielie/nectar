@@ -133,6 +133,16 @@ private extension IconImageCache {
 		if Self.isNetNewsWireBrandedFeed(feed) {
 			return IconImage.nnwFeedIcon
 		}
+		// AO3 feeds get the bundled high-resolution mark instead of whatever
+		// low-res favicon FeedIconDownloader/FaviconDownloader resolved.
+		// Must be checked before those caches below: this method (not
+		// Feed.smallIcon) is the actual path feed-list/timeline rows use to
+		// resolve a Feed's icon, so without this check here the bundled AO3
+		// icon was never reachable for real feed rows, regardless of what
+		// Feed.smallIcon did.
+		if let iconImage = feed.archiveOfOurOwnBundledIcon {
+			return iconImage
+		}
 		if let iconImage = feedIconImageCache[feedID] {
 			return iconImage
 		}
