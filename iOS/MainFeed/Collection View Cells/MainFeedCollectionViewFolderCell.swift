@@ -155,8 +155,10 @@ class MainFeedCollectionViewFolderCell: UICollectionViewCell {
 			unreadCountLabel.font = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .semibold)
 		default:
 			// See MainFeedCollectionViewCell's matching fix -- same
-			// SurfacePalette listBackground wiring, same reason.
-			backgroundConfig.backgroundColor = Assets.Colors.listBackground(for: traitCollection)
+			// SurfacePalette settingsCellBackground wiring, same reason (a
+			// row should read as lighter than the list's own background,
+			// matching MainTimelineCell's card contrast, not match it exactly).
+			backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
 			folderTitle.textColor = .label
 			faviconView.tintColor = Assets.Colors.primaryAccent
 			folderTitle.font = UIFont.preferredFont(forTextStyle: .body)

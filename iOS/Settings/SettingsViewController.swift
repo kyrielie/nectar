@@ -28,6 +28,23 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case ao3Account = 6
 	}
 
+	/// surface-palette-followup-plan, Issue B. Wraps `rootView` with
+	/// `SurfacePaletteAware` and wires a `SurfacePaletteObserver` to the
+	/// hosting controller's own `traitCollection` (never
+	/// `UITraitCollection.current` -- see `SurfacePaletteObserver`'s doc
+	/// comment). Shared by all six SwiftUI-hosted settings screens so the
+	/// observer/registerForTraitChanges wiring is written once.
+	private static func makeSurfacePaletteAwareHostingController<RootView: View>(rootView: RootView) -> UIHostingController<AnyView> {
+		let hostingController = UIHostingController(rootView: AnyView(rootView))
+		let observer = SurfacePaletteObserver(traitCollection: hostingController.traitCollection)
+		hostingController.rootView = AnyView(rootView.surfacePaletteAware(observer: observer))
+		hostingController.registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (vc: UIHostingController<AnyView>, previous: UITraitCollection) in
+			guard vc.traitCollection.userInterfaceStyle != previous.userInterfaceStyle else { return }
+			observer.refresh(for: vc.traitCollection)
+		}
+		return hostingController
+	}
+
 	private enum AppearanceRow: Int, CaseIterable {
 		case colorPalette = 0
 		case accentColor = 1
@@ -271,7 +288,13 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case .articles:
 			switch ArticlesRow(rawValue: indexPath.row) {
 			case .theme:
-				let hostingController = UIHostingController(rootView: ArticleThemeListView())
+				// Scope note (surface-palette-followup-plan, Issue B): this is
+				// the only one of the six SurfacePaletteAware screens with its
+				// own internal color-picking UI (the ColorPicker below, bound
+				// to article-theme colors, unrelated to Assets.Colors). The
+				// .tint(observer.accentColor) applied by surfacePaletteAware
+				// has been confirmed not to bleed into that ColorPicker.
+				let hostingController = Self.makeSurfacePaletteAwareHostingController(rootView: ArticleThemeListView())
 				self.navigationController?.pushViewController(hostingController, animated: true)
 			case .pageCounterDisplayMode:
 				if let sourceView = tableView.cellForRow(at: indexPath) {
@@ -297,11 +320,11 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 			let viewController: UIViewController? = {
 				switch TroubleshootingRow(rawValue: indexPath.row) {
 				case .errorLog:
-					return UIHostingController(rootView: ErrorLogView())
+					return Self.makeSurfacePaletteAwareHostingController(rootView: ErrorLogView())
 				case .accountStats:
-					return UIHostingController(rootView: AccountStatsView())
+					return Self.makeSurfacePaletteAwareHostingController(rootView: AccountStatsView())
 				case .activityLog:
-					return UIHostingController(rootView: ActivityLogView())
+					return Self.makeSurfacePaletteAwareHostingController(rootView: ActivityLogView())
 				case .dinosaurs:
 					return UIHostingController(rootView: DinosaursView(dismissAndPresent: { [weak self] dinosaur in
 						guard let self else {
@@ -325,13 +348,13 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case .help:
 			switch HelpRow(rawValue: indexPath.row) {
 			case .about:
-				let hosting = UIHostingController(rootView: AboutView())
+				let hosting = Self.makeSurfacePaletteAwareHostingController(rootView: AboutView())
 				self.navigationController?.pushViewController(hosting, animated: true)
 			default:
 				break
 			}
 		case .ao3Account:
-			let hosting = UIHostingController(rootView: AO3AccountSettingsView())
+			let hosting = Self.makeSurfacePaletteAwareHostingController(rootView: AO3AccountSettingsView())
 			self.navigationController?.pushViewController(hosting, animated: true)
 		default:
 			tableView.selectRow(at: nil, animated: true, scrollPosition: .none)

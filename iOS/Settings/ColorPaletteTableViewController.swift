@@ -32,7 +32,27 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 		configureSettingsPaletteBackground()
 	}
 
+	// surface-palette-followup-plan: guards against the same reentrancy
+	// AccentColorTableViewController's accentColorDidChange doc comment
+	// describes. AppDefaults.shared.surfaceTint's setter posts
+	// .surfaceTintDidChange synchronously, so when didSelectRowAt below
+	// sets surfaceTint, this handler runs *during* that same
+	// didSelectRowAt call, before didSelectRowAt reaches its own
+	// reloadSections a few lines later -- any reloadSections call made
+	// here while true tears the table down while UIKit is still in the
+	// middle of processing that same row's selection, and its
+	// post-selection bookkeeping (restoring the checkmark/highlight after
+	// the delegate call returns) then lands against a section that's
+	// been rebuilt underneath it, leaving the checkmark on the
+	// previously-selected row instead of the one just tapped. Set while
+	// didSelectRowAt's .surfacePalette case is running its own deferred
+	// reload; that reload already covers .preview too, so this handler
+	// only needs to fire for changes that originate elsewhere (e.g. the
+	// Surface Palette preview being changed from another screen).
+	private var isHandlingSurfacePaletteSelection = false
+
 	@objc private func surfaceTintDidChange(_ note: Notification) {
+		guard !isHandlingSurfacePaletteSelection else { return }
 		reloadPreviewSection()
 	}
 
@@ -101,10 +121,17 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 			}
 			tableView.reloadSections(IndexSet(integer: Section.interfaceStyle.rawValue), with: .none)
 		case .surfacePalette:
-			if let surfacePalette = SurfacePalette(rawValue: indexPath.row) {
-				AppDefaults.shared.surfaceTint = surfacePalette
-			}
-			tableView.reloadSections(IndexSet(integer: Section.surfacePalette.rawValue), with: .none)
+			guard let surfacePalette = SurfacePalette(rawValue: indexPath.row) else { return }
+
+			isHandlingSurfacePaletteSelection = true
+			AppDefaults.shared.surfaceTint = surfacePalette
+			isHandlingSurfacePaletteSelection = false
+
+			// Reload after setting, not before -- and in one call covering
+			// both sections, so this is the only reloadSections touching
+			// .surfacePalette during this selection (see
+			// isHandlingSurfacePaletteSelection's doc comment above).
+			tableView.reloadSections(IndexSet([Section.surfacePalette.rawValue, Section.preview.rawValue]), with: .none)
 		case .preview:
 			break
 		}
