@@ -52,7 +52,14 @@ final class TableOfContentsViewController: UICollectionViewController {
 	override func viewDidLoad() {
 		super.viewDidLoad()
 
-		title = NSLocalizedString("Table of Contents", comment: "Table of Contents")
+		// A single book's own title is more useful here than a generic
+		// label -- for an anthology (several books' worth of entries),
+		// there's no single title to show, so the generic label remains.
+		if !isAnthology, let bookTitle = bookEntries.first?.text, !bookTitle.isEmpty {
+			title = bookTitle
+		} else {
+			title = NSLocalizedString("Table of Contents", comment: "Table of Contents")
+		}
 		navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .close, target: self, action: #selector(dismissTableOfContents))
 
 		configureDataSource()
@@ -148,7 +155,20 @@ final class TableOfContentsViewController: UICollectionViewController {
 		if !isAnthology {
 			// Flat, non-expandable list -- there's nothing to disclose.
 			var sectionSnapshot = NSDiffableDataSourceSectionSnapshot<Item>()
-			let chapterItems = entries.filter { $0.tagName != "h1" }.map { Item.chapter($0) }
+			var chapterItems = entries.filter { $0.tagName != "h1" }.map { Item.chapter($0) }
+
+			// A true single-chapter work (Calibre or AO3-fetched alike) has
+			// no h2 chapter entries at all -- only its own h1 book title,
+			// which the filter above always excludes. Rather than leave the
+			// screen empty (the reported bug: AO3-fetched single-chapter
+			// works showed a blank Table of Contents), fall back to the
+			// book entry itself as the one navigable row -- tapping it
+			// scrolls to the top of the article, same as tapping a chapter
+			// row does for any other entry.
+			if chapterItems.isEmpty, let bookEntry = bookEntries.first {
+				chapterItems = [.chapter(bookEntry)]
+			}
+
 			sectionSnapshot.append(chapterItems)
 			dataSource.apply(sectionSnapshot, to: 0, animatingDifferences: false)
 			return

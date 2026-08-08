@@ -370,4 +370,28 @@ import Testing
 			#expect(!flattenedText(heading).contains("Borrow Somebody's Dreams Till Tomorrow"))
 		}
 	}
+
+	@Test func singleChapterWorkTitleBecomesTocHeading() throws {
+		// Regression for the empty-ToC bug: a single-chapter work has no
+		// per-chapter <h2 class="heading"> at all, so stripping the work
+		// title's "heading" class (as the multi-chapter branch does) left
+		// tocNodes() (h1, h2.heading, h2.toc-heading) with nothing to find.
+		// The title should instead be promoted to <h1>, which tocNodes()
+		// does match, and TableOfContentsViewController's flat-list
+		// handling renders as the sole navigable row.
+		let html = htmlFixtureString("ao3-work-single-chapter.html")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		let root = parseHTMLLiteTree(result.contentHTML)
+		let tocHeadings = descendants(of: root, where: {
+			($0.tag == "h1") || ($0.tag == "h2" && ($0.attributes["class"] == "heading" || $0.attributes["class"] == "toc-heading"))
+		})
+
+		#expect(tocHeadings.count == 1)
+		#expect(tocHeadings.first?.tag == "h1")
+	}
 }
