@@ -3,7 +3,7 @@
 //  NetNewsWire-iOS
 //
 //  Personalization & Theming plan, item 6 ("Stats-visibility toggles").
-//  A plain UISwitch row, same shape as BadgeColorModeCell -- this setting
+//  A plain UISwitch row, same shape the badge-palette picker rows use -- this setting
 //  is a boolean, not a ranged slider value, so it doesn't fit the
 //  TimelineCustomizerCell/TickMarkSlider machinery the number-of-lines and
 //  tag-display-mode rows use.
@@ -67,7 +67,7 @@ final class StatsVisibilityCell: UICollectionViewListCell {
 		} else {
 			backgroundConfig = UIBackgroundConfiguration.listGroupedCell().updated(for: state)
 		}
-		backgroundConfig.backgroundColor = traitCollection.userInterfaceStyle == .dark ? .secondarySystemBackground : .white
+		backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
 		backgroundConfig.cornerRadius = 20
 		self.backgroundConfiguration = backgroundConfig
 	}

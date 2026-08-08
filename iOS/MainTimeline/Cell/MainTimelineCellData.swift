@@ -11,7 +11,7 @@ import Articles
 import Images
 
 /// Which controlled vocabulary a `.badges`-mode pill's text came from, for
-/// `BadgeColorMode.colored` tinting. Fandom carries `.fandom` for shape
+/// any non-neutral `BadgeColorPalette` tinting. Fandom carries `.fandom` for shape
 /// consistency even though it always renders neutral -- there's no AO3-wide
 /// color convention for fandom the way there is for rating/warning/category,
 /// and picking arbitrary per-fandom colors would read as meaningful when it
@@ -141,7 +141,7 @@ enum BadgeCategory: Sendable {
 
 	/// Fandom/rating/warnings/categories as individual pill badges, each
 	/// tagged with the `BadgeCategory` its text came from so the cell can
-	/// tint it under `BadgeColorMode.colored`. Reads `article.ratings`/
+	/// tint it under a non-neutral `BadgeColorPalette`. Reads `article.ratings`/
 	/// `.warnings`/`.categories`/`.fandoms` directly (array-typed, one pill
 	/// per element) rather than re-splitting the already-joined
 	/// `fandomString`/`categoryString`, which stay as-is for `.compact`/

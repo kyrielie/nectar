@@ -120,7 +120,7 @@ final class MainTimelineCell: UICollectionViewCell {
 		if state.isSwiped {
 			backgroundConfig.backgroundColor = .secondarySystemFill
 		} else if !state.isSelected {
-			backgroundConfig.backgroundColor = .clear
+			backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
 		}
 
 		let isActive = state.isSwiped || state.isSelected
@@ -302,10 +302,10 @@ private extension MainTimelineCell {
 	func updateMetadataBadges() {
 		let badges = cellData.metadataBadges
 		ensureViewCount(badges.count, in: &metadataBadgeViews, makeView: MainTimelineCell.badgeLabel)
-		let mode = AppDefaults.shared.badgeColorMode
+		let palette = AppDefaults.shared.badgeColorMode
 		for (index, badge) in badges.enumerated() {
 			let label = metadataBadgeViews[index]
-			let colors = BadgeColorTable.colors(for: badge.text, category: badge.category, mode: mode)
+			let colors = BadgeColorTable.colors(for: badge.text, category: badge.category, palette: palette)
 			label.backgroundColor = colors.background
 			label.textColor = colors.text
 			label.text = badge.text
