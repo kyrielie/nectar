@@ -55,20 +55,51 @@ enum TagDisplayMode: Int, CaseIterable, Sendable {
 	}
 }
 
-/// Whether `.badges` mode's rating/warning/category pills render with their
-/// own tint or stay neutral. `.neutral` is the default (today's rendering);
-/// fandom pills stay neutral in both modes -- see MainTimelineCellData's
-/// BadgeCategory doc comment for why.
-enum BadgeColorMode: Int, CaseIterable, Sendable {
-	case neutral = 1
-	case colored = 2
+/// Whether, and how, `.badges` mode's rating/warning/category pills render
+/// with their own tint. Fandom pills stay neutral in every palette -- see
+/// MainTimelineCellData's BadgeCategory doc comment for why.
+///
+/// Renamed from `BadgeColorMode` (surface-palette-and-badge-colors-plan,
+/// section 3) -- what used to be a plain on/off is now a real palette,
+/// grown the same incremental way `AccentColor`/`SurfacePalette` did.
+///
+/// Five cases, two tiers:
+///  - Fixed-palette tier (`.default`, `.semantic`, `.monochrome`,
+///    `.transparent`): hue/no-hue choice is baked into the case itself,
+///    independent of whatever `AccentColor` is active.
+///  - Accent-following tier (`.accent`): rating/category/warning colors
+///    are derived at read time from `AppDefaults.shared.accentColor`, so
+///    this one case's rendered colors change whenever the person's accent
+///    choice changes, without a badge-specific setting change.
+///
+/// `.monochrome` is a rename of the original `.neutral` case, not a new
+/// one -- it keeps raw value `1` so this rename needs no `UserDefaults`
+/// migration; anyone with `badgeColorMode == 1` already saved keeps
+/// exactly the palette they had, now spelled `.monochrome` because that
+/// name describes what it actually renders (`.tertiarySystemFill`
+/// background / `.secondaryLabel` text, no hue at all) instead of reading
+/// like "off" or "muted-but-still-tinted." `.default`/`.semantic` keep
+/// their original raw values (2/3) unchanged. `.transparent` and
+/// `.accent` are genuinely new and take the next free raw values (4/5).
+enum BadgeColorPalette: Int, CaseIterable, Sendable {
+	case monochrome = 1
+	case `default` = 2
+	case semantic = 3
+	case transparent = 4
+	case accent = 5
 
 	var description: String {
 		switch self {
-		case .neutral:
-			return NSLocalizedString("Neutral", comment: "Neutral badge color mode")
-		case .colored:
-			return NSLocalizedString("Colored", comment: "Colored badge color mode")
+		case .monochrome:
+			return NSLocalizedString("Monochrome", comment: "Monochrome badge color palette")
+		case .default:
+			return NSLocalizedString("Default", comment: "Default badge color palette")
+		case .semantic:
+			return NSLocalizedString("Semantic", comment: "Semantic badge color palette")
+		case .transparent:
+			return NSLocalizedString("Transparent", comment: "Transparent badge color palette")
+		case .accent:
+			return NSLocalizedString("Accent", comment: "Accent-following badge color palette")
 		}
 	}
 }
@@ -96,6 +127,18 @@ enum AccentColor: Int, CaseIterable, Sendable {
 	case forest = 3
 	case slate = 4
 	case berry = 5
+	/// icon-and-badge-palette-plan follow-up: four additional theme cases,
+	/// added instead of building a per-icon override UI (explicitly out of
+	/// scope, see IconHexSet's doc comment above) -- the variety a person
+	/// wants from customizable icon colors is delivered by adding more
+	/// complete `AccentColor` cases to this picker, the same way
+	/// `.rosePine` through `.berry` already work, rather than by exposing
+	/// IconHexSet's individual fields to per-field editing. Raw values 6-9
+	/// are genuinely new and take the next free slots after `.berry`.
+	case ocean = 6
+	case sunset = 7
+	case lavender = 8
+	case graphite = 9
 
 	var description: String {
 		switch self {
@@ -111,6 +154,14 @@ enum AccentColor: Int, CaseIterable, Sendable {
 			return NSLocalizedString("Slate", comment: "Slate accent color")
 		case .berry:
 			return NSLocalizedString("Berry", comment: "Berry accent color")
+		case .ocean:
+			return NSLocalizedString("Ocean", comment: "Ocean accent color")
+		case .sunset:
+			return NSLocalizedString("Sunset", comment: "Sunset accent color")
+		case .lavender:
+			return NSLocalizedString("Lavender", comment: "Lavender accent color")
+		case .graphite:
+			return NSLocalizedString("Graphite", comment: "Graphite accent color")
 		}
 	}
 
@@ -129,6 +180,10 @@ enum AccentColor: Int, CaseIterable, Sendable {
 		case .forest: return "#5a8a6b"
 		case .slate: return "#5f7a8a"
 		case .berry: return "#c4507a"
+		case .ocean: return "#2f6690"
+		case .sunset: return "#d9622b"
+		case .lavender: return "#7c6bab"
+		case .graphite: return "#6b6b6b"
 		}
 	}
 
@@ -140,31 +195,165 @@ enum AccentColor: Int, CaseIterable, Sendable {
 		case .forest: return "#8fb89c"
 		case .slate: return "#8ea3b0"
 		case .berry: return "#eb6f92"
+		case .ocean: return "#7ec8e3"
+		case .sunset: return "#f2a65a"
+		case .lavender: return "#b8a9d9"
+		case .graphite: return "#a8a8a8"
+		}
+	}
+
+	/// Per-icon color slots for this accent case, mirroring
+	/// `SurfacePalette.HexSet`'s shape: one named field per icon rather
+	/// than a single shared hue, so `.rosePine`/`.sepia`/etc. can decide
+	/// independently whether `unreadFeed` and `readFeed` should share a
+	/// hue or contrast, instead of every icon being forced through
+	/// `secondaryAccent` the way it was before this type existed.
+	struct IconHexSet {
+		/// Assets.Images.mainFolder
+		var folder: String
+		/// Assets.Images.unreadFeed
+		var unreadFeed: String
+		/// Assets.Images.readFeed
+		var readFeed: String
+		/// Assets.Images.lastOpenedFeed
+		var lastOpenedFeed: String
+		/// Assets.Images.unreadCellIndicator
+		var unreadCellIndicator: String
+		/// Assets.Images.starredFeed / Assets.Images.timelineStar -- folded
+		/// in here so star tracks the same per-palette override path as
+		/// every other icon slot instead of being the one exception that
+		/// stayed pinned to the asset-catalog "starColor".
+		var star: String
+		/// Assets.Images.todayFeed -- was the hardcoded UIColor.systemOrange
+		/// literal before this type existed.
+		var today: String
+		/// Assets.Images.lovedFeed -- was the hardcoded RSColor.systemRed
+		/// literal before this type existed.
+		var loved: String
+	}
+
+	/// nil for `.default` -- same "fall back to the existing asset-catalog
+	/// color / hardcoded literal" contract as `primaryHex`/`secondaryHex`.
+	/// Every other case supplies a complete `IconHexSet`; there is no
+	/// per-field fallback within a non-default case, the same way
+	/// `SurfacePalette.HexSet` has no per-field fallback -- a palette that
+	/// wants "everything from .rosePine except the star" is expressed by
+	/// copying .rosePine's set and changing one field, not by leaving a
+	/// field unset.
+	var iconHexSet: IconHexSet? {
+		switch self {
+		case .default:
+			return nil
+		case .rosePine:
+			return IconHexSet(
+				folder: "#3e8fb0", unreadFeed: "#3e8fb0", readFeed: "#9ccfd8",
+				lastOpenedFeed: "#3e8fb0", unreadCellIndicator: "#3e8fb0",
+				star: "#ebbcba", today: "#eb6f92", loved: "#eb6f92"
+			)
+		case .sepia:
+			return IconHexSet(
+				folder: "#b5835a", unreadFeed: "#b5835a", readFeed: "#d4a574",
+				lastOpenedFeed: "#b5835a", unreadCellIndicator: "#b5835a",
+				star: "#d4a574", today: "#c4703a", loved: "#a8503a"
+			)
+		case .forest:
+			return IconHexSet(
+				folder: "#5a8a6b", unreadFeed: "#5a8a6b", readFeed: "#8fb89c",
+				lastOpenedFeed: "#5a8a6b", unreadCellIndicator: "#5a8a6b",
+				star: "#8fb89c", today: "#b5893a", loved: "#a8503a"
+			)
+		case .slate:
+			return IconHexSet(
+				folder: "#5f7a8a", unreadFeed: "#5f7a8a", readFeed: "#8ea3b0",
+				lastOpenedFeed: "#5f7a8a", unreadCellIndicator: "#5f7a8a",
+				star: "#8ea3b0", today: "#b5893a", loved: "#a8503a"
+			)
+		case .berry:
+			return IconHexSet(
+				folder: "#c4507a", unreadFeed: "#c4507a", readFeed: "#eb6f92",
+				lastOpenedFeed: "#c4507a", unreadCellIndicator: "#c4507a",
+				star: "#eb6f92", today: "#d97f3f", loved: "#c0483f"
+			)
+		case .ocean:
+			return IconHexSet(
+				folder: "#2f6690", unreadFeed: "#2f6690", readFeed: "#7ec8e3",
+				lastOpenedFeed: "#2f6690", unreadCellIndicator: "#2f6690",
+				star: "#7ec8e3", today: "#d97f3f", loved: "#c0483f"
+			)
+		case .sunset:
+			return IconHexSet(
+				folder: "#d9622b", unreadFeed: "#d9622b", readFeed: "#f2a65a",
+				lastOpenedFeed: "#d9622b", unreadCellIndicator: "#d9622b",
+				star: "#f2a65a", today: "#d9622b", loved: "#c0483f"
+			)
+		case .lavender:
+			return IconHexSet(
+				folder: "#7c6bab", unreadFeed: "#7c6bab", readFeed: "#b8a9d9",
+				lastOpenedFeed: "#7c6bab", unreadCellIndicator: "#7c6bab",
+				star: "#b8a9d9", today: "#d97f3f", loved: "#c0483f"
+			)
+		case .graphite:
+			return IconHexSet(
+				folder: "#6b6b6b", unreadFeed: "#6b6b6b", readFeed: "#a8a8a8",
+				lastOpenedFeed: "#6b6b6b", unreadCellIndicator: "#6b6b6b",
+				star: "#a8a8a8", today: "#c4703a", loved: "#a8503a"
+			)
 		}
 	}
 }
 
-/// Tints the native-chrome surface colors (bar/fullScreen backgrounds, plus the
-/// vibrant-text tint) as a set, independent of AccentColor --
-/// this affects UIKit chrome backgrounds, never the WKWebView article content, and
+/// Tints the native-chrome surface colors (bar backgrounds, nav bar, and the
+/// vibrant-text tint) as a set, independent of AccentColor -- this affects
+/// UIKit chrome backgrounds, never the WKWebView article content, and
 /// deliberately stays a separate picker rather than merging into AccentColor's
-/// contract (which today only tints icons/progress fill, never backgrounds). See
-/// Technotes/Themes.md's native-surface-color section for the reasoning.
+/// contract (which today only tints icons/progress fill, never backgrounds).
+/// Also independent of the light/dark/automatic `UserInterfaceColorPalette`
+/// setting: a palette tints chrome colors on top of whichever mode is
+/// active, and does not itself force a mode. See Technotes/Themes.md's
+/// native-surface-color section for the reasoning.
+///
+/// Named `SurfacePalette`, not `ColorPalette` -- `UserInterfaceColorPalette`
+/// (and its `ColorPaletteTableViewController` / `AppearanceRow.colorPalette`)
+/// already exist and mean something unrelated: the light/dark/automatic
+/// appearance picker above. This type keeps the `surfaceTint` name at the
+/// `AppDefaults.shared` property, `UserDefaults` key, and notification-name
+/// level (all unchanged below) purely to avoid a migration -- only the
+/// Swift-level type name changes, from `SurfaceTint` to `SurfacePalette`.
 ///
 /// `.default` preserves the existing colorset values unchanged, same contract as
-/// AccentColor.default. Starts with a single alternative (.slate) rather than a full
-/// palette -- grow this the same incremental way AccentColor grew from its own
-/// starting set, once there's a second real design to validate against.
-enum SurfaceTint: Int, CaseIterable, Sendable {
+/// AccentColor.default. Started with a single alternative (.slate); grown here
+/// to four the same incremental way AccentColor grew from its own starting set,
+/// now that there's more than one real design to validate against. `.sepia`,
+/// `.forest`, and `.berry` are genuinely new and take the next free raw values
+/// after `.slate` (2/3/4) -- same "append, never renumber" contract `.slate`
+/// itself already established relative to `.default`.
+enum SurfacePalette: Int, CaseIterable, Sendable {
 	case `default` = 0
 	case slate = 1
+	/// Warm parchment tone, aimed at the reading experience specifically --
+	/// a paper-like alternative to Slate's cool chrome, using the same
+	/// browns/tans a sepia-toned photo or an aged book page would.
+	case sepia = 2
+	/// Muted, desaturated green -- calmer than Slate's blue-gray without
+	/// reading as a literal "forest" hue; the same restrained-saturation
+	/// approach Slate takes, just shifted toward green.
+	case forest = 3
+	/// Soft plum/mauve -- a gentle nod to AO3's own maroon branding without
+	/// reproducing it directly; warmer and cozier than Slate or Forest.
+	case berry = 4
 
 	var description: String {
 		switch self {
 		case .default:
-			return NSLocalizedString("Default", comment: "Default surface tint")
+			return NSLocalizedString("Default", comment: "Default surface palette")
 		case .slate:
-			return NSLocalizedString("Slate", comment: "Slate surface tint")
+			return NSLocalizedString("Slate", comment: "Slate surface palette")
+		case .sepia:
+			return NSLocalizedString("Sepia", comment: "Sepia surface palette")
+		case .forest:
+			return NSLocalizedString("Forest", comment: "Forest surface palette")
+		case .berry:
+			return NSLocalizedString("Berry", comment: "Berry surface palette")
 		}
 	}
 
@@ -172,6 +361,20 @@ enum SurfaceTint: Int, CaseIterable, Sendable {
 		var barBackground: String
 		var fullScreenBackground: String
 		var vibrantText: String
+		/// Nav bar background, consumed by whichever view/controller installs
+		/// a `UINavigationBarAppearance` -- see `ArticleViewController.viewDidLoad()`.
+		var navigationBarBackground: String
+		/// Nav bar back-button/title tint, paired with `navigationBarBackground`.
+		var navigationBarTint: String
+		/// Backdrop for settings/list table and collection views -- see
+		/// Assets.Colors.settingsBackground(for:)/listBackground(for:).
+		var settingsBackground: String
+		/// Individual settings-cell fill, distinct from `settingsBackground`
+		/// so grouped-card contrast survives palette overrides -- see
+		/// Assets.Colors.settingsCellBackground(for:).
+		var settingsCellBackground: String
+		/// Feed list + timeline backdrop -- see Assets.Colors.listBackground(for:).
+		var listBackground: String
 	}
 
 	/// nil for `.default` -- same "fall back to the asset catalog" contract as
@@ -183,7 +386,45 @@ enum SurfaceTint: Int, CaseIterable, Sendable {
 			return HexSet(
 				barBackground: "#E4E7EB",
 				fullScreenBackground: "#1C2128",
-				vibrantText: "#F5F6F8"
+				vibrantText: "#F5F6F8",
+				navigationBarBackground: "#E4E7EB",
+				navigationBarTint: "#20242B",
+				settingsBackground: "#DADFE6",
+				settingsCellBackground: "#F0F2F5",
+				listBackground: "#DADFE6"
+			)
+		case .sepia:
+			return HexSet(
+				barBackground: "#EDE4D3",
+				fullScreenBackground: "#2B2318",
+				vibrantText: "#FBF6EC",
+				navigationBarBackground: "#EDE4D3",
+				navigationBarTint: "#3A2E1D",
+				settingsBackground: "#E3D7BF",
+				settingsCellBackground: "#F7EFDE",
+				listBackground: "#E3D7BF"
+			)
+		case .forest:
+			return HexSet(
+				barBackground: "#E2E8DE",
+				fullScreenBackground: "#1A2420",
+				vibrantText: "#F2F7EE",
+				navigationBarBackground: "#E2E8DE",
+				navigationBarTint: "#22301F",
+				settingsBackground: "#D6E0D1",
+				settingsCellBackground: "#EEF3EA",
+				listBackground: "#D6E0D1"
+			)
+		case .berry:
+			return HexSet(
+				barBackground: "#EDE1E6",
+				fullScreenBackground: "#241620",
+				vibrantText: "#F8EEF3",
+				navigationBarBackground: "#EDE1E6",
+				navigationBarTint: "#3D2030",
+				settingsBackground: "#E2D2DA",
+				settingsCellBackground: "#F5EAEF",
+				listBackground: "#E2D2DA"
 			)
 		}
 	}
@@ -195,7 +436,45 @@ enum SurfaceTint: Int, CaseIterable, Sendable {
 			return HexSet(
 				barBackground: "#20242B",
 				fullScreenBackground: "#0B0D10",
-				vibrantText: "#F5F6F8"
+				vibrantText: "#F5F6F8",
+				navigationBarBackground: "#20242B",
+				navigationBarTint: "#F5F6F8",
+				settingsBackground: "#16191E",
+				settingsCellBackground: "#262B33",
+				listBackground: "#16191E"
+			)
+		case .sepia:
+			return HexSet(
+				barBackground: "#2B2318",
+				fullScreenBackground: "#150F09",
+				vibrantText: "#FBF6EC",
+				navigationBarBackground: "#2B2318",
+				navigationBarTint: "#F3E7CE",
+				settingsBackground: "#1E1810",
+				settingsCellBackground: "#332A1D",
+				listBackground: "#1E1810"
+			)
+		case .forest:
+			return HexSet(
+				barBackground: "#22301F",
+				fullScreenBackground: "#0D1310",
+				vibrantText: "#F2F7EE",
+				navigationBarBackground: "#22301F",
+				navigationBarTint: "#EAF1E5",
+				settingsBackground: "#162014",
+				settingsCellBackground: "#26331F",
+				listBackground: "#162014"
+			)
+		case .berry:
+			return HexSet(
+				barBackground: "#3D2030",
+				fullScreenBackground: "#150B12",
+				vibrantText: "#F8EEF3",
+				navigationBarBackground: "#3D2030",
+				navigationBarTint: "#F3E2EA",
+				settingsBackground: "#1E1119",
+				settingsCellBackground: "#32202A",
+				listBackground: "#1E1119"
 			)
 		}
 	}
@@ -610,10 +889,10 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	var badgeColorMode: BadgeColorMode {
+	var badgeColorMode: BadgeColorPalette {
 		get {
 			let rawValue = AppDefaults.store.integer(forKey: Key.badgeColorMode)
-			return BadgeColorMode(rawValue: rawValue) ?? .neutral
+			return BadgeColorPalette(rawValue: rawValue) ?? .monochrome
 		}
 		set {
 			AppDefaults.store.set(newValue.rawValue, forKey: Key.badgeColorMode)
@@ -632,10 +911,10 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	var surfaceTint: SurfaceTint {
+	var surfaceTint: SurfacePalette {
 		get {
 			let rawValue = AppDefaults.store.integer(forKey: Key.surfaceTint)
-			return SurfaceTint(rawValue: rawValue) ?? .default
+			return SurfacePalette(rawValue: rawValue) ?? .default
 		}
 		set {
 			AppDefaults.store.set(newValue.rawValue, forKey: Key.surfaceTint)
@@ -778,7 +1057,7 @@ final class AppDefaults: Sendable {
 										Key.timelineNumberOfLines: 2,
 										Key.timelineIconDimension: IconSize.medium.rawValue,
 										Key.timelineTagDisplayMode: TagDisplayMode.compact.rawValue,
-									Key.badgeColorMode: BadgeColorMode.neutral.rawValue,
+									Key.badgeColorMode: BadgeColorPalette.monochrome.rawValue,
 										Key.accentColor: AccentColor.default.rawValue,
 										Key.timelineSortDirection: ComparisonResult.orderedDescending.rawValue,
 								Key.timelineSortField: ArticleSorter.SortField.date.rawValue,

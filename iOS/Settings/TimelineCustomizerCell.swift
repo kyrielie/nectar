@@ -18,6 +18,14 @@ final class TimelineCustomizerCell: UICollectionViewCell {
 
 	var sliderConfiguration: SliderConfiguration! {
 		didSet {
+			// Settings.storyboard binds the slider's thumbTintColor to the static
+			// primaryAccentColor asset, which never changes -- setting it here from
+			// the live Assets.Colors.primaryAccent on every configure keeps the
+			// thumb in sync with the person's accent choice, both on first layout
+			// and whenever the cell is reconfigured after an accent color change
+			// (see TimelineCustomizerCollectionViewController's accentColorDidChange
+			// observer, which triggers that reconfiguration).
+			slider.thumbTintColor = Assets.Colors.primaryAccent
 			switch sliderConfiguration {
 			case .numberOfLines:
 				slider.minimumValue = 1
@@ -60,7 +68,7 @@ final class TimelineCustomizerCell: UICollectionViewCell {
 		} else {
 			backgroundConfig = UIBackgroundConfiguration.listGroupedCell().updated(for: state)
 		}
-		backgroundConfig.backgroundColor = traitCollection.userInterfaceStyle == .dark ? .secondarySystemBackground : .white
+		backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
 		backgroundConfig.cornerRadius = 20
 		self.backgroundConfiguration = backgroundConfig
 	}

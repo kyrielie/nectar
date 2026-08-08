@@ -225,8 +225,31 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		NotificationCenter.default.addObserver(self, selector: #selector(feedIconDidBecomeAvailable(_:)), name: .feedIconDidBecomeAvailable, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(feedSettingDidChange(_:)), name: .feedSettingDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange(_:)), name: .accentColorDidChange, object: nil)
+		// surface-palette-and-badge-colors-plan, section 2.3: repaint the
+		// non-sidebar list background when the surface palette changes.
+		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
 
 		registerForTraitChanges([UITraitPreferredContentSizeCategory.self], target: self, action: #selector(preferredContentSizeCategoryDidChange))
+		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: MainFeedCollectionViewController, previousTraitCollection: UITraitCollection) in
+			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
+			self.applyListBackground()
+		}
+	}
+
+	@objc func surfaceTintDidChange(_ note: Notification) {
+		applyListBackground()
+		// The container's own background updates above, but each row's
+		// backgroundConfiguration.backgroundColor (MainFeedCollectionViewCell /
+		// MainFeedCollectionViewFolderCell) is only computed in
+		// updateConfiguration(using:) -- reload so rows actually re-run it and
+		// pick up the new listBackground, instead of staying whatever color
+		// was live when they were last configured.
+		collectionView.reloadData()
+	}
+
+	private func applyListBackground() {
+		guard collectionView.backgroundColor != .clear else { return } // sidebar appearance: stays transparent
+		collectionView.backgroundColor = Assets.Colors.listBackground(for: traitCollection)
 	}
 
 	// MARK: - Collection View Configuration
@@ -357,7 +380,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 			// This defrosts the glass.
 			collectionView.backgroundColor = .clear
 		} else {
-			collectionView.backgroundColor = .systemGroupedBackground
+			collectionView.backgroundColor = Assets.Colors.listBackground(for: traitCollection)
 		}
 	}
 

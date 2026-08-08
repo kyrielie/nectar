@@ -109,11 +109,21 @@ final class ArticleViewController: UIViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground(_:)), name: UIApplication.willEnterForegroundNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(userDefaultsDidChange(_:)), name: UserDefaults.didChangeNotification, object: nil)
 
+		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,
+		// IPHONEOS_DEPLOYMENT_TARGET = 17.0), so use registerForTraitChanges
+		// rather than the traitCollectionDidChange override it deprecated --
+		// same reasoning and pattern as WebViewController.viewDidLoad().
+		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: ArticleViewController, previousTraitCollection: UITraitCollection) in
+			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
+			self.applySurfacePaletteNavigationBarAppearance()
+		}
+
 		let appearance = UINavigationBarAppearance()
 		appearance.configureWithDefaultBackground()
 		navigationItem.standardAppearance = appearance
 		navigationItem.scrollEdgeAppearance = appearance
 		navigationItem.compactAppearance = appearance
+		applySurfacePaletteNavigationBarAppearance()
 
 		let fullScreenTapZone = UIView()
 		fullScreenTapZone.translatesAutoresizingMaskIntoConstraints = false
@@ -341,7 +351,37 @@ final class ArticleViewController: UIViewController {
 		Task { @MainActor in
 			coordinator.applyArticleBackSwipeGating()
 			navigationItem.rightBarButtonItems = rightBarButtonItems()
+			applySurfacePaletteNavigationBarAppearance()
 		}
+	}
+
+	// Section 3 of color-palette-plan.md ("Wire the two new nav-bar
+	// properties"). Re-applies on top of the configureWithDefaultBackground()
+	// appearance set in viewDidLoad -- SurfacePalette.HexSet.navigationBarBackground/
+	// navigationBarTint are nil-equivalent (.default returns nil hex sets), so
+	// .default leaves the system appearance untouched, same fallback contract
+	// as every other SurfacePalette-driven color. Uses the explicit-trait-collection
+	// pattern (self.traitCollection, not UITraitCollection.current) established
+	// for Assets.Colors.barBackground/vibrantText/fullScreenBackground.
+	private func applySurfacePaletteNavigationBarAppearance() {
+		let isDark = traitCollection.userInterfaceStyle == .dark
+		let palette = AppDefaults.shared.surfaceTint
+		let hexSet = isDark ? palette.darkHexSet : palette.lightHexSet
+		guard let hexSet else { return }
+
+		let appearance = UINavigationBarAppearance()
+		appearance.configureWithDefaultBackground()
+		if let backgroundColor = UIColor(cssHex: hexSet.navigationBarBackground) {
+			appearance.backgroundColor = backgroundColor
+		}
+		if let tintColor = UIColor(cssHex: hexSet.navigationBarTint) {
+			appearance.titleTextAttributes = [.foregroundColor: tintColor]
+			appearance.largeTitleTextAttributes = [.foregroundColor: tintColor]
+			navigationController?.navigationBar.tintColor = tintColor
+		}
+		navigationItem.standardAppearance = appearance
+		navigationItem.scrollEdgeAppearance = appearance
+		navigationItem.compactAppearance = appearance
 	}
 
 	@objc func willEnterForeground(_ note: Notification) {

@@ -16,14 +16,14 @@ class VibrantTableViewCell: UITableViewCell {
 		if selectionStyle == .none {
 			return UIColor.label
 		}
-		return isHighlighted || isSelected ? Assets.Colors.vibrantText : UIColor.label
+		return isHighlighted || isSelected ? Assets.Colors.vibrantText(for: traitCollection) : UIColor.label
 	}
 
 	var secondaryLabelColor: UIColor {
 		if selectionStyle == .none {
 			return UIColor.secondaryLabel
 		}
-		return isHighlighted || isSelected ? Assets.Colors.vibrantText : UIColor.secondaryLabel
+		return isHighlighted || isSelected ? Assets.Colors.vibrantText(for: traitCollection) : UIColor.secondaryLabel
 	}
 
 	override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {

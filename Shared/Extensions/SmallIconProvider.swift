@@ -11,6 +11,7 @@ import Articles
 import Account
 import RSCore
 import Images
+import UIKit
 
 protocol SmallIconProvider {
 	@MainActor var smallIcon: IconImage? { get }
@@ -25,11 +26,39 @@ protocol SmallIconProvider {
 
 @MainActor extension Feed: SmallIconProvider {
 	var smallIcon: IconImage? {
+		// Feature request: AO3 feeds get the bundled high-resolution vector
+		// mark instead of whatever low-res favicon.ico the site serves --
+		// takes priority over both FaviconDownloader and FaviconGenerator,
+		// the same way a downloaded favicon already takes priority over the
+		// generated placeholder below.
+		if isArchiveOfOurOwnFeed, let icon = Self.archiveOfOurOwnIcon {
+			return icon
+		}
 		if let iconImage = FaviconDownloader.shared.favicon(for: self) {
 			return iconImage
 		}
 		return FaviconGenerator.shared.favicon(self)
 	}
+
+	/// Exact-match host check, deliberately narrower than
+	/// `AO3LinkListImporter.permittedHosts` (which also covers mirror/legacy
+	/// domains like archiveofourown.com/.net and the raw IP addresses) --
+	/// this only needs to catch the host a *feed* URL would actually use,
+	/// not every host a pasted permalink might use.
+	private var isArchiveOfOurOwnFeed: Bool {
+		for candidate in [homePageURL, url] {
+			guard let candidate, let host = URL(string: candidate)?.host?.lowercased() else { continue }
+			if host == "archiveofourown.org" || host.hasSuffix(".archiveofourown.org") {
+				return true
+			}
+		}
+		return false
+	}
+
+	private static let archiveOfOurOwnIcon: IconImage? = {
+		guard let image = UIImage(named: "archiveOfOurOwnFeedIcon") else { return nil }
+		return IconImage(image, isBackgroundSuppressed: true)
+	}()
 }
 
 @MainActor extension Folder: SmallIconProvider {

@@ -53,7 +53,7 @@ import UIKit
 
 	override func didMoveToSuperview() {
 		super.didMoveToSuperview()
-		layer.backgroundColor = Assets.Colors.barBackground.cgColor
+		updateBarBackground()
 		isOpaque = true
 		NotificationCenter.default.addObserver(self, selector: #selector(textDidChange(_:)), name: UITextField.textDidChangeNotification, object: searchField)
 		// barBackground is baked into layer.backgroundColor once above rather than
@@ -63,6 +63,28 @@ import UIKit
 		// state toggle and so don't need one. See nectar-architecture.md, "App
 		// chrome color pipeline."
 		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
+
+		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,
+		// IPHONEOS_DEPLOYMENT_TARGET = 17.0), so use registerForTraitChanges
+		// rather than the traitCollectionDidChange override it deprecated --
+		// same reasoning and pattern as WebViewController.viewDidLoad(). Was a
+		// traitCollectionDidChange override (see the comment this replaced,
+		// "Pre-existing gap, surfaced by moving barBackground onto an explicit
+		// trait collection") -- functionally unchanged, just off the
+		// non-deprecated API.
+		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: ArticleSearchBar, previousTraitCollection: UITraitCollection) in
+			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
+			self.updateBarBackground()
+		}
+	}
+
+	// Assets.Colors.barBackground(for:) takes an explicit trait collection
+	// (see that property's doc comment) rather than reading
+	// UITraitCollection.current -- pass this view's own traitCollection,
+	// matching the pattern upstream NetNewsWire uses in IconView and
+	// WebViewController.
+	private func updateBarBackground() {
+		layer.backgroundColor = Assets.Colors.barBackground(for: traitCollection).cgColor
 	}
 
 	private func updateUI() {
@@ -175,7 +197,7 @@ private extension ArticleSearchBar {
 	}
 
 	@objc func surfaceTintDidChange(_ note: Notification) {
-		layer.backgroundColor = Assets.Colors.barBackground.cgColor
+		updateBarBackground()
 	}
 }
 
