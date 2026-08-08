@@ -60,6 +60,21 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 		tableView.reloadSections(IndexSet(integer: Section.preview.rawValue), with: .none)
 	}
 
+	// SettingsPaletteBackgroundHosting -- also called on a light/dark trait
+	// change, not just a palette switch; see SettingsBackgroundPalette.swift.
+	// This screen previously relied on the protocol's no-op default here,
+	// which is why its rows never picked up settingsCellBackground at all.
+	func refreshPaletteCellBackgrounds() {
+		for cell in tableView.visibleCells {
+			applySettingsCellBackground(to: cell)
+		}
+	}
+
+	override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+		guard Section(rawValue: indexPath.section) != .preview else { return } // SurfacePalettePreviewCell paints its own swatches
+		applySettingsCellBackground(to: cell)
+	}
+
     // MARK: - Table view data source
 
     override func numberOfSections(in tableView: UITableView) -> Int {
