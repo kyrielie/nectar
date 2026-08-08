@@ -153,11 +153,22 @@ class MainFeedCollectionViewFolderCell: UICollectionViewCell {
 			folderTitle.font = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .semibold)
 			unreadCountLabel.textColor = Assets.Colors.primaryAccent
 			unreadCountLabel.font = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .semibold)
+		case (false, .pad):
+			// See MainFeedCollectionViewCell's matching (false, .pad) case --
+			// backgroundConfig.backgroundColor must stay untouched (nil) so
+			// the sidebar's intentionally-.clear glass background isn't
+			// painted over with an opaque listBackground square.
+			folderTitle.textColor = .label
+			faviconView.tintColor = Assets.Colors.primaryAccent
+			folderTitle.font = UIFont.preferredFont(forTextStyle: .body)
+			unreadCountLabel.textColor = .secondaryLabel
+			unreadCountLabel.font = UIFont.preferredFont(forTextStyle: .body)
 		default:
 			// See MainFeedCollectionViewCell's matching fix -- same
 			// SurfacePalette settingsCellBackground wiring, same reason (a
 			// row should read as lighter than the list's own background,
 			// matching MainTimelineCell's card contrast, not match it exactly).
+			// Phone/insetGrouped only -- see (false, .pad) above.
 			backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
 			folderTitle.textColor = .label
 			faviconView.tintColor = Assets.Colors.primaryAccent

@@ -135,7 +135,9 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 	private lazy var navigationBarSubtitleTitleLabel: UILabel = {
 		let label = UILabel()
 		label.font = .systemFont(ofSize: 12)
-		label.textColor = .systemGray
+		// textColor is set by applyPaletteTintToCustomTitleViews(_:), called
+		// from applySurfacePaletteNavigationBarAppearance() in viewDidLoad
+		// before this label is ever shown.
 		label.textAlignment = .center
 		label.isUserInteractionEnabled = true
 		label.adjustsFontForContentSizeCategory = false
@@ -189,6 +191,13 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: MainTimelineModernViewController, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
 			self.applyListBackground()
+			// applySurfacePaletteNavigationBarAppearance() also recolors
+			// navigationBarTitleLabel/navigationBarSubtitleTitleLabel via
+			// applyPaletteTintToCustomTitleViews(_:) below -- no separate
+			// reload needed for the collection view itself: MainTimelineCell's
+			// resting-state background is .clear (transparent, painted by
+			// listBackground above), not a baked hex color, so there's
+			// nothing per-cell left that goes stale on a trait change.
 			self.applySurfacePaletteNavigationBarAppearance()
 		}
 
@@ -303,6 +312,20 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 				}
 			}
 		}
+	}
+
+	/// `applySurfacePaletteNavigationBarAppearance()` sets
+	/// `UINavigationBarAppearance.titleTextAttributes`/`largeTitleTextAttributes`,
+	/// but this screen's title and subtitle are custom `UILabel`s installed as
+	/// `navigationItem.titleView`/`subtitleView` (`navigationBarTitleLabel`/
+	/// `navigationBarSubtitleTitleLabel` above) -- a custom titleView bypasses
+	/// UINavigationBarAppearance's text-attribute rendering entirely, so
+	/// those two labels never picked up `navigationBarTint` from a non-default
+	/// SurfacePalette. `tintColor` is nil for `.default` (system palette,
+	/// meaning "use the normal dynamic label colors").
+	func applyPaletteTintToCustomTitleViews(_ tintColor: UIColor?) {
+		navigationBarTitleLabel.textColor = tintColor ?? .label
+		navigationBarSubtitleTitleLabel.textColor = tintColor ?? .secondaryLabel
 	}
 
 	func updateNavigationBarTitle(_ text: String) {

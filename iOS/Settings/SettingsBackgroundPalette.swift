@@ -21,17 +21,36 @@ protocol SettingsPaletteBackgroundHosting: UIViewController {
 	/// `UITableViewController`s, a `UICollectionView` for
 	/// `UICollectionViewController`s.
 	var paletteBackgroundView: UIView { get }
+
+	/// Repaint whatever per-row/per-cell fill this screen owns
+	/// (`applySettingsCellBackground(to:)` over `visibleCells`, a plain
+	/// `reloadData()`, a `reloadSections`, etc.) -- called after every
+	/// `applySettingsPaletteBackground()`, including on a light/dark trait
+	/// change. Default is a no-op, correct for any screen with no per-cell
+	/// palette-driven fill of its own.
+	func refreshPaletteCellBackgrounds()
 }
 
 extension SettingsPaletteBackgroundHosting {
 
+	func refreshPaletteCellBackgrounds() {}
+
 	/// Call once from `viewDidLoad()`.
 	func configureSettingsPaletteBackground() {
 		applySettingsPaletteBackground()
+		refreshPaletteCellBackgrounds()
 
 		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
 			self.applySettingsPaletteBackground()
+			// Bug fix: this only used to repaint paletteBackgroundView (the
+			// container). Each row's own settingsCellBackground fill is a
+			// baked hex color (RSColor(cssHex:)), not a dynamic system color,
+			// so it doesn't repaint itself on a light/dark switch -- it needs
+			// the same explicit refresh a .surfaceTintDidChange palette
+			// switch already gets below, or rows already on screen keep the
+			// previous appearance's color until they scroll off and back.
+			self.refreshPaletteCellBackgrounds()
 		}
 
 		NotificationCenter.default.addObserver(forName: .surfaceTintDidChange, object: nil, queue: .main) { [weak self] _ in

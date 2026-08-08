@@ -515,6 +515,12 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 	}
 
 	@objc func surfaceTintDidChange(_ note: Notification) {
+		refreshPaletteCellBackgrounds()
+	}
+
+	// SettingsPaletteBackgroundHosting -- also called on a light/dark trait
+	// change now, not just a palette switch; see SettingsBackgroundPalette.swift.
+	func refreshPaletteCellBackgrounds() {
 		for cell in tableView.visibleCells {
 			applySettingsCellBackground(to: cell)
 		}

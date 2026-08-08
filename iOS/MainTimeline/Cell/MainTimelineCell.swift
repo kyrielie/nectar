@@ -116,15 +116,30 @@ final class MainTimelineCell: UICollectionViewCell {
 			backgroundConfig.cornerRadius = 0
 		}
 
-		// Selected cells keep the standard system selection color from updated(for: state).
+		// Resting-state cards are intentionally transparent, same as upstream
+		// NetNewsWire: the card shows whatever's drawn behind it
+		// (MainTimelineModernViewController's own listBackground, itself
+		// palette-aware) rather than painting a second, separate fill on top.
+		// This was briefly changed to an opaque settingsCellBackground fill to
+		// work around a bug where a non-default SurfacePalette left rows
+		// looking flatly wrong -- that bug was actually the *container* never
+		// picking up listBackground (fixed in
+		// MainTimelineModernViewController.applyListBackground()); painting
+		// the cards opaque was the wrong fix for it and is reverted here.
+		// Selected cells keep the standard system selection color from
+		// updated(for: state).
 		if state.isSwiped {
 			backgroundConfig.backgroundColor = .secondarySystemFill
 		} else if !state.isSelected {
-			backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
+			backgroundConfig.backgroundColor = .clear
 		}
 
 		let isActive = state.isSwiped || state.isSelected
 
+		// The Settings live-preview cell (TimelineCustomizerCollectionViewController)
+		// is the one legitimate exception: it sits directly on a
+		// settingsBackground container with no listBackground layer beneath
+		// it, so it still needs its own opaque fill to read as a card at all.
 		if isPreview {
 			backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
 		}
