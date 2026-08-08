@@ -30,32 +30,58 @@ protocol SurfacePaletteNavigationBarAware: UIViewController {
 	/// its own flat color. Defaults to `false` so adopting this protocol without
 	/// overriding the property preserves the original always-opaque behavior.
 	var wantsTransparentScrollEdgeAppearance: Bool { get }
+
+	/// Called every time `applySurfacePaletteNavigationBarAppearance()` runs,
+	/// with the same resolved tint color it just applied to
+	/// `UINavigationBarAppearance.titleTextAttributes`/`largeTitleTextAttributes`
+	/// (`nil` for the `.default` palette, meaning "use normal dynamic system
+	/// colors"). `UINavigationBarAppearance`'s text attributes only affect
+	/// `navigationItem.title` rendered by the system's own title view --
+	/// they have **no effect** on a custom `navigationItem.titleView`/
+	/// `subtitleView`. Any screen that installs one of those (e.g.
+	/// `MainTimelineModernViewController`'s `navigationBarTitleLabel`/
+	/// `navigationBarSubtitleTitleLabel`) must override this and recolor its
+	/// own label(s) here, or they'll silently keep whatever color they had
+	/// regardless of the active SurfacePalette. Default is a no-op, which is
+	/// correct for any screen relying on `navigationItem.title` directly.
+	func applyPaletteTintToCustomTitleViews(_ tintColor: UIColor?)
 }
 
 extension SurfacePaletteNavigationBarAware {
 
 	var wantsTransparentScrollEdgeAppearance: Bool { false }
+	func applyPaletteTintToCustomTitleViews(_ tintColor: UIColor?) {}
 
 	/// Call once from `viewDidLoad()` and again from a `.surfaceTintDidChange`
 	/// observer. Uses the explicit-trait-collection pattern (`self.traitCollection`,
 	/// not `UITraitCollection.current`) established for
 	/// `Assets.Colors.barBackground`/`vibrantText`/`fullScreenBackground`.
 	///
-	/// `.default` palette's `HexSet` is nil, so this intentionally leaves the
-	/// system appearance untouched rather than resetting to
-	/// `configureWithDefaultBackground()` -- same "nil means don't override"
-	/// contract as every other SurfacePalette-driven color. That also means a
-	/// controller that previously had a custom palette applied and then
-	/// switches to `.default` keeps the last-applied appearance until it's
-	/// re-created; none of the three current call sites are long-lived enough
-	/// across a palette-to-default transition for this to be visible in
-	/// practice, but a future long-lived host should reset standardAppearance/
-	/// scrollEdgeAppearance/compactAppearance to nil in the `hexSet == nil` case.
+	/// `.default` palette's `HexSet` is nil, meaning "don't override" -- the
+	/// same contract as every other SurfacePalette-driven color. Unlike a
+	/// plain color property, though, a `UINavigationBarAppearance` set on
+	/// this controller sticks around until something explicitly clears it,
+	/// so "don't override" on the way *back* to `.default` has to mean
+	/// "clear whatever a previous custom palette left behind," not "leave
+	/// it untouched": `MainFeedCollectionViewController` and
+	/// `MainTimelineModernViewController` are the app's long-lived root
+	/// screens (not re-created per push the way Settings' screens are), so
+	/// picking Slate, backing out, then switching to Default while either
+	/// stays on screen is a real, reachable transition -- not the
+	/// hypothetical this comment used to assume away. Reset to nil (the
+	/// system's own appearance) in that case instead of returning early.
 	func applySurfacePaletteNavigationBarAppearance() {
 		let isDark = traitCollection.userInterfaceStyle == .dark
 		let palette = AppDefaults.shared.surfaceTint
 		let hexSet = isDark ? palette.darkHexSet : palette.lightHexSet
-		guard let hexSet else { return }
+		guard let hexSet else {
+			navigationItem.standardAppearance = nil
+			navigationItem.compactAppearance = nil
+			navigationItem.scrollEdgeAppearance = nil
+			navigationController?.navigationBar.tintColor = nil
+			applyPaletteTintToCustomTitleViews(nil)
+			return
+		}
 
 		let appearance = UINavigationBarAppearance()
 		appearance.configureWithDefaultBackground()
@@ -70,6 +96,7 @@ extension SurfacePaletteNavigationBarAware {
 		}
 		navigationItem.standardAppearance = appearance
 		navigationItem.compactAppearance = appearance
+		applyPaletteTintToCustomTitleViews(tintColor)
 
 		guard wantsTransparentScrollEdgeAppearance else {
 			navigationItem.scrollEdgeAppearance = appearance

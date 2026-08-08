@@ -94,9 +94,36 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController, Se
 			}
 		}
 
+		// TimelineCustomizerCell/StatsVisibilityCell compute
+		// Assets.Colors.settingsCellBackground(for:) inside their own
+		// updateConfiguration(using:), but UIKit only re-invokes that when a
+		// cell's own state changes (highlight/selection), not on an external
+		// notification. configureSettingsPaletteBackground()'s own
+		// .surfaceTintDidChange observer only repaints paletteBackgroundView
+		// (this collection view's container background), so without this,
+		// switching SurfacePalette while this screen is visible leaves every
+		// row showing the previous palette's settingsCellBackground until
+		// the screen is torn down and re-pushed. Reusing userDefaultsDidChange()
+		// (a plain reloadData()) forces each cell to rebuild and re-run
+		// updateConfiguration(using:) with the live palette, same as
+		// accentColorDidChange above already does for thumb tints.
+		NotificationCenter.default.addObserver(forName: .surfaceTintDidChange, object: nil, queue: .main) { [weak self] _ in
+			Task { @MainActor in
+				self?.refreshPaletteCellBackgrounds()
+			}
+		}
+
 		configureCollectionView()
 		configureSettingsPaletteBackground()
     }
+
+	// SettingsPaletteBackgroundHosting -- also called on a light/dark trait
+	// change now, not just a palette switch; see SettingsBackgroundPalette.swift.
+	// Reuses userDefaultsDidChange() (a plain reloadData()), same fix shape
+	// as the .surfaceTintDidChange observer above.
+	func refreshPaletteCellBackgrounds() {
+		userDefaultsDidChange()
+	}
 	private func configureCollectionView() {
 		collectionView.register(
 			TimelineHeaderView.self,

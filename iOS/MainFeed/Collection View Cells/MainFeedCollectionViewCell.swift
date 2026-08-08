@@ -100,6 +100,20 @@ final class MainFeedCollectionViewCell: UICollectionViewCell {
 											   weight: .semibold)
 			unreadCountLabel.textColor = Assets.Colors.primaryAccent
 			unreadCountLabel.font = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize, weight: .semibold)
+		case (false, .pad):
+			// Deliberately leaves backgroundConfig.backgroundColor untouched
+			// (nil) here. .pad's collection view background is intentionally
+			// .clear -- MainFeedCollectionViewController.configureCollectionView()'s
+			// "This defrosts the glass" case -- so a non-highlighted sidebar
+			// row must stay transparent too, or every row paints an opaque
+			// listBackground square over the sidebar material and the glass
+			// effect disappears entirely. This case must stay separate from
+			// the phone/insetGrouped default below, which intentionally does
+			// paint an opaque listBackground.
+			feedTitle.textColor = .label
+			feedTitle.font = UIFont.preferredFont(forTextStyle: .body)
+			unreadCountLabel.font = UIFont.preferredFont(forTextStyle: .body)
+			unreadCountLabel.textColor = .secondaryLabel
 		default:
 			// Was left at UIBackgroundConfiguration's own default (systemBackground),
 			// which meant a non-default SurfacePalette (e.g. Slate) tinted the
@@ -111,7 +125,9 @@ final class MainFeedCollectionViewCell: UICollectionViewCell {
 			// uses for its own cards against listBackground -- not listBackground
 			// itself, which made every row exactly match the container behind it
 			// (no visible row at all, and in Slate specifically read as flatly
-			// wrong rather than merely blending in).
+			// wrong rather than merely blending in). Phone/insetGrouped only --
+			// see the (false, .pad) case above for why iPad's sidebar must not
+			// take this branch.
 			backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
 			feedTitle.textColor = .label
 			feedTitle.font = UIFont.preferredFont(forTextStyle: .body)
