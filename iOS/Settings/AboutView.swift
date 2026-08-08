@@ -69,7 +69,6 @@ struct AboutView: View {
 			.scenePadding(.horizontal)
 		}
 		.multilineTextAlignment(.center)
-		.background(Color(uiColor: .systemBackground))
 		.navigationTitle(Text(verbatim: "About Nectar"))
     }
 }

@@ -362,52 +362,163 @@ free; Nectar's per-theme colors can't be expressed that way, since custom
 themes need their own light/dark colors, so this pipeline needs its own
 live-invalidation hook that the dynamic-color approach got automatically.
 
-## App chrome color pipeline (Accent Color / Surface Tint)
+## App chrome color pipeline (Accent Color / Surface Palette)
 
 Two independent systems tint native UIKit chrome, deliberately separate
-from the article-reader theme pipeline above — a "Slate" surface tint and a
+from the article-reader theme pipeline above — a "Slate" surface palette and a
 light article theme can legitimately show different chrome colors at the
 same time, that's intended, not a bug to reconcile:
 
 - **Accent Color** (`Assets.Colors.primaryAccent`/`.secondaryAccent`) tints
   icons and progress indicators.
-- **Surface Tint** (`Assets.Colors.barBackground`/`.vibrantText`/
-  `.fullScreenBackground`) tints chrome surface backgrounds. `.default`
-  falls back to the existing asset-catalog colorset value for each, same
-  contract `AccentColor.default` uses.
+- **Surface Palette** (`SurfacePalette`, `AppDefaults.shared.surfaceTint`)
+  tints chrome surface backgrounds as a coordinated set. The Swift type is
+  `SurfacePalette`; the `AppDefaults` property, `UserDefaults` key, and
+  notification name are still spelled `surfaceTint`/`.surfaceTintDidChange`
+  — that's a deliberate leftover from before the type was renamed from
+  `SurfaceTint`, kept to avoid a defaults migration, not an inconsistency to
+  "fix." `.default` falls back to the existing asset-catalog colorset value
+  for each field, same contract `AccentColor.default` uses. Five cases ship
+  today: `.default`, `.slate`, `.sepia`, `.forest`, `.berry`.
 
-Pipeline shape: setting `AppDefaults.shared.accentColor`/`.surfaceTint`
-posts `.accentColorDidChange`/`.surfaceTintDidChange` respectively, an
-observer forces a repaint, and the repaint reads `Assets.Colors.*` fresh —
-these are deliberately non-cached, live per-read properties, not resolved
-once and stored.
+### SurfacePalette.HexSet: one struct, two appearances, eight fields
+
+Each non-default `SurfacePalette` case supplies a `lightHexSet` and a
+`darkHexSet` (both `nil` for `.default`), each a complete `HexSet` of eight
+hex-string fields. Every field has a matching `Assets.Colors` accessor that
+takes an explicit `UITraitCollection` and branches light/dark off
+`traitCollection.userInterfaceStyle`, falling back to the pre-existing
+asset-catalog colorset of the same base name when the resolved hex is `nil`
+(the `.default` case) or fails to parse:
+
+| `HexSet` field | `Assets.Colors` accessor | Used for |
+| --- | --- | --- |
+| `barBackground` | `barBackground(for:)` | `ArticleSearchBar`'s bar fill |
+| `vibrantText` | `vibrantText(for:)` | Text drawn on top of a tinted bar/surface |
+| `fullScreenBackground` | `fullScreenBackground(for:)` | Full-screen transition backdrop (`ImageTransition`) |
+| `navigationBarBackground` | — (consumed directly by `SurfacePaletteNavigationBarAware`) | `UINavigationBarAppearance.backgroundColor` |
+| `navigationBarTint` | — (consumed directly by `SurfacePaletteNavigationBarAware`) | Nav bar title/back-button/large-title tint |
+| `settingsBackground` | `settingsBackground(for:)` | Backdrop behind settings/list table and collection views |
+| `settingsCellBackground` | `settingsCellBackground(for:)` | Individual cell fill *inside* that backdrop |
+| `listBackground` | `listBackground(for:)` | Feed list + timeline container backdrop |
+
+The `settingsBackground`/`settingsCellBackground` pair (and the
+`listBackground`/`settingsCellBackground` pair) exist specifically so a
+palette can keep a **container** and the **cells drawn on top of it**
+visually distinct — the cell color is always the lighter, more-legible one
+of the pair in both appearances, e.g. Slate dark's `listBackground` is
+`#16191E` against a `settingsCellBackground` of `#262B33`. Any new
+card/cell/row that sits on top of a `listBackground` or `settingsBackground`
+surface should read `settingsCellBackground`, not re-use the container's
+own color — using the same color for both makes the row visually disappear
+into its container instead of standing out, and reads as broken (not merely
+flat) once a non-default palette is active. `MainTimelineCell` establishes
+this pattern for timeline cards; `MainFeedCollectionViewCell`/
+`MainFeedCollectionViewFolderCell` follow it for feed-list rows.
+
+### Live-update pipeline shape
+
+Setting `AppDefaults.shared.accentColor`/`.surfaceTint` posts
+`.accentColorDidChange`/`.surfaceTintDidChange` **synchronously** (the
+setter calls `NotificationCenter.default.post` directly, on the same
+thread, before the setter returns), an observer forces a repaint, and the
+repaint reads `Assets.Colors.*` fresh — these are deliberately non-cached,
+live per-read properties, not resolved once and stored.
+
+The synchronous-post detail matters for any screen that changes the
+palette from inside a `UITableViewDelegate`/`UICollectionViewDelegate`
+selection callback (`didSelectRowAt:`, etc.): setting
+`AppDefaults.shared.surfaceTint` there re-enters the same view controller's
+own `.surfaceTintDidChange` observer *before* `didSelectRowAt:` reaches any
+code after the assignment. If that observer and the selection handler's own
+follow-up code both call `reloadSections`/`reloadData` on the section
+containing the just-tapped row, UIKit's post-selection bookkeeping
+(restoring the checkmark/highlight after the delegate call returns) can run
+against a section that was torn down and rebuilt twice underneath it,
+leaving the checkmark on the previously-selected row instead of the one
+just tapped. `ColorPaletteTableViewController` and
+`AccentColorTableViewController` both guard against this the same way: a
+`isHandling*Selection` flag suppresses the notification-driven reload while
+the selection handler's own (single, combined) `reloadSections` call is in
+flight, so the row's own section is only ever rebuilt once per tap. Any new
+screen that both listens for `.surfaceTintDidChange`/`.accentColorDidChange`
+*and* changes that same default from its own selection handling needs the
+same guard, not just a same-section double-reload "coincidentally working."
 
 Current observer list for each notification, kept here explicitly so the
-next person adding a Surface-Tint-consuming view knows to add an observer
-too: **Accent Color** has `SceneDelegate`,
-`MainFeedCollectionViewController`, `MainTimelineModernViewController`.
-**Surface Tint** has `ArticleSearchBar`, which bakes `barBackground` into a
-`CGColor` once in `didMoveToSuperview()` and so needs its own observer to
-repaint on a live Surface Tint change (added as part of the same fix that
-gave the article pipeline above its own live-invalidation hook — same
-underlying shape, "new machinery added without the free live-update
-behavior a dynamic system color would have given it"). `Vibrant*` views
+next person adding a Surface-Palette-consuming view knows to add an
+observer too:
+
+**Accent Color** (`.accentColorDidChange`): `SceneDelegate`,
+`MainFeedCollectionViewController`, `MainTimelineModernViewController`,
+`AccentColorTableViewController`.
+
+**Surface Palette** (`.surfaceTintDidChange`): `ArticleSearchBar`, which
+bakes `barBackground` into a `CGColor` once in `didMoveToSuperview()` and so
+needs its own observer to repaint on a live change (added as part of the
+same fix that gave the article pipeline above its own live-invalidation
+hook — same underlying shape, "new machinery added without the free
+live-update behavior a dynamic system color would have given it");
+`MainFeedCollectionViewController`, which repaints `listBackground` and
+reloads the collection view so each row's `settingsCellBackground` fill
+gets recomputed; `MainTimelineModernViewController`, same reasoning;
+`ColorPaletteTableViewController`, `AccentColorTableViewController`, and
+`SettingsBackgroundPalette`/`SurfacePaletteAware` (SwiftUI-facing), which
+repaint the Settings screens' own `settingsBackground`/
+`settingsCellBackground` fills; `SettingsViewController`. `Vibrant*` views
 (`VibrantLabel`/`VibrantButton`/`VibrantTableViewCell`) deliberately don't
 observe it, since they already re-read `.vibrantText` on every
 highlight/selection state toggle, which happens far more often than a
-Surface Tint change — the staleness window is bounded by the next
+Surface Palette change — the staleness window is bounded by the next
 interaction, not indefinite the way `ArticleSearchBar`'s baked `CGColor`
 was. `ImageTransition` deliberately doesn't observe it either, since it
 reads `.fullScreenBackground` fresh at the start of each transition, which
 is already "live" for practical purposes.
 
-`SurfaceTint.HexSet` originally also carried `controlBackground` and
+`SurfacePalette.HexSet` originally also carried `controlBackground` and
 `sectionHeader` fields; both were removed (along with the corresponding
 `Assets.Colors` properties) once grep confirmed zero non-definition call
-sites for either — dead fields from early in Surface Tint's design, never
+sites for either — dead fields from early in Surface Palette's design, never
 wired to an actual consumer. If a future engineer finds this file compared
 against an old planning doc and wonders why `HexSet` looks incomplete,
 that's why.
+
+### Nav bar appearance: `SurfacePaletteNavigationBarAware`
+
+`ArticleViewController`, `MainFeedCollectionViewController`, and
+`MainTimelineModernViewController` all adopt
+`SurfacePaletteNavigationBarAware` (`Shared/Extensions/`) and call
+`applySurfacePaletteNavigationBarAppearance()` once from `viewDidLoad()`
+and again from their own `.surfaceTintDidChange`/trait-change handlers. The
+shared method always builds an opaque `standardAppearance`/
+`compactAppearance` from `navigationBarBackground`/`navigationBarTint` (the
+bar once a large title has collapsed, or in compact height), but branches on
+a protocol property, `wantsTransparentScrollEdgeAppearance` (default
+`false`), for `scrollEdgeAppearance` — the bar shown at the *top* of the
+content, before any scrolling:
+
+- `ArticleViewController` leaves it `false`: there's no card/list content
+  behind the bar for it to blend with, so it wants the same opaque fill in
+  every scroll state, and already configures `scrollEdgeAppearance` opaquely
+  itself before its first call to `applySurfacePaletteNavigationBarAppearance()`.
+- `MainFeedCollectionViewController` and `MainTimelineModernViewController`
+  override it to `true`: both sit on top of a scrolling list of cards/rows,
+  and want the system's normal large-title behavior where the bar is
+  transparent at the top and only opaque once content has scrolled
+  underneath it, so the bar matches whatever's drawn there (the transparent
+  sidebar "glass," or a timeline card's own `settingsCellBackground`,
+  visible through it) instead of imposing a flat `navigationBarBackground`
+  fill that reads as a mismatched strip at the top of the screen.
+
+This split exists because `applySurfacePaletteNavigationBarAppearance()`
+was extracted from `ArticleViewController`'s own (correct, always-opaque)
+implementation and reused as-is by the other two screens; unconditionally
+setting `scrollEdgeAppearance` to the same opaque `appearance` object as
+`standardAppearance` regressed both of their previously-transparent top
+edges. Any *future* screen adopting this protocol should think about which
+side of that split it's on before assuming the default (`false`, opaque) is
+correct — the wrong choice is silent (nothing crashes) and only shows up as
+a color mismatch at the very top of the content.
 
 `Assets.Colors`'s existing dark/light-branching properties
 (`barBackground`, `vibrantText`, `fullScreenBackground`) resolve their

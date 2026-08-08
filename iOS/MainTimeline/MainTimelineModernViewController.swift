@@ -16,7 +16,14 @@ import Account
 import Articles
 import Images
 
-final class MainTimelineModernViewController: UIViewController, UndoableCommandRunner {
+final class MainTimelineModernViewController: UIViewController, UndoableCommandRunner, SurfacePaletteNavigationBarAware {
+
+	// This screen's large title collapses over a scrolling timeline of
+	// cards -- keep the scroll-edge bar transparent so the cards' own color
+	// shows through instead of an opaque bar fill (see
+	// SurfacePaletteNavigationBarAware's doc comment).
+	var wantsTransparentScrollEdgeAppearance: Bool { true }
+
 
 	// MARK: Private Variables
 	private var numberOfTextLines = 0
@@ -178,9 +185,11 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 		assert(dataSource != nil)
 		configureCollectionView(dataSource!)
 		applyListBackground()
+		applySurfacePaletteNavigationBarAppearance()
 		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: MainTimelineModernViewController, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
 			self.applyListBackground()
+			self.applySurfacePaletteNavigationBarAppearance()
 		}
 
 		configureSearchController()
@@ -1421,6 +1430,7 @@ private extension MainTimelineModernViewController {
 	@objc func surfaceTintDidChange(_ note: Notification) {
 		Self.logger.debug("MainTimelineModernViewController: surfaceTintDidChange")
 		applyListBackground()
+		applySurfacePaletteNavigationBarAppearance()
 		// Rows paint their own settingsCellBackground fill in the default
 		// (non-selected/non-preview) state -- see
 		// MainTimelineCell.updateConfiguration(using:) -- so a palette

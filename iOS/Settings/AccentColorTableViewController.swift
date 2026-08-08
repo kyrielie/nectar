@@ -167,10 +167,43 @@ final class AccentColorTableViewController: UITableViewController, SettingsPalet
 			// main Settings menu before they could get to those. Reload
 			// in place instead, matching how .badgePalette below already
 			// behaves.
-			if let accentColor = AccentColor(rawValue: indexPath.row) {
-				AppDefaults.shared.accentColor = accentColor
+			//
+			// surface-palette-followup-plan, Issue C: the row's tap
+			// highlight used to rely on the ambient window.tintColor,
+			// which SceneDelegate.handleAccentColorDidChange reassigns
+			// the instant AppDefaults.shared.accentColor's setter posts
+			// .accentColorDidChange (synchronously -- see that setter's
+			// own comments). But UIKit's built-in highlight animation
+			// had already started rendering with the *old* tint on
+			// touch-down, and reloadSections below tears the row down
+			// before that animation finishes -- net effect, a truncated
+			// flash of a stale color. This screen is choosing the
+			// color, so it shouldn't depend on the ambient tint at all:
+			// set an explicit selectedBackgroundView sourced from the
+			// tapped row's own color before changing accentColor, then
+			// hold it briefly before reloading. Matches
+			// VibrantTableViewCell.applyThemeProperties()'s established
+			// flat, fully-opaque selectedBackgroundView convention, not
+			// a new design choice -- sourced from the row's own
+			// primaryHex (via the same swatchImage helper) rather than
+			// VibrantTableViewCell's ambient secondaryAccent, since here
+			// the row *is* the color being chosen.
+			guard let accentColor = AccentColor(rawValue: indexPath.row) else { return }
+
+			if let cell = tableView.cellForRow(at: indexPath) {
+				let highlightColor = accentColor.primaryHex.flatMap { UIColor(cssHex: $0) } ?? Self.defaultPrimarySwatchColor
+				let selectedBackgroundView = UIView(frame: .zero)
+				selectedBackgroundView.backgroundColor = highlightColor
+				cell.selectedBackgroundView = selectedBackgroundView
 			}
-			tableView.reloadSections(IndexSet([Section.accentColors.rawValue, Section.preview.rawValue]), with: .none)
+
+			AppDefaults.shared.accentColor = accentColor
+
+			UIView.animate(withDuration: 0.2, delay: 0.15, options: [], animations: {
+				tableView.deselectRow(at: indexPath, animated: true)
+			}, completion: { _ in
+				tableView.reloadSections(IndexSet([Section.accentColors.rawValue, Section.preview.rawValue]), with: .none)
+			})
 		case .badgePalette:
 			// Pre-existing off-by-one, fixed alongside the icon-and-badge-palette-plan
 			// changes: BadgeColorPalette's raw values are 1-based

@@ -133,11 +133,13 @@
 		872A441A15A239651DDAAE6C /* MainFeedCollectionViewFolderCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 592E25A74431291C0AF61880 /* MainFeedCollectionViewFolderCell.swift */; };
 		874C3DE4544F6828594EE0FF /* CSSImportExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7B99107A73BC3141F4F0B9 /* CSSImportExtractorTests.swift */; };
 		87806C63C60811604FABEDA0 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 6B0BB76AA9AF689160D5B231 /* Localizable.xcstrings */; };
+		8883641BDF5CD3BDE385661A /* SurfacePaletteNavigationBarAware.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD92F948B56668B8C542DB59 /* SurfacePaletteNavigationBarAware.swift */; };
 		893D7B05B40FA54A24B2AE81 /* DetailKeyboardShortcuts.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3FF508EDC33DE3F4254E9AA6 /* DetailKeyboardShortcuts.plist */; };
 		895DFD12C44C985B537AA641 /* MainFeedCollectionHeaderReusableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20E5BC5E6761AB2BB5DC3C8 /* MainFeedCollectionHeaderReusableView.swift */; };
 		8A8C1BB69E3801F5077060B8 /* RSTree in Frameworks */ = {isa = PBXBuildFile; productRef = 9F8FEA64037C2FBBB425E62F /* RSTree */; };
 		8C28380B3660064273040340 /* ContextMenuPreviewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E374143FB4FA6BAC5F0D2DA9 /* ContextMenuPreviewViewController.swift */; };
 		8C6606D73014CFF179CE7E6E /* UnreadFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF1C72C8F04830B0695D3CF /* UnreadFeed.swift */; };
+		8C73AD199CFC0884071279DA /* SurfacePaletteAware.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473DF8E0A097A37599A298F6 /* SurfacePaletteAware.swift */; };
 		8ECA534F1C23FE68C64E29AA /* main.js in Resources */ = {isa = PBXBuildFile; fileRef = 31CBD810D281D864C5D110E0 /* main.js */; };
 		8ED12C1BC67095900FF0F335 /* TimelineKeyboardShortcuts.plist in Resources */ = {isa = PBXBuildFile; fileRef = B085BA6F278DFCC129CB03D0 /* TimelineKeyboardShortcuts.plist */; };
 		8FA96DEBDCC1EC46330CB4D1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 22AE046256E7B985A23CADFD /* Assets.xcassets */; };
@@ -336,6 +338,7 @@
 		4282386F19959AD746D614C4 /* ArticleThemePlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemePlist.swift; sourceTree = "<group>"; };
 		452F5904107DC49BDE569FEE /* RSTree */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RSTree; path = Modules/RSTree; sourceTree = SOURCE_ROOT; };
 		459AC2EE6DD0C5DD440DC4A9 /* RefreshInterval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshInterval.swift; sourceTree = "<group>"; };
+		473DF8E0A097A37599A298F6 /* SurfacePaletteAware.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfacePaletteAware.swift; sourceTree = "<group>"; };
 		4820776BEC859D8546D325EC /* DinosaurRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DinosaurRowView.swift; sourceTree = "<group>"; };
 		4853704E5BA2FFC9BB28FDFF /* DefaultAccountNames.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = DefaultAccountNames.xcstrings; sourceTree = "<group>"; };
 		48955878779452CF41F91954 /* ReadFeedDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadFeedDelegate.swift; sourceTree = "<group>"; };
@@ -427,6 +430,7 @@
 		A7E4182681904059C4FDC62C /* RSWeb */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RSWeb; path = Modules/RSWeb; sourceTree = SOURCE_ROOT; };
 		AAEAF0FF77BBE87180FB32D9 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		AB4EBD6F6A6FF4EFA34F350A /* ArticleStatusSyncTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleStatusSyncTimer.swift; sourceTree = "<group>"; };
+		AD92F948B56668B8C542DB59 /* SurfacePaletteNavigationBarAware.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfacePaletteNavigationBarAware.swift; sourceTree = "<group>"; };
 		ADC91A90B641331B6CCBCF9A /* BadgeColorTableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgeColorTableTests.swift; sourceTree = "<group>"; };
 		B085BA6F278DFCC129CB03D0 /* TimelineKeyboardShortcuts.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = TimelineKeyboardShortcuts.plist; sourceTree = "<group>"; };
 		B097756D7E321AA2E83909C5 /* SmartFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartFeed.swift; sourceTree = "<group>"; };
@@ -863,6 +867,7 @@
 				408CF200893FD78B61028BCD /* SettingsTableViewCell.xib */,
 				1DC9E81A26EF709D33F254C6 /* SettingsViewController.swift */,
 				A668DF87CBAB972204DAB988 /* StatsVisibilityCell.swift */,
+				473DF8E0A097A37599A298F6 /* SurfacePaletteAware.swift */,
 				5C34F26F4BA9ADB448F37CF8 /* SurfacePalettePreviewCell.swift */,
 				0C3F719F3FC24AAE7F0B920F /* TickMarkSlider.swift */,
 				D5F588710EF6C2E7DE25DF90 /* TimelineCustomizerCell.swift */,
@@ -1009,6 +1014,7 @@
 				4EB78BFA707577156D4AAB9D /* NSAttributedString+Extensions.swift */,
 				A34BBBCEF64C157D11C03A07 /* RSImage+Extensions.swift */,
 				4EC8F675BDAC7097AD92EE79 /* SmallIconProvider.swift */,
+				AD92F948B56668B8C542DB59 /* SurfacePaletteNavigationBarAware.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -1387,6 +1393,8 @@
 				27FF4DD68F2839BFAE1795B1 /* StarredFeedDelegate.swift in Sources */,
 				03BB10C63EBB6682AE758D17 /* StatsVisibilityCell.swift in Sources */,
 				161EEF7A10D39FFDE099F82C /* StringSize+Extensions.swift in Sources */,
+				8C73AD199CFC0884071279DA /* SurfacePaletteAware.swift in Sources */,
+				8883641BDF5CD3BDE385661A /* SurfacePaletteNavigationBarAware.swift in Sources */,
 				DEACD4D094E0D1286008E45F /* SurfacePalettePreviewCell.swift in Sources */,
 				FD0CD1ABD3EA4D7B18949EF0 /* TableOfContentsViewController.swift in Sources */,
 				772DDEFAD789846202A76844 /* TickMarkSlider.swift in Sources */,

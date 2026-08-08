@@ -106,9 +106,13 @@ final class MainFeedCollectionViewCell: UICollectionViewCell {
 			// collection view's own background via MainFeedCollectionViewController's
 			// applyListBackground(), but every row on top of it stayed the system's
 			// plain white/black -- the exact "rows... remain white in light mode"
-			// report. Rows now match the same listBackground the container behind
-			// them uses.
-			backgroundConfig.backgroundColor = Assets.Colors.listBackground(for: traitCollection)
+			// report. Rows now use settingsCellBackground, the same
+			// lighter-than-container-background contrast MainTimelineCell already
+			// uses for its own cards against listBackground -- not listBackground
+			// itself, which made every row exactly match the container behind it
+			// (no visible row at all, and in Slate specifically read as flatly
+			// wrong rather than merely blending in).
+			backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
 			feedTitle.textColor = .label
 			feedTitle.font = UIFont.preferredFont(forTextStyle: .body)
 			unreadCountLabel.font = UIFont.preferredFont(forTextStyle: .body)
