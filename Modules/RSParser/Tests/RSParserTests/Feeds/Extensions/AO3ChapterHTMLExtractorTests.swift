@@ -371,14 +371,29 @@ import Testing
 		}
 	}
 
-	@Test func singleChapterWorkTitleBecomesTocHeading() throws {
-		// Regression for the empty-ToC bug: a single-chapter work has no
-		// per-chapter <h2 class="heading"> at all, so stripping the work
-		// title's "heading" class (as the multi-chapter branch does) left
-		// tocNodes() (h1, h2.heading, h2.toc-heading) with nothing to find.
-		// The title should instead be promoted to <h1>, which tocNodes()
-		// does match, and TableOfContentsViewController's flat-list
-		// handling renders as the sole navigable row.
+	@Test func singleChapterWorkTitleIsNotAToCHeading() throws {
+		// A single-chapter work's own preface title must not survive as
+		// any tocNodes()-matching heading (h1, h2.heading, or
+		// h2.toc-heading) in the *extracted* contentHTML -- same
+		// treatment as the multi-chapter branch's workTitleIsNotAToCHeading
+		// above, via the same stripPhantomTitleHeadingClass call.
+		//
+		// This intentionally does NOT assert an h1 shows up here. An
+		// earlier version of this fix rewrote the title to <h1> instead
+		// of stripping it, reasoning that tocNodes() would otherwise find
+		// nothing to show for a single-chapter work. That's true of this
+		// extractor's own output in isolation, but the assembled article
+		// page always has its own top-level <h1> already, from
+		// template.html's `<div class="articleTitle"><h1>...`, which is
+		// what's meant to serve that role -- see
+		// TableOfContentsViewController's fallback to the lone <h1> entry
+		// when there are no <h2> chapters. Promoting AO3's own title to a
+		// second <h1> here doubled that up: the assembled page ended up
+		// with two <h1>s, which made TableOfContentsViewController treat
+		// the work as a (degenerate, two-row) anthology instead of a
+		// single book with one entry. See
+		// singleChapterWorkTemplateHeadingIsTheOnlyTocEntry below for the
+		// full assembled-page shape this is protecting.
 		let html = htmlFixtureString("ao3-work-single-chapter.html")
 		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
 		guard case .success(let result) = outcome else {
@@ -387,6 +402,31 @@ import Testing
 		}
 
 		let root = parseHTMLLiteTree(result.contentHTML)
+		let tocHeadings = descendants(of: root, where: {
+			($0.tag == "h1") || ($0.tag == "h2" && ($0.attributes["class"] == "heading" || $0.attributes["class"] == "toc-heading"))
+		})
+
+		#expect(tocHeadings.isEmpty)
+	}
+
+	@Test func singleChapterWorkTemplateHeadingIsTheOnlyTocEntry() throws {
+		// End-to-end shape of the page tocNodes() actually runs against:
+		// template.html's own `<div class="articleTitle"><h1>...` wrapper
+		// around the article title, followed by this extractor's
+		// contentHTML. For a single-chapter work that contentHTML has no
+		// heading of its own (previous test), so the template's <h1>
+		// should be the one and only tocNodes() match -- not zero (the
+		// original empty-ToC bug) and not two (the regression this fix
+		// replaces).
+		let html = htmlFixtureString("ao3-work-single-chapter.html")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		let assembledPage = "<div class=\"articleTitle\"><h1>Some Work Title</h1></div>" + result.contentHTML
+		let root = parseHTMLLiteTree(assembledPage)
 		let tocHeadings = descendants(of: root, where: {
 			($0.tag == "h1") || ($0.tag == "h2" && ($0.attributes["class"] == "heading" || $0.attributes["class"] == "toc-heading"))
 		})
