@@ -408,6 +408,60 @@ import Testing
 		#expect(result.contentHTML.contains("<span class='ao3SeriesNavDisabled'>Next</span>"))
 	}
 
+	@Test func topPrefaceSeriesRowAlsoRendersPerEntryNavigationLinks() throws {
+		// Same fixture/setup as seriesEntriesPairPreviousNextIndependentlyPerSeries
+		// above, which already confirmed the *footer*'s per-entry links.
+		// This test confirms the top preface row (id="ao3Preface") also
+		// renders through AO3PrefaceRenderer.html(id:data:)'s
+		// isSeriesNavigation branch -- one <dt>Series:</dt><dd>...</dd>
+		// pair per series membership, positioned inside the preface
+		// itself and ahead of #workskin, not just the trailing footer.
+		let html = """
+		<html><body>
+		<dl class="work meta group">
+		<dt class="series">Series:</dt>
+		<dd class="series">
+		<span class="series"><a class="previous" href="/works/111">← Previous Work</a><a class="next" href="/works/222">Next Work →</a><span class="divider"> </span><span class="position">Part 3 of <a href="/series/1001">Series One</a></span></span>, <span class="series"><a class="previous" href="/works/333">← Previous Work</a><span class="divider"> </span><span class="position">Part 5 of <a href="/series/2002">Series Two</a></span></span>
+		</dd>
+		</dl>
+		<div id="workskin">
+		<div class="chapter" id="chapter-1">
+		<div class="chapter preface group"><h3 class="title">Chapter 1</h3></div>
+		<div class="userstuff module" role="article">Body text.</div>
+		</div>
+		</div>
+		</body></html>
+		"""
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		let prefaceRange = try #require(result.contentHTML.range(of: "id='ao3Preface'"))
+		let workskinRange = try #require(result.contentHTML.range(of: "id=\"workskin\""))
+		let footerRange = try #require(result.contentHTML.range(of: "id='ao3SeriesFooter'"))
+		#expect(prefaceRange.lowerBound < workskinRange.lowerBound)
+		#expect(workskinRange.lowerBound < footerRange.lowerBound)
+
+		// The preface block itself (everything before #workskin) gets its
+		// own <dt>Series:</dt> pair per entry -- two memberships, two
+		// pairs -- not one row with both names comma-joined into a single
+		// <dd> the way every other row still renders.
+		let prefaceHTML = String(result.contentHTML[result.contentHTML.startIndex..<workskinRange.lowerBound])
+		let dtCount = prefaceHTML.components(separatedBy: "<dt>Series:</dt>").count - 1
+		#expect(dtCount == 2)
+		#expect(prefaceHTML.contains("href='nectar-series:first?ao3id=1001'"))
+		#expect(prefaceHTML.contains("href='nectar-series:next?ao3id=1001&amp;workurl=https://archiveofourown.org/works/222'"))
+		#expect(prefaceHTML.contains("href='nectar-series:first?ao3id=2002'"))
+		#expect(prefaceHTML.contains("<span class='ao3SeriesNavDisabled'>Next</span>"))
+
+		// Same links appear a second time in the trailing footer -- top
+		// and bottom both read from the same per-span parse (2a/2b), so
+		// they can't drift out of sync with each other.
+		#expect(result.contentHTML.components(separatedBy: "href='nectar-series:first?ao3id=1001'").count - 1 == 2)
+	}
+
 	@Test func metaGroupCollectionsRowRenderedForSingleChapterWork() throws {
 		// This fixture's Work Header includes a Collections row -- the only
 		// one of the four fixtures that does. Confirms a row this app

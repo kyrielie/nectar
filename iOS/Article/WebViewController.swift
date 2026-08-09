@@ -29,6 +29,13 @@ final class WebViewController: UIViewController {
 		static let scrollRestoreComplete = "scrollRestoreComplete"
 	}
 
+	// Inline series navigation (nectar-inline-series-nav-implementation-
+	// plan.md, Phase 3a) -- the private, non-web URL scheme
+	// AO3PrefaceRenderer's First/Previous/Next links use
+	// (`nectar-series:<direction>?ao3id=...&workurl=...`), recognized in
+	// decidePolicyFor navigationAction below.
+	private static let nectarSeriesScheme = "nectar-series"
+
 	private var topShowBarsView: UIView!
 	private var bottomShowBarsView: UIView!
 	private var topShowBarsViewConstraint: NSLayoutConstraint!
@@ -57,6 +64,18 @@ final class WebViewController: UIViewController {
 	private var seriesNavigationInFlight: Set<AO3SeriesNavigator.Direction> = []
 	private var isFetchingFirstWorkInSeries = false
 	private var seriesNavigationFailureMessage: String?
+
+	// Inline series navigation (nectar-inline-series-nav-implementation-
+	// plan.md, Phase 3a/3c). Interim per-tap guard against a double-fetch
+	// from a fast double-tap on the same link, keyed on the tapped
+	// href's own string -- deliberately not the richer
+	// `[SeriesNavKey: NavState]` store Phase 4e's plan describes (that
+	// needs a JS hook to repaint the tapped link's own text/disabled
+	// state in the webview, which isn't wired up yet); this only
+	// suppresses a duplicate fetch, it doesn't feed back into the
+	// rendered HTML. Reset alongside the other series-navigation state
+	// below, on article change.
+	private var nectarSeriesLinkNavigationInFlight: Set<String> = []
 
 	// Bumped at the top of every loadWebView() call. Captured by value into each
 	// dequeueWebView/ready completion so that a completion arriving after a newer
@@ -89,6 +108,7 @@ final class WebViewController: UIViewController {
 				seriesNavigationInFlight.removeAll()
 				isFetchingFirstWorkInSeries = false
 				seriesNavigationFailureMessage = nil
+				nectarSeriesLinkNavigationInFlight.removeAll()
 			}
 		}
 	}
@@ -600,12 +620,28 @@ extension WebViewController: WKNavigationDelegate {
 	func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
 
 		if navigationAction.navigationType == .linkActivated {
+			let url = navigationAction.request.url
+
+			// nectar-series: links (inline series navigation, plan Phase
+			// 3a) are app-internal navigation, not the external-link case
+			// AppDefaults.shared.disableArticleLinks exists to guard --
+			// checked before that early-return so the toggle can't
+			// silently break this feature (confirmed hazard, plan's
+			// Revision notes).
+			if url?.scheme == Self.nectarSeriesScheme {
+				decisionHandler(.cancel)
+				if let url {
+					handleNectarSeriesLink(url)
+				}
+				return
+			}
+
 			if AppDefaults.shared.disableArticleLinks {
 				decisionHandler(.cancel)
 				return
 			}
 
-			guard let url = navigationAction.request.url else {
+			guard let url else {
 				decisionHandler(.allow)
 				return
 			}
@@ -671,6 +707,16 @@ extension WebViewController: WKUIDelegate {
 	}
 
 	func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+		// nectar-series: links are never rendered with target="_blank", so
+		// this path shouldn't be reachable for them -- but block rather
+		// than assume, same "confirm, don't assume" caution the plan
+		// calls for on this mirror check (Phase 3a). No navigation
+		// side-effect here either way: decidePolicyFor navigationAction
+		// above is the one and only place a tap is actually handled.
+		if navigationAction.request.url?.scheme == Self.nectarSeriesScheme {
+			return nil
+		}
+
 		if AppDefaults.shared.disableArticleLinks {
 			return nil
 		}
@@ -1469,6 +1515,82 @@ private extension WebViewController {
 				self.seriesNavigationFailureMessage = error.displayMessage
 				UIAccessibility.post(notification: .announcement, argument: error.displayMessage)
 			}
+		}
+	}
+
+	// MARK: - Inline series navigation (nectar-series: links, Phase 3a)
+
+	/// Handles a tap on one of the `nectar-series:` links
+	/// `AO3PrefaceRenderer` builds into the preface's Series row and the
+	/// "This work is part of" footer (plan Phase 3a/3b) --
+	/// `first?ao3id=<id>`, `previous?ao3id=<id>&workurl=<permalink>`, or
+	/// `next?ao3id=<id>&workurl=<permalink>`. `url.path` carries the
+	/// direction: for a non-hierarchical URI like `nectar-series:previous?...`
+	/// (no `//` authority), `URLComponents` parses everything between the
+	/// scheme colon and the query string as `path`, not `host` -- there is
+	/// no `nectar-series://previous` form here.
+	///
+	/// Interim implementation, same scope note as
+	/// `AO3SeriesNavigator.fetchAdjacentWork(direction:workURL:feedID:account:)`/
+	/// `fetchFirstWorkInSeries(ao3SeriesID:feedID:account:)`: fetches and
+	/// stubs only the single tapped work, then stays inside the reader
+	/// (`coordinator.selectArticleInCurrentFeed`, same as
+	/// `performSeriesNavigation`/`performFirstWorkNavigation` above) rather
+	/// than the plan's Phase 4d return-to-timeline flow. Phase 4's bounded
+	/// two-page series-listing walk, its batch stub-import of every other
+	/// series member encountered along the way, and its per-`(seriesID,
+	/// direction)` UI state store (4e, repainting the tapped link itself
+	/// via a JS hook) are not implemented here -- a second tap on the same
+	/// link while the first is still in flight is only suppressed by
+	/// `nectarSeriesLinkNavigationInFlight`, the tapped link's own text
+	/// doesn't change to reflect that.
+	private func handleNectarSeriesLink(_ url: URL) {
+		guard let article, let account = article.account else { return }
+		guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+
+		let direction = components.path
+		let queryItems = components.queryItems ?? []
+		let ao3ID = queryItems.first(where: { $0.name == "ao3id" })?.value
+		let workURL = queryItems.first(where: { $0.name == "workurl" })?.value
+
+		// Keyed on the tapped href itself, not (ao3ID, direction) --
+		// good enough to suppress a double-tap without needing Phase 4e's
+		// richer key shape (Direction has no .first case yet).
+		let inFlightKey = url.absoluteString
+		guard !nectarSeriesLinkNavigationInFlight.contains(inFlightKey) else { return }
+
+		switch direction {
+		case "previous", "next":
+			guard let workURL else { return }
+			let navigatorDirection: AO3SeriesNavigator.Direction = direction == "previous" ? .previous : .next
+			nectarSeriesLinkNavigationInFlight.insert(inFlightKey)
+			Task { @MainActor in
+				let result = await AO3SeriesNavigator.fetchAdjacentWork(direction: navigatorDirection, workURL: workURL, feedID: article.feedID, account: account)
+				guard self.article?.articleID == article.articleID else { return }
+				self.nectarSeriesLinkNavigationInFlight.remove(inFlightKey)
+				self.handleNectarSeriesLinkResult(result)
+			}
+		case "first":
+			guard let ao3ID else { return }
+			nectarSeriesLinkNavigationInFlight.insert(inFlightKey)
+			Task { @MainActor in
+				let result = await AO3SeriesNavigator.fetchFirstWorkInSeries(ao3SeriesID: ao3ID, feedID: article.feedID, account: account)
+				guard self.article?.articleID == article.articleID else { return }
+				self.nectarSeriesLinkNavigationInFlight.remove(inFlightKey)
+				self.handleNectarSeriesLinkResult(result)
+			}
+		default:
+			Self.logger.debug("handleNectarSeriesLink: unrecognized direction '\(direction, privacy: .public)' in \(url.absoluteString, privacy: .public)")
+		}
+	}
+
+	private func handleNectarSeriesLinkResult(_ result: Result<String, AO3SeriesNavigationError>) {
+		switch result {
+		case .success(let newArticleID):
+			coordinator.selectArticleInCurrentFeed(newArticleID)
+		case .failure(let error):
+			UIAccessibility.post(notification: .announcement, argument: error.displayMessage)
+			Self.logger.debug("nectar-series link navigation failed: \(error.displayMessage, privacy: .public)")
 		}
 	}
 

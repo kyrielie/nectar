@@ -34,8 +34,10 @@ struct AmbrosiaSQLiteImportTableTests {
 		let isFinished: Bool
 		let isReadLater: Bool
 		let isLiked: Bool
+		let datePublished: String?
+		let dateModified: String?
 
-		init(id: String, title: String? = "Test Title", ao3WorkID: String? = nil, contentHTML: String? = "<p>content</p>", wordCount: Int? = nil, isFinished: Bool = false, isReadLater: Bool = false, isLiked: Bool = false) {
+		init(id: String, title: String? = "Test Title", ao3WorkID: String? = nil, contentHTML: String? = "<p>content</p>", wordCount: Int? = nil, isFinished: Bool = false, isReadLater: Bool = false, isLiked: Bool = false, datePublished: String? = nil, dateModified: String? = nil) {
 			self.id = id
 			self.title = title
 			self.ao3WorkID = ao3WorkID
@@ -44,6 +46,8 @@ struct AmbrosiaSQLiteImportTableTests {
 			self.isFinished = isFinished
 			self.isReadLater = isReadLater
 			self.isLiked = isLiked
+			self.datePublished = datePublished
+			self.dateModified = dateModified
 		}
 	}
 
@@ -102,11 +106,11 @@ struct AmbrosiaSQLiteImportTableTests {
 		""")
 
 		let insertColumns = omitContentHTMLColumn
-			? "id, title, ao3_work_id, word_count, is_finished, is_read_later, is_liked"
-			: "id, title, ao3_work_id, word_count, is_finished, is_read_later, is_liked, content_html"
+			? "id, title, ao3_work_id, word_count, is_finished, is_read_later, is_liked, date_published, date_modified"
+			: "id, title, ao3_work_id, word_count, is_finished, is_read_later, is_liked, date_published, date_modified, content_html"
 
 		for row in rows {
-			var args: [Any] = [row.id, row.title as Any, row.ao3WorkID as Any, row.wordCount as Any, row.isFinished, row.isReadLater, row.isLiked]
+			var args: [Any] = [row.id, row.title as Any, row.ao3WorkID as Any, row.wordCount as Any, row.isFinished, row.isReadLater, row.isLiked, row.datePublished as Any, row.dateModified as Any]
 			if !omitContentHTMLColumn {
 				args.append(row.contentHTML as Any)
 			}
@@ -193,6 +197,50 @@ struct AmbrosiaSQLiteImportTableTests {
 
 		let fetched = db.fetchArticles(articleIDs: ["book-1"])
 		#expect(fetched.first?.contentHTML == html)
+	}
+
+	// MARK: - 3b. date_published/date_modified parse into real Date values
+
+	@Test("imported date_published/date_modified (ISO 8601 wire TEXT) parse into the corresponding Date, not a ~1970 epoch artifact")
+	func datesParseFromWireISO8601Text() async throws {
+		let db = TestFixtures.makeDatabase()
+
+		let path = try makeTransferFile(rows: [
+			ItemRow(id: "book-1", datePublished: "2024-01-15T10:30:00Z", dateModified: "2024-03-02T08:00:00Z")
+		])
+		defer { try? FileManager.default.removeItem(atPath: path) }
+		_ = try db.importAmbrosiaSQLiteTransfer(temporaryFilePath: path, feedID: "sqlite-feed", wireFormatVersion: Self.wireFormatVersion)
+
+		let fetched = db.fetchArticles(articleIDs: ["book-1"])
+		let article = try #require(fetched.first)
+
+		let expectedPublished = DateParser.date(from: "2024-01-15T10:30:00Z")
+		let expectedModified = DateParser.date(from: "2024-03-02T08:00:00Z")
+
+		#expect(article.datePublished == expectedPublished)
+		#expect(article.dateModified == expectedModified)
+
+		// Regression guard: before the fix, copyItems copied the ISO 8601 TEXT
+		// straight into the numeric datePublished/dateModified columns, and
+		// SQLite's TEXT-to-REAL coercion on read parsed only the leading
+		// "2024" digit run, producing a bogus ~1970-01-01 date. Assert we're
+		// nowhere near 1970 to catch a regression back to that behavior even
+		// if DateParser's own output ever changes shape.
+		let nineteenSeventy = Date(timeIntervalSince1970: 0)
+		#expect(article.datePublished.map { abs($0.timeIntervalSince(nineteenSeventy)) > 60 * 60 * 24 * 365 } == true)
+	}
+
+	@Test("a row with no date_published/date_modified imports with nil dates rather than throwing")
+	func missingDatesImportAsNil() async throws {
+		let db = TestFixtures.makeDatabase()
+
+		let path = try makeTransferFile(rows: [ItemRow(id: "book-1")])
+		defer { try? FileManager.default.removeItem(atPath: path) }
+		_ = try db.importAmbrosiaSQLiteTransfer(temporaryFilePath: path, feedID: "sqlite-feed", wireFormatVersion: Self.wireFormatVersion)
+
+		let fetched = db.fetchArticles(articleIDs: ["book-1"])
+		#expect(fetched.first?.datePublished == nil)
+		#expect(fetched.first?.dateModified == nil)
 	}
 
 	// MARK: - 4. Wire-format version mismatch throws before ATTACH

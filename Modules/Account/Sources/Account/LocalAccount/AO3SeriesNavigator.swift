@@ -80,6 +80,28 @@ public enum AO3SeriesNavigator {
 		return await fetchAndAddWork(workID: workID, feedID: existingArticle.feedID, account: account)
 	}
 
+	/// Same fetch as `fetchAdjacentWork(direction:from:account:)` above,
+	/// but taking the already-known target work URL directly rather than
+	/// re-deriving it from `existingArticle.series`'s collapsed "first
+	/// membership wins" pick. Used by the inline `nectar-series:` link
+	/// handler (`WebViewController.handleNectarSeriesLink`, plan Phase
+	/// 3a/3c) -- the tapped link already carries the correct per-series
+	/// URL from `AO3ChapterHTMLExtractor.seriesEntriesWithNavigation`'s
+	/// per-span parse, so reusing the article-wide entry point above
+	/// would silently pick the wrong series' URL for a work in more than
+	/// one series, the exact bug Phase 1/2's data-model change fixed.
+	///
+	/// Interim, same as `fetchAdjacentWork(direction:from:account:)`: just
+	/// the single-work fetch-and-add every Task 10 entry point in this
+	/// file already does, not yet Phase 4's bounded series-listing walk
+	/// or batch stub-import of other series members.
+	public static func fetchAdjacentWork(direction: Direction, workURL: String, feedID: String, account: Account) async -> Result<String, AO3SeriesNavigationError> {
+		guard let workID = AO3SummaryExtractor.ao3WorkID(fromPermalink: workURL) else {
+			return .failure(.noAdjacentWork)
+		}
+		return await fetchAndAddWork(workID: workID, feedID: feedID, account: account)
+	}
+
 	public enum Direction: Sendable {
 		case previous
 		case next
@@ -96,8 +118,23 @@ public enum AO3SeriesNavigator {
 	/// the reader's "First work" button is singular, so some choice has
 	/// to be made when there's more than one series to be first-in.
 	public static func fetchFirstWorkInSeries(from existingArticle: Article, account: Account) async -> Result<String, AO3SeriesNavigationError> {
-		guard let seriesID = existingArticle.series?.first(where: { $0.ao3ID != nil })?.ao3ID,
-		      let seriesURL = URL(string: "https://archiveofourown.org/series/\(seriesID)") else {
+		guard let seriesID = existingArticle.series?.first(where: { $0.ao3ID != nil })?.ao3ID else {
+			return .failure(.noSeriesID)
+		}
+		return await fetchFirstWorkInSeries(ao3SeriesID: seriesID, feedID: existingArticle.feedID, account: account)
+	}
+
+	/// Same fetch as `fetchFirstWorkInSeries(from:account:)` above, but
+	/// taking `ao3SeriesID` directly rather than deriving it from
+	/// `existingArticle.series`'s "first membership with a non-nil ao3ID
+	/// wins" pick. Used by the inline `nectar-series:first` link handler
+	/// (`WebViewController.handleNectarSeriesLink`) -- the tapped link
+	/// already names the specific series it belongs to (plan Phase 3a),
+	/// so a work in more than one series resolves First against whichever
+	/// series row was actually tapped, not always the first one in
+	/// `article.series`.
+	public static func fetchFirstWorkInSeries(ao3SeriesID: String, feedID: String, account: Account) async -> Result<String, AO3SeriesNavigationError> {
+		guard let seriesURL = URL(string: "https://archiveofourown.org/series/\(ao3SeriesID)") else {
 			return .failure(.noSeriesID)
 		}
 
@@ -119,7 +156,7 @@ public enum AO3SeriesNavigator {
 			return .failure(.emptySeriesListing)
 		}
 
-		return await fetchAndAddWork(workID: workID, feedID: existingArticle.feedID, account: account)
+		return await fetchAndAddWork(workID: workID, feedID: feedID, account: account)
 	}
 }
 
