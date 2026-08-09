@@ -78,7 +78,12 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// person can open articles); keeping it slow and bounded is the
 	/// actual mitigation here, not just Downloader's reactive 429 backoff.
 	private static let maxArticlesPerSweep = 5
-	private static let secondsBetweenSweepRequests: TimeInterval = 5
+	// internal, not private -- AO3SeriesNavigator's bounded two-fetch
+	// series-listing walk (Phase 4c of the inline series navigation plan)
+	// reuses this exact pacing value between its page-1 and second-page
+	// fetches, rather than inventing a second "don't hammer AO3" constant
+	// for the same concern.
+	static let secondsBetweenSweepRequests: TimeInterval = 5
 
 	private let attemptDates = OSAllocatedUnfairLock(initialState: [String: Date]())
 
@@ -692,7 +697,21 @@ nonisolated private extension AO3ChapterFetcher {
 		let authors: Set<ParsedAuthor>? = existingArticle.authors.map { authorSet in
 			Set(authorSet.map { ParsedAuthor(name: $0.name, url: $0.url, avatarURL: $0.avatarURL, emailAddress: $0.emailAddress) })
 		}
-		let series: [ParsedSeriesEntry]? = existingArticle.series?.map { ParsedSeriesEntry(name: $0.name, index: $0.index, ao3ID: $0.ao3ID) }
+		// Inline series navigation: prefer the existing article's own
+		// already-known series membership, carried through unchanged
+		// (name/index/ao3ID *and*, now, previousWorkURL/nextWorkURL --
+		// dropping the latter two here would silently discard per-series
+		// nav data on every refetch). Falls back to this fetch's freshly
+		// parsed seriesEntries only when there's no existing series at all
+		// to carry forward -- the first-ever fetch of a work reached via
+		// Phase 4's bulk series import, whose stub (AO3SeriesNavigator's
+		// stub builder) never sets `series`.
+		let series: [ParsedSeriesEntry]?
+		if let existingSeries = existingArticle.series, !existingSeries.isEmpty {
+			series = existingSeries.map { ParsedSeriesEntry(name: $0.name, index: $0.index, ao3ID: $0.ao3ID, previousWorkURL: $0.previousWorkURL, nextWorkURL: $0.nextWorkURL) }
+		} else {
+			series = extraction.seriesEntries.map(\.entry)
+		}
 
 		return ParsedItem(
 			syncServiceID: nil,
@@ -735,13 +754,6 @@ nonisolated private extension AO3ChapterFetcher {
 			kudosCount: applyStatsUpdate ? extraction.kudosCount : existingArticle.kudosCount,
 			bookmarkCount: applyStatsUpdate ? extraction.bookmarkCount : existingArticle.bookmarkCount,
 			hitCount: applyStatsUpdate ? extraction.hitCount : existingArticle.hitCount,
-			// Prev/next Work navigation is page chrome captured on the same
-			// fetch as content/chapters, not a "stat" -- always applied now,
-			// matching chapterCurrent/contentHTML above (there is no longer
-			// a content-specific toggle to gate this on; see this
-			// function's doc comment).
-			previousWorkURL: extraction.previousWorkURL,
-			nextWorkURL: extraction.nextWorkURL,
 			// rebuildParsedItem only runs on a successful extraction (it's
 			// handed the extraction.chapters/stats result), so "now" is
 			// correct here regardless of caller -- a failed fetch never
