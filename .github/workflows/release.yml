@@ -1,5 +1,22 @@
 name: Release IPA and Publish Source
 
+# Two independent ways in:
+#   - workflow_dispatch: the full build -> attach IPA -> publish source.json
+#     flow for a tag.
+#   - release (edited): source.json's localizedDescription is a snapshot of
+#     the release body taken by the "Resolve release" step below, at
+#     whatever point publish-source happens to run. If you edit a release's
+#     notes on GitHub *after* the dispatch run already published source.json
+#     (the normal flow for hand-writing a changelog once the auto-generated
+#     notes are in front of you), that edit previously never made it to the
+#     AltStore source -- there was no trigger to re-run publish-source, so
+#     source.json kept showing whatever the body was at creation time. This
+#     trigger re-runs just publish-source (no rebuild, the IPA is untouched)
+#     so an edited release's notes actually reach source.json.
+#     Deliberately not "published": that fires on the same initial
+#     gh release create the dispatch flow already does, which would kick off
+#     a second, redundant publish-source run racing the first for the
+#     gh-pages push.
 on:
   workflow_dispatch:
     inputs:
@@ -7,6 +24,8 @@ on:
         description: "Release tag to create/attach the IPA to (e.g. v0.1.1)"
         required: true
         type: string
+  release:
+    types: [edited]
 
 permissions:
   contents: write
@@ -14,6 +33,7 @@ permissions:
 jobs:
   build-ipa-release:
     name: Build and Release Unsigned IPA
+    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-26
     outputs:
       tag: ${{ inputs.tag }}
@@ -118,6 +138,13 @@ jobs:
   publish-source:
     name: Publish source.json
     needs: build-ipa-release
+    # needs.build-ipa-release normally makes this job skip whenever the
+    # needed job is skipped (which it always is on a `release` trigger,
+    # since build-ipa-release's own `if` only allows workflow_dispatch) --
+    # `always()` plus the explicit success/event check overrides that so
+    # a release-edited run isn't skipped, while a workflow_dispatch run
+    # still won't proceed past a failed build.
+    if: always() && (github.event_name == 'release' || needs.build-ipa-release.result == 'success')
     runs-on: macos-26
     steps:
       - name: Resolve release
@@ -128,7 +155,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          tag_name="${{ needs.build-ipa-release.outputs.tag }}"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag_name="${{ github.event.release.tag_name }}"
+          else
+            tag_name="${{ needs.build-ipa-release.outputs.tag }}"
+          fi
           release_json=$(gh api "repos/${{ github.repository }}/releases/tags/$tag_name")
           release_id=$(echo "$release_json" | jq -r '.id')
           published_at=$(echo "$release_json" | jq -r '.published_at')
@@ -152,6 +183,13 @@ jobs:
       - name: Checkout main (scripts and templates)
         uses: actions/checkout@v5
         with:
+          # Explicit ref: without this, checkout defaults to whatever ref
+          # triggered the run -- for workflow_dispatch that's normally
+          # main, but for the `release` (edited) trigger github.ref is the
+          # release's own tag, not main. update_source.py and
+          # source.template.json should always come from main regardless
+          # of which trigger fired.
+          ref: main
           path: main
 
       - name: Select Xcode 26.3

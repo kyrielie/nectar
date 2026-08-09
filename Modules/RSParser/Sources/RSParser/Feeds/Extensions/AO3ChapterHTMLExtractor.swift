@@ -440,10 +440,16 @@ struct AO3WorkHeaderExtraction {
 /// and the unlinked "Part N of " prefix text) -- kept alongside `entry`
 /// rather than folded into it, since neither is meaningful outside a
 /// rendered row.
-struct AO3SeriesSpanResult {
-	let entry: ParsedSeriesEntry
-	let href: String?
-	let prefix: String
+public struct AO3SeriesSpanResult: Sendable {
+	public let entry: ParsedSeriesEntry
+	public let href: String?
+	public let prefix: String
+
+	public init(entry: ParsedSeriesEntry, href: String?, prefix: String) {
+		self.entry = entry
+		self.href = href
+		self.prefix = prefix
+	}
 }
 
 private extension AO3ChapterHTMLExtractor {
@@ -513,10 +519,19 @@ private extension AO3ChapterHTMLExtractor {
 			} else if classTokens.contains("series") {
 				let spanResults = seriesEntriesWithNavigation(fromDD: dd)
 				guard !spanResults.isEmpty else { continue }
+				// isSeriesNavigation: true routes this row through
+				// AO3PrefaceRenderer.html(id:data:)'s per-entry dt/dd
+				// rendering (Phase 3b) instead of the generic
+				// comma-joined-into-one-dd path every other row uses --
+				// each entry's ao3ID/previousWorkURL/nextWorkURL come
+				// straight off the same per-span parse the footer below
+				// (seriesEntries) also uses, so the top row's First/
+				// Previous/Next links and the bottom "This work is part
+				// of" block always agree.
 				let displayEntries = spanResults.map { result in
-					AO3TagEntry(text: result.entry.name, href: result.href, prefix: result.prefix)
+					AO3TagEntry(text: result.entry.name, href: result.href, prefix: result.prefix, ao3ID: result.entry.ao3ID, previousWorkURL: result.entry.previousWorkURL, nextWorkURL: result.entry.nextWorkURL)
 				}
-				rows.append(AO3PrefaceRow(label: label, values: displayEntries))
+				rows.append(AO3PrefaceRow(label: label, values: displayEntries, isSeriesNavigation: true))
 				seriesEntries = spanResults
 			} else if classTokens.contains("collections") {
 				// Plain comma-separated <a> links directly in the dd, no
