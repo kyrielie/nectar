@@ -1,49 +1,102 @@
-# Nectar
+<div align="center">
 
-Nectar is an iOS feed reader application specifically built for Archive of Our Own. It correctly parses [AO3 rss feed](https://archiveofourown.org/faq/subscriptions-and-feeds?language_id=en#subscribetag) metadata and loads the fulltext with creator's style enabled. Basically, it works just like opening AO3 in a browser but saves your reading position and give you a distraction free reading experience. AO3 rss feeds are highly limited, so archive restricted works are not available.
+# 🍯 Nectar
 
-It is also the companion app for [Ambrosia](https://github.com/kyrielie/ambrosia), a local library for fanfiction that can host a JSON feed. It reads a JSON Feed extension (`_ambrosia`) that carries fic-specific metadata — word count, chapter progress, fandom, rating and warnings, series — and surfaces it directly in the timeline and article view. This is the fastest way I could think of transferring works onto my phone.
+**A fic-aware iOS feed reader for Archive of Our Own and [Ambrosia](https://github.com/kyrielie/ambrosia).**
 
-Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) and uses its code and licence, but it is not affiliated with or supported by the NetNewsWire project. It will always be free and open source. Nectar is not associated with Archive of Our Own, it makes requests to AO3's servers each time you open a work. Your reading history stays on your device and is not shared.
+[![Install via AltStore](https://img.shields.io/badge/AltStore-Install-4185A9?style=for-the-badge)](https://kyrielie.github.io/nectar/source.json)
+[![Latest release](https://img.shields.io/github/v/release/kyrielie/nectar?style=for-the-badge&label=release)](https://github.com/kyrielie/nectar/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/kyrielie/nectar/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/kyrielie/nectar/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](./LICENSE)
 
-## Status
+</div>
 
-This is beta software under active development. Expect rough edges.
+Nectar reads Archive of Our Own's [RSS feeds](https://archiveofourown.org/faq/subscriptions-and-feeds?language_id=en#subscribetag) and loads each work's full text with the creator's own style enabled, so it feels like opening AO3 in a browser — but with saved reading position, offline-friendly caching, and a distraction-free reader. AO3's RSS feeds are limited by design (restricted works aren't included), so Nectar is also the companion app for [Ambrosia](https://github.com/kyrielie/ambrosia), a local fanfiction library that hosts a JSON Feed extension (`_ambrosia`) carrying fic-specific metadata — word count, chapter progress, fandom, rating, warnings, series, and book identity — for large personal collections that AO3's own feeds can't cover.
 
-## Scope
+Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) and uses its code and license, but is not affiliated with or supported by the NetNewsWire project. It is not associated with Archive of Our Own; it makes requests to AO3's servers only when you open a work. Your reading history and progress stay on your device and are never shared.
 
-Nectar can parse Ambrosia paged JSON feeds and sqlite transfers. It is not meant to be general-purpose
-feed reader, but technically it should be functional with any RSS/JSON feed.
+> **Status:** beta software under active development. Expect rough edges.
 
-- If you don't use Ambrosia, use [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) instead.
-- If you do use Ambrosia, Nectar can also read its plain feeds — it just adds
-  the fic-reader metadata on top when available.
+---
+
+## Contents
+
+- [Features](#features)
+- [Installation](#installation)
+  - [AltStore (recommended)](#altstore-recommended)
+  - [Sideloadly](#sideloadly)
+  - [Building from source](#building-from-source)
+- [Scope](#scope)
+- [Architecture](#architecture)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
-- **Fic-aware timeline and article view** — word count, chapter progress,
-  completion status, fandom, relationships, characters, ratings, warnings,
-  categories, and series are read from the `_ambrosia` JSON Feed extension
-  and shown as metadata lines/badges on each card, alongside a reading
-  progress bar derived from scroll position.
-- **Markdown content** — items can carry a Markdown body instead of HTML;
-  Nectar renders it to HTML for display.
-- **Book identity across duplicates** — duplicate works or works subscribed to through
-  more than one collection feed is recognized as the same book based on AO3 id. Marking it
-  read, starred, or Loved, or updating its reading progress, applies to
-  every copy at once.
-- **Loved**, in addition to the usual Read and Starred (Read Later) states,
-  with its own smart feed and heart indicator.
-- **Timeline Layout customization** — summary line count and metadata and tag previews are
-  adjustable from Settings, with a live preview.
-- **Reader theme overrides** — normal reader features, now built into the application.
+- **Fic-aware timeline and article view** — word count, chapter progress, completion status, fandom, relationships, characters, ratings, warnings, categories, and series are read from AO3/Ambrosia and shown as metadata lines and badges on each card, alongside a reading-progress bar derived from scroll position.
+- **Large-collection sync** — beyond ordinary JSON Feed fetching, Ambrosia collections can sync over a dedicated paginated SQLite transfer route built for large libraries that would be impractical over plain HTTP JSON.
+- **Book identity across duplicates** — the same work showing up in more than one collection feed, or re-imported from Calibre, is recognized as one book. Marking it read, starred, or Loved, or updating reading progress, applies to every copy at once and survives unsubscribing/re-subscribing.
+- **Live AO3 chapter fetching** — in-progress works can fetch new chapters on demand, with per-host rate-limit backoff and a regression guard that refuses to overwrite good content with a bad/short fetch.
+- **Markdown content** — items can carry a Markdown body instead of HTML; Nectar renders it for display.
+- **Loved**, alongside the usual Read and Starred (Read Later) states, with its own smart feed and heart indicator.
+- **Timeline layout customization** — icon size, summary line count, and metadata/tag previews are adjustable from Settings, with a live preview.
+- **Reader theming** — Accent Color and Surface Palette let you retint the app's chrome independently of the article reader's own theme, with a matching set of bundled `.nnwtheme`s.
+
+## Installation
+
+Nectar isn't on the App Store — it's distributed as an unsigned IPA you sideload yourself, via **AltStore** (auto-updating) or **Sideloadly** (manual, one release at a time).
+
+### AltStore (recommended)
+
+AltStore keeps Nectar updated automatically, the same way the App Store would.
+
+1. Install [AltStore](https://altstore.io) (or [SideStore](https://sidestore.io)) if you haven't already, and pair it with your Apple ID.
+2. Add Nectar's source to AltStore:
+
+   ```
+   https://kyrielie.github.io/nectar/source.json
+   ```
+
+3. Install **Nectar** from the source. AltStore will surface new releases here automatically going forward.
+
+### Sideloadly
+
+If you'd rather install a single release without adding a source:
+
+1. Download the latest `Nectar-unsigned.ipa` from [the Releases page](https://github.com/kyrielie/nectar/releases/latest).
+2. Install [Sideloadly](https://sideloadly.io) and connect your device.
+3. Drag the IPA into Sideloadly, sign in with your Apple ID, and install. Sideloadly re-signs the unsigned IPA during install.
+4. With a free Apple ID, the app's signature expires after about 7 days — reinstall the same IPA through Sideloadly when it stops opening (no rebuild needed). A paid Apple Developer account extends this to a year.
+
+### Building from source
+
+Building your own signed IPA (useful if you want to build off `main` rather than the latest tagged release) is documented in [`docs/building-an-ipa-for-sideloadly.md`](./docs/building-an-ipa-for-sideloadly.md). In short:
+
+```bash
+git clone --recursive https://github.com/kyrielie/nectar.git
+cd nectar
+brew install xcodegen
+xcodegen generate
+open NetNewsWire.xcodeproj
+```
+
+Requires Xcode with an iOS 17+ SDK and the `Nectar-iOS` scheme.
+
+## Scope
+
+Nectar can parse Ambrosia's paged JSON feeds and SQLite transfers, plus AO3's own RSS feeds directly. It isn't meant to be a general-purpose feed reader, though it should technically work with any RSS/JSON feed.
+
+- If you don't use Ambrosia, use [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) instead.
+- If you do use Ambrosia, Nectar reads its plain feeds too — it just layers the fic-reader metadata on top when available.
 
 ## Architecture
 
-See [`nectar-architecture.md`](./nectar-architecture.md) for how feed data
-flows from Ambrosia's JSON Feed extension through to the app's UI.
+See [`nectar-architecture.md`](./nectar-architecture.md) for how feed data flows from AO3/Ambrosia through to the app's UI — module layout, book identity, the SQLite transfer route, the reading-progress pipeline, and the theming system.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`Technotes/CodingGuidelines.md`](./Technotes/CodingGuidelines.md) before opening a PR.
 
 ## License
 
-Nectar is available under the same license as NetNewsWire — see
-[`LICENSE`](./LICENSE).
+Nectar is available under the same license as NetNewsWire — see [`LICENSE`](./LICENSE) (MIT).

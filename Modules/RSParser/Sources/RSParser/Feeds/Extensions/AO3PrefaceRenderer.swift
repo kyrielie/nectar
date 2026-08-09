@@ -122,6 +122,10 @@ public enum AO3PrefaceRenderer {
 		var rowsHTML = ""
 
 		for row in data.rows {
+			if row.isSeriesNavigation {
+				rowsHTML += seriesNavigationRowsHTML(row)
+				continue
+			}
 			let joined = row.values.map(renderedEntry).joined(separator: ", ")
 			guard !joined.isEmpty else { continue }
 			let classAttribute = row.isWide ? " class='wide'" : ""
@@ -136,6 +140,29 @@ public enum AO3PrefaceRenderer {
 			return nil
 		}
 		return "<div id='\(escapeAttribute(id))'><dl class='tags'>\(rowsHTML)</dl></div>"
+	}
+
+	/// One `<dt>Series:</dt><dd>...</dd>` pair per entry, not the generic
+	/// comma-joined single `<dd>` every other row uses (Phase 3b) -- a
+	/// work in two series gets two separately-navigable rows, each with
+	/// its own trailing First / Previous / Next links, instead of one row
+	/// listing two names with no way to tell which link belongs to which
+	/// series. Each entry's own `ao3ID`/`previousWorkURL`/`nextWorkURL`
+	/// (populated by `AO3ChapterHTMLExtractor.parseWorkHeader`'s series
+	/// branch and `ArticleRenderer.ao3SyntheticPrefaceHTML`, both setting
+	/// `AO3PrefaceRow.isSeriesNavigation`) feeds the same
+	/// `seriesNavigationLinksHTML(ao3ID:previousWorkURL:nextWorkURL:)`
+	/// helper the bottom footer (`seriesFooterHTML`) uses, so a future
+	/// markup tweak to the link line itself only happens once.
+	private static func seriesNavigationRowsHTML(_ row: AO3PrefaceRow) -> String {
+		var result = ""
+		for entry in row.values {
+			let nameHTML = renderedEntry(entry)
+			guard !nameHTML.isEmpty else { continue }
+			let linksHTML = seriesNavigationLinksHTML(ao3ID: entry.ao3ID, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL)
+			result += "<dt>\(escape(row.label))</dt><dd><span class='ao3SeriesPrefaceEntry'>\(nameHTML)</span> <span class='ao3SeriesPrefaceLinks'>\(linksHTML)</span></dd>"
+		}
+		return result
 	}
 
 	private static func renderedEntry(_ entry: AO3TagEntry) -> String {
@@ -158,7 +185,7 @@ public enum AO3PrefaceRenderer {
 		escape(string).replacingOccurrences(of: "'", with: "&#39;")
 	}
 
-	// MARK: - Inline series navigation footer (Phase 3b groundwork)
+	// MARK: - Inline series navigation footer (Phase 3b)
 
 	/// "This work is part of ..." block, appended after the article body --
 	/// one entry per series membership, each with its own First / Previous /
@@ -176,13 +203,17 @@ public enum AO3PrefaceRenderer {
 	/// in this preface pipeline -- there is no bare `#ao3SeriesFooter` div
 	/// for a non-series work.
 	///
-	/// NOTE: this is the footer (bottom) half of Phase 3 only. The
-	/// preface's own top Series row still renders the pre-Phase-3 way (one
-	/// comma-joined `<dd>`, no inline links) -- `AO3PrefaceRow.
-	/// isSeriesNavigation` exists on the model already but `html(id:data:)`
-	/// doesn't yet special-case it. That rework, the `nectar-series:`
-	/// scheme's `WebViewController` handling (Phase 3a/3c), and Phase 4's
-	/// tap-to-navigate flow are follow-up work, not done here.
+	/// NOTE: as of Phase 3b the preface's own top Series row also renders
+	/// through `html(id:data:)`'s `isSeriesNavigation` branch (one
+	/// `<dt>/<dd>` pair per entry, matching this footer's per-entry
+	/// shape), and `WebViewController` intercepts the `nectar-series:`
+	/// links both places emit (Phase 3a) with an interim single-work
+	/// fetch. What's still not done: Phase 4's bounded two-page
+	/// series-listing walk, batch stub-import of every other series
+	/// member encountered along the way, and the navigateToTimeline()
+	/// return-to-timeline flow (4d) -- tapping a link today fetches only
+	/// the tapped work itself and stays inside the reader, same as the
+	/// context-menu actions it's meant to replace.
 	public static func seriesFooterHTML(entries: [ParsedSeriesEntry]) -> String? {
 		guard !entries.isEmpty else {
 			return nil
@@ -199,8 +230,18 @@ public enum AO3PrefaceRenderer {
 		return "<div id='ao3SeriesFooter'><p class='ao3SeriesFooterHeading'>This work is part of a series:</p>\(entriesHTML)</div>"
 	}
 
-	/// Builds the "First · Previous · Next" line for one series entry,
-	/// linked via the `nectar-series:` scheme (Phase 3a) so
+	/// `ParsedSeriesEntry`-typed convenience for the footer builder above
+	/// -- delegates straight to the three-field overload below, which is
+	/// also what the top preface row (`seriesNavigationRowsHTML`) calls
+	/// directly against an `AO3TagEntry`'s matching fields, so both
+	/// places render from the exact same three values with no separate
+	/// copy of the link-building logic.
+	static func seriesNavigationLinksHTML(entry: ParsedSeriesEntry) -> String {
+		seriesNavigationLinksHTML(ao3ID: entry.ao3ID, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL)
+	}
+
+	/// Builds the "First · Previous · Next" line for one series
+	/// membership, linked via the `nectar-series:` scheme (Phase 3a) so
 	/// `WebViewController` can act on a tap without a JS bridge. First is
 	/// tappable whenever `ao3ID` is known -- its target is resolved lazily
 	/// on tap (Phase 4), since AO3's work page has no "first work" link to
@@ -209,17 +250,17 @@ public enum AO3PrefaceRenderer {
 	/// fetch; otherwise they render as plain, unlinked muted text (Phase
 	/// 3c) rather than being hidden outright, so a per-row label still
 	/// communicates "you're at the start/end of *this* series."
-	static func seriesNavigationLinksHTML(entry: ParsedSeriesEntry) -> String {
+	static func seriesNavigationLinksHTML(ao3ID: String?, previousWorkURL: String?, nextWorkURL: String?) -> String {
 		var parts: [String] = []
 
-		if let ao3ID = entry.ao3ID {
+		if let ao3ID {
 			parts.append(link(label: "First", href: "nectar-series:first?ao3id=\(percentEncodedQueryValue(ao3ID))"))
 		} else {
 			parts.append(disabledLabel("First"))
 		}
 
-		parts.append(directionLink(label: "Previous", direction: "previous", ao3ID: entry.ao3ID, workURL: entry.previousWorkURL))
-		parts.append(directionLink(label: "Next", direction: "next", ao3ID: entry.ao3ID, workURL: entry.nextWorkURL))
+		parts.append(directionLink(label: "Previous", direction: "previous", ao3ID: ao3ID, workURL: previousWorkURL))
+		parts.append(directionLink(label: "Next", direction: "next", ao3ID: ao3ID, workURL: nextWorkURL))
 
 		return parts.joined(separator: " · ")
 	}

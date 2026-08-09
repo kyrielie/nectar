@@ -212,3 +212,52 @@ a.footnote {
 #ao3Preface dt.wide {
 	white-space: normal;
 }
+
+/* Inline series navigation (nectar-inline-series-nav-implementation-plan.md,
+   Phase 3): the per-entry First / Previous / Next links AO3PrefaceRenderer
+   appends to each series membership, both inside the preface's own Series
+   row (.ao3SeriesPrefaceLinks, one <dt>/<dd> pair per entry -- see
+   AO3PrefaceRow.isSeriesNavigation) and in the "This work is part of a
+   series:" block appended after the article body (#ao3SeriesFooter, built
+   by AO3PrefaceRenderer.seriesFooterHTML). Both share
+   .ao3SeriesNavDisabled for the grayed-out, unlinked Previous/Next label a
+   first/last-in-series entry renders instead of a tappable <a> (Phase
+   3c) -- deliberately shown rather than hidden, so the row still
+   communicates "you're at the start/end of this series" positionally.
+   Deliberately kept in core.css alongside the preface rules above, for
+   the same "every theme needs this, not just the default" reason. */
+.ao3SeriesPrefaceEntry {
+	margin-right: 0.5em;
+}
+.ao3SeriesPrefaceLinks,
+.ao3SeriesFooterLinks {
+	white-space: nowrap;
+	font-size: 0.95em;
+}
+.ao3SeriesNavDisabled {
+	color: var(--ao3-series-nav-disabled-color, rgba(0, 0, 0, 0.4));
+}
+#ao3SeriesFooter {
+	margin: 1.5em 0 0 0;
+	padding-top: 1em;
+	border-top: 1px solid var(--ao3-preface-border-color, rgba(0, 0, 0, 0.15));
+	font-size: 0.9em;
+}
+.ao3SeriesFooterHeading {
+	margin: 0 0 0.5em 0;
+	font-weight: 600;
+}
+.ao3SeriesFooterEntry {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 0.5em;
+	padding: 0.5em 0.75em;
+	margin-bottom: 0.4em;
+	background-color: var(--ao3-preface-background-color, rgba(0, 0, 0, 0.03));
+	border-radius: 0.4em;
+}
+.ao3SeriesFooterName {
+	font-weight: 500;
+}

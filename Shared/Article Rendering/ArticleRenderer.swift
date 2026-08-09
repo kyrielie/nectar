@@ -107,6 +107,18 @@ import os
 			bodyPrefix += prefaceHTML
 		}
 
+		// Inline series navigation footer (Phase 3b), synthetic-preface
+		// path -- the real-fetch path's equivalent footer is baked
+		// straight into article.contentHTML by
+		// AO3ChapterHTMLExtractor.serializedContentHTML, so this only
+		// ever fires for the same nil-contentHTML window
+		// ao3SyntheticPrefaceHTML's own guard covers, via the shared
+		// ao3SyntheticSeriesFooterHTML(for:) below.
+		var bodySuffix = ""
+		if let article, let footerHTML = Self.ao3SyntheticSeriesFooterHTML(for: article) {
+			bodySuffix += footerHTML
+		}
+
 		if let article, article.contentHTML == nil,
 		   let failureMessage = AO3ChapterFetcher.shared.lastFetchFailureMessage(forArticleID: article.articleID) {
 			// contentHTML is nil (full chapter text never landed) and the
@@ -122,7 +134,7 @@ import os
 				.replacingOccurrences(of: ">", with: "&gt;")
 			bodyPrefix += "<p class='ao3ChapterFetchNotice'>Full text unavailable: \(escapedMessage)</p>"
 		}
-		self.body = Self.stripFakeParagraphIndents(bodyPrefix + (article?.body ?? ""))
+		self.body = Self.stripFakeParagraphIndents(bodyPrefix + (article?.body ?? "") + bodySuffix)
 		self.baseURL = article?.baseURL?.absoluteString
 		self.timelineFeed = timelineFeed
 		if let article {
@@ -483,10 +495,20 @@ private extension ArticleRenderer {
 		// here.
 
 		if let series = article.series, !series.isEmpty {
+			// isSeriesNavigation: true, same as AO3ChapterHTMLExtractor's
+			// real-fetch path -- ao3ID comes through even here (Ambrosia's
+			// `_ambrosia.series` entries do carry `ao3_id`, confirmed in
+			// the plan's 3b revision note), so a synthetic-preface First
+			// link can still be live. previousWorkURL/nextWorkURL are
+			// always nil on an Ambrosia-sourced entry (no such key in
+			// that wire format), so Previous/Next fall out of
+			// AO3PrefaceRenderer's own nil-check as the grayed, unlinked
+			// state for every row built here -- nothing special-cased
+			// for that, it's just what an always-nil field produces.
 			let entries = series.map { entry in
-				AO3TagEntry(text: entry.name, prefix: "Part \(entry.index) of ")
+				AO3TagEntry(text: entry.name, prefix: "Part \(entry.index) of ", ao3ID: entry.ao3ID, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL)
 			}
-			rows.append(AO3PrefaceRow(label: "Series:", values: entries))
+			rows.append(AO3PrefaceRow(label: "Series:", values: entries, isSeriesNavigation: true))
 		}
 
 		// Collections: deliberately not synthesized here -- flagged as an
@@ -519,6 +541,32 @@ private extension ArticleRenderer {
 		return AO3PrefaceRenderer.html(id: "ao3SyntheticPreface", data: AO3PrefaceData(rows: rows, statsRows: statsRows))
 	}
 
+	/// The synthetic-preface path's counterpart to
+	/// `AO3ChapterHTMLExtractor.serializedContentHTML`'s footer append --
+	/// both call the same `AO3PrefaceRenderer.seriesFooterHTML(entries:)`
+	/// builder (Phase 3b) so a future markup tweak only happens once.
+	/// Gated on `article.contentHTML == nil` for the same real-vs-
+	/// synthesized reason `ao3SyntheticPrefaceHTML` is (see that
+	/// function's doc comment) -- once a chapter fetch has succeeded once,
+	/// the footer is already baked into contentHTML and this must return
+	/// nil, or the two would stack. Deliberately not gated behind
+	/// `AppDefaults.shared.statsVisible` the way the preface itself is:
+	/// the footer is navigation, not a stats display, so hiding stats
+	/// shouldn't also hide the only way to reach an adjacent series work
+	/// before a chapter has ever been fetched.
+	static func ao3SyntheticSeriesFooterHTML(for article: Article) -> String? {
+		guard article.contentHTML == nil else {
+			return nil
+		}
+		guard let series = article.series, !series.isEmpty else {
+			return nil
+		}
+		let entries = series.map { entry in
+			ParsedSeriesEntry(name: entry.name, index: entry.index, ao3ID: entry.ao3ID, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL)
+		}
+		return AO3PrefaceRenderer.seriesFooterHTML(entries: entries)
+	}
+
 	/// AO3 authors sometimes fake a paragraph's first-line indent with literal
 	/// leading whitespace -- repeated spaces or, more often, `&nbsp;` sequences,
 	/// since HTML collapses plain spaces but not non-breaking ones -- typed
@@ -539,7 +587,8 @@ private extension ArticleRenderer {
 	/// block elements, inside `<pre>`, etc.), can't fire on the
 	/// `contentText`/`summary` plain-text fallbacks (neither ever contains a
 	/// literal `<p` substring), and is a harmless no-op against `bodyPrefix`'s
-	/// synthesized preface/notice `<p>` tags, which never start with
+	/// synthesized preface/notice `<p>` tags and `bodySuffix`'s synthesized
+	/// series-footer heading `<p>` tag, none of which ever start with
 	/// whitespace.
 	static func stripFakeParagraphIndents(_ html: String) -> String {
 		html.replacingOccurrences(

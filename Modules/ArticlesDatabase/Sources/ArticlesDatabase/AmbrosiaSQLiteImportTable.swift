@@ -21,6 +21,7 @@ import Foundation
 import os
 import RSDatabase
 import RSDatabaseObjC
+import RSParser
 
 /// Manifest describing one page's position within a paginated `.sqlite`
 /// transfer walk (Nectar plan 3a/3c), read from the `transfer_manifest`
@@ -314,17 +315,37 @@ enum AmbrosiaSQLiteImportTable {
 		// which made every `.sqlite` transfer import throw. Dropping it here
 		// matches the ordinary path's existing (silent) behavior rather than
 		// adding a new column for a field nothing else in the app reads.
+		// datePublished/dateModified are deliberately left out of this bulk
+		// INSERT...SELECT, the same way contentHTML is: the wire format sends
+		// date_published/date_modified as ISO 8601 TEXT (see the Wire Contract
+		// in docs/nectar-implementation-plan.md), but the local `articles`
+		// table's datePublished/dateModified columns hold numeric
+		// timeIntervalSince1970 values -- every other write path gets that
+		// conversion for free because FMDB's dictionary/positional binding
+		// converts a Swift `Date` to a double before it ever reaches SQLite
+		// (see FMDatabase.bindObject:toColumn:inStatement:). A raw
+		// SELECT-and-copy of the TEXT column skips that conversion entirely:
+		// SQLite's TEXT-to-REAL coercion on read parses only the leading
+		// digit run of an ISO 8601 string (e.g. "2024-01-15T10:30:00Z" ->
+		// 2024.0), so every date silently became a bogus ~1970 timestamp
+		// (see logicalDatePublished's fallback in Shared/Extensions/
+		// ArticleUtilities.swift, and MainTimelineCellData, which read
+		// whatever ends up in these columns). Parsed and written per row by
+		// copyParsedDates below, using RSParser.DateParser -- the same parser
+		// JSONFeedParser uses for date_published/date_modified on the
+		// ordinary HTTP JSON Feed path -- so both import routes produce the
+		// same Date value from the same wire string.
 		let insertArticlesSQL = """
 		INSERT OR REPLACE INTO articles (
 		  articleID, feedID, uniqueID, title, url, externalURL, summary,
-		  datePublished, dateModified, authors,
+		  authors,
 		  wordCount, chapterCurrent, chapterTotal, isComplete,
 		  fandoms, relationships, characters, ratings, warnings, categories, series,
 		  isAmbrosiaItem, bookKey
 		)
 		SELECT
 		  t.id, ?, t.id, t.title, t.url, t.url, t.summary,
-		  t.date_published, t.date_modified, t.authors_json,
+		  t.authors_json,
 		  t.word_count, t.chapter_current, t.chapter_total, t.is_complete,
 		  t.fandoms_json, t.relationships_json, t.characters_json, t.ratings_json,
 		  t.warnings_json, t.categories_json, t.series_json,
@@ -336,6 +357,7 @@ enum AmbrosiaSQLiteImportTable {
 		}
 
 		try Self.copyCompressedContentHTML(database: database)
+		try Self.copyParsedDates(database: database)
 
 		// Status field mapping, from the Wire Contract:
 		//   is_read_later    -> starred
@@ -380,6 +402,42 @@ enum AmbrosiaSQLiteImportTable {
 			guard database.executeUpdate("UPDATE articles SET contentHTML = ? WHERE articleID = ?;", withArgumentsIn: [compressed as Any, id]) else {
 				resultSet.close()
 				throw AmbrosiaSQLiteImportError.importFailed("contentHTML update: \(database.lastErrorMessage() ?? "unknown error")")
+			}
+		}
+		resultSet.close()
+	}
+
+	/// Reads `date_published`/`date_modified` off the attached transfer file
+	/// one row at a time, parses them with `RSParser.DateParser` (the ISO
+	/// 8601 wire format -- see the Wire Contract), and writes the resulting
+	/// `Date` values into the just-inserted articles row via parameter
+	/// binding, so FMDB stores them the same way every other write path
+	/// does (`timeIntervalSince1970`, not the raw ISO 8601 string). Runs
+	/// inside the same transaction as copyItems's other statements, so a
+	/// failure partway through still rolls back cleanly. Same pattern as
+	/// copyCompressedContentHTML above, and for the same reason: the bulk
+	/// INSERT...SELECT can't be trusted to move these two columns as-is.
+	///
+	/// A row with no parseable date (missing, empty, or malformed) writes
+	/// NULL for that column, same as every other field on this import
+	/// route -- copyItems's INSERT OR REPLACE already wholesale-replaces a
+	/// re-imported row rather than diffing field-by-field, so a date that
+	/// disappears from the wire disappears here too, consistent with the
+	/// rest of this path rather than a new exception.
+	private static func copyParsedDates(database: FMDatabase) throws {
+		guard let resultSet = database.executeQuery("SELECT id, date_published, date_modified FROM \(attachedSchemaName).items;", withArgumentsIn: []) else {
+			throw AmbrosiaSQLiteImportError.importFailed("date read: \(database.lastErrorMessage() ?? "unknown error")")
+		}
+
+		while resultSet.next() {
+			guard let id = resultSet.swiftString(forColumn: "id") else {
+				continue
+			}
+			let datePublished = resultSet.swiftString(forColumn: "date_published").flatMap { DateParser.date(from: $0) }
+			let dateModified = resultSet.swiftString(forColumn: "date_modified").flatMap { DateParser.date(from: $0) }
+			guard database.executeUpdate("UPDATE articles SET datePublished = ?, dateModified = ? WHERE articleID = ?;", withArgumentsIn: [datePublished as Any, dateModified as Any, id]) else {
+				resultSet.close()
+				throw AmbrosiaSQLiteImportError.importFailed("date update: \(database.lastErrorMessage() ?? "unknown error")")
 			}
 		}
 		resultSet.close()

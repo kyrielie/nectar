@@ -237,6 +237,7 @@
 		FAF6FF5B40099281BCD51AB4 /* RSParser in Frameworks */ = {isa = PBXBuildFile; productRef = 8CB7900664FB4296957673EE /* RSParser */; };
 		FD0CD1ABD3EA4D7B18949EF0 /* TableOfContentsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA5B8A874CE124C100A11D6 /* TableOfContentsViewController.swift */; };
 		FD8D85384459098FEF2C81B9 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 949D266AEC1C1229462A4550 /* SceneDelegate.swift */; };
+		FEB6AC1FCF90EA0C1EC23AB6 /* ArticleRendererSeriesNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3ECA72CB6133EA7B1AFE5C6 /* ArticleRendererSeriesNavigationTests.swift */; };
 		FF46BB2CFCE15344171E0977 /* ActivityLogViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8521720A8BD99B7FE4C42704 /* ActivityLogViewModel.swift */; };
 		FF8BFB8E1D57C29CFECD21E5 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF455879D9C563CB8D4340CE /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
@@ -420,6 +421,7 @@
 		A0BB9366CA7F3C4F4A176DD5 /* DeleteCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteCommand.swift; sourceTree = "<group>"; };
 		A10D3A0ED63089797C27146A /* ActivityLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogView.swift; sourceTree = "<group>"; };
 		A34BBBCEF64C157D11C03A07 /* RSImage+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RSImage+Extensions.swift"; sourceTree = "<group>"; };
+		A3ECA72CB6133EA7B1AFE5C6 /* ArticleRendererSeriesNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleRendererSeriesNavigationTests.swift; sourceTree = "<group>"; };
 		A41A67C71540DE45997625FE /* ArticleRenderingSpecialCases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleRenderingSpecialCases.swift; sourceTree = "<group>"; };
 		A41F57E3BEE70260170C3D17 /* AddFeedDefaultContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFeedDefaultContainer.swift; sourceTree = "<group>"; };
 		A4FD081876054F057E1DFF4F /* AO3AccountSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3AccountSettingsView.swift; sourceTree = "<group>"; };
@@ -686,6 +688,7 @@
 				110FA7FA5A10A599860574EA /* AccentColorTableViewControllerSelectionTests.swift */,
 				C8A6E7B6A2FCD1F653F1FE71 /* ActivityItemSourceTests.swift */,
 				9A44B1DC23B3CF47E3C80D76 /* ArticleCSVExporterTests.swift */,
+				A3ECA72CB6133EA7B1AFE5C6 /* ArticleRendererSeriesNavigationTests.swift */,
 				2BD2C21916AA07DB85053663 /* ArticleRendererStripFakeParagraphIndentsTests.swift */,
 				E512053E9572D65A8EA03583 /* ArticleThemeColorExtractorTests.swift */,
 				26B7C99C4ABA370226735E19 /* ArticleThemePlistFamilyTests.swift */,
@@ -1426,6 +1429,7 @@
 				BC6BBF8CA91C7AC3A39FE473 /* AccentColorTableViewControllerSelectionTests.swift in Sources */,
 				E5559C48B3DCA17AFE420F34 /* ActivityItemSourceTests.swift in Sources */,
 				B969EB6D6447E0689D0096E0 /* ArticleCSVExporterTests.swift in Sources */,
+				FEB6AC1FCF90EA0C1EC23AB6 /* ArticleRendererSeriesNavigationTests.swift in Sources */,
 				5359FE92B04870B0444E56BA /* ArticleRendererStripFakeParagraphIndentsTests.swift in Sources */,
 				833EEF3FA1E0C63BF64D3547 /* ArticleThemeColorExtractorTests.swift in Sources */,
 				C20C0E058FE3B0E9D852FC28 /* ArticleThemePlistFamilyTests.swift in Sources */,
