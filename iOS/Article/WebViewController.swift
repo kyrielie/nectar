@@ -190,7 +190,23 @@ final class WebViewController: UIViewController {
 		// after this view is already on screen, showing a real flash of the bare notch
 		// on every page turn. renderPage() below will refresh the color/text again once
 		// the theme is known; this just gets visibility correct immediately.
-		updateNotchAndPageCounterVisibility()
+		//
+		// Resolve the theme colors ourselves here rather than calling
+		// updateNotchAndPageCounterVisibility() bare: at this point renderPage()
+		// hasn't run yet and webView is still nil (it's only assigned inside
+		// loadWebView()'s async dequeue completion), so updateNotchAndPageCounterVisibility's
+		// own "reuse webView.backgroundColor" fallback has nothing to reuse. If
+		// shouldHideNotch is on, notchCoverView can go visible right here, with no
+		// background color ever set on it -- it shows whatever's behind it (this
+		// controller's own view, i.e. the surrounding chrome) instead of the
+		// article's theme background, until the async renderPage() catches up a
+		// frame or more later. Passing the resolved colors explicitly closes that
+		// window. self.traitCollection is safe to read here (unlike the bare
+		// Assets.Colors namespace -- see nectar-architecture.md's "Article
+		// background/notch color pipeline"): the view is already loaded, so this
+		// is a real view's own trait collection, not the ambient current one.
+		let initialColors = Self.resolvedArticleColors(isDark: traitCollection.userInterfaceStyle == .dark)
+		updateNotchAndPageCounterVisibility(resolvedBackground: initialColors.background, resolvedText: initialColors.text)
 
 		if !isAwaitingInitialScrollFetch {
 			loadWebView(reason: "viewDidLoad")
@@ -1015,26 +1031,40 @@ private extension WebViewController {
 	private func applyResolvedBackgroundColors() {
 		guard let webView else { return }
 
-		let theme = ArticleThemesManager.shared.currentTheme
-		let themeColors = ArticleThemeColorExtractor.colors(for: theme)
-		let overrides = AppDefaults.shared.articleThemeOverrides
 		let isDark = webView.traitCollection.userInterfaceStyle == .dark
-		let resolvedBackground: UIColor
-		if isDark, let hex = overrides.backgroundColorDarkHex ?? overrides.backgroundColorHex, let overrideColor = UIColor(cssHex: hex) {
-			resolvedBackground = overrideColor
-		} else if !isDark, let hex = overrides.backgroundColorHex, let overrideColor = UIColor(cssHex: hex) {
-			resolvedBackground = overrideColor
-		} else {
-			resolvedBackground = isDark ? themeColors.backgroundColorDark : themeColors.backgroundColor
-		}
-		webView.backgroundColor = resolvedBackground
-		webView.underPageBackgroundColor = resolvedBackground
-		webView.scrollView.backgroundColor = resolvedBackground
+		let colors = Self.resolvedArticleColors(isDark: isDark)
+		webView.backgroundColor = colors.background
+		webView.underPageBackgroundColor = colors.background
+		webView.scrollView.backgroundColor = colors.background
 
 		// Keep the notch cover / page counter in sync with the same resolved color and
 		// text color on every render, not just on the next bars-toggle -- otherwise they
 		// keep showing whatever was last set, stale, through an article/theme change.
-		updateNotchAndPageCounterVisibility(resolvedBackground: resolvedBackground, resolvedText: isDark ? themeColors.textColorDark : themeColors.textColor)
+		updateNotchAndPageCounterVisibility(resolvedBackground: colors.background, resolvedText: colors.text)
+	}
+
+	/// Precedence: override background (if set) -> theme's own background ->
+	/// ArticleThemeColorExtractor's black/white fallback -- shared by
+	/// applyResolvedBackgroundColors() (once webView exists) and viewDidLoad's
+	/// own initial notch-cover resolution (before webView exists), so both
+	/// paths agree instead of one of them falling back to whatever's currently
+	/// on screen. Static/no webView dependency deliberately: the caller
+	/// supplies isDark from whichever trait collection is actually valid at
+	/// its own call site.
+	private static func resolvedArticleColors(isDark: Bool) -> (background: UIColor, text: UIColor) {
+		let theme = ArticleThemesManager.shared.currentTheme
+		let themeColors = ArticleThemeColorExtractor.colors(for: theme)
+		let overrides = AppDefaults.shared.articleThemeOverrides
+		let background: UIColor
+		if isDark, let hex = overrides.backgroundColorDarkHex ?? overrides.backgroundColorHex, let overrideColor = UIColor(cssHex: hex) {
+			background = overrideColor
+		} else if !isDark, let hex = overrides.backgroundColorHex, let overrideColor = UIColor(cssHex: hex) {
+			background = overrideColor
+		} else {
+			background = isDark ? themeColors.backgroundColorDark : themeColors.backgroundColor
+		}
+		let text = isDark ? themeColors.textColorDark : themeColors.textColor
+		return (background, text)
 	}
 
 	func finalScrollPosition(scrollingUp: Bool) -> CGFloat {
