@@ -68,20 +68,18 @@ public struct AO3ChapterExtractionResult: Sendable {
 	/// without it.
 	public let csrfToken: String?
 
-	/// Task 10 (prev/next/first navigation): the AO3-absolute URL of the
-	/// previous/next work in whichever series membership carries one,
-	/// read off `<a class="previous">`/`<a class="next">` inside the same
-	/// `<span class="series">` block `seriesEntries(fromDD:)` already
-	/// reads the position text out of -- see
-	/// `previousNextWorkURLs(fromDD:)`. Page-navigation chrome AO3 renders
-	/// on every work page regardless of whether the reader has series
-	/// grouping enabled; capturing it costs no additional request. `nil`
-	/// when the work has no series membership, or is the first/last work
-	/// in every series it belongs to (for that respective direction).
-	public let previousWorkURL: String?
-	public let nextWorkURL: String?
+	/// Inline series navigation: per-series-membership previous/next-work
+	/// data, read off each `<span class="series">` block's own
+	/// `<a class="previous">`/`<a class="next">` -- see
+	/// `seriesEntriesWithNavigation(fromDD:)`. Superseded Task 10's single
+	/// article-wide `previousWorkURL`/`nextWorkURL` pair, which collapsed
+	/// a work's multiple series memberships down to whichever span had a
+	/// link first. Empty when the work has no series membership at all;
+	/// otherwise one entry per membership, each with its own (possibly
+	/// nil, for first/last-in-that-series) previous/next pair.
+	public let seriesEntries: [AO3SeriesSpanResult]
 
-	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, wordCount: Int? = nil, csrfToken: String? = nil, previousWorkURL: String? = nil, nextWorkURL: String? = nil) {
+	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, wordCount: Int? = nil, csrfToken: String? = nil, seriesEntries: [AO3SeriesSpanResult] = []) {
 		self.contentHTML = contentHTML
 		self.chapters = chapters
 		self.commentCount = commentCount
@@ -90,8 +88,7 @@ public struct AO3ChapterExtractionResult: Sendable {
 		self.hitCount = hitCount
 		self.wordCount = wordCount
 		self.csrfToken = csrfToken
-		self.previousWorkURL = previousWorkURL
-		self.nextWorkURL = nextWorkURL
+		self.seriesEntries = seriesEntries
 	}
 }
 
@@ -160,7 +157,7 @@ public enum AO3ChapterHTMLExtractor {
 				let chapters = chapterDivs.compactMap(extractedChapter)
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), previousWorkURL: assembled.previousWorkURL, nextWorkURL: assembled.nextWorkURL))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries))
 			}
 
 			// Single-chapter works carry no per-chapter <div class="chapter">
@@ -203,7 +200,7 @@ public enum AO3ChapterHTMLExtractor {
 				let chapters = [AO3ExtractedChapter(id: "chapter-1", title: "Chapter 1")]
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), previousWorkURL: assembled.previousWorkURL, nextWorkURL: assembled.nextWorkURL))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries))
 			}
 		}
 
@@ -387,23 +384,34 @@ private extension AO3ChapterHTMLExtractor {
 	/// Comments/Kudos/Bookmarks/Hits into structured data this function can
 	/// hand back to callers instead of leaving them buried in an opaque
 	/// HTML blob.
-	static func serializedContentHTML(root: HTMLLiteElement, workSkinParent: HTMLLiteElement, workSkinIndex: Int, workSkinDiv: HTMLLiteElement) -> (contentHTML: String, commentCount: Int?, kudosCount: Int?, bookmarkCount: Int?, hitCount: Int?, wordCount: Int?, previousWorkURL: String?, nextWorkURL: String?) {
+	static func serializedContentHTML(root: HTMLLiteElement, workSkinParent: HTMLLiteElement, workSkinIndex: Int, workSkinDiv: HTMLLiteElement) -> (contentHTML: String, commentCount: Int?, kudosCount: Int?, bookmarkCount: Int?, hitCount: Int?, wordCount: Int?, seriesEntries: [AO3SeriesSpanResult]) {
 		var contentHTML = ""
 		var counts = (commentCount: Int?.none, kudosCount: Int?.none, bookmarkCount: Int?.none, hitCount: Int?.none, wordCount: Int?.none)
-		var navigation = (previousWorkURL: String?.none, nextWorkURL: String?.none)
+		var seriesEntries: [AO3SeriesSpanResult] = []
 
 		if let workHeader = parseWorkHeader(root: root) {
 			if let prefaceHTML = AO3PrefaceRenderer.html(id: "ao3Preface", data: workHeader.data) {
 				contentHTML += prefaceHTML
 			}
 			counts = (workHeader.commentCount, workHeader.kudosCount, workHeader.bookmarkCount, workHeader.hitCount, workHeader.wordCount)
-			navigation = (workHeader.previousWorkURL, workHeader.nextWorkURL)
+			seriesEntries = workHeader.seriesEntries
 		}
 		if let styleElement = precedingStyleElement(parent: workSkinParent, beforeIndex: workSkinIndex) {
 			contentHTML += serializeHTMLLiteNodes([.element(styleElement)])
 		}
 		contentHTML += serializeHTMLLiteNodes([.element(workSkinDiv)])
-		return (contentHTML, counts.commentCount, counts.kudosCount, counts.bookmarkCount, counts.hitCount, counts.wordCount, navigation.previousWorkURL, navigation.nextWorkURL)
+		// Inline series navigation footer: appended immediately after
+		// workSkinDiv's own content, from the same per-span data just
+		// parsed above, so the top preface links and this bottom "This
+		// work is part of" block always agree (same source data, two
+		// render calls) instead of drifting. Absent entirely (no
+		// #ao3SeriesFooter div at all) when the work has no series
+		// membership -- matches the no-fandom/no-warnings "don't render an
+		// empty row" precedent elsewhere in this preface pipeline.
+		if let footerHTML = AO3PrefaceRenderer.seriesFooterHTML(entries: seriesEntries.map(\.entry)) {
+			contentHTML += footerHTML
+		}
+		return (contentHTML, counts.commentCount, counts.kudosCount, counts.bookmarkCount, counts.hitCount, counts.wordCount, seriesEntries)
 	}
 }
 
@@ -420,8 +428,22 @@ struct AO3WorkHeaderExtraction {
 	let bookmarkCount: Int?
 	let hitCount: Int?
 	let wordCount: Int?
-	let previousWorkURL: String?
-	let nextWorkURL: String?
+	let seriesEntries: [AO3SeriesSpanResult]
+}
+
+/// One `<span class="series">` block's full data: `entry` is the
+/// persistable/navigable data (name/index/ao3ID/previousWorkURL/
+/// nextWorkURL, as a `ParsedSeriesEntry` -- see that type's doc comment
+/// for why previous/next live here now instead of as a single article-wide
+/// pair). `href`/`prefix` are the display-only fields the top preface's
+/// `<dt>Series:</dt><dd>` row needs (the linked series name's own href,
+/// and the unlinked "Part N of " prefix text) -- kept alongside `entry`
+/// rather than folded into it, since neither is meaningful outside a
+/// rendered row.
+struct AO3SeriesSpanResult {
+	let entry: ParsedSeriesEntry
+	let href: String?
+	let prefix: String
 }
 
 private extension AO3ChapterHTMLExtractor {
@@ -454,8 +476,7 @@ private extension AO3ChapterHTMLExtractor {
 		var bookmarkCount: Int?
 		var hitCount: Int?
 		var wordCount: Int?
-		var previousWorkURL: String?
-		var nextWorkURL: String?
+		var seriesEntries: [AO3SeriesSpanResult] = []
 
 		var pendingDT: HTMLLiteElement?
 		for element in directChildElements(of: metaGroup) {
@@ -490,10 +511,13 @@ private extension AO3ChapterHTMLExtractor {
 				guard !text.isEmpty else { continue }
 				rows.append(AO3PrefaceRow(label: label, values: [AO3TagEntry(text: text)]))
 			} else if classTokens.contains("series") {
-				let entries = seriesEntries(fromDD: dd)
-				guard !entries.isEmpty else { continue }
-				rows.append(AO3PrefaceRow(label: label, values: entries))
-				(previousWorkURL, nextWorkURL) = previousNextWorkURLs(fromDD: dd)
+				let spanResults = seriesEntriesWithNavigation(fromDD: dd)
+				guard !spanResults.isEmpty else { continue }
+				let displayEntries = spanResults.map { result in
+					AO3TagEntry(text: result.entry.name, href: result.href, prefix: result.prefix)
+				}
+				rows.append(AO3PrefaceRow(label: label, values: displayEntries))
+				seriesEntries = spanResults
 			} else if classTokens.contains("collections") {
 				// Plain comma-separated <a> links directly in the dd, no
 				// <ul><li> wrapper -- confirmed a different shape from the
@@ -558,8 +582,7 @@ private extension AO3ChapterHTMLExtractor {
 			bookmarkCount: bookmarkCount,
 			hitCount: hitCount,
 			wordCount: wordCount,
-			previousWorkURL: previousWorkURL,
-			nextWorkURL: nextWorkURL
+			seriesEntries: seriesEntries
 		)
 	}
 
@@ -578,12 +601,21 @@ private extension AO3ChapterHTMLExtractor {
 	/// than one series -- confirmed in twoseries.html), each wrapping
 	/// optional Previous/Next Work navigation links around the one that
 	/// actually matters: `<span class="position">Part <N> of
-	/// <a href="/series/<id>">Name</a></span>`. Only that inner span is
-	/// read; the Previous/Next links are page-navigation chrome, not
-	/// metadata about the work itself.
-	static func seriesEntries(fromDD dd: HTMLLiteElement) -> [AO3TagEntry] {
+	/// <a href="/series/<id>">Name</a></span>`.
+	///
+	/// Merges what used to be two independent walks of the same span list
+	/// (`seriesEntries(fromDD:)` for the display name/index/ao3ID,
+	/// `previousNextWorkURLs(fromDD:)` for prev/next) into one pass, so
+	/// each span's own previous/next pairs with its own series membership
+	/// instead of collapsing every membership's navigation down to
+	/// whichever span happened to have a link first (Task 10's original,
+	/// now-superseded "first span wins" behavior). One `AO3SeriesSpanResult`
+	/// per span, in document order; a span this can't parse a position/name
+	/// out of is dropped (matches the old `seriesEntries(fromDD:)`'s
+	/// `compactMap` behavior).
+	static func seriesEntriesWithNavigation(fromDD dd: HTMLLiteElement) -> [AO3SeriesSpanResult] {
 		let spans = descendants(of: dd, where: { $0.tag == "span" && $0.attributes["class"] == "series" })
-		return spans.compactMap { span in
+		return spans.compactMap { span -> AO3SeriesSpanResult? in
 			guard let positionSpan = firstDescendant(of: span, where: { $0.tag == "span" && $0.attributes["class"] == "position" }) else {
 				return nil
 			}
@@ -591,48 +623,78 @@ private extension AO3ChapterHTMLExtractor {
 				return nil
 			}
 			let name = flattenedText(anchor).trimmingCharacters(in: .whitespacesAndNewlines)
-			let fullText = flattenedText(positionSpan).trimmingCharacters(in: .whitespacesAndNewlines)
-			guard !name.isEmpty, let nameRange = fullText.range(of: name) else {
-				return AO3TagEntry(text: name, href: anchor.attributes["href"])
+			guard !name.isEmpty else {
+				return nil
 			}
+			let fullText = flattenedText(positionSpan).trimmingCharacters(in: .whitespacesAndNewlines)
 			// Everything before the linked name -- "Part 6 of " -- stays
 			// unlinked, matching Ambrosia's own preface style (confirmed:
 			// test2.json's Series row links only the series name, not the
 			// "Part 1 of" prefix).
-			let prefix = String(fullText[fullText.startIndex..<nameRange.lowerBound])
-			return AO3TagEntry(text: name, href: anchor.attributes["href"], prefix: prefix)
+			let prefix: String
+			if let nameRange = fullText.range(of: name) {
+				prefix = String(fullText[fullText.startIndex..<nameRange.lowerBound])
+			} else {
+				prefix = ""
+			}
+
+			let ao3ID = seriesID(fromHref: anchor.attributes["href"])
+			// "Part <N> of " -- same regex-free digit scan as the prefix
+			// text itself, since fullText already has it isolated. A work
+			// reached only via a refetch of an *existing* article carries
+			// its already-known index straight through unchanged
+			// (AO3ChapterFetcher.rebuildParsedItem maps existingArticle.series
+			// through as-is); this parse only matters for a work with no
+			// prior ArticleSeriesEntry to carry forward from (first-ever
+			// import via Phase 4's bulk series import) -- treat a failed
+			// parse there as 0 rather than silently guessing, since a wrong
+			// index would pick the wrong series-listing page in that flow.
+			let index = Self.parsedIndex(fromPositionText: fullText) ?? 0
+
+			var previousWorkURL: String?
+			var nextWorkURL: String?
+			if let previousAnchor = firstDescendant(of: span, where: { $0.tag == "a" && $0.attributes["class"] == "previous" }) {
+				previousWorkURL = absoluteURL(previousAnchor.attributes["href"])
+			}
+			if let nextAnchor = firstDescendant(of: span, where: { $0.tag == "a" && $0.attributes["class"] == "next" }) {
+				nextWorkURL = absoluteURL(nextAnchor.attributes["href"])
+			}
+
+			let entry = ParsedSeriesEntry(name: name, index: index, ao3ID: ao3ID, previousWorkURL: previousWorkURL, nextWorkURL: nextWorkURL)
+			return AO3SeriesSpanResult(entry: entry, href: anchor.attributes["href"], prefix: prefix)
 		}
 	}
 
-	/// Task 10 (prev/next/first navigation): the same `<span class="series">`
-	/// blocks `seriesEntries(fromDD:)` reads the position text out of also
-	/// carry optional `<a class="previous">`/`<a class="next">` Work
-	/// navigation links -- previously discarded entirely (see
-	/// `seriesEntries(fromDD:)`'s own doc comment); now captured here.
-	///
-	/// A work in more than one series (confirmed: twoseries.html) gets one
-	/// `span.series` block per membership, each with its own
-	/// previous/next pair. The reader's prev/next buttons are singular,
-	/// though, so the first block that has a link for a given direction
-	/// wins for that direction -- in practice a work is almost always in
-	/// at most one series, so this only matters for the rare multi-series
-	/// case.
-	static func previousNextWorkURLs(fromDD dd: HTMLLiteElement) -> (previous: String?, next: String?) {
-		let spans = descendants(of: dd, where: { $0.tag == "span" && $0.attributes["class"] == "series" })
-		var previous: String?
-		var next: String?
-		for span in spans {
-			if previous == nil, let previousAnchor = firstDescendant(of: span, where: { $0.tag == "a" && $0.attributes["class"] == "previous" }) {
-				previous = absoluteURL(previousAnchor.attributes["href"])
-			}
-			if next == nil, let nextAnchor = firstDescendant(of: span, where: { $0.tag == "a" && $0.attributes["class"] == "next" }) {
-				next = absoluteURL(nextAnchor.attributes["href"])
-			}
-			if previous != nil && next != nil {
-				break
-			}
+	/// "Part <N> of " -> `N`, reading only the digits between "Part " and
+	/// " of " in the span's own flattened text (the same text
+	/// `seriesEntriesWithNavigation(fromDD:)` already has in hand -- no
+	/// separate DOM walk needed). `nil` if the text doesn't start with
+	/// "Part " or the digits between don't parse, so the caller can treat
+	/// a genuinely unparseable index as distinct from a real "0".
+	static func parsedIndex(fromPositionText text: String) -> Int? {
+		guard text.hasPrefix("Part ") else {
+			return nil
 		}
-		return (previous, next)
+		guard let ofRange = text.range(of: " of ") else {
+			return nil
+		}
+		let indexString = text[text.index(text.startIndex, offsetBy: "Part ".count)..<ofRange.lowerBound]
+			.trimmingCharacters(in: .whitespacesAndNewlines)
+		return Int(indexString)
+	}
+
+	/// Identical approach to `AO3SearchResultsExtractor.seriesID(fromHref:)`/
+	/// `AO3SummaryExtractor.seriesID(fromHref:)` -- both private to their
+	/// own file, so not directly reusable here; kept as a third small,
+	/// independently-stable copy rather than adding cross-file coupling
+	/// for a three-line helper, same precedent as `absoluteURL` below.
+	static func seriesID(fromHref href: String?) -> String? {
+		guard let href, let range = href.range(of: "/series/") else {
+			return nil
+		}
+		let rest = href[range.upperBound...]
+		let digits = rest.prefix { $0.isNumber }
+		return digits.isEmpty ? nil : String(digits)
 	}
 
 	private static let baseURL = "https://archiveofourown.org"

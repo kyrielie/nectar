@@ -60,8 +60,10 @@ extension Article {
 		let kudosCount = row.columnIsNull(DatabaseKey.kudosCount) ? nil : Int(row.longLongInt(forColumn: DatabaseKey.kudosCount))
 		let bookmarkCount = row.columnIsNull(DatabaseKey.bookmarkCount) ? nil : Int(row.longLongInt(forColumn: DatabaseKey.bookmarkCount))
 		let hitCount = row.columnIsNull(DatabaseKey.hitCount) ? nil : Int(row.longLongInt(forColumn: DatabaseKey.hitCount))
-		let previousWorkURL = row.swiftString(forColumn: DatabaseKey.previousWorkURL)
-		let nextWorkURL = row.swiftString(forColumn: DatabaseKey.nextWorkURL)
+		// DatabaseKey.previousWorkURL/nextWorkURL columns still exist but are
+		// dead: Article no longer has singular previousWorkURL/nextWorkURL
+		// fields (see Article.swift's doc comment) -- previous/next
+		// navigation is per-series now, inside `series` itself.
 		let lastPrefaceFetchDate = row.date(forColumn: DatabaseKey.lastPrefaceFetchDate)
 		let isAmbrosiaItem = row.columnIsNull(DatabaseKey.isAmbrosiaItem) ? false : row.bool(forColumn: DatabaseKey.isAmbrosiaItem)
 
@@ -71,7 +73,7 @@ extension Article {
 		let pendingUpdateDetectedAt = row.date(forColumn: DatabaseKey.pendingUpdateDetectedAt)
 		let wordCountRegressionFlaggedAt = row.date(forColumn: DatabaseKey.wordCountRegressionFlaggedAt)
 
-		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, series: series, commentCount: commentCount, kudosCount: kudosCount, bookmarkCount: bookmarkCount, hitCount: hitCount, previousWorkURL: previousWorkURL, nextWorkURL: nextWorkURL, lastPrefaceFetchDate: lastPrefaceFetchDate, pendingUpdateContentHTML: pendingUpdateContentHTML, pendingUpdateDetectedAt: pendingUpdateDetectedAt, wordCountRegressionFlaggedAt: wordCountRegressionFlaggedAt, isAmbrosiaItem: isAmbrosiaItem, bookKey: bookKey, status: status)
+		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, series: series, commentCount: commentCount, kudosCount: kudosCount, bookmarkCount: bookmarkCount, hitCount: hitCount, lastPrefaceFetchDate: lastPrefaceFetchDate, pendingUpdateContentHTML: pendingUpdateContentHTML, pendingUpdateDetectedAt: pendingUpdateDetectedAt, wordCountRegressionFlaggedAt: wordCountRegressionFlaggedAt, isAmbrosiaItem: isAmbrosiaItem, bookKey: bookKey, status: status)
 	}
 
 	private static func authorsFromRow(_ row: FMResultSet) -> Set<Author>? {
@@ -124,9 +126,9 @@ extension Article {
 			dateModified = nil
 		}
 
-		let series = parsedItem.series?.map { ArticleSeriesEntry(name: $0.name, index: $0.index, ao3ID: $0.ao3ID) }
+		let series = parsedItem.series?.map { ArticleSeriesEntry(name: $0.name, index: $0.index, ao3ID: $0.ao3ID, previousWorkURL: $0.previousWorkURL, nextWorkURL: $0.nextWorkURL) }
 
-		self.init(accountID: accountID, articleID: parsedItem.syncServiceID, feedID: feedID, uniqueID: parsedItem.uniqueID, title: parsedItem.title, contentHTML: parsedItem.contentHTML, contentText: parsedItem.contentText, markdown: parsedItem.markdown, url: parsedItem.url, externalURL: parsedItem.externalURL, summary: parsedItem.summary, imageURL: parsedItem.imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: parsedItem.wordCount, chapterCurrent: parsedItem.chapterCurrent, chapterTotal: parsedItem.chapterTotal, isComplete: parsedItem.isComplete, fandoms: parsedItem.fandoms, relationships: parsedItem.relationships, characters: parsedItem.characters, ratings: parsedItem.ratings, warnings: parsedItem.warnings, categories: parsedItem.categories, series: series, commentCount: parsedItem.commentCount, kudosCount: parsedItem.kudosCount, bookmarkCount: parsedItem.bookmarkCount, hitCount: parsedItem.hitCount, previousWorkURL: parsedItem.previousWorkURL, nextWorkURL: parsedItem.nextWorkURL, lastPrefaceFetchDate: parsedItem.lastPrefaceFetchDate, isAmbrosiaItem: parsedItem.isAmbrosiaItem, bookKey: parsedItem.bookKey, status: status)
+		self.init(accountID: accountID, articleID: parsedItem.syncServiceID, feedID: feedID, uniqueID: parsedItem.uniqueID, title: parsedItem.title, contentHTML: parsedItem.contentHTML, contentText: parsedItem.contentText, markdown: parsedItem.markdown, url: parsedItem.url, externalURL: parsedItem.externalURL, summary: parsedItem.summary, imageURL: parsedItem.imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: parsedItem.wordCount, chapterCurrent: parsedItem.chapterCurrent, chapterTotal: parsedItem.chapterTotal, isComplete: parsedItem.isComplete, fandoms: parsedItem.fandoms, relationships: parsedItem.relationships, characters: parsedItem.characters, ratings: parsedItem.ratings, warnings: parsedItem.warnings, categories: parsedItem.categories, series: series, commentCount: parsedItem.commentCount, kudosCount: parsedItem.kudosCount, bookmarkCount: parsedItem.bookmarkCount, hitCount: parsedItem.hitCount, lastPrefaceFetchDate: parsedItem.lastPrefaceFetchDate, isAmbrosiaItem: parsedItem.isAmbrosiaItem, bookKey: parsedItem.bookKey, status: status)
 	}
 
 	private func addPossibleStringChangeWithKeyPath(_ comparisonKeyPath: KeyPath<Article, String?>, _ otherArticle: Article, _ key: String, _ dictionary: inout DatabaseDictionary) {
@@ -260,12 +262,9 @@ extension Article {
 		if hitCount != existingArticle.hitCount, let hitCount {
 			d[DatabaseKey.hitCount] = hitCount
 		}
-		if previousWorkURL != existingArticle.previousWorkURL, let previousWorkURL {
-			d[DatabaseKey.previousWorkURL] = previousWorkURL
-		}
-		if nextWorkURL != existingArticle.nextWorkURL, let nextWorkURL {
-			d[DatabaseKey.nextWorkURL] = nextWorkURL
-		}
+		// DatabaseKey.previousWorkURL/nextWorkURL are no longer written --
+		// see Article.swift's doc comment; previous/next now lives inside
+		// each `series` entry, covered by the `series` diff above.
 		if lastPrefaceFetchDate != existingArticle.lastPrefaceFetchDate, let lastPrefaceFetchDate {
 			d[DatabaseKey.lastPrefaceFetchDate] = lastPrefaceFetchDate
 		}
@@ -397,12 +396,8 @@ extension Article {
 		if let hitCount {
 			d[DatabaseKey.hitCount] = hitCount
 		}
-		if let previousWorkURL {
-			d[DatabaseKey.previousWorkURL] = previousWorkURL
-		}
-		if let nextWorkURL {
-			d[DatabaseKey.nextWorkURL] = nextWorkURL
-		}
+		// DatabaseKey.previousWorkURL/nextWorkURL are no longer written --
+		// see the comment in changesFrom above.
 		if let lastPrefaceFetchDate {
 			d[DatabaseKey.lastPrefaceFetchDate] = lastPrefaceFetchDate
 		}
