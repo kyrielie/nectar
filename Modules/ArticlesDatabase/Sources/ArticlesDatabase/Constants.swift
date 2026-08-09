@@ -59,6 +59,11 @@ struct DatabaseKey {
 	// Task 10 ("Prev/next/first navigation") -- previous/next work in
 	// series, read off the same live work-page fetch as the four stats
 	// above.
+	// Dead: Article no longer has singular previousWorkURL/nextWorkURL
+	// fields (superseded by per-series navigation on ArticleSeriesEntry).
+	// Kept, unwritten/unread, rather than migrated away -- see
+	// nectar-architecture.md's SurfacePalette.HexSet note for the
+	// precedent. Do not reuse these column names for anything else.
 	static let previousWorkURL = "previousWorkURL"
 	static let nextWorkURL = "nextWorkURL"
 	static let lastPrefaceFetchDate = "lastPrefaceFetchDate"

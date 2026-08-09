@@ -274,10 +274,11 @@ import Testing
 		// ao3-work-two-series.html: a work belonging to two series at once
 		// ("Double Or Nothing" and "Je Me Souviens"), each rendered as its
 		// own comma-separated <span class="series"> inside one <dd
-		// class="series"> -- confirms seriesEntries(fromDD:) reads both via
-		// its descendants search rather than only the first. Regression
-		// coverage, not a new feature: no code change was needed for this
-		// case, since descendants(of:where:) already walks all matches.
+		// class="series"> -- confirms seriesEntriesWithNavigation(fromDD:)
+		// reads both via its descendants search rather than only the
+		// first. Regression coverage, not a new feature: no code change
+		// was needed for this case, since descendants(of:where:) already
+		// walks all matches.
 		let html = htmlFixtureString("ao3-work-two-series.html")
 		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
 		guard case .success(let result) = outcome else {
@@ -291,26 +292,120 @@ import Testing
 		#expect(result.contentHTML.contains("Je Me Souviens"))
 		// Only the linked series name comes from the anchor text; the "Part
 		// <N> of " prefix ahead of it is unlinked plain text, matching
-		// Ambrosia's own preface style (see seriesEntries(fromDD:)).
+		// Ambrosia's own preface style (see
+		// seriesEntriesWithNavigation(fromDD:)).
 		#expect(result.contentHTML.contains("Part 6 of"))
 		#expect(result.contentHTML.contains("Part 2 of"))
+
+		// Beyond the rendered HTML string above, confirm the *pairing*:
+		// each series' own ao3ID and parsed index attach to the right
+		// name, not just that both ids/indices are present somewhere in
+		// the result -- the two prior assertions above couldn't catch a
+		// bug that swapped the two series' ids or indices.
+		#expect(result.seriesEntries.count == 2)
+		let doubleOrNothing = try #require(result.seriesEntries.first { $0.entry.name == "Double Or Nothing" })
+		#expect(doubleOrNothing.entry.ao3ID == "4183855")
+		#expect(doubleOrNothing.entry.index == 6)
+		let jeMeSouviens = try #require(result.seriesEntries.first { $0.entry.name == "Je Me Souviens" })
+		#expect(jeMeSouviens.entry.ao3ID == "4569715")
+		#expect(jeMeSouviens.entry.index == 2)
 	}
 
 	@Test func previousWorkURLCapturedNextNilWhenLastInBothSeries() throws {
-		// Task 10: ao3-work-two-series.html's two <span class="series">
-		// blocks each carry the same <a class="previous"
-		// href="/works/60379705"> and no <a class="next"> (this work is
-		// the last part in both series memberships) -- confirms
-		// previousNextWorkURLs(fromDD:) reads the first block's link for
-		// each direction and resolves it to an absolute URL.
+		// Task 10 (superseded by inline series navigation, but the fixture
+		// data is still real): ao3-work-two-series.html's two
+		// <span class="series"> blocks each carry the same
+		// <a class="previous" href="/works/60379705"> and no
+		// <a class="next"> (this work is the last part in both series
+		// memberships) -- confirms seriesEntriesWithNavigation(fromDD:)
+		// reads each block's own link and resolves it to an absolute URL.
+		//
+		// Both spans happen to carry the *same* previous URL in this
+		// fixture, so this test alone can't distinguish "each series kept
+		// its own value" from "the first span's value leaked to both" --
+		// see seriesEntriesPairPreviousNextIndependentlyPerSeries below
+		// for that regression coverage, using a synthetic fixture where
+		// the two memberships genuinely differ.
 		let html = htmlFixtureString("ao3-work-two-series.html")
 		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
 		guard case .success(let result) = outcome else {
 			Issue.record("Expected .success, got \(outcome)")
 			return
 		}
-		#expect(result.previousWorkURL == "https://archiveofourown.org/works/60379705")
-		#expect(result.nextWorkURL == nil)
+		#expect(result.seriesEntries.count == 2)
+		for span in result.seriesEntries {
+			#expect(span.entry.previousWorkURL == "https://archiveofourown.org/works/60379705")
+			#expect(span.entry.nextWorkURL == nil)
+		}
+	}
+
+	@Test func seriesEntriesPairPreviousNextIndependentlyPerSeries() throws {
+		// Synthetic fixture (ao3-work-two-series.html's two spans happen
+		// to share the same previous URL and neither has a next, so it
+		// can't tell "per-entry pairing" apart from "first span wins" --
+		// see the note on previousWorkURLCapturedNextNilWhenLastInBothSeries
+		// above). This work is a member of two series with genuinely
+		// different previous/next works, mirroring
+		// AO3SeriesListingExtractorTests.swift's synthetic-literal style.
+		let html = """
+		<html><body>
+		<dl class="work meta group">
+		<dt class="series">Series:</dt>
+		<dd class="series">
+		<span class="series"><a class="previous" href="/works/111">← Previous Work</a><a class="next" href="/works/222">Next Work →</a><span class="divider"> </span><span class="position">Part 3 of <a href="/series/1001">Series One</a></span></span>, <span class="series"><a class="previous" href="/works/333">← Previous Work</a><span class="divider"> </span><span class="position">Part 5 of <a href="/series/2002">Series Two</a></span></span>
+		</dd>
+		</dl>
+		<div id="workskin">
+		<div class="chapter" id="chapter-1">
+		<div class="chapter preface group"><h3 class="title">Chapter 1</h3></div>
+		<div class="userstuff module" role="article">Body text.</div>
+		</div>
+		</div>
+		</body></html>
+		"""
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		#expect(result.seriesEntries.count == 2)
+		let seriesOne = try #require(result.seriesEntries.first { $0.entry.name == "Series One" })
+		#expect(seriesOne.entry.ao3ID == "1001")
+		#expect(seriesOne.entry.index == 3)
+		#expect(seriesOne.entry.previousWorkURL == "https://archiveofourown.org/works/111")
+		#expect(seriesOne.entry.nextWorkURL == "https://archiveofourown.org/works/222")
+
+		let seriesTwo = try #require(result.seriesEntries.first { $0.entry.name == "Series Two" })
+		#expect(seriesTwo.entry.ao3ID == "2002")
+		#expect(seriesTwo.entry.index == 5)
+		#expect(seriesTwo.entry.previousWorkURL == "https://archiveofourown.org/works/333")
+		#expect(seriesTwo.entry.nextWorkURL == nil)
+
+		// Footer block (Phase 3b): confirms serializedContentHTML appends
+		// AO3PrefaceRenderer.seriesFooterHTML's output once, positioned
+		// after workSkinDiv's own content marker, using the same
+		// per-span data just asserted above -- top and bottom agree
+		// because both read from this one parse pass.
+		let workskinRange = try #require(result.contentHTML.range(of: "id=\"workskin\""))
+		let footerRange = try #require(result.contentHTML.range(of: "id='ao3SeriesFooter'"))
+		#expect(workskinRange.lowerBound < footerRange.lowerBound)
+		// percentEncodedQueryValue only encodes "&"/"="/"?" (the query
+		// string's own delimiters); ":"/"/" are otherwise valid in
+		// .urlQueryAllowed and pass through unencoded, so a work URL
+		// reads naturally here. The literal "&" *between* the two query
+		// params (not inside either value) goes through the HTML
+		// attribute escaper afterward, same as any other href -- hence
+		// "&amp;" below, not "&".
+		#expect(result.contentHTML.contains("href='nectar-series:first?ao3id=1001'"))
+		#expect(result.contentHTML.contains("href='nectar-series:previous?ao3id=1001&amp;workurl=https://archiveofourown.org/works/111'"))
+		#expect(result.contentHTML.contains("href='nectar-series:next?ao3id=1001&amp;workurl=https://archiveofourown.org/works/222'"))
+		#expect(result.contentHTML.contains("href='nectar-series:first?ao3id=2002'"))
+		#expect(result.contentHTML.contains("href='nectar-series:previous?ao3id=2002&amp;workurl=https://archiveofourown.org/works/333'"))
+		// Series Two has no next work -- rendered as plain muted text,
+		// not a nectar-series:next link (Phase 3c).
+		#expect(!result.contentHTML.contains("nectar-series:next?ao3id=2002"))
+		#expect(result.contentHTML.contains("<span class='ao3SeriesNavDisabled'>Next</span>"))
 	}
 
 	@Test func metaGroupCollectionsRowRenderedForSingleChapterWork() throws {

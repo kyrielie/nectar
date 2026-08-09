@@ -151,6 +151,22 @@ private extension AO3SeriesNavigatorTests {
 	static func makeArticle(previousWorkURL: String? = nil, nextWorkURL: String? = nil, series: [ArticleSeriesEntry]? = nil) -> Article {
 		let articleID = "test-article-id-\(UUID().uuidString)"
 		let status = ArticleStatus(articleID: articleID, read: false, starred: false, dateArrived: Date())
+		// fetchAdjacentWork (interim Phase 1/2 shim -- see the doc comment
+		// on AO3SeriesNavigator.fetchAdjacentWork) now reads previous/next
+		// off `series` entries, not the singular Article-level fields the
+		// inline-series-navigation plan's Phase 1 removed. When a caller
+		// below only wants to simulate a bare previous/next pair (not
+		// exercising genuinely multi-series behavior), wrap it in one
+		// synthetic ArticleSeriesEntry here so those call sites don't each
+		// need to build their own `series` array by hand.
+		let resolvedSeries: [ArticleSeriesEntry]?
+		if let series {
+			resolvedSeries = series
+		} else if previousWorkURL != nil || nextWorkURL != nil {
+			resolvedSeries = [ArticleSeriesEntry(name: "Test Series", index: 1, ao3ID: "1", previousWorkURL: previousWorkURL, nextWorkURL: nextWorkURL)]
+		} else {
+			resolvedSeries = nil
+		}
 		return Article(
 			accountID: "test-account-id",
 			articleID: articleID,
@@ -167,9 +183,7 @@ private extension AO3SeriesNavigatorTests {
 			datePublished: nil,
 			dateModified: nil,
 			authors: nil,
-			series: series,
-			previousWorkURL: previousWorkURL,
-			nextWorkURL: nextWorkURL,
+			series: resolvedSeries,
 			bookKey: "ao3-work:999",
 			status: status
 		)

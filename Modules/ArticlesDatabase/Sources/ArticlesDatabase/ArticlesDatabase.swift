@@ -148,7 +148,11 @@ public struct ArticleStorageInfo: Sendable {
 			// Task 10 ("Prev/next/first navigation") -- previous/next work
 			// URLs, read off the same live work-page fetch as the stats
 			// above, but stored as TEXT (URLs, not counts). Same additive,
-			// containsColumn-guarded pattern.
+			// containsColumn-guarded pattern. Superseded by per-series
+			// navigation (inline series nav plan): Article no longer writes
+			// or reads these columns, but the migration stays so an
+			// existing install's schema doesn't change shape, and the
+			// column names stay reserved (see Constants.swift).
 			let ao3SeriesNavigationColumns = ["previousWorkURL", "nextWorkURL"]
 			for column in ao3SeriesNavigationColumns {
 				if !self.articlesTable.containsColumn(column, in: database) {

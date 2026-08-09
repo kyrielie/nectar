@@ -54,12 +54,26 @@ public enum AO3SeriesNavigationError: Error, Sendable {
 @MainActor
 public enum AO3SeriesNavigator {
 
-	/// Adds and fetches `existingArticle.previousWorkURL`/`nextWorkURL`
+	/// Adds and fetches the adjacent work in `existingArticle`'s series
 	/// (whichever `direction` selects), returning the new article's
 	/// `articleID` once its content has finished loading, so the caller
 	/// can navigate the reader straight to it.
+	///
+	/// Interim Phase 1/2 shim: since the inline-series-navigation plan's
+	/// Phase 1 folded `previousWorkURL`/`nextWorkURL` into each
+	/// `ArticleSeriesEntry` (a work in more than one series can have a
+	/// different adjacent work per series -- see `ArticleSeriesEntry`'s
+	/// doc comment), this whole entry point is superseded by Phase 4's
+	/// `openSeriesWork(ao3SeriesID:direction:targetWorkURL:targetIndex:existingArticle:account:)`,
+	/// which is per-series rather than per-article. Until Phase 4 lands,
+	/// this keeps the existing context-menu behavior working by picking
+	/// the first series membership with a non-nil URL for `direction` --
+	/// the same "first membership wins" collapsing the old
+	/// `AO3ChapterHTMLExtractor.previousNextWorkURLs(fromDD:)` used to do
+	/// before Phase 2 replaced it. Delete this function (and this whole
+	/// call path) once Phase 4 ships.
 	public static func fetchAdjacentWork(direction: Direction, from existingArticle: Article, account: Account) async -> Result<String, AO3SeriesNavigationError> {
-		let permalink = direction == .previous ? existingArticle.previousWorkURL : existingArticle.nextWorkURL
+		let permalink = existingArticle.series?.compactMap { direction == .previous ? $0.previousWorkURL : $0.nextWorkURL }.first
 		guard let permalink, let workID = AO3SummaryExtractor.ao3WorkID(fromPermalink: permalink) else {
 			return .failure(.noAdjacentWork)
 		}

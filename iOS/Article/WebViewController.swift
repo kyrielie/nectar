@@ -1368,19 +1368,27 @@ private extension WebViewController {
 	}
 
 	/// Task 10 ("Prev/next/first navigation"): AO3's own Previous/Next
-	/// Work links, captured on fetch -- see
-	/// `Article.previousWorkURL`/`nextWorkURL`'s doc comment. Hidden
-	/// entirely (nil) rather than shown-disabled when there's no
-	/// adjacent work in that direction, since "no previous work" isn't
-	/// an error state worth a menu row for -- unlike checkForUpdatesAction's
-	/// disabled-with-explanation case, there's no person-actionable fix
-	/// for "you're at the start of the series."
+	/// Work links, captured on fetch -- now per series membership on
+	/// `ArticleSeriesEntry.previousWorkURL`/`nextWorkURL` (see that
+	/// type's doc comment) rather than a single article-wide pair.
+	/// Interim Phase 1/2 shim, same "first membership wins" collapsing
+	/// `AO3SeriesNavigator.fetchAdjacentWork`'s doc comment describes --
+	/// this whole context-menu action pair is superseded by the inline
+	/// per-series links the plan's Phase 3/4 render directly in the
+	/// article and is deleted once those ship. Hidden entirely (nil)
+	/// rather than shown-disabled when there's no adjacent work in that
+	/// direction, since "no previous work" isn't an error state worth a
+	/// menu row for -- unlike checkForUpdatesAction's disabled-with-
+	/// explanation case, there's no person-actionable fix for "you're at
+	/// the start of the series."
 	func previousWorkAction() -> UIAction? {
-		seriesNavigationAction(direction: .previous, url: article?.previousWorkURL, title: NSLocalizedString("Previous Work", comment: "Command"), loadingTitle: NSLocalizedString("Loading Previous Work…", comment: "Command, in progress"), image: Assets.Images.prevArticle)
+		let url = article?.series?.compactMap(\.previousWorkURL).first
+		return seriesNavigationAction(direction: .previous, url: url, title: NSLocalizedString("Previous Work", comment: "Command"), loadingTitle: NSLocalizedString("Loading Previous Work…", comment: "Command, in progress"), image: Assets.Images.prevArticle)
 	}
 
 	func nextWorkAction() -> UIAction? {
-		seriesNavigationAction(direction: .next, url: article?.nextWorkURL, title: NSLocalizedString("Next Work", comment: "Command"), loadingTitle: NSLocalizedString("Loading Next Work…", comment: "Command, in progress"), image: Assets.Images.nextArticle)
+		let url = article?.series?.compactMap(\.nextWorkURL).first
+		return seriesNavigationAction(direction: .next, url: url, title: NSLocalizedString("Next Work", comment: "Command"), loadingTitle: NSLocalizedString("Loading Next Work…", comment: "Command, in progress"), image: Assets.Images.nextArticle)
 	}
 
 	private func seriesNavigationAction(direction: AO3SeriesNavigator.Direction, url: String?, title: String, loadingTitle: String, image: UIImage?) -> UIAction? {
