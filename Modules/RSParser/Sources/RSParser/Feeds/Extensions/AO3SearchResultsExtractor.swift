@@ -134,21 +134,13 @@ private extension AO3SearchResultsExtractor {
 
 private extension AO3SearchResultsExtractor {
 
-	/// `li.next` containing a real `<a href>` -- present and enabled when
-	/// another page exists. Confirmed against a captured page-1-of-4601
-	/// results page where `li.next` wrapped a live `<a>`; the disabled
-	/// shape on an actual last page (by symmetry with `li.previous`'s
-	/// confirmed `<span class="disabled">` shape on page 1) is not
-	/// independently confirmed from a captured last-page sample -- treat
-	/// as plausible-but-unverified per the project's own rule about not
-	/// guessing markup. Either way this resolves safely: absence of a
-	/// live anchor (missing `<li>`, or `<li>` present but only wrapping a
-	/// disabled `<span>`) both read as `false`.
+	/// Hoisted to `AO3ListingPagination.hasNextPage(_:)` (inline-series-
+	/// navigation plan, Phase 4a) once `AO3SeriesListingExtractor` needed
+	/// the identical `li.next > a[href]` check for the series-listing
+	/// walk -- see that type's own doc comment for the confirmation
+	/// details this used to carry directly.
 	static func hasNextPage(_ root: HTMLLiteElement) -> Bool {
-		guard let nextLI = firstDescendant(of: root, where: { $0.tag == "li" && classTokens(of: $0).contains("next") }) else {
-			return false
-		}
-		return firstDescendant(of: nextLI, where: { $0.tag == "a" && $0.attributes["href"] != nil }) != nil
+		AO3ListingPagination.hasNextPage(root)
 	}
 }
 
