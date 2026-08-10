@@ -250,11 +250,23 @@ public enum AO3PrefaceRenderer {
 	/// fetch; otherwise they render as plain, unlinked muted text (Phase
 	/// 3c) rather than being hidden outright, so a per-row label still
 	/// communicates "you're at the start/end of *this* series."
+	///
+	/// Every tappable link also carries `data-nectar-series-key="<ao3ID>|
+	/// <direction>"` (Phase 4e) -- the same key
+	/// `WebViewController`'s per-`(seriesID, direction)` nav-state store
+	/// uses, so a single small JS snippet can find and repaint every
+	/// on-page occurrence of "this series' Previous link" (it appears
+	/// twice: once in the preface's top row, once in the "This work is
+	/// part of" footer) without a full page reload. A work can belong to
+	/// more than one series row -- e.g. the same series' Previous link
+	/// appearing once per row that names it -- so this is deliberately
+	/// `querySelectorAll`-shaped (repaint every match), not a single-id
+	/// lookup.
 	static func seriesNavigationLinksHTML(ao3ID: String?, previousWorkURL: String?, nextWorkURL: String?) -> String {
 		var parts: [String] = []
 
 		if let ao3ID {
-			parts.append(link(label: "First", href: "nectar-series:first?ao3id=\(percentEncodedQueryValue(ao3ID))"))
+			parts.append(link(label: "First", href: "nectar-series:first?ao3id=\(percentEncodedQueryValue(ao3ID))", seriesKey: seriesNavKey(ao3ID: ao3ID, direction: "first")))
 		} else {
 			parts.append(disabledLabel("First"))
 		}
@@ -270,11 +282,15 @@ public enum AO3PrefaceRenderer {
 			return disabledLabel(label)
 		}
 		let href = "nectar-series:\(direction)?ao3id=\(percentEncodedQueryValue(ao3ID))&workurl=\(percentEncodedQueryValue(workURL))"
-		return link(label: label, href: href)
+		return link(label: label, href: href, seriesKey: seriesNavKey(ao3ID: ao3ID, direction: direction))
 	}
 
-	private static func link(label: String, href: String) -> String {
-		"<a href='\(escapeAttribute(href))'>\(escape(label))</a>"
+	private static func seriesNavKey(ao3ID: String, direction: String) -> String {
+		"\(ao3ID)|\(direction)"
+	}
+
+	private static func link(label: String, href: String, seriesKey: String) -> String {
+		"<a href='\(escapeAttribute(href))' data-nectar-series-key='\(escapeAttribute(seriesKey))'>\(escape(label))</a>"
 	}
 
 	private static func disabledLabel(_ label: String) -> String {

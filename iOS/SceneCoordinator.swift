@@ -1756,6 +1756,43 @@ struct SidebarItemNode: Hashable, Sendable {
 		}
 	}
 
+	/// Inline-series-navigation plan, Phase 4d: sends the user back to the
+	/// timeline, then opens `articleID` once it's actually present in
+	/// `self.articles` -- distinct from `selectArticleInCurrentFeed`
+	/// above, which stays inside the article reader and only searches
+	/// whatever `self.articles` already holds.
+	///
+	/// `articleID` here was very likely just stub-imported (or newly
+	/// fetched) by `AO3SeriesNavigator.openSeriesWork`, so it may not be
+	/// in `self.articles` yet -- that array is only refreshed by
+	/// `accountDidDownloadArticles` -> `queueFetchAndMergeArticles()`,
+	/// an asynchronous, debounced path with no signal this call can wait
+	/// on directly. The naive `navigateToTimeline(); selectArticleInCurrentFeed(id)`
+	/// sequence races that refresh: `selectArticleInCurrentFeed` can run
+	/// before the merge has surfaced the new article, silently no-op'ing.
+	///
+	/// Fix: don't rely on the notification-driven queue for this flow.
+	/// Call `fetchAndMergeArticlesAsync(animated:completion:)` directly
+	/// and only select from inside its completion, after `self.articles`
+	/// has actually been rebuilt.
+	///
+	/// **Known, unresolved risk (flagged rather than silently assumed
+	/// safe):** this bypasses `fetchAndMergeArticlesQueue`'s coalescing.
+	/// If a notification-driven `queueFetchAndMergeArticles()` call (e.g.
+	/// from the same stub-import's own `AccountDidDownloadArticles` post)
+	/// fires around the same time, both calls run `fetchUnsortedArticlesAsync`
+	/// back to back rather than coalescing into one -- redundant work, not
+	/// a correctness bug as far as this function's own selection goes
+	/// (each call rebuilds `self.articles` fully), but not verified
+	/// against `CoalescingQueue`'s actual behavior under real concurrent
+	/// use before shipping.
+	func navigateToTimelineAndSelectArticle(_ articleID: String) {
+		navigateToTimeline()
+		fetchAndMergeArticlesAsync(animated: true) { [weak self] in
+			self?.selectArticleInCurrentFeed(articleID)
+		}
+	}
+
 	func importTheme(filename: String) {
 		do {
 			try ArticleThemeImporter.importTheme(controller: rootSplitViewController, url: URL(fileURLWithPath: filename))

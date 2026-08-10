@@ -52,6 +52,16 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 			sessionConfiguration.httpAdditionalHeaders = userAgentHeaders
 		}
 
+		// Mirrors URLSession.webservice's own unit-test seam (RSWeb's
+		// URLSession+Webservice.swift) -- without this, Downloader.shared
+		// (used by AO3SeriesNavigator.openSeriesWork and
+		// AO3ChapterFetcher, among others) has no way to be exercised in
+		// tests except against the real archiveofourown.org, since it
+		// builds its own URLSession here rather than using .webservice.
+		if Platform.isRunningUnitTests {
+			sessionConfiguration.protocolClasses = [TestingURLProtocol.self]
+		}
+
 		urlSession = URLSession(configuration: sessionConfiguration)
 	}
 

@@ -530,3 +530,28 @@ scrollToHeading = withEncodedArg(options => {
 		el.scrollIntoView({ behavior: 'instant', block: 'start' });
 	}
 });
+
+// Inline series navigation (nectar-inline-series-nav-implementation-
+// plan.md, Phase 4e). Repaints the tapped link's own text/disabled state
+// in place, without a full page reload/scroll-position loss. `seriesKey`
+// matches the `data-nectar-series-key="<ao3ID>|<direction>"` attribute
+// AO3PrefaceRenderer stamps onto every tappable First/Previous/Next link
+// (WebViewController's SeriesNavKey, `"\(ao3SeriesID)|\(direction)"`
+// there). Deliberately `querySelectorAll`-shaped, not a single-id
+// lookup: the same series' link appears twice on the page (the preface's
+// top row and the "This work is part of" footer), and a work can belong
+// to more than one series row, so every match for this key must repaint
+// together.
+updateNectarSeriesLink = withEncodedArg(options => {
+	const { seriesKey, label, disabled } = options;
+	document.querySelectorAll('[data-nectar-series-key="' + seriesKey + '"]').forEach(el => {
+		el.textContent = label;
+		if (disabled) {
+			el.setAttribute('aria-disabled', 'true');
+			el.classList.add('nectarSeriesLinkLoading');
+		} else {
+			el.removeAttribute('aria-disabled');
+			el.classList.remove('nectarSeriesLinkLoading');
+		}
+	});
+});

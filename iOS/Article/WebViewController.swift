@@ -57,25 +57,26 @@ final class WebViewController: UIViewController {
 	// is not a safe way to identify it.
 	private var webView: PreloadedWebView?
 
-	// Task 10 ("Prev/next/first navigation"): per-button in-flight/error
-	// state for the three AO3SeriesNavigator actions below. Reset to nil
-	// whenever `article` changes (a different work has its own separate
-	// prev/next/first state) -- see `article` didSet.
-	private var seriesNavigationInFlight: Set<AO3SeriesNavigator.Direction> = []
-	private var isFetchingFirstWorkInSeries = false
-	private var seriesNavigationFailureMessage: String?
-
 	// Inline series navigation (nectar-inline-series-nav-implementation-
-	// plan.md, Phase 3a/3c). Interim per-tap guard against a double-fetch
-	// from a fast double-tap on the same link, keyed on the tapped
-	// href's own string -- deliberately not the richer
-	// `[SeriesNavKey: NavState]` store Phase 4e's plan describes (that
-	// needs a JS hook to repaint the tapped link's own text/disabled
-	// state in the webview, which isn't wired up yet); this only
-	// suppresses a duplicate fetch, it doesn't feed back into the
-	// rendered HTML. Reset alongside the other series-navigation state
-	// below, on article change.
-	private var nectarSeriesLinkNavigationInFlight: Set<String> = []
+	// plan.md, Phase 4e). Per-(series, direction) in-flight/failure state
+	// for the links AO3PrefaceRenderer renders directly into the article
+	// -- replaces Task 10's single-slot `seriesNavigationInFlight`/
+	// `isFetchingFirstWorkInSeries`/`seriesNavigationFailureMessage`
+	// (deleted along with the context-menu actions they backed, see
+	// handleNectarSeriesLink below). Two different series' Previous
+	// links (or the same series' Previous and Next) must be able to be
+	// in-flight/failed independently, hence a dictionary keyed on
+	// `SeriesNavKey` rather than one shared flag. Reset whenever
+	// `article` changes -- see `article` didSet.
+	private struct SeriesNavKey: Hashable {
+		let ao3SeriesID: String
+		let direction: AO3SeriesNavigator.Direction
+	}
+	private enum SeriesNavState {
+		case inFlight
+		case failed(String)
+	}
+	private var seriesNavState: [SeriesNavKey: SeriesNavState] = [:]
 
 	// Bumped at the top of every loadWebView() call. Captured by value into each
 	// dequeueWebView/ready completion so that a completion arriving after a newer
@@ -105,10 +106,7 @@ final class WebViewController: UIViewController {
 			// A different work has its own separate prev/next/first state --
 			// don't carry over another article's in-flight/error state.
 			if article?.articleID != oldValue?.articleID {
-				seriesNavigationInFlight.removeAll()
-				isFetchingFirstWorkInSeries = false
-				seriesNavigationFailureMessage = nil
-				nectarSeriesLinkNavigationInFlight.removeAll()
+				seriesNavState.removeAll()
 			}
 		}
 	}
@@ -579,10 +577,11 @@ extension WebViewController: UIContextMenuInteractionDelegate {
 				menus.append(UIMenu(title: "", options: .displayInline, children: [action]))
 			}
 
-			let seriesNavigationActions = [self.previousWorkAction(), self.nextWorkAction(), self.firstWorkInSeriesAction()].compactMap { $0 }
-			if !seriesNavigationActions.isEmpty {
-				menus.append(UIMenu(title: "", options: .displayInline, children: seriesNavigationActions))
-			}
+			// Previous/Next/First Work in Series used to be here as
+			// context-menu actions (Task 10) -- superseded by the inline
+			// "First · Previous · Next" links AO3PrefaceRenderer now
+			// renders directly in the article (inline-series-navigation
+			// plan, Phase 3/4). See handleNectarSeriesLink below.
 
 			menus.append(UIMenu(title: "", options: .displayInline, children: [self.shareAction()]))
 
@@ -1413,185 +1412,154 @@ private extension WebViewController {
 		}
 	}
 
-	/// Task 10 ("Prev/next/first navigation"): AO3's own Previous/Next
-	/// Work links, captured on fetch -- now per series membership on
-	/// `ArticleSeriesEntry.previousWorkURL`/`nextWorkURL` (see that
-	/// type's doc comment) rather than a single article-wide pair.
-	/// Interim Phase 1/2 shim, same "first membership wins" collapsing
-	/// `AO3SeriesNavigator.fetchAdjacentWork`'s doc comment describes --
-	/// this whole context-menu action pair is superseded by the inline
-	/// per-series links the plan's Phase 3/4 render directly in the
-	/// article and is deleted once those ship. Hidden entirely (nil)
-	/// rather than shown-disabled when there's no adjacent work in that
-	/// direction, since "no previous work" isn't an error state worth a
-	/// menu row for -- unlike checkForUpdatesAction's disabled-with-
-	/// explanation case, there's no person-actionable fix for "you're at
-	/// the start of the series."
-	func previousWorkAction() -> UIAction? {
-		let url = article?.series?.compactMap(\.previousWorkURL).first
-		return seriesNavigationAction(direction: .previous, url: url, title: NSLocalizedString("Previous Work", comment: "Command"), loadingTitle: NSLocalizedString("Loading Previous Work…", comment: "Command, in progress"), image: Assets.Images.prevArticle)
-	}
-
-	func nextWorkAction() -> UIAction? {
-		let url = article?.series?.compactMap(\.nextWorkURL).first
-		return seriesNavigationAction(direction: .next, url: url, title: NSLocalizedString("Next Work", comment: "Command"), loadingTitle: NSLocalizedString("Loading Next Work…", comment: "Command, in progress"), image: Assets.Images.nextArticle)
-	}
-
-	private func seriesNavigationAction(direction: AO3SeriesNavigator.Direction, url: String?, title: String, loadingTitle: String, image: UIImage?) -> UIAction? {
-		guard url != nil else { return nil }
-		if seriesNavigationInFlight.contains(direction) {
-			return UIAction(title: loadingTitle, image: image, attributes: .disabled) { _ in }
-		}
-		if let seriesNavigationFailureMessage {
-			let failureTitle = String(format: NSLocalizedString("%@ (%@ -- Retry)", comment: "Command, previous attempt failed"), title, seriesNavigationFailureMessage)
-			return UIAction(title: failureTitle, image: image) { [weak self] _ in
-				self?.performSeriesNavigation(direction: direction)
-			}
-		}
-		return UIAction(title: title, image: image) { [weak self] _ in
-			self?.performSeriesNavigation(direction: direction)
-		}
-	}
-
-	private func performSeriesNavigation(direction: AO3SeriesNavigator.Direction) {
-		guard let article, let account = article.account else { return }
-		seriesNavigationFailureMessage = nil
-		seriesNavigationInFlight.insert(direction)
-		Task { @MainActor in
-			let result = await AO3SeriesNavigator.fetchAdjacentWork(direction: direction, from: article, account: account)
-			// The person may have navigated to a different article while
-			// this was in flight -- state belongs to whichever article is
-			// showing now, and this fetch's own article no longer exists
-			// to react against.
-			guard self.article?.articleID == article.articleID else { return }
-			self.seriesNavigationInFlight.remove(direction)
-			switch result {
-			case .success(let newArticleID):
-				self.coordinator.selectArticleInCurrentFeed(newArticleID)
-			case .failure(let error):
-				self.seriesNavigationFailureMessage = error.displayMessage
-				UIAccessibility.post(notification: .announcement, argument: error.displayMessage)
-			}
-		}
-	}
-
-	/// Task 10: unlike previous/next (data already in hand from the last
-	/// content fetch), reaching work #1 needs its own network request --
-	/// AO3's work page has no "first work in series" link, only
-	/// previous/next (see
-	/// `AO3ChapterHTMLExtractor.previousNextWorkURLs`'s doc comment) --
-	/// so this is fetched lazily, only on tap, via
-	/// `AO3SeriesNavigator.fetchFirstWorkInSeries`.
-	func firstWorkInSeriesAction() -> UIAction? {
-		guard let article, article.series?.contains(where: { $0.ao3ID != nil }) == true else { return nil }
-		if isFetchingFirstWorkInSeries {
-			let loadingTitle = NSLocalizedString("Loading First Work…", comment: "Command, in progress")
-			return UIAction(title: loadingTitle, image: Assets.Images.prevArticle, attributes: .disabled) { _ in }
-		}
-		if let seriesNavigationFailureMessage {
-			let failureTitle = String(format: NSLocalizedString("First Work (%@ -- Retry)", comment: "Command, previous attempt failed"), seriesNavigationFailureMessage)
-			return UIAction(title: failureTitle, image: Assets.Images.prevArticle) { [weak self] _ in
-				self?.performFirstWorkNavigation()
-			}
-		}
-		let title = NSLocalizedString("First Work in Series", comment: "Command")
-		return UIAction(title: title, image: Assets.Images.prevArticle) { [weak self] _ in
-			self?.performFirstWorkNavigation()
-		}
-	}
-
-	private func performFirstWorkNavigation() {
-		guard let article, let account = article.account else { return }
-		seriesNavigationFailureMessage = nil
-		isFetchingFirstWorkInSeries = true
-		Task { @MainActor in
-			let result = await AO3SeriesNavigator.fetchFirstWorkInSeries(from: article, account: account)
-			guard self.article?.articleID == article.articleID else { return }
-			self.isFetchingFirstWorkInSeries = false
-			switch result {
-			case .success(let newArticleID):
-				self.coordinator.selectArticleInCurrentFeed(newArticleID)
-			case .failure(let error):
-				self.seriesNavigationFailureMessage = error.displayMessage
-				UIAccessibility.post(notification: .announcement, argument: error.displayMessage)
-			}
-		}
-	}
-
-	// MARK: - Inline series navigation (nectar-series: links, Phase 3a)
-
-	/// Handles a tap on one of the `nectar-series:` links
-	/// `AO3PrefaceRenderer` builds into the preface's Series row and the
-	/// "This work is part of" footer (plan Phase 3a/3b) --
-	/// `first?ao3id=<id>`, `previous?ao3id=<id>&workurl=<permalink>`, or
+	/// Handles a tap on one of the `nectar-series:` links `AO3PrefaceRenderer`
+	/// builds into the preface's Series row and the "This work is part
+	/// of" footer (plan Phase 3a/3b) -- `first?ao3id=<id>`,
+	/// `previous?ao3id=<id>&workurl=<permalink>`, or
 	/// `next?ao3id=<id>&workurl=<permalink>`. `url.path` carries the
-	/// direction: for a non-hierarchical URI like `nectar-series:previous?...`
-	/// (no `//` authority), `URLComponents` parses everything between the
-	/// scheme colon and the query string as `path`, not `host` -- there is
-	/// no `nectar-series://previous` form here.
+	/// direction: for a non-hierarchical URI like
+	/// `nectar-series:previous?...` (no `//` authority), `URLComponents`
+	/// parses everything between the scheme colon and the query string
+	/// as `path`, not `host` -- there is no `nectar-series://previous`
+	/// form here.
 	///
-	/// Interim implementation, same scope note as
-	/// `AO3SeriesNavigator.fetchAdjacentWork(direction:workURL:feedID:account:)`/
-	/// `fetchFirstWorkInSeries(ao3SeriesID:feedID:account:)`: fetches and
-	/// stubs only the single tapped work, then stays inside the reader
-	/// (`coordinator.selectArticleInCurrentFeed`, same as
-	/// `performSeriesNavigation`/`performFirstWorkNavigation` above) rather
-	/// than the plan's Phase 4d return-to-timeline flow. Phase 4's bounded
-	/// two-page series-listing walk, its batch stub-import of every other
-	/// series member encountered along the way, and its per-`(seriesID,
-	/// direction)` UI state store (4e, repainting the tapped link itself
-	/// via a JS hook) are not implemented here -- a second tap on the same
-	/// link while the first is still in flight is only suppressed by
-	/// `nectarSeriesLinkNavigationInFlight`, the tapped link's own text
-	/// doesn't change to reflect that.
+	/// Replaces Task 10's `previousWorkAction`/`nextWorkAction`/
+	/// `firstWorkInSeriesAction` context-menu trio and the interim
+	/// single-work `handleNectarSeriesLink` shim that called
+	/// `AO3SeriesNavigator.fetchAdjacentWork`/`fetchFirstWorkInSeries` --
+	/// both deleted. This is the plan's Phase 4c/4d/4e flow: bounded
+	/// two-page series-listing walk via `AO3SeriesNavigator.openSeriesWork`,
+	/// return to the timeline via `SceneCoordinator.navigateToTimelineAndSelectArticle`
+	/// rather than staying inside the reader, and a JS repaint of the
+	/// tapped link's own text/disabled state via `updateNectarSeriesLink`
+	/// while the fetch is in flight.
 	private func handleNectarSeriesLink(_ url: URL) {
 		guard let article, let account = article.account else { return }
 		guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
 
-		let direction = components.path
+		let directionString = components.path
 		let queryItems = components.queryItems ?? []
 		let ao3ID = queryItems.first(where: { $0.name == "ao3id" })?.value
 		let workURL = queryItems.first(where: { $0.name == "workurl" })?.value
 
-		// Keyed on the tapped href itself, not (ao3ID, direction) --
-		// good enough to suppress a double-tap without needing Phase 4e's
-		// richer key shape (Direction has no .first case yet).
-		let inFlightKey = url.absoluteString
-		guard !nectarSeriesLinkNavigationInFlight.contains(inFlightKey) else { return }
-
-		switch direction {
-		case "previous", "next":
-			guard let workURL else { return }
-			let navigatorDirection: AO3SeriesNavigator.Direction = direction == "previous" ? .previous : .next
-			nectarSeriesLinkNavigationInFlight.insert(inFlightKey)
-			Task { @MainActor in
-				let result = await AO3SeriesNavigator.fetchAdjacentWork(direction: navigatorDirection, workURL: workURL, feedID: article.feedID, account: account)
-				guard self.article?.articleID == article.articleID else { return }
-				self.nectarSeriesLinkNavigationInFlight.remove(inFlightKey)
-				self.handleNectarSeriesLinkResult(result)
-			}
+		let direction: AO3SeriesNavigator.Direction
+		switch directionString {
 		case "first":
-			guard let ao3ID else { return }
-			nectarSeriesLinkNavigationInFlight.insert(inFlightKey)
-			Task { @MainActor in
-				let result = await AO3SeriesNavigator.fetchFirstWorkInSeries(ao3SeriesID: ao3ID, feedID: article.feedID, account: account)
-				guard self.article?.articleID == article.articleID else { return }
-				self.nectarSeriesLinkNavigationInFlight.remove(inFlightKey)
-				self.handleNectarSeriesLinkResult(result)
-			}
+			direction = .first
+		case "previous":
+			direction = .previous
+		case "next":
+			direction = .next
 		default:
-			Self.logger.debug("handleNectarSeriesLink: unrecognized direction '\(direction, privacy: .public)' in \(url.absoluteString, privacy: .public)")
+			Self.logger.debug("handleNectarSeriesLink: unrecognized direction '\(directionString, privacy: .public)' in \(url.absoluteString, privacy: .public)")
+			return
+		}
+
+		guard let ao3ID else { return }
+
+		// .previous/.next need the tapped link's own permalink -- it's
+		// already known (Phase 2's per-span parse), no re-derivation.
+		if direction != .first, workURL == nil {
+			return
+		}
+
+		let key = SeriesNavKey(ao3SeriesID: ao3ID, direction: direction)
+
+		// A fast double-tap on the same link while the first tap is
+		// still in flight is a no-op, not a second fetch.
+		if case .inFlight = seriesNavState[key] {
+			return
+		}
+
+		// targetIndex (Phase 4c): only meaningful for .previous/.next,
+		// derived from this article's own matching series entry's index
+		// +/- 1 -- used to compute which listing page the target falls
+		// on if openSeriesWork doesn't find it on page 1. Left nil for
+		// .first (unused there) and for a series entry that, for
+		// whatever reason, isn't present on this article (openSeriesWork
+		// then has no page-fetch fallback and reports
+		// .seriesListingMismatch instead of guessing a page).
+		var targetIndex: Int?
+		if direction != .first, let matchingEntry = article.series?.first(where: { $0.ao3ID == ao3ID }) {
+			targetIndex = direction == .previous ? matchingEntry.index - 1 : matchingEntry.index + 1
+		}
+
+		seriesNavState[key] = .inFlight
+		updateNectarSeriesLinkUI(key: key, disabled: true)
+
+		Task { @MainActor in
+			let result = await AO3SeriesNavigator.openSeriesWork(
+				ao3SeriesID: ao3ID,
+				direction: direction,
+				targetWorkURL: workURL,
+				targetIndex: targetIndex,
+				existingArticle: article,
+				account: account
+			)
+
+			// The person may have navigated to a different article while
+			// this was in flight -- state and on-page repaint both
+			// belong to whichever article originated the tap, which may
+			// no longer be the one showing now.
+			guard self.article?.articleID == article.articleID else { return }
+
+			switch result {
+			case .success(let newArticleID):
+				self.seriesNavState[key] = nil
+				self.updateNectarSeriesLinkUI(key: key, disabled: false)
+				self.coordinator.navigateToTimelineAndSelectArticle(newArticleID)
+			case .failure(let error):
+				self.seriesNavState[key] = .failed(error.displayMessage)
+				self.updateNectarSeriesLinkUI(key: key, disabled: false)
+				UIAccessibility.post(notification: .announcement, argument: error.displayMessage)
+				Self.logger.debug("nectar-series link navigation failed: \(error.displayMessage, privacy: .public)")
+			}
 		}
 	}
 
-	private func handleNectarSeriesLinkResult(_ result: Result<String, AO3SeriesNavigationError>) {
-		switch result {
-		case .success(let newArticleID):
-			coordinator.selectArticleInCurrentFeed(newArticleID)
-		case .failure(let error):
-			UIAccessibility.post(notification: .announcement, argument: error.displayMessage)
-			Self.logger.debug("nectar-series link navigation failed: \(error.displayMessage, privacy: .public)")
+	/// The label AO3PrefaceRenderer originally rendered for this
+	/// direction ("First"/"Previous"/"Next") -- what the link's text is
+	/// restored to once its fetch finishes, success or failure alike.
+	/// Failure is surfaced via `UIAccessibility.post` above, not by
+	/// changing this label, since `updateNectarSeriesLink`'s JS side
+	/// only swaps text/disabled state, not styling per-error-message.
+	private func seriesNavLabel(for direction: AO3SeriesNavigator.Direction) -> String {
+		switch direction {
+		case .first: return NSLocalizedString("First", comment: "Inline series navigation link")
+		case .previous: return NSLocalizedString("Previous", comment: "Inline series navigation link")
+		case .next: return NSLocalizedString("Next", comment: "Inline series navigation link")
 		}
+	}
+
+	/// Repaints every on-page occurrence of `key`'s link (Phase 4e) --
+	/// `main_ios.js`'s `updateNectarSeriesLink` is `querySelectorAll`-shaped
+	/// since the same series' link can appear twice (preface row and
+	/// footer). `seriesKey` here must match the `data-nectar-series-key`
+	/// format `AO3PrefaceRenderer.seriesNavKey(ao3ID:direction:)` stamps
+	/// onto the rendered `<a>` (`"<ao3ID>|<direction>"`, lowercase
+	/// direction string) -- kept in sync by hand since one side is Swift
+	/// and the other is the renderer's own string building.
+	private struct UpdateNectarSeriesLinkOptions: Encodable {
+		let seriesKey: String
+		let label: String
+		let disabled: Bool
+	}
+
+	private func updateNectarSeriesLinkUI(key: SeriesNavKey, disabled: Bool) {
+		let directionString: String
+		switch key.direction {
+		case .first: directionString = "first"
+		case .previous: directionString = "previous"
+		case .next: directionString = "next"
+		}
+		let options = UpdateNectarSeriesLinkOptions(
+			seriesKey: "\(key.ao3SeriesID)|\(directionString)",
+			label: seriesNavLabel(for: key.direction),
+			disabled: disabled
+		)
+		guard let json = try? JSONEncoder().encode(options) else { return }
+		let encoded = json.base64EncodedString()
+		webView?.evaluateJavaScript("updateNectarSeriesLink(\"\(encoded)\");")
 	}
 
 	func shareAction() -> UIAction {
