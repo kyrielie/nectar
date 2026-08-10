@@ -59,11 +59,16 @@ public struct ParsedItem: Hashable, Sendable {
 	public let series: [ParsedSeriesEntry]?
 
 	// AO3 Work Header stats (Comments/Kudos/Bookmarks/Hits), read off AO3's
-	// live dl.stats block -- not part of the `_ambrosia` extension object
-	// above (Ambrosia's own JSON Feed has no equivalent field), and never
-	// set from an ordinary feed refresh. Populated only by
-	// AO3ChapterFetcher.rebuildParsedItem, from AO3ChapterExtractionResult,
-	// on each successful chapter fetch.
+	// live dl.stats block. Two independent sources populate these: a
+	// friend's self-hosted Ambrosia server can publish its own
+	// already-scraped stats under `_ambrosia` (JSONFeedParser), and
+	// AO3ChapterFetcher.rebuildParsedItem populates them from a live
+	// chapter fetch's AO3ChapterExtractionResult. Neither source is
+	// gated by AmbrosiaAO3NetworkPreference.updatesEnabled once the data
+	// is already in hand -- that preference only controls whether a live
+	// AO3 request happens at all (see its own doc comment and
+	// AO3ChapterFetcher.isAO3NetworkRequestAllowed); it was never meant
+	// to hide already-downloaded metadata from display.
 	public let commentCount: Int?
 	public let kudosCount: Int?
 	public let bookmarkCount: Int?
@@ -224,20 +229,5 @@ public struct ParsedItem: Hashable, Sendable {
 			hasher.combine(uniqueID)
 			hasher.combine(feedURL)
 		}
-	}
-
-	/// Returns a copy with the four AO3 Work Header stats
-	/// (comment/kudos/bookmark/hit count) cleared, everything else
-	/// unchanged. Used by callers that need to respect a "don't apply
-	/// AO3-derived stats" preference for feed-supplied values (as opposed
-	/// to the fetcher-only stats this type's own doc comment describes) --
-	/// see AmbrosiaAO3NetworkPreference.updatesEnabled in the Account
-	/// module, which this type can't reference directly (RSParser doesn't
-	/// depend on Account), so the decision of *when* to call this lives
-	/// with the caller. `markdown` is passed as `nil` here rather than
-	/// `self.markdown` so the designated init doesn't re-render it from
-	/// scratch -- `contentHTML` below is already the final rendered value.
-	public func strippingAO3Stats() -> ParsedItem {
-		ParsedItem(syncServiceID: syncServiceID, uniqueID: uniqueID, feedURL: feedURL, url: url, externalURL: externalURL, title: title, language: language, contentHTML: contentHTML, contentText: contentText, markdown: nil, summary: summary, imageURL: imageURL, bannerImageURL: bannerImageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, tags: tags, attachments: attachments, isAmbrosiaItem: isAmbrosiaItem, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, series: series, commentCount: nil, kudosCount: nil, bookmarkCount: nil, hitCount: nil, lastPrefaceFetchDate: lastPrefaceFetchDate, ao3WorkID: ao3WorkID, isAnthology: isAnthology, ao3SeriesID: ao3SeriesID, seriesName: seriesName)
 	}
 }

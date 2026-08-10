@@ -30,7 +30,8 @@
 //  Lives in the Account module for the same reason
 //  AO3PrefaceRefetchPreference does -- AO3ChapterFetcher is what actually
 //  needs to read this, and that shouldn't require depending on the iOS app
-//  target.
+//  target. Uses NectarAppGroupUserDefaults.store, same as
+//  AO3PrefaceRefetchPreference.
 //
 import Foundation
 
@@ -41,22 +42,7 @@ public enum AmbrosiaAO3NetworkPreference {
 	// user's choice carry over as "on" with no migration code needed.
 	private static let updatesKey = "ambrosiaAO3StatsUpdatesEnabled"
 
-	// UserDefaults is internally thread-safe but isn't marked Sendable, so a
-	// global `let` of it still trips the concurrency checker;
-	// nonisolated(unsafe) reflects the actual (safe) runtime behavior here --
-	// same rationale, and the same app-group-suite-with-.standard-fallback
-	// lookup, as AO3PrefaceRefetchPreference.store in the same directory.
-	private nonisolated(unsafe) static let store: UserDefaults = {
-		if let appIdentifierPrefix = Bundle.main.object(forInfoDictionaryKey: "AppIdentifierPrefix") as? String,
-		   let bundleIdentifier = Bundle.main.bundleIdentifier,
-		   let suiteDefaults = UserDefaults(suiteName: "\(appIdentifierPrefix)group.\(bundleIdentifier)") {
-			return suiteDefaults
-		}
-		// Fall back to .standard rather than force-unwrapping: this type is
-		// also reachable from non-app contexts (e.g. unit tests) where the
-		// AppIdentifierPrefix Info.plist key isn't present.
-		return .standard
-	}()
+	private static var store: UserDefaults { NectarAppGroupUserDefaults.store }
 
 	/// "Fetch AO3 updates for library works." Gates whether any live AO3
 	/// fetch happens at all for an Ambrosia-sourced article -- content and

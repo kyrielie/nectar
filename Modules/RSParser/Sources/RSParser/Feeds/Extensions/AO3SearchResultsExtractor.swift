@@ -38,6 +38,15 @@
 //  checkpoint split: feed routing/pagination bookkeeping/retry+Cloudflare
 //  handling (checkpoint 2), and AO3IgnoreList wiring (checkpoint 3).
 //
+//  Date/language/stats selectors (dd.language, p.datetime,
+//  dd.comments/kudos/bookmarks/hits) added later, reconciled against a
+//  user-supplied real View Source capture of a search-results page rather
+//  than a fresh live fetch of this session's own -- on firmer footing
+//  than the original ao3downloader-sourced set above, but still not
+//  independently confirmed by this session against AO3 directly. Same
+//  recheck-against-a-capture advice applies if these specifically start
+//  coming back empty on pages that clearly have the data.
+//
 
 import Foundation
 
@@ -221,9 +230,17 @@ private extension AO3SearchResultsExtractor {
 		let categories = symbolTexts(in: li, classToken: "category")
 		let series = seriesEntries(fromLI: li)
 
+		let language = stringValue(fromDD: li, classToken: "language")
+		let dateModified = datetime(fromLI: li)
+
 		let wordCount = intValue(fromDD: li, classToken: "words")
 		let (chapterCurrent, chapterTotal) = chapterCounts(fromLI: li)
 		let isComplete = completionState(fromLI: li, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal)
+
+		let commentCount = intValue(fromDD: li, classToken: "comments")
+		let kudosCount = intValue(fromDD: li, classToken: "kudos")
+		let bookmarkCount = intValue(fromDD: li, classToken: "bookmarks")
+		let hitCount = intValue(fromDD: li, classToken: "hits")
 
 		return ParsedItem(
 			syncServiceID: nil,
@@ -232,7 +249,7 @@ private extension AO3SearchResultsExtractor {
 			url: permalink,
 			externalURL: nil,
 			title: title.isEmpty ? nil : title,
-			language: nil,
+			language: language,
 			contentHTML: nil,
 			contentText: nil,
 			markdown: nil,
@@ -240,7 +257,7 @@ private extension AO3SearchResultsExtractor {
 			imageURL: nil,
 			bannerImageURL: nil,
 			datePublished: nil,
-			dateModified: nil,
+			dateModified: dateModified,
 			authors: authors.isEmpty ? nil : authors,
 			tags: freeformTags.isEmpty ? nil : Set(freeformTags),
 			attachments: nil,
@@ -256,6 +273,10 @@ private extension AO3SearchResultsExtractor {
 			warnings: warnings.isEmpty ? nil : warnings,
 			categories: categories.isEmpty ? nil : categories,
 			series: series.isEmpty ? nil : series,
+			commentCount: commentCount,
+			kudosCount: kudosCount,
+			bookmarkCount: bookmarkCount,
+			hitCount: hitCount,
 			ao3WorkID: workID
 		)
 	}
@@ -327,6 +348,74 @@ private extension AO3SearchResultsExtractor {
 		descendants(of: li, where: { $0.tag == "span" && classTokens(of: $0).contains(classToken) })
 			.map { flattenedText($0).trimmingCharacters(in: .whitespacesAndNewlines) }
 			.filter { !$0.isEmpty }
+	}
+}
+
+// MARK: - Language
+
+private extension AO3SearchResultsExtractor {
+
+	/// `dd.language` -- plain text (e.g. "English"), same dl.stats block
+	/// as words/chapters/comments/kudos/bookmarks/hits below, just not
+	/// numeric so it doesn't fit `intValue(fromDD:classToken:)`.
+	static func stringValue(fromDD li: HTMLLiteElement, classToken: String) -> String? {
+		guard let dd = firstDescendant(of: li, where: { $0.tag == "dd" && classTokens(of: $0).contains(classToken) }) else {
+			return nil
+		}
+		let text = flattenedText(dd).trimmingCharacters(in: .whitespacesAndNewlines)
+		return text.isEmpty ? nil : text
+	}
+}
+
+// MARK: - Date
+
+private extension AO3SearchResultsExtractor {
+
+	/// `dd MMM yyyy`, e.g. "28 Dec 2022" -- fixed `en_US_POSIX` locale
+	/// since AO3 renders this in fixed English month abbreviations
+	/// regardless of the requesting account's locale, not the device's.
+	/// Also fixed to UTC: AO3's page itself renders this date in the
+	/// browsing account's own timezone preference (Eastern by default),
+	/// not UTC, but with day-only granularity and no timezone indicator
+	/// in the text itself, there's no way to know which timezone a given
+	/// capture used -- and leaving `timeZone` unset would make
+	/// `date(from:)` fall back to the run-time default calendar's
+	/// timezone, so the same "01 Jan 2026" string would parse to a
+	/// different `Date` on different devices. Fixing to UTC trades
+	/// "possibly a day off from AO3's own Eastern-time rendering" for
+	/// "deterministic and testable" -- day-granularity display already
+	/// tolerates this; nothing in this codebase reads time-of-day off
+	/// this value.
+	static let datetimeFormatter: DateFormatter = {
+		let formatter = DateFormatter()
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		formatter.timeZone = TimeZone(identifier: "UTC")
+		formatter.dateFormat = "dd MMM yyyy"
+		return formatter
+	}()
+
+	/// `p.datetime` -- this is AO3's "last updated" date for the work
+	/// (its own listing label; AO3 doesn't separately expose original
+	/// publish date on a search-results row), so it maps to
+	/// `dateModified`, not `datePublished` -- consistent with
+	/// `Article.logicalDatePublished`'s existing
+	/// `datePublished ?? dateModified ?? status.dateArrived` fallback,
+	/// which already treats an unset `datePublished` correctly here.
+	/// Day-granularity only: AO3 also embeds a second-granularity
+	/// `<!-- updated_at=<unix> -->` HTML comment alongside this text, but
+	/// `HTMLScanner.consumeComment()` discards all HTML comments during
+	/// tokenization -- that data never reaches this parser's tree at
+	/// all, so this text node is the only date signal actually available
+	/// here.
+	static func datetime(fromLI li: HTMLLiteElement) -> Date? {
+		guard let p = firstDescendant(of: li, where: { $0.tag == "p" && classTokens(of: $0).contains("datetime") }) else {
+			return nil
+		}
+		let text = flattenedText(p).trimmingCharacters(in: .whitespacesAndNewlines)
+		guard !text.isEmpty else {
+			return nil
+		}
+		return datetimeFormatter.date(from: text)
 	}
 }
 

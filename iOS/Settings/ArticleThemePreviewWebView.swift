@@ -89,7 +89,7 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 	/// against a flatter sample body here but broke against real content --
 	/// this wrapper is what makes that class of bug visible in this preview
 	/// instead of only in a real article.
-	internal static let sampleBodyForTesting = """
+	internal nonisolated static let sampleBodyForTesting = """
 	<div id="ao3SyntheticPreface"><dl class="tags">
 	<dt>Warnings:</dt><dd>No Archive Warnings Apply</dd>
 	<dt>Chapters:</dt><dd>2/2</dd>

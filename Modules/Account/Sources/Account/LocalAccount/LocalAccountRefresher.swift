@@ -924,13 +924,13 @@ import os
 
 // MARK: - Private
 
-private extension LocalAccountRefresher {
+extension LocalAccountRefresher {
 
 	/// These hosts will never return a feed.
 	///
 	/// People may still have feeds pointing to Twitter due to our prior
 	/// use of the Twitter API. (Which Twitter took away.)
-	static let badHosts = ["twitter.com", "www.twitter.com", "x.com", "www.x.com"]
+	private static let badHosts = ["twitter.com", "www.twitter.com", "x.com", "www.x.com"]
 
 	/// Returns whether this feed should be skipped and the reason if so.
 	///
@@ -941,7 +941,7 @@ private extension LocalAccountRefresher {
 	/// time between checks and no Cache-Control throttle here: refreshing on
 	/// demand (pull-to-refresh, or right after a re-scan on the Mac) must
 	/// always go through.
-	static func feedShouldBeSkipped(_ feed: Feed, _ redditURLToRefresh: String?) -> (Bool, String?) {
+	private static func feedShouldBeSkipped(_ feed: Feed, _ redditURLToRefresh: String?) -> (Bool, String?) {
 		let (skipForDisallowedHost, disallowedHostReason) = feedShouldBeSkippedForDisallowedHostReasons(feed)
 		if skipForDisallowedHost {
 			return (true, disallowedHostReason)
@@ -966,7 +966,7 @@ private extension LocalAccountRefresher {
 	/// only the one-off add-time fetch (lastCheckDate == nil) and the
 	/// explicit "load more" / future "check for new results" paths
 	/// (AO3SearchResultsPaginator) touch it after that.
-	static func feedShouldBeSkippedForAO3SearchResultsReasons(_ feed: Feed) -> (Bool, String?) {
+	private static func feedShouldBeSkippedForAO3SearchResultsReasons(_ feed: Feed) -> (Bool, String?) {
 		guard let url = url(for: feed), Self.isAO3SearchResultsFeed(url) else {
 			return (false, nil)
 		}
@@ -978,13 +978,13 @@ private extension LocalAccountRefresher {
 
 	/// Reddit rate-limits to one feed per minute, so we
 	/// refresh the least recently checked one.
-	static func redditURLToRefresh(in feeds: Set<Feed>) -> String? {
+	private static func redditURLToRefresh(in feeds: Set<Feed>) -> String? {
 		let redditFeeds = feeds.filter { SpecialCase.urlStringMatchesDomain($0.url, [SpecialCase.redditHostName]) }
 		let winner = redditFeeds.min { ($0.lastCheckDate ?? .distantPast) < ($1.lastCheckDate ?? .distantPast) }
 		return winner?.url
 	}
 
-	static func feedShouldBeSkippedForRedditReasons(_ feed: Feed, _ redditURLToRefresh: String?) -> (Bool, String?) {
+	private static func feedShouldBeSkippedForRedditReasons(_ feed: Feed, _ redditURLToRefresh: String?) -> (Bool, String?) {
 		guard SpecialCase.urlStringMatchesDomain(feed.url, [SpecialCase.redditHostName]) else {
 			return (false, nil)
 		}
@@ -998,7 +998,7 @@ private extension LocalAccountRefresher {
 		return (true, reason)
 	}
 
-	static func feedShouldBeSkippedForDisallowedHostReasons(_ feed: Feed) -> (Bool, String?) {
+	private static func feedShouldBeSkippedForDisallowedHostReasons(_ feed: Feed) -> (Bool, String?) {
 		guard let url = url(for: feed) else {
 			return (true, "Skipped — invalid URL")
 		}
@@ -1072,7 +1072,7 @@ private extension LocalAccountRefresher {
 		return queryItems.contains { $0.name.hasPrefix("work_search[") }
 	}
 
-	static func url(for feed: Feed) -> URL? {
+	private static func url(for feed: Feed) -> URL? {
 		guard let url = URL(string: feed.url) else {
 			return nil
 		}
@@ -1087,7 +1087,7 @@ private extension LocalAccountRefresher {
 	/// Whether `error` represents a connection-level failure (couldn't reach the host
 	/// at all) as opposed to the host responding with an HTTP-level error. Used to
 	/// distinguish "your library's Mac is asleep/off" from an actual feed problem.
-	static func isConnectionLevelError(_ error: NSError) -> Bool {
+	private static func isConnectionLevelError(_ error: NSError) -> Bool {
 		guard error.domain == NSURLErrorDomain else {
 			return false
 		}
@@ -1107,7 +1107,7 @@ private extension LocalAccountRefresher {
 	/// failing on its own. Cancellation is not a feed error: it means the feed
 	/// simply wasn't fetched this pass and needs retrying, not that anything is
 	/// wrong with it.
-	static func isCancellationError(_ error: NSError) -> Bool {
+	private static func isCancellationError(_ error: NSError) -> Bool {
 		error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled
 	}
 }
