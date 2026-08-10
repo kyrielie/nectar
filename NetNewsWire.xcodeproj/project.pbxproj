@@ -137,6 +137,7 @@
 		893D7B05B40FA54A24B2AE81 /* DetailKeyboardShortcuts.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3FF508EDC33DE3F4254E9AA6 /* DetailKeyboardShortcuts.plist */; };
 		895DFD12C44C985B537AA641 /* MainFeedCollectionHeaderReusableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20E5BC5E6761AB2BB5DC3C8 /* MainFeedCollectionHeaderReusableView.swift */; };
 		8A8C1BB69E3801F5077060B8 /* RSTree in Frameworks */ = {isa = PBXBuildFile; productRef = 9F8FEA64037C2FBBB425E62F /* RSTree */; };
+		8BDA180C49E5354746F6F5E3 /* Articles in Frameworks */ = {isa = PBXBuildFile; productRef = 1498F5AC998FC43D3734148A /* Articles */; };
 		8C28380B3660064273040340 /* ContextMenuPreviewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E374143FB4FA6BAC5F0D2DA9 /* ContextMenuPreviewViewController.swift */; };
 		8C6606D73014CFF179CE7E6E /* UnreadFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCF1C72C8F04830B0695D3CF /* UnreadFeed.swift */; };
 		8C73AD199CFC0884071279DA /* SurfacePaletteAware.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473DF8E0A097A37599A298F6 /* SurfacePaletteAware.swift */; };
@@ -180,6 +181,7 @@
 		C047C03AC68B22A7428F0742 /* ActivityLog in Frameworks */ = {isa = PBXBuildFile; productRef = 2C8D74500C1BF1B11AFBE4BF /* ActivityLog */; };
 		C20C0E058FE3B0E9D852FC28 /* ArticleThemePlistFamilyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26B7C99C4ABA370226735E19 /* ArticleThemePlistFamilyTests.swift */; };
 		C245D9BE0FCBA12370312CB6 /* ArticleSearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EC887B424297E7132E79D2A /* ArticleSearchBar.swift */; };
+		C2609CCA09E83B59A7AF7474 /* RSCore in Frameworks */ = {isa = PBXBuildFile; productRef = 28D6EA2F93EAA6C71BCEC6E4 /* RSCore */; };
 		C28F0918560B4F3F1C44931A /* RefreshProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34FA897BFD9355F3E5A1997C /* RefreshProgressView.swift */; };
 		C2E08BDB0AACA98EC5F9B10A /* WebViewConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31FBDC8619C257400DD4395 /* WebViewConfiguration.swift */; };
 		C3388B70A405402A635D0503 /* ArticleSpecifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0E55EECD7D9E39899A599B /* ArticleSpecifier.swift */; };
@@ -513,6 +515,15 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		6832D81F22E9C8A28582F01D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8BDA180C49E5354746F6F5E3 /* Articles in Frameworks */,
+				C2609CCA09E83B59A7AF7474 /* RSCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		AC80DF8F4E38A805862750AC /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -1087,6 +1098,7 @@
 			buildConfigurationList = DA02CBCD031607BA5A15FF40 /* Build configuration list for PBXNativeTarget "Nectar-iOSTests" */;
 			buildPhases = (
 				9EADC35C3347BE5BC93CB802 /* Sources */,
+				6832D81F22E9C8A28582F01D /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -1095,6 +1107,8 @@
 			);
 			name = "Nectar-iOSTests";
 			packageProductDependencies = (
+				1498F5AC998FC43D3734148A /* Articles */,
+				28D6EA2F93EAA6C71BCEC6E4 /* RSCore */,
 			);
 			productName = "Nectar-iOSTests";
 			productReference = 8F85897E4F6D1161866E1071 /* Nectar-iOSTests.xctest */;
@@ -1652,9 +1666,17 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		1498F5AC998FC43D3734148A /* Articles */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Articles;
+		};
 		1ED5F18CEF977EC9F1E394EF /* Images */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Images;
+		};
+		28D6EA2F93EAA6C71BCEC6E4 /* RSCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RSCore;
 		};
 		2C8D74500C1BF1B11AFBE4BF /* ActivityLog */ = {
 			isa = XCSwiftPackageProductDependency;

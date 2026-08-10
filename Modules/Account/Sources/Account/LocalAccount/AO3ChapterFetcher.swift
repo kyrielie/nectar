@@ -383,9 +383,9 @@ extension AO3ChapterFetcher {
 
 // MARK: - Private
 
-nonisolated private extension AO3ChapterFetcher {
+nonisolated extension AO3ChapterFetcher {
 
-	func downloadIfNeeded(workID: String, articleID: String, accountID: String, feedID: String) {
+	private func downloadIfNeeded(workID: String, articleID: String, accountID: String, feedID: String) {
 		let shouldDownload = attemptDates.withLock { dates in
 			let currentDate = Date()
 			if let attemptDate = dates[articleID], attemptDate > currentDate.addingTimeInterval(-Self.secondsBetweenAttempts) {
@@ -582,7 +582,7 @@ nonisolated private extension AO3ChapterFetcher {
 	/// request. `AO3AuthenticatedFetcher` uses its own cache-free ephemeral
 	/// session instead.
 	@MainActor
-	func retryAuthenticated(url: URL) async -> AuthenticatedRetryResult {
+	private func retryAuthenticated(url: URL) async -> AuthenticatedRetryResult {
 		guard AO3SessionStore.isSignedIn else {
 			return .notSignedIn
 		}
@@ -617,7 +617,7 @@ nonisolated private extension AO3ChapterFetcher {
 	/// `.ao3ChapterFetchDidFail` so an already-visible article view can
 	/// react immediately rather than waiting for the next fetch attempt.
 	@MainActor
-	func fail(articleID: String, kind: ActivityKind, activityLog: ActivityLog, message: String, error: Error? = nil) {
+	private func fail(articleID: String, kind: ActivityKind, activityLog: ActivityLog, message: String, error: Error? = nil) {
 		let loggedError = error ?? NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: message])
 		activityLog.didFail(.ao3ChapterFetcher, kind: kind, error: loggedError)
 		failureMessages.withLock { $0[articleID] = message }
@@ -654,7 +654,7 @@ nonisolated private extension AO3ChapterFetcher {
 	/// counts as a regression once it clears `AO3RegressionThreshold`'s
 	/// 10%-and-300-word bar, using the identical threshold the metadata-
 	/// level watch in `Article+Database.changesFrom` uses.
-	static func detectRegression(existingArticle: Article, extraction: AO3ChapterExtractionResult) -> String? {
+	private static func detectRegression(existingArticle: Article, extraction: AO3ChapterExtractionResult) -> String? {
 		guard let storedHTML = existingArticle.contentHTML, !storedHTML.isEmpty,
 			  case .success(let storedExtraction) = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: storedHTML) else {
 			// Nothing stored yet, or the stored content can't be
@@ -763,7 +763,7 @@ nonisolated private extension AO3ChapterFetcher {
 		)
 	}
 
-	func postNotification(name: Notification.Name, articleID: String, message: String? = nil) {
+	private func postNotification(name: Notification.Name, articleID: String, message: String? = nil) {
 		var userInfo: [String: Any] = [AO3ChapterFetchUserInfoKey.articleID: articleID]
 		if let message {
 			userInfo[AO3ChapterFetchUserInfoKey.message] = message

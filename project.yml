@@ -152,6 +152,8 @@ targets:
       - path: Tests/NetNewsWire-iOSTests
     dependencies:
       - target: Nectar-iOS
+      - package: Articles
+      - package: RSCore
     configFiles:
       Debug: xcconfig/NetNewsWire_iOSTests_target.xcconfig
       Release: xcconfig/NetNewsWire_iOSTests_target.xcconfig

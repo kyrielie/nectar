@@ -15,9 +15,10 @@
 //  one with no record that later pages never arrived.
 //
 //  UserDefaults-backed (the plan's alternative to a SwiftData model), using
-//  the same app-group suite AmbrosiaTransferFormatPreference already uses --
-//  this is scratch per-feed progress bookkeeping, not user data that needs a
-//  schema migration story of its own.
+//  NectarAppGroupUserDefaults.store -- the same app-group suite
+//  AmbrosiaTransferFormatPreference already uses -- this is scratch per-feed
+//  progress bookkeeping, not user data that needs a schema migration story
+//  of its own.
 //
 
 import Foundation
@@ -50,18 +51,7 @@ public enum AmbrosiaSQLiteTransferWalkStateStore {
 
 	private static let keyPrefix = "ambrosiaSQLiteTransferWalkState."
 
-	// UserDefaults is internally thread-safe but isn't marked Sendable, so a
-	// global `let` of it still trips the concurrency checker; nonisolated(unsafe)
-	// reflects the actual (safe) runtime behavior here -- same rationale as
-	// AmbrosiaTransferFormatPreference's `store`.
-	private nonisolated(unsafe) static let store: UserDefaults = {
-		if let appIdentifierPrefix = Bundle.main.object(forInfoDictionaryKey: "AppIdentifierPrefix") as? String,
-		   let bundleIdentifier = Bundle.main.bundleIdentifier,
-		   let suiteDefaults = UserDefaults(suiteName: "\(appIdentifierPrefix)group.\(bundleIdentifier)") {
-			return suiteDefaults
-		}
-		return .standard
-	}()
+	private static var store: UserDefaults { NectarAppGroupUserDefaults.store }
 
 	public static func load(feedID: String) -> AmbrosiaSQLiteTransferWalkState? {
 		guard let data = store.data(forKey: keyPrefix + feedID) else {

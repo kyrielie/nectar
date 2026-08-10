@@ -9,10 +9,11 @@
 //  Lives in the Account module (rather than the iOS app's AppDefaults) so
 //  LocalAccountRefresher.url(for:) -- which is what actually needs to read
 //  it on every refresh -- doesn't have to depend on the iOS app target. Uses
-//  the same app-group suite AppDefaults.store uses, so the iOS-side "Ambrosia
-//  transfer format: JSON / SQLite" UI (near existing Ambrosia-pairing UI, per
-//  the plan) can read/write the same key through this type rather than a
-//  second UserDefaults suite that could drift out of sync with it.
+//  NectarAppGroupUserDefaults.store (same app-group suite AppDefaults.store
+//  uses), so the iOS-side "Ambrosia transfer format: JSON / SQLite" UI (near
+//  existing Ambrosia-pairing UI, per the plan) can read/write the same key
+//  through this type rather than a second UserDefaults suite that could
+//  drift out of sync with it.
 //
 import Foundation
 
@@ -25,20 +26,7 @@ public enum AmbrosiaTransferFormatPreference {
 
 	private static let key = "ambrosiaTransferFormat"
 
-	// UserDefaults is internally thread-safe but isn't marked Sendable, so a
-	// global `let` of it still trips the concurrency checker; nonisolated(unsafe)
-	// reflects the actual (safe) runtime behavior here.
-	private nonisolated(unsafe) static let store: UserDefaults = {
-		if let appIdentifierPrefix = Bundle.main.object(forInfoDictionaryKey: "AppIdentifierPrefix") as? String,
-		   let bundleIdentifier = Bundle.main.bundleIdentifier,
-		   let suiteDefaults = UserDefaults(suiteName: "\(appIdentifierPrefix)group.\(bundleIdentifier)") {
-			return suiteDefaults
-		}
-		// Fall back to .standard rather than force-unwrapping: this type is
-		// also reachable from non-app contexts (e.g. unit tests) where the
-		// AppIdentifierPrefix Info.plist key isn't present.
-		return .standard
-	}()
+	private static var store: UserDefaults { NectarAppGroupUserDefaults.store }
 
 	public static var current: AmbrosiaTransferFormat {
 		get {

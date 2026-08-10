@@ -90,7 +90,7 @@ import os
 	/// entire.html's `<dd class="published">2026-07-07</dd>`), so the
 	/// synthesized preface's Published/Updated rows read the same as both
 	/// AO3's live page and Ambrosia's own epub-derived preface.
-	private static let ao3StatsDateFormatter: DateFormatter = {
+	private nonisolated static let ao3StatsDateFormatter: DateFormatter = {
 		let formatter = DateFormatter()
 		formatter.dateFormat = "yyyy-MM-dd"
 		formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -420,7 +420,7 @@ private extension ArticleRenderer {
 
 // MARK: - Synthesized AO3 preface
 
-private extension ArticleRenderer {
+extension ArticleRenderer {
 
 	/// A front-matter block mirroring AO3's own metadata table
 	/// (rating/warning/category/fandom/relationships/characters/language/
@@ -451,7 +451,7 @@ private extension ArticleRenderer {
 	/// complete preface) -- they never have a nil contentHTML to fall back
 	/// from, so this never fires for them and there's no risk of stacking a
 	/// second preface above Ambrosia's own.
-	static func ao3SyntheticPrefaceHTML(for article: Article) -> String? {
+	nonisolated static func ao3SyntheticPrefaceHTML(for article: Article) -> String? {
 		guard article.contentHTML == nil else {
 			return nil
 		}
@@ -506,7 +506,7 @@ private extension ArticleRenderer {
 			// state for every row built here -- nothing special-cased
 			// for that, it's just what an always-nil field produces.
 			let entries = series.map { entry in
-				AO3TagEntry(text: entry.name, prefix: "Part \(entry.index) of ", ao3ID: entry.ao3ID, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL)
+				AO3TagEntry(text: entry.name, prefix: "Part \(entry.index) of ", ao3ID: entry.ao3ID, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL, index: entry.index)
 			}
 			rows.append(AO3PrefaceRow(label: "Series:", values: entries, isSeriesNavigation: true))
 		}
@@ -554,7 +554,7 @@ private extension ArticleRenderer {
 	/// the footer is navigation, not a stats display, so hiding stats
 	/// shouldn't also hide the only way to reach an adjacent series work
 	/// before a chapter has ever been fetched.
-	static func ao3SyntheticSeriesFooterHTML(for article: Article) -> String? {
+	nonisolated static func ao3SyntheticSeriesFooterHTML(for article: Article) -> String? {
 		guard article.contentHTML == nil else {
 			return nil
 		}
@@ -566,6 +566,9 @@ private extension ArticleRenderer {
 		}
 		return AO3PrefaceRenderer.seriesFooterHTML(entries: entries)
 	}
+}
+
+extension ArticleRenderer {
 
 	/// AO3 authors sometimes fake a paragraph's first-line indent with literal
 	/// leading whitespace -- repeated spaces or, more often, `&nbsp;` sequences,
@@ -590,7 +593,7 @@ private extension ArticleRenderer {
 	/// synthesized preface/notice `<p>` tags and `bodySuffix`'s synthesized
 	/// series-footer heading `<p>` tag, none of which ever start with
 	/// whitespace.
-	static func stripFakeParagraphIndents(_ html: String) -> String {
+	nonisolated static func stripFakeParagraphIndents(_ html: String) -> String {
 		html.replacingOccurrences(
 			of: #"(<p[^>]*>)((?:&nbsp;|&#160;|&#xA0;|\s)+)"#,
 			with: "$1",

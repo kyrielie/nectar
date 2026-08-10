@@ -28,14 +28,16 @@ public struct AO3TagEntry: Sendable, Equatable {
 	public let ao3ID: String?
 	public let previousWorkURL: String?
 	public let nextWorkURL: String?
+	public let index: Int
 
-	public init(text: String, href: String? = nil, prefix: String = "", ao3ID: String? = nil, previousWorkURL: String? = nil, nextWorkURL: String? = nil) {
+	public init(text: String, href: String? = nil, prefix: String = "", ao3ID: String? = nil, previousWorkURL: String? = nil, nextWorkURL: String? = nil, index: Int = 0) {
 		self.text = text
 		self.href = href
 		self.prefix = prefix
 		self.ao3ID = ao3ID
 		self.previousWorkURL = previousWorkURL
 		self.nextWorkURL = nextWorkURL
+		self.index = index
 	}
 }
 
@@ -151,7 +153,7 @@ public enum AO3PrefaceRenderer {
 	/// (populated by `AO3ChapterHTMLExtractor.parseWorkHeader`'s series
 	/// branch and `ArticleRenderer.ao3SyntheticPrefaceHTML`, both setting
 	/// `AO3PrefaceRow.isSeriesNavigation`) feeds the same
-	/// `seriesNavigationLinksHTML(ao3ID:previousWorkURL:nextWorkURL:)`
+	/// `seriesNavigationLinksHTML(ao3ID:index:previousWorkURL:nextWorkURL:)`
 	/// helper the bottom footer (`seriesFooterHTML`) uses, so a future
 	/// markup tweak to the link line itself only happens once.
 	private static func seriesNavigationRowsHTML(_ row: AO3PrefaceRow) -> String {
@@ -159,7 +161,7 @@ public enum AO3PrefaceRenderer {
 		for entry in row.values {
 			let nameHTML = renderedEntry(entry)
 			guard !nameHTML.isEmpty else { continue }
-			let linksHTML = seriesNavigationLinksHTML(ao3ID: entry.ao3ID, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL)
+			let linksHTML = seriesNavigationLinksHTML(ao3ID: entry.ao3ID, index: entry.index, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL)
 			result += "<dt>\(escape(row.label))</dt><dd><span class='ao3SeriesPrefaceEntry'>\(nameHTML)</span> <span class='ao3SeriesPrefaceLinks'>\(linksHTML)</span></dd>"
 		}
 		return result
@@ -237,15 +239,19 @@ public enum AO3PrefaceRenderer {
 	/// places render from the exact same three values with no separate
 	/// copy of the link-building logic.
 	static func seriesNavigationLinksHTML(entry: ParsedSeriesEntry) -> String {
-		seriesNavigationLinksHTML(ao3ID: entry.ao3ID, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL)
+		seriesNavigationLinksHTML(ao3ID: entry.ao3ID, index: entry.index, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL)
 	}
 
 	/// Builds the "First · Previous · Next" line for one series
 	/// membership, linked via the `nectar-series:` scheme (Phase 3a) so
 	/// `WebViewController` can act on a tap without a JS bridge. First is
-	/// tappable whenever `ao3ID` is known -- its target is resolved lazily
-	/// on tap (Phase 4), since AO3's work page has no "first work" link to
-	/// read a URL off directly, unlike Previous/Next. Previous/Next are
+	/// tappable whenever `ao3ID` is known and `index != 1` -- when this
+	/// entry already *is* the first work in the series, First renders as
+	/// the same disabled/muted label as the `ao3ID == nil` case, since
+	/// there's nowhere further to navigate. Its target is otherwise
+	/// resolved lazily on tap (Phase 4), since AO3's work page has no
+	/// "first work" link to read a URL off directly, unlike Previous/Next.
+	/// Previous/Next are
 	/// only tappable when their URL was actually captured off the live
 	/// fetch; otherwise they render as plain, unlinked muted text (Phase
 	/// 3c) rather than being hidden outright, so a per-row label still
@@ -262,10 +268,10 @@ public enum AO3PrefaceRenderer {
 	/// appearing once per row that names it -- so this is deliberately
 	/// `querySelectorAll`-shaped (repaint every match), not a single-id
 	/// lookup.
-	static func seriesNavigationLinksHTML(ao3ID: String?, previousWorkURL: String?, nextWorkURL: String?) -> String {
+	static func seriesNavigationLinksHTML(ao3ID: String?, index: Int, previousWorkURL: String?, nextWorkURL: String?) -> String {
 		var parts: [String] = []
 
-		if let ao3ID {
+		if let ao3ID, index != 1 {
 			parts.append(link(label: "First", href: "nectar-series:first?ao3id=\(percentEncodedQueryValue(ao3ID))", seriesKey: seriesNavKey(ao3ID: ao3ID, direction: "first")))
 		} else {
 			parts.append(disabledLabel("First"))

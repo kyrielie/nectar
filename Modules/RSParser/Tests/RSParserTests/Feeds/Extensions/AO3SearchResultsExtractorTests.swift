@@ -33,7 +33,7 @@ import Testing
 	@Test func extractsBothRowsInDocumentOrder() throws {
 		let html = htmlFixtureString("ao3-search-results.html")
 		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
-		guard case .success(let items) = outcome else {
+		guard case .success(let items, _) = outcome else {
 			Issue.record("Expected .success, got \(outcome)")
 			return
 		}
@@ -59,6 +59,33 @@ import Testing
 		#expect(item.isComplete == true)
 		#expect(item.series == nil)
 		#expect(item.summary?.contains("Two paragraphs of summary.") == true)
+		#expect(item.language == "English")
+		#expect(item.kudosCount == 10)
+		#expect(item.hitCount == 200)
+		// Row 1's stats block has no Comments/Bookmarks rows -- confirms
+		// their absence stays nil rather than crashing or picking up
+		// row 2's values.
+		#expect(item.commentCount == nil)
+		#expect(item.bookmarkCount == nil)
+	}
+
+	@Test func datetimeParsedAsUTCDayGranularity() throws {
+		// "01 Jan 2026" -- fixed to UTC by the extractor's own formatter
+		// (see AO3SearchResultsExtractor.datetimeFormatter's doc comment
+		// for why), so this is deterministic across machines/timezones.
+		let item = try extractedItem(workID: "11111111")
+		var expected = DateComponents()
+		expected.year = 2026
+		expected.month = 1
+		expected.day = 1
+		var utcCalendar = Calendar(identifier: .gregorian)
+		utcCalendar.timeZone = try #require(TimeZone(identifier: "UTC"))
+		#expect(item.dateModified == utcCalendar.date(from: expected))
+		// datePublished is never set from a search-results row -- AO3
+		// doesn't expose original publish date on this page at all, only
+		// "last updated" -- so Article.logicalDatePublished's fallback
+		// chain reaches dateModified for these items.
+		#expect(item.datePublished == nil)
 	}
 
 	// MARK: - Row 2: co-authored, multi-series, WIP with unknown chapter total
@@ -92,11 +119,16 @@ import Testing
 		#expect(item.characters == ["Character A", "Character B"])
 	}
 
-	@Test func statsWithoutCommentsOrBookmarksStayNil() throws {
-		// Row 1's stats block has no Comments/Bookmarks rows at all --
-		// confirms absence doesn't crash or get confused with row 2's.
-		let item = try extractedItem(workID: "11111111")
-		#expect(item.wordCount == 1234)
+	@Test func allFourStatsCountsPresentOnRow2() throws {
+		// Row 2's stats block has Comments/Kudos/Bookmarks/Hits all
+		// present (unlike row 1, which only has Kudos/Hits) -- confirms
+		// all four selectors independently, not just their absence.
+		let item = try extractedItem(workID: "22222222")
+		#expect(item.commentCount == 5)
+		#expect(item.kudosCount == 99)
+		#expect(item.bookmarkCount == 3)
+		#expect(item.hitCount == 1000)
+		#expect(item.language == "English")
 	}
 
 	// MARK: - Helpers
@@ -104,7 +136,7 @@ import Testing
 	private func extractedItem(workID: String) throws -> ParsedItem {
 		let html = htmlFixtureString("ao3-search-results.html")
 		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
-		guard case .success(let items) = outcome else {
+		guard case .success(let items, _) = outcome else {
 			Issue.record("Expected .success, got \(outcome)")
 			throw TestError.unexpectedOutcome
 		}

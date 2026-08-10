@@ -69,6 +69,15 @@ final class RSSItem {
 		// on success, contentHTML is deliberately left nil (Workstream 2 of
 		// the AO3 plan fills it in on demand) and the cleaned prose becomes
 		// the summary.
+		//
+		// result.language (parsed from the summary's own "Language:" stats
+		// field, e.g. "English", "Français") takes precedence over `language`
+		// (this item's own xml:lang attribute) when both are present: AO3's
+		// tag/user Atom feeds never set xml:lang on the entry itself (the
+		// work's actual language only shows up in the summary text), so
+		// `language` is nil for every real AO3 entry and this ordering never
+		// discards a value that would otherwise have been used -- it only
+		// matters for a hypothetical AO3 entry that also set xml:lang.
 		if let s = summary, !s.isEmpty, let result = AO3SummaryExtractor.extract(fromSummaryHTML: s) {
 			return ParsedItem(
 				syncServiceID: nil,
@@ -77,7 +86,7 @@ final class RSSItem {
 				url: permalink,
 				externalURL: link,
 				title: title,
-				language: language,
+				language: result.language ?? language,
 				contentHTML: nil,
 				contentText: nil,
 				markdown: markdown,

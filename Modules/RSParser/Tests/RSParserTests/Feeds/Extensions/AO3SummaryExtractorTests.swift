@@ -71,6 +71,44 @@ import Testing
 		}
 	}
 
+	@Test func languageParsedFromStatsParagraph() {
+		let html = "<p>Words: 23552, Chapters: 3/?, Language: English</p><ul><li>Fandoms: <a class=\"tag\" href=\"https://archiveofourown.org/tags/Some%20Fandom/works\">Some Fandom</a></li></ul>"
+		let result = AO3SummaryExtractor.extract(fromSummaryHTML: html)
+		#expect(result?.language == "English")
+		#expect(result?.wordCount == 23552)
+		#expect(result?.chapterCurrent == 3)
+		#expect(result?.chapterTotal == nil)
+	}
+
+	@Test func nonEnglishLanguageParsedFromStatsParagraph() {
+		// Real AO3 language values aren't always a single plain word --
+		// confirms the "everything after the last colon" approach doesn't
+		// accidentally truncate at a comma or other punctuation inside the
+		// language name itself.
+		let html = "<p>Words: 1000, Chapters: 1/1, Language: 中文-普通话 國語</p>"
+		let result = AO3SummaryExtractor.extract(fromSummaryHTML: html)
+		#expect(result?.language == "中文-普通话 國語")
+	}
+
+	@Test func missingLanguageFieldLeavesLanguageNil() {
+		// Defensive: a stats paragraph AO3 didn't actually render this way,
+		// but the parser shouldn't crash or invent a value if it ever does.
+		let html = "<p>Words: 500, Chapters: 1/1</p>"
+		let result = AO3SummaryExtractor.extract(fromSummaryHTML: html)
+		#expect(result?.language == nil)
+		#expect(result?.wordCount == 500)
+	}
+
+	@Test func endToEndLanguageFromRealFixture() throws {
+		// testfeed.atom's own entries are all "Language: English" --
+		// confirms the field is actually threaded through
+		// RSSItem.toParsedItem() end to end, not just parseStats in
+		// isolation.
+		let feed = try #require(try FeedParser.parse(parserData("testfeed", "atom", "https://archiveofourown.org/tags/1147379/feed.atom")))
+		let item = try #require(feed.items.first { $0.title == "I've Looked at Life From Both Sides Now" })
+		#expect(item.language == "English")
+	}
+
 	// A bare <br> or <hr> (no trailing slash) inside the summary's prose --
 	// AO3 emits these unclosed -- must not be mistaken for an unclosed
 	// element that swallows the rest of the summary, including the

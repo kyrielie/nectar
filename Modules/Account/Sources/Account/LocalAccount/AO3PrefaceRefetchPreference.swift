@@ -14,10 +14,11 @@
 //  Lives in the Account module (not the iOS app's AppDefaults) for the same
 //  reason AmbrosiaTransferFormatPreference does -- AO3ChapterFetcher.isStale
 //  is what actually needs to read it, and that shouldn't require depending on
-//  the iOS app target. Uses the same app-group suite AppDefaults.store uses,
-//  so the iOS-side picker (AO3AccountSettingsView) reads/writes the same key
-//  through this type rather than a second UserDefaults suite that could
-//  drift out of sync with it.
+//  the iOS app target. Uses NectarAppGroupUserDefaults.store (same app-group
+//  suite AppDefaults.store uses), so the iOS-side picker
+//  (AO3AccountSettingsView) reads/writes the same key through this type
+//  rather than a second UserDefaults suite that could drift out of sync
+//  with it.
 //
 import Foundation
 
@@ -68,20 +69,7 @@ public enum AO3PrefaceRefetchPreference {
 
 	private static let key = "ao3PrefaceRefetchInterval"
 
-	// UserDefaults is internally thread-safe but isn't marked Sendable, so a
-	// global `let` of it still trips the concurrency checker; nonisolated(unsafe)
-	// reflects the actual (safe) runtime behavior here.
-	private nonisolated(unsafe) static let store: UserDefaults = {
-		if let appIdentifierPrefix = Bundle.main.object(forInfoDictionaryKey: "AppIdentifierPrefix") as? String,
-		   let bundleIdentifier = Bundle.main.bundleIdentifier,
-		   let suiteDefaults = UserDefaults(suiteName: "\(appIdentifierPrefix)group.\(bundleIdentifier)") {
-			return suiteDefaults
-		}
-		// Fall back to .standard rather than force-unwrapping: this type is
-		// also reachable from non-app contexts (e.g. unit tests) where the
-		// AppIdentifierPrefix Info.plist key isn't present.
-		return .standard
-	}()
+	private static var store: UserDefaults { NectarAppGroupUserDefaults.store }
 
 	/// Monthly by default -- frequent enough to pick up new comments/kudos/
 	/// hits and any formatting fixes on a settled work without refetching

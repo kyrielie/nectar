@@ -11,7 +11,7 @@
 //  file targets AO3PrefaceRenderer.html(id:data:)'s isSeriesNavigation
 //  branch specifically (the per-entry <dt>/<dd> preface row rendering
 //  changes2 added), which had no dedicated coverage before this pass, plus
-//  the shared seriesNavigationLinksHTML(ao3ID:previousWorkURL:nextWorkURL:)
+//  the shared seriesNavigationLinksHTML(ao3ID:index:previousWorkURL:nextWorkURL:)
 //  helper's percent-encoding directly.
 //
 
@@ -27,8 +27,8 @@ import Testing
 		// pair per entry (Phase 3b), not the generic single-<dd>,
 		// comma-joined shape every other row uses.
 		let entries = [
-			AO3TagEntry(text: "Series One", href: "/series/1001", prefix: "Part 3 of ", ao3ID: "1001", previousWorkURL: "https://archiveofourown.org/works/111", nextWorkURL: "https://archiveofourown.org/works/222"),
-			AO3TagEntry(text: "Series Two", href: "/series/2002", prefix: "Part 5 of ", ao3ID: "2002", previousWorkURL: "https://archiveofourown.org/works/333", nextWorkURL: nil)
+			AO3TagEntry(text: "Series One", href: "/series/1001", prefix: "Part 3 of ", ao3ID: "1001", previousWorkURL: "https://archiveofourown.org/works/111", nextWorkURL: "https://archiveofourown.org/works/222", index: 3),
+			AO3TagEntry(text: "Series Two", href: "/series/2002", prefix: "Part 5 of ", ao3ID: "2002", previousWorkURL: "https://archiveofourown.org/works/333", nextWorkURL: nil, index: 5)
 		]
 		let row = AO3PrefaceRow(label: "Series:", values: entries, isSeriesNavigation: true)
 		let data = AO3PrefaceData(rows: [row], statsRows: [])
@@ -49,7 +49,7 @@ import Testing
 		// survives into the rendered preface row, not just the footer
 		// (which AO3ChapterHTMLExtractorTests already covers).
 		let entries = [
-			AO3TagEntry(text: "Has Next", ao3ID: "1001", previousWorkURL: nil, nextWorkURL: "https://archiveofourown.org/works/222"),
+			AO3TagEntry(text: "Has Next", ao3ID: "1001", previousWorkURL: nil, nextWorkURL: "https://archiveofourown.org/works/222", index: 2),
 		]
 		let row = AO3PrefaceRow(label: "Series:", values: entries, isSeriesNavigation: true)
 		let html = AO3PrefaceRenderer.html(id: "ao3Preface", data: AO3PrefaceData(rows: [row], statsRows: []))
@@ -65,8 +65,11 @@ import Testing
 		// preface series row must still render a live, tappable First
 		// link while Previous/Next fall out as the grayed, unlinked
 		// state, purely from previousWorkURL/nextWorkURL being nil (no
-		// special-casing for the Ambrosia case specifically).
-		let entries = [AO3TagEntry(text: "Some Series", prefix: "Part 1 of ", ao3ID: "9999", previousWorkURL: nil, nextWorkURL: nil)]
+		// special-casing for the Ambrosia case specifically). index: 4
+		// (not 1) keeps this fixture on the "linked" branch -- the
+		// index == 1 case (First itself disabled) has its own dedicated
+		// test below.
+		let entries = [AO3TagEntry(text: "Some Series", prefix: "Part 4 of ", ao3ID: "9999", previousWorkURL: nil, nextWorkURL: nil, index: 4)]
 		let row = AO3PrefaceRow(label: "Series:", values: entries, isSeriesNavigation: true)
 		let html = AO3PrefaceRenderer.html(id: "ao3SyntheticPreface", data: AO3PrefaceData(rows: [row], statsRows: []))
 
@@ -95,7 +98,7 @@ import Testing
 		// own "&"-delimited nectar-series: query string's delimiters.
 		// ":"/"/" stay literal (still permitted by .urlQueryAllowed).
 		let workURL = "https://archiveofourown.org/works/1?view_adult=true&view_full_work=true"
-		let entries = [AO3TagEntry(text: "Weird URL Series", ao3ID: "555", previousWorkURL: workURL, nextWorkURL: nil)]
+		let entries = [AO3TagEntry(text: "Weird URL Series", ao3ID: "555", previousWorkURL: workURL, nextWorkURL: nil, index: 2)]
 		let row = AO3PrefaceRow(label: "Series:", values: entries, isSeriesNavigation: true)
 		let html = AO3PrefaceRenderer.html(id: "ao3Preface", data: AO3PrefaceData(rows: [row], statsRows: []))
 
@@ -107,5 +110,20 @@ import Testing
 		// AO3ChapterHTMLExtractorTests's existing footer assertions.
 		#expect(html?.contains("workurl=https://archiveofourown.org/works/1%3Fview_adult%3Dtrue%26view_full_work%3Dtrue'") == true)
 		#expect(html?.contains("ao3id=555&amp;workurl=") == true)
+	}
+
+	@Test func firstRendersDisabledWhenIndexIsOne() {
+		// index == 1 means this entry already is the first work in its
+		// series -- First must render as the same disabled/muted label
+		// as the ao3ID == nil case, even though ao3ID is populated here,
+		// since there's nowhere further to navigate.
+		let entries = [AO3TagEntry(text: "Series Opener", ao3ID: "4242", previousWorkURL: nil, nextWorkURL: "https://archiveofourown.org/works/999", index: 1)]
+		let row = AO3PrefaceRow(label: "Series:", values: entries, isSeriesNavigation: true)
+		let html = AO3PrefaceRenderer.html(id: "ao3Preface", data: AO3PrefaceData(rows: [row], statsRows: []))
+
+		#expect(html?.contains("<span class='ao3SeriesNavDisabled'>First</span>") == true)
+		#expect(html?.contains("nectar-series:first?ao3id=4242") != true)
+		// Next still links normally -- only First is affected by index == 1.
+		#expect(html?.contains("href='nectar-series:next?ao3id=4242&amp;workurl=https://archiveofourown.org/works/999'") == true)
 	}
 }
