@@ -89,8 +89,8 @@ import Articles
 
 	func testNextReturnsCachedArticleWithoutFetchingListing() async {
 		// A work already fetched under the same feed, with content --
-		// exactly cachedArticleID's match condition (uniqueID == workID,
-		// contentHTML != nil).
+		// exactly existingArticlesByWorkID's match condition (bookKey
+		// resolves to workID, contentHTML != nil).
 		_ = await account.updateAsync(feedID: existingArticle.feedID, parsedItems: [
 			ParsedItem(syncServiceID: nil, uniqueID: "87955346", feedURL: existingArticle.feedID,
 			           url: "https://archiveofourown.org/works/87955346", externalURL: nil,
@@ -164,6 +164,67 @@ import Articles
 			XCTFail("expected .networkError, got \(result)")
 			return
 		}
+	}
+
+	// MARK: - Dedup (Fix 4): existing article under a different uniqueID scheme
+
+	func testExistingAmbrosiaStyleArticleIsReusedNotDuplicated() async {
+		// An Ambrosia-synced article for work 87955346 whose uniqueID is
+		// Ambrosia's own id, not the bare AO3 work id -- bookKey routes
+		// through ao3WorkID regardless (JSONFeedParser.swift:241 always
+		// sets ao3WorkID for AO3-sourced items). This work also appears
+		// on page 1 of the fetched listing.
+		_ = await account.updateAsync(feedID: existingArticle.feedID, parsedItems: [
+			ParsedItem(syncServiceID: nil, uniqueID: "ambrosia-item-9001", feedURL: existingArticle.feedID,
+			           url: "https://archiveofourown.org/works/87955346", externalURL: nil,
+			           title: "Part One", language: nil, contentHTML: nil,
+			           contentText: nil, markdown: nil, summary: nil, imageURL: nil, bannerImageURL: nil,
+			           datePublished: nil, dateModified: nil, authors: nil, tags: nil, attachments: nil,
+			           ao3WorkID: "87955346")
+		], deleteOlder: false)
+		let ambrosiaArticleID = Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "ambrosia-item-9001")
+
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999001", file: "ao3-series-nav-page1.html")
+		TestingURLProtocol.setResponse("archiveofourown.org/works/87955346", file: "ao3-work-single-chapter.html")
+
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .first, targetWorkURL: nil, targetIndex: nil,
+			existingArticle: existingArticle, account: account
+		)
+
+		// download must have been handed the Ambrosia article's own
+		// articleID, not a freshly computed one from the bare workID.
+		XCTAssertEqual(result, .success(ambrosiaArticleID))
+
+		// No second row for work 87955346 -- stubImport must have
+		// filtered it out of page1Works before handing anything to
+		// updateAsync.
+		let articles = await account.fetchArticlesAsync(.feed(account.existingFeed(withFeedID: existingArticle.feedID)!))
+		let matchingArticles = articles.filter { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) == "87955346" }
+		XCTAssertEqual(matchingArticles.count, 1)
+		XCTAssertEqual(matchingArticles.first?.articleID, ambrosiaArticleID)
+	}
+
+	func testCurrentlyOpenWorkOnPageOneDoesNotDuplicate() async {
+		// Regression case for the "always at least one duplicate" report:
+		// existingArticle's own work (id "1", from setUp's
+		// importPastedAO3Links) additionally appears on the fetched
+		// page-1 listing -- confirms the feed's article count for that
+		// ao3WorkID stays at 1 after the call, not 2.
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999003", file: "ao3-series-nav-page1-with-work-one.html")
+		TestingURLProtocol.setResponse("archiveofourown.org/works/22222", file: "ao3-work-single-chapter.html")
+
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999003", direction: .next,
+			targetWorkURL: "https://archiveofourown.org/works/22222", targetIndex: 2,
+			existingArticle: existingArticle, account: account
+		)
+		XCTAssertEqual(result, .success(Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "22222")))
+
+		let articles = await account.fetchArticlesAsync(.feed(account.existingFeed(withFeedID: existingArticle.feedID)!))
+		let matchingArticles = articles.filter { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) == "1" }
+		XCTAssertEqual(matchingArticles.count, 1)
+		XCTAssertEqual(matchingArticles.first?.articleID, existingArticle.articleID)
 	}
 
 	// MARK: - Second page needed (Step 3)

@@ -1762,6 +1762,22 @@ struct SidebarItemNode: Hashable, Sendable {
 	/// above, which stays inside the article reader and only searches
 	/// whatever `self.articles` already holds.
 	///
+	/// "Return to timeline" here means `selectArticle(nil)` -- the same
+	/// call every other "leave the detail column" site in this file uses
+	/// (`navigateToFeeds()`, `selectSidebarItem`'s deselect branch,
+	/// `beginSearching()`, `endSearching()`). It unconditionally performs
+	/// `rootSplitViewController.show(.supplementary)` and clears
+	/// `articleViewController?.article`, which is what actually pops the
+	/// detail column. `navigateToTimeline()` itself is not that primitive
+	/// -- it's a keyboard-focus helper for iPad hardware-shortcut callers
+	/// where both columns are already visible side by side, so it only
+	/// selects an article when none is selected and otherwise just shifts
+	/// first-responder status; when `currentArticle != nil` (true on every
+	/// real invocation of this flow, since the user is mid-article when
+	/// they tap a series nav link) it was a UI no-op, leaving the reader
+	/// on screen. `mainTimelineViewController?.focus()` is kept here too,
+	/// for parity with `navigateToTimeline()`'s own first-responder shift.
+	///
 	/// `articleID` here was very likely just stub-imported (or newly
 	/// fetched) by `AO3SeriesNavigator.openSeriesWork`, so it may not be
 	/// in `self.articles` yet -- that array is only refreshed by
@@ -1787,7 +1803,8 @@ struct SidebarItemNode: Hashable, Sendable {
 	/// against `CoalescingQueue`'s actual behavior under real concurrent
 	/// use before shipping.
 	func navigateToTimelineAndSelectArticle(_ articleID: String) {
-		navigateToTimeline()
+		selectArticle(nil)
+		mainTimelineViewController?.focus()
 		fetchAndMergeArticlesAsync(animated: true) { [weak self] in
 			self?.selectArticleInCurrentFeed(articleID)
 		}

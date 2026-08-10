@@ -143,34 +143,4 @@ import RSParser
 		#expect(withoutExtension.bookmarkCount == nil)
 		#expect(withoutExtension.hitCount == nil)
 	}
-
-	// Bug fix (Task 8 audit, finding #3): strippingAO3Stats() is what
-	// Account.updateAsync uses to withhold feed-supplied stats while
-	// AmbrosiaAO3NetworkPreference.updatesEnabled is off -- see that
-	// method's doc comment. Verified here at the RSParser level since
-	// that's a plain ParsedItem→ParsedItem transform with no Account
-	// dependency; Account's own test suite covers the toggle wiring.
-	@Test func strippingAO3StatsClearsOnlyTheFourStatsFields() throws {
-		let d = parserData("ambrosia", "json", "http://ambrosia.local:8420/feed/search.xml")
-		let parsedFeed = try #require(try FeedParser.parse(d))
-		let withExtension = try #require(parsedFeed.items.first { $0.uniqueID == "ambrosia-book-42" })
-
-		let stripped = withExtension.strippingAO3Stats()
-
-		#expect(stripped.commentCount == nil)
-		#expect(stripped.kudosCount == nil)
-		#expect(stripped.bookmarkCount == nil)
-		#expect(stripped.hitCount == nil)
-
-		// Everything else -- including the other Task 2 fields that are
-		// unaffected by updatesEnabled -- survives unchanged.
-		#expect(stripped.uniqueID == withExtension.uniqueID)
-		#expect(stripped.wordCount == withExtension.wordCount)
-		#expect(stripped.chapterCurrent == withExtension.chapterCurrent)
-		#expect(stripped.chapterTotal == withExtension.chapterTotal)
-		#expect(stripped.isAmbrosiaItem == withExtension.isAmbrosiaItem)
-		#expect(stripped.fandoms == withExtension.fandoms)
-		#expect(stripped.series?.first?.name == withExtension.series?.first?.name)
-		#expect(stripped.contentHTML == withExtension.contentHTML)
-	}
 }

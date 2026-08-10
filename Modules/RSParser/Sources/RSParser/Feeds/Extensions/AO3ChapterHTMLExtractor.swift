@@ -529,7 +529,7 @@ private extension AO3ChapterHTMLExtractor {
 				// Previous/Next links and the bottom "This work is part
 				// of" block always agree.
 				let displayEntries = spanResults.map { result in
-					AO3TagEntry(text: result.entry.name, href: result.href, prefix: result.prefix, ao3ID: result.entry.ao3ID, previousWorkURL: result.entry.previousWorkURL, nextWorkURL: result.entry.nextWorkURL)
+					AO3TagEntry(text: result.entry.name, href: result.href, prefix: result.prefix, ao3ID: result.entry.ao3ID, previousWorkURL: result.entry.previousWorkURL, nextWorkURL: result.entry.nextWorkURL, index: result.entry.index)
 				}
 				rows.append(AO3PrefaceRow(label: label, values: displayEntries, isSeriesNavigation: true))
 				seriesEntries = spanResults

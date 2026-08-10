@@ -19,6 +19,7 @@ public struct AO3ExtractionResult: Sendable {
 	public let chapterCurrent: Int?
 	public let chapterTotal: Int?            // nil when AO3 shows "?"
 	public let isComplete: Bool?             // nil when chapterTotal is nil
+	public let language: String?
 	public let fandoms: [String]?
 	public let ratings: [String]?
 	public let warnings: [String]?
@@ -51,7 +52,7 @@ public enum AO3SummaryExtractor {
 			return nil
 		}
 
-		let (wordCount, chapterCurrent, chapterTotal, isComplete) = parseStats(flattenedText(statsBlock))
+		let (wordCount, chapterCurrent, chapterTotal, isComplete, language) = parseStats(flattenedText(statsBlock))
 
 		var fandoms: [String]?
 		var ratings: [String]?
@@ -105,6 +106,7 @@ public enum AO3SummaryExtractor {
 			chapterCurrent: chapterCurrent,
 			chapterTotal: chapterTotal,
 			isComplete: isComplete,
+			language: language,
 			fandoms: fandoms,
 			ratings: ratings,
 			warnings: warnings,
@@ -135,13 +137,30 @@ public enum AO3SummaryExtractor {
 
 private extension AO3SummaryExtractor {
 
-	static func parseStats(_ text: String) -> (wordCount: Int?, chapterCurrent: Int?, chapterTotal: Int?, isComplete: Bool?) {
+	static func parseStats(_ text: String) -> (wordCount: Int?, chapterCurrent: Int?, chapterTotal: Int?, isComplete: Bool?, language: String?) {
 		var wordCount: Int?
 		var chapterCurrent: Int?
 		var chapterTotal: Int?
 		var isComplete: Bool?
+		var language: String?
 
-		let fields = text.components(separatedBy: ",")
+		// "Language:" is handled separately, taking everything from its
+		// own colon to the end of the stats text, rather than through the
+		// comma-split loop below -- a language name can itself contain a
+		// comma (AO3 lists several multi-part names, e.g. "Chinese-
+		// simplified"'s siblings), and Language is always the stats
+		// paragraph's last field, so this can't clip a field that comes
+		// after it.
+		let statsWithoutLanguage: String
+		if let languageRange = text.range(of: "Language:") {
+			let rawLanguage = text[languageRange.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+			language = rawLanguage.isEmpty ? nil : rawLanguage
+			statsWithoutLanguage = String(text[text.startIndex..<languageRange.lowerBound])
+		} else {
+			statsWithoutLanguage = text
+		}
+
+		let fields = statsWithoutLanguage.components(separatedBy: ",")
 		for field in fields {
 			guard let colonIndex = field.firstIndex(of: ":") else {
 				continue
@@ -171,7 +190,7 @@ private extension AO3SummaryExtractor {
 			}
 		}
 
-		return (wordCount, chapterCurrent, chapterTotal, isComplete)
+		return (wordCount, chapterCurrent, chapterTotal, isComplete, language)
 	}
 }
 

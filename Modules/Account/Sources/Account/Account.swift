@@ -951,28 +951,25 @@ public enum FetchType {
 	func updateAsync(feedID: String, parsedItems: Set<ParsedItem>, deleteOlder: Bool = true) async -> ArticleChanges {
 		precondition(Thread.isMainThread)
 
-		// Bug fix (Task 8 audit, finding #3): JSONFeedParser reads
-		// comment/kudos/bookmark/hit counts straight off a feed's
-		// _ambrosia extension at parse time (Task 2, intentional --
-		// supports a friend's self-hosted Ambrosia server publishing its
-		// own already-scraped stats), with no reference to
-		// AmbrosiaAO3NetworkPreference at all. Someone who turns off
-		// "fetch AO3 updates" expecting to never see AO3-derived numbers
-		// in a local archive reader would reasonably expect that to
-		// cover feed-supplied stats too, not just live-fetched ones.
-		// Stripped here, at the one place both ParsedItem (RSParser) and
-		// the preference (this module) are in scope, rather than in
-		// JSONFeedParser itself (which can't depend on Account) or in
-		// ArticlesDatabase (wrong dependency direction, and shared by
-		// every account type, not just this Ambrosia-toggle concern).
-		// Already-stored stats from an earlier sync are left alone --
-		// this only withholds newly incoming feed-supplied values while
-		// the toggle is off, and picks them back up on the next refresh
-		// once it's re-enabled.
-		let parsedItems: Set<ParsedItem> = AmbrosiaAO3NetworkPreference.updatesEnabled
-			? parsedItems
-			: Set(parsedItems.map { $0.isAmbrosiaItem ? $0.strippingAO3Stats() : $0 })
-
+		// AmbrosiaAO3NetworkPreference.updatesEnabled ("fetch AO3
+		// updates") gates whether Nectar makes a *live request to AO3's
+		// servers* -- it's not a display filter over metadata already in
+		// hand. A feed refresh here is never an AO3 request itself (the
+		// feed came from Ambrosia's own LocalFeedServer, or from an
+		// AO3-native RSS/Atom/search-results source that this preference
+		// doesn't gate at all -- see AmbrosiaAO3NetworkPreference's own
+		// doc comment and AO3ChapterFetcher.isAO3NetworkRequestAllowed),
+		// so there is no request here to withhold, and stripping
+		// comment/kudos/bookmark/hit counts the feed already sent us
+		// doesn't stop any traffic -- it only hides data Nectar already
+		// downloaded. Previously this stripped those four fields from
+		// Ambrosia-sourced items whenever the toggle was off (Task 8
+		// audit, finding #3); reverted, since that contradicted the
+		// toggle's actual purpose and, on top of that, only ever applied
+		// to isAmbrosiaItem items -- AO3-search-results-sourced items
+		// (isAmbrosiaItem: false) were never covered by it either way,
+		// so the old behavior was inconsistent across sources on top of
+		// being the wrong behavior for the ones it did cover.
 		let articleChanges = await database.updateAsync(parsedItems: parsedItems, feedID: feedID, deleteOlder: deleteOlder)
 		sendNotificationAbout(articleChanges)
 		return articleChanges

@@ -73,19 +73,9 @@ final class RootSplitViewController: UISplitViewController {
 		coordinator.selectNextUnread()
 	}
 
-	@objc func markRead(_ sender: Any?) {
-		coordinator.markAsReadForCurrentArticle()
-	}
-
 	@objc func markUnreadAndGoToNextUnread(_ sender: Any?) {
 		coordinator.markAsUnreadForCurrentArticle()
 		coordinator.selectNextUnread()
-	}
-
-	@objc func markAllAsReadAndGoToNextUnread(_ sender: Any?) {
-		coordinator.markAllAsReadInTimeline {
-			self.coordinator.selectNextUnread()
-		}
 	}
 
 	@objc func markAboveAsRead(_ sender: Any?) {
@@ -100,20 +90,8 @@ final class RootSplitViewController: UISplitViewController {
 		coordinator.markAsUnreadForCurrentArticle()
 	}
 
-	@objc func goToPreviousSubscription(_ sender: Any?) {
-		coordinator.selectPrevFeed()
-	}
-
-	@objc func goToNextSubscription(_ sender: Any?) {
-		coordinator.selectNextFeed()
-	}
-
 	@objc func openInBrowser(_ sender: Any?) {
 		coordinator.showBrowserForCurrentArticle()
-	}
-
-	@objc func openInAppBrowser(_ sender: Any?) {
-		coordinator.showInAppBrowser()
 	}
 
 	@objc func articleSearch(_ sender: Any?) {

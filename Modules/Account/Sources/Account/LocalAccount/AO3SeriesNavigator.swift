@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import os
 import Articles
 import RSParser
 import RSWeb
@@ -128,6 +129,20 @@ public enum AO3SeriesNavigator {
 	/// on having been pre-stubbed), they just don't appear as rows in the
 	/// timeline until then. Deliberate cost of the two-page cap, not an
 	/// incomplete-import bug.
+	///
+	/// **Dedup:** every listing page includes whatever work the user is
+	/// currently reading (that's how they got here), so a naive stub-
+	/// every-row pass would create a second row for it whenever its
+	/// existing `uniqueID` doesn't happen to equal its bare AO3 work id --
+	/// the normal case for an Ambrosia-synced article. `Article.bookKey`
+	/// (routed through `AO3ChapterFetcher.ao3WorkID(fromBookKey:)`) is a
+	/// reliable, already-existing cross-scheme identity key for "is this
+	/// AO3 work already in this feed," independent of whichever `uniqueID`
+	/// scheme produced the row -- see `existingArticlesByWorkID` below,
+	/// computed once per call and used both to skip re-stubbing an
+	/// already-present work and to resolve the real `articleID` a target
+	/// should be refetched under, rather than always computing a fresh
+	/// one from a bare `workID`.
 	public static func openSeriesWork(
 		ao3SeriesID: String,
 		direction: Direction,
@@ -148,11 +163,18 @@ public enum AO3SeriesNavigator {
 			knownTargetWorkID = workID
 		}
 
+		// Fetched once, reused by the cache check below, target
+		// resolution (all three directions, including .first), and both
+		// stub-import passes -- see existingArticlesByWorkID's own doc
+		// comment for why this is what actually prevents the
+		// currently-open work from getting stubbed as a duplicate.
+		let existingByWorkID = await existingArticlesByWorkID(feedID: existingArticle.feedID, account: account)
+
 		// Step 1: cache check -- skipped entirely for .first, whose
 		// target id isn't known until page 1 is parsed below.
 		if let knownTargetWorkID {
-			if let cachedArticleID = await cachedArticleID(forWorkID: knownTargetWorkID, feedID: existingArticle.feedID, account: account) {
-				return .success(cachedArticleID)
+			if let existing = existingByWorkID[knownTargetWorkID], existing.contentHTML != nil {
+				return .success(existing.articleID)
 			}
 		}
 
@@ -164,7 +186,12 @@ public enum AO3SeriesNavigator {
 		guard !page1Works.isEmpty else {
 			return .failure(.emptySeriesListing)
 		}
-		await stubImport(page1Works, feedID: existingArticle.feedID, account: account)
+		// The currently-open work (always present on page 1) is filtered
+		// out here instead of being handed to stubImport/updateAsync as a
+		// competing row under a fresh uniqueID -- this is what actually
+		// kills the duplicate.
+		let newPage1Works = page1Works.filter { existingByWorkID[$0.workID] == nil }
+		await stubImport(newPage1Works, feedID: existingArticle.feedID, account: account)
 
 		let targetWorkID: String
 		switch direction {
@@ -178,7 +205,7 @@ public enum AO3SeriesNavigator {
 		}
 
 		if page1Works.contains(where: { $0.workID == targetWorkID }) {
-			return await downloadAndAwait(workID: targetWorkID, feedID: existingArticle.feedID, account: account)
+			return await downloadAndAwait(workID: targetWorkID, existingArticleID: existingByWorkID[targetWorkID]?.articleID, feedID: existingArticle.feedID, account: account)
 		}
 
 		// .first's target is always page1Works[0], so it can never reach
@@ -204,30 +231,50 @@ public enum AO3SeriesNavigator {
 			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
 		}
 		let (pageNWorks, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: pageNHTML)
-		await stubImport(pageNWorks, feedID: existingArticle.feedID, account: account)
+		// Same filter as Step 2, against the same shared map -- page N is
+		// very unlikely to contain the current article, but a target
+		// reached via .previous/.next from a different session could
+		// already be present as a stub from an earlier tap.
+		let newPageNWorks = pageNWorks.filter { existingByWorkID[$0.workID] == nil }
+		await stubImport(newPageNWorks, feedID: existingArticle.feedID, account: account)
 
 		guard pageNWorks.contains(where: { $0.workID == targetWorkID }) else {
 			return .failure(.seriesListingMismatch)
 		}
 
-		return await downloadAndAwait(workID: targetWorkID, feedID: existingArticle.feedID, account: account)
+		return await downloadAndAwait(workID: targetWorkID, existingArticleID: existingByWorkID[targetWorkID]?.articleID, feedID: existingArticle.feedID, account: account)
 	}
 }
 
 private extension AO3SeriesNavigator {
 
-	/// An existing article under `feedID` whose `ao3WorkID` (recovered
-	/// from `bookKey`, same as every other AO3-refetch call site --
-	/// `Article` itself carries no separate `ao3WorkID` property) matches
-	/// `workID` and already has fetched content. `Account.fetchArticlesAsync`
-	/// is used over the synchronous `fetchArticles` since this already
-	/// runs off an async context and the feed's article set can be large.
-	static func cachedArticleID(forWorkID workID: String, feedID: String, account: Account) async -> String? {
+	/// Existing articles under `feedID`, keyed by AO3 work id (recovered
+	/// from `bookKey` -- always present for AO3-sourced articles per
+	/// every producer in this codebase: `JSONFeedParser` for
+	/// Ambrosia-synced items, `AO3ChapterFetcher.rebuildParsedItem` for
+	/// real-fetch refetches, and this navigator's own stubs). Fetched
+	/// once per `openSeriesWork` call and reused by the cache check,
+	/// `.first`'s target resolution, and both stub-import passes, so
+	/// nothing this function does ever creates a second row for a work
+	/// that's already in the feed under some other `uniqueID` scheme
+	/// (Ambrosia sync being the common case, since the currently-open
+	/// article is always a member of the series page(s) this function
+	/// fetches).
+	static func existingArticlesByWorkID(feedID: String, account: Account) async -> [String: Article] {
 		guard let feed = account.existingFeed(withFeedID: feedID) else {
-			return nil
+			return [:]
 		}
 		let articles = await account.fetchArticlesAsync(.feed(feed))
-		return articles.first(where: { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) == workID && $0.contentHTML != nil })?.articleID
+		var result: [String: Article] = [:]
+		for article in articles {
+			guard let workID = AO3ChapterFetcher.ao3WorkID(fromBookKey: article.bookKey) else { continue }
+			// If a pre-fix duplicate already exists for this workID,
+			// prefer whichever copy actually has content, self-healing
+			// old dupes rather than picking one arbitrarily.
+			if let existing = result[workID], existing.contentHTML != nil { continue }
+			result[workID] = article
+		}
+		return result
 	}
 
 	/// `GET https://archiveofourown.org/series/<id>` for page 1 (bare, no
@@ -254,30 +301,31 @@ private extension AO3SeriesNavigator {
 	/// Batch-stubs every work found on one fetched listing page into
 	/// `feedID`, one `account.updateAsync` call for the whole page (per
 	/// its own doc comment about being written around one feed-shaped
-	/// batch, not one call per work). Placeholder-title shape matches
-	/// `downloadAndAwait`'s single-work stub exactly (Phase 4b) --
-	/// deliberately not using the listing row's real, already-parsed
-	/// title: every work here except the one this call is ultimately
-	/// opening stays an unfetched stub until it's next opened directly,
-	/// same "content fetched only on open" contract as any other
-	/// AO3-sourced stub in this app, so richer upfront metadata would be
-	/// work with no consumer.
+	/// batch, not one call per work). Uses the listing row's own,
+	/// already-parsed title (Phase 4b follow-up) -- every work here
+	/// except the one this call is ultimately opening still stays an
+	/// unfetched stub with no `contentHTML` until it's next opened
+	/// directly, same "content fetched only on open" contract as any
+	/// other AO3-sourced stub in this app; only the placeholder title
+	/// itself is upgraded from a generic "AO3 Work <id>" to the real
+	/// work title, since that's already sitting unused on the row and
+	/// costs nothing further to thread through.
 	static func stubImport(_ works: [AO3SeriesListingExtractor.WorkListingEntry], feedID: String, account: Account) async {
 		guard !works.isEmpty else {
 			return
 		}
-		let stubs = Set(works.map { placeholderStub(workID: $0.workID, feedID: feedID) })
+		let stubs = Set(works.map { placeholderStub(workID: $0.workID, permalink: $0.permalink, title: $0.title, feedID: feedID) })
 		_ = await account.updateAsync(feedID: feedID, parsedItems: stubs, deleteOlder: false)
 	}
 
-	static func placeholderStub(workID: String, feedID: String) -> ParsedItem {
+	static func placeholderStub(workID: String, permalink: String, title: String, feedID: String) -> ParsedItem {
 		ParsedItem(
 			syncServiceID: nil,
 			uniqueID: workID,
 			feedURL: feedID,
-			url: "https://archiveofourown.org/works/\(workID)",
+			url: permalink,
 			externalURL: nil,
-			title: String(format: NSLocalizedString("AO3 Work %@", comment: "Series-navigation placeholder title, before the work is fetched"), workID),
+			title: title,
 			language: nil,
 			contentHTML: nil,
 			contentText: nil,
@@ -294,48 +342,88 @@ private extension AO3SeriesNavigator {
 		)
 	}
 
-	/// Ensures a stub exists for `workID` (a no-op if `stubImport` already
-	/// created one -- `updateAsync`'s `deleteOlder: false` upsert on a
-	/// stable `uniqueID` of `workID` makes calling this twice for the same
-	/// work harmless, not a duplicate), then fetches it via
+	/// Fetches `workID`'s real content via
 	/// `AO3ChapterFetcher.download(workID:articleID:accountID:feedID:)`,
 	/// reusing its existing Cloudflare/registration-required/rate-limit
-	/// handling rather than re-implementing it here. `articleID` is
-	/// computed with `Article.calculatedArticleID(feedID:uniqueID:)` up
-	/// front (the same derivation the database uses for any
-	/// nil-`syncServiceID` `ParsedItem`) so it's known before the write
-	/// completes, letting this wait on the notification pair `download`
-	/// posts rather than re-querying the database afterward.
-	static func downloadAndAwait(workID: String, feedID: String, account: Account) async -> Result<String, AO3SeriesNavigationError> {
-		let articleID = Article.calculatedArticleID(feedID: feedID, uniqueID: workID)
+	/// handling rather than re-implementing it here.
+	///
+	/// `existingArticleID`, when non-nil, is the caller's already-resolved
+	/// row for this work (from `existingArticlesByWorkID`, keyed on
+	/// `bookKey` -- independent of whatever `uniqueID` scheme produced the
+	/// row). Reusing it here, instead of always computing a fresh
+	/// `Article.calculatedArticleID(feedID:uniqueID:)` from the bare
+	/// `workID`, is what stops this function from creating a second row
+	/// for a work that's already in the feed under a different `uniqueID`
+	/// (Ambrosia sync being the common case). When it's nil -- no existing
+	/// row for this work under any scheme -- this falls back to computing
+	/// `articleID` the original way and stubbing one before the fetch, so
+	/// `download`'s own `articleID`-only lookup (`AO3ChapterFetcher.swift`,
+	/// "Article no longer exists" otherwise) has a row to find.
+	///
+	/// Waits on the notification pair `download` posts rather than
+	/// re-querying the database afterward, since `articleID` is known
+	/// up front either way.
+	static func downloadAndAwait(workID: String, existingArticleID: String?, feedID: String, account: Account) async -> Result<String, AO3SeriesNavigationError> {
+		let articleID: String
+		if let existingArticleID {
+			// Reusing an existing row -- refresh it in place, no stub
+			// creation, no risk of a duplicate under a fresh workID-based
+			// uniqueID.
+			articleID = existingArticleID
+		} else {
+			articleID = Article.calculatedArticleID(feedID: feedID, uniqueID: workID)
 
-		// Belt-and-suspenders: openSeriesWork's own page-1/page-N walk
-		// always stubs the target before calling this, but this entry
-		// point doesn't assume that -- a stub-less call is still safe
-		// (deleteOlder: false, stable uniqueID) and keeps this function
-		// usable on its own.
-		_ = await account.updateAsync(feedID: feedID, parsedItems: [placeholderStub(workID: workID, feedID: feedID)], deleteOlder: false)
+			// Belt-and-suspenders: openSeriesWork's own page-1/page-N walk
+			// always stubs the target before calling this when there's no
+			// existing row, but this entry point doesn't assume that -- a
+			// stub-less call is still safe (deleteOlder: false, stable
+			// uniqueID) and keeps this function usable on its own. No
+			// listing row is available here (only a bare workID), so this
+			// stub still uses the generic placeholder title/permalink --
+			// irrelevant within moments anyway, since the real fetch this
+			// function awaits immediately overwrites both via
+			// rebuildParsedItem.
+			_ = await account.updateAsync(feedID: feedID, parsedItems: [placeholderStub(workID: workID, permalink: "https://archiveofourown.org/works/\(workID)", title: String(format: NSLocalizedString("AO3 Work %@", comment: "Series-navigation placeholder title, before the work is fetched"), workID), feedID: feedID)], deleteOlder: false)
+		}
 
 		return await withCheckedContinuation { continuation in
-			var tokens: [NSObjectProtocol] = []
-			var didResume = false
+			// NotificationCenter's addObserver(...using:) closure parameter
+			// is @Sendable, and NSObjectProtocol (what addObserver returns)
+			// isn't itself Sendable -- an unchecked box is used here rather
+			// than threading the tokens through OSAllocatedUnfairLock's
+			// generic state, since the lock's own Sendable requirement on
+			// its State type rejects NSObjectProtocol just as directly.
+			// Safe in practice: both observers only ever fire on queue:
+			// .main, and removeObserver is called at most once, from
+			// finish, gated by the same shouldResume check that also
+			// guards continuation.resume.
+			final class TokenBox: @unchecked Sendable {
+				var tokens: [NSObjectProtocol] = []
+			}
+			let tokenBox = TokenBox()
+			let didResume = OSAllocatedUnfairLock(initialState: false)
 
-			func finish(_ result: Result<String, AO3SeriesNavigationError>) {
-				guard !didResume else { return }
-				didResume = true
-				tokens.forEach(NotificationCenter.default.removeObserver)
+			@Sendable func finish(_ result: Result<String, AO3SeriesNavigationError>) {
+				let shouldResume = didResume.withLock { resumed -> Bool in
+					guard !resumed else { return false }
+					resumed = true
+					return true
+				}
+				guard shouldResume else { return }
+				tokenBox.tokens.forEach(NotificationCenter.default.removeObserver)
 				continuation.resume(returning: result)
 			}
 
-			tokens.append(NotificationCenter.default.addObserver(forName: .ao3ChapterFetchDidComplete, object: nil, queue: .main) { note in
+			let completeToken = NotificationCenter.default.addObserver(forName: .ao3ChapterFetchDidComplete, object: nil, queue: .main) { note in
 				guard note.userInfo?[AO3ChapterFetchUserInfoKey.articleID] as? String == articleID else { return }
 				finish(.success(articleID))
-			})
-			tokens.append(NotificationCenter.default.addObserver(forName: .ao3ChapterFetchDidFail, object: nil, queue: .main) { note in
+			}
+			let failToken = NotificationCenter.default.addObserver(forName: .ao3ChapterFetchDidFail, object: nil, queue: .main) { note in
 				guard note.userInfo?[AO3ChapterFetchUserInfoKey.articleID] as? String == articleID else { return }
 				let message = note.userInfo?[AO3ChapterFetchUserInfoKey.message] as? String ?? NSLocalizedString("Couldn't load this work", comment: "AO3 series navigation error")
 				finish(.failure(.fetchFailed(message)))
-			})
+			}
+			tokenBox.tokens = [completeToken, failToken]
 
 			AO3ChapterFetcher.shared.download(workID: workID, articleID: articleID, accountID: account.accountID, feedID: feedID)
 		}
