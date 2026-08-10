@@ -45,7 +45,10 @@ public final class TestingURLProtocol: URLProtocol {
 		}
 
 		let urlString = url.absoluteString
-		let match = Self.responses.first { urlString.contains($0.key) }?.value
+		let match = Self.responses
+			.filter { urlString.contains($0.key) }
+			.max { $0.key.count < $1.key.count }?
+			.value
 
 		let httpResponse = HTTPURLResponse(url: url, statusCode: match?.statusCode ?? 200, httpVersion: "HTTP/1.1", headerFields: nil)!
 		client?.urlProtocol(self, didReceive: httpResponse, cacheStoragePolicy: .notAllowed)

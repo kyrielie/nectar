@@ -237,6 +237,15 @@ a.footnote {
 .ao3SeriesNavDisabled {
 	color: var(--ao3-series-nav-disabled-color, rgba(0, 0, 0, 0.4));
 }
+/* Phase 4e: applied by main_ios.js's updateNectarSeriesLink() to a
+   First/Previous/Next link while its tap is in flight -- same muted
+   treatment as .ao3SeriesNavDisabled (still an <a>, not swapped out for
+   a <span>, so the same element gets its label/state restored on
+   completion rather than being torn down and rebuilt). */
+.nectarSeriesLinkLoading {
+	color: var(--ao3-series-nav-disabled-color, rgba(0, 0, 0, 0.4));
+	pointer-events: none;
+}
 #ao3SeriesFooter {
 	margin: 1.5em 0 0 0;
 	padding-top: 1em;

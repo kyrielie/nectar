@@ -8,6 +8,19 @@ higher-throughput sync route for large collections: a paginated SQLite
 transfer format, fetched and imported directly rather than parsed as JSON.
 Confirmed against the current source tree.
 
+**Provenance note for whoever picks this up next:** this revision folds in
+six features/behaviors that were present and wired up in the code but
+missing from the previous version of this document — found via a
+systematic audit (file-by-file duplication/dead-code sweep, then a
+path-matched diff against an upstream NetNewsWire snapshot). All six are
+marked below by name (AO3 direct feed ingestion, `JSONFeedParser`
+diagnostic logging, Feed LAN-IP repointing, AO3/host refresh throttling,
+background refresh budget, Last Opened smart feed). Known problems found
+during the same audit — duplicated helpers, dead code, one unresolved
+design question — are tracked separately in
+`nectar-audit-remediation-plan.md`, not here; this file describes what the
+code *does*, not what's wrong with it.
+
 ## Module layout
 
 SPM packages live under `Modules/`. The ones with app-specific relevance:
@@ -28,7 +41,13 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   `ParsedItem` also carries a `markdown` field: when present, RSParser
   renders it to HTML via `Tidemark.markdownToHTML` and uses that as
   `contentHTML` (falling back to any provided `contentHTML` if the
-  rendered result is empty).
+  rendered result is empty). `JSONFeedParser` also logs, via `os.Logger`
+  (`.notice`), an item-count summary for every parse plus a reason for
+  each individual dropped item (missing `uniqueID`, missing content) and
+  each same-`uniqueID` collision within one feed — read this log first
+  when chasing "why did this item disappear." `RSParser` also has a
+  second, independent ingestion path that doesn't go through
+  `JSONFeedParser` at all — see AO3 direct feed ingestion below.
 - **Modules/Articles** — the persisted domain model. `Article` mirrors
   `ParsedItem` 1:1, including the Ambrosia fields, `markdown`, and
   `bookKey` (always resolves to at least `uniqueID`, so it's
@@ -50,9 +69,24 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   mirrors `ParsedItem.bookKey`'s precedence.
 - **Modules/Account** — account management and sync services (Feedbin,
   Feedly, Reader API, NewsBlur, CloudKit, local/Ambrosia), built on top of
-  `ArticlesDatabase`. `LocalAccountRefresher` (LocalAccount) routes each
+  `ArticlesDatabase`. Only the local/Ambrosia backend is reachable —
+  `AccountType` has exactly one live case, `.onMyMac`; the
+  Feedbin/Feedly/NewsBlur/ReaderAPI/CloudKit delegate code, and the
+  `Modules/CloudKitSync`/`Modules/NewsBlur` packages, are fully deleted
+  from the tree, not merely unreachable-but-compiled (intentional: an
+  unsigned IPA can't use iCloud, and the removed backends have no route to
+  reach without it). `LocalAccountRefresher` (LocalAccount) routes each
   feed to one of two fetch paths per refresh — see SQLite transfer route
-  below.
+  below — and, separately, decides per-refresh whether a feed should be
+  skipped this pass at all — see AO3/host refresh throttling below. A
+  feed's fetch address (the Ambrosia server's LAN IP) can change without
+  changing its `feedID` — see Feed LAN-IP repointing below.
+  `Account.isLibraryReachable` (backed by `AccountSettings`, defaulting to
+  `true` when never set) tracks whether the paired Ambrosia server
+  responded as of the last refresh; `LocalAccountRefresher` sets it false
+  on a failed refresh attempt and true again on the next successful one,
+  and `MainFeedCollectionViewController`/`SceneCoordinator` read it for
+  "server unreachable" UI state.
 - **Modules/RSCore / RSWeb / RSDatabase / RSTree** — cross-cutting utility
   layers (AppKit/UIKit helpers, HTTP/download plumbing, SQLite wrapper,
   tree/outline data structure) carried over from NetNewsWire, largely
@@ -67,9 +101,11 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   `ArticleStringFormatter` (title/summary truncation and caching),
   `ArticleRenderer` (HTML page assembly for the web view), `Assets.swift`
   (icon/color constants, including the fork's Loved/heart and Ambrosia
-  additions), and `SmartFeeds/` (Today/Unread/Starred/Loved/Read smart
-  feeds — `LovedFeedDelegate` uses a dedicated filled-heart icon, not the
-  Starred bookmark icon).
+  additions), and `SmartFeeds/` (Today/Unread/Starred/Loved/Read/**Last
+  Opened** smart feeds — `LovedFeedDelegate` uses a dedicated filled-heart
+  icon, not the Starred bookmark icon; `LastOpenedFeedDelegate` is a
+  Nectar-original smart feed with no upstream counterpart, described
+  below).
 - **iOS/** — the only compiled app target. Key areas for current work:
   - `iOS/MainTimeline` — the article list. `MainTimelineCellData` builds
     per-row display state from an `Article`; `MainTimelineCellLayout`
@@ -191,6 +227,161 @@ assuming a straight `SELECT` is safe — `content_html` and the dates are the
 two columns that needed the one-row-at-a-time treatment so far, not because
 they're special-cased on principle but because they're the only two whose
 wire type doesn't already match the local column's storage type.
+
+## AO3 direct feed ingestion (RSS/Atom route)
+
+Ambrosia JSON Feed is not the only way an article reaches Nectar. Nectar
+also subscribes directly to AO3's own native tag/user RSS and Atom feeds
+(`https://archiveofourown.org/tags/<tag>/feed.atom`, works search feeds,
+etc.) — a public site, not the user's own Ambrosia server. This route goes
+through the ordinary `RSSParser`/`AtomParser` path (not `JSONFeedParser`),
+with three fork-specific additions layered on at the `parsedItems`
+construction site in both parsers:
+
+- **`AO3IgnoreList.shouldExclude(_:)`** filters out items from
+  blocked works/authors before they're ever turned into a `ParsedItem` —
+  one choke point that covers show/fetch/save at once, so a blocked
+  work never reaches the database, the timeline, or search.
+- **`AO3SummaryExtractor.extract(fromSummaryHTML:)`** (`RSSItem.toParsedItem`
+  only — Atom items don't carry AO3's summary HTML in the same shape) tries
+  to parse AO3's machine-generated summary HTML into structured fields
+  (fandoms, relationships, ratings, word count, `ao3WorkID` from the
+  permalink, etc.) and, on success, builds the `ParsedItem` from that
+  structured result instead of falling through to the generic
+  body/summary promotion every other feed uses.
+- AO3 search-results/tag-listing pages get their own pagination and
+  refresh-skip handling — see AO3/host refresh throttling below.
+
+None of this is present in `JSONFeedParser`'s article-construction path;
+it only applies to feeds fetched as RSS/Atom. `RSSItem.swift`/
+`RSSParser.swift`/`AtomParser.swift` are otherwise upstream NetNewsWire
+code — these three additions are the only diff from upstream in any of
+them. In-code comments reference this as "Task 7"/"Task 9" of a `docs/`
+planning file; the planning file itself is out of scope, but the task
+numbers confirm this is a deliberate, planned feature, not incidental.
+
+## Feed LAN-IP repointing
+
+`Feed.url` (`Modules/Account`) is `nonisolated(unsafe) public
+private(set) var`, not a `let` — a feed's fetch address can change without
+changing its `feedID`, via `Feed.repoint(to:)`. This exists because the
+Ambrosia server is addressed by LAN IP, which can change (DHCP lease
+renewal, network switch) independent of anything about the feed's
+identity; repointing in place means existing articles, statuses, and
+`BookStateTable` rows stay associated with the feed with no merge step,
+where creating a new feed at the new URL would orphan all of that history.
+
+`LocalAccountDelegate` drives repointing from two entry points, both
+routed through one shared `collectionKeyIndex` helper (no duplicated
+matching logic between the two paths):
+
+- **OPML import** (`reconcileRepairedFeeds`/`repointAndRefresh`): after
+  importing OPML, newly-created feeds are matched against existing ones by
+  `AmbrosiaFeedIdentity.collectionKey(for:)` — a collection identity, not
+  the URL — and a match under a different URL repoints the *existing*
+  feed rather than keeping the OPML-created duplicate. This supersedes an
+  earlier merge-by-`bookKey` approach (noted in-code).
+- **Manual single-feed add** (`repointIfAmbrosiaRepair`, called from
+  `createFeed`): the same collection-key matching, checked before falling
+  through to ordinary feed creation.
+
+A third, related piece: **`rewriteAmbrosiaJSONFeedURLs`** rewrites an
+Ambrosia-exported OPML's `xmlUrl` from the RSS 2.0 route it ships (no
+`_ambrosia` metadata) to the sibling `.json` route before subscribing, so
+an OPML round-trip doesn't silently lose book-card data.
+
+Repointing deliberately avoids the `bookKey`-merge path in favor of
+`feedID` stability — consistent with `articleID` being `feedID`-derived
+(see Book identity above): a repoint keeps the same `feedID`, so no
+article identity changes at all, whereas a `bookKey` merge would try to
+reconcile two different `feedID` lineages after the fact.
+
+## AO3/host refresh throttling
+
+`LocalAccountRefresher.feedShouldBeSkipped(_:_:)` runs once per feed per
+refresh pass and decides whether that feed is skipped this time, checking
+three independent reasons in order:
+
+1. **Disallowed host** (`feedShouldBeSkippedForDisallowedHostReasons`) —
+   permanently skips the `nectar-import://` pasted-AO3-link-list import
+   feed (`Account.importedLinksFeedURL`; it has no real server behind it,
+   articles are written directly via `updateAsync`, so refreshing it can
+   never succeed) and a small `badHosts` list (`twitter.com`/`x.com`
+   variants — feeds pointed at the old Twitter API, which no longer
+   provides feeds). Both are inherited NetNewsWire behavior, not
+   Nectar-specific.
+2. **AO3 search-results feeds** (`feedShouldBeSkippedForAO3SearchResultsReasons`,
+   `isAO3SearchResultsFeed`) — a normal scheduled/background/pull-to-refresh
+   pass never re-fetches page 1 of an AO3 search/tag-listing feed once it's
+   been added; only the one-off add-time fetch and explicit
+   pagination/"load more" touch it after that. Matched on host (AO3's
+   domain allowlist) + path shape (`/tags/.../works`, or `/works` with a
+   `work_search[...]` query key) — deliberately not by file extension.
+3. **Reddit** (`feedShouldBeSkippedForRedditReasons`) — Reddit allows one
+   feed fetch per minute, so at most one Reddit feed refreshes per pass
+   (the least-recently-checked one); this is also inherited NetNewsWire
+   behavior, unrelated to Ambrosia/AO3.
+
+This replaces upstream's general-purpose
+`feedShouldBeSkippedForCacheControlReasons`/
+`feedShouldBeSkippedForTimingReasons` (a courtesy minimum-refresh-interval
+that protects small blog/podcast servers from being hammered), removed
+with the comment "Nectar only ever refreshes feeds from the user's own
+local Ambrosia server... never a public site the app needs to be polite
+to."
+
+**Open gap, not yet resolved:** that removal comment is incomplete. AO3
+tag/user RSS/Atom feeds (see AO3 direct feed ingestion above) *are* a
+public, non-Ambrosia site, and `isAO3SearchResultsFeed`'s matching only
+covers AO3's HTML search/tag-listing *pages* — not AO3's native
+`.atom`/RSS feed URLs, which is the actual direct-subscription route. A
+regular AO3 tag/user Atom feed subscription has no proactive
+skip/minimum-interval protection today; it refreshes on every
+scheduled/background/pull-to-refresh pass like an Ambrosia feed, backed
+only by `Downloader`'s *reactive* per-host 429/Cloudflare-challenge
+handling (see AO3 preface rendering below) as a backstop. This may be
+fine in practice given AO3's own aggressive rate limiting, but it's an
+open design question, not a settled one — see the remediation plan.
+
+## Background refresh budget and interrupted-feed retry
+
+iOS background refresh runs on `BGTaskScheduler`
+(`com.kyrielie.Nectar.FeedRefresh`, registered and scheduled from
+`iOS/AppDelegate.swift`), which replaced upstream's in-process
+`Timer`-based `AccountRefreshTimer` entirely (not a reimplementation under
+a new name — a wholesale move to the standard iOS background-task API).
+
+`AppDelegate` computes the OS-granted remaining execution time, subtracts
+a safety margin, and stores the result as
+`AccountManager.shared.backgroundRefreshDeadline`.
+`LocalAccountRefresher` checks `Date() >= deadline` mid-pagination and, if
+the deadline has passed, stops early rather than risking termination
+mid-write; feeds it didn't get to are tracked as interrupted. On
+completion, `LocalAccountDelegate` posts
+`.refreshDidCompleteWithInterruptedFeeds` with the interrupted feed URLs,
+which `AppDelegate` observes to decide whether to request another
+background pass. `backgroundRefreshDeadline` is cleared (`nil`) once a
+refresh pass completes normally or the app returns to the foreground, so
+it never leaks a stale deadline into a later foreground-triggered refresh.
+
+## Last Opened smart feed
+
+`LastOpenedFeedDelegate` (`Shared/SmartFeeds/`, Nectar-original, no
+upstream counterpart) is a fifth smart feed alongside
+Today/Unread/Starred/Loved/Read: the 10 most recently opened articles,
+mirroring `ReadFeedDelegate`/`LovedFeedDelegate`'s shape but with a fixed
+`FetchType.lastOpened(10)` limit rather than an unbounded fetch — the cap
+is enforced via `SQL LIMIT` in `ArticlesTable.fetchLastOpenedArticles`,
+not client-side truncation. `SceneCoordinator` calls
+`Account.recordBookOpened(articleID:)` (→ `BookStateTable.lastOpenedAt`)
+whenever an article is opened, except when the *current* timeline feed is
+itself the Last Opened feed (`SidebarItem.forcesLastOpenedSort`, `true`
+only for this delegate) — opening an article from inside "Last Opened"
+doesn't re-order the list out from under the user mid-browse. Unlike
+Read/Loved/Read Later, there's no natural running total to show as a
+badge count (the feed is always capped at 10, which says nothing about
+library size), so `fetchUnreadCount` is hardcoded to `0` rather than
+repurposing the badge for something misleading.
 
 ## Data flow: feed to card
 

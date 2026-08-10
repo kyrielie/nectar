@@ -2,24 +2,43 @@
 //  AO3SeriesNavigatorTests.swift
 //  AccountTests
 //
-//  Nectar remediation plan, Part 1.3: coverage for AO3SeriesNavigator
-//  (Task 10's prev/next/first navigation), previously untested despite
-//  shipping with a five-case public error enum.
+//  Nectar inline-series-navigation plan, Phase 4: coverage for
+//  AO3SeriesNavigator.openSeriesWork, which replaced the old
+//  fetchAdjacentWork/fetchFirstWorkInSeries pair this file used to test
+//  (both deleted -- they collapsed a work's multiple series memberships
+//  to one, which per-series inline links no longer do).
 //
-//  Same limitation AO3ChapterFetcherTests documents: Downloader.shared and
-//  AO3ChapterFetcher.shared.download are concrete singletons with no
-//  injected seam, so the network-dependent paths --
-//  .emptySeriesListing/.networkError/.fetchFailed, and the success path --
-//  can't be exercised here. This covers what's actually reachable without
-//  a network call: fetchAdjacentWork's/fetchFirstWorkInSeries's early
-//  guards, both of which return before AO3SeriesNavigator ever touches
-//  Downloader or AO3ChapterFetcher (AO3SeriesNavigator.swift:62-67, 85-88).
-//  Flagged here rather than silently narrowed to "whatever's easy": a real
-//  test of the success/network-error paths needs that seam built first,
-//  the same gap AO3ChapterFetcherTests already calls out.
+//  Previously this file could only cover openSeriesWork's pre-network
+//  guards -- Downloader.shared had no injected seam, a limitation
+//  AO3ChapterFetcherTests's header comment documented directly. That gap
+//  is now closed: Downloader's own URLSession picks up TestingURLProtocol
+//  under Platform.isRunningUnitTests, the same way URLSession.webservice
+//  already did (see RSWeb's Downloader.swift and
+//  TestingURLProtocol+Responses.swift). Every openSeriesWork branch below
+//  is exercised against canned responses, not a live archiveofourown.org
+//  fetch.
+//
+//  AO3SeriesNavigationError is Equatable (added alongside this rewrite)
+//  purely so Result<String, AO3SeriesNavigationError> can be compared
+//  with XCTAssertEqual below.
+//
+//  Fixtures: ao3-series-nav-page1.html/page2.html are small, hand-built
+//  two-work/one-work series-listing pages -- markup shape (work row,
+//  pagination widget, both the "has next page" and "last page" forms)
+//  copied verbatim from the real captured ao3-series-listing.html and
+//  longseries.html fixtures in RSParserTests, not invented. The work
+//  actually downloaded in most tests (87955346) reuses
+//  RSParserTests/Resources/ao3-work-single-chapter.html, a real captured
+//  work page already proven to round-trip through
+//  AO3ChapterHTMLExtractor.extract -- that extractor doesn't cross-check
+//  extracted content against the requested work ID, so the same fixture
+//  is registered under several different work-page URLs below without
+//  misrepresenting anything the extractor itself checks.
 //
 
 import XCTest
+import RSParser
+import RSWeb
 import Articles
 @testable import Account
 
@@ -27,165 +46,190 @@ import Articles
 
 	private var account: Account!
 
+	// Every test's existingArticle lives under this feed -- created via
+	// the same importPastedAO3Links path a real "already reading this
+	// series" article would have gone through, rather than
+	// hand-constructing an Article directly.
+	private var existingArticle: Article!
+
 	override func setUp() async throws {
+		TestingURLProtocol.reset()
 		account = TestAccountManager.shared.createAccount(type: .onMyMac)
+		_ = await account.importPastedAO3Links("https://archiveofourown.org/works/1")
+		let feed = account.existingFeed(withURL: Account.importedLinksFeedURL)!
+		existingArticle = await account.fetchArticlesAsync(.feed(feed)).first!
 	}
 
 	override func tearDown() async throws {
+		TestingURLProtocol.reset()
 		TestAccountManager.shared.deleteAccount(account)
 		account = nil
+		existingArticle = nil
 	}
 
-	// MARK: - fetchAdjacentWork: .noAdjacentWork
+	// MARK: - Pre-network guards (.previous/.next only -- .first has none)
 
-	func testFetchPreviousWorkWithNilPreviousWorkURLFailsWithNoAdjacentWork() async {
-		let article = Self.makeArticle(previousWorkURL: nil, nextWorkURL: "https://archiveofourown.org/works/456")
-
-		let result = await AO3SeriesNavigator.fetchAdjacentWork(direction: .previous, from: article, account: account)
-
-		switch result {
-		case .success:
-			XCTFail("Expected .noAdjacentWork, got success")
-		case .failure(let error):
-			guard case .noAdjacentWork = error else {
-				return XCTFail("Expected .noAdjacentWork, got \(error)")
-			}
-		}
-	}
-
-	func testFetchNextWorkWithNilNextWorkURLFailsWithNoAdjacentWork() async {
-		let article = Self.makeArticle(previousWorkURL: "https://archiveofourown.org/works/123", nextWorkURL: nil)
-
-		let result = await AO3SeriesNavigator.fetchAdjacentWork(direction: .next, from: article, account: account)
-
-		switch result {
-		case .success:
-			XCTFail("Expected .noAdjacentWork, got success")
-		case .failure(let error):
-			guard case .noAdjacentWork = error else {
-				return XCTFail("Expected .noAdjacentWork, got \(error)")
-			}
-		}
-	}
-
-	/// A malformed permalink AO3SummaryExtractor.ao3WorkID can't parse an
-	/// ID out of takes the same .noAdjacentWork path as a nil URL --
-	/// AO3SeriesNavigator.swift:63 guards both together in one condition.
-	func testFetchAdjacentWorkWithUnparseablePermalinkFailsWithNoAdjacentWork() async {
-		let article = Self.makeArticle(previousWorkURL: "https://example.com/not-an-ao3-work-url", nextWorkURL: nil)
-
-		let result = await AO3SeriesNavigator.fetchAdjacentWork(direction: .previous, from: article, account: account)
-
-		switch result {
-		case .success:
-			XCTFail("Expected .noAdjacentWork, got success")
-		case .failure(let error):
-			guard case .noAdjacentWork = error else {
-				return XCTFail("Expected .noAdjacentWork, got \(error)")
-			}
-		}
-	}
-
-	// MARK: - fetchFirstWorkInSeries: .noSeriesID
-
-	func testFetchFirstWorkInSeriesWithNilSeriesFailsWithNoSeriesID() async {
-		let article = Self.makeArticle(series: nil)
-
-		let result = await AO3SeriesNavigator.fetchFirstWorkInSeries(from: article, account: account)
-
-		switch result {
-		case .success:
-			XCTFail("Expected .noSeriesID, got success")
-		case .failure(let error):
-			guard case .noSeriesID = error else {
-				return XCTFail("Expected .noSeriesID, got \(error)")
-			}
-		}
-	}
-
-	/// Every series membership has a nil ao3ID (e.g. a Calibre-only
-	/// series with no AO3 counterpart) -- same failure as no series at
-	/// all, since fetchFirstWorkInSeries (AO3SeriesNavigator.swift:85)
-	/// filters for a non-nil ao3ID specifically, not just series' presence.
-	func testFetchFirstWorkInSeriesWithNoAO3SeriesIDFailsWithNoSeriesID() async {
-		let article = Self.makeArticle(series: [ArticleSeriesEntry(name: "Calibre-only Series", index: 1, ao3ID: nil)])
-
-		let result = await AO3SeriesNavigator.fetchFirstWorkInSeries(from: article, account: account)
-
-		switch result {
-		case .success:
-			XCTFail("Expected .noSeriesID, got success")
-		case .failure(let error):
-			guard case .noSeriesID = error else {
-				return XCTFail("Expected .noSeriesID, got \(error)")
-			}
-		}
-	}
-
-	/// A work in multiple series picks the first membership with a
-	/// non-nil ao3ID (AO3SeriesNavigator.swift:79-83's documented "first
-	/// one wins" rule) -- this confirms a nil-ao3ID entry ahead of a
-	/// real one doesn't itself trigger .noSeriesID. Can't assert which
-	/// series URL gets fetched without a Downloader seam, but this at
-	/// least confirms the guard clears (doesn't fail synchronously) when
-	/// a later entry has a usable ao3ID.
-	func testFetchFirstWorkInSeriesSkipsNilAO3IDEntriesToFindALaterOne() async {
-		let article = Self.makeArticle(series: [
-			ArticleSeriesEntry(name: "Calibre-only Series", index: 1, ao3ID: nil),
-			ArticleSeriesEntry(name: "The Real Series", index: 2, ao3ID: "9999")
-		])
-
-		let result = await AO3SeriesNavigator.fetchFirstWorkInSeries(from: article, account: account)
-
-		// The .noSeriesID guard must have cleared -- whatever happens
-		// next depends on a real network call this test can't make, but
-		// it must not be .noSeriesID specifically.
-		if case .failure(.noSeriesID) = result {
-			XCTFail("Expected the noSeriesID guard to clear once a later entry has a non-nil ao3ID")
-		}
-	}
-}
-
-private extension AO3SeriesNavigatorTests {
-
-	static func makeArticle(previousWorkURL: String? = nil, nextWorkURL: String? = nil, series: [ArticleSeriesEntry]? = nil) -> Article {
-		let articleID = "test-article-id-\(UUID().uuidString)"
-		let status = ArticleStatus(articleID: articleID, read: false, starred: false, dateArrived: Date())
-		// fetchAdjacentWork (interim Phase 1/2 shim -- see the doc comment
-		// on AO3SeriesNavigator.fetchAdjacentWork) now reads previous/next
-		// off `series` entries, not the singular Article-level fields the
-		// inline-series-navigation plan's Phase 1 removed. When a caller
-		// below only wants to simulate a bare previous/next pair (not
-		// exercising genuinely multi-series behavior), wrap it in one
-		// synthetic ArticleSeriesEntry here so those call sites don't each
-		// need to build their own `series` array by hand.
-		let resolvedSeries: [ArticleSeriesEntry]?
-		if let series {
-			resolvedSeries = series
-		} else if previousWorkURL != nil || nextWorkURL != nil {
-			resolvedSeries = [ArticleSeriesEntry(name: "Test Series", index: 1, ao3ID: "1", previousWorkURL: previousWorkURL, nextWorkURL: nextWorkURL)]
-		} else {
-			resolvedSeries = nil
-		}
-		return Article(
-			accountID: "test-account-id",
-			articleID: articleID,
-			feedID: "test-feed-id",
-			uniqueID: "test-unique-id",
-			title: "Test Work",
-			contentHTML: nil,
-			contentText: nil,
-			markdown: nil,
-			url: "https://archiveofourown.org/works/999",
-			externalURL: nil,
-			summary: "A test summary.",
-			imageURL: nil,
-			datePublished: nil,
-			dateModified: nil,
-			authors: nil,
-			series: resolvedSeries,
-			bookKey: "ao3-work:999",
-			status: status
+	func testPreviousWithNilTargetWorkURLFailsWithNoAdjacentWork() async {
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .previous, targetWorkURL: nil, targetIndex: nil,
+			existingArticle: existingArticle, account: account
 		)
+		XCTAssertEqual(result, .failure(.noAdjacentWork))
+	}
+
+	func testNextWithUnparseableTargetWorkURLFailsWithNoAdjacentWork() async {
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .next, targetWorkURL: "not a permalink", targetIndex: nil,
+			existingArticle: existingArticle, account: account
+		)
+		XCTAssertEqual(result, .failure(.noAdjacentWork))
+	}
+
+	// MARK: - Cache hit (Step 1) -- no listing fetch at all
+
+	func testNextReturnsCachedArticleWithoutFetchingListing() async {
+		// A work already fetched under the same feed, with content --
+		// exactly cachedArticleID's match condition (uniqueID == workID,
+		// contentHTML != nil).
+		_ = await account.updateAsync(feedID: existingArticle.feedID, parsedItems: [
+			ParsedItem(syncServiceID: nil, uniqueID: "87955346", feedURL: existingArticle.feedID,
+			           url: "https://archiveofourown.org/works/87955346", externalURL: nil,
+			           title: "Cached Work", language: nil, contentHTML: "<p>already fetched</p>",
+			           contentText: nil, markdown: nil, summary: nil, imageURL: nil, bannerImageURL: nil,
+			           datePublished: nil, dateModified: nil, authors: nil, tags: nil, attachments: nil,
+			           ao3WorkID: "87955346")
+		], deleteOlder: false)
+
+		// Deliberately NOT registering any TestingURLProtocol response for
+		// series/999001 -- if the cache check were skipped, the fetch
+		// would hit the default 200/no-data stub and this would fail with
+		// .networkError instead of matching the cached article.
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .next,
+			targetWorkURL: "https://archiveofourown.org/works/87955346", targetIndex: 2,
+			existingArticle: existingArticle, account: account
+		)
+		XCTAssertEqual(result, .success(Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "87955346")))
+	}
+
+	// MARK: - Page 1 resolves it (Step 2)
+
+	func testFirstResolvesFirstWorkFromPageOne() async {
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999001", file: "ao3-series-nav-page1.html")
+		TestingURLProtocol.setResponse("archiveofourown.org/works/87955346", file: "ao3-work-single-chapter.html")
+
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .first, targetWorkURL: nil, targetIndex: nil,
+			existingArticle: existingArticle, account: account
+		)
+		XCTAssertEqual(result, .success(Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "87955346")))
+
+		// Both page-1 rows should be stubbed into the feed, not just the
+		// one actually downloaded (Step 2's batch-stub behavior).
+		let articles = await account.fetchArticlesAsync(.feed(account.existingFeed(withFeedID: existingArticle.feedID)!))
+		XCTAssertTrue(articles.contains { $0.uniqueID == "22222" })
+	}
+
+	func testNextResolvesFromPageOneWhenTargetIsThere() async {
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999001", file: "ao3-series-nav-page1.html")
+		TestingURLProtocol.setResponse("archiveofourown.org/works/87955346", file: "ao3-work-single-chapter.html")
+
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .next,
+			targetWorkURL: "https://archiveofourown.org/works/87955346", targetIndex: 1,
+			existingArticle: existingArticle, account: account
+		)
+		XCTAssertEqual(result, .success(Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "87955346")))
+	}
+
+	func testEmptySeriesListingWhenPageOneHasNoWorkRows() async {
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999002", file: "ao3-series-nav-empty.html")
+
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999002", direction: .first, targetWorkURL: nil, targetIndex: nil,
+			existingArticle: existingArticle, account: account
+		)
+		XCTAssertEqual(result, .failure(.emptySeriesListing))
+	}
+
+	func testNetworkErrorWhenPageOneCantBeLoaded() async {
+		// No response registered for this series ID at all -- resolves to
+		// TestingURLProtocol's default 200/no-data stub, which
+		// fetchListingPage treats as unreadable.
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999999", direction: .first, targetWorkURL: nil, targetIndex: nil,
+			existingArticle: existingArticle, account: account
+		)
+		guard case .failure(.networkError) = result else {
+			XCTFail("expected .networkError, got \(result)")
+			return
+		}
+	}
+
+	// MARK: - Second page needed (Step 3)
+
+	func testTwoPageWalkFindsTargetOnPageTwo() async {
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999001?page=2", file: "ao3-series-nav-page2.html")
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999001", file: "ao3-series-nav-page1.html")
+		TestingURLProtocol.setResponse("archiveofourown.org/works/33333", file: "ao3-work-single-chapter.html")
+
+		// pageSize is 2 (page1Works.count); targetIndex 3 -> ceil(3/2) = page 2.
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .next,
+			targetWorkURL: "https://archiveofourown.org/works/33333", targetIndex: 3,
+			existingArticle: existingArticle, account: account
+		)
+		XCTAssertEqual(result, .success(Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "33333")))
+
+		// Page 2's own row should be stubbed too.
+		let articles = await account.fetchArticlesAsync(.feed(account.existingFeed(withFeedID: existingArticle.feedID)!))
+		XCTAssertTrue(articles.contains { $0.uniqueID == "33333" })
+	}
+
+	func testSeriesListingMismatchWhenComputedPageDoesNotContainTarget() async {
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999001?page=2", file: "ao3-series-nav-page2.html")
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999001", file: "ao3-series-nav-page1.html")
+
+		// targetIndex 3 -> page 2, but this target isn't actually on
+		// either fixture page.
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .next,
+			targetWorkURL: "https://archiveofourown.org/works/404404", targetIndex: 3,
+			existingArticle: existingArticle, account: account
+		)
+		XCTAssertEqual(result, .failure(.seriesListingMismatch))
+	}
+
+	func testSeriesListingMismatchWhenIndexMathSaysPageOneButTargetIsMissing() async {
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999001", file: "ao3-series-nav-page1.html")
+		// Deliberately no ?page=2 response registered: targetIndex 1 means
+		// targetPage resolves to 1 (not >1), so Step 3's guard should stop
+		// before ever requesting a second page. If it requested one
+		// anyway, the missing stub would surface as .networkError instead
+		// of .seriesListingMismatch, catching the regression.
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .next,
+			targetWorkURL: "https://archiveofourown.org/works/404404", targetIndex: 1,
+			existingArticle: existingArticle, account: account
+		)
+		XCTAssertEqual(result, .failure(.seriesListingMismatch))
+	}
+
+	// MARK: - Fetch failure (Step 4)
+
+	func testFetchFailedWhenTargetWorkPageCantBeExtracted() async {
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999001", file: "ao3-series-nav-page1.html")
+		// A page with no chapter content at all -- AO3ChapterHTMLExtractor
+		// can't extract anything usable from it.
+		TestingURLProtocol.setResponse("archiveofourown.org/works/87955346", file: "ao3-series-nav-empty.html")
+
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .first, targetWorkURL: nil, targetIndex: nil,
+			existingArticle: existingArticle, account: account
+		)
+		guard case .failure(.fetchFailed) = result else {
+			XCTFail("expected .fetchFailed, got \(result)")
+			return
+		}
 	}
 }

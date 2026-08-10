@@ -4,14 +4,13 @@
 //
 //  Nectar AO3 direct-reading support, Workstream 2 test plan.
 //
-//  Downloader.shared isn't mockable (concrete singleton, no injected
-//  protocol) — this deliberately doesn't attempt to fake that out. Instead
-//  it covers everything in AO3ChapterFetcher that's pure/synchronous:
-//  ao3WorkID(fromBookKey:)'s prefix parsing and isStale(article:)'s chapter-
-//  count comparison, both against constructed Article fixtures rather than
-//  a live fetch. A real network-level test of `download` would need a
-//  Downloader seam this codebase doesn't have yet -- flagged here rather
-//  than silently skipped.
+//  Downloader.shared now has a TestingURLProtocol seam (see RSWeb's
+//  Downloader.swift and AO3SeriesNavigatorTests.swift for a real usage),
+//  but AO3ChapterFetcher.download's own Cloudflare/registration-required/
+//  retry branches aren't exercised here yet -- this still only covers
+//  what's pure/synchronous: ao3WorkID(fromBookKey:)'s prefix parsing and
+//  isStale(article:)'s chapter-count comparison, both against constructed
+//  Article fixtures rather than a live or stubbed fetch.
 //
 
 import XCTest

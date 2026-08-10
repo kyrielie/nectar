@@ -83,9 +83,10 @@ import XCTest
 	// Not covered here: LocalAccountRefresher.feedShouldBeSkippedForDisallowedHostReasons's
 	// nectar-import scheme check. That function lives in a `private extension`
 	// in the same file, unreachable even via @testable import, and refreshAll()
-	// itself goes through DownloadSession/live network -- same "not mockable,
-	// not faked" situation AO3ChapterFetcherTests documents for Downloader.shared.
-	// Verified by reading LocalAccountRefresher.swift directly instead: the
-	// scheme check is the first branch in feedShouldBeSkippedForDisallowedHostReasons,
-	// returning (true, ...) before any host-based logic runs.
+	// itself goes through DownloadSession, which (unlike Downloader.shared,
+	// now stubbable -- see AO3SeriesNavigatorTests.swift) still has no
+	// TestingURLProtocol seam of its own. Verified by reading
+	// LocalAccountRefresher.swift directly instead: the scheme check is the
+	// first branch in feedShouldBeSkippedForDisallowedHostReasons, returning
+	// (true, ...) before any host-based logic runs.
 }

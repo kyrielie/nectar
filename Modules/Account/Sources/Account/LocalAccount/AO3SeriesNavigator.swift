@@ -2,16 +2,21 @@
 //  AO3SeriesNavigator.swift
 //  NetNewsWire
 //
-//  Nectar AO3 direct-reading support, Task 10 ("Prev/next/first
-//  navigation -- independent of the grouping toggle"). See
-//  nectar-ao3-features-plan-FINAL.md.
+//  Nectar AO3 direct-reading support. Originally Task 10 ("Prev/next/
+//  first navigation -- independent of the grouping toggle"), now the
+//  inline-series-navigation plan's Phase 4: `openSeriesWork` below
+//  replaces every "first membership wins" per-article entry point this
+//  file used to expose (`fetchAdjacentWork`/`fetchFirstWorkInSeries`,
+//  deleted this pass) -- those collapsed a work's multiple series
+//  memberships to one, which per-series inline links (Phase 3) no
+//  longer do, so the navigator underneath them can't either.
 //
-//  Tapping Previous/Next/First in the reader adds that work to the
-//  current article's own feed (mirroring the stub-then-fetch shape of
-//  Account.importPastedAO3Links(_:), but under existingArticle.feedID
-//  rather than the "Imported Links" feed) and fetches it immediately --
-//  unlike AO3ChapterFetcher.fetchIfNeeded's lazy on-open trigger, this is
-//  an explicit "read this now" tap.
+//  `openSeriesWork` adds and fetches a series member the same way the
+//  old entry points did (stub-then-fetch, mirroring
+//  Account.importPastedAO3Links(_:), under existingArticle.feedID
+//  rather than the "Imported Links" feed) but is bounded to at most two
+//  series-listing page fetches regardless of series length -- see the
+//  function's own doc comment.
 //
 
 import Foundation
@@ -19,17 +24,20 @@ import Articles
 import RSParser
 import RSWeb
 
-public enum AO3SeriesNavigationError: Error, Sendable {
-	/// `article.previousWorkURL`/`nextWorkURL` was nil -- the work is
-	/// first/last in every series it belongs to (for that direction), or
-	/// has no series membership at all.
+public enum AO3SeriesNavigationError: Error, Sendable, Equatable {
+	/// The tapped link carried no usable target -- a `.previous`/`.next`
+	/// tap with no `workurl`, or an unparseable one.
 	case noAdjacentWork
-	/// `article.series` has no entry with a non-nil `ao3ID` to build a
-	/// `/series/<id>` listing URL from.
-	case noSeriesID
-	/// The series-listing page loaded but no work row was found in it
-	/// (see `AO3SeriesListingExtractor.firstWorkPermalink`).
+	/// The series-listing page loaded but no work row was found on it
+	/// (see `AO3SeriesListingExtractor.workPermalinks`).
 	case emptySeriesListing
+	/// The known target work id didn't appear on the page(s) actually
+	/// fetched -- either the computed page number (position math assuming
+	/// a contiguous, gap-free "Part N" listing) was wrong, or the listing
+	/// changed between when the tapped link's data was captured and now.
+	/// A hard stop, not a retry-with-a-third-page case -- see
+	/// `openSeriesWork`'s Step 3.
+	case seriesListingMismatch
 	/// Couldn't reach AO3, or its response couldn't be read.
 	case networkError(String)
 	/// AO3ChapterFetcher's own fetch of the target work failed --
@@ -41,10 +49,10 @@ public enum AO3SeriesNavigationError: Error, Sendable {
 		switch self {
 		case .noAdjacentWork:
 			return NSLocalizedString("No adjacent work in this series", comment: "AO3 series navigation error")
-		case .noSeriesID:
-			return NSLocalizedString("This work's series page isn't available", comment: "AO3 series navigation error")
 		case .emptySeriesListing:
-			return NSLocalizedString("Couldn't find the first work in this series", comment: "AO3 series navigation error")
+			return NSLocalizedString("Couldn't find that work in the series", comment: "AO3 series navigation error")
+		case .seriesListingMismatch:
+			return NSLocalizedString("Couldn't locate that work in the series listing", comment: "AO3 series navigation error")
 		case .networkError(let message), .fetchFailed(let message):
 			return message
 		}
@@ -54,132 +62,216 @@ public enum AO3SeriesNavigationError: Error, Sendable {
 @MainActor
 public enum AO3SeriesNavigator {
 
-	/// Adds and fetches the adjacent work in `existingArticle`'s series
-	/// (whichever `direction` selects), returning the new article's
-	/// `articleID` once its content has finished loading, so the caller
-	/// can navigate the reader straight to it.
-	///
-	/// Interim Phase 1/2 shim: since the inline-series-navigation plan's
-	/// Phase 1 folded `previousWorkURL`/`nextWorkURL` into each
-	/// `ArticleSeriesEntry` (a work in more than one series can have a
-	/// different adjacent work per series -- see `ArticleSeriesEntry`'s
-	/// doc comment), this whole entry point is superseded by Phase 4's
-	/// `openSeriesWork(ao3SeriesID:direction:targetWorkURL:targetIndex:existingArticle:account:)`,
-	/// which is per-series rather than per-article. Until Phase 4 lands,
-	/// this keeps the existing context-menu behavior working by picking
-	/// the first series membership with a non-nil URL for `direction` --
-	/// the same "first membership wins" collapsing the old
-	/// `AO3ChapterHTMLExtractor.previousNextWorkURLs(fromDD:)` used to do
-	/// before Phase 2 replaced it. Delete this function (and this whole
-	/// call path) once Phase 4 ships.
-	public static func fetchAdjacentWork(direction: Direction, from existingArticle: Article, account: Account) async -> Result<String, AO3SeriesNavigationError> {
-		let permalink = existingArticle.series?.compactMap { direction == .previous ? $0.previousWorkURL : $0.nextWorkURL }.first
-		guard let permalink, let workID = AO3SummaryExtractor.ao3WorkID(fromPermalink: permalink) else {
-			return .failure(.noAdjacentWork)
-		}
-		return await fetchAndAddWork(workID: workID, feedID: existingArticle.feedID, account: account)
-	}
-
-	/// Same fetch as `fetchAdjacentWork(direction:from:account:)` above,
-	/// but taking the already-known target work URL directly rather than
-	/// re-deriving it from `existingArticle.series`'s collapsed "first
-	/// membership wins" pick. Used by the inline `nectar-series:` link
-	/// handler (`WebViewController.handleNectarSeriesLink`, plan Phase
-	/// 3a/3c) -- the tapped link already carries the correct per-series
-	/// URL from `AO3ChapterHTMLExtractor.seriesEntriesWithNavigation`'s
-	/// per-span parse, so reusing the article-wide entry point above
-	/// would silently pick the wrong series' URL for a work in more than
-	/// one series, the exact bug Phase 1/2's data-model change fixed.
-	///
-	/// Interim, same as `fetchAdjacentWork(direction:from:account:)`: just
-	/// the single-work fetch-and-add every Task 10 entry point in this
-	/// file already does, not yet Phase 4's bounded series-listing walk
-	/// or batch stub-import of other series members.
-	public static func fetchAdjacentWork(direction: Direction, workURL: String, feedID: String, account: Account) async -> Result<String, AO3SeriesNavigationError> {
-		guard let workID = AO3SummaryExtractor.ao3WorkID(fromPermalink: workURL) else {
-			return .failure(.noAdjacentWork)
-		}
-		return await fetchAndAddWork(workID: workID, feedID: feedID, account: account)
-	}
-
-	public enum Direction: Sendable {
+	public enum Direction: Sendable, Hashable {
+		case first
 		case previous
 		case next
 	}
 
-	/// Fetches `existingArticle`'s series-listing page (lazily -- this is
-	/// the only Task 10 codepath that needs it, since prev/next alone
-	/// never reach work #1 directly) to find the first work, then adds
-	/// and fetches it the same way `fetchAdjacentWork` does.
+	/// Adds (if needed) and fetches one work in the series identified by
+	/// `ao3SeriesID`, returning the new/existing article's `articleID`
+	/// once its content is available, so the caller can navigate the
+	/// reader straight to it.
 	///
-	/// A work in more than one series picks the first membership with a
-	/// non-nil `ao3ID`, same "first one wins" reasoning as
-	/// `AO3ChapterHTMLExtractor.previousNextWorkURLs`'s doc comment --
-	/// the reader's "First work" button is singular, so some choice has
-	/// to be made when there's more than one series to be first-in.
-	public static func fetchFirstWorkInSeries(from existingArticle: Article, account: Account) async -> Result<String, AO3SeriesNavigationError> {
-		guard let seriesID = existingArticle.series?.first(where: { $0.ao3ID != nil })?.ao3ID else {
-			return .failure(.noSeriesID)
-		}
-		return await fetchFirstWorkInSeries(ao3SeriesID: seriesID, feedID: existingArticle.feedID, account: account)
-	}
+	/// - Parameters:
+	///   - direction: which work to open. `.first` always resolves
+	///     against page 1 of the listing (AO3's work page carries no
+	///     "first work in series" link of its own -- see
+	///     `AO3SeriesListingExtractor`'s header comment -- so First's
+	///     target is discovered from the listing, not known up front).
+	///   - targetWorkURL: the adjacent work's own permalink, already known
+	///     from `ArticleSeriesEntry.previousWorkURL`/`nextWorkURL` (the
+	///     per-series field the tapped inline link carries in its
+	///     `workurl` query item). Required for `.previous`/`.next`; unused
+	///     for `.first`.
+	///   - targetIndex: the target's expected 1-based "Part N" position in
+	///     the series listing -- `existingArticle`'s own matching series
+	///     entry's `index`, minus/plus one. Used only to compute which
+	///     listing page the target should be on if it isn't found on page
+	///     1; not trusted blindly (see Step 3's verification). Unused for
+	///     `.first`.
+	///   - existingArticle: the article the tap originated from, for its
+	///     `feedID` (every stubbed/fetched work lands in this same feed)
+	///     and as the cache-check scope.
+	///   - account: the account `existingArticle` belongs to.
+	///
+	/// Bounded to at most two series-listing page fetches, regardless of
+	/// series length:
+	///
+	/// 1. **Cache check** (`.previous`/`.next` only -- `.first`'s target
+	///    id isn't known yet). If a cached article already exists under
+	///    `existingArticle.feedID` for the target work id, with content
+	///    already fetched, return it directly -- no listing fetch at all.
+	/// 2. **Fetch page 1**, always. This is the only fetch `.first` ever
+	///    needs -- series list works in ascending Part order, so #1 is
+	///    never on a later page. Every work found is batch-stubbed into
+	///    the feed (one `account.updateAsync` call, not one per work).
+	///    `.previous`/`.next` whose target is on this page resolve here
+	///    too, no second fetch.
+	/// 3. **Fetch the computed page** (`.previous`/`.next` only, when the
+	///    target isn't on page 1) -- the single allowed second fetch,
+	///    paced by `AO3ChapterFetcher.secondsBetweenSweepRequests` before
+	///    issuing it. The target's presence on this page is verified
+	///    against the actually-parsed listing, not assumed from the index
+	///    math alone -- if it's missing, this returns
+	///    `.seriesListingMismatch` rather than trying a third page. That
+	///    verification is what makes "two pages maximum" a structural
+	///    guarantee.
+	/// 4. **Fetch the target's real content**, via the same
+	///    `AO3ChapterFetcher.shared.download` + notification-wait shape
+	///    this file has always used.
+	///
+	/// **Accepted gap:** only page 1 and (when needed) one other computed
+	/// page ever get stubbed. Works strictly between them are never
+	/// pre-imported by this flow -- they still work correctly if opened
+	/// directly later (`bookKey`/`BookStateTable` sharing doesn't depend
+	/// on having been pre-stubbed), they just don't appear as rows in the
+	/// timeline until then. Deliberate cost of the two-page cap, not an
+	/// incomplete-import bug.
+	public static func openSeriesWork(
+		ao3SeriesID: String,
+		direction: Direction,
+		targetWorkURL: String?,
+		targetIndex: Int?,
+		existingArticle: Article,
+		account: Account
+	) async -> Result<String, AO3SeriesNavigationError> {
 
-	/// Same fetch as `fetchFirstWorkInSeries(from:account:)` above, but
-	/// taking `ao3SeriesID` directly rather than deriving it from
-	/// `existingArticle.series`'s "first membership with a non-nil ao3ID
-	/// wins" pick. Used by the inline `nectar-series:first` link handler
-	/// (`WebViewController.handleNectarSeriesLink`) -- the tapped link
-	/// already names the specific series it belongs to (plan Phase 3a),
-	/// so a work in more than one series resolves First against whichever
-	/// series row was actually tapped, not always the first one in
-	/// `article.series`.
-	public static func fetchFirstWorkInSeries(ao3SeriesID: String, feedID: String, account: Account) async -> Result<String, AO3SeriesNavigationError> {
-		guard let seriesURL = URL(string: "https://archiveofourown.org/series/\(ao3SeriesID)") else {
-			return .failure(.noSeriesID)
+		let knownTargetWorkID: String?
+		switch direction {
+		case .first:
+			knownTargetWorkID = nil
+		case .previous, .next:
+			guard let targetWorkURL, let workID = AO3SummaryExtractor.ao3WorkID(fromPermalink: targetWorkURL) else {
+				return .failure(.noAdjacentWork)
+			}
+			knownTargetWorkID = workID
 		}
 
-		let downloadResponse: DownloadResponse
-		do {
-			downloadResponse = try await Downloader.shared.download(seriesURL)
-		} catch {
-			return .failure(.networkError(error.localizedDescription))
+		// Step 1: cache check -- skipped entirely for .first, whose
+		// target id isn't known until page 1 is parsed below.
+		if let knownTargetWorkID {
+			if let cachedArticleID = await cachedArticleID(forWorkID: knownTargetWorkID, feedID: existingArticle.feedID, account: account) {
+				return .success(cachedArticleID)
+			}
 		}
 
-		guard let data = downloadResponse.data, !data.isEmpty,
-		      let response = downloadResponse.response, response.statusIsOK,
-		      let html = String(data: data, encoding: .utf8) else {
+		// Step 2: page 1, always.
+		guard let page1HTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: 1) else {
 			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
 		}
-
-		guard let permalink = AO3SeriesListingExtractor.firstWorkPermalink(fromSeriesListingHTML: html),
-		      let workID = AO3SummaryExtractor.ao3WorkID(fromPermalink: permalink) else {
+		let (page1Works, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: page1HTML)
+		guard !page1Works.isEmpty else {
 			return .failure(.emptySeriesListing)
 		}
+		await stubImport(page1Works, feedID: existingArticle.feedID, account: account)
 
-		return await fetchAndAddWork(workID: workID, feedID: feedID, account: account)
+		let targetWorkID: String
+		switch direction {
+		case .first:
+			targetWorkID = page1Works[0].workID
+		case .previous, .next:
+			guard let knownTargetWorkID else {
+				return .failure(.noAdjacentWork)
+			}
+			targetWorkID = knownTargetWorkID
+		}
+
+		if page1Works.contains(where: { $0.workID == targetWorkID }) {
+			return await downloadAndAwait(workID: targetWorkID, feedID: existingArticle.feedID, account: account)
+		}
+
+		// .first's target is always page1Works[0], so it can never reach
+		// here -- only .previous/.next fall through to the second fetch.
+
+		// Step 3: the single allowed second fetch, only when the target's
+		// position math says it isn't on page 1.
+		guard let targetIndex else {
+			return .failure(.seriesListingMismatch)
+		}
+		let pageSize = page1Works.count
+		let targetPage = Int((Double(targetIndex) / Double(pageSize)).rounded(.up))
+		guard targetPage > 1 else {
+			// The index math says the target should have been on page 1,
+			// but it wasn't found there -- treat as a mismatch rather
+			// than silently fetching page 1 again.
+			return .failure(.seriesListingMismatch)
+		}
+
+		try? await Task.sleep(nanoseconds: UInt64(AO3ChapterFetcher.secondsBetweenSweepRequests * 1_000_000_000))
+
+		guard let pageNHTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: targetPage) else {
+			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
+		}
+		let (pageNWorks, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: pageNHTML)
+		await stubImport(pageNWorks, feedID: existingArticle.feedID, account: account)
+
+		guard pageNWorks.contains(where: { $0.workID == targetWorkID }) else {
+			return .failure(.seriesListingMismatch)
+		}
+
+		return await downloadAndAwait(workID: targetWorkID, feedID: existingArticle.feedID, account: account)
 	}
 }
 
 private extension AO3SeriesNavigator {
 
-	/// Creates a placeholder stub for `workID` under `feedID` (same
-	/// bare-link shape `Account.importPastedAO3Links(_:)` uses --
-	/// `updateAsync`'s `deleteOlder: false` plus a stable `uniqueID` of
-	/// `workID` means calling this twice for the same work is a no-op,
-	/// not a duplicate), then fetches it via the same
-	/// `AO3ChapterFetcher.download(workID:articleID:accountID:feedID:)`
-	/// every on-open/explicit refetch already goes through -- reusing its
-	/// existing Cloudflare/registration-required/rate-limit handling
-	/// rather than re-implementing it here. `articleID` is computed with
-	/// `Article.calculatedArticleID(feedID:uniqueID:)` up front (the same
-	/// derivation the database uses for any nil-`syncServiceID`
-	/// `ParsedItem`) so it's known before the write completes, letting
-	/// this wait on the notification pair `download` posts rather than
-	/// re-querying the database afterward.
-	static func fetchAndAddWork(workID: String, feedID: String, account: Account) async -> Result<String, AO3SeriesNavigationError> {
-		let articleID = Article.calculatedArticleID(feedID: feedID, uniqueID: workID)
+	/// An existing article under `feedID` whose `ao3WorkID` (recovered
+	/// from `bookKey`, same as every other AO3-refetch call site --
+	/// `Article` itself carries no separate `ao3WorkID` property) matches
+	/// `workID` and already has fetched content. `Account.fetchArticlesAsync`
+	/// is used over the synchronous `fetchArticles` since this already
+	/// runs off an async context and the feed's article set can be large.
+	static func cachedArticleID(forWorkID workID: String, feedID: String, account: Account) async -> String? {
+		guard let feed = account.existingFeed(withFeedID: feedID) else {
+			return nil
+		}
+		let articles = await account.fetchArticlesAsync(.feed(feed))
+		return articles.first(where: { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) == workID && $0.contentHTML != nil })?.articleID
+	}
 
-		let stub = ParsedItem(
+	/// `GET https://archiveofourown.org/series/<id>` for page 1 (bare, no
+	/// query string -- AO3's own page-1-is-bare-URL convention), or
+	/// `.../series/<id>?page=<n>` for `n >= 2`.
+	static func fetchListingPage(ao3SeriesID: String, page: Int) async -> String? {
+		var urlString = "https://archiveofourown.org/series/\(ao3SeriesID)"
+		if page > 1 {
+			urlString += "?page=\(page)"
+		}
+		guard let url = URL(string: urlString) else {
+			return nil
+		}
+		guard let downloadResponse = try? await Downloader.shared.download(url) else {
+			return nil
+		}
+		guard let data = downloadResponse.data, !data.isEmpty,
+		      let response = downloadResponse.response, response.statusIsOK else {
+			return nil
+		}
+		return String(data: data, encoding: .utf8)
+	}
+
+	/// Batch-stubs every work found on one fetched listing page into
+	/// `feedID`, one `account.updateAsync` call for the whole page (per
+	/// its own doc comment about being written around one feed-shaped
+	/// batch, not one call per work). Placeholder-title shape matches
+	/// `downloadAndAwait`'s single-work stub exactly (Phase 4b) --
+	/// deliberately not using the listing row's real, already-parsed
+	/// title: every work here except the one this call is ultimately
+	/// opening stays an unfetched stub until it's next opened directly,
+	/// same "content fetched only on open" contract as any other
+	/// AO3-sourced stub in this app, so richer upfront metadata would be
+	/// work with no consumer.
+	static func stubImport(_ works: [AO3SeriesListingExtractor.WorkListingEntry], feedID: String, account: Account) async {
+		guard !works.isEmpty else {
+			return
+		}
+		let stubs = Set(works.map { placeholderStub(workID: $0.workID, feedID: feedID) })
+		_ = await account.updateAsync(feedID: feedID, parsedItems: stubs, deleteOlder: false)
+	}
+
+	static func placeholderStub(workID: String, feedID: String) -> ParsedItem {
+		ParsedItem(
 			syncServiceID: nil,
 			uniqueID: workID,
 			feedURL: feedID,
@@ -200,7 +292,29 @@ private extension AO3SeriesNavigator {
 			attachments: nil,
 			ao3WorkID: workID
 		)
-		_ = await account.updateAsync(feedID: feedID, parsedItems: [stub], deleteOlder: false)
+	}
+
+	/// Ensures a stub exists for `workID` (a no-op if `stubImport` already
+	/// created one -- `updateAsync`'s `deleteOlder: false` upsert on a
+	/// stable `uniqueID` of `workID` makes calling this twice for the same
+	/// work harmless, not a duplicate), then fetches it via
+	/// `AO3ChapterFetcher.download(workID:articleID:accountID:feedID:)`,
+	/// reusing its existing Cloudflare/registration-required/rate-limit
+	/// handling rather than re-implementing it here. `articleID` is
+	/// computed with `Article.calculatedArticleID(feedID:uniqueID:)` up
+	/// front (the same derivation the database uses for any
+	/// nil-`syncServiceID` `ParsedItem`) so it's known before the write
+	/// completes, letting this wait on the notification pair `download`
+	/// posts rather than re-querying the database afterward.
+	static func downloadAndAwait(workID: String, feedID: String, account: Account) async -> Result<String, AO3SeriesNavigationError> {
+		let articleID = Article.calculatedArticleID(feedID: feedID, uniqueID: workID)
+
+		// Belt-and-suspenders: openSeriesWork's own page-1/page-N walk
+		// always stubs the target before calling this, but this entry
+		// point doesn't assume that -- a stub-less call is still safe
+		// (deleteOlder: false, stable uniqueID) and keeps this function
+		// usable on its own.
+		_ = await account.updateAsync(feedID: feedID, parsedItems: [placeholderStub(workID: workID, feedID: feedID)], deleteOlder: false)
 
 		return await withCheckedContinuation { continuation in
 			var tokens: [NSObjectProtocol] = []
