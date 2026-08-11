@@ -24,9 +24,14 @@ public final class TestingURLProtocol: URLProtocol {
 	/// Populated by tests; consulted per request, so it may change between requests.
 	nonisolated(unsafe) public static var responses = [String: Response]()
 
+	/// URLs actually requested through this protocol. Useful for tests that
+	/// need to distinguish "no network request" from a cached response.
+	nonisolated(unsafe) public static var requestedURLs = [URL]()
+
 	/// Clears all registered responses. Call between tests.
 	public static func reset() {
 		responses = [:]
+		requestedURLs = []
 	}
 
 	public override static func canInit(with request: URLRequest) -> Bool {
@@ -43,6 +48,7 @@ public final class TestingURLProtocol: URLProtocol {
 			client?.urlProtocol(self, didFailWithError: URLError(.badURL))
 			return
 		}
+		Self.requestedURLs.append(url)
 
 		let urlString = url.absoluteString
 		let match = Self.responses
