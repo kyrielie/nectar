@@ -275,6 +275,40 @@ bare AO3 work id (the normal case for an Ambrosia-synced article).
 already-present work and resolve which existing `articleID` a target should
 be refetched under.
 
+### Tracing a nav tap: log lines by category
+
+Every leg of a First/Previous/Next tap now logs at `.debug` via `os.Logger`,
+following the app's established `Self.logger.debug("Prefix: message
+key=\(value, privacy: .public)")` convention (see `ArticlesDatabase.swift`,
+`Account.swift`). Filter Console.app on these categories, in the order a tap
+actually flows through them, to see the whole path from tap to opened work:
+
+1. **`WebViewController`** -- `handleNectarSeriesLink: tapped ...` (the tap
+   itself, with direction/ao3ID/workURL), then either `... ignored, already
+   in flight ...` (double-tap guard) or `... starting openSeriesWork ...`,
+   and finally `... openSeriesWork succeeded ...` or the pre-existing `...
+   navigation failed ...` line.
+2. **`AO3SeriesNavigator`** -- the interesting decisions all happen here:
+   `openSeriesWork` entry (full parameters), the Step 1 same-feed cache-check
+   result (content already fetched / stub needing a fetch / no hit), the
+   Step 1b cross-feed cache-check result (a fetched copy of the same work
+   found under a different feed and copied in, or no hit), Step 2's page 1
+   fetch/parse/stub counts, target resolution (found on page 1, or falling
+   through to Step 3), Step 3's computed page number and its
+   fetch/parse/stub counts, and the final match/mismatch outcome. Then
+   `downloadAndAwait`'s own start/success/failure lines, which are the only
+   place this trace observes `AO3ChapterFetcher`'s `.ao3ChapterFetchDidComplete`/
+   `.ao3ChapterFetchDidFail` notification pair.
+3. **`SceneCoordinator`** -- `SceneCoordinator: navigateToTimelineAndSelectArticle
+   articleID=...`, the last leg of a successful tap, once the reader hands
+   off back to the timeline.
+
+A stall with no further log lines after `AO3SeriesNavigator: openSeriesWork
+fetching computed page N ...` means the second listing fetch (or the
+`AO3ChapterFetcher.secondsBetweenSweepRequests` pacing sleep before it) is
+still in flight -- that sleep is real wall-clock time, not a bug, before
+the second `fetchListingPage` call goes out.
+
 ## Summary of preferences
 
 | Preference | Type/default | Purpose |

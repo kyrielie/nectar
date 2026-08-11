@@ -34,14 +34,12 @@
 //  says anything about the real series' total length.
 //
 //  Inline-series-navigation plan, Phase 4a:
-//  `workPermalinks(fromSeriesListingHTML:)` extends this beyond
-//  "first work only" to every work row on one fetched listing page,
-//  plus whether a further page exists (`li.next > a[href]`, hoisted
-//  into `AO3ListingPagination.hasNextPage(_:)` since
-//  `AO3SearchResultsExtractor` needs the identical check -- see that
-//  type's own doc comment). Still deliberately page-scoped: this file
-//  parses whatever single page it's given, it does not itself walk
-//  pagination -- the two-fetch-cap walk lives in
+//  `workPermalinks(fromSeriesListingHTML:)` extends this beyond "first
+//  work only" to every work row on one fetched listing page, whether a
+//  further page exists (`li.next > a[href]`), and the pagination
+//  widget's total page count when present. Still deliberately
+//  page-scoped: this file parses whatever single page it's given, it
+//  does not itself walk pagination -- the two-fetch-cap walk lives in
 //  `AO3SeriesNavigator.openSeriesWork`.
 //
 
@@ -70,15 +68,16 @@ public enum AO3SeriesListingExtractor {
 	}
 
 	/// One entry per work row on this page, in document order (ascending
-	/// Part order -- see header comment), plus whether AO3's own `li.next`
-	/// pagination widget shows a further page. Reuses `isWorkRow`/
-	/// `absoluteURL` above (same row/link shape `firstWorkPermalink`
-	/// already validated) rather than a separate selector, and reuses
-	/// `AO3SearchResultsExtractor`'s own row-metadata helpers for the
-	/// richer fields below -- the two listing types share byte-for-byte
-	/// the same "work blurb" row shape (see header comment), so the same
-	/// summary/tag/stat parsing applies unchanged.
-	public static func workPermalinks(fromSeriesListingHTML html: String) -> (permalinks: [WorkListingEntry], hasNextPage: Bool) {
+	/// Part order -- see header comment), whether AO3's own `li.next`
+	/// pagination widget shows a further page, and the widget's total page
+	/// count when present. Reuses `isWorkRow`/`absoluteURL` above (same
+	/// row/link shape `firstWorkPermalink` already validated) rather than
+	/// a separate selector, and reuses `AO3SearchResultsExtractor`'s own
+	/// row-metadata helpers for the richer fields below -- the two listing
+	/// types share byte-for-byte the same "work blurb" row shape (see
+	/// header comment), so the same summary/tag/stat parsing applies
+	/// unchanged.
+	public static func workPermalinks(fromSeriesListingHTML html: String) -> (permalinks: [WorkListingEntry], hasNextPage: Bool, totalPages: Int?) {
 		let root = parseHTMLLiteTree(html)
 		let workRows = descendants(of: root, where: { isWorkRow($0) })
 
@@ -106,7 +105,7 @@ public enum AO3SeriesListingExtractor {
 			)
 		}
 
-		return (entries, AO3ListingPagination.hasNextPage(root))
+		return (entries, AO3ListingPagination.hasNextPage(root), AO3ListingPagination.totalPages(root))
 	}
 
 	/// One work row from a series-listing page. Extended (inline-series-
