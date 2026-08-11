@@ -21,6 +21,18 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 		window!.tintColor = Assets.Colors.primaryAccent
 
+		// window.tintColor is a set-once property (see handleAccentColorDidChange's
+		// doc comment below) -- it only repaints on its own when the color object
+		// assigned to it is a genuinely dynamic (light/dark-adapting) UIColor, which
+		// is true for Assets.Colors.primaryAccent's `.default` case but not for any
+		// custom AccentColor (a fixed hex, deliberately the same in both
+		// appearances). Registering for UITraitUserInterfaceStyle here closes that
+		// gap explicitly instead of relying on that incidental behavior.
+		window!.registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (window: UIWindow, previousTraitCollection: UITraitCollection) in
+			guard window.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
+			window.tintColor = Assets.Colors.primaryAccent
+		}
+
 		let rootViewController = window!.rootViewController as! RootSplitViewController
 		rootViewController.presentsWithGesture = true
 		rootViewController.showsSecondaryOnlyButton = true

@@ -287,6 +287,17 @@ extension AO3ChapterFetcher {
 		return workID.isEmpty ? nil : workID
 	}
 
+	/// The reverse of `ao3WorkID(fromBookKey:)` -- `ParsedItem.bookKey`'s
+	/// own formula for a bare AO3 work id with no series/anthology
+	/// grouping (`ao3SeriesID`/`isAnthology` both nil), which is what
+	/// every AO3 series-navigation stub and fetch always is. Exists so
+	/// callers that need to go workID -> bookKey (cross-feed lookups, in
+	/// particular) don't hand-duplicate `ao3WorkIDBookKeyPrefix`
+	/// themselves.
+	static func bookKey(forWorkID workID: String) -> String {
+		"\(ao3WorkIDBookKeyPrefix)\(workID)"
+	}
+
 	/// Checks the account's unread articles for stale AO3-work content and
 	/// calls `fetchIfNeeded` for a bounded, throttled batch -- see
 	/// `maxArticlesPerSweep`/`secondsBetweenSweepRequests`. Scoped to

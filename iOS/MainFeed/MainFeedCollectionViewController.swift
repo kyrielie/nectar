@@ -968,6 +968,13 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 	@objc func accentColorDidChange(_ note: Notification) {
 		IconImageCache.shared.emptyCache()
 		reloadAllVisibleCells()
+		// filterButton/currentActivityButton set .tintColor explicitly from
+		// Assets.Colors.primaryAccent only when their own state changes
+		// (filter toggled, activity started/stopped) -- neither was previously
+		// re-tinted here, so a stale tint could persist until the next state
+		// change happened to touch it.
+		updateCurrentActivityButtonState()
+		updateUI()
 	}
 
 	@objc func unreadCountDidChange(_ note: Notification) {
