@@ -63,6 +63,8 @@ public enum AO3SeriesNavigationError: Error, Sendable, Equatable {
 @MainActor
 public enum AO3SeriesNavigator {
 
+	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AO3SeriesNavigator")
+
 	public enum Direction: Sendable, Hashable {
 		case first
 		case previous
@@ -100,9 +102,23 @@ public enum AO3SeriesNavigator {
 	/// series length:
 	///
 	/// 1. **Cache check** (`.previous`/`.next` only -- `.first`'s target
-	///    id isn't known yet). If a cached article already exists under
-	///    `existingArticle.feedID` for the target work id, with content
-	///    already fetched, return it directly -- no listing fetch at all.
+	///    id isn't known yet). If a row already exists under
+	///    `existingArticle.feedID` for the target work id, no listing
+	///    fetch happens at all: with content already fetched, it's
+	///    returned directly; without content yet (a stub batch-imported by
+	///    an earlier tap), its content is fetched directly via
+	///    `downloadAndAwait`, skipping straight to Step 4.
+	/// 1b. **Cross-feed cache check** (`.previous`/`.next` only, on a
+	///    Step 1 miss): the same work may already be fetched under a
+	///    *different* feed -- another series' stub-import, an
+	///    Ambrosia-synced copy, a direct-URL import. When found (with
+	///    content), its content/metadata is copied into a new row under
+	///    `existingArticle.feedID` rather than the reader being sent to
+	///    the other feed -- see `copiedParsedItem`'s own doc comment. An
+	///    unfetched cross-feed stub doesn't qualify here (see that
+	///    step's own comment for why); it still gets found and reused
+	///    normally if/when it turns up again as a same-feed row via
+	///    Steps 2/3 below.
 	/// 2. **Fetch page 1**, always. This is the only fetch `.first` ever
 	///    needs -- series list works in ascending Part order, so #1 is
 	///    never on a later page. Every work found is batch-stubbed into
@@ -152,6 +168,8 @@ public enum AO3SeriesNavigator {
 		account: Account
 	) async -> Result<String, AO3SeriesNavigationError> {
 
+		Self.logger.debug("AO3SeriesNavigator: openSeriesWork ao3SeriesID=\(ao3SeriesID, privacy: .public) direction=\(String(describing: direction), privacy: .public) targetWorkURL=\(targetWorkURL ?? "nil", privacy: .public) targetIndex=\(targetIndex.map(String.init) ?? "nil", privacy: .public) existingArticleID=\(existingArticle.articleID, privacy: .public)")
+
 		let knownTargetWorkID: String?
 		switch direction {
 		case .first:
@@ -172,18 +190,67 @@ public enum AO3SeriesNavigator {
 
 		// Step 1: cache check -- skipped entirely for .first, whose
 		// target id isn't known until page 1 is parsed below.
-		if let knownTargetWorkID {
-			if let existing = existingByWorkID[knownTargetWorkID], existing.contentHTML != nil {
+		//
+		// A row already existing under this feedID (regardless of whether
+		// its content has been fetched yet) is enough to skip the listing
+		// fetch entirely -- the row's own presence is what tells us its
+		// permalink/position, which is the only reason Step 2/3 fetch a
+		// listing page in the first place. A previously-fetched article
+		// (contentHTML != nil) returns immediately, no network activity at
+		// all. A previously-stubbed-but-never-opened row (contentHTML ==
+		// nil -- e.g. batch-stubbed as someone else's neighbor by an
+		// earlier Next/Previous tap, per the Dedup note above) still needs
+		// its real content fetched, so it falls through to the same
+		// downloadAndAwait call the listing-fetch paths use below, just
+		// without ever fetching a listing page to get there.
+		if let knownTargetWorkID, let existing = existingByWorkID[knownTargetWorkID] {
+			if existing.contentHTML != nil {
+				Self.logger.debug("AO3SeriesNavigator: openSeriesWork cache hit with content, workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public)")
 				return .success(existing.articleID)
+			}
+			Self.logger.debug("AO3SeriesNavigator: openSeriesWork cache hit as stub (no content yet), workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public), fetching directly")
+			return await downloadAndAwait(workID: knownTargetWorkID, existingArticleID: existing.articleID, feedID: existingArticle.feedID, account: account)
+		}
+
+		// Step 1b (Bug 3b): cross-feed reuse. Same idea as Step 1, but
+		// looking account-wide rather than only under existingArticle's
+		// own feed -- the work may already be sitting, fully fetched, in
+		// a different feed (a different series' stub-import pass, an
+		// Ambrosia-synced copy elsewhere, a direct-URL import, etc.).
+		// Only a *fetched* cross-feed copy (contentHTML != nil) is worth
+		// this: an unfetched cross-feed stub carries no more information
+		// than page 1 is about to give us for free, and copying it in
+		// would still need a listing-page-equivalent position lookup
+		// this function doesn't have another way to get. Copies the
+		// other feed's content into a *new* row under
+		// existingArticle.feedID (per product decision: reuse-in-place
+		// was rejected because every other row this navigator produces
+		// lives under existingArticle.feedID, and the reader's "which
+		// feed is this series in" model assumes that) rather than
+		// navigating the reader to the other feed directly.
+		if let knownTargetWorkID, existingByWorkID[knownTargetWorkID] == nil {
+			let crossFeedMatches = await account.fetchArticlesAsync(bookKeys: [AO3ChapterFetcher.bookKey(forWorkID: knownTargetWorkID)])
+			// Prefer whichever cross-feed copy actually has content, same
+			// self-healing precedent existingArticlesByWorkID's own dedup
+			// already uses for an in-feed duplicate.
+			if let sourceArticle = crossFeedMatches.first(where: { $0.contentHTML != nil }) {
+				Self.logger.debug("AO3SeriesNavigator: openSeriesWork cross-feed cache hit, workID=\(knownTargetWorkID, privacy: .public) sourceArticleID=\(sourceArticle.articleID, privacy: .public), copying into feedID=\(existingArticle.feedID, privacy: .public)")
+				let copiedItem = copiedParsedItem(from: sourceArticle, feedID: existingArticle.feedID)
+				_ = await account.updateAsync(feedID: existingArticle.feedID, parsedItems: [copiedItem], deleteOlder: false)
+				return .success(Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: knownTargetWorkID))
 			}
 		}
 
+		Self.logger.debug("AO3SeriesNavigator: openSeriesWork no cache hit (same-feed or cross-feed), fetching page 1")
+
 		// Step 2: page 1, always.
 		guard let page1HTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: 1) else {
+			Self.logger.debug("AO3SeriesNavigator: openSeriesWork page 1 fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
 			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
 		}
 		let (page1Works, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: page1HTML)
 		guard !page1Works.isEmpty else {
+			Self.logger.debug("AO3SeriesNavigator: openSeriesWork page 1 parsed but empty, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
 			return .failure(.emptySeriesListing)
 		}
 		// The currently-open work (always present on page 1) is filtered
@@ -191,6 +258,7 @@ public enum AO3SeriesNavigator {
 		// competing row under a fresh uniqueID -- this is what actually
 		// kills the duplicate.
 		let newPage1Works = page1Works.filter { existingByWorkID[$0.workID] == nil }
+		Self.logger.debug("AO3SeriesNavigator: openSeriesWork page 1 parsed, workCount=\(page1Works.count, privacy: .public) newStubs=\(newPage1Works.count, privacy: .public)")
 		await stubImport(newPage1Works, feedID: existingArticle.feedID, account: account)
 
 		let targetWorkID: String
@@ -205,6 +273,7 @@ public enum AO3SeriesNavigator {
 		}
 
 		if page1Works.contains(where: { $0.workID == targetWorkID }) {
+			Self.logger.debug("AO3SeriesNavigator: openSeriesWork target found on page 1, workID=\(targetWorkID, privacy: .public)")
 			return await downloadAndAwait(workID: targetWorkID, existingArticleID: existingByWorkID[targetWorkID]?.articleID, feedID: existingArticle.feedID, account: account)
 		}
 
@@ -214,6 +283,7 @@ public enum AO3SeriesNavigator {
 		// Step 3: the single allowed second fetch, only when the target's
 		// position math says it isn't on page 1.
 		guard let targetIndex else {
+			Self.logger.debug("AO3SeriesNavigator: openSeriesWork target not on page 1 and no targetIndex to compute a second page, workID=\(targetWorkID, privacy: .public)")
 			return .failure(.seriesListingMismatch)
 		}
 		let pageSize = page1Works.count
@@ -222,12 +292,15 @@ public enum AO3SeriesNavigator {
 			// The index math says the target should have been on page 1,
 			// but it wasn't found there -- treat as a mismatch rather
 			// than silently fetching page 1 again.
+			Self.logger.debug("AO3SeriesNavigator: openSeriesWork targetIndex math says page 1 but target wasn't there, workID=\(targetWorkID, privacy: .public) targetIndex=\(targetIndex, privacy: .public)")
 			return .failure(.seriesListingMismatch)
 		}
 
+		Self.logger.debug("AO3SeriesNavigator: openSeriesWork fetching computed page \(targetPage, privacy: .public) for workID=\(targetWorkID, privacy: .public) targetIndex=\(targetIndex, privacy: .public) pageSize=\(pageSize, privacy: .public)")
 		try? await Task.sleep(nanoseconds: UInt64(AO3ChapterFetcher.secondsBetweenSweepRequests * 1_000_000_000))
 
 		guard let pageNHTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: targetPage) else {
+			Self.logger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
 			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
 		}
 		let (pageNWorks, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: pageNHTML)
@@ -236,12 +309,15 @@ public enum AO3SeriesNavigator {
 		// reached via .previous/.next from a different session could
 		// already be present as a stub from an earlier tap.
 		let newPageNWorks = pageNWorks.filter { existingByWorkID[$0.workID] == nil }
+		Self.logger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) parsed, workCount=\(pageNWorks.count, privacy: .public) newStubs=\(newPageNWorks.count, privacy: .public)")
 		await stubImport(newPageNWorks, feedID: existingArticle.feedID, account: account)
 
 		guard pageNWorks.contains(where: { $0.workID == targetWorkID }) else {
+			Self.logger.debug("AO3SeriesNavigator: openSeriesWork target not found on computed page \(targetPage, privacy: .public), workID=\(targetWorkID, privacy: .public) -- mismatch")
 			return .failure(.seriesListingMismatch)
 		}
 
+		Self.logger.debug("AO3SeriesNavigator: openSeriesWork target found on computed page \(targetPage, privacy: .public), workID=\(targetWorkID, privacy: .public)")
 		return await downloadAndAwait(workID: targetWorkID, existingArticleID: existingByWorkID[targetWorkID]?.articleID, feedID: existingArticle.feedID, account: account)
 	}
 }
@@ -298,26 +374,141 @@ private extension AO3SeriesNavigator {
 		return String(data: data, encoding: .utf8)
 	}
 
+	/// Bug 3b (cross-feed reuse): builds a `ParsedItem` for
+	/// `existingArticle.feedID` that copies `sourceArticle`'s already-
+	/// fetched content and metadata wholesale, under this file's own
+	/// bare-`workID` `uniqueID` convention (not `sourceArticle`'s own
+	/// `uniqueID`, which may use a different scheme -- Ambrosia sync
+	/// being the common case). `workID` is threaded through separately
+	/// rather than recovered from `sourceArticle.bookKey` at the call
+	/// site, since the caller already has it as `knownTargetWorkID`.
+	///
+	/// Authors/series need their own `Article` -> `Parsed*` conversions
+	/// (the reverse of `Article+Database.swift`'s `ParsedItem` -> ...
+	/// mapping) -- same shape `AO3ChapterFetcher.rebuildParsedItem`
+	/// already uses for its own existingArticle-carries-forward cases.
+	/// `lastPrefaceFetchDate` is carried forward too: the copy is exactly
+	/// as fresh as the source fetch was, not "just fetched now," so a
+	/// background sweep shouldn't treat it as newly-stale.
+	static func copiedParsedItem(from sourceArticle: Article, feedID: String) -> ParsedItem {
+		let workID = AO3ChapterFetcher.ao3WorkID(fromBookKey: sourceArticle.bookKey) ?? sourceArticle.uniqueID
+		let authors: Set<ParsedAuthor>? = sourceArticle.authors.map { authorSet in
+			Set(authorSet.map { ParsedAuthor(name: $0.name, url: $0.url, avatarURL: $0.avatarURL, emailAddress: $0.emailAddress) })
+		}
+		let series: [ParsedSeriesEntry]? = sourceArticle.series?.map {
+			ParsedSeriesEntry(name: $0.name, index: $0.index, ao3ID: $0.ao3ID, previousWorkURL: $0.previousWorkURL, nextWorkURL: $0.nextWorkURL)
+		}
+		return ParsedItem(
+			syncServiceID: nil,
+			uniqueID: workID,
+			feedURL: feedID,
+			url: sourceArticle.rawLink,
+			externalURL: sourceArticle.rawExternalLink,
+			title: sourceArticle.title,
+			language: nil,
+			contentHTML: sourceArticle.contentHTML,
+			contentText: sourceArticle.contentText,
+			markdown: sourceArticle.markdown,
+			summary: sourceArticle.summary,
+			imageURL: sourceArticle.rawImageLink,
+			bannerImageURL: nil,
+			datePublished: sourceArticle.datePublished,
+			dateModified: sourceArticle.dateModified,
+			authors: authors,
+			tags: sourceArticle.additionalTags.map { Set($0) },
+			attachments: nil,
+			isAmbrosiaItem: sourceArticle.isAmbrosiaItem,
+			wordCount: sourceArticle.wordCount,
+			chapterCurrent: sourceArticle.chapterCurrent,
+			chapterTotal: sourceArticle.chapterTotal,
+			isComplete: sourceArticle.isComplete,
+			fandoms: sourceArticle.fandoms,
+			relationships: sourceArticle.relationships,
+			characters: sourceArticle.characters,
+			ratings: sourceArticle.ratings,
+			warnings: sourceArticle.warnings,
+			categories: sourceArticle.categories,
+			series: series,
+			commentCount: sourceArticle.commentCount,
+			kudosCount: sourceArticle.kudosCount,
+			bookmarkCount: sourceArticle.bookmarkCount,
+			hitCount: sourceArticle.hitCount,
+			lastPrefaceFetchDate: sourceArticle.lastPrefaceFetchDate,
+			ao3WorkID: workID
+		)
+	}
+
 	/// Batch-stubs every work found on one fetched listing page into
 	/// `feedID`, one `account.updateAsync` call for the whole page (per
 	/// its own doc comment about being written around one feed-shaped
 	/// batch, not one call per work). Uses the listing row's own,
-	/// already-parsed title (Phase 4b follow-up) -- every work here
-	/// except the one this call is ultimately opening still stays an
-	/// unfetched stub with no `contentHTML` until it's next opened
-	/// directly, same "content fetched only on open" contract as any
-	/// other AO3-sourced stub in this app; only the placeholder title
-	/// itself is upgraded from a generic "AO3 Work <id>" to the real
-	/// work title, since that's already sitting unused on the row and
-	/// costs nothing further to thread through.
+	/// already-parsed metadata (Phase 4b, extended by the listing-
+	/// metadata follow-up to cover summary/fandoms/tags/word count, not
+	/// just title) -- every work here except the one this call is
+	/// ultimately opening still stays an unfetched stub with no
+	/// `contentHTML` until it's next opened directly, same "content
+	/// fetched only on open" contract as any other AO3-sourced stub in
+	/// this app; only the placeholder's metadata is upgraded from the
+	/// bare generic defaults, since it's already sitting unused on the
+	/// row and costs nothing further to thread through. A later real
+	/// fetch still always wins: `AO3ChapterFetcher.rebuildParsedItem`
+	/// prefers the live work page's own metadata over whatever's already
+	/// stored, falling back to the stored value only when the live page
+	/// didn't have that field at all -- so a listing-derived stub value
+	/// never lingers stale past the work's first real open.
 	static func stubImport(_ works: [AO3SeriesListingExtractor.WorkListingEntry], feedID: String, account: Account) async {
 		guard !works.isEmpty else {
 			return
 		}
-		let stubs = Set(works.map { placeholderStub(workID: $0.workID, permalink: $0.permalink, title: $0.title, feedID: feedID) })
+		let stubs = Set(works.map { placeholderStub(from: $0, feedID: feedID) })
 		_ = await account.updateAsync(feedID: feedID, parsedItems: stubs, deleteOlder: false)
 	}
 
+	/// `uniqueID: workID` (not the row's own `permalink`) -- matching
+	/// `downloadAndAwait`'s `Article.calculatedArticleID(feedID:uniqueID:)`
+	/// fallback and every other AO3-work `bookKey` derivation in this
+	/// file. `AO3SearchResultsExtractor.parsedItem(fromWorkLI:)` uses
+	/// `permalink` for its own `uniqueID` instead, but that's a different
+	/// call site (search-results feed import) with its own established
+	/// identity scheme; reusing its row-metadata helpers here doesn't
+	/// mean reusing that convention too.
+	static func placeholderStub(from entry: AO3SeriesListingExtractor.WorkListingEntry, feedID: String) -> ParsedItem {
+		ParsedItem(
+			syncServiceID: nil,
+			uniqueID: entry.workID,
+			feedURL: feedID,
+			url: entry.permalink,
+			externalURL: nil,
+			title: entry.title,
+			language: nil,
+			contentHTML: nil,
+			contentText: nil,
+			markdown: nil,
+			summary: entry.summary,
+			imageURL: nil,
+			bannerImageURL: nil,
+			datePublished: nil,
+			dateModified: nil,
+			authors: nil,
+			tags: entry.freeformTags.isEmpty ? nil : Set(entry.freeformTags),
+			attachments: nil,
+			wordCount: entry.wordCount,
+			fandoms: entry.fandoms.isEmpty ? nil : entry.fandoms,
+			relationships: entry.relationships.isEmpty ? nil : entry.relationships,
+			characters: entry.characters.isEmpty ? nil : entry.characters,
+			ratings: entry.ratings.isEmpty ? nil : entry.ratings,
+			warnings: entry.warnings.isEmpty ? nil : entry.warnings,
+			categories: entry.categories.isEmpty ? nil : entry.categories,
+			ao3WorkID: entry.workID
+		)
+	}
+
+	/// Generic placeholder for the no-listing-row case (a bare `workID`
+	/// with no parsed metadata at all) -- `downloadAndAwait`'s own
+	/// belt-and-suspenders stub when it's called without an existing row.
+	/// Kept separate from `placeholderStub(from:feedID:)` above rather
+	/// than threading a synthetic all-nil `WorkListingEntry` through it,
+	/// since this path never has real listing data to lose.
 	static func placeholderStub(workID: String, permalink: String, title: String, feedID: String) -> ParsedItem {
 		ParsedItem(
 			syncServiceID: nil,
@@ -364,6 +555,7 @@ private extension AO3SeriesNavigator {
 	/// re-querying the database afterward, since `articleID` is known
 	/// up front either way.
 	static func downloadAndAwait(workID: String, existingArticleID: String?, feedID: String, account: Account) async -> Result<String, AO3SeriesNavigationError> {
+		Self.logger.debug("AO3SeriesNavigator: downloadAndAwait starting, workID=\(workID, privacy: .public) existingArticleID=\(existingArticleID ?? "nil", privacy: .public)")
 		let articleID: String
 		if let existingArticleID {
 			// Reusing an existing row -- refresh it in place, no stub
@@ -416,11 +608,13 @@ private extension AO3SeriesNavigator {
 
 			let completeToken = NotificationCenter.default.addObserver(forName: .ao3ChapterFetchDidComplete, object: nil, queue: .main) { note in
 				guard note.userInfo?[AO3ChapterFetchUserInfoKey.articleID] as? String == articleID else { return }
+				Self.logger.debug("AO3SeriesNavigator: downloadAndAwait succeeded, workID=\(workID, privacy: .public) articleID=\(articleID, privacy: .public)")
 				finish(.success(articleID))
 			}
 			let failToken = NotificationCenter.default.addObserver(forName: .ao3ChapterFetchDidFail, object: nil, queue: .main) { note in
 				guard note.userInfo?[AO3ChapterFetchUserInfoKey.articleID] as? String == articleID else { return }
 				let message = note.userInfo?[AO3ChapterFetchUserInfoKey.message] as? String ?? NSLocalizedString("Couldn't load this work", comment: "AO3 series navigation error")
+				Self.logger.debug("AO3SeriesNavigator: downloadAndAwait failed, workID=\(workID, privacy: .public) articleID=\(articleID, privacy: .public) message=\(message, privacy: .public)")
 				finish(.failure(.fetchFailed(message)))
 			}
 			tokenBox.tokens = [completeToken, failToken]

@@ -112,14 +112,15 @@ enum BadgeColorPalette: Int, CaseIterable, Sendable {
 ///
 /// Scope note: `Assets.Colors.primaryAccent`/`.secondaryAccent` are read live
 /// by most call sites (tintColor assignments, updateColors()-style methods),
-/// so those repaint immediately via `accentColorDidChange`. A handful of
-/// `Assets.Images` entries (mainFolder, unreadFeed, readFeed, lastOpenedFeed,
-/// unreadCellIndicator) are `static let IconImage`s that capture
-/// `preferredColor` once at process launch rather than reading it per-draw --
-/// those five continue showing the color that was active at launch until the
-/// app restarts. Making them fully live would mean changing IconImage's
-/// `preferredColor` from a stored `let` to something recomputed per use,
-/// which is a larger change than this setting justifies on its own.
+/// so those repaint immediately via `accentColorDidChange`. The
+/// `Assets.Images` entries this used to warn about (mainFolder, unreadFeed,
+/// readFeed, lastOpenedFeed, unreadCellIndicator) were `static let
+/// IconImage`s that captured `preferredColor` once at process launch -- see
+/// `Assets.swift`'s own comment on those properties, which were converted to
+/// `static var`s (recomputed per access) to fix exactly this. That fix is
+/// why this note used to describe a launch-time-only limitation that no
+/// longer applies; kept here in case any *new* `Assets.Images` entry
+/// reintroduces the same `static let` pattern.
 enum AccentColor: Int, CaseIterable, Sendable {
 	case `default` = 0
 	case rosePine = 1

@@ -261,7 +261,12 @@ private extension AO3SearchResultsExtractor {
 
 // MARK: - Summary
 
-private extension AO3SearchResultsExtractor {
+// `internal` (module-default), not `private`: AO3SeriesListingExtractor
+// reuses this against the identical "work blurb" row shape (see that
+// type's own doc comment) rather than duplicating it -- both files are
+// part of the RSParser target, so this stays invisible outside the
+// module.
+extension AO3SearchResultsExtractor {
 
 	/// `blockquote.summary` -- serialized as HTML (it's normally a handful
 	/// of `<p>` paragraphs), matching the shape `AO3SummaryExtractor`'s
@@ -279,7 +284,9 @@ private extension AO3SearchResultsExtractor {
 
 // MARK: - Tag lists (fandoms/warnings/characters/relationships/freeforms)
 
-private extension AO3SearchResultsExtractor {
+// `internal`, not `private` -- see the Summary section's access-note above;
+// same reuse by AO3SeriesListingExtractor applies here.
+extension AO3SearchResultsExtractor {
 
 	/// `<h5 class="fandoms">...<a>...</a></h5>` -- fandoms are grouped in
 	/// one container -- or `<li class="warnings">...</li>` (and the
@@ -302,7 +309,9 @@ private extension AO3SearchResultsExtractor {
 
 // MARK: - Symbol row (rating/category/complete-or-WIP)
 
-private extension AO3SearchResultsExtractor {
+// `internal`, not `private` -- see the Summary section's access-note above;
+// same reuse by AO3SeriesListingExtractor applies here.
+extension AO3SearchResultsExtractor {
 
 	/// `span.rating` / `span.category` -- AO3 renders these as one `<span>`
 	/// per value (e.g. two `span.category` elements for an "F/M, Other"
@@ -385,7 +394,11 @@ private extension AO3SearchResultsExtractor {
 
 // MARK: - Words / chapters / completion
 
-private extension AO3SearchResultsExtractor {
+// `internal`, not `private` -- see the Summary section's access-note above;
+// same reuse by AO3SeriesListingExtractor applies here (only `dd.words`
+// is currently reused, but the whole block stays together with its
+// `chapterCounts`/`completionState` siblings for cohesion).
+extension AO3SearchResultsExtractor {
 
 	/// `dd.words` -- digits only, comma stripped (e.g. "116,556").
 	static func intValue(fromDD li: HTMLLiteElement, classToken: String) -> Int? {

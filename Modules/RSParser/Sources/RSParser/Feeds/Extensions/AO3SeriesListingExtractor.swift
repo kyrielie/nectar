@@ -73,7 +73,11 @@ public enum AO3SeriesListingExtractor {
 	/// Part order -- see header comment), plus whether AO3's own `li.next`
 	/// pagination widget shows a further page. Reuses `isWorkRow`/
 	/// `absoluteURL` above (same row/link shape `firstWorkPermalink`
-	/// already validated) rather than a separate selector.
+	/// already validated) rather than a separate selector, and reuses
+	/// `AO3SearchResultsExtractor`'s own row-metadata helpers for the
+	/// richer fields below -- the two listing types share byte-for-byte
+	/// the same "work blurb" row shape (see header comment), so the same
+	/// summary/tag/stat parsing applies unchanged.
 	public static func workPermalinks(fromSeriesListingHTML html: String) -> (permalinks: [WorkListingEntry], hasNextPage: Bool) {
 		let root = parseHTMLLiteTree(html)
 		let workRows = descendants(of: root, where: { isWorkRow($0) })
@@ -86,24 +90,64 @@ public enum AO3SeriesListingExtractor {
 				return nil
 			}
 			let title = flattenedText(titleAnchor)
-			return WorkListingEntry(workID: workID, permalink: permalink, title: title)
+			return WorkListingEntry(
+				workID: workID,
+				permalink: permalink,
+				title: title,
+				summary: AO3SearchResultsExtractor.summaryHTML(fromLI: li),
+				fandoms: AO3SearchResultsExtractor.tagTexts(in: li, tag: "h5", classToken: "fandoms"),
+				relationships: AO3SearchResultsExtractor.tagTexts(in: li, tag: "li", classToken: "relationships"),
+				characters: AO3SearchResultsExtractor.tagTexts(in: li, tag: "li", classToken: "characters"),
+				freeformTags: AO3SearchResultsExtractor.tagTexts(in: li, tag: "li", classToken: "freeforms"),
+				warnings: AO3SearchResultsExtractor.tagTexts(in: li, tag: "li", classToken: "warnings"),
+				ratings: AO3SearchResultsExtractor.symbolTexts(in: li, classToken: "rating"),
+				categories: AO3SearchResultsExtractor.symbolTexts(in: li, classToken: "category"),
+				wordCount: AO3SearchResultsExtractor.intValue(fromDD: li, classToken: "words")
+			)
 		}
 
 		return (entries, AO3ListingPagination.hasNextPage(root))
 	}
 
-	/// One work row from a series-listing page: bare `(workID, permalink,
-	/// title)` only -- deliberately not the richer per-row metadata
-	/// `AO3SearchResultsExtractor.parsedItem(fromWorkLI:)` extracts
-	/// (summary/fandoms/tags/word count), since every series member other
-	/// than the one actually being opened is meant to stay a lazy stub
+	/// One work row from a series-listing page. Extended (inline-series-
+	/// navigation plan, Phase 4b/listing-metadata follow-up) beyond the
+	/// original bare `(workID, permalink, title)` to reuse
+	/// `AO3SearchResultsExtractor`'s row-metadata helpers directly against
+	/// the identical row shape -- the series-listing fixture already
+	/// contains this data (`dd.words`, `blockquote.summary`, etc.), it was
+	/// simply unread before. Every series member other than the one
+	/// actually being opened still stays a stub with no `contentHTML`
 	/// until it's next opened directly (see `AO3SeriesNavigator`'s stub
-	/// builder, Phase 4b) -- richer upfront metadata here would be work
-	/// with no consumer.
+	/// builder) -- only the placeholder's metadata gets richer, not its
+	/// fetch timing.
 	public struct WorkListingEntry: Equatable, Sendable {
 		public let workID: String
 		public let permalink: String
 		public let title: String
+		public let summary: String?
+		public let fandoms: [String]
+		public let relationships: [String]
+		public let characters: [String]
+		public let freeformTags: [String]
+		public let warnings: [String]
+		public let ratings: [String]
+		public let categories: [String]
+		public let wordCount: Int?
+
+		public init(workID: String, permalink: String, title: String, summary: String? = nil, fandoms: [String] = [], relationships: [String] = [], characters: [String] = [], freeformTags: [String] = [], warnings: [String] = [], ratings: [String] = [], categories: [String] = [], wordCount: Int? = nil) {
+			self.workID = workID
+			self.permalink = permalink
+			self.title = title
+			self.summary = summary
+			self.fandoms = fandoms
+			self.relationships = relationships
+			self.characters = characters
+			self.freeformTags = freeformTags
+			self.warnings = warnings
+			self.ratings = ratings
+			self.categories = categories
+			self.wordCount = wordCount
+		}
 	}
 }
 

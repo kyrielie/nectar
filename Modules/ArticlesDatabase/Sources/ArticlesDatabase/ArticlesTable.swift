@@ -93,6 +93,24 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		return fetchArticlesAsync({ self.fetchArticles(articleIDs: articleIDs, $0) }, completion)
 	}
 
+	// MARK: - Fetching Articles by bookKey (account-wide, no feed filter)
+
+	/// Every article, across every feed in this account, whose `bookKey`
+	/// matches one of `bookKeys` -- the read-only counterpart to
+	/// `articleIDsForBookKeys` above (which this reuses directly), for
+	/// callers that need the full `Article` rows rather than just IDs.
+	/// Series navigation's cross-feed stub reuse (Bug 3b) is the first
+	/// caller: "does this AO3 work already exist somewhere in the
+	/// account, under any feed" has no existing FetchType for it --
+	/// every other public fetch method is feed/folder/status-scoped.
+	func fetchArticles(bookKeys: Set<String>) -> Set<Article> {
+		fetchArticles { self.fetchArticles(bookKeys: bookKeys, $0) }
+	}
+
+	func fetchArticlesAsync(bookKeys: Set<String>, _ completion: @escaping ArticleSetResultBlock) {
+		fetchArticlesAsync({ self.fetchArticles(bookKeys: bookKeys, $0) }, completion)
+	}
+
 	// MARK: - Fetching Unread Articles
 
 	func fetchUnreadArticles(_ feedIDs: Set<String>, _ limit: Int?) -> Set<Article> {
@@ -1588,6 +1606,26 @@ nonisolated private extension ArticlesTable {
 		let parameters = articleIDs.map { $0 as AnyObject }
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(articleIDs.count))!
 		let whereClause = "articleID in \(placeholders)"
+		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
+	}
+
+	/// Direct `bookKey in (...)` match only -- no pre-migration
+	/// uniqueID-as-bookKey fallback the way `articleIDsForBookKeys` needs
+	/// for status propagation, which must cover every article ever
+	/// persisted. Every AO3 series-navigation stub/fetch always sets
+	/// `ao3WorkID` (this navigator's own `placeholderStub`, plus
+	/// `AO3ChapterFetcher.rebuildParsedItem` and `JSONFeedParser` for
+	/// Ambrosia-synced items -- see `AO3SeriesNavigator`'s own
+	/// `existingArticlesByWorkID` doc comment), so `bookKey` is always
+	/// populated (`"ao3-work:<id>"`) for the rows this call cares about;
+	/// there is no pre-migration AO3 row with an empty bookKey to miss.
+	func fetchArticles(bookKeys: Set<String>, _ database: FMDatabase) -> Set<Article> {
+		if bookKeys.isEmpty {
+			return Set<Article>()
+		}
+		let parameters = bookKeys.map { $0 as AnyObject }
+		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(bookKeys.count))!
+		let whereClause = "bookKey in \(placeholders)"
 		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
 

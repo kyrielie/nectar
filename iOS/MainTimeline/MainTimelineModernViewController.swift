@@ -1484,6 +1484,13 @@ private extension MainTimelineModernViewController {
 		// Assets.Colors.secondaryAccent on their next updateColors()/
 		// updateIndicatorView() call.
 		reloadVisibleCells()
+		// filterButton.tintColor is set explicitly from Assets.Colors.primaryAccent
+		// only when isReadArticlesFiltered flips (see resetUI(resetScroll:)) --
+		// wasn't previously re-applied here, so it could keep showing the old
+		// accent color until the filter was next toggled.
+		if isReadArticlesFiltered {
+			filterButton.tintColor = Assets.Colors.primaryAccent
+		}
 	}
 
 	@objc func surfaceTintDidChange(_ note: Notification) {
