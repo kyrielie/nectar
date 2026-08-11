@@ -583,4 +583,84 @@ import Testing
 		#expect(tocHeadings.count == 1)
 		#expect(tocHeadings.first?.tag == "h1")
 	}
+
+	// MARK: - Work page metadata (byline/summary/tag-groups/dates)
+
+	@Test func metadataParsedFromMultiChapterFixture() throws {
+		// ao3-work-multi-chapter.html: byline "JustLookFrightenedAndScuttle",
+		// a one-paragraph summary, both Published (2026-07-07) and Updated
+		// (2026-08-01) present, plus one value in every tag-group row --
+		// confirmed against the fixture directly (see the diagnosis this
+		// feature was built against).
+		let html = htmlFixtureString("ao3-work-multi-chapter.html")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		let metadata = result.metadata
+		#expect(metadata.authors.compactMap(\.name) == ["JustLookFrightenedAndScuttle"])
+		#expect(metadata.authors.first?.url == "https://archiveofourown.org/users/JustLookFrightenedAndScuttle/pseuds/JustLookFrightenedAndScuttle")
+		#expect(metadata.summary?.contains("Bitty is making it") == true)
+		#expect(metadata.fandoms == ["Check Please! (Webcomic)"])
+		#expect(metadata.relationships == ["Eric \"Bitty\" Bittle/Jack Zimmermann"])
+		#expect(metadata.ratings == ["Teen And Up Audiences"])
+		#expect(metadata.warnings == ["No Archive Warnings Apply"])
+		#expect(metadata.categories == ["M/M"])
+		#expect(metadata.additionalTags.contains("Getting Together") == true)
+
+		var calendar = Calendar(identifier: .gregorian)
+		calendar.timeZone = TimeZone(identifier: "UTC")!
+		if let published = metadata.datePublished {
+			let components = calendar.dateComponents([.year, .month, .day], from: published)
+			#expect(components.year == 2026 && components.month == 7 && components.day == 7)
+		} else {
+			Issue.record("Expected non-nil datePublished")
+		}
+		if let modified = metadata.dateModified {
+			let components = calendar.dateComponents([.year, .month, .day], from: modified)
+			#expect(components.year == 2026 && components.month == 8 && components.day == 1)
+		} else {
+			Issue.record("Expected non-nil dateModified")
+		}
+	}
+
+	@Test func metadataDateModifiedNilWhenNoStatusRow() throws {
+		// ao3-work-single-chapter.html's dl.stats has Published but no
+		// Updated/Completed row at all (a work with no post-publish edit)
+		// -- dateModified should come back nil, not some fallback value,
+		// distinguishing "never updated" from "update date unknown."
+		let html = htmlFixtureString("ao3-work-single-chapter.html")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		#expect(result.metadata.dateModified == nil)
+		#expect(result.metadata.datePublished != nil)
+		#expect(result.metadata.authors.compactMap(\.name) == ["RainScrawl"])
+		#expect(result.metadata.summary?.contains("What if Jack went first overall") == true)
+	}
+
+	@Test func metadataEmptyWhenNoMetaGroupFound() {
+		// A page with #workskin/.chapter but no dl.work.meta.group at all
+		// (a shape not yet sampled, or a stripped-down test page) should
+		// extract successfully with an empty AO3WorkPageMetadata, not
+		// crash or fail the whole extraction -- same "optional, absence
+		// isn't fatal" contract parseWorkHeader already documents for the
+		// metadata block as a whole.
+		let html = "<html><body><div id=\"workskin\"><div class=\"chapter\" id=\"chapter-1\"><div class=\"chapter preface group\"><h3 class=\"title\">Chapter 1</h3></div><div class=\"userstuff module\" role=\"article\"><p>Text.</p></div></div></div></body></html>"
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		#expect(result.metadata.authors.isEmpty)
+		#expect(result.metadata.summary == nil)
+		#expect(result.metadata.datePublished == nil)
+		#expect(result.metadata.fandoms.isEmpty)
+	}
 }

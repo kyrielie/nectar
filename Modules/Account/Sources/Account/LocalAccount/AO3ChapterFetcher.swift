@@ -694,9 +694,46 @@ nonisolated extension AO3ChapterFetcher {
 	/// same module). `detectRegression` above stays fileprivate; only
 	/// this one needs the wider access.
 	internal static func rebuildParsedItem(from existingArticle: Article, workID: String, extraction: AO3ChapterExtractionResult, applyStatsUpdate: Bool) -> ParsedItem {
-		let authors: Set<ParsedAuthor>? = existingArticle.authors.map { authorSet in
-			Set(authorSet.map { ParsedAuthor(name: $0.name, url: $0.url, avatarURL: $0.avatarURL, emailAddress: $0.emailAddress) })
-		}
+		// Metadata fields (author/summary/date/tag-groups): always prefer
+		// what this fetch's live page parsed (AO3ChapterHTMLExtractor's
+		// AO3WorkPageMetadata), falling back to existingArticle's own
+		// stored value only when the live page didn't have that field at
+		// all -- the metadata block being absent entirely (gated page, or
+		// a shape not yet sampled -- see parseWorkHeader's own doc
+		// comment on why it's optional), not merely empty. This is what
+		// fixes a series-nav stub (AO3SeriesNavigator.placeholderStub,
+		// summary/authors/date/tags all nil) never getting real metadata
+		// past the bare stub: previously every one of these fields below
+		// passed existingArticle's value straight through unchanged, which
+		// for a stub meant "nil forever." An article that already has real
+		// metadata (search-results/Ambrosia import) gets the same
+		// always-overwrite treatment on every refetch, so a Check-for-
+		// updates or background sweep can't get stuck on stale metadata
+		// either -- the live page is the source of truth, not whatever's
+		// already in the database.
+		let metadata = extraction.metadata
+		let authors: Set<ParsedAuthor>? = metadata.authors.isEmpty
+			? existingArticle.authors.map { authorSet in
+				Set(authorSet.map { ParsedAuthor(name: $0.name, url: $0.url, avatarURL: $0.avatarURL, emailAddress: $0.emailAddress) })
+			}
+			: metadata.authors
+		let summary = metadata.summary ?? existingArticle.summary
+		let datePublished = metadata.datePublished ?? existingArticle.datePublished
+		let dateModified = metadata.dateModified ?? existingArticle.dateModified
+		let fandoms = metadata.fandoms.isEmpty ? existingArticle.fandoms : metadata.fandoms
+		let relationships = metadata.relationships.isEmpty ? existingArticle.relationships : metadata.relationships
+		let characters = metadata.characters.isEmpty ? existingArticle.characters : metadata.characters
+		let ratings = metadata.ratings.isEmpty ? existingArticle.ratings : metadata.ratings
+		let warnings = metadata.warnings.isEmpty ? existingArticle.warnings : metadata.warnings
+		let categories = metadata.categories.isEmpty ? existingArticle.categories : metadata.categories
+		// Additional Tags (freeform): ParsedItem.tags is the only carrier
+		// today -- Article has no persisted field for it yet (see
+		// ParsedItem.tags's own doc comment). Passed through regardless,
+		// ready for that field once it exists; currently dropped
+		// downstream the same way every other source of ParsedItem.tags
+		// already is.
+		let additionalTags: Set<String>? = metadata.additionalTags.isEmpty ? nil : Set(metadata.additionalTags)
+
 		// Inline series navigation: prefer the existing article's own
 		// already-known series membership, carried through unchanged
 		// (name/index/ao3ID *and*, now, previousWorkURL/nextWorkURL --
@@ -730,25 +767,25 @@ nonisolated extension AO3ChapterFetcher {
 			// were ever non-nil, ParsedItem's init would re-render markdown
 			// to HTML and discard the contentHTML fetched above entirely.
 			markdown: existingArticle.markdown,
-			summary: existingArticle.summary,
+			summary: summary,
 			imageURL: existingArticle.rawImageLink,
 			bannerImageURL: nil,
-			datePublished: existingArticle.datePublished,
-			dateModified: existingArticle.dateModified,
+			datePublished: datePublished,
+			dateModified: dateModified,
 			authors: authors,
-			tags: nil,
+			tags: additionalTags,
 			attachments: nil,
 			isAmbrosiaItem: existingArticle.isAmbrosiaItem,
 			wordCount: existingArticle.wordCount,
 			chapterCurrent: extraction.chapters.count,
 			chapterTotal: existingArticle.chapterTotal,
 			isComplete: existingArticle.isComplete,
-			fandoms: existingArticle.fandoms,
-			relationships: existingArticle.relationships,
-			characters: existingArticle.characters,
-			ratings: existingArticle.ratings,
-			warnings: existingArticle.warnings,
-			categories: existingArticle.categories,
+			fandoms: fandoms,
+			relationships: relationships,
+			characters: characters,
+			ratings: ratings,
+			warnings: warnings,
+			categories: categories,
 			series: series,
 			commentCount: applyStatsUpdate ? extraction.commentCount : existingArticle.commentCount,
 			kudosCount: applyStatsUpdate ? extraction.kudosCount : existingArticle.kudosCount,

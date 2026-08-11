@@ -228,13 +228,10 @@ private extension AO3SummaryExtractor {
 		return ParsedSeriesEntry(name: name, index: index, ao3ID: ao3ID)
 	}
 
+	/// Shared with `AO3SearchResultsExtractor`/`AO3ChapterHTMLExtractor`
+	/// via `AO3HTMLHelpers.seriesID(fromHref:)`.
 	static func seriesID(fromHref href: String?) -> String? {
-		guard let href, let range = href.range(of: "/series/") else {
-			return nil
-		}
-		let rest = href[range.upperBound...]
-		let digits = rest.prefix { $0.isNumber }
-		return digits.isEmpty ? nil : String(digits)
+		AO3HTMLHelpers.seriesID(fromHref: href)
 	}
 }
 

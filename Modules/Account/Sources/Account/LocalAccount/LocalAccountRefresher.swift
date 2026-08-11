@@ -934,13 +934,26 @@ extension LocalAccountRefresher {
 
 	/// Returns whether this feed should be skipped and the reason if so.
 	///
-	/// Nectar only ever refreshes feeds from the user's own local Ambrosia
-	/// server (this fork restricts account creation to `.onMyMac`, and every
-	/// feed URL is a route on that account's paired server) -- never a public
-	/// site the app needs to be polite to. There is deliberately no minimum
-	/// time between checks and no Cache-Control throttle here: refreshing on
-	/// demand (pull-to-refresh, or right after a re-scan on the Mac) must
-	/// always go through.
+	/// Most Nectar feeds are routes on the user's own local Ambrosia server
+	/// (this fork restricts account creation to `.onMyMac`), which is why
+	/// there is deliberately no general minimum-time-between-checks /
+	/// Cache-Control throttle here of the kind upstream NetNewsWire applies
+	/// to every feed host: refreshing on demand (pull-to-refresh, or right
+	/// after a re-scan on the Mac) must always go through for those feeds.
+	///
+	/// That reasoning does NOT extend to every feed Nectar fetches, though:
+	/// Nectar also subscribes directly to AO3's own tag/user RSS/Atom feeds
+	/// (see AO3IgnoreList/AO3SummaryExtractor), which *is* a public site
+	/// this app should be polite to. AO3 search-results/tag-listing pages
+	/// get an explicit, narrower throttle below
+	/// (feedShouldBeSkippedForAO3SearchResultsReasons); ordinary AO3
+	/// tag/user Atom/RSS feed URLs are NOT covered by that check today and
+	/// have no proactive throttle here at all, relying only on
+	/// Downloader's reactive per-host 429/Cloudflare-challenge handling.
+	/// That gap is tracked, not yet resolved either way -- see
+	/// nectar-audit-remediation-plan.md item 3b before assuming it needs
+	/// fixing; it may be fine as-is given how aggressively AO3 already
+	/// rate-limits.
 	private static func feedShouldBeSkipped(_ feed: Feed, _ redditURLToRefresh: String?) -> (Bool, String?) {
 		let (skipForDisallowedHost, disallowedHostReason) = feedShouldBeSkippedForDisallowedHostReasons(feed)
 		if skipForDisallowedHost {

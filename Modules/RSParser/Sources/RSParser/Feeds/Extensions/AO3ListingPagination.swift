@@ -30,16 +30,9 @@ enum AO3ListingPagination {
 	/// `<li>` present but only wrapping a disabled `<span>`) both read as
 	/// `false`.
 	static func hasNextPage(_ root: HTMLLiteElement) -> Bool {
-		guard let nextLI = firstDescendant(of: root, where: { $0.tag == "li" && classTokens(of: $0).contains("next") }) else {
+		guard let nextLI = firstDescendant(of: root, where: { $0.tag == "li" && AO3HTMLHelpers.classTokens(of: $0).contains("next") }) else {
 			return false
 		}
 		return firstDescendant(of: nextLI, where: { $0.tag == "a" && $0.attributes["href"] != nil }) != nil
-	}
-}
-
-private extension AO3ListingPagination {
-
-	static func classTokens(of element: HTMLLiteElement) -> [String] {
-		(element.attributes["class"] ?? "").split(separator: " ").map(String.init)
 	}
 }
