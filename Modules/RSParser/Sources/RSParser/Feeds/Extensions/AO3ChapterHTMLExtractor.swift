@@ -79,7 +79,20 @@ public struct AO3ChapterExtractionResult: Sendable {
 	/// nil, for first/last-in-that-series) previous/next pair.
 	public let seriesEntries: [AO3SeriesSpanResult]
 
-	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, wordCount: Int? = nil, csrfToken: String? = nil, seriesEntries: [AO3SeriesSpanResult] = []) {
+	/// Structured metadata read off the live work page, surfaced here (not
+	/// just rendered into `contentHTML`'s preface) so
+	/// `AO3ChapterFetcher.rebuildParsedItem` can populate `Article`'s own
+	/// summary/authors/date/tag-group fields for a work reached only
+	/// through `AO3SeriesNavigator`'s stub-then-fetch flow, whose stub
+	/// never has this data (see that type's doc comment on why series-
+	/// listing rows are deliberately left bare). Also used for a refetch
+	/// of an article that already has real metadata (search-results/
+	/// Ambrosia import) -- `rebuildParsedItem` always prefers this fresh
+	/// data over whatever's already stored, treating the live page as the
+	/// source of truth.
+	public let metadata: AO3WorkPageMetadata
+
+	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, wordCount: Int? = nil, csrfToken: String? = nil, seriesEntries: [AO3SeriesSpanResult] = [], metadata: AO3WorkPageMetadata = AO3WorkPageMetadata()) {
 		self.contentHTML = contentHTML
 		self.chapters = chapters
 		self.commentCount = commentCount
@@ -89,6 +102,65 @@ public struct AO3ChapterExtractionResult: Sendable {
 		self.wordCount = wordCount
 		self.csrfToken = csrfToken
 		self.seriesEntries = seriesEntries
+		self.metadata = metadata
+	}
+}
+
+/// Structured fields read off a live work page's byline, summary, and
+/// `dl.work.meta.group` tag rows/stats -- everything `rebuildParsedItem`
+/// needs to fill in what a series-nav stub leaves nil, or to refresh what
+/// an already-real article has on a normal "Check for updates" refetch.
+/// Every field is nil/empty when the page shape it comes from wasn't
+/// found (gated page, or a shape not yet sampled) -- same "optional,
+/// absence isn't a hard failure" precedent `parseWorkHeader` already
+/// follows for the metadata block as a whole.
+public struct AO3WorkPageMetadata: Sendable {
+	/// `h3.byline.heading`'s `a[rel=author]` anchors, in `div.preface.group`
+	/// (the work-level one, before any chapter's own preface) -- same
+	/// row shape `AO3SearchResultsExtractor` reads off a listing row's
+	/// heading, just a different container on the full work page.
+	public let authors: Set<ParsedAuthor>
+	/// `div.summary.module`'s `blockquote.userstuff`, serialized as HTML
+	/// the same way `AO3SearchResultsExtractor.summaryHTML` does for a
+	/// listing row's `blockquote.summary`, so both sources produce the
+	/// same shape `ArticleStringFormatter` already expects.
+	public let summary: String?
+	/// `dt.published`/`dd.published` inside the meta group's `dl.stats` --
+	/// present on every real work page (unlike the search-listing page,
+	/// which exposes only "last updated"), so this is the one place
+	/// `datePublished` can be recovered for a series-nav stub.
+	public let datePublished: Date?
+	/// `dt.status`/`dd.status` in the same `dl.stats` -- labeled
+	/// "Updated:" or "Completed:" depending on the work's state (same
+	/// `dt`/`dd` class either way, see `parseWorkHeader`'s own doc
+	/// comment on why class, not label text, is what's keyed on here).
+	public let dateModified: Date?
+	public let fandoms: [String]
+	public let relationships: [String]
+	public let characters: [String]
+	public let ratings: [String]
+	public let warnings: [String]
+	public let categories: [String]
+	/// Freeform "Additional Tags" -- `dt.freeform.tags`/`dd.freeform.tags`.
+	/// Distinct from the other tag groups above in that `Article` has no
+	/// persisted field for it yet (see `ParsedItem.tags`'s own doc
+	/// comment on why the JSON Feed `tags` field is parsed but dropped
+	/// everywhere else in the app) -- kept here regardless, ready for
+	/// that field to be added.
+	public let additionalTags: [String]
+
+	public init(authors: Set<ParsedAuthor> = [], summary: String? = nil, datePublished: Date? = nil, dateModified: Date? = nil, fandoms: [String] = [], relationships: [String] = [], characters: [String] = [], ratings: [String] = [], warnings: [String] = [], categories: [String] = [], additionalTags: [String] = []) {
+		self.authors = authors
+		self.summary = summary
+		self.datePublished = datePublished
+		self.dateModified = dateModified
+		self.fandoms = fandoms
+		self.relationships = relationships
+		self.characters = characters
+		self.ratings = ratings
+		self.warnings = warnings
+		self.categories = categories
+		self.additionalTags = additionalTags
 	}
 }
 
@@ -157,7 +229,7 @@ public enum AO3ChapterHTMLExtractor {
 				let chapters = chapterDivs.compactMap(extractedChapter)
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries, metadata: assembled.metadata))
 			}
 
 			// Single-chapter works carry no per-chapter <div class="chapter">
@@ -200,7 +272,7 @@ public enum AO3ChapterHTMLExtractor {
 				let chapters = [AO3ExtractedChapter(id: "chapter-1", title: "Chapter 1")]
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries, metadata: assembled.metadata))
 			}
 		}
 
@@ -245,14 +317,14 @@ private extension AO3ChapterHTMLExtractor {
 		}) != nil
 	}
 
-	/// Registration-required login wall: matched on `div#signin`'s
-	/// presence -- an id, so cheaper and more specific than matching the
-	/// "Sorry! This work is only available to registered users of the
-	/// Archive." prose.
+	/// Registration-required login wall -- see `AO3HTMLHelpers.isRegistrationRequired`.
+	/// Previously matched on `div#signin`'s bare presence only; reconciled
+	/// to the stricter text-matching version also used by
+	/// `AO3SearchResultsExtractor`, since a signin div shown for an
+	/// unrelated reason (rate limiting, a different notice) shouldn't
+	/// read as "registration required" here either.
 	static func isRegistrationRequired(_ root: HTMLLiteElement) -> Bool {
-		firstDescendant(of: root, where: {
-			$0.tag == "div" && $0.attributes["id"] == "signin"
-		}) != nil
+		AO3HTMLHelpers.isRegistrationRequired(root)
 	}
 }
 
@@ -384,10 +456,11 @@ private extension AO3ChapterHTMLExtractor {
 	/// Comments/Kudos/Bookmarks/Hits into structured data this function can
 	/// hand back to callers instead of leaving them buried in an opaque
 	/// HTML blob.
-	static func serializedContentHTML(root: HTMLLiteElement, workSkinParent: HTMLLiteElement, workSkinIndex: Int, workSkinDiv: HTMLLiteElement) -> (contentHTML: String, commentCount: Int?, kudosCount: Int?, bookmarkCount: Int?, hitCount: Int?, wordCount: Int?, seriesEntries: [AO3SeriesSpanResult]) {
+	static func serializedContentHTML(root: HTMLLiteElement, workSkinParent: HTMLLiteElement, workSkinIndex: Int, workSkinDiv: HTMLLiteElement) -> (contentHTML: String, commentCount: Int?, kudosCount: Int?, bookmarkCount: Int?, hitCount: Int?, wordCount: Int?, seriesEntries: [AO3SeriesSpanResult], metadata: AO3WorkPageMetadata) {
 		var contentHTML = ""
 		var counts = (commentCount: Int?.none, kudosCount: Int?.none, bookmarkCount: Int?.none, hitCount: Int?.none, wordCount: Int?.none)
 		var seriesEntries: [AO3SeriesSpanResult] = []
+		var metadata = AO3WorkPageMetadata()
 
 		if let workHeader = parseWorkHeader(root: root) {
 			if let prefaceHTML = AO3PrefaceRenderer.html(id: "ao3Preface", data: workHeader.data) {
@@ -395,6 +468,30 @@ private extension AO3ChapterHTMLExtractor {
 			}
 			counts = (workHeader.commentCount, workHeader.kudosCount, workHeader.bookmarkCount, workHeader.hitCount, workHeader.wordCount)
 			seriesEntries = workHeader.seriesEntries
+
+			// Byline/summary live in the work-level `div.preface.group`
+			// (inside `#workskin`), not the `dl.work.meta.group` metadata
+			// block `parseWorkHeader` just parsed -- a separate, narrower
+			// search scoped to workSkinDiv, same distinction
+			// `stripPhantomTitleHeadingClass`'s doc comment already draws
+			// between the two.
+			let preface = workPreface(workSkinDiv)
+			let authors = preface.map(bylineAuthors) ?? []
+			let summary = preface.flatMap(summaryHTML)
+
+			metadata = AO3WorkPageMetadata(
+				authors: authors,
+				summary: summary,
+				datePublished: workHeader.datePublished,
+				dateModified: workHeader.dateModified,
+				fandoms: workHeader.fandoms,
+				relationships: workHeader.relationships,
+				characters: workHeader.characters,
+				ratings: workHeader.ratings,
+				warnings: workHeader.warnings,
+				categories: workHeader.categories,
+				additionalTags: workHeader.additionalTags
+			)
 		}
 		if let styleElement = precedingStyleElement(parent: workSkinParent, beforeIndex: workSkinIndex) {
 			contentHTML += serializeHTMLLiteNodes([.element(styleElement)])
@@ -411,7 +508,63 @@ private extension AO3ChapterHTMLExtractor {
 		if let footerHTML = AO3PrefaceRenderer.seriesFooterHTML(entries: seriesEntries.map(\.entry)) {
 			contentHTML += footerHTML
 		}
-		return (contentHTML, counts.commentCount, counts.kudosCount, counts.bookmarkCount, counts.hitCount, counts.wordCount, seriesEntries)
+		return (contentHTML, counts.commentCount, counts.kudosCount, counts.bookmarkCount, counts.hitCount, counts.wordCount, seriesEntries, metadata)
+	}
+}
+
+// MARK: - Byline / summary (work-level preface, inside #workskin)
+
+private extension AO3ChapterHTMLExtractor {
+
+	/// The work-level `div.preface.group` -- first one found under
+	/// `workSkinDiv`, distinct from each chapter's own
+	/// `div.chapter.preface.group` (confirmed: the work-level one has no
+	/// `chapter` class token, matching `stripPhantomTitleHeadingClass`'s
+	/// existing selector for the same container).
+	static func workPreface(_ workSkinDiv: HTMLLiteElement) -> HTMLLiteElement? {
+		firstDescendant(of: workSkinDiv, where: {
+			$0.tag == "div" && $0.attributes["class"] == "preface group"
+		})
+	}
+
+	/// `h3.byline.heading`'s `a[rel=author]` anchors -- same selector
+	/// `AO3SearchResultsExtractor` uses for a listing row's heading,
+	/// scoped here to the work-level byline instead.
+	static func bylineAuthors(_ workPreface: HTMLLiteElement) -> Set<ParsedAuthor> {
+		guard let bylineH3 = firstDescendant(of: workPreface, where: {
+			$0.tag == "h3" && classTokens(of: $0).contains("byline")
+		}) else {
+			return []
+		}
+		let authorAnchors = descendants(of: bylineH3, where: { $0.tag == "a" && $0.attributes["rel"] == "author" })
+		return Set(authorAnchors.compactMap { anchor -> ParsedAuthor? in
+			let name = flattenedText(anchor).trimmingCharacters(in: .whitespacesAndNewlines)
+			guard !name.isEmpty else { return nil }
+			return ParsedAuthor(name: name, url: absoluteURL(anchor.attributes["href"]), avatarURL: nil, emailAddress: nil)
+		})
+	}
+
+	/// `div.summary.module`'s `blockquote.userstuff`, serialized as HTML
+	/// the same way `AO3SearchResultsExtractor.summaryHTML` serializes a
+	/// listing row's `blockquote.summary` -- same downstream shape
+	/// (`ArticleStringFormatter`), different source container/class.
+	static func summaryHTML(_ workPreface: HTMLLiteElement) -> String? {
+		guard let summaryModule = firstDescendant(of: workPreface, where: {
+			$0.tag == "div" && classTokens(of: $0).contains("summary") && classTokens(of: $0).contains("module")
+		}) else {
+			return nil
+		}
+		guard let blockquote = firstDescendant(of: summaryModule, where: {
+			$0.tag == "blockquote"
+		}) else {
+			return nil
+		}
+		let serialized = serializeHTMLLiteNodes(blockquote.children)
+		return serialized.isEmpty ? nil : serialized
+	}
+
+	static func classTokens(of element: HTMLLiteElement) -> [String] {
+		AO3HTMLHelpers.classTokens(of: element)
 	}
 }
 
@@ -429,6 +582,23 @@ struct AO3WorkHeaderExtraction {
 	let hitCount: Int?
 	let wordCount: Int?
 	let seriesEntries: [AO3SeriesSpanResult]
+	// Tag-group rows, discrete text values (not display-formatted
+	// AO3TagEntry) -- for AO3ChapterFetcher.rebuildParsedItem to populate
+	// Article's own fandoms/relationships/etc fields, independent of
+	// whatever the generic AO3PrefaceRow rendering above does with the
+	// same rows.
+	let fandoms: [String]
+	let relationships: [String]
+	let characters: [String]
+	let ratings: [String]
+	let warnings: [String]
+	let categories: [String]
+	let additionalTags: [String]
+	// dl.stats' Published:/Updated:(or Completed:) rows, parsed as Date --
+	// distinct from the four count fields above, which come from the same
+	// dl.stats but stay Int.
+	let datePublished: Date?
+	let dateModified: Date?
 }
 
 /// One `<span class="series">` block's full data: `entry` is the
@@ -483,6 +653,15 @@ private extension AO3ChapterHTMLExtractor {
 		var hitCount: Int?
 		var wordCount: Int?
 		var seriesEntries: [AO3SeriesSpanResult] = []
+		var fandoms: [String] = []
+		var relationships: [String] = []
+		var characters: [String] = []
+		var ratings: [String] = []
+		var warnings: [String] = []
+		var categories: [String] = []
+		var additionalTags: [String] = []
+		var datePublished: Date?
+		var dateModified: Date?
 
 		var pendingDT: HTMLLiteElement?
 		for element in directChildElements(of: metaGroup) {
@@ -512,6 +691,29 @@ private extension AO3ChapterHTMLExtractor {
 				// (rating/warning/category, usually one or two values).
 				let isWide = classTokens.contains("fandom") || classTokens.contains("relationship") || classTokens.contains("character") || classTokens.contains("freeform")
 				rows.append(AO3PrefaceRow(label: label, values: entries, isWide: isWide))
+
+				// Same rows, discrete text values -- for
+				// AO3ChapterFetcher.rebuildParsedItem, independent of the
+				// AO3PrefaceRow rendering above. Keyed on class the same
+				// way the row-shape switch above already is, not label
+				// text (see parseWorkHeader's own doc comment on "Rating:"
+				// vs "Ratings:" etc.).
+				let texts = entries.map(\.text)
+				if classTokens.contains("fandom") {
+					fandoms.append(contentsOf: texts)
+				} else if classTokens.contains("relationship") {
+					relationships.append(contentsOf: texts)
+				} else if classTokens.contains("character") {
+					characters.append(contentsOf: texts)
+				} else if classTokens.contains("rating") {
+					ratings.append(contentsOf: texts)
+				} else if classTokens.contains("warning") {
+					warnings.append(contentsOf: texts)
+				} else if classTokens.contains("category") {
+					categories.append(contentsOf: texts)
+				} else if classTokens.contains("freeform") {
+					additionalTags.append(contentsOf: texts)
+				}
 			} else if classTokens.contains("language") {
 				let text = flattenedText(dd).trimmingCharacters(in: .whitespacesAndNewlines)
 				guard !text.isEmpty else { continue }
@@ -571,6 +773,12 @@ private extension AO3ChapterHTMLExtractor {
 					case "bookmarks": bookmarkCount = numeric
 					case "hits": hitCount = numeric
 					case "words": wordCount = numeric
+					case "published": datePublished = Self.workPageDate(fromStatValue: statValue)
+					// "status" covers both "Updated:" and "Completed:"
+					// labels (same dt/dd class either way -- see this
+					// function's own doc comment) -- either way it's the
+					// work's current dateModified.
+					case "status": dateModified = Self.workPageDate(fromStatValue: statValue)
 					default: break
 					}
 				}
@@ -597,8 +805,33 @@ private extension AO3ChapterHTMLExtractor {
 			bookmarkCount: bookmarkCount,
 			hitCount: hitCount,
 			wordCount: wordCount,
-			seriesEntries: seriesEntries
+			seriesEntries: seriesEntries,
+			fandoms: fandoms,
+			relationships: relationships,
+			characters: characters,
+			ratings: ratings,
+			warnings: warnings,
+			categories: categories,
+			additionalTags: additionalTags,
+			datePublished: datePublished,
+			dateModified: dateModified
 		)
+	}
+
+	/// AO3's `dl.stats` Published/Updated/Completed values are plain
+	/// `YYYY-MM-DD` (confirmed: ao3-work-multi-chapter.html's
+	/// `"2026-07-07"`/`"2026-08-01"`) -- no time component, unlike the
+	/// search-listing page's `<time datetime="...">` attribute
+	/// `AO3SearchResultsExtractor.datetime(fromLI:)` reads instead. A
+	/// fixed-format parser rather than ISO8601DateFormatter, which expects
+	/// a full date-time and would reject a bare date.
+	static func workPageDate(fromStatValue value: String) -> Date? {
+		let formatter = DateFormatter()
+		formatter.calendar = Calendar(identifier: .gregorian)
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		formatter.timeZone = TimeZone(identifier: "UTC")
+		formatter.dateFormat = "yyyy-MM-dd"
+		return formatter.date(from: value)
 	}
 
 	/// `<a class="tag" href="...">Name</a>` entries, wherever they sit
@@ -698,37 +931,16 @@ private extension AO3ChapterHTMLExtractor {
 		return Int(indexString)
 	}
 
-	/// Identical approach to `AO3SearchResultsExtractor.seriesID(fromHref:)`/
-	/// `AO3SummaryExtractor.seriesID(fromHref:)` -- both private to their
-	/// own file, so not directly reusable here; kept as a third small,
-	/// independently-stable copy rather than adding cross-file coupling
-	/// for a three-line helper, same precedent as `absoluteURL` below.
+	/// Shared with `AO3SearchResultsExtractor`/`AO3SummaryExtractor` via
+	/// `AO3HTMLHelpers.seriesID(fromHref:)`.
 	static func seriesID(fromHref href: String?) -> String? {
-		guard let href, let range = href.range(of: "/series/") else {
-			return nil
-		}
-		let rest = href[range.upperBound...]
-		let digits = rest.prefix { $0.isNumber }
-		return digits.isEmpty ? nil : String(digits)
+		AO3HTMLHelpers.seriesID(fromHref: href)
 	}
 
-	private static let baseURL = "https://archiveofourown.org"
-
-	/// Identical to `AO3SearchResultsExtractor.absoluteURL` -- not
-	/// reused directly to avoid a cross-file dependency for one
-	/// three-line helper; keep both in sync if AO3's link shape ever
-	/// changes.
+	/// Shared with `AO3SearchResultsExtractor`/`AO3SeriesListingExtractor`
+	/// via `AO3HTMLHelpers.absoluteURL(_:)`.
 	static func absoluteURL(_ href: String?) -> String? {
-		guard let href, !href.isEmpty else {
-			return nil
-		}
-		if href.hasPrefix("http://") || href.hasPrefix("https://") {
-			return href
-		}
-		if href.hasPrefix("/") {
-			return baseURL + href
-		}
-		return baseURL + "/" + href
+		AO3HTMLHelpers.absoluteURL(href)
 	}
 
 	/// `element.children` filtered down to just the `.element` nodes, in

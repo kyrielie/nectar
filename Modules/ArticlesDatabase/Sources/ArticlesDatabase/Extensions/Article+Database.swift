@@ -53,6 +53,7 @@ extension Article {
 		let ratings = Self.stringArrayFromRow(row, DatabaseKey.ratings)
 		let warnings = Self.stringArrayFromRow(row, DatabaseKey.warnings)
 		let categories = Self.stringArrayFromRow(row, DatabaseKey.categories)
+		let additionalTags = Self.stringArrayFromRow(row, DatabaseKey.additionalTags)
 		let series = Self.seriesFromRow(row)
 		let bookKey = row.swiftString(forColumn: DatabaseKey.bookKey)
 
@@ -73,7 +74,7 @@ extension Article {
 		let pendingUpdateDetectedAt = row.date(forColumn: DatabaseKey.pendingUpdateDetectedAt)
 		let wordCountRegressionFlaggedAt = row.date(forColumn: DatabaseKey.wordCountRegressionFlaggedAt)
 
-		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, series: series, commentCount: commentCount, kudosCount: kudosCount, bookmarkCount: bookmarkCount, hitCount: hitCount, lastPrefaceFetchDate: lastPrefaceFetchDate, pendingUpdateContentHTML: pendingUpdateContentHTML, pendingUpdateDetectedAt: pendingUpdateDetectedAt, wordCountRegressionFlaggedAt: wordCountRegressionFlaggedAt, isAmbrosiaItem: isAmbrosiaItem, bookKey: bookKey, status: status)
+		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, additionalTags: additionalTags, series: series, commentCount: commentCount, kudosCount: kudosCount, bookmarkCount: bookmarkCount, hitCount: hitCount, lastPrefaceFetchDate: lastPrefaceFetchDate, pendingUpdateContentHTML: pendingUpdateContentHTML, pendingUpdateDetectedAt: pendingUpdateDetectedAt, wordCountRegressionFlaggedAt: wordCountRegressionFlaggedAt, isAmbrosiaItem: isAmbrosiaItem, bookKey: bookKey, status: status)
 	}
 
 	private static func authorsFromRow(_ row: FMResultSet) -> Set<Author>? {
@@ -127,8 +128,16 @@ extension Article {
 		}
 
 		let series = parsedItem.series?.map { ArticleSeriesEntry(name: $0.name, index: $0.index, ao3ID: $0.ao3ID, previousWorkURL: $0.previousWorkURL, nextWorkURL: $0.nextWorkURL) }
+		// additionalTags: ParsedItem.tags is a Set<String>? (the standard
+		// JSON Feed field), converted to Article's own [String]? here the
+		// same way `authors`/`series` are converted from their ParsedItem
+		// shapes just above. Sorted for a stable, deterministic order --
+		// Set has none of its own, and an unstable order would make every
+		// refetch look like a change to changesFrom even when the tags
+		// themselves didn't change.
+		let additionalTags = parsedItem.tags.map { $0.sorted() }
 
-		self.init(accountID: accountID, articleID: parsedItem.syncServiceID, feedID: feedID, uniqueID: parsedItem.uniqueID, title: parsedItem.title, contentHTML: parsedItem.contentHTML, contentText: parsedItem.contentText, markdown: parsedItem.markdown, url: parsedItem.url, externalURL: parsedItem.externalURL, summary: parsedItem.summary, imageURL: parsedItem.imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: parsedItem.wordCount, chapterCurrent: parsedItem.chapterCurrent, chapterTotal: parsedItem.chapterTotal, isComplete: parsedItem.isComplete, fandoms: parsedItem.fandoms, relationships: parsedItem.relationships, characters: parsedItem.characters, ratings: parsedItem.ratings, warnings: parsedItem.warnings, categories: parsedItem.categories, series: series, commentCount: parsedItem.commentCount, kudosCount: parsedItem.kudosCount, bookmarkCount: parsedItem.bookmarkCount, hitCount: parsedItem.hitCount, lastPrefaceFetchDate: parsedItem.lastPrefaceFetchDate, isAmbrosiaItem: parsedItem.isAmbrosiaItem, bookKey: parsedItem.bookKey, status: status)
+		self.init(accountID: accountID, articleID: parsedItem.syncServiceID, feedID: feedID, uniqueID: parsedItem.uniqueID, title: parsedItem.title, contentHTML: parsedItem.contentHTML, contentText: parsedItem.contentText, markdown: parsedItem.markdown, url: parsedItem.url, externalURL: parsedItem.externalURL, summary: parsedItem.summary, imageURL: parsedItem.imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: parsedItem.wordCount, chapterCurrent: parsedItem.chapterCurrent, chapterTotal: parsedItem.chapterTotal, isComplete: parsedItem.isComplete, fandoms: parsedItem.fandoms, relationships: parsedItem.relationships, characters: parsedItem.characters, ratings: parsedItem.ratings, warnings: parsedItem.warnings, categories: parsedItem.categories, additionalTags: additionalTags, series: series, commentCount: parsedItem.commentCount, kudosCount: parsedItem.kudosCount, bookmarkCount: parsedItem.bookmarkCount, hitCount: parsedItem.hitCount, lastPrefaceFetchDate: parsedItem.lastPrefaceFetchDate, isAmbrosiaItem: parsedItem.isAmbrosiaItem, bookKey: parsedItem.bookKey, status: status)
 	}
 
 	private func addPossibleStringChangeWithKeyPath(_ comparisonKeyPath: KeyPath<Article, String?>, _ otherArticle: Article, _ key: String, _ dictionary: inout DatabaseDictionary) {
@@ -237,6 +246,9 @@ extension Article {
 		}
 		if categories != existingArticle.categories, let categories, !categories.isEmpty, let json = Self.jsonString(categories) {
 			d[DatabaseKey.categories] = json
+		}
+		if additionalTags != existingArticle.additionalTags, let additionalTags, !additionalTags.isEmpty, let json = Self.jsonString(additionalTags) {
+			d[DatabaseKey.additionalTags] = json
 		}
 		if series != existingArticle.series, let series, !series.isEmpty, let json = Self.jsonString(series) {
 			d[DatabaseKey.series] = json
@@ -380,6 +392,9 @@ extension Article {
 		}
 		if let categories, !categories.isEmpty, let json = Self.jsonString(categories) {
 			d[DatabaseKey.categories] = json
+		}
+		if let additionalTags, !additionalTags.isEmpty, let json = Self.jsonString(additionalTags) {
+			d[DatabaseKey.additionalTags] = json
 		}
 		if let series, !series.isEmpty, let json = Self.jsonString(series) {
 			d[DatabaseKey.series] = json
