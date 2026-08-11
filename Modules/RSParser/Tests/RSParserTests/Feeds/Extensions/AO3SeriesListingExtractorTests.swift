@@ -36,7 +36,7 @@ import Testing
 	/// here.)
 	@Test func workPermalinksParsesAllTenRowsInDocumentOrder() {
 		let html = htmlFixtureString("ao3-series-listing.html")
-		let (works, hasNextPage) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
+		let (works, hasNextPage, totalPages) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
 
 		#expect(works.count == 10)
 		#expect(works.first?.workID == "4436639")
@@ -47,6 +47,7 @@ import Testing
 
 		// No `li.next` pagination widget on this single-page capture.
 		#expect(hasNextPage == false)
+		#expect(totalPages == nil)
 	}
 
 	/// Listing-metadata follow-up: `workPermalinks` now reuses
@@ -58,7 +59,7 @@ import Testing
 	/// fixture's own markup for that row.
 	@Test func workPermalinksParsesRichMetadataFromRealCapturedRow() {
 		let html = htmlFixtureString("ao3-series-listing.html")
-		let (works, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
+		let (works, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
 
 		let first = try #require(works.first)
 		#expect(first.workID == "4436639")
@@ -74,9 +75,10 @@ import Testing
 	}
 
 	@Test func workPermalinksReturnsEmptyOnPageWithNoWorkRows() {
-		let (works, hasNextPage) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: "<html><body><p>This series has no works yet.</p></body></html>")
+		let (works, hasNextPage, totalPages) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: "<html><body><p>This series has no works yet.</p></body></html>")
 		#expect(works.isEmpty)
 		#expect(hasNextPage == false)
+		#expect(totalPages == nil)
 	}
 
 	/// `longseries.html`: a real captured page 1 of
@@ -90,7 +92,7 @@ import Testing
 	/// not hardcoded).
 	@Test func workPermalinksOnRealMultiPageSeriesFirstPage() {
 		let html = htmlFixtureString("longseries.html")
-		let (works, hasNextPage) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
+		let (works, hasNextPage, totalPages) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
 
 		#expect(works.count == 20)
 		#expect(works.first?.workID == "6922927")
@@ -100,6 +102,24 @@ import Testing
 		#expect(works.last?.title == "new romantics")
 
 		#expect(hasNextPage == true)
+		#expect(totalPages == 7)
+	}
+
+	@Test func totalPagesOnRealLastPageCapture() {
+		let html = htmlFixtureString("ao3-series-nav-lastpage.html")
+		let (_, hasNextPage, totalPages) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
+
+		#expect(hasNextPage == false)
+		#expect(totalPages == 3)
+	}
+
+	@Test func totalPagesNilOnRealSinglePageSeriesCapture() {
+		let html = htmlFixtureString("ao3-series-nav-43794-page1.html")
+		let (works, hasNextPage, totalPages) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
+
+		#expect(works.map(\.workID) == ["779826", "779835", "779840", "1836235", "2085420"])
+		#expect(hasNextPage == false)
+		#expect(totalPages == nil)
 	}
 
 	/// Confirms `hasNextPage` reads a live `li.next > a[href]` the same
@@ -123,8 +143,9 @@ import Testing
 		</ul>
 		</body></html>
 		"""
-		let (works, hasNextPage) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
+		let (works, hasNextPage, totalPages) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
 		#expect(works.count == 1)
 		#expect(hasNextPage == true)
+		#expect(totalPages == nil)
 	}
 }

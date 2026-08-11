@@ -64,12 +64,23 @@ public enum AO3SeriesNavigationError: Error, Sendable, Equatable {
 public enum AO3SeriesNavigator {
 
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AO3SeriesNavigator")
+	private static var seriesWalkedDates: [String: Date] = [:]
 
 	public enum Direction: Sendable, Hashable {
 		case first
 		case previous
 		case next
 	}
+
+	#if DEBUG
+	static func resetWalkedStateForTesting() {
+		seriesWalkedDates = [:]
+	}
+
+	static func markWalkedForTesting(feedID: String, ao3SeriesID: String) {
+		markWalked(feedID: feedID, ao3SeriesID: ao3SeriesID)
+	}
+	#endif
 
 	/// Adds (if needed) and fetches one work in the series identified by
 	/// `ao3SeriesID`, returning the new/existing article's `articleID`
@@ -103,11 +114,11 @@ public enum AO3SeriesNavigator {
 	///
 	/// 1. **Cache check** (`.previous`/`.next` only -- `.first`'s target
 	///    id isn't known yet). If a row already exists under
-	///    `existingArticle.feedID` for the target work id, no listing
-	///    fetch happens at all: with content already fetched, it's
-	///    returned directly; without content yet (a stub batch-imported by
-	///    an earlier tap), its content is fetched directly via
-	///    `downloadAndAwait`, skipping straight to Step 4.
+	///    `existingArticle.feedID` for the target work id with content
+	///    already fetched, it's returned directly. If it is only a stub,
+	///    the listing shortcut is trusted only when this feed/series pair
+	///    has been walked recently per `AO3PrefaceRefetchPreference`;
+	///    otherwise page 1 is backfilled before the target content fetch.
 	/// 1b. **Cross-feed cache check** (`.previous`/`.next` only, on a
 	///    Step 1 miss): the same work may already be fetched under a
 	///    *different* feed -- another series' stub-import, an
@@ -191,24 +202,33 @@ public enum AO3SeriesNavigator {
 		// Step 1: cache check -- skipped entirely for .first, whose
 		// target id isn't known until page 1 is parsed below.
 		//
-		// A row already existing under this feedID (regardless of whether
-		// its content has been fetched yet) is enough to skip the listing
-		// fetch entirely -- the row's own presence is what tells us its
-		// permalink/position, which is the only reason Step 2/3 fetch a
-		// listing page in the first place. A previously-fetched article
-		// (contentHTML != nil) returns immediately, no network activity at
-		// all. A previously-stubbed-but-never-opened row (contentHTML ==
-		// nil -- e.g. batch-stubbed as someone else's neighbor by an
-		// earlier Next/Previous tap, per the Dedup note above) still needs
-		// its real content fetched, so it falls through to the same
-		// downloadAndAwait call the listing-fetch paths use below, just
-		// without ever fetching a listing page to get there.
+		// A previously-fetched article (contentHTML != nil) returns
+		// immediately, no network activity at all. A previously-stubbed-
+		// but-never-opened row (contentHTML == nil) only skips the listing
+		// fetch when this feed/series pair has a recent page-1 walk on
+		// file. Otherwise the stub may have arrived from unrelated search
+		// or import work, so do a one-page backfill before fetching the
+		// target's content.
 		if let knownTargetWorkID, let existing = existingByWorkID[knownTargetWorkID] {
 			if existing.contentHTML != nil {
 				Self.logger.debug("AO3SeriesNavigator: openSeriesWork cache hit with content, workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public)")
 				return .success(existing.articleID)
 			}
-			Self.logger.debug("AO3SeriesNavigator: openSeriesWork cache hit as stub (no content yet), workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public), fetching directly")
+			if isWalkRecent(feedID: existingArticle.feedID, ao3SeriesID: ao3SeriesID) {
+				Self.logger.debug("AO3SeriesNavigator: openSeriesWork cache hit as stub with recent walk, workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public), fetching directly")
+				return await downloadAndAwait(workID: knownTargetWorkID, existingArticleID: existing.articleID, feedID: existingArticle.feedID, account: account)
+			}
+
+			Self.logger.debug("AO3SeriesNavigator: openSeriesWork cache hit as stub without recent walk, attempting page-1 backfill, workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public)")
+			if let page1HTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: 1) {
+				let (page1Works, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: page1HTML)
+				let newPage1Works = page1Works.filter { existingByWorkID[$0.workID] == nil }
+				await stubImport(newPage1Works, feedID: existingArticle.feedID, account: account)
+				markWalked(feedID: existingArticle.feedID, ao3SeriesID: ao3SeriesID)
+				Self.logger.debug("AO3SeriesNavigator: openSeriesWork stub-hit backfill parsed workCount=\(page1Works.count, privacy: .public) newStubs=\(newPage1Works.count, privacy: .public)")
+			} else {
+				Self.logger.debug("AO3SeriesNavigator: openSeriesWork stub-hit backfill page-1 fetch failed, proceeding to target workID=\(knownTargetWorkID, privacy: .public)")
+			}
 			return await downloadAndAwait(workID: knownTargetWorkID, existingArticleID: existing.articleID, feedID: existingArticle.feedID, account: account)
 		}
 
@@ -248,7 +268,7 @@ public enum AO3SeriesNavigator {
 			Self.logger.debug("AO3SeriesNavigator: openSeriesWork page 1 fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
 			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
 		}
-		let (page1Works, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: page1HTML)
+		let (page1Works, _, page1TotalPages) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: page1HTML)
 		guard !page1Works.isEmpty else {
 			Self.logger.debug("AO3SeriesNavigator: openSeriesWork page 1 parsed but empty, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
 			return .failure(.emptySeriesListing)
@@ -260,6 +280,7 @@ public enum AO3SeriesNavigator {
 		let newPage1Works = page1Works.filter { existingByWorkID[$0.workID] == nil }
 		Self.logger.debug("AO3SeriesNavigator: openSeriesWork page 1 parsed, workCount=\(page1Works.count, privacy: .public) newStubs=\(newPage1Works.count, privacy: .public)")
 		await stubImport(newPage1Works, feedID: existingArticle.feedID, account: account)
+		markWalked(feedID: existingArticle.feedID, ao3SeriesID: ao3SeriesID)
 
 		let targetWorkID: String
 		switch direction {
@@ -295,6 +316,10 @@ public enum AO3SeriesNavigator {
 			Self.logger.debug("AO3SeriesNavigator: openSeriesWork targetIndex math says page 1 but target wasn't there, workID=\(targetWorkID, privacy: .public) targetIndex=\(targetIndex, privacy: .public)")
 			return .failure(.seriesListingMismatch)
 		}
+		guard let page1TotalPages, targetPage <= page1TotalPages else {
+			Self.logger.debug("AO3SeriesNavigator: openSeriesWork computed page \(targetPage, privacy: .public) exceeds known total pages \(page1TotalPages.map(String.init) ?? "nil", privacy: .public), workID=\(targetWorkID, privacy: .public)")
+			return .failure(.seriesListingMismatch)
+		}
 
 		Self.logger.debug("AO3SeriesNavigator: openSeriesWork fetching computed page \(targetPage, privacy: .public) for workID=\(targetWorkID, privacy: .public) targetIndex=\(targetIndex, privacy: .public) pageSize=\(pageSize, privacy: .public)")
 		try? await Task.sleep(nanoseconds: UInt64(AO3ChapterFetcher.secondsBetweenSweepRequests * 1_000_000_000))
@@ -303,7 +328,7 @@ public enum AO3SeriesNavigator {
 			Self.logger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
 			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
 		}
-		let (pageNWorks, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: pageNHTML)
+		let (pageNWorks, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: pageNHTML)
 		// Same filter as Step 2, against the same shared map -- page N is
 		// very unlikely to contain the current article, but a target
 		// reached via .previous/.next from a different session could
@@ -323,6 +348,21 @@ public enum AO3SeriesNavigator {
 }
 
 private extension AO3SeriesNavigator {
+
+	static func walkKey(feedID: String, ao3SeriesID: String) -> String {
+		"\(feedID)|\(ao3SeriesID)"
+	}
+
+	static func isWalkRecent(feedID: String, ao3SeriesID: String) -> Bool {
+		guard let lastWalked = seriesWalkedDates[walkKey(feedID: feedID, ao3SeriesID: ao3SeriesID)] else {
+			return false
+		}
+		return Date().timeIntervalSince(lastWalked) < AO3PrefaceRefetchPreference.current.timeInterval
+	}
+
+	static func markWalked(feedID: String, ao3SeriesID: String) {
+		seriesWalkedDates[walkKey(feedID: feedID, ao3SeriesID: ao3SeriesID)] = Date()
+	}
 
 	/// Existing articles under `feedID`, keyed by AO3 work id (recovered
 	/// from `bookKey` -- always present for AO3-sourced articles per

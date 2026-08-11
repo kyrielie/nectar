@@ -54,6 +54,7 @@ import Articles
 
 	override func setUp() async throws {
 		TestingURLProtocol.reset()
+		AO3SeriesNavigator.resetWalkedStateForTesting()
 		account = TestAccountManager.shared.createAccount(type: .onMyMac)
 		_ = await account.importPastedAO3Links("https://archiveofourown.org/works/1")
 		let feed = account.existingFeed(withURL: Account.importedLinksFeedURL)!
@@ -62,6 +63,7 @@ import Articles
 
 	override func tearDown() async throws {
 		TestingURLProtocol.reset()
+		AO3SeriesNavigator.resetWalkedStateForTesting()
 		TestAccountManager.shared.deleteAccount(account)
 		account = nil
 		existingArticle = nil
@@ -115,11 +117,10 @@ import Articles
 	func testNextReusesExistingStubWithoutFetchingListingButStillFetchesContent() async {
 		// A work already stubbed under the same feed -- e.g. batch-stubbed
 		// as someone else's neighbor by an earlier Next/Previous tap --
-		// but never opened, so contentHTML is nil. Step 1 should still
-		// recognize the row and skip the listing fetch, but (unlike the
-		// full-cache-hit case above) it does need the work's real content,
-		// so a work-page fetch is expected -- only the series-listing
-		// fetch is skipped.
+		// but never opened, so contentHTML is nil. This fast path is now
+		// trusted only when a recent page-1 walk is recorded for the
+		// feed/series pair; seed that here so this test keeps covering the
+		// legitimate prior-walk shortcut.
 		_ = await account.updateAsync(feedID: existingArticle.feedID, parsedItems: [
 			ParsedItem(syncServiceID: nil, uniqueID: "87955346", feedURL: existingArticle.feedID,
 			           url: "https://archiveofourown.org/works/87955346", externalURL: nil,
@@ -128,6 +129,7 @@ import Articles
 			           datePublished: nil, dateModified: nil, authors: nil, tags: nil, attachments: nil,
 			           ao3WorkID: "87955346")
 		], deleteOlder: false)
+		AO3SeriesNavigator.markWalkedForTesting(feedID: existingArticle.feedID, ao3SeriesID: "999001")
 
 		// Deliberately NOT registering any TestingURLProtocol response for
 		// series/999001 -- if the listing fetch weren't skipped, the fetch
@@ -142,10 +144,67 @@ import Articles
 		)
 		let articleID = Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "87955346")
 		XCTAssertEqual(result, .success(articleID))
+		XCTAssertFalse(TestingURLProtocol.requestedURLs.contains { $0.absoluteString.contains("archiveofourown.org/series/999001") })
 
 		let articles = await account.fetchArticlesAsync(.feed(account.existingFeed(withFeedID: existingArticle.feedID)!))
 		let fetched = articles.first { $0.articleID == articleID }
 		XCTAssertNotNil(fetched?.contentHTML)
+	}
+
+	func testNextBackfillsPageOneWhenExistingStubHasNoRecentWalk() async {
+		// Real repro shape: the target work already exists under this feed
+		// as a stub from an unrelated source, so the old Step 1 code
+		// fetched only that target and never walked the series listing.
+		// With no recent walk recorded, page 1 should be fetched and the
+		// rest of the series page should be stubbed before the target is
+		// fetched in place.
+		_ = await account.updateAsync(feedID: existingArticle.feedID, parsedItems: [
+			ParsedItem(syncServiceID: nil, uniqueID: "https://archiveofourown.org/works/779835", feedURL: existingArticle.feedID,
+			           url: "https://archiveofourown.org/works/779835", externalURL: nil,
+			           title: "The Parting Glass", language: nil, contentHTML: nil,
+			           contentText: nil, markdown: nil, summary: nil, imageURL: nil, bannerImageURL: nil,
+			           datePublished: nil, dateModified: nil, authors: nil, tags: nil, attachments: nil,
+			           ao3WorkID: "779835")
+		], deleteOlder: false)
+
+		TestingURLProtocol.setResponse("archiveofourown.org/series/43794", file: "ao3-series-nav-43794-page1.html")
+		TestingURLProtocol.setResponse("archiveofourown.org/works/779835", file: "ao3-work-single-chapter.html")
+
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "43794", direction: .next,
+			targetWorkURL: "https://archiveofourown.org/works/779835", targetIndex: 2,
+			existingArticle: existingArticle, account: account
+		)
+
+		let existingStubArticleID = Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "https://archiveofourown.org/works/779835")
+		XCTAssertEqual(result, .success(existingStubArticleID))
+		XCTAssertTrue(TestingURLProtocol.requestedURLs.contains { $0.absoluteString == "https://archiveofourown.org/series/43794" })
+
+		let articles = await account.fetchArticlesAsync(.feed(account.existingFeed(withFeedID: existingArticle.feedID)!))
+		let workIDs = Set(articles.compactMap { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) })
+		XCTTrue(workIDs.isSuperset(of: ["779826", "779835", "779840", "1836235", "2085420"]))
+		XCTEqual(articles.filter { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) == "779835" }.count, 1)
+	}
+
+	func testNextStubHitWithMissingBackfillStillFetchesKnownTarget() async {
+		_ = await account.updateAsync(feedID: existingArticle.feedID, parsedItems: [
+			ParsedItem(syncServiceID: nil, uniqueID: "87955346", feedURL: existingArticle.feedID,
+			           url: "https://archiveofourown.org/works/87955346", externalURL: nil,
+			           title: "AO3 Work 87955346", language: nil, contentHTML: nil,
+			           contentText: nil, markdown: nil, summary: nil, imageURL: nil, bannerImageURL: nil,
+			           datePublished: nil, dateModified: nil, authors: nil, tags: nil, attachments: nil,
+			           ao3WorkID: "87955346")
+		], deleteOlder: false)
+		TestingURLProtocol.setResponse("archiveofourown.org/works/87955346", file: "ao3-work-single-chapter.html")
+
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .next,
+			targetWorkURL: "https://archiveofourown.org/works/87955346", targetIndex: 2,
+			existingArticle: existingArticle, account: account
+		)
+
+		XCTAssertEqual(result, .success(Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "87955346")))
+		XCTAssertTrue(TestingURLProtocol.requestedURLs.contains { $0.absoluteString == "https://archiveofourown.org/series/999001" })
 	}
 
 	// MARK: - Cross-feed reuse (Step 1b, Bug 3b)
@@ -397,6 +456,20 @@ import Articles
 			existingArticle: existingArticle, account: account
 		)
 		XCTAssertEqual(result, .failure(.seriesListingMismatch))
+	}
+
+	func testSeriesListingMismatchWhenComputedPageExceedsTotalPages() async {
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999001", file: "ao3-series-nav-page1.html")
+		// pageSize is 2 and the pagination widget says there are only 2
+		// pages. targetIndex 5 computes page 3, so Step 3 should fail
+		// before sleeping or requesting `?page=3`.
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .next,
+			targetWorkURL: "https://archiveofourown.org/works/404404", targetIndex: 5,
+			existingArticle: existingArticle, account: account
+		)
+		XCTAssertEqual(result, .failure(.seriesListingMismatch))
+		XCTAssertFalse(TestingURLProtocol.requestedURLs.contains { $0.absoluteString.contains("archiveofourown.org/series/999001?page=3") })
 	}
 
 	// MARK: - Fetch failure (Step 4)
