@@ -112,9 +112,118 @@ import Articles
 		XCTAssertEqual(result, .success(Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "87955346")))
 	}
 
-	// MARK: - Page 1 resolves it (Step 2)
+	func testNextReusesExistingStubWithoutFetchingListingButStillFetchesContent() async {
+		// A work already stubbed under the same feed -- e.g. batch-stubbed
+		// as someone else's neighbor by an earlier Next/Previous tap --
+		// but never opened, so contentHTML is nil. Step 1 should still
+		// recognize the row and skip the listing fetch, but (unlike the
+		// full-cache-hit case above) it does need the work's real content,
+		// so a work-page fetch is expected -- only the series-listing
+		// fetch is skipped.
+		_ = await account.updateAsync(feedID: existingArticle.feedID, parsedItems: [
+			ParsedItem(syncServiceID: nil, uniqueID: "87955346", feedURL: existingArticle.feedID,
+			           url: "https://archiveofourown.org/works/87955346", externalURL: nil,
+			           title: "AO3 Work 87955346", language: nil, contentHTML: nil,
+			           contentText: nil, markdown: nil, summary: nil, imageURL: nil, bannerImageURL: nil,
+			           datePublished: nil, dateModified: nil, authors: nil, tags: nil, attachments: nil,
+			           ao3WorkID: "87955346")
+		], deleteOlder: false)
 
-	func testFirstResolvesFirstWorkFromPageOne() async {
+		// Deliberately NOT registering any TestingURLProtocol response for
+		// series/999001 -- if the listing fetch weren't skipped, the fetch
+		// would hit the default 200/no-data stub and the subsequent
+		// content download would fail to resolve the expected work.
+		TestingURLProtocol.setResponse("archiveofourown.org/works/87955346", file: "ao3-work-single-chapter.html")
+
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .next,
+			targetWorkURL: "https://archiveofourown.org/works/87955346", targetIndex: 2,
+			existingArticle: existingArticle, account: account
+		)
+		let articleID = Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "87955346")
+		XCTAssertEqual(result, .success(articleID))
+
+		let articles = await account.fetchArticlesAsync(.feed(account.existingFeed(withFeedID: existingArticle.feedID)!))
+		let fetched = articles.first { $0.articleID == articleID }
+		XCTAssertNotNil(fetched?.contentHTML)
+	}
+
+	// MARK: - Cross-feed reuse (Step 1b, Bug 3b)
+
+	func testNextCopiesFetchedCrossFeedArticleWithoutFetchingListingOrContent() async {
+		// A different feed already has this work fully fetched (e.g. it's
+		// also a member of some other series the person has separately
+		// navigated). Step 1b should find it by bookKey, copy its
+		// content/metadata into a new row under existingArticle's own
+		// feed, and return that -- no listing fetch, no work-page fetch.
+		let otherFeed = account.createFeed(with: "Other Feed", url: "https://example.com/other-feed", feedID: "other-feed-id", homePageURL: nil)
+		account.addFeedToTreeAtTopLevel(otherFeed)
+		_ = await account.updateAsync(feedID: otherFeed.feedID, parsedItems: [
+			ParsedItem(syncServiceID: nil, uniqueID: "some-other-uniqueid", feedURL: otherFeed.feedID,
+			           url: "https://archiveofourown.org/works/87955346", externalURL: nil,
+			           title: "Already Fetched Elsewhere", language: nil, contentHTML: "<p>already fetched, different feed</p>",
+			           contentText: nil, markdown: nil, summary: "a summary", imageURL: nil, bannerImageURL: nil,
+			           datePublished: nil, dateModified: nil, authors: nil, tags: nil, attachments: nil,
+			           wordCount: 4200, fandoms: ["Some Fandom"],
+			           ao3WorkID: "87955346")
+		], deleteOlder: false)
+
+		// Deliberately NOT registering any TestingURLProtocol response for
+		// series/999001 or works/87955346 -- if Step 1b were skipped, both
+		// the listing fetch and the work-page fetch would hit the default
+		// 200/no-data stub and this would fail with .networkError instead.
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .next,
+			targetWorkURL: "https://archiveofourown.org/works/87955346", targetIndex: 2,
+			existingArticle: existingArticle, account: account
+		)
+		let expectedArticleID = Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "87955346")
+		XCTAssertEqual(result, .success(expectedArticleID))
+
+		let articles = await account.fetchArticlesAsync(.feed(account.existingFeed(withFeedID: existingArticle.feedID)!))
+		let copied = articles.first { $0.articleID == expectedArticleID }
+		XCTAssertEqual(copied?.contentHTML, "<p>already fetched, different feed</p>")
+		XCTAssertEqual(copied?.summary, "a summary")
+		XCTAssertEqual(copied?.wordCount, 4200)
+		XCTAssertEqual(copied?.fandoms, ["Some Fandom"])
+		XCTAssertEqual(copied?.uniqueID, "87955346")
+
+		// The other feed's own copy is untouched, not moved or deleted.
+		let otherFeedArticles = await account.fetchArticlesAsync(.feed(otherFeed))
+		XCTAssertTrue(otherFeedArticles.contains { $0.uniqueID == "some-other-uniqueid" })
+	}
+
+	func testNextIgnoresUnfetchedCrossFeedStubAndFallsThroughToListing() async {
+		// A different feed has a *stub* for this work (contentHTML nil,
+		// e.g. batch-stubbed there by that series' own Step 2) -- Step 1b
+		// should NOT treat this as a usable cross-feed hit (see that
+		// step's own comment on why), so this must fall through to the
+		// normal page-1 listing fetch.
+		let otherFeed = account.createFeed(with: "Other Feed", url: "https://example.com/other-feed-2", feedID: "other-feed-id-2", homePageURL: nil)
+		account.addFeedToTreeAtTopLevel(otherFeed)
+		_ = await account.updateAsync(feedID: otherFeed.feedID, parsedItems: [
+			ParsedItem(syncServiceID: nil, uniqueID: "87955346", feedURL: otherFeed.feedID,
+			           url: "https://archiveofourown.org/works/87955346", externalURL: nil,
+			           title: "AO3 Work 87955346", language: nil, contentHTML: nil,
+			           contentText: nil, markdown: nil, summary: nil, imageURL: nil, bannerImageURL: nil,
+			           datePublished: nil, dateModified: nil, authors: nil, tags: nil, attachments: nil,
+			           ao3WorkID: "87955346")
+		], deleteOlder: false)
+
+		TestingURLProtocol.setResponse("archiveofourown.org/series/999001", file: "ao3-series-nav-page1.html")
+		TestingURLProtocol.setResponse("archiveofourown.org/works/87955346", file: "ao3-work-single-chapter.html")
+
+		let result = await AO3SeriesNavigator.openSeriesWork(
+			ao3SeriesID: "999001", direction: .next,
+			targetWorkURL: "https://archiveofourown.org/works/87955346", targetIndex: 1,
+			existingArticle: existingArticle, account: account
+		)
+		XCTAssertEqual(result, .success(Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "87955346")))
+	}
+
+
+
+	func testFirstResolvesFirstWorkFromPageOne() async throws {
 		TestingURLProtocol.setResponse("archiveofourown.org/series/999001", file: "ao3-series-nav-page1.html")
 		TestingURLProtocol.setResponse("archiveofourown.org/works/87955346", file: "ao3-work-single-chapter.html")
 
@@ -128,6 +237,20 @@ import Articles
 		// one actually downloaded (Step 2's batch-stub behavior).
 		let articles = await account.fetchArticlesAsync(.feed(account.existingFeed(withFeedID: existingArticle.feedID)!))
 		XCTAssertTrue(articles.contains { $0.uniqueID == "22222" })
+
+		// Listing-metadata follow-up: the stubbed neighbor (22222, never
+		// itself fetched in this test) should carry the richer metadata
+		// this fixture's row now has -- summary/fandom/word-count/tags --
+		// not just title/permalink, confirming workPermalinks' new fields
+		// actually reach the stored Article via placeholderStub(from:).
+		let neighbor = try XCTUnwrap(articles.first { $0.uniqueID == "22222" })
+		XCTAssertNil(neighbor.contentHTML)
+		XCTAssertEqual(neighbor.wordCount, 1500)
+		XCTAssertEqual(neighbor.fandoms, ["Test Fandom"])
+		XCTAssertEqual(neighbor.ratings, ["Teen And Up Audiences"])
+		XCTAssertEqual(neighbor.categories, ["Gen"])
+		XCTAssertEqual(neighbor.warnings, ["No Archive Warnings Apply"])
+		XCTAssertTrue(neighbor.summary?.contains("The second part of the story.") == true)
 	}
 
 	func testNextResolvesFromPageOneWhenTargetIsThere() async {

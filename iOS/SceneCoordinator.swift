@@ -1792,17 +1792,32 @@ struct SidebarItemNode: Hashable, Sendable {
 	/// and only select from inside its completion, after `self.articles`
 	/// has actually been rebuilt.
 	///
-	/// **Known, unresolved risk (flagged rather than silently assumed
-	/// safe):** this bypasses `fetchAndMergeArticlesQueue`'s coalescing.
-	/// If a notification-driven `queueFetchAndMergeArticles()` call (e.g.
-	/// from the same stub-import's own `AccountDidDownloadArticles` post)
-	/// fires around the same time, both calls run `fetchUnsortedArticlesAsync`
-	/// back to back rather than coalescing into one -- redundant work, not
-	/// a correctness bug as far as this function's own selection goes
-	/// (each call rebuilds `self.articles` fully), but not verified
-	/// against `CoalescingQueue`'s actual behavior under real concurrent
-	/// use before shipping.
+	/// **Resolved risk, formerly flagged here as unverified:** this
+	/// bypasses `fetchAndMergeArticlesQueue`'s coalescing by design (see
+	/// above), but the series-navigation flow that calls this also posts
+	/// one or more `.AccountDidDownloadArticles` notifications of its own
+	/// on the way here (each `stubImport` batch, then the final
+	/// `AO3ChapterFetcher.download`'s `updateAsync`) -- `accountDidDownloadArticles`
+	/// reacts to each by calling `queueFetchAndMergeArticles()`, and
+	/// `CoalescingQueue.add` restarts its debounce timer on every call, so
+	/// that queue is essentially always freshly armed right as this
+	/// function starts. If that debounced call fires while the direct
+	/// fetch below is still in flight, `fetchAndMergeArticlesAsync` (the
+	/// no-arg, notification-driven path) calls `fetchUnsortedArticlesAsync`
+	/// -> `cancelPendingAsyncFetches()` -> `fetchRequestQueue.cancelAllRequests()`,
+	/// which marks the in-flight `FetchRequestOperation` canceled.
+	/// `FetchRequestOperation.run`'s `process()` skips `resultBlock`
+	/// entirely for a canceled operation, so the `completion` closure
+	/// below -- and therefore `selectArticleInCurrentFeed` -- silently
+	/// never runs: the person is left on the timeline with nothing
+	/// selected. Calling `cancelPendingCalls()` here drops any coalesced
+	/// call still pending from this flow's own notifications before it
+	/// can race with the direct fetch; it's the same primitive
+	/// `WebViewController`'s scroll-position queue already uses for an
+	/// analogous "about to do my own synchronous flush" situation.
 	func navigateToTimelineAndSelectArticle(_ articleID: String) {
+		Self.logger.debug("SceneCoordinator: navigateToTimelineAndSelectArticle articleID=\(articleID, privacy: .public)")
+		fetchAndMergeArticlesQueue.cancelPendingCalls()
 		selectArticle(nil)
 		mainTimelineViewController?.focus()
 		fetchAndMergeArticlesAsync(animated: true) { [weak self] in

@@ -1442,6 +1442,8 @@ private extension WebViewController {
 		let ao3ID = queryItems.first(where: { $0.name == "ao3id" })?.value
 		let workURL = queryItems.first(where: { $0.name == "workurl" })?.value
 
+		Self.logger.debug("handleNectarSeriesLink: tapped direction=\(directionString, privacy: .public) ao3ID=\(ao3ID ?? "nil", privacy: .public) workURL=\(workURL ?? "nil", privacy: .public)")
+
 		let direction: AO3SeriesNavigator.Direction
 		switch directionString {
 		case "first":
@@ -1468,6 +1470,7 @@ private extension WebViewController {
 		// A fast double-tap on the same link while the first tap is
 		// still in flight is a no-op, not a second fetch.
 		if case .inFlight = seriesNavState[key] {
+			Self.logger.debug("handleNectarSeriesLink: ignored, already in flight for ao3ID=\(ao3ID, privacy: .public) direction=\(directionString, privacy: .public)")
 			return
 		}
 
@@ -1487,6 +1490,8 @@ private extension WebViewController {
 		seriesNavState[key] = .inFlight
 		updateNectarSeriesLinkUI(key: key, disabled: true)
 
+		Self.logger.debug("handleNectarSeriesLink: starting openSeriesWork ao3ID=\(ao3ID, privacy: .public) direction=\(directionString, privacy: .public) targetIndex=\(targetIndex.map(String.init) ?? "nil", privacy: .public)")
+
 		Task { @MainActor in
 			let result = await AO3SeriesNavigator.openSeriesWork(
 				ao3SeriesID: ao3ID,
@@ -1505,6 +1510,7 @@ private extension WebViewController {
 
 			switch result {
 			case .success(let newArticleID):
+				Self.logger.debug("handleNectarSeriesLink: openSeriesWork succeeded, newArticleID=\(newArticleID, privacy: .public)")
 				self.seriesNavState[key] = nil
 				self.updateNectarSeriesLinkUI(key: key, disabled: false)
 				self.coordinator.navigateToTimelineAndSelectArticle(newArticleID)

@@ -406,6 +406,14 @@ public struct ArticleStorageInfo: Sendable {
 		return articlesTable.fetchArticles(articleIDs: articleIDs)
 	}
 
+	/// Account-wide, no feed filter -- see `ArticlesTable.fetchArticles(bookKeys:_:)`'s
+	/// own doc comment for why this is safe without the pre-migration
+	/// uniqueID fallback `articleIDsForBookKeys` needs.
+	public func fetchArticles(bookKeys: Set<String>) -> Set<Article> {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		return articlesTable.fetchArticles(bookKeys: bookKeys)
+	}
+
 	public func fetchUnreadArticles(feedIDs: Set<String>, limit: Int? = nil) -> Set<Article> {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		return articlesTable.fetchUnreadArticles(feedIDs, limit)
@@ -556,6 +564,15 @@ public struct ArticleStorageInfo: Sendable {
 	public func fetchArticlesAsync(articleIDs: Set<String>) async -> Set<Article> {
 		await withCheckedContinuation { continuation in
 			_fetchArticlesAsync(articleIDs: articleIDs) { articles in
+				continuation.resume(returning: articles)
+			}
+		}
+	}
+
+	/// Async counterpart to `fetchArticles(bookKeys:)` above.
+	public func fetchArticlesAsync(bookKeys: Set<String>) async -> Set<Article> {
+		await withCheckedContinuation { continuation in
+			_fetchArticlesAsync(bookKeys: bookKeys) { articles in
 				continuation.resume(returning: articles)
 			}
 		}
@@ -1118,6 +1135,11 @@ private extension ArticlesDatabase {
 	func _fetchArticlesAsync(articleIDs: Set<String>, _ completion: @escaping  ArticleSetResultBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.fetchArticlesAsync(articleIDs: articleIDs, completion)
+	}
+
+	func _fetchArticlesAsync(bookKeys: Set<String>, _ completion: @escaping ArticleSetResultBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.fetchArticlesAsync(bookKeys: bookKeys, completion)
 	}
 
 	func _fetchUnreadArticlesAsync(feedIDs: Set<String>, limit: Int? = nil, _ completion: @escaping ArticleSetResultBlock) {

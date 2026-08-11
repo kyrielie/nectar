@@ -49,6 +49,30 @@ import Testing
 		#expect(hasNextPage == false)
 	}
 
+	/// Listing-metadata follow-up: `workPermalinks` now reuses
+	/// `AO3SearchResultsExtractor`'s row-metadata helpers against the
+	/// identical row shape, so the same fixture's first row (work
+	/// 4436639, "maybe i'm waking up") should carry summary/fandom/tag/
+	/// word-count data too, not just the original bare
+	/// `(workID, permalink, title)`. Values below read directly off the
+	/// fixture's own markup for that row.
+	@Test func workPermalinksParsesRichMetadataFromRealCapturedRow() {
+		let html = htmlFixtureString("ao3-series-listing.html")
+		let (works, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
+
+		let first = try #require(works.first)
+		#expect(first.workID == "4436639")
+		#expect(first.wordCount == 157904)
+		#expect(first.fandoms == ["Check Please! (Webcomic)"])
+		#expect(first.ratings == ["Mature"])
+		#expect(first.categories == ["M/M"])
+		#expect(first.warnings == ["No Archive Warnings Apply"])
+		#expect(first.summary?.isEmpty == false)
+		#expect(first.freeformTags.contains("Angst"))
+		#expect(first.characters.contains("Eric Bittle"))
+		#expect(first.relationships.contains("Eric Bittle/Jack Zimmermann"))
+	}
+
 	@Test func workPermalinksReturnsEmptyOnPageWithNoWorkRows() {
 		let (works, hasNextPage) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: "<html><body><p>This series has no works yet.</p></body></html>")
 		#expect(works.isEmpty)

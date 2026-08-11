@@ -820,6 +820,20 @@ public enum FetchType {
 		}
 	}
 
+	/// Account-wide, no feed/folder scoping -- deliberately not a
+	/// `FetchType` case: every existing case is a feed/folder/status
+	/// view a person can actually navigate to, while this is a narrower,
+	/// AO3-specific identity lookup ("does this work exist anywhere in
+	/// the account") with a single caller
+	/// (`AO3SeriesNavigator`'s cross-feed stub reuse). Pass-through to
+	/// `ArticlesDatabase.fetchArticlesAsync(bookKeys:)` -- see that
+	/// method's own doc comment for why the plain `bookKey in (...)`
+	/// match (no pre-migration uniqueID fallback) is safe for this
+	/// caller specifically.
+	public func fetchArticlesAsync(bookKeys: Set<String>) async -> Set<Article> {
+		await database.fetchArticlesAsync(bookKeys: bookKeys)
+	}
+
 	public func fetchUnreadCountForStarredArticlesAsync() async -> Int {
 		await database.fetchUnreadCountForStarredArticlesAsync(feedIDs: flattenedFeedsIDs)
 	}

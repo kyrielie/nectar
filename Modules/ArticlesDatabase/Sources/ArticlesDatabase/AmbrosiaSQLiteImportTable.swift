@@ -308,13 +308,31 @@ enum AmbrosiaSQLiteImportTable {
 		// column (confirmed against the schema in ArticlesDatabase.swift -- the
 		// only `tags` this database ever had was upstream NetNewsWire's separate
 		// relational tags table, dropped entirely, see the `DROP TABLE if EXISTS
-		// tags` migration). `Article` itself has no `tags` property either.
-		// `ParsedItem.tags` (the standard JSON Feed field) is parsed but never
-		// persisted anywhere on the ordinary feed-import path -- this bulk
-		// INSERT previously referenced a `tags` column that has never existed,
-		// which made every `.sqlite` transfer import throw. Dropping it here
-		// matches the ordinary path's existing (silent) behavior rather than
-		// adding a new column for a field nothing else in the app reads.
+		// tags` migration). `ParsedItem.tags` (the standard JSON Feed field) is
+		// parsed but never persisted on the ordinary feed-import path -- this
+		// bulk INSERT previously referenced a `tags` column that has never
+		// existed, which made every `.sqlite` transfer import throw. Dropping
+		// it here matches the ordinary path's existing (silent) behavior.
+		//
+		// No `additionalTags`/`t.additional_tags_json` column here either, but
+		// for a different reason than the above: `Article.additionalTags` does
+		// exist now (added alongside AO3ChapterHTMLExtractor's work-page
+		// metadata parsing -- freeform "Additional Tags" fandom/relationship/
+		// etc. sibling), it's just that Ambrosia's wire format has nothing to
+		// copy it from. Confirmed against the Wire Contract: Ambrosia only
+		// ever includes freeform tags baked into `content_html`'s rendered
+		// prose, never as a structured field on `items` the way fandoms_json/
+		// relationships_json/etc. are -- there is no `additional_tags_json`
+		// column on the transfer file to read. Leaving this column out of the
+		// bulk INSERT is therefore not a gap to backfill here: an Ambrosia-
+		// imported article gets additionalTags populated the same way a
+		// native-AO3-feed stub does, from AO3ChapterFetcher.rebuildParsedItem's
+		// live-page metadata on its first successful chapter fetch (AO3 is
+		// already the source of truth there -- see AO3ChapterHTMLExtractor's
+		// AO3WorkPageMetadata and rebuildParsedItem's always-overwrite
+		// behavior). Until that first fetch happens, additionalTags is nil on
+		// import, same gap fandoms/ratings/etc. already have on this path and
+		// already accept.
 		// datePublished/dateModified are deliberately left out of this bulk
 		// INSERT...SELECT, the same way contentHTML is: the wire format sends
 		// date_published/date_modified as ISO 8601 TEXT (see the Wire Contract
