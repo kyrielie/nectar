@@ -47,6 +47,7 @@ struct DatabaseKey {
 	static let ratings = "ratings"
 	static let warnings = "warnings"
 	static let categories = "categories"
+	static let additionalTags = "additionalTags"
 	static let series = "series"
 	static let bookKey = "bookKey"
 

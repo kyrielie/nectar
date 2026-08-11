@@ -303,6 +303,86 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		XCTAssertEqual(parsedItem.contentHTML, extraction.contentHTML)
 	}
 
+	// MARK: - rebuildParsedItem metadata overwrite (series-nav stub fix)
+
+	func testRebuildParsedItemFillsMetadataForNilStub() {
+		// The bug under investigation: a series-nav stub
+		// (AO3SeriesNavigator.placeholderStub) has summary/authors/dates/
+		// tag-groups all nil. Confirm rebuildParsedItem now populates
+		// every one of them from the live fetch instead of leaving them
+		// nil forever.
+		let existingArticle = Self.makeArticle(
+			contentHTML: nil,
+			chapterCurrent: nil,
+			summary: nil,
+			authors: nil,
+			datePublished: nil,
+			dateModified: nil,
+			fandoms: nil,
+			additionalTags: nil
+		)
+		guard case .success(let extraction) = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: Self.workPageFixtureWithMetadata(chapterCount: 1)) else {
+			XCTFail("Expected .success extracting the metadata-bearing fixture")
+			return
+		}
+		let parsedItem = AO3ChapterFetcher.rebuildParsedItem(from: existingArticle, workID: "999", extraction: extraction, applyStatsUpdate: true)
+
+		XCTAssertEqual(parsedItem.summary, "<p>Fresh fetched summary text.</p>")
+		XCTAssertEqual(parsedItem.authors?.first?.name, "FreshFetchedAuthor")
+		XCTAssertEqual(parsedItem.fandoms, ["Fresh Fetched Fandom"])
+		XCTAssertEqual(parsedItem.tags, ["Fresh Fetched Tag"])
+		XCTAssertNotNil(parsedItem.datePublished)
+		XCTAssertNotNil(parsedItem.dateModified)
+	}
+
+	func testRebuildParsedItemOverwritesStaleMetadataOnRefetch() {
+		// The other half of Q1's answer: an article that ALREADY has real
+		// metadata (search-results import or Ambrosia sync) must still get
+		// the live page's fresh values on a normal refetch/sweep, not keep
+		// whatever was stored at import time -- the live page is the
+		// source of truth on every fetch, not just the first one.
+		let existingArticle = Self.makeArticle(
+			contentHTML: Self.workPageFixtureWithMetadata(chapterCount: 1),
+			chapterCurrent: 1,
+			summary: "Stale imported summary.",
+			authors: Set([Author(authorID: nil, name: "Stale Imported Author", url: nil, avatarURL: nil, emailAddress: nil)].compactMap { $0 }),
+			fandoms: ["Stale Imported Fandom"]
+		)
+		guard case .success(let extraction) = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: Self.workPageFixtureWithMetadata(chapterCount: 1)) else {
+			XCTFail("Expected .success extracting the metadata-bearing fixture")
+			return
+		}
+		let parsedItem = AO3ChapterFetcher.rebuildParsedItem(from: existingArticle, workID: "999", extraction: extraction, applyStatsUpdate: true)
+
+		XCTAssertEqual(parsedItem.summary, "<p>Fresh fetched summary text.</p>")
+		XCTAssertEqual(parsedItem.authors?.first?.name, "FreshFetchedAuthor")
+		XCTAssertEqual(parsedItem.fandoms, ["Fresh Fetched Fandom"])
+		XCTAssertNotEqual(parsedItem.summary, existingArticle.summary)
+	}
+
+	func testRebuildParsedItemFallsBackToExistingWhenMetadataBlockAbsent() {
+		// When the live page has no dl.work.meta.group at all (gated page,
+		// or a shape not yet sampled -- parseWorkHeader returns nil),
+		// rebuildParsedItem must not blank out an existing article's real
+		// metadata -- fall back to existingArticle's stored value, same
+		// "absence isn't a hard failure" contract the extractor itself
+		// documents.
+		let existingArticle = Self.makeArticle(
+			contentHTML: Self.workPageFixture(chapterCount: 1),
+			chapterCurrent: 1,
+			summary: "Keep this summary.",
+			fandoms: ["Keep This Fandom"]
+		)
+		guard case .success(let extraction) = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: Self.workPageFixture(chapterCount: 1)) else {
+			XCTFail("Expected .success extracting the minimal (no-metadata) fixture")
+			return
+		}
+		let parsedItem = AO3ChapterFetcher.rebuildParsedItem(from: existingArticle, workID: "999", extraction: extraction, applyStatsUpdate: true)
+
+		XCTAssertEqual(parsedItem.summary, "Keep this summary.")
+		XCTAssertEqual(parsedItem.fandoms, ["Keep This Fandom"])
+	}
+
 	// MARK: - Fixtures
 
 	/// A minimal synthetic work page: just enough structure
@@ -326,7 +406,50 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		return "<div id=\"workskin\">\(chapters)</div>"
 	}
 
-	private static func makeArticle(contentHTML: String?, chapterCurrent: Int?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false, lastPrefaceFetchDate: Date? = nil, bookKeyOverride: String? = nil) -> Article {
+	/// Same minimal shape as workPageFixture, plus a real
+	/// dl.work.meta.group/preface so rebuildParsedItem's metadata
+	/// overwrite behavior has something to actually overwrite with/from
+	/// -- author, summary, one tag per group, and both Published/Updated
+	/// dates, all distinct values from makeArticle's own defaults so a
+	/// test can tell "came from this fetch" apart from "existingArticle's
+	/// stored value leaked through."
+	private static func workPageFixtureWithMetadata(chapterCount: Int, published: String = "2026-01-01", updated: String = "2026-02-02") -> String {
+		let metaGroup = """
+		<dl class="work meta group">
+		<dt class="rating tags">Rating:</dt>
+		<dd class="rating tags"><ul class="commas"><li><a class="tag" href="/tags/x">Teen And Up Audiences</a></li></ul></dd>
+		<dt class="fandom tags">Fandom:</dt>
+		<dd class="fandom tags"><ul class="commas"><li><a class="tag" href="/tags/x">Fresh Fetched Fandom</a></li></ul></dd>
+		<dt class="freeform tags">Additional Tags:</dt>
+		<dd class="freeform tags"><ul class="commas"><li><a class="tag" href="/tags/x">Fresh Fetched Tag</a></li></ul></dd>
+		<dt class="stats">Stats:</dt>
+		<dd class="stats"><dl class="stats"><dt class="published">Published:</dt><dd class="published">\(published)</dd><dt class="status">Updated:</dt><dd class="status">\(updated)</dd><dt class="words">Words:</dt><dd class="words">100</dd></dl></dd>
+		</dl>
+		"""
+		let preface = """
+		<div class="preface group">
+		<h2 class="title heading">Fresh Fetched Title</h2>
+		<h3 class="byline heading"><a rel="author" href="/users/FreshFetchedAuthor/pseuds/FreshFetchedAuthor">FreshFetchedAuthor</a></h3>
+		<div class="summary module"><h3 class="heading">Summary:</h3><blockquote class="userstuff"><p>Fresh fetched summary text.</p></blockquote></div>
+		</div>
+		"""
+		let chapters = (1...max(chapterCount, 1)).prefix(chapterCount).map { n in
+			"""
+			<div class="chapter" id="chapter-\(n)">
+			<div class="chapter preface group">
+			<h3 class="title"><a>Chapter \(n)</a></h3>
+			</div>
+			<div class="userstuff module" role="article">
+			<h3 class="landmark heading" id="work">Chapter Text</h3>
+			<p>Body \(n).</p>
+			</div>
+			</div>
+			"""
+		}.joined()
+		return "\(metaGroup)<div id=\"workskin\">\(preface)\(chapters)</div>"
+	}
+
+	private static func makeArticle(contentHTML: String?, chapterCurrent: Int?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false, lastPrefaceFetchDate: Date? = nil, bookKeyOverride: String? = nil, summary: String? = "A test summary.", authors: Set<Author>? = nil, datePublished: Date? = nil, dateModified: Date? = nil, fandoms: [String]? = nil, additionalTags: [String]? = nil) -> Article {
 		// Unique per call -- AO3ChapterFetcher.shared.attemptDates is a
 		// process-lifetime singleton cache keyed by articleID, so reusing a
 		// fixed ID across tests leaks already-noted/already-attempted state
@@ -345,12 +468,14 @@ final class AO3ChapterFetcherTests: XCTestCase {
 			markdown: nil,
 			url: "https://archiveofourown.org/works/999",
 			externalURL: nil,
-			summary: "A test summary.",
+			summary: summary,
 			imageURL: nil,
-			datePublished: nil,
-			dateModified: nil,
-			authors: nil,
+			datePublished: datePublished,
+			dateModified: dateModified,
+			authors: authors,
 			chapterCurrent: chapterCurrent,
+			fandoms: fandoms,
+			additionalTags: additionalTags,
 			lastPrefaceFetchDate: lastPrefaceFetchDate,
 			isAmbrosiaItem: isAmbrosiaItem,
 			bookKey: bookKey,

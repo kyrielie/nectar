@@ -264,6 +264,19 @@ public struct ArticleStorageInfo: Sendable {
 				database.executeStatements("ALTER TABLE articles add column bookKey TEXT;")
 			}
 
+			// additionalTags (freeform "Additional Tags"): parsed by
+			// AO3ChapterHTMLExtractor's AO3WorkPageMetadata alongside the
+			// other tag-group columns (fandoms/relationships/etc, added
+			// earlier as part of the Ambrosia extension group above), but
+			// added separately here since nothing wrote it before now --
+			// see Article.additionalTags's own doc comment. Same additive,
+			// containsColumn-guarded ALTER TABLE pattern, TEXT (JSON-encoded
+			// array) like the other tag-group columns.
+			if !self.articlesTable.containsColumn(DatabaseKey.additionalTags, in: database) {
+				Self.logger.debug("ArticlesDatabase: adding additionalTags column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.additionalTags) TEXT;")
+			}
+
 			// One-time data fix for the ParsedItem.bookKey routing change (series-group
 			// items now route to "ao3-series:<id>" like an anthology-with-a-series-id
 			// does, instead of falling through to the bare uniqueID -- see
@@ -900,7 +913,7 @@ public struct ArticleStorageInfo: Sendable {
 private extension ArticlesDatabase {
 
 	static let tableCreationStatements = """
-	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, series TEXT);
+	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, additionalTags TEXT, series TEXT);
 
 	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOLEAN NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE);
 

@@ -49,8 +49,6 @@ import Foundation
 
 public enum AO3SeriesListingExtractor {
 
-	private static let baseURL = "https://archiveofourown.org"
-
 	/// The AO3-absolute permalink of the first (lowest "Part N") work
 	/// listed on this series page, or nil if no work row was found (an
 	/// empty/deleted series, a registration wall, or a page shape this
@@ -112,58 +110,20 @@ public enum AO3SeriesListingExtractor {
 private extension AO3SeriesListingExtractor {
 
 	/// Identical row shape to `AO3SearchResultsExtractor.isWorkRow`
-	/// (`li.work-<id>`) -- see this file's header comment. Not shared
-	/// code with that type, same reasoning `AO3SearchResultsExtractor`'s
-	/// own doc comments give for not sharing its registration-wall
-	/// check: two small, independently-stable selectors, not worth the
-	/// coupling.
+	/// (`li.work-<id>`) -- shared via `AO3HTMLHelpers.isWorkRow`.
 	static func isWorkRow(_ element: HTMLLiteElement) -> Bool {
-		guard element.tag == "li" else {
-			return false
-		}
-		return classTokens(of: element).contains { token in
-			guard token.hasPrefix("work-") else { return false }
-			let digits = token.dropFirst("work-".count)
-			return !digits.isEmpty && digits.allSatisfy(\.isNumber)
-		}
+		AO3HTMLHelpers.isWorkRow(element)
 	}
 
-	/// The numeric id from a work row's own `work-<id>` class token --
-	/// same token `isWorkRow` above already scans for, just returning the
-	/// digits instead of a Bool. Identical approach to
-	/// `AO3SearchResultsExtractor.workID(fromLI:)`; not reused directly
-	/// (that helper is file-private there), same "two small,
-	/// independently-stable selectors, not worth the coupling" reasoning
-	/// this file's header comment already gives for `absoluteURL`.
 	static func workID(fromLI element: HTMLLiteElement) -> String? {
-		for token in classTokens(of: element) {
-			guard token.hasPrefix("work-") else { continue }
-			let digits = token.dropFirst("work-".count)
-			if !digits.isEmpty && digits.allSatisfy(\.isNumber) {
-				return String(digits)
-			}
-		}
-		return nil
+		AO3HTMLHelpers.workID(fromLI: element)
 	}
 
 	static func classTokens(of element: HTMLLiteElement) -> [String] {
-		(element.attributes["class"] ?? "").split(separator: " ").map(String.init)
+		AO3HTMLHelpers.classTokens(of: element)
 	}
 
-	/// Identical to `AO3SearchResultsExtractor.absoluteURL` -- not
-	/// reused directly to avoid a cross-file dependency for one
-	/// three-line helper; keep both in sync if AO3's link shape ever
-	/// changes.
 	static func absoluteURL(_ href: String?) -> String? {
-		guard let href, !href.isEmpty else {
-			return nil
-		}
-		if href.hasPrefix("http://") || href.hasPrefix("https://") {
-			return href
-		}
-		if href.hasPrefix("/") {
-			return baseURL + href
-		}
-		return baseURL + "/" + href
+		AO3HTMLHelpers.absoluteURL(href)
 	}
 }

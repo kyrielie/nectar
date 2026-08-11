@@ -95,8 +95,6 @@ public enum AO3SearchResultsOutcome: Sendable {
 /// called for; that's the caller's (checkpoint 2's) job.
 public enum AO3SearchResultsExtractor {
 
-	private static let baseURL = "https://archiveofourown.org"
-
 	public static func extract(fromResultsPageHTML html: String, feedURL: String) -> AO3SearchResultsOutcome {
 		let root = parseHTMLLiteTree(html)
 
@@ -126,16 +124,8 @@ public enum AO3SearchResultsExtractor {
 
 private extension AO3SearchResultsExtractor {
 
-	/// Same shape as `AO3ChapterHTMLExtractor`'s registration-wall check:
-	/// `div#signin` containing "This work is only available to registered
-	/// users of the Archive." -- reused here rather than shared code,
-	/// since the two extractors otherwise have nothing else in common and
-	/// a shared helper for one three-line check isn't worth the coupling.
 	static func isRegistrationRequired(_ root: HTMLLiteElement) -> Bool {
-		guard let signinDiv = firstDescendant(of: root, where: { $0.tag == "div" && $0.attributes["id"] == "signin" }) else {
-			return false
-		}
-		return flattenedText(signinDiv).contains("This work is only available to registered users of the Archive.")
+		AO3HTMLHelpers.isRegistrationRequired(root)
 	}
 }
 
@@ -158,33 +148,16 @@ private extension AO3SearchResultsExtractor {
 private extension AO3SearchResultsExtractor {
 
 	/// `li.work-{worknum}` -- confirmed selector (see header comment).
-	/// Matched via a class-token scan rather than a fixed prefix string
-	/// match on the whole class attribute, since the row's real class
-	/// list also carries `work`/`blurb`/`group` tokens alongside
-	/// `work-<id>`, in unconfirmed order.
 	static func isWorkRow(_ element: HTMLLiteElement) -> Bool {
-		guard element.tag == "li" else {
-			return false
-		}
-		return workID(fromLI: element) != nil
+		AO3HTMLHelpers.isWorkRow(element)
 	}
 
 	static func workID(fromLI element: HTMLLiteElement) -> String? {
-		for token in classTokens(of: element) {
-			guard token.hasPrefix("work-") else {
-				continue
-			}
-			let digits = token.dropFirst("work-".count)
-			guard !digits.isEmpty, digits.allSatisfy(\.isNumber) else {
-				continue
-			}
-			return String(digits)
-		}
-		return nil
+		AO3HTMLHelpers.workID(fromLI: element)
 	}
 
 	static func classTokens(of element: HTMLLiteElement) -> [String] {
-		(element.attributes["class"] ?? "").split(separator: " ").map(String.init)
+		AO3HTMLHelpers.classTokens(of: element)
 	}
 }
 
@@ -282,16 +255,7 @@ private extension AO3SearchResultsExtractor {
 	}
 
 	static func absoluteURL(_ href: String?) -> String? {
-		guard let href, !href.isEmpty else {
-			return nil
-		}
-		if href.hasPrefix("http://") || href.hasPrefix("https://") {
-			return href
-		}
-		if href.hasPrefix("/") {
-			return baseURL + href
-		}
-		return baseURL + "/" + href
+		AO3HTMLHelpers.absoluteURL(href)
 	}
 }
 
@@ -518,11 +482,6 @@ private extension AO3SearchResultsExtractor {
 	}
 
 	static func seriesID(fromHref href: String?) -> String? {
-		guard let href, let range = href.range(of: "/series/") else {
-			return nil
-		}
-		let rest = href[range.upperBound...]
-		let digits = rest.prefix { $0.isNumber }
-		return digits.isEmpty ? nil : String(digits)
+		AO3HTMLHelpers.seriesID(fromHref: href)
 	}
 }
