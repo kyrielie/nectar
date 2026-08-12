@@ -85,6 +85,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case hideNotchInFullScreen = 8
 		case pageCounterDisplayMode = 9
 		case disableArticleLinks = 10
+		case showArticleScrollbar = 11
 	}
 
 	private enum HelpRow: Int {
@@ -110,6 +111,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 	@IBOutlet var hideNotchInFullScreenSwitch: UISwitch!
 	@IBOutlet var pageCounterDisplayModeDetailLabel: UILabel!
 	@IBOutlet var disableArticleLinksSwitch: UISwitch!
+	@IBOutlet var showArticleScrollbarSwitch: UISwitch!
 	@IBOutlet var colorPaletteDetailLabel: UILabel!
 	@IBOutlet var accentColorDetailLabel: UILabel!
 	@IBOutlet var openLinksInNetNewsWire: UISwitch!
@@ -184,6 +186,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		hideNotchInFullScreenSwitch.isOn = AppDefaults.shared.hideNotchInFullScreen
 		updatePageCounterDisplayModeLabel()
 		disableArticleLinksSwitch.isOn = AppDefaults.shared.disableArticleLinks
+		showArticleScrollbarSwitch.isOn = AppDefaults.shared.showArticleScrollbar
 
 		colorPaletteDetailLabel.text = String(describing: AppDefaults.userInterfaceColorPalette)
 		applyAccentColorTinting()
@@ -488,6 +491,10 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		AppDefaults.shared.disableArticleLinks = disableArticleLinksSwitch.isOn
 	}
 
+	@IBAction func switchShowArticleScrollbar(_ sender: Any) {
+		AppDefaults.shared.showArticleScrollbar = showArticleScrollbarSwitch.isOn
+	}
+
 	@IBAction func switchBrowserPreference(_ sender: Any) {
 		if openLinksInNetNewsWire.isOn {
 			AppDefaults.shared.useSystemBrowser = false
@@ -542,7 +549,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 					   showLastUpdatedLabelSwitch, showFullscreenArticlesSwitch, backSwipeEnabledSwitch,
 					   pagingSwipeEnabledSwitch, showFeedNameInReaderViewSwitch, showPrevNextArticleButtonsSwitch,
 					   showTableOfContentsAndFindSwitch, hideNotchInFullScreenSwitch, disableArticleLinksSwitch,
-					   openLinksInNetNewsWire] {
+					   showArticleScrollbarSwitch, openLinksInNetNewsWire] {
 			toggle?.onTintColor = liveTint
 		}
 	}
