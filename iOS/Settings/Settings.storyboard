@@ -690,6 +690,40 @@
                                             <outlet property="label" destination="Dis-a3-Lnk" id="Dis-aC-Lnk"/>
                                         </connections>
                                     </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="Scb-a1-Bar" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="1497" width="374" height="51.5"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Scb-a1-Bar" id="Scb-a2-Bar">
+                                            <rect key="frame" x="0.0" y="0.0" width="374" height="51.5"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="Show Article Scrollbar" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Scb-a3-Bar">
+                                                    <rect key="frame" x="20" y="15" width="265" height="21.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Scb-a4-Bar" userLabel="Show Article Scrollbar">
+                                                    <rect key="frame" x="293" y="12" width="63" height="28"/>
+                                                    <color key="onTintColor" name="primaryAccentColor"/>
+                                                    <connections>
+                                                        <action selector="switchShowArticleScrollbar:" destination="a0p-rk-skQ" eventType="valueChanged" id="Scb-a5-Bar"/>
+                                                    </connections>
+                                                </switch>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="Scb-a4-Bar" firstAttribute="leading" secondItem="Scb-a3-Bar" secondAttribute="trailing" constant="8" symbolic="YES" id="Scb-a6-Bar"/>
+                                                <constraint firstItem="Scb-a3-Bar" firstAttribute="top" secondItem="Scb-a2-Bar" secondAttribute="topMargin" id="Scb-a7-Bar"/>
+                                                <constraint firstAttribute="bottomMargin" secondItem="Scb-a3-Bar" secondAttribute="bottom" id="Scb-a8-Bar"/>
+                                                <constraint firstAttribute="trailingMargin" secondItem="Scb-a4-Bar" secondAttribute="trailing" id="Scb-a9-Bar"/>
+                                                <constraint firstItem="Scb-a4-Bar" firstAttribute="centerY" secondItem="Scb-a2-Bar" secondAttribute="centerY" id="Scb-aA-Bar"/>
+                                                <constraint firstItem="Scb-a3-Bar" firstAttribute="leading" secondItem="Scb-a2-Bar" secondAttribute="leadingMargin" id="Scb-aB-Bar"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                        <connections>
+                                            <outlet property="label" destination="Scb-a3-Bar" id="Scb-aC-Bar"/>
+                                        </connections>
+                                    </tableViewCell>
                                 </cells>
                             </tableViewSection>
                             <tableViewSection headerTitle="Appearance" id="TkH-4v-yhk">
@@ -940,6 +974,7 @@
                         <outlet property="hideNotchInFullScreenSwitch" destination="Nct-g4-Ntc" id="Nct-og-Ntc"/>
                         <outlet property="pageCounterDisplayModeDetailLabel" destination="Nct-h4-Pgc" id="Nct-oh-Pgc"/>
                         <outlet property="disableArticleLinksSwitch" destination="Dis-a4-Lnk" id="Dis-oa-Lnk"/>
+                        <outlet property="showArticleScrollbarSwitch" destination="Scb-a4-Bar" id="Scb-oa-Bar"/>
                         <outlet property="timelineSortFieldDetailLabel" destination="Keq-Np-l9O" id="c9W-ot-u6i"/>
                         <outlet property="showFullscreenArticlesSwitch" destination="2Md-2E-7Z4" id="lEN-VP-wEO"/>
                         <outlet property="timelineSortDirectionDetailLabel" destination="SBF-dt-002" id="Zm7-HG-r5h"/>
