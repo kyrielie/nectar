@@ -25,6 +25,15 @@ import Articles
 import RSParser
 import RSWeb
 
+// File-scope, not a member of AO3SeriesNavigator below: a `nonisolated static
+// let` inside a `@MainActor`-isolated type is still treated by the compiler
+// as main-actor-isolated when referenced from a non-isolated context (the
+// `@Sendable` NotificationCenter closure in downloadAndAwait(workID:...)
+// below needs it) -- moving it to file scope, outside the actor-isolated
+// type entirely, is the reliable fix rather than fighting the isolation
+// checker with `nonisolated`/`Self.`/concrete-type-name spelling tricks.
+private let ao3SeriesNavigatorLogger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AO3SeriesNavigator")
+
 public enum AO3SeriesNavigationError: Error, Sendable, Equatable {
 	/// The tapped link carried no usable target -- a `.previous`/`.next`
 	/// tap with no `workurl`, or an unparseable one.
@@ -63,7 +72,6 @@ public enum AO3SeriesNavigationError: Error, Sendable, Equatable {
 @MainActor
 public enum AO3SeriesNavigator {
 
-	nonisolated private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AO3SeriesNavigator")
 	private static var seriesWalkedDates: [String: Date] = [:]
 
 	public enum Direction: Sendable, Hashable {
@@ -179,7 +187,7 @@ public enum AO3SeriesNavigator {
 		account: Account
 	) async -> Result<String, AO3SeriesNavigationError> {
 
-		Self.logger.debug("AO3SeriesNavigator: openSeriesWork ao3SeriesID=\(ao3SeriesID, privacy: .public) direction=\(String(describing: direction), privacy: .public) targetWorkURL=\(targetWorkURL ?? "nil", privacy: .public) targetIndex=\(targetIndex.map(String.init) ?? "nil", privacy: .public) existingArticleID=\(existingArticle.articleID, privacy: .public)")
+		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork ao3SeriesID=\(ao3SeriesID, privacy: .public) direction=\(String(describing: direction), privacy: .public) targetWorkURL=\(targetWorkURL ?? "nil", privacy: .public) targetIndex=\(targetIndex.map(String.init) ?? "nil", privacy: .public) existingArticleID=\(existingArticle.articleID, privacy: .public)")
 
 		let knownTargetWorkID: String?
 		switch direction {
@@ -211,23 +219,23 @@ public enum AO3SeriesNavigator {
 		// target's content.
 		if let knownTargetWorkID, let existing = existingByWorkID[knownTargetWorkID] {
 			if existing.contentHTML != nil {
-				Self.logger.debug("AO3SeriesNavigator: openSeriesWork cache hit with content, workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public)")
+				ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork cache hit with content, workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public)")
 				return .success(existing.articleID)
 			}
 			if isWalkRecent(feedID: existingArticle.feedID, ao3SeriesID: ao3SeriesID) {
-				Self.logger.debug("AO3SeriesNavigator: openSeriesWork cache hit as stub with recent walk, workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public), fetching directly")
+				ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork cache hit as stub with recent walk, workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public), fetching directly")
 				return await downloadAndAwait(workID: knownTargetWorkID, existingArticleID: existing.articleID, feedID: existingArticle.feedID, account: account)
 			}
 
-			Self.logger.debug("AO3SeriesNavigator: openSeriesWork cache hit as stub without recent walk, attempting page-1 backfill, workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public)")
+			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork cache hit as stub without recent walk, attempting page-1 backfill, workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public)")
 			if let page1HTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: 1) {
 				let (page1Works, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: page1HTML)
 				let newPage1Works = page1Works.filter { existingByWorkID[$0.workID] == nil }
 				await stubImport(newPage1Works, feedID: existingArticle.feedID, account: account)
 				markWalked(feedID: existingArticle.feedID, ao3SeriesID: ao3SeriesID)
-				Self.logger.debug("AO3SeriesNavigator: openSeriesWork stub-hit backfill parsed workCount=\(page1Works.count, privacy: .public) newStubs=\(newPage1Works.count, privacy: .public)")
+				ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork stub-hit backfill parsed workCount=\(page1Works.count, privacy: .public) newStubs=\(newPage1Works.count, privacy: .public)")
 			} else {
-				Self.logger.debug("AO3SeriesNavigator: openSeriesWork stub-hit backfill page-1 fetch failed, proceeding to target workID=\(knownTargetWorkID, privacy: .public)")
+				ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork stub-hit backfill page-1 fetch failed, proceeding to target workID=\(knownTargetWorkID, privacy: .public)")
 			}
 			return await downloadAndAwait(workID: knownTargetWorkID, existingArticleID: existing.articleID, feedID: existingArticle.feedID, account: account)
 		}
@@ -254,23 +262,23 @@ public enum AO3SeriesNavigator {
 			// self-healing precedent existingArticlesByWorkID's own dedup
 			// already uses for an in-feed duplicate.
 			if let sourceArticle = crossFeedMatches.first(where: { $0.contentHTML != nil }) {
-				Self.logger.debug("AO3SeriesNavigator: openSeriesWork cross-feed cache hit, workID=\(knownTargetWorkID, privacy: .public) sourceArticleID=\(sourceArticle.articleID, privacy: .public), copying into feedID=\(existingArticle.feedID, privacy: .public)")
+				ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork cross-feed cache hit, workID=\(knownTargetWorkID, privacy: .public) sourceArticleID=\(sourceArticle.articleID, privacy: .public), copying into feedID=\(existingArticle.feedID, privacy: .public)")
 				let copiedItem = copiedParsedItem(from: sourceArticle, feedID: existingArticle.feedID)
 				_ = await account.updateAsync(feedID: existingArticle.feedID, parsedItems: [copiedItem], deleteOlder: false)
 				return .success(Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: knownTargetWorkID))
 			}
 		}
 
-		Self.logger.debug("AO3SeriesNavigator: openSeriesWork no cache hit (same-feed or cross-feed), fetching page 1")
+		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork no cache hit (same-feed or cross-feed), fetching page 1")
 
 		// Step 2: page 1, always.
 		guard let page1HTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: 1) else {
-			Self.logger.debug("AO3SeriesNavigator: openSeriesWork page 1 fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
+			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page 1 fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
 			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
 		}
 		let (page1Works, _, page1TotalPages) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: page1HTML)
 		guard !page1Works.isEmpty else {
-			Self.logger.debug("AO3SeriesNavigator: openSeriesWork page 1 parsed but empty, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
+			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page 1 parsed but empty, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
 			return .failure(.emptySeriesListing)
 		}
 		// The currently-open work (always present on page 1) is filtered
@@ -278,7 +286,7 @@ public enum AO3SeriesNavigator {
 		// competing row under a fresh uniqueID -- this is what actually
 		// kills the duplicate.
 		let newPage1Works = page1Works.filter { existingByWorkID[$0.workID] == nil }
-		Self.logger.debug("AO3SeriesNavigator: openSeriesWork page 1 parsed, workCount=\(page1Works.count, privacy: .public) newStubs=\(newPage1Works.count, privacy: .public)")
+		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page 1 parsed, workCount=\(page1Works.count, privacy: .public) newStubs=\(newPage1Works.count, privacy: .public)")
 		await stubImport(newPage1Works, feedID: existingArticle.feedID, account: account)
 		markWalked(feedID: existingArticle.feedID, ao3SeriesID: ao3SeriesID)
 
@@ -294,7 +302,7 @@ public enum AO3SeriesNavigator {
 		}
 
 		if page1Works.contains(where: { $0.workID == targetWorkID }) {
-			Self.logger.debug("AO3SeriesNavigator: openSeriesWork target found on page 1, workID=\(targetWorkID, privacy: .public)")
+			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork target found on page 1, workID=\(targetWorkID, privacy: .public)")
 			// existingByWorkID is a snapshot taken before stubImport above
 			// ran, so it never has an entry for a work that only just got
 			// stubbed by *this* call -- the normal case, since a
@@ -316,7 +324,7 @@ public enum AO3SeriesNavigator {
 		// Step 3: the single allowed second fetch, only when the target's
 		// position math says it isn't on page 1.
 		guard let targetIndex else {
-			Self.logger.debug("AO3SeriesNavigator: openSeriesWork target not on page 1 and no targetIndex to compute a second page, workID=\(targetWorkID, privacy: .public)")
+			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork target not on page 1 and no targetIndex to compute a second page, workID=\(targetWorkID, privacy: .public)")
 			return .failure(.seriesListingMismatch)
 		}
 		let pageSize = page1Works.count
@@ -325,19 +333,19 @@ public enum AO3SeriesNavigator {
 			// The index math says the target should have been on page 1,
 			// but it wasn't found there -- treat as a mismatch rather
 			// than silently fetching page 1 again.
-			Self.logger.debug("AO3SeriesNavigator: openSeriesWork targetIndex math says page 1 but target wasn't there, workID=\(targetWorkID, privacy: .public) targetIndex=\(targetIndex, privacy: .public)")
+			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork targetIndex math says page 1 but target wasn't there, workID=\(targetWorkID, privacy: .public) targetIndex=\(targetIndex, privacy: .public)")
 			return .failure(.seriesListingMismatch)
 		}
 		guard let page1TotalPages, targetPage <= page1TotalPages else {
-			Self.logger.debug("AO3SeriesNavigator: openSeriesWork computed page \(targetPage, privacy: .public) exceeds known total pages \(page1TotalPages.map(String.init) ?? "nil", privacy: .public), workID=\(targetWorkID, privacy: .public)")
+			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork computed page \(targetPage, privacy: .public) exceeds known total pages \(page1TotalPages.map(String.init) ?? "nil", privacy: .public), workID=\(targetWorkID, privacy: .public)")
 			return .failure(.seriesListingMismatch)
 		}
 
-		Self.logger.debug("AO3SeriesNavigator: openSeriesWork fetching computed page \(targetPage, privacy: .public) for workID=\(targetWorkID, privacy: .public) targetIndex=\(targetIndex, privacy: .public) pageSize=\(pageSize, privacy: .public)")
+		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork fetching computed page \(targetPage, privacy: .public) for workID=\(targetWorkID, privacy: .public) targetIndex=\(targetIndex, privacy: .public) pageSize=\(pageSize, privacy: .public)")
 		try? await Task.sleep(nanoseconds: UInt64(AO3ChapterFetcher.secondsBetweenSweepRequests * 1_000_000_000))
 
 		guard let pageNHTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: targetPage) else {
-			Self.logger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
+			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
 			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
 		}
 		let (pageNWorks, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: pageNHTML)
@@ -346,15 +354,15 @@ public enum AO3SeriesNavigator {
 		// reached via .previous/.next from a different session could
 		// already be present as a stub from an earlier tap.
 		let newPageNWorks = pageNWorks.filter { existingByWorkID[$0.workID] == nil }
-		Self.logger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) parsed, workCount=\(pageNWorks.count, privacy: .public) newStubs=\(newPageNWorks.count, privacy: .public)")
+		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) parsed, workCount=\(pageNWorks.count, privacy: .public) newStubs=\(newPageNWorks.count, privacy: .public)")
 		await stubImport(newPageNWorks, feedID: existingArticle.feedID, account: account)
 
 		guard pageNWorks.contains(where: { $0.workID == targetWorkID }) else {
-			Self.logger.debug("AO3SeriesNavigator: openSeriesWork target not found on computed page \(targetPage, privacy: .public), workID=\(targetWorkID, privacy: .public) -- mismatch")
+			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork target not found on computed page \(targetPage, privacy: .public), workID=\(targetWorkID, privacy: .public) -- mismatch")
 			return .failure(.seriesListingMismatch)
 		}
 
-		Self.logger.debug("AO3SeriesNavigator: openSeriesWork target found on computed page \(targetPage, privacy: .public), workID=\(targetWorkID, privacy: .public)")
+		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork target found on computed page \(targetPage, privacy: .public), workID=\(targetWorkID, privacy: .public)")
 		// Same stale-snapshot fallback as the page-1 branch above --
 		// existingByWorkID predates both stubImport calls (page 1's and
 		// this page's), so a work stubbed by either still needs the
@@ -612,7 +620,7 @@ private extension AO3SeriesNavigator {
 	/// re-querying the database afterward, since `articleID` is known
 	/// up front either way.
 	static func downloadAndAwait(workID: String, existingArticleID: String?, feedID: String, account: Account) async -> Result<String, AO3SeriesNavigationError> {
-		Self.logger.debug("AO3SeriesNavigator: downloadAndAwait starting, workID=\(workID, privacy: .public) existingArticleID=\(existingArticleID ?? "nil", privacy: .public)")
+		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: downloadAndAwait starting, workID=\(workID, privacy: .public) existingArticleID=\(existingArticleID ?? "nil", privacy: .public)")
 		let articleID: String
 		if let existingArticleID {
 			// Reusing an existing row -- refresh it in place, no stub
@@ -665,21 +673,13 @@ private extension AO3SeriesNavigator {
 
 			let completeToken = NotificationCenter.default.addObserver(forName: .ao3ChapterFetchDidComplete, object: nil, queue: .main) { note in
 				guard note.userInfo?[AO3ChapterFetchUserInfoKey.articleID] as? String == articleID else { return }
-				// Concrete type name, not `Self.` -- inside this @Sendable
-				// NotificationCenter closure, referencing the already-`nonisolated`
-				// `logger` via dynamic `Self` still gets flagged by the compiler
-				// as a main-actor-isolated access (a `Self`-vs-concrete-type
-				// isolation-checking quirk, not an actual isolation difference:
-				// `Self` == `AO3SeriesNavigator` unconditionally here, there's no
-				// subtyping in an enum). The concrete name sidesteps it.
-				AO3SeriesNavigator.logger.debug("AO3SeriesNavigator: downloadAndAwait succeeded, workID=\(workID, privacy: .public) articleID=\(articleID, privacy: .public)")
+				ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: downloadAndAwait succeeded, workID=\(workID, privacy: .public) articleID=\(articleID, privacy: .public)")
 				finish(.success(articleID))
 			}
 			let failToken = NotificationCenter.default.addObserver(forName: .ao3ChapterFetchDidFail, object: nil, queue: .main) { note in
 				guard note.userInfo?[AO3ChapterFetchUserInfoKey.articleID] as? String == articleID else { return }
 				let message = note.userInfo?[AO3ChapterFetchUserInfoKey.message] as? String ?? NSLocalizedString("Couldn't load this work", comment: "AO3 series navigation error")
-				// Same Self-vs-concrete-type note as the success handler above.
-				AO3SeriesNavigator.logger.debug("AO3SeriesNavigator: downloadAndAwait failed, workID=\(workID, privacy: .public) articleID=\(articleID, privacy: .public) message=\(message, privacy: .public)")
+				ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: downloadAndAwait failed, workID=\(workID, privacy: .public) articleID=\(articleID, privacy: .public) message=\(message, privacy: .public)")
 				finish(.failure(.fetchFailed(message)))
 			}
 			tokenBox.tokens = [completeToken, failToken]

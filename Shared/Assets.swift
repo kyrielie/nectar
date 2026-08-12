@@ -201,6 +201,31 @@ struct Assets {
 				: AppDefaults.shared.surfaceTint.lightHexSet?.vibrantText
 			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "vibrantTextColor")!
 		}
+		/// Backs the top nav bar's own tinted fill when
+		/// `AppDefaults.shared.useTintedNavigationBar` is on (see
+		/// `SurfacePaletteNavigationBarAware`). Genuinely needs a real fallback --
+		/// there's no sensible "leave it unset" for a background fill once tinting
+		/// is on and the hex fails to parse -- so this follows the
+		/// `barBackground`/`vibrantText`/`fullScreenBackground` pattern above
+		/// exactly, unlike `navigationBarTint` below.
+		static func navigationBarBackground(for traitCollection: UITraitCollection) -> RSColor {
+			let hex = traitCollection.userInterfaceStyle == .dark
+				? AppDefaults.shared.surfaceTint.darkHexSet?.navigationBarBackground
+				: AppDefaults.shared.surfaceTint.lightHexSet?.navigationBarBackground
+			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "navigationBarBackgroundColor")!
+		}
+		/// Deliberately stays `RSColor?`, not a forced fallback: when
+		/// `UIColor(cssHex:)` fails to parse, the caller leaves `tintColor` unset,
+		/// falling through to the normal accent-color-driven system cascade --
+		/// the same "don't override" contract the nil-hexSet reset path uses on
+		/// purpose. A named-asset fallback here would override that cascade with
+		/// a fixed color instead of deferring to accent color.
+		static func navigationBarTint(for traitCollection: UITraitCollection) -> RSColor? {
+			let hex = traitCollection.userInterfaceStyle == .dark
+				? AppDefaults.shared.surfaceTint.darkHexSet?.navigationBarTint
+				: AppDefaults.shared.surfaceTint.lightHexSet?.navigationBarTint
+			return hex.flatMap { RSColor(cssHex: $0) }
+		}
 		static var iconBackground: RSColor { RSColor(named: "iconBackgroundColor")! }
 		static func fullScreenBackground(for traitCollection: UITraitCollection) -> RSColor {
 			let hex = traitCollection.userInterfaceStyle == .dark

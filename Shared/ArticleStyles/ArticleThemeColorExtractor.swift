@@ -25,6 +25,28 @@ import UIKit
 /// system color keywords (`Canvas`, `CanvasText`, etc. -- these fall through to "not
 /// found" like any other unparseable value), or selector specificity beyond
 /// exact-selector matching.
+/// Precedence: explicit override (if set) -> theme's own extracted color ->
+/// ArticleThemeColorExtractor's black/white fallback. Shared by
+/// WebViewController.resolvedArticleColors(isDark:) (real reader, reads the
+/// persisted override) and ArticleThemePreviewWebView.updateUIView() (Settings
+/// preview, reads in-progress unsaved override state) so both agree on the same
+/// precedence instead of the preview re-deriving it and risking drift.
+enum ArticleResolvedColors {
+	static func resolved(theme: ArticleTheme, isDark: Bool, overrideBackgroundColorHex: String?, overrideBackgroundColorDarkHex: String?) -> (background: UIColor, text: UIColor) {
+		let themeColors = ArticleThemeColorExtractor.colors(for: theme)
+		let background: UIColor
+		if isDark, let hex = overrideBackgroundColorDarkHex ?? overrideBackgroundColorHex, let overrideColor = UIColor(cssHex: hex) {
+			background = overrideColor
+		} else if !isDark, let hex = overrideBackgroundColorHex, let overrideColor = UIColor(cssHex: hex) {
+			background = overrideColor
+		} else {
+			background = isDark ? themeColors.backgroundColorDark : themeColors.backgroundColor
+		}
+		let text = isDark ? themeColors.textColorDark : themeColors.textColor
+		return (background, text)
+	}
+}
+
 enum ArticleThemeColorExtractor {
 
 	struct ThemeColors {

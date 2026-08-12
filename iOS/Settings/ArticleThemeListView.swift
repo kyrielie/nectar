@@ -388,7 +388,9 @@ struct ArticleThemeListView: View {
 				css: previewCSS,
 				template: ArticleThemesManager.shared.currentTheme.template,
 				showFeedName: AppDefaults.shared.showFeedNameInReaderView,
-				colorScheme: currentThemeHasDarkModeVariant ? previewColorScheme : .light
+				colorScheme: currentThemeHasDarkModeVariant ? previewColorScheme : .light,
+				overrideBackgroundColorHex: useCustomBackgroundColor ? backgroundColor.hexString : nil,
+				overrideBackgroundColorDarkHex: useCustomBackgroundColor ? backgroundColorDark.hexString : nil
 			)
 			.frame(height: 320)
 			.listRowInsets(EdgeInsets())

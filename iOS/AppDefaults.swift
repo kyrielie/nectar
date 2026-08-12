@@ -513,6 +513,7 @@ final class AppDefaults: Sendable {
 		static let lastImageCacheFlushDate = "lastImageCacheFlushDate"
 		static let firstRunDate = "firstRunDate"
 		static let hasShownAO3Onboarding = "hasShownAO3Onboarding"
+		static let hasMigratedNavigationBarTintingDefault = "hasMigratedNavigationBarTintingDefault"
 		static let timelineGroupByFeed = "timelineGroupByFeed"
 		static let refreshClearsReadArticles = "refreshClearsReadArticles"
 		static let timelineNumberOfLines = "timelineNumberOfLines"
@@ -521,6 +522,7 @@ final class AppDefaults: Sendable {
 		static let badgeColorMode = "badgeColorMode"
 		static let accentColor = "accentColor"
 		static let surfaceTint = "surfaceTint"
+		static let useTintedNavigationBar = "useTintedNavigationBar"
 		static let statsVisible = "statsVisible"
 		static let timelineSortDirection = "timelineSortDirection"
 		static let timelineSortField = "timelineSortField"
@@ -935,6 +937,26 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	/// Whether SurfacePalette drives the top nav bar's own tinted fill
+	/// (navigationBarBackground/navigationBarTint) via
+	/// SurfacePaletteNavigationBarAware, or the bar stays plain system
+	/// appearance -- the bottom toolbar's model -- regardless of the active
+	/// palette. Default false: a fresh install gets the bottom toolbar's
+	/// simpler, always-correct behavior for the top bar too. Existing
+	/// installs on a non-.default palette are migrated to true once at
+	/// launch -- see migrateNavigationBarTintingDefaultIfNeeded() below --
+	/// so this default doesn't silently strip an already-chosen palette's
+	/// most visible chrome on upgrade.
+	var useTintedNavigationBar: Bool {
+		get {
+			return AppDefaults.bool(for: Key.useTintedNavigationBar)
+		}
+		set {
+			AppDefaults.setBool(for: Key.useTintedNavigationBar, newValue)
+			NotificationCenter.default.post(name: .surfaceTintDidChange, object: nil)
+		}
+	}
+
 	/// Personalization plan item 6 ("Stats-visibility toggles"): one shared
 	/// boolean consumed by both `MainTimelineCellData` (list) and
 	/// `AO3PrefaceRenderer`/`ao3SyntheticPrefaceHTML` (reader), since both
@@ -1063,6 +1085,20 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	/// One-shot: preserves the tinted top bar for anyone who already had a
+	/// non-.default SurfacePalette active before useTintedNavigationBar
+	/// existed, so shipping a false default doesn't read as a regression.
+	/// Call once at launch, after registerDefaults(). Writes directly via
+	/// AppDefaults.store rather than the useTintedNavigationBar property
+	/// setter, to avoid posting .surfaceTintDidChange to a view hierarchy
+	/// that doesn't exist yet this early in launch.
+	@MainActor func migrateNavigationBarTintingDefaultIfNeeded() {
+		guard !AppDefaults.bool(for: Key.hasMigratedNavigationBarTintingDefault) else { return }
+		AppDefaults.setBool(for: Key.hasMigratedNavigationBarTintingDefault, true)
+		guard surfaceTint != .default else { return }
+		AppDefaults.setBool(for: Key.useTintedNavigationBar, true)
+	}
+
 	@MainActor static func registerDefaults() {
 		let defaults: [String: Any] = [Key.userInterfaceColorPalette: UserInterfaceColorPalette.automatic.rawValue,
 										Key.timelineGroupByFeed: false,
@@ -1085,6 +1121,7 @@ final class AppDefaults: Sendable {
 									Key.pageCounterDisplayMode: PageCounterDisplayMode.percentage.rawValue,
 									Key.showLastUpdatedLabel: false,
 									Key.showArticleScrollbar: true,
+									Key.useTintedNavigationBar: false,
 									Key.statsVisible: true,
 										// "Promenade" (Themes/Promenade.nnwtheme), not Self.defaultThemeName --
 										// that constant is a sentinel meaning "use the app's built-in fallback

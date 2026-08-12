@@ -21,7 +21,7 @@ struct AO3ImportedLink: Hashable, Sendable {
 /// surrounding text -- see Task 3's own note on why that's explicitly not
 /// attempted. `NSDataDetector` does the URL-shaped-substring scanning;
 /// everything past that is host-allowlist + work-id extraction.
-enum AO3LinkListImporter {
+public enum AO3LinkListImporter {
 
 	/// Sourced directly from AO3's own work-skin proxy-detection script and
 	/// cross-checked against AO3's public Accessing Fanworks FAQ. Exact-match
@@ -76,5 +76,16 @@ enum AO3LinkListImporter {
 			return false
 		}
 		return permittedHosts.contains(host)
+	}
+
+	/// Public wrapper around `isPermittedHost(_:)` -- same allowlist, same
+	/// exact-match-only matching, exposed so other targets (the iOS app's
+	/// `WebViewController`, routing AO3 links to the in-app authenticated
+	/// browser vs. a regular in-app browser) can check against the same
+	/// list instead of maintaining a second, possibly-drifting one. Kept
+	/// as a single function rather than making `permittedHosts` itself
+	/// public, to keep the actual list single-sourced here.
+	public static func isAO3Host(_ url: URL) -> Bool {
+		isPermittedHost(url)
 	}
 }
