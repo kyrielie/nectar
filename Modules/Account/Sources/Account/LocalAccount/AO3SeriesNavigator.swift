@@ -295,7 +295,19 @@ public enum AO3SeriesNavigator {
 
 		if page1Works.contains(where: { $0.workID == targetWorkID }) {
 			Self.logger.debug("AO3SeriesNavigator: openSeriesWork target found on page 1, workID=\(targetWorkID, privacy: .public)")
-			return await downloadAndAwait(workID: targetWorkID, existingArticleID: existingByWorkID[targetWorkID]?.articleID, feedID: existingArticle.feedID, account: account)
+			// existingByWorkID is a snapshot taken before stubImport above
+			// ran, so it never has an entry for a work that only just got
+			// stubbed by *this* call -- the normal case, since a
+			// pre-existing entry would have already returned via Step 1's
+			// cache check. Falling back to the deterministic
+			// calculatedArticleID (same feedID/uniqueID stubImport just
+			// wrote under) means downloadAndAwait treats this as an
+			// existing row instead of taking its own no-existing-row
+			// fallback branch, which would otherwise immediately
+			// overwrite the listing-derived title stubImport just wrote
+			// with its own generic "AO3 Work %@" placeholder.
+			let targetArticleID = existingByWorkID[targetWorkID]?.articleID ?? Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: targetWorkID)
+			return await downloadAndAwait(workID: targetWorkID, existingArticleID: targetArticleID, feedID: existingArticle.feedID, account: account)
 		}
 
 		// .first's target is always page1Works[0], so it can never reach
@@ -343,7 +355,12 @@ public enum AO3SeriesNavigator {
 		}
 
 		Self.logger.debug("AO3SeriesNavigator: openSeriesWork target found on computed page \(targetPage, privacy: .public), workID=\(targetWorkID, privacy: .public)")
-		return await downloadAndAwait(workID: targetWorkID, existingArticleID: existingByWorkID[targetWorkID]?.articleID, feedID: existingArticle.feedID, account: account)
+		// Same stale-snapshot fallback as the page-1 branch above --
+		// existingByWorkID predates both stubImport calls (page 1's and
+		// this page's), so a work stubbed by either still needs the
+		// deterministic-ID fallback here.
+		let targetArticleID = existingByWorkID[targetWorkID]?.articleID ?? Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: targetWorkID)
+		return await downloadAndAwait(workID: targetWorkID, existingArticleID: targetArticleID, feedID: existingArticle.feedID, account: account)
 	}
 }
 

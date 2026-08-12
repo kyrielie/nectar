@@ -15,10 +15,27 @@ import Testing
 
 	@Test func noResultsOnPageWithNoWorkRows() {
 		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: "<html><body><p>No results found.</p></body></html>", feedURL: feedURL)
-		guard case .noResults = outcome else {
+		guard case .noResults(let pageTitle) = outcome else {
 			Issue.record("Expected .noResults, got \(outcome)")
 			return
 		}
+		// No <title> element in this fixture at all -- pageTitle should
+		// come back nil, not crash or return an empty string.
+		#expect(pageTitle == nil)
+	}
+
+	@Test func noResultsPageStillCarriesPageTitle() {
+		// AO3 serves a real, titled page even for a zero-result search
+		// (see LocalAccountDelegate.createFeed's AO3 branch and the
+		// investigation doc's open question on #1 -- a zero-result feed
+		// shouldn't be left "Untitled" either).
+		let html = "<html><head><title>Some Rare Fandom - Works | Archive of Our Own</title></head><body><p>No results found. Try again with fewer options.</p></body></html>"
+		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
+		guard case .noResults(let pageTitle) = outcome else {
+			Issue.record("Expected .noResults, got \(outcome)")
+			return
+		}
+		#expect(pageTitle == "Some Rare Fandom")
 	}
 
 	@Test func registrationRequiredDetected() {
@@ -33,12 +50,40 @@ import Testing
 	@Test func extractsBothRowsInDocumentOrder() throws {
 		let html = htmlFixtureString("ao3-search-results.html")
 		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
-		guard case .success(let items, _) = outcome else {
+		guard case .success(let items, _, let pageTitle) = outcome else {
 			Issue.record("Expected .success, got \(outcome)")
 			return
 		}
 		#expect(items.count == 2)
 		#expect(items.map(\.ao3WorkID) == ["11111111", "22222222"])
+		// This fixture is a synthetic <body>-only fragment with no <title>
+		// at all (see its own header comment) -- pageTitle should come
+		// back nil here, not crash.
+		#expect(pageTitle == nil)
+	}
+
+	@Test func pageTitleSuffixStrippedAndTrimmed() {
+		// Exact suffix AO3 renders on every search/tag-listing page --
+		// confirmed against the real ao3-search-results-tdwp.html fixture
+		// (Account module) used by AO3SeriesNavigatorTests, which has
+		// <title>The Devil Wears Prada (2006) - Works | Archive of Our
+		// Own</title>.
+		let html = "<html><head><title>The Devil Wears Prada (2006) - Works | Archive of Our Own</title></head><body></body></html>"
+		#expect(AO3SearchResultsExtractor.extractPageTitle(fromResultsPageHTML: html) == "The Devil Wears Prada (2006)")
+	}
+
+	@Test func pageTitleWithoutExpectedSuffixPassedThroughAsIs() {
+		// A title that doesn't carry the expected suffix (future AO3
+		// markup change, or an untested page shape) is still passed
+		// through rather than discarded -- see extractPageTitle's own
+		// doc comment.
+		let html = "<html><head><title>Something Unexpected</title></head><body></body></html>"
+		#expect(AO3SearchResultsExtractor.extractPageTitle(fromResultsPageHTML: html) == "Something Unexpected")
+	}
+
+	@Test func emptyPageTitleReturnsNil() {
+		let html = "<html><head><title></title></head><body></body></html>"
+		#expect(AO3SearchResultsExtractor.extractPageTitle(fromResultsPageHTML: html) == nil)
 	}
 
 	// MARK: - Row 1: single author, single series-free work
@@ -136,7 +181,7 @@ import Testing
 	private func extractedItem(workID: String) throws -> ParsedItem {
 		let html = htmlFixtureString("ao3-search-results.html")
 		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
-		guard case .success(let items, _) = outcome else {
+		guard case .success(let items, _, _) = outcome else {
 			Issue.record("Expected .success, got \(outcome)")
 			throw TestError.unexpectedOutcome
 		}

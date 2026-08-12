@@ -400,15 +400,44 @@ private extension LocalAccountDelegate {
 
 			do {
 				switch try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url) {
-				case .success(let parsedItems, _):
+				case .success(let parsedItems, _, let pageTitle):
 					let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(parsedItems), deleteOlder: false)
 					account.sendNotificationAbout(articleChanges)
 					feed.ao3SearchLastFetchedPage = 1
-				case .noResults, .registrationRequired, .rateLimited:
+					// feed.name (not editedName, set above from the user's
+					// typed Name field) -- nameForDisplay's own
+					// editedName -> name -> "Untitled" precedence means a
+					// typed name still wins; this only fills in the
+					// otherwise-permanent "Untitled" fallback for a feed
+					// added with no typed name. AO3 renders a real
+					// <title> on every search/tag-listing page (see
+					// AO3SearchResultsExtractor.extractPageTitle), so
+					// pageTitle is nil only if that page's own markup was
+					// missing or empty, not from any condition this
+					// branch already handles differently.
+					if let pageTitle {
+						feed.name = pageTitle
+					}
+				case .noResults(let pageTitle):
+					// Not thrown -- the feed is still validly added, same
+					// as today's behavior via refresher.refreshFeeds;
+					// zero results is visible via a subsequent manual
+					// "load more" / paginator call, not blocking here.
+					// AO3 still serves a real, titled page for a
+					// zero-result search, so this still isn't left
+					// "Untitled" if a title's available.
+					if let pageTitle {
+						feed.name = pageTitle
+					}
+				case .registrationRequired, .rateLimited:
 					// Not thrown -- the feed is still validly added, same
 					// as today's behavior via refresher.refreshFeeds;
 					// these outcomes are visible via a subsequent manual
 					// "load more" / paginator call, not blocking here.
+					// Neither carries a pageTitle: a registration wall
+					// never reaches AO3SearchResultsExtractor.extract at
+					// all (caught earlier by isRegistrationRequired), and
+					// a 429 has no body to parse a title from.
 					break
 				case .cloudflareChallenge(let challengedURL):
 					AO3ChallengeSessionStore.lastChallengedURL = challengedURL

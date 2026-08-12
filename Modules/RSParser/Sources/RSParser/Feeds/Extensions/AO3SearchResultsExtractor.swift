@@ -77,10 +77,20 @@ public enum AO3SearchResultsOutcome: Sendable {
 	/// `hasNextPage(_:)`'s own doc comment) -- safely resolves to false
 	/// either way: worst case "load more" disables one page early, it
 	/// never loops past the real last page.
-	case success([ParsedItem], hasNextPage: Bool)
+	///
+	/// `pageTitle` is the page's own `<title>`, suffix-stripped and
+	/// trimmed (see `extractPageTitle(fromResultsPageHTML:)`) -- carried
+	/// alongside the items so a create-time caller can name the feed after
+	/// the fandom/tag rather than leaving it "Untitled" (see
+	/// `LocalAccountDelegate.createFeed`'s AO3 branch). `nil` only if the
+	/// page's `<title>` element itself is missing or empty, which
+	/// shouldn't happen on a real AO3 page but isn't asserted against.
+	case success([ParsedItem], hasNextPage: Bool, pageTitle: String?)
 	/// The page parsed as a real AO3 search-results page but listed no
 	/// work rows -- a legitimate zero-result search, not a parse failure.
-	case noResults
+	/// AO3 still serves a real, titled `<title>` on a zero-result page, so
+	/// `pageTitle` is carried here too, same reasoning as `.success`.
+	case noResults(pageTitle: String?)
 	/// AO3's "restricted to registered users" login wall -- same detection
 	/// as `AO3ChapterHTMLExtractor`'s `.registrationRequired`.
 	case registrationRequired
@@ -102,9 +112,11 @@ public enum AO3SearchResultsExtractor {
 			return .registrationRequired
 		}
 
+		let pageTitle = extractPageTitle(fromRoot: root)
+
 		let workLis = descendants(of: root, where: { isWorkRow($0) })
 		guard !workLis.isEmpty else {
-			return .noResults
+			return .noResults(pageTitle: pageTitle)
 		}
 
 		let items = workLis.compactMap { parsedItem(fromWorkLI: $0, feedURL: feedURL) }
@@ -114,9 +126,36 @@ public enum AO3SearchResultsExtractor {
 			// worth reporting -- stays .noResults, same as a genuine
 			// zero-result search, rather than carrying a hasNextPage value
 			// nothing would use.
-			return .noResults
+			return .noResults(pageTitle: pageTitle)
 		}
-		return .success(items, hasNextPage: hasNextPage(root))
+		return .success(items, hasNextPage: hasNextPage(root), pageTitle: pageTitle)
+	}
+
+	/// Parses `<title>Fandom Name - Works | Archive of Our Own</title>`,
+	/// stripping the `" - Works | Archive of Our Own"` suffix AO3 renders
+	/// on every search/tag-listing page (both the `/works?work_search[...]`
+	/// query-search form and the `/tags/<tag>/works` path form), and
+	/// trims whitespace. Returns `nil` if no `<title>` element is found or
+	/// its text is empty after trimming -- deliberately not further
+	/// validated against the suffix actually being present, since a title
+	/// that doesn't carry the expected suffix (a future AO3 markup change,
+	/// or a page shape this wasn't tested against) is still better passed
+	/// through as-is than discarded outright.
+	public static func extractPageTitle(fromResultsPageHTML html: String) -> String? {
+		extractPageTitle(fromRoot: parseHTMLLiteTree(html))
+	}
+
+	private static func extractPageTitle(fromRoot root: HTMLLiteElement) -> String? {
+		guard let titleElement = firstDescendant(of: root, where: { $0.tag == "title" }) else {
+			return nil
+		}
+		var text = flattenedText(titleElement).trimmingCharacters(in: .whitespacesAndNewlines)
+		let suffix = " - Works | Archive of Our Own"
+		if text.hasSuffix(suffix) {
+			text.removeLast(suffix.count)
+		}
+		text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+		return text.isEmpty ? nil : text
 	}
 }
 

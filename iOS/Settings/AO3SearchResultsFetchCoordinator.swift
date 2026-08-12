@@ -26,8 +26,8 @@ import Account
 @MainActor final class AO3SearchResultsFetchCoordinator {
 
 	enum Outcome {
-		case imported(newWorkCount: Int, hasNextPage: Bool)
-		case noResults
+		case imported(newWorkCount: Int, hasNextPage: Bool, pageTitle: String?)
+		case noResults(pageTitle: String?)
 		case registrationRequired
 		case rateLimited
 		/// Headless fetch was Cloudflare-challenged. Caller should show an
@@ -44,10 +44,10 @@ import Account
 	func fetch(url: URL, feedURL: String) async -> Outcome {
 		do {
 			switch try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feedURL) {
-			case .success(let parsedItems, let hasNextPage):
-				return .imported(newWorkCount: parsedItems.count, hasNextPage: hasNextPage)
-			case .noResults:
-				return .noResults
+			case .success(let parsedItems, let hasNextPage, let pageTitle):
+				return .imported(newWorkCount: parsedItems.count, hasNextPage: hasNextPage, pageTitle: pageTitle)
+			case .noResults(let pageTitle):
+				return .noResults(pageTitle: pageTitle)
 			case .registrationRequired:
 				return .registrationRequired
 			case .rateLimited:
@@ -97,10 +97,27 @@ import Account
 
 		let importOutcome = await AO3SearchResultsImporter.importFetchedPage(html: html, feedURL: feedURL, feed: feed, account: account, advancePageTo: advancePageTo)
 		switch importOutcome {
-		case .imported(let newWorkCount, let hasNextPage):
-			return .imported(newWorkCount: newWorkCount, hasNextPage: hasNextPage)
-		case .noResults:
-			return .noResults
+		case .imported(let newWorkCount, let hasNextPage, let pageTitle):
+			// feed.name only, never editedName -- editedName is
+			// exclusively written by an explicit user rename
+			// (Account.renameFeed/LocalAccountDelegate.renameFeed), so
+			// this can never clobber a hand-typed name, whether this
+			// retry is filling in the create-time Cloudflare-challenge
+			// gap (AddFeedViewController, advancePageTo: 1) or a later
+			// "load more" page (MainTimelineModernViewController,
+			// advancePageTo: page N) -- the latter just redundantly
+			// re-sets feed.name to the same fandom/tag title page 1
+			// already gave it, since every page of one search/tag
+			// listing shares the same <title>.
+			if let pageTitle {
+				feed.name = pageTitle
+			}
+			return .imported(newWorkCount: newWorkCount, hasNextPage: hasNextPage, pageTitle: pageTitle)
+		case .noResults(let pageTitle):
+			if let pageTitle {
+				feed.name = pageTitle
+			}
+			return .noResults(pageTitle: pageTitle)
 		case .registrationRequired:
 			return .registrationRequired
 		}

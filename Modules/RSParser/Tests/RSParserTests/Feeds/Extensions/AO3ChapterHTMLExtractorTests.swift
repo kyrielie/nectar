@@ -447,9 +447,11 @@ import Testing
 		// The preface block itself (everything before #workskin) gets its
 		// own <dt>Series:</dt> pair per entry -- two memberships, two
 		// pairs -- not one row with both names comma-joined into a single
-		// <dd> the way every other row still renders.
+		// <dd> the way every other row still renders. class='wide' (fix
+		// #6, series row overflow): each pair now renders on its own
+		// full-width line, same as Fandom/Relationships/etc.
 		let prefaceHTML = String(result.contentHTML[result.contentHTML.startIndex..<workskinRange.lowerBound])
-		let dtCount = prefaceHTML.components(separatedBy: "<dt>Series:</dt>").count - 1
+		let dtCount = prefaceHTML.components(separatedBy: "<dt class='wide'>Series:</dt>").count - 1
 		#expect(dtCount == 2)
 		#expect(prefaceHTML.contains("href='nectar-series:first?ao3id=1001'"))
 		#expect(prefaceHTML.contains("href='nectar-series:next?ao3id=1001&amp;workurl=https://archiveofourown.org/works/222'"))

@@ -61,7 +61,14 @@ import RSParser
 		}
 
 		switch fetchOutcome {
-		case .success(let parsedItems, let hasNextPage):
+		case .success(let parsedItems, let hasNextPage, _):
+			// pageTitle deliberately unused here: renaming an already-
+			// named feed off a later page's <title> (identical fandom/tag
+			// text on every page of the same search/tag listing, so
+			// there's nothing new to learn past page 1) isn't this
+			// function's job -- see LocalAccountDelegate.createFeed's AO3
+			// branch, the only place a page's title is used to name the
+			// feed.
 			let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(parsedItems), deleteOlder: false)
 			account.sendNotificationAbout(articleChanges)
 			if let advancePageTo {
@@ -69,6 +76,11 @@ import RSParser
 			}
 			return .loaded(newWorkCount: parsedItems.count, hasNextPage: hasNextPage)
 		case .noResults:
+			// pageTitle deliberately unused here, same reasoning as
+			// .success above -- matched without a binding since Swift
+			// still permits an unlabeled `case .noResults:` pattern
+			// against a single-payload case, ignoring the associated
+			// value.
 			return .noResults
 		case .registrationRequired:
 			return .registrationRequired
