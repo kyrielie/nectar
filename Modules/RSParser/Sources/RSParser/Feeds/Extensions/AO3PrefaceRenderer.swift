@@ -162,7 +162,14 @@ public enum AO3PrefaceRenderer {
 			let nameHTML = renderedEntry(entry)
 			guard !nameHTML.isEmpty else { continue }
 			let linksHTML = seriesNavigationLinksHTML(ao3ID: entry.ao3ID, index: entry.index, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL)
-			result += "<dt>\(escape(row.label))</dt><dd><span class='ao3SeriesPrefaceEntry'>\(nameHTML)</span> <span class='ao3SeriesPrefaceLinks'>\(linksHTML)</span></dd>"
+			// class='wide', same as every other multi-value tag row (Fandom/
+			// Relationships/Characters/Additional Tags, see the generic branch
+			// above): drops this row to its own full-width line below the
+			// label instead of confining it to the narrow 1fr value column,
+			// where .ao3SeriesPrefaceLinks's white-space: nowrap would
+			// otherwise push the row (and the whole preface) past the
+			// container's width.
+			result += "<dt class='wide'>\(escape(row.label))</dt><dd class='wide'><span class='ao3SeriesPrefaceEntry'>\(nameHTML)</span> <span class='ao3SeriesPrefaceLinks'>\(linksHTML)</span></dd>"
 		}
 		return result
 	}

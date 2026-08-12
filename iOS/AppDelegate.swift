@@ -97,14 +97,14 @@ import Images
 			self.updateBadge()
 		}
 
-		UNUserNotificationCenter.current().requestAuthorization(options: [.badge, .sound, .alert]) { (granted, _) in
-			if granted {
-				DispatchQueue.main.async {
-					UIApplication.shared.registerForRemoteNotifications()
-				}
-			}
-		}
-
+		// Deliberately not requesting notification authorization here. This is
+		// a reading app with no push/remote-notification account backend
+		// (AccountType has exactly one live case, .onMyMac), so there's
+		// nothing for registerForRemoteNotifications() to register with, and
+		// prompting on every launch has no purpose. The correct, lazy request
+		// site is FeedInspectorViewController.newArticleNotificationsEnabledChanged(_:),
+		// which only asks when a person explicitly turns on per-feed "new
+		// article" notifications.
 		UNUserNotificationCenter.current().delegate = self
 		UserNotificationManager.shared.start()
 

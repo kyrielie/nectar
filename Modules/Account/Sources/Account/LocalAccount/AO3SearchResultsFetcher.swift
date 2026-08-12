@@ -32,8 +32,8 @@ import RSWeb
 ///   independently of status code, per the plan's explicit call-out that
 ///   this needs its own detection separate from AO3's own 429 handling.
 public enum AO3SearchResultsFetchOutcome {
-	case success([ParsedItem], hasNextPage: Bool)
-	case noResults
+	case success([ParsedItem], hasNextPage: Bool, pageTitle: String?)
+	case noResults(pageTitle: String?)
 	case registrationRequired
 	case rateLimited
 	case cloudflareChallenge(challengedURL: URL)
@@ -133,10 +133,10 @@ public enum AO3SearchResultsFetcher {
 				}
 
 				switch AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL) {
-				case .success(let items, let hasNextPage):
-					return .success(items, hasNextPage: hasNextPage)
-				case .noResults:
-					return .noResults
+				case .success(let items, let hasNextPage, let pageTitle):
+					return .success(items, hasNextPage: hasNextPage, pageTitle: pageTitle)
+				case .noResults(let pageTitle):
+					return .noResults(pageTitle: pageTitle)
 				case .registrationRequired:
 					return .registrationRequired
 				}

@@ -79,6 +79,20 @@ public struct ArticleStorageInfo: Sendable {
 
 	nonisolated private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticlesDatabase")
 
+	/// Gates the one-time migration block in `init` below, via `PRAGMA
+	/// user_version` on this database's own "main" schema (distinct from
+	/// `AmbrosiaSQLiteImportTable.readWireFormatVersion`'s use of the same
+	/// pragma name against a standalone-opened transfer file, and from
+	/// whatever `user_version` an ATTACH DATABASE'd transfer file carries
+	/// under its own alias schema -- unqualified `PRAGMA user_version`
+	/// always addresses "main", so these don't collide). Bump this and add
+	/// the new migration statements inside the existing `guard existingVersion
+	/// < Self.currentSchemaVersion` block for any future schema change; a
+	/// fresh install starts at user_version 0 and runs every step up to
+	/// currentSchemaVersion in one pass, same as an existing install
+	/// catching up.
+	private static let currentSchemaVersion: Int32 = 1
+
 	public init(databaseFilePath: String, accountID: String, retentionStyle: RetentionStyle) {
 		Self.logger.debug("Articles Database init \(accountID, privacy: .public)")
 
@@ -98,6 +112,22 @@ public struct ArticleStorageInfo: Sendable {
 		// "no such column" warnings on every early read.
 		queue.runInDatabaseSync { database in
 			Self.logger.debug("ArticlesDatabase: creating tables \(accountID, privacy: .public)")
+
+			// The containsColumn-guarded ALTER TABLEs and the one-time
+			// bookKey data-fix below are additive/idempotent, but each
+			// containsColumn check is its own `select * from ... limit 1`
+			// query -- roughly 25 of them, plus the JOIN/UPDATE data-fix --
+			// and this whole block runs synchronously on the main thread
+			// (required, see comment above) on every single launch,
+			// forever, even once a database is fully migrated. Skip
+			// straight past all of it once user_version shows this launch
+			// has nothing left to do; only a version bump (new migration
+			// work added below) makes it run again.
+			let existingVersion = database.userVersion()
+			guard existingVersion < Self.currentSchemaVersion else {
+				return
+			}
+
 			if !self.articlesTable.containsColumn("searchRowID", in: database) {
 				database.executeStatements("ALTER TABLE articles add column searchRowID INTEGER;")
 			}
@@ -326,6 +356,8 @@ public struct ArticleStorageInfo: Sendable {
 
 			database.executeStatements("CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);")
 			database.executeStatements("DROP TABLE if EXISTS tags;DROP INDEX if EXISTS tags_tagName_index;DROP INDEX if EXISTS articles_feedID_index;DROP INDEX if EXISTS statuses_read_index;DROP TABLE if EXISTS attachments;DROP TABLE if EXISTS attachmentsLookup;")
+
+			database.setUserVersion(Self.currentSchemaVersion)
 		}
 
 		DispatchQueue.main.async {

@@ -229,7 +229,18 @@ a.footnote {
 .ao3SeriesPrefaceEntry {
 	margin-right: 0.5em;
 }
-.ao3SeriesPrefaceLinks,
+/* No white-space: nowrap here (unlike .ao3SeriesFooterLinks below): the
+   preface row sits in the narrow 1fr value column of the dl.tags grid
+   (now full-width via dt/dd.wide, but still only as wide as the preface
+   container), and CSS grid tracks don't clip nowrap content by default --
+   a long First / Previous / Next cluster forced onto one line pushed the
+   row, and the preface with it, past the container's width. The footer's
+   own .ao3SeriesFooterLinks doesn't share this failure mode (its
+   .ao3SeriesFooterEntry container already wraps via flex-wrap), so it
+   keeps nowrap. */
+.ao3SeriesPrefaceLinks {
+	font-size: 0.95em;
+}
 .ao3SeriesFooterLinks {
 	white-space: nowrap;
 	font-size: 0.95em;

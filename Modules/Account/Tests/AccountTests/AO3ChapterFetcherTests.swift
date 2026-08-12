@@ -333,6 +333,11 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		XCTAssertEqual(parsedItem.tags, ["Fresh Fetched Tag"])
 		XCTAssertNotNil(parsedItem.datePublished)
 		XCTAssertNotNil(parsedItem.dateModified)
+		// Bug #2/#3 (investigation doc): a series-nav stub's placeholder
+		// "AO3 Work N" title must be replaced by the live page's real
+		// title on this same fetch, not left stuck at the placeholder
+		// until some other update happens to touch it.
+		XCTAssertEqual(parsedItem.title, "Fresh Fetched Title")
 	}
 
 	func testRebuildParsedItemOverwritesStaleMetadataOnRefetch() {
@@ -358,6 +363,13 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		XCTAssertEqual(parsedItem.authors?.first?.name, "FreshFetchedAuthor")
 		XCTAssertEqual(parsedItem.fandoms, ["Fresh Fetched Fandom"])
 		XCTAssertNotEqual(parsedItem.summary, existingArticle.summary)
+		// Per product decision (investigation doc #2): the live page's
+		// title wins on every refetch, same "always overwrite" policy as
+		// every other field here -- including when existingArticle
+		// already had a real (non-placeholder) title, e.g. from an
+		// Ambrosia import. No Ambrosia exception carved out.
+		XCTAssertEqual(parsedItem.title, "Fresh Fetched Title")
+		XCTAssertNotEqual(parsedItem.title, existingArticle.title)
 	}
 
 	func testRebuildParsedItemFallsBackToExistingWhenMetadataBlockAbsent() {

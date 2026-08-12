@@ -279,17 +279,24 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 	}
 
 	func deselectIfNecessary() {
-		Self.logger.debug("MainTimelineModernViewController: deselectIfNecessary")
-
 		guard traitCollection.userInterfaceIdiom == .phone else {
 			return
 		}
 		guard let coordinator, coordinator.isRootSplitCollapsed else {
 			return
 		}
+		// See SceneCoordinator.isNavigatingToTimelineArticle: its
+		// navigateToTimelineAndSelectArticle deliberately pops to this screen
+		// as one step of a "flash to timeline, then push the real target"
+		// sequence (series nav Next/Previous), not a genuine user
+		// back-navigation -- don't clear a selection that flow is actively
+		// (re)establishing, or may have already re-established by the time
+		// this runs.
+		guard !coordinator.isNavigatingToTimelineArticle else {
+			return
+		}
 
 		if coordinator.currentArticle != nil {
-			Self.logger.debug("MainTimelineModernViewController: deselectIfNecessary deselecting")
 			if let indexPath = collectionView?.indexPathsForSelectedItems?.first {
 				collectionView?.deselectItem(at: indexPath, animated: true)
 			}
@@ -1254,7 +1261,7 @@ extension MainTimelineModernViewController {
 				let outcome = await coordinator.presentSolverAndRetry(challengedURL: challengedURL, feedURL: feed.url, feed: feed, account: account, advancePageTo: nextPage, presentingViewController: self)
 				self.isAO3LoadMoreInFlight = false
 				switch outcome {
-				case .imported(_, let hasNextPage):
+				case .imported(_, let hasNextPage, _):
 					self.ao3LoadMoreState = hasNextPage ? .loadMore : .noMoreResults
 				case .noResults:
 					self.ao3LoadMoreState = .noMoreResults

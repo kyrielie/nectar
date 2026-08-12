@@ -546,51 +546,72 @@ extension WebViewController: UIContextMenuInteractionDelegate {
     func contextMenuInteraction(_ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint) -> UIContextMenuConfiguration? {
 
 		return UIContextMenuConfiguration(identifier: nil, previewProvider: contextMenuPreviewProvider) { [weak self] _ in
-			guard let self = self else { return nil }
-
-			var menus = [UIMenu]()
-
-			var navActions = [UIAction]()
-			if let action = self.prevArticleAction() {
-				navActions.append(action)
-			}
-			if let action = self.nextArticleAction() {
-				navActions.append(action)
-			}
-			if !navActions.isEmpty {
-				menus.append(UIMenu(title: "", options: .displayInline, children: navActions))
-			}
-
-			var toggleActions = [UIAction]()
-			if let action = self.toggleReadAction() {
-				toggleActions.append(action)
-			}
-			toggleActions.append(self.toggleStarredAction())
-			toggleActions.append(self.toggleLovedAction())
-			menus.append(UIMenu(title: "", options: .displayInline, children: toggleActions))
-
-			if let action = self.nextUnreadArticleAction() {
-				menus.append(UIMenu(title: "", options: .displayInline, children: [action]))
-			}
-
-			if let action = self.checkForUpdatesAction() {
-				menus.append(UIMenu(title: "", options: .displayInline, children: [action]))
-			}
-
-			// Previous/Next/First Work in Series used to be here as
-			// context-menu actions (Task 10) -- superseded by the inline
-			// "First · Previous · Next" links AO3PrefaceRenderer now
-			// renders directly in the article (inline-series-navigation
-			// plan, Phase 3/4). See handleNectarSeriesLink below.
-
-			menus.append(UIMenu(title: "", options: .displayInline, children: [self.shareAction()]))
-
-			return UIMenu(title: "", children: menus)
+			self?.buildContextMenu()
         }
     }
 
 	func contextMenuInteraction(_ interaction: UIContextMenuInteraction, willPerformPreviewActionForMenuWith configuration: UIContextMenuConfiguration, animator: UIContextMenuInteractionCommitAnimating) {
 		coordinator.showBrowserForCurrentArticle()
+	}
+
+	/// Builds the full press-and-hold context menu, including the
+	/// loved/starred/read toggle row. Also called from those toggle
+	/// actions' own handlers (via `refreshVisibleContextMenu`) to rebuild
+	/// the menu in place after a tap -- extracted out of
+	/// `configurationForMenuAtLocation`'s elementsProvider closure so both
+	/// call sites build the exact same menu.
+	private func buildContextMenu() -> UIMenu {
+		var menus = [UIMenu]()
+
+		var navActions = [UIAction]()
+		if let action = prevArticleAction() {
+			navActions.append(action)
+		}
+		if let action = nextArticleAction() {
+			navActions.append(action)
+		}
+		if !navActions.isEmpty {
+			menus.append(UIMenu(title: "", options: .displayInline, children: navActions))
+		}
+
+		var toggleActions = [UIAction]()
+		if let action = toggleReadAction() {
+			toggleActions.append(action)
+		}
+		toggleActions.append(toggleStarredAction())
+		toggleActions.append(toggleLovedAction())
+		menus.append(UIMenu(title: "", options: .displayInline, children: toggleActions))
+
+		if let action = nextUnreadArticleAction() {
+			menus.append(UIMenu(title: "", options: .displayInline, children: [action]))
+		}
+
+		if let action = checkForUpdatesAction() {
+			menus.append(UIMenu(title: "", options: .displayInline, children: [action]))
+		}
+
+		// Previous/Next/First Work in Series used to be here as
+		// context-menu actions (Task 10) -- superseded by the inline
+		// "First · Previous · Next" links AO3PrefaceRenderer now
+		// renders directly in the article (inline-series-navigation
+		// plan, Phase 3/4). See handleNectarSeriesLink below.
+
+		menus.append(UIMenu(title: "", options: .displayInline, children: [shareAction()]))
+
+		return UIMenu(title: "", children: menus)
+	}
+
+	/// Rebuilds the currently-presented context menu in place after a
+	/// loved/starred/read toggle tap. Those three actions set
+	/// `keepsMenuPresented = true` (iOS 16+) so the tap doesn't dismiss the
+	/// menu, but UIKit doesn't re-invoke `configurationForMenuAtLocation`'s
+	/// elementsProvider closure on its own -- `updateVisibleMenu` is the
+	/// supported way to swap the presented menu's contents in place, so the
+	/// tapped row's icon/title reflect the new state immediately.
+	private func refreshVisibleContextMenu() {
+		contextMenuInteraction.updateVisibleMenu { [weak self] _ in
+			self?.buildContextMenu() ?? UIMenu(title: "")
+		}
 	}
 
 }
@@ -1356,28 +1377,46 @@ private extension WebViewController {
 		guard let article = article, !article.status.read || article.isAvailableToMarkUnread else { return nil }
 
 		let title = article.status.read ? NSLocalizedString("Mark as Unread", comment: "Command") : NSLocalizedString("Mark as Read", comment: "Command")
-		let readImage = article.status.read ? Assets.Images.circleClosed : Assets.Images.circleOpen
-		return UIAction(title: title, image: readImage) { [weak self] _ in
+		// circleOpen/circleClosed match ArticleViewController's own toolbar
+		// convention (updateUI(): read -> circleOpen, unread -> circleClosed) --
+		// this was previously inverted here.
+		let readImage = article.status.read ? Assets.Images.circleOpen : Assets.Images.circleClosed
+		let action = UIAction(title: title, image: readImage) { [weak self] _ in
 			self?.coordinator.toggleReadForCurrentArticle()
+			self?.refreshVisibleContextMenu()
 		}
+		action.keepsMenuPresented = true
+		return action
 	}
 
 	func toggleStarredAction() -> UIAction {
 		let starred = article?.status.starred ?? false
 		let title = starred ? NSLocalizedString("Remove from Read Later", comment: "Command") : NSLocalizedString("Add to Read Later", comment: "Command")
-		let starredImage = starred ? Assets.Images.starOpen : Assets.Images.starClosed
-		return UIAction(title: title, image: starredImage) { [weak self] _ in
+		// starClosed/starOpen match ArticleViewController's own toolbar
+		// convention (updateUI(): starred -> starClosed, not starred ->
+		// starOpen) -- this was previously inverted here.
+		let starredImage = starred ? Assets.Images.starClosed : Assets.Images.starOpen
+		let action = UIAction(title: title, image: starredImage) { [weak self] _ in
 			self?.coordinator.toggleStarredForCurrentArticle()
+			self?.refreshVisibleContextMenu()
 		}
+		action.keepsMenuPresented = true
+		return action
 	}
 
 	func toggleLovedAction() -> UIAction {
 		let loved = article?.status.loved ?? false
 		let title = loved ? NSLocalizedString("Remove from Loved", comment: "Command") : NSLocalizedString("Add to Loved", comment: "Command")
-		let lovedImage = loved ? Assets.Images.heartOpen : Assets.Images.heartClosed
-		return UIAction(title: title, image: lovedImage) { [weak self] _ in
+		// heartClosed/heartOpen match ArticleViewController's own toolbar
+		// convention (updateUI(): loved -> heartClosed, not loved ->
+		// heartOpen) -- this was previously inverted here.
+		let lovedImage = loved ? Assets.Images.heartClosed : Assets.Images.heartOpen
+		let action = UIAction(title: title, image: lovedImage) { [weak self] _ in
 			self?.coordinator.toggleLovedForCurrentArticle()
+			self?.refreshVisibleContextMenu()
 		}
+		action.keepsMenuPresented = true
+		return action
 	}
 
 	func nextUnreadArticleAction() -> UIAction? {

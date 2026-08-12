@@ -151,21 +151,35 @@ import Articles
 		XCTAssertNotNil(fetched?.contentHTML)
 	}
 
-	func testNextBackfillsPageOneWhenExistingStubHasNoRecentWalk() async {
-		// Real repro shape: the target work already exists under this feed
-		// as a stub from an unrelated source, so the old Step 1 code
-		// fetched only that target and never walked the series listing.
-		// With no recent walk recorded, page 1 should be fetched and the
-		// rest of the series page should be stubbed before the target is
-		// fetched in place.
-		_ = await account.updateAsync(feedID: existingArticle.feedID, parsedItems: [
-			ParsedItem(syncServiceID: nil, uniqueID: "https://archiveofourown.org/works/779835", feedURL: existingArticle.feedID,
-			           url: "https://archiveofourown.org/works/779835", externalURL: nil,
-			           title: "The Parting Glass", language: nil, contentHTML: nil,
-			           contentText: nil, markdown: nil, summary: nil, imageURL: nil, bannerImageURL: nil,
-			           datePublished: nil, dateModified: nil, authors: nil, tags: nil, attachments: nil,
-			           ao3WorkID: "779835")
-		], deleteOlder: false)
+	func testNextBackfillsPageOneWhenExistingStubHasNoRecentWalk() async throws {
+		// Real repro shape, built from the actual captured data (the
+		// original bug report): work 779835 ("The Parting Glass", the
+		// true next work in series 43794) already exists under this feed
+		// as a stub -- not from any prior series-nav walk, but because it
+		// coincidentally also appears as one of ~20 rows on an unrelated
+		// AO3 tag search-results page ("The Devil Wears Prada (2006)")
+		// the person subscribed to first. Seeded the way a real search
+		// import would, via AO3SearchResultsImporter -- not
+		// AO3SeriesNavigator.stubImport -- so this exercises the actual
+		// foreign-stub shape (uniqueID is the work's permalink, not the
+		// bare work id `stubImport` would have used) rather than a
+		// synthetic stand-in for it. The old Step 1 code trusted any
+		// same-feed stub unconditionally and fetched only the target,
+		// never walking the series listing. With no recent walk recorded,
+		// page 1 should be fetched and the rest of the series page should
+		// be stubbed before the target is fetched in place.
+		let searchFeed = account.existingFeed(withFeedID: existingArticle.feedID)!
+		let searchResultsHTML = try String(contentsOf: Bundle.module.resourceURL!.appendingPathComponent("ao3-search-results-tdwp.html"), encoding: .utf8)
+		let importOutcome = await AO3SearchResultsImporter.importFetchedPage(html: searchResultsHTML, feedURL: searchFeed.url, feed: searchFeed, account: account, advancePageTo: 1)
+		guard case .imported(let newWorkCount, _, _) = importOutcome else {
+			XCTFail("expected the tdwp fixture to import successfully, got \(importOutcome)")
+			return
+		}
+		XCTAssertGreaterThan(newWorkCount, 0)
+
+		let seededArticles = await account.fetchArticlesAsync(.feed(searchFeed))
+		let seededStub = try XCTUnwrap(seededArticles.first { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) == "779835" })
+		XCTAssertNil(seededStub.contentHTML)
 
 		TestingURLProtocol.setResponse("archiveofourown.org/series/43794", file: "ao3-series-nav-43794-page1.html")
 		TestingURLProtocol.setResponse("archiveofourown.org/works/779835", file: "ao3-work-single-chapter.html")
@@ -176,14 +190,13 @@ import Articles
 			existingArticle: existingArticle, account: account
 		)
 
-		let existingStubArticleID = Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "https://archiveofourown.org/works/779835")
-		XCTAssertEqual(result, .success(existingStubArticleID))
+		XCTAssertEqual(result, .success(seededStub.articleID))
 		XCTAssertTrue(TestingURLProtocol.requestedURLs.contains { $0.absoluteString == "https://archiveofourown.org/series/43794" })
 
-		let articles = await account.fetchArticlesAsync(.feed(account.existingFeed(withFeedID: existingArticle.feedID)!))
+		let articles = await account.fetchArticlesAsync(.feed(searchFeed))
 		let workIDs = Set(articles.compactMap { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) })
-		XCTTrue(workIDs.isSuperset(of: ["779826", "779835", "779840", "1836235", "2085420"]))
-		XCTEqual(articles.filter { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) == "779835" }.count, 1)
+		XCTAssertTrue(workIDs.isSuperset(of: ["779826", "779835", "779840", "1836235", "2085420"]))
+		XCTAssertEqual(articles.filter { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) == "779835" }.count, 1)
 	}
 
 	func testNextStubHitWithMissingBackfillStillFetchesKnownTarget() async {

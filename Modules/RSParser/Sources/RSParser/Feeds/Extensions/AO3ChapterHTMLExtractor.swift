@@ -79,6 +79,19 @@ public struct AO3ChapterExtractionResult: Sendable {
 	/// nil, for first/last-in-that-series) previous/next pair.
 	public let seriesEntries: [AO3SeriesSpanResult]
 
+	/// The work's own title, from its `<h2 class="title heading">` --
+	/// captured at the same site `stripPhantomTitleHeadingClass` already
+	/// locates that heading (see that function's own doc comment), before
+	/// it's mutated. Separate from `AO3WorkPageMetadata` (which lives in
+	/// the Work Header's `dl.stats` block) since the title itself lives in
+	/// a different part of the page -- the work-level `div.preface.group`,
+	/// not the metadata table. Used by `AO3ChapterFetcher.rebuildParsedItem`
+	/// to correct a series-nav stub's placeholder "AO3 Work N" title (or
+	/// refresh any existingArticle's title on an ordinary refetch) with
+	/// the real one, matching every other field's live-wins policy in that
+	/// function.
+	public let title: String?
+
 	/// Structured metadata read off the live work page, surfaced here (not
 	/// just rendered into `contentHTML`'s preface) so
 	/// `AO3ChapterFetcher.rebuildParsedItem` can populate `Article`'s own
@@ -92,7 +105,7 @@ public struct AO3ChapterExtractionResult: Sendable {
 	/// source of truth.
 	public let metadata: AO3WorkPageMetadata
 
-	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, wordCount: Int? = nil, csrfToken: String? = nil, seriesEntries: [AO3SeriesSpanResult] = [], metadata: AO3WorkPageMetadata = AO3WorkPageMetadata()) {
+	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, wordCount: Int? = nil, csrfToken: String? = nil, seriesEntries: [AO3SeriesSpanResult] = [], title: String? = nil, metadata: AO3WorkPageMetadata = AO3WorkPageMetadata()) {
 		self.contentHTML = contentHTML
 		self.chapters = chapters
 		self.commentCount = commentCount
@@ -102,6 +115,7 @@ public struct AO3ChapterExtractionResult: Sendable {
 		self.wordCount = wordCount
 		self.csrfToken = csrfToken
 		self.seriesEntries = seriesEntries
+		self.title = title
 		self.metadata = metadata
 	}
 }
@@ -185,7 +199,10 @@ public enum AO3ChapterExtractionOutcome: Sendable {
 	/// Neither `#workskin`+`.chapter` divs, nor either known gate page, was
 	/// found. Catch-all for a genuinely deleted/moved work, or any other
 	/// shape not yet sampled (a collection- or series-level gate, for
-	/// instance).
+	/// instance) -- since an unsampled restricted-page shape can't be told
+	/// apart from a real 404 here, `AO3ChapterFetcher.download` retries
+	/// authenticated on this outcome the same as `.registrationRequired`,
+	/// rather than treating it as definitively unretryable.
 	case notFound
 }
 
@@ -224,12 +241,12 @@ public enum AO3ChapterHTMLExtractor {
 				$0.tag == "div" && $0.attributes["class"] == "chapter" && ($0.attributes["id"]?.hasPrefix("chapter-") ?? false)
 			})
 			if !chapterDivs.isEmpty {
-				stripPhantomTitleHeadingClass(inWorkSkin: workSkinDiv)
+				let title = stripPhantomTitleHeadingClass(inWorkSkin: workSkinDiv)
 
 				let chapters = chapterDivs.compactMap(extractedChapter)
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries, metadata: assembled.metadata))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries, title: title, metadata: assembled.metadata))
 			}
 
 			// Single-chapter works carry no per-chapter <div class="chapter">
@@ -266,13 +283,13 @@ public enum AO3ChapterHTMLExtractor {
 				// un-collapsible rows for a single-chapter work instead of
 				// one. Do not reintroduce that without also accounting
 				// for template.html's own heading.
-				stripPhantomTitleHeadingClass(inWorkSkin: workSkinDiv)
+				let singleChapterTitle = stripPhantomTitleHeadingClass(inWorkSkin: workSkinDiv)
 				stripLandmarkHeading(from: chaptersDiv)
 
 				let chapters = [AO3ExtractedChapter(id: "chapter-1", title: "Chapter 1")]
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries, metadata: assembled.metadata))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries, title: singleChapterTitle, metadata: assembled.metadata))
 			}
 		}
 
@@ -409,16 +426,27 @@ private extension AO3ChapterHTMLExtractor {
 	/// Confirmed harmless against the one workskin sample in hand, whose
 	/// rules target paragraph-level classes, not `.title`/`.heading` --
 	/// flagged as unverified against a workskin that does style that chrome.
-	static func stripPhantomTitleHeadingClass(inWorkSkin workSkinDiv: HTMLLiteElement) {
+	///
+	/// Returns the heading's flattened text (trimmed, nil if empty) before
+	/// the `class` attribute rewrite -- the rewrite only touches the class
+	/// attribute, never the text node, so this is exactly the title AO3
+	/// itself rendered. Callers use this to populate
+	/// `AO3ChapterExtractionResult.title`, since nothing else on the page
+	/// captures the work's own title into a structured field (see that
+	/// property's own doc comment).
+	@discardableResult
+	static func stripPhantomTitleHeadingClass(inWorkSkin workSkinDiv: HTMLLiteElement) -> String? {
 		guard let workPreface = firstDescendant(of: workSkinDiv, where: {
 			$0.tag == "div" && $0.attributes["class"] == "preface group"
 		}) else {
-			return
+			return nil
 		}
 		guard let titleHeading = firstDescendant(of: workPreface, where: { $0.tag == "h2" }) else {
-			return
+			return nil
 		}
+		let title = flattenedText(titleHeading).trimmingCharacters(in: .whitespacesAndNewlines)
 		titleHeading.attributes["class"] = "title"
+		return title.isEmpty ? nil : title
 	}
 }
 
@@ -738,10 +766,15 @@ private extension AO3ChapterHTMLExtractor {
 			} else if classTokens.contains("collections") {
 				// Plain comma-separated <a> links directly in the dd, no
 				// <ul><li> wrapper -- confirmed a different shape from the
-				// tag rows above (ao3-work-single-chapter.html).
+				// tag rows above (ao3-work-single-chapter.html). isWide:
+				// true for the same reason as fandom/relationship/
+				// character/freeform above -- a work in several
+				// collections otherwise wraps inside the narrow
+				// label-adjacent column instead of using the preface's
+				// full width.
 				let entries = tagEntries(fromLinksIn: dd)
 				guard !entries.isEmpty else { continue }
-				rows.append(AO3PrefaceRow(label: label, values: entries))
+				rows.append(AO3PrefaceRow(label: label, values: entries, isWide: true))
 			} else if classTokens.contains("stats") {
 				guard let statsDL = firstDescendant(of: dd, where: { $0.tag == "dl" && $0.attributes["class"] == "stats" }) else {
 					continue

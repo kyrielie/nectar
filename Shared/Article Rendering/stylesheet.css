@@ -67,6 +67,8 @@ a:hover {
 	--article-date-color: rgba(0, 0, 0, 0.5);
 	--table-cell-border-color: lightgray;
 	--sup-link-color: rgba(255, 255, 255, 0.9);
+	--article-text-color: black;
+	--article-background-color: white;
 }
 
 @media(prefers-color-scheme: dark) {
@@ -79,7 +81,29 @@ a:hover {
 		--article-date-color: rgba(255, 255, 255, 0.5);
 		--table-cell-border-color: dimgray;
 		--code-background-color: #333;
+		--article-text-color: white;
+		--article-background-color: black;
 	}
+}
+
+/* Explicit color/background-color on body, rather than relying solely on
+   `color-scheme: light dark` (further down, in the iOS/macOS-specific
+   blocks) to paint the UA-default Canvas/CanvasText colors. Toggling the
+   app's own Appearance setting (or the system flipping under it) while an
+   article is open produced "white text on white background" / "light text
+   on light background" with the default theme specifically, fixed only by
+   reopening the article -- WKWebView doesn't reliably repaint the implicit
+   `color-scheme` canvas colors on a live prefers-color-scheme change,
+   unlike an explicit `color`/`background-color` declaration inside a real
+   `@media (prefers-color-scheme: dark)` block, which is what every custom
+   theme already declares (and which is why this bug never showed up with a
+   custom theme selected). Values match ArticleThemeColorExtractor's own
+   black-on-white/white-on-black fallback for a theme with no explicit body
+   colors, so this is a no-op for what gets displayed -- only for whether it
+   live-updates. */
+body {
+	color: var(--article-text-color);
+	background-color: var(--article-background-color);
 }
 
 body .headerTable {
