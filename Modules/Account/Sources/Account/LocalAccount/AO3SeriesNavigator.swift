@@ -63,7 +63,7 @@ public enum AO3SeriesNavigationError: Error, Sendable, Equatable {
 @MainActor
 public enum AO3SeriesNavigator {
 
-	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AO3SeriesNavigator")
+	nonisolated private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AO3SeriesNavigator")
 	private static var seriesWalkedDates: [String: Date] = [:]
 
 	public enum Direction: Sendable, Hashable {

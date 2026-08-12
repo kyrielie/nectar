@@ -1381,11 +1381,10 @@ private extension WebViewController {
 		// convention (updateUI(): read -> circleOpen, unread -> circleClosed) --
 		// this was previously inverted here.
 		let readImage = article.status.read ? Assets.Images.circleOpen : Assets.Images.circleClosed
-		let action = UIAction(title: title, image: readImage) { [weak self] _ in
+		let action = UIAction(title: title, image: readImage, attributes: .keepsMenuPresented) { [weak self] _ in
 			self?.coordinator.toggleReadForCurrentArticle()
 			self?.refreshVisibleContextMenu()
 		}
-		action.keepsMenuPresented = true
 		return action
 	}
 
@@ -1396,11 +1395,10 @@ private extension WebViewController {
 		// convention (updateUI(): starred -> starClosed, not starred ->
 		// starOpen) -- this was previously inverted here.
 		let starredImage = starred ? Assets.Images.starClosed : Assets.Images.starOpen
-		let action = UIAction(title: title, image: starredImage) { [weak self] _ in
+		let action = UIAction(title: title, image: starredImage, attributes: .keepsMenuPresented) { [weak self] _ in
 			self?.coordinator.toggleStarredForCurrentArticle()
 			self?.refreshVisibleContextMenu()
 		}
-		action.keepsMenuPresented = true
 		return action
 	}
 
@@ -1411,11 +1409,10 @@ private extension WebViewController {
 		// convention (updateUI(): loved -> heartClosed, not loved ->
 		// heartOpen) -- this was previously inverted here.
 		let lovedImage = loved ? Assets.Images.heartClosed : Assets.Images.heartOpen
-		let action = UIAction(title: title, image: lovedImage) { [weak self] _ in
+		let action = UIAction(title: title, image: lovedImage, attributes: .keepsMenuPresented) { [weak self] _ in
 			self?.coordinator.toggleLovedForCurrentArticle()
 			self?.refreshVisibleContextMenu()
 		}
-		action.keepsMenuPresented = true
 		return action
 	}
 
