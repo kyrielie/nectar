@@ -534,6 +534,7 @@ final class AppDefaults: Sendable {
 		static let hideNotchInFullScreen = "hideNotchInFullScreen"
 		static let pageCounterDisplayMode = "pageCounterDisplayMode"
 		static let disableArticleLinks = "disableArticleLinks"
+		static let showArticleScrollbar = "showArticleScrollbar"
 		static let showLastUpdatedLabel = "showLastUpdatedLabel"
 		static let articleThemeOverrides = "articleThemeOverrides"
 		static let lastRefresh = "lastRefresh"
@@ -792,6 +793,18 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			AppDefaults.setBool(for: Key.disableArticleLinks, newValue)
+		}
+	}
+
+	/// Whether the article web view shows its native vertical scroll
+	/// indicator. On by default (via registerDefaults), preserving the
+	/// system's normal scrollbar behavior.
+	var showArticleScrollbar: Bool {
+		get {
+			return AppDefaults.bool(for: Key.showArticleScrollbar)
+		}
+		set {
+			AppDefaults.setBool(for: Key.showArticleScrollbar, newValue)
 		}
 	}
 
@@ -1069,6 +1082,7 @@ final class AppDefaults: Sendable {
 										Key.showFeedNameInReaderView: false,
 									Key.showPrevNextArticleButtons: true,
 									Key.showLastUpdatedLabel: true,
+									Key.showArticleScrollbar: true,
 									Key.statsVisible: true,
 										Key.currentThemeName: Self.defaultThemeName,
 									   Key.splitViewPreferredDisplayMode: UISplitViewController.DisplayMode.oneBesideSecondary.rawValue]

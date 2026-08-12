@@ -981,6 +981,12 @@ private extension WebViewController {
 				// on every dequeue rather than once at creation.
 				webView.scrollView.scrollsToTop = false
 
+				// Same pooling concern as scrollsToTop above: reasserted on every
+				// dequeue rather than once at creation, and read fresh (not cached)
+				// so a Settings change takes effect on the next article open without
+				// needing a relaunch.
+				webView.scrollView.showsVerticalScrollIndicator = AppDefaults.shared.showArticleScrollbar
+
 				self.view.setNeedsLayout()
 				self.view.layoutIfNeeded()
 
