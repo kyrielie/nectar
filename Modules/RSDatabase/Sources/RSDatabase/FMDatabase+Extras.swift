@@ -110,29 +110,4 @@ public extension FMDatabase {
 		let count = resultSet.intWithCountResult()
 		return count
 	}
-
-	/// Reads this connection's "main" schema `PRAGMA user_version`, defaulting
-	/// to 0 (SQLite's own default for a database that's never set it) if the
-	/// query fails outright. Unqualified `PRAGMA user_version` always
-	/// addresses "main", not any ATTACH DATABASE'd schema -- see
-	/// `ArticlesDatabase.currentSchemaVersion`'s doc comment for why that
-	/// matters here.
-	func userVersion() -> Int32 {
-		guard let resultSet = executeQuery("PRAGMA user_version;", withArgumentsIn: nil) else {
-			return 0
-		}
-		defer { resultSet.close() }
-		guard resultSet.next() else {
-			return 0
-		}
-		return resultSet.int(forColumnIndex: 0)
-	}
-
-	/// Sets this connection's "main" schema `PRAGMA user_version`. `PRAGMA`
-	/// doesn't accept bound parameters, and the value here is always an
-	/// internal constant (never user/network input), so string interpolation
-	/// is safe.
-	func setUserVersion(_ version: Int32) {
-		executeStatements("PRAGMA user_version = \(version);")
-	}
 }
