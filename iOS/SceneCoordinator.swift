@@ -1838,16 +1838,14 @@ struct SidebarItemNode: Hashable, Sendable {
 		fetchAndMergeArticlesQueue.cancelPendingCalls()
 
 		isNavigatingToTimelineArticle = true
-		// Defensive fallback: fetchAndMergeArticlesAsync's completion silently
-		// never runs at all if timelineFeed is nil, or if the fetch it kicks
-		// off gets canceled/superseded by an unrelated notification-driven
-		// fetch racing in on fetchAndMergeArticlesQueue (see the long comment
-		// above this function). Neither should leave this flag stuck true
-		// forever -- that would permanently disable deselectIfNecessary's
-		// normal "user backed out of the article" cleanup. clearNavigationFlag()
-		// is written to run at most once (whichever of the two paths gets
-		// there first), so this is belt-and-suspenders against the completion
-		// path, not a substitute for it.
+		// Defensive fallback: deselectIfNecessary() only clears this flag if
+		// it actually runs, which requires the pop-to-timeline transition's
+		// viewDidAppear to fire at all (collapsed split view, i.e. iPhone).
+		// On a non-collapsed layout, or if that transition never completes
+		// for some other reason, nothing would otherwise ever reset this --
+		// permanently disabling deselectIfNecessary's normal "user backed
+		// out of the article" cleanup for the rest of the session. This
+		// timer is that backstop, not the primary reset path.
 		var didClearNavigationFlag = false
 		let clearNavigationFlag = { [weak self] in
 			guard !didClearNavigationFlag else { return }
@@ -1862,7 +1860,19 @@ struct SidebarItemNode: Hashable, Sendable {
 		mainTimelineViewController?.focus()
 		fetchAndMergeArticlesAsync(animated: true) { [weak self] in
 			self?.selectArticleInCurrentFeed(articleID)
-			clearNavigationFlag()
+			// Deliberately NOT calling clearNavigationFlag() here. This
+			// completion typically runs *before* the pop-to-timeline
+			// transition's own delayed viewDidAppear/deselectIfNecessary()
+			// call lands (see the long comment above isNavigatingToTimelineArticle) --
+			// clearing the flag right after reselecting the real article
+			// closes the guard window before deselectIfNecessary() gets a
+			// chance to consult it, so it sees the flag already false and
+			// wrongly deselects the article this flow just selected.
+			// deselectIfNecessary() itself clears the flag once it actually
+			// consults it (self-consuming, one-shot), so this completion
+			// leaves that to happen there. The asyncAfter fallback above
+			// remains as a backstop for the case where deselectIfNecessary()
+			// never fires at all (e.g. non-collapsed split view).
 		}
 	}
 

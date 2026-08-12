@@ -85,13 +85,18 @@ public struct ArticleStorageInfo: Sendable {
 	/// pragma name against a standalone-opened transfer file, and from
 	/// whatever `user_version` an ATTACH DATABASE'd transfer file carries
 	/// under its own alias schema -- unqualified `PRAGMA user_version`
-	/// always addresses "main", so these don't collide). Bump this and add
-	/// the new migration statements inside the existing `guard existingVersion
-	/// < Self.currentSchemaVersion` block for any future schema change; a
-	/// fresh install starts at user_version 0 and runs every step up to
-	/// currentSchemaVersion in one pass, same as an existing install
-	/// catching up.
-	private static let currentSchemaVersion: Int32 = 1
+	/// always addresses "main", so these don't collide). Read/written via
+	/// FMDB's own `FMDatabaseAdditions` category (`userVersion`/
+	/// `setUserVersion:`, bridged as `UInt32`) rather than a hand-rolled
+	/// `PRAGMA user_version` query -- that category already exists on
+	/// `FMDatabase`, and a second Swift `userVersion()` here previously
+	/// collided with it ("ambiguous use of 'userVersion()'"). Bump this and
+	/// add the new migration statements inside the existing `guard
+	/// existingVersion < Self.currentSchemaVersion` block for any future
+	/// schema change; a fresh install starts at user_version 0 and runs
+	/// every step up to currentSchemaVersion in one pass, same as an
+	/// existing install catching up.
+	nonisolated private static let currentSchemaVersion: UInt32 = 1
 
 	public init(databaseFilePath: String, accountID: String, retentionStyle: RetentionStyle) {
 		Self.logger.debug("Articles Database init \(accountID, privacy: .public)")
