@@ -263,31 +263,20 @@ in) need to go through a different, in-app presentation instead:
 
 ---
 
-## 4. Preface flash while content is being fetched -- IMPLEMENTED
+## 4. Preface flash while content is being fetched -- REVERTED
 
-Built as proposed below, with the idempotency question resolved: all of
-`processPage()`'s steps (`main.js`) address elements fresh by selector on
-each call and don't stash cross-call state at the document/window level, so
-re-running it against a freshly-swapped `#bodyContainer` is safe -- the old
-subtree is simply gone, replaced by unprocessed nodes, the same shape as a
-first pass on initial load.
-
-Changes:
-- `main_ios.js`: new `updateArticleBody(html)` (`withEncodedArg`-wrapped,
-  matching `updateNectarSeriesLink`'s pattern) replaces `#bodyContainer`'s
-  `innerHTML` and re-runs `processPage()`.
-- `WebViewController.swift`: new `updateArticleBodyInPlace(reason:)` re-runs
-  `ArticleRenderer.articleHTML` for the current article and evaluates
-  `updateArticleBody(...)` instead of calling `loadWebView(reason:)`. Wired
-  into both `ao3ChapterFetchDidComplete(_:)` and `ao3ChapterFetchDidFail(_:)`,
-  matching the plan's note that the failure path should get the same
-  treatment. Falls back to a full `loadWebView(reason:)` reload if there's no
-  existing web view to update in place, or if encoding the body HTML fails.
-
-Not yet confirmed on-device: scroll position preservation across the swap
-(the plan's item 4 point 4) and whether `#bodyContainer`'s height change
-shifts the current scroll offset. Worth checking against a real
-AO3-chapter-fetch-completes case before considering this fully done.
+Implemented as an in-place DOM swap (`main_ios.js`'s `updateArticleBody`,
+`WebViewController.updateArticleBodyInPlace(reason:)`, wired into both
+`ao3ChapterFetchDidComplete(_:)`/`ao3ChapterFetchDidFail(_:)` in place of
+`loadWebView(reason:)`), then reverted after causing more problems than it
+fixed. Both handlers are back to calling `loadWebView(reason:)` directly,
+matching pre-implementation behavior — the flash this item targeted is back,
+but so is the previously-working full-reload path. Root cause of the
+in-place approach's problems not diagnosed here; if revisited, start from
+the original proposal below and the "not yet confirmed on-device" caveats
+it already flagged (scroll-position preservation across the swap,
+`#bodyContainer` height-change effects) as the likely places something went
+wrong, rather than re-deriving the mechanism from scratch.
 
 ### Original proposal (for reference)
 
