@@ -833,7 +833,6 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-
 	/// layered on top of whichever theme (default or imported) is active. See
 	/// ArticleThemeOverrides.cssOverrideBlock and ArticleRenderer.styleString().
 	var articleThemeOverrides: ArticleThemeOverrides {

@@ -41,7 +41,7 @@ struct BookKeySQLParityTests {
 		Row(label: "anthology with neither series id nor name", isAnthology: true, ao3SeriesID: nil, seriesName: nil, ao3WorkID: "work-4", id: "row-4"),
 		Row(label: "non-anthology with work id", isAnthology: false, ao3SeriesID: nil, seriesName: nil, ao3WorkID: "work-5", id: "row-5"),
 		Row(label: "non-anthology with empty-string work id falls through to id", isAnthology: false, ao3SeriesID: nil, seriesName: nil, ao3WorkID: "", id: "row-6"),
-		Row(label: "bare fallback", isAnthology: false, ao3SeriesID: nil, seriesName: nil, ao3WorkID: nil, id: "row-7"),
+		Row(label: "bare fallback", isAnthology: false, ao3SeriesID: nil, seriesName: nil, ao3WorkID: nil, id: "row-7")
 	]
 
 	@Test("Swift and SQL bookKey computation agree for every case in the matrix", arguments: matrix)

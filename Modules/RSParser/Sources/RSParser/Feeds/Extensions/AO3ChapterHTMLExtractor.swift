@@ -484,7 +484,18 @@ private extension AO3ChapterHTMLExtractor {
 	/// Comments/Kudos/Bookmarks/Hits into structured data this function can
 	/// hand back to callers instead of leaving them buried in an opaque
 	/// HTML blob.
-	static func serializedContentHTML(root: HTMLLiteElement, workSkinParent: HTMLLiteElement, workSkinIndex: Int, workSkinDiv: HTMLLiteElement) -> (contentHTML: String, commentCount: Int?, kudosCount: Int?, bookmarkCount: Int?, hitCount: Int?, wordCount: Int?, seriesEntries: [AO3SeriesSpanResult], metadata: AO3WorkPageMetadata) {
+	struct SerializedContent {
+		let contentHTML: String
+		let commentCount: Int?
+		let kudosCount: Int?
+		let bookmarkCount: Int?
+		let hitCount: Int?
+		let wordCount: Int?
+		let seriesEntries: [AO3SeriesSpanResult]
+		let metadata: AO3WorkPageMetadata
+	}
+
+	static func serializedContentHTML(root: HTMLLiteElement, workSkinParent: HTMLLiteElement, workSkinIndex: Int, workSkinDiv: HTMLLiteElement) -> SerializedContent {
 		var contentHTML = ""
 		var counts = (commentCount: Int?.none, kudosCount: Int?.none, bookmarkCount: Int?.none, hitCount: Int?.none, wordCount: Int?.none)
 		var seriesEntries: [AO3SeriesSpanResult] = []
@@ -536,7 +547,16 @@ private extension AO3ChapterHTMLExtractor {
 		if let footerHTML = AO3PrefaceRenderer.seriesFooterHTML(entries: seriesEntries.map(\.entry)) {
 			contentHTML += footerHTML
 		}
-		return (contentHTML, counts.commentCount, counts.kudosCount, counts.bookmarkCount, counts.hitCount, counts.wordCount, seriesEntries, metadata)
+		return SerializedContent(
+			contentHTML: contentHTML,
+			commentCount: counts.commentCount,
+			kudosCount: counts.kudosCount,
+			bookmarkCount: counts.bookmarkCount,
+			hitCount: counts.hitCount,
+			wordCount: counts.wordCount,
+			seriesEntries: seriesEntries,
+			metadata: metadata
+		)
 	}
 }
 

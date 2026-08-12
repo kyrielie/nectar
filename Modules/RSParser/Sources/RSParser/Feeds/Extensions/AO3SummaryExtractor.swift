@@ -239,14 +239,16 @@ private extension AO3SummaryExtractor {
 
 private extension AO3SummaryExtractor {
 
-	static func parseTagList(_ ul: HTMLLiteElement,
-	                          fandoms: inout [String]?,
-	                          ratings: inout [String]?,
-	                          warnings: inout [String]?,
-	                          categories: inout [String]?,
-	                          characters: inout [String]?,
-	                          relationships: inout [String]?,
-	                          additionalTags: inout [String]?) {
+	static func parseTagList(
+		_ ul: HTMLLiteElement,
+		fandoms: inout [String]?,
+		ratings: inout [String]?,
+		warnings: inout [String]?,
+		categories: inout [String]?,
+		characters: inout [String]?,
+		relationships: inout [String]?,
+		additionalTags: inout [String]?
+	) {
 		for child in ul.children {
 			guard case .element(let li) = child, li.tag == "li" else {
 				continue

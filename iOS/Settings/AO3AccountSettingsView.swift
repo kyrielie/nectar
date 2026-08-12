@@ -128,9 +128,9 @@ struct AO3AccountSettingsView: View {
 			// if AO3SessionStore changed for some other reason while the
 			// sheet was up.
 			isSignedIn = AO3SessionStore.isSignedIn
-		}) {
+		}, content: {
 			AO3LoginRepresentable()
-		}
+		})
 		.confirmationDialog(
 			NSLocalizedString("Sign out of AO3?", comment: "AO3 sign out confirmation title"),
 			isPresented: $isShowingSignOutConfirmation,
@@ -146,9 +146,9 @@ struct AO3AccountSettingsView: View {
 			// Covers both outcomes (cleared, or cancelled), same reasoning
 			// as the login sheet's onDismiss above.
 			challengeCapturedAt = AO3ChallengeSessionStore.capturedAt
-		}) {
+		}, content: {
 			AO3ChallengeSolverRepresentable()
-		}
+		})
 	}
 
 	/// "Not yet verified" / "Verified just now" / "Verified 12 minutes ago"

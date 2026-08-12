@@ -54,7 +54,7 @@ import Testing
 		// survives into the rendered preface row, not just the footer
 		// (which AO3ChapterHTMLExtractorTests already covers).
 		let entries = [
-			AO3TagEntry(text: "Has Next", ao3ID: "1001", previousWorkURL: nil, nextWorkURL: "https://archiveofourown.org/works/222", index: 2),
+			AO3TagEntry(text: "Has Next", ao3ID: "1001", previousWorkURL: nil, nextWorkURL: "https://archiveofourown.org/works/222", index: 2)
 		]
 		let row = AO3PrefaceRow(label: "Series:", values: entries, isSeriesNavigation: true)
 		let html = AO3PrefaceRenderer.html(id: "ao3Preface", data: AO3PrefaceData(rows: [row], statsRows: []))

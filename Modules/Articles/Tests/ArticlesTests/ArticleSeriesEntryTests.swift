@@ -36,9 +36,9 @@ import Testing
 	/// nil for an `Optional` property -- confirmed here rather than
 	/// assumed.
 	@Test func decodesPreExistingThreeKeyPayloadWithNilNavigationFields() throws {
-		let legacyJSON = """
+		let legacyJSON = Data("""
 		{"name":"Some Series","index":3,"ao3ID":"12345"}
-		""".data(using: .utf8)!
+		""".utf8)
 
 		let decoded = try JSONDecoder().decode(ArticleSeriesEntry.self, from: legacyJSON)
 
@@ -53,9 +53,9 @@ import Testing
 	/// ever being nil-able in practice -- confirms a legacy payload with
 	/// `ao3ID` explicitly null still decodes, unaffected by this change.
 	@Test func decodesPreExistingPayloadWithNullAo3ID() throws {
-		let legacyJSON = """
+		let legacyJSON = Data("""
 		{"name":"Calibre-only Series","index":1,"ao3ID":null}
-		""".data(using: .utf8)!
+		""".utf8)
 
 		let decoded = try JSONDecoder().decode(ArticleSeriesEntry.self, from: legacyJSON)
 

@@ -24,7 +24,6 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 	// SurfacePaletteNavigationBarAware's doc comment).
 	var wantsTransparentScrollEdgeAppearance: Bool { true }
 
-
 	// MARK: Private Variables
 	private var numberOfTextLines = 0
 	private var iconSize = IconSize.medium
@@ -550,7 +549,7 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 					guard let self, let articles = self.articles else { return }
 					self.coordinator?.markAllAsReadLater(articles)
 				}
-			),
+			)
 		]
 
 		let alert = UIAlertController(
@@ -611,7 +610,7 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 			(currentArticles.canMarkAllAsNotReadLater(),
 			 NSLocalizedString("Remove All from Read Later", comment: "Command"),
 			 NSLocalizedString("Remove All from Read Later?", comment: "Confirm title"),
-			 { [weak self] articles in self?.coordinator?.markAllAsNotReadLater(articles) }),
+			 { [weak self] articles in self?.coordinator?.markAllAsNotReadLater(articles) })
 		]
 
 		let inverseActions: [UIAction] = candidates.compactMap { candidate in
@@ -1337,7 +1336,7 @@ private final class AO3LoadMoreFooterView: UICollectionReusableView {
 				view.centerXAnchor.constraint(equalTo: centerXAnchor),
 				view.centerYAnchor.constraint(equalTo: centerYAnchor),
 				view.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: 8),
-				view.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -8),
+				view.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -8)
 			])
 		}
 

@@ -125,7 +125,7 @@ final class TableOfContentsViewController: UICollectionViewController {
 	// MARK: Data source
 
 	private func configureDataSource() {
-		let chapterCellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { cell, indexPath, item in
+		let chapterCellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { cell, _, item in
 			var content = cell.defaultContentConfiguration()
 			content.text = item.entry.text
 			cell.contentConfiguration = content
@@ -133,7 +133,7 @@ final class TableOfContentsViewController: UICollectionViewController {
 		}
 
 		let emptyBookIndices = tocIndicesWithNoChapters
-		let bookCellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { cell, indexPath, item in
+		let bookCellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { cell, _, item in
 			var content = cell.defaultContentConfiguration()
 			content.text = item.entry.text
 			content.textProperties.font = .preferredFont(forTextStyle: .headline)

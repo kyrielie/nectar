@@ -74,7 +74,7 @@ import Testing
 		AO3IgnoreList.ignoreAuthor(url: ignoredURL)
 		let item = Self.makeItem(ao3WorkID: "12345", authorURLs: [
 			"https://archiveofourown.org/users/fine/pseuds/fine",
-			ignoredURL,
+			ignoredURL
 		])
 		#expect(AO3IgnoreList.shouldExclude(item))
 	}
