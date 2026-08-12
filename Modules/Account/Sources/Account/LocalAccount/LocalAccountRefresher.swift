@@ -345,11 +345,16 @@ import os
 
 			do {
 				switch try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url) {
-				case .success(let parsedItems, let hasNextPage):
+				case .success(let parsedItems, let hasNextPage, _):
 					// hasNextPage isn't consumed here -- a routine/add-time
 					// fetch always writes page 1 (below) regardless; only
 					// AO3SearchResultsPaginator's "load more" UI needs the
 					// signal, and it calls AO3SearchResultsFetcher directly.
+					// pageTitle also unused: this is a routine background
+					// refresh of an already-named feed, not the
+					// LocalAccountDelegate.createFeed add-time path -- a
+					// refresh must never overwrite a name the person may
+					// have hand-edited since the feed was created.
 					_ = hasNextPage
 					let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(parsedItems), deleteOlder: false)
 					account.sendNotificationAbout(articleChanges)

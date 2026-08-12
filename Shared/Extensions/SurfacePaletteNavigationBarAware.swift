@@ -74,11 +74,19 @@ extension SurfacePaletteNavigationBarAware {
 		let isDark = traitCollection.userInterfaceStyle == .dark
 		let palette = AppDefaults.shared.surfaceTint
 		let hexSet = isDark ? palette.darkHexSet : palette.lightHexSet
+
 		guard let hexSet else {
 			navigationItem.standardAppearance = nil
 			navigationItem.compactAppearance = nil
 			navigationItem.scrollEdgeAppearance = nil
 			navigationController?.navigationBar.tintColor = nil
+			// Symmetric with the tintColor assignment below: a previous non-.default
+			// palette may have left an explicit tintColor sitting on these items,
+			// which -- unlike the bar's own .tintColor -- doesn't get reset just by
+			// clearing the appearance/bar tint above. Reset to nil so they fall back
+			// to the normal cascade/dynamic system color again.
+			navigationItem.leftBarButtonItem?.tintColor = nil
+			navigationItem.rightBarButtonItems?.forEach { $0.tintColor = nil }
 			applyPaletteTintToCustomTitleViews(nil)
 			return
 		}
@@ -96,6 +104,16 @@ extension SurfacePaletteNavigationBarAware {
 		}
 		navigationItem.standardAppearance = appearance
 		navigationItem.compactAppearance = appearance
+		// Set each bar button item's own tintColor explicitly rather than relying
+		// solely on the bar-level cascade above: a UIBarButtonItem that's already
+		// on screen doesn't reliably repaint just because navigationBar.tintColor
+		// was reassigned after the fact (as opposed to at layout time) -- this
+		// produced dark-on-dark/light-on-light toolbar icons after toggling
+		// appearance (system or in-app) while the screen was already visible. The
+		// buttons stayed hit-testable (frames/targets unchanged) but kept showing
+		// whatever color they'd last actually rendered.
+		navigationItem.leftBarButtonItem?.tintColor = tintColor
+		navigationItem.rightBarButtonItems?.forEach { $0.tintColor = tintColor }
 		applyPaletteTintToCustomTitleViews(tintColor)
 
 		guard wantsTransparentScrollEdgeAppearance else {

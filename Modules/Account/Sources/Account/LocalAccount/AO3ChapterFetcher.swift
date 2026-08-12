@@ -482,14 +482,42 @@ nonisolated extension AO3ChapterFetcher {
 					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Adult content gate encountered despite view_adult=true (unexpected)")
 					return
 				case .notFound:
-					// Genuinely ambiguous remainder -- deleted/moved work,
-					// or a gate shape not yet sampled. Existing
-					// contentHTML (nil, on first fetch) is left alone;
-					// ArticleRenderer's contentHTML ?? contentText ??
-					// summary chain already falls back to Workstream 1's
-					// blurb.
-					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "No chapter content found (gated or removed work)")
-					return
+					// Genuinely ambiguous shape -- could be a real
+					// deleted/moved work, or a restricted-page shape (a
+					// collection- or series-level gate, for instance) this
+					// extractor doesn't yet recognize as
+					// .registrationRequired -- see
+					// AO3ChapterExtractionOutcome.notFound's own doc
+					// comment. Retried authenticated the same way
+					// .registrationRequired is above, so a signed-in
+					// reader who actually has access still gets the
+					// cookie'd fetch instead of this silently never
+					// retrying. A truly deleted/moved work still comes
+					// back .notFound on the retry too -- one extra
+					// request when signed in, folded back into the same
+					// "gated or removed" message via .notSignedIn below --
+					// and retryAuthenticated only ever clears the stored
+					// session on .signedOut, never on .notFound, so this
+					// doesn't risk logging a valid session out over an
+					// unrelated 404.
+					switch await retryAuthenticated(url: url) {
+					case .success(let result):
+						extraction = result
+					case .signedOut:
+						AO3SessionStore.clearSession()
+						fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Signed out of AO3 -- sign in again in Settings to read this work")
+						return
+					case .notSignedIn:
+						// Existing contentHTML (nil, on first fetch) is left
+						// alone; ArticleRenderer's contentHTML ?? contentText
+						// ?? summary chain already falls back to Workstream
+						// 1's blurb.
+						fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "No chapter content found (gated or removed work)")
+						return
+					case .otherFailure(let retryMessage):
+						fail(articleID: articleID, kind: kind, activityLog: activityLog, message: retryMessage)
+						return
+					}
 				}
 
 				guard let account = AccountManager.shared.existingAccount(accountID: accountID) else {
@@ -580,9 +608,13 @@ nonisolated extension AO3ChapterFetcher {
 	}
 
 	/// Retries `url` once with the stored AO3 session's Cookie header
-	/// attached, on `.registrationRequired` only -- `.adultContentGate` and
-	/// `.notFound` aren't login problems and a login retry wouldn't fix
-	/// either (per the plan).
+	/// attached, on `.registrationRequired` and `.notFound` -- `.notFound`
+	/// is AO3ChapterHTMLExtractor's catch-all for a restricted-page shape
+	/// it doesn't recognize as `.registrationRequired` specifically (see
+	/// `AO3ChapterExtractionOutcome.notFound`'s doc comment), so it gets
+	/// the same authenticated retry. `.adultContentGate` is excluded: it's
+	/// not a login problem and a login retry wouldn't fix it (per the
+	/// plan).
 	///
 	/// Deliberately bypasses `Downloader.shared` rather than adding a
 	/// Cookie header to a request routed through it: `Downloader`'s cache
@@ -767,7 +799,7 @@ nonisolated extension AO3ChapterFetcher {
 			feedURL: existingArticle.feedID,
 			url: existingArticle.rawLink,
 			externalURL: existingArticle.rawExternalLink,
-			title: existingArticle.title,
+			title: extraction.title ?? existingArticle.title,
 			language: nil,
 			contentHTML: extraction.contentHTML,
 			contentText: existingArticle.contentText,

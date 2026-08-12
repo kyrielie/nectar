@@ -20,8 +20,8 @@ import RSParser
 @MainActor public enum AO3SearchResultsImporter {
 
 	public enum ImportOutcome: Sendable {
-		case imported(newWorkCount: Int, hasNextPage: Bool)
-		case noResults
+		case imported(newWorkCount: Int, hasNextPage: Bool, pageTitle: String?)
+		case noResults(pageTitle: String?)
 		case registrationRequired
 	}
 
@@ -38,15 +38,15 @@ import RSParser
 	/// every work that only shows up on a different page.
 	public static func importFetchedPage(html: String, feedURL: String, feed: Feed, account: Account, advancePageTo: Int?) async -> ImportOutcome {
 		switch AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL) {
-		case .success(let items, let hasNextPage):
+		case .success(let items, let hasNextPage, let pageTitle):
 			let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(items), deleteOlder: false)
 			account.sendNotificationAbout(articleChanges)
 			if let advancePageTo {
 				feed.ao3SearchLastFetchedPage = advancePageTo
 			}
-			return .imported(newWorkCount: items.count, hasNextPage: hasNextPage)
-		case .noResults:
-			return .noResults
+			return .imported(newWorkCount: items.count, hasNextPage: hasNextPage, pageTitle: pageTitle)
+		case .noResults(let pageTitle):
+			return .noResults(pageTitle: pageTitle)
 		case .registrationRequired:
 			return .registrationRequired
 		}

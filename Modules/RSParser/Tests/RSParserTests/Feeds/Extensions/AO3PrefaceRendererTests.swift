@@ -34,7 +34,12 @@ import Testing
 		let data = AO3PrefaceData(rows: [row], statsRows: [])
 		let html = AO3PrefaceRenderer.html(id: "ao3Preface", data: data)
 
-		let dtCount = (html ?? "").components(separatedBy: "<dt>Series:</dt>").count - 1
+		// class='wide' (fix #6, series row overflow): the Series row now
+		// renders on its own full-width line, same as Fandom/Relationships/
+		// Characters/Additional Tags, instead of being confined to the
+		// narrow value column where the nowrap nav-links cluster could
+		// overflow the container.
+		let dtCount = (html ?? "").components(separatedBy: "<dt class='wide'>Series:</dt>").count - 1
 		#expect(dtCount == 2)
 		#expect(html?.contains("Series One") == true)
 		#expect(html?.contains("Series Two") == true)

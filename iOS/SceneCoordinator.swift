@@ -74,6 +74,23 @@ struct SidebarItemNode: Hashable, Sendable {
 	private var fetchSerialNumber = 0
 	private let fetchRequestQueue = FetchRequestQueue()
 
+	// Set for the duration of navigateToTimelineAndSelectArticle's flow (see
+	// that function): its opening selectArticle(nil) deliberately pops to the
+	// timeline as one step of a "flash to timeline, then push the real
+	// target" sequence, not a genuine user back-navigation. That pop triggers
+	// MainTimelineModernViewController.viewDidAppear, but its completion is
+	// delayed by the split-view transition -- long enough that this whole
+	// function has often already fetched and re-selected the real target
+	// article by the time viewDidAppear's own deselectIfNecessary() call
+	// fires. deselectIfNecessary() has no other way to distinguish that from
+	// "the user tapped back," so it was clearing the correctly-selected
+	// article right out from under a just-completed series-nav Next/Previous
+	// tap. Consulted (not just set) in
+	// MainTimelineModernViewController.deselectIfNecessary() so the guard
+	// holds regardless of which of the two racing transitions'
+	// viewDidAppear/deselect call actually lands second.
+	var isNavigatingToTimelineArticle = false
+
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "SceneCoordinator")
 
 	// Which Containers are expanded
@@ -1751,9 +1768,11 @@ struct SidebarItemNode: Hashable, Sendable {
 	}
 
 	func selectArticleInCurrentFeed(_ articleID: String) {
-		if let article = self.articles.first(where: { $0.articleID == articleID }) {
-			self.selectArticle(article)
+		guard let article = articles.first(where: { $0.articleID == articleID }) else {
+			Self.logger.debug("SceneCoordinator: selectArticleInCurrentFeed did not find articleID=\(articleID, privacy: .public) in self.articles (count=\(self.articles.count))")
+			return
 		}
+		selectArticle(article)
 	}
 
 	/// Inline-series-navigation plan, Phase 4d: sends the user back to the
@@ -1816,12 +1835,34 @@ struct SidebarItemNode: Hashable, Sendable {
 	/// `WebViewController`'s scroll-position queue already uses for an
 	/// analogous "about to do my own synchronous flush" situation.
 	func navigateToTimelineAndSelectArticle(_ articleID: String) {
-		Self.logger.debug("SceneCoordinator: navigateToTimelineAndSelectArticle articleID=\(articleID, privacy: .public)")
 		fetchAndMergeArticlesQueue.cancelPendingCalls()
+
+		isNavigatingToTimelineArticle = true
+		// Defensive fallback: fetchAndMergeArticlesAsync's completion silently
+		// never runs at all if timelineFeed is nil, or if the fetch it kicks
+		// off gets canceled/superseded by an unrelated notification-driven
+		// fetch racing in on fetchAndMergeArticlesQueue (see the long comment
+		// above this function). Neither should leave this flag stuck true
+		// forever -- that would permanently disable deselectIfNecessary's
+		// normal "user backed out of the article" cleanup. clearNavigationFlag()
+		// is written to run at most once (whichever of the two paths gets
+		// there first), so this is belt-and-suspenders against the completion
+		// path, not a substitute for it.
+		var didClearNavigationFlag = false
+		let clearNavigationFlag = { [weak self] in
+			guard !didClearNavigationFlag else { return }
+			didClearNavigationFlag = true
+			self?.isNavigatingToTimelineArticle = false
+		}
+		DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+			clearNavigationFlag()
+		}
+
 		selectArticle(nil)
 		mainTimelineViewController?.focus()
 		fetchAndMergeArticlesAsync(animated: true) { [weak self] in
 			self?.selectArticleInCurrentFeed(articleID)
+			clearNavigationFlag()
 		}
 	}
 
@@ -2476,6 +2517,9 @@ private extension SceneCoordinator {
 
 	func fetchAndMergeArticlesAsync(animated: Bool = true, completion: (() -> Void)? = nil) {
 
+		// completion is never called if timelineFeed is nil -- callers that need
+		// a guaranteed callback (e.g. navigateToTimelineAndSelectArticle) must
+		// not rely on this alone; see its own defensive fallback.
 		guard let timelineFeed = timelineFeed else {
 			return
 		}
@@ -2503,6 +2547,12 @@ private extension SceneCoordinator {
 	}
 
 	func cancelPendingAsyncFetches() {
+		// Every call site of fetchUnsortedArticlesAsync routes through here,
+		// bumping fetchSerialNumber and canceling fetchRequestQueue -- an
+		// unrelated call landing here while another fetch is still in flight
+		// makes that fetch's own completion find operation.id != fetchSerialNumber
+		// and silently never call back. See fetchAndMergeArticlesAsync's callers
+		// that need a guaranteed callback.
 		fetchSerialNumber += 1
 		fetchRequestQueue.cancelAllRequests()
 	}
@@ -2540,8 +2590,15 @@ private extension SceneCoordinator {
 		cancelPendingAsyncFetches()
 
 		let fetchers = representedObjects.compactMap { $0 as? ArticleFetcher }
+		let assignedSerialNumber = fetchSerialNumber
+		Self.logger.debug("SceneCoordinator: fetchUnsortedArticlesAsync queuing operation id=\(assignedSerialNumber, privacy: .public) for \(fetchers.count, privacy: .public) fetcher(s)")
 		let fetchOperation = FetchRequestOperation(id: fetchSerialNumber, hidingReadArticlesState: hidingReadArticlesState, fetchers: fetchers) { [weak self] (articles, operation) in
 			precondition(Thread.isMainThread)
+			// If isCanceled is true or the id mismatches (superseded by a newer
+			// fetch bumping fetchSerialNumber while this one was in flight),
+			// completion(articles) -- and everything downstream of it, including
+			// selectArticleInCurrentFeed -- never runs. See
+			// fetchAndMergeArticlesAsync's callers that need a guaranteed callback.
 			guard !operation.isCanceled, let strongSelf = self, operation.id == strongSelf.fetchSerialNumber else {
 				return
 			}
