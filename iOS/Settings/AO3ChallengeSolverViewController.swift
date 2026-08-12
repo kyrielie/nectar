@@ -92,7 +92,7 @@ final class AO3ChallengeSolverViewController: UIViewController {
 			webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
 			webView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
 			webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-			webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+			webView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
 		])
 
 		webView.load(URLRequest(url: challengeURL))

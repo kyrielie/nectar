@@ -121,7 +121,7 @@ public enum AO3ChallengeSessionStore {
 			kSecAttrService as String: service,
 			kSecAttrAccount as String: account,
 			kSecReturnData as String: true,
-			kSecMatchLimit as String: kSecMatchLimitOne,
+			kSecMatchLimit as String: kSecMatchLimitOne
 		]
 		var result: AnyObject?
 		let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -139,7 +139,7 @@ public enum AO3ChallengeSessionStore {
 			kSecValueData as String: data,
 			// AfterFirstUnlock, matching AO3SessionStore: AO3SearchResultsFetcher
 			// can run during a background refresh while the device is locked.
-			kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+			kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
 		]
 		SecItemAdd(query as CFDictionary, nil)
 	}
@@ -148,7 +148,7 @@ public enum AO3ChallengeSessionStore {
 		let query: [String: Any] = [
 			kSecClass as String: kSecClassGenericPassword,
 			kSecAttrService as String: service,
-			kSecAttrAccount as String: account,
+			kSecAttrAccount as String: account
 		]
 		SecItemDelete(query as CFDictionary)
 	}

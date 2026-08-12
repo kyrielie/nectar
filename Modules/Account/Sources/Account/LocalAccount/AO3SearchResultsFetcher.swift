@@ -87,7 +87,7 @@ public enum AO3SearchResultsFetcher {
 				if let clearanceCookieHeaderValue {
 					request.setValue(clearanceCookieHeaderValue, forHTTPHeaderField: "Cookie")
 				}
-				let downloadResponse = try await Downloader.shared.download(request, shouldCache: { data, response in
+				let downloadResponse = try await Downloader.shared.download(request, shouldCache: { data, _ in
 					// See Downloader's own doc comment on the caching check:
 					// a Cloudflare challenge page is a 200, so it needs its
 					// own veto here on top of Downloader's status-code check,
@@ -196,7 +196,7 @@ public enum AO3CloudflareChallenge {
 	// Cloudflare's block page uses, and a challenge-bypass link.
 	private static let challengeMarkers = [
 		"Just a moment...",
-		"cf-chl-bypass",
+		"cf-chl-bypass"
 	]
 
 	public static func isChallengePage(_ html: String) -> Bool {
