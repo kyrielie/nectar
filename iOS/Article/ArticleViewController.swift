@@ -59,7 +59,11 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	weak var coordinator: SceneCoordinator!
 
 	private let poppableDelegate = PoppableGestureRecognizerDelegate()
-	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticleViewController")
+	// nonisolated: userDefaultsDidChange(_:) below is itself `nonisolated`
+	// (it can arrive off the main thread via UserDefaults.didChangeNotification)
+	// and logs through this before hopping to @MainActor -- Logger is Sendable,
+	// so there's no isolation reason for the property itself to be MainActor-only.
+	nonisolated private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticleViewController")
 
 	// Set once require(toFail:) has been established between the paging
 	// scroll view's pan gesture and interactiveContentPopGestureRecognizer,
@@ -108,6 +112,23 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		NotificationCenter.default.addObserver(self, selector: #selector(contentSizeCategoryDidChange(_:)), name: UIContentSizeCategory.didChangeNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground(_:)), name: UIApplication.willEnterForegroundNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(userDefaultsDidChange(_:)), name: UserDefaults.didChangeNotification, object: nil)
+		// Top-toolbar-colors-wrong-on-live-switch bug: this screen used to rely
+		// solely on the generic UserDefaults.didChangeNotification observer
+		// above to repaint the nav bar on a Surface Palette change, unlike
+		// every other SurfacePaletteNavigationBarAware-adopting screen (see
+		// nectar-architecture.md, "Live-update pipeline shape" -- its own
+		// observer list never included ArticleViewController). That generic
+		// notification carries none of the same-thread, synchronous-before-
+		// the-setter-returns guarantee .surfaceTintDidChange/.accentColorDidChange
+		// do, and is dispatched via a Task { @MainActor } hop here on top of
+		// that, so the nav bar's repaint had no ordering guarantee relative to
+		// the palette actually changing -- reliably correct after a fresh
+		// viewDidLoad (exiting and re-entering the article), unreliable on a
+		// live switch while this screen stayed on screen. Observing the
+		// dedicated notifications directly closes that gap; matches
+		// MainFeedCollectionViewController/MainTimelineModernViewController.
+		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange(_:)), name: .accentColorDidChange, object: nil)
 
 		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,
 		// IPHONEOS_DEPLOYMENT_TARGET = 17.0), so use registerForTraitChanges
@@ -348,11 +369,42 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	}
 
 	@objc nonisolated func userDefaultsDidChange(_ note: Notification) {
+		// TEMPORARY diagnostic logging (top-toolbar-colors-wrong-on-live-switch
+		// investigation) -- left in deliberately for one more on-device pass to
+		// confirm how late/whether this generic notification lands relative to
+		// the dedicated surfaceTintDidChange(_:)/accentColorDidChange(_:)
+		// handlers below, which now do the actual nav-bar repaint. Remove once
+		// confirmed and once rightBarButtonItems()/applyArticleBackSwipeGating()
+		// below are confirmed to not also need a dedicated notification.
+		Self.logger.debug("userDefaultsDidChange: generic UserDefaults notification received")
 		Task { @MainActor in
 			coordinator.applyArticleBackSwipeGating()
 			navigationItem.rightBarButtonItems = rightBarButtonItems()
-			applySurfacePaletteNavigationBarAppearance()
+			// applySurfacePaletteNavigationBarAppearance() intentionally no
+			// longer runs from here -- see surfaceTintDidChange(_:) below.
+			// Left commented, not deleted, so the "before" behavior this patch
+			// changes is visible in the diff/blame rather than silently gone:
+			// applySurfacePaletteNavigationBarAppearance()
 		}
+	}
+
+	@objc func surfaceTintDidChange(_ note: Notification) {
+		// TEMPORARY diagnostic logging -- see userDefaultsDidChange(_:) above.
+		Self.logger.debug("surfaceTintDidChange: repainting nav bar, palette=\(String(describing: AppDefaults.shared.surfaceTint), privacy: .public)")
+		applySurfacePaletteNavigationBarAppearance()
+	}
+
+	@objc func accentColorDidChange(_ note: Notification) {
+		// TEMPORARY diagnostic logging -- see userDefaultsDidChange(_:) above.
+		// Accent Color doesn't currently drive anything in
+		// applySurfacePaletteNavigationBarAppearance() (that reads surfaceTint
+		// only, per nectar-architecture.md's "App chrome color pipeline"
+		// table), but this screen's bar-button icons render via the system
+		// tint cascade same as everywhere else, so observing this too keeps
+		// ArticleViewController's story consistent with the documented
+		// observer list rather than silently only covering Surface Palette.
+		Self.logger.debug("accentColorDidChange: repainting nav bar")
+		applySurfacePaletteNavigationBarAppearance()
 	}
 
 	// Section 3 of color-palette-plan.md ("Wire the two new nav-bar
