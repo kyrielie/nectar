@@ -86,7 +86,8 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 		case .interfaceStyle, .none:
 			return UserInterfaceColorPalette.allCases.count
 		case .surfacePalette:
-			return SurfacePalette.allCases.count
+			// +1 for the "Tinted Navigation Bar" toggle row, above the palette list.
+			return SurfacePalette.allCases.count + 1
 		case .preview:
 			return 1
 		}
@@ -111,7 +112,12 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 			return cell
 		case .surfacePalette:
 			let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-			let rowSurfacePalette = SurfacePalette.allCases[indexPath.row]
+			if indexPath.row == 0 {
+				cell.textLabel?.text = NSLocalizedString("Tinted Navigation Bar", comment: "Tinted navigation bar toggle row")
+				cell.accessoryType = AppDefaults.shared.useTintedNavigationBar ? .checkmark : .none
+				return cell
+			}
+			let rowSurfacePalette = SurfacePalette.allCases[indexPath.row - 1]
 			cell.textLabel?.text = rowSurfacePalette.description
 			cell.accessoryType = rowSurfacePalette == AppDefaults.shared.surfaceTint ? .checkmark : .none
 			return cell
@@ -136,7 +142,21 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 			}
 			tableView.reloadSections(IndexSet(integer: Section.interfaceStyle.rawValue), with: .none)
 		case .surfacePalette:
-			guard let surfacePalette = SurfacePalette(rawValue: indexPath.row) else { return }
+			if indexPath.row == 0 {
+				// Same reentrancy guard as the palette rows below: useTintedNavigationBar's
+				// setter now posts .surfaceTintDidChange synchronously too, and this
+				// screen's own surfaceTintDidChange(_:) handler would otherwise reenter
+				// mid-selection the same way isHandlingSurfacePaletteSelection's doc
+				// comment describes for the palette rows themselves.
+				isHandlingSurfacePaletteSelection = true
+				AppDefaults.shared.useTintedNavigationBar.toggle()
+				isHandlingSurfacePaletteSelection = false
+
+				tableView.reloadSections(IndexSet([Section.surfacePalette.rawValue, Section.preview.rawValue]), with: .none)
+				return
+			}
+
+			guard let surfacePalette = SurfacePalette(rawValue: indexPath.row - 1) else { return }
 
 			isHandlingSurfacePaletteSelection = true
 			AppDefaults.shared.surfaceTint = surfacePalette

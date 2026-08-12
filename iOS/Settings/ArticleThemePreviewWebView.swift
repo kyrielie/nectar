@@ -46,6 +46,14 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 	/// those themes' CSS doesn't branch on `prefers-color-scheme` in the first place.
 	let colorScheme: ColorScheme
 
+	/// In-progress, unsaved override background hex values from
+	/// ArticleThemeListView's own @State -- not AppDefaults.shared.articleThemeOverrides,
+	/// which only reflects the last *saved* override. nil when the corresponding
+	/// "Custom Color" toggle is off, same "nil means don't override" contract
+	/// ArticleThemeOverrides itself uses.
+	let overrideBackgroundColorHex: String?
+	let overrideBackgroundColorDarkHex: String?
+
 	/// Fallback sample body used only if a theme has no `template.html` at all (shouldn't
 	/// normally happen -- `ArticleTheme.template` is non-nil for the default theme and for
 	/// any well-formed imported theme -- but keeps the preview from rendering blank rather
@@ -296,6 +304,16 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 
 	func updateUIView(_ webView: WKWebView, context: Context) {
 		webView.overrideUserInterfaceStyle = colorScheme == .dark ? .dark : .light
+
+		let isDark = colorScheme == .dark
+		let resolved = ArticleResolvedColors.resolved(
+			theme: ArticleThemesManager.shared.currentTheme,
+			isDark: isDark,
+			overrideBackgroundColorHex: overrideBackgroundColorHex,
+			overrideBackgroundColorDarkHex: overrideBackgroundColorDarkHex
+		)
+		webView.backgroundColor = resolved.background
+		webView.underPageBackgroundColor = resolved.background
 
 		let renderedBody = (try? MacroProcessor.renderedText(withTemplate: template ?? Self.fallbackTemplate, substitutions: substitutions))
 			?? (template ?? Self.fallbackTemplate)

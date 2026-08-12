@@ -78,7 +78,32 @@ extension SurfacePaletteNavigationBarAware {
 	/// stays on screen is a real, reachable transition -- not the
 	/// hypothetical this comment used to assume away. Reset to nil (the
 	/// system's own appearance) in that case instead of returning early.
+
+	/// Symmetric with the tintColor assignment in the tinted branch below: a
+	/// previous non-.default palette (or a previous tinted-nav-bar state) may
+	/// have left an explicit tintColor sitting on these items, which -- unlike
+	/// the bar's own .tintColor -- doesn't get reset just by clearing the
+	/// appearance/bar tint. Reset to nil so they fall back to the normal
+	/// cascade/dynamic system color again. Shared by both the `.default`-palette
+	/// path and the useTintedNavigationBar-off path, so there's one reset
+	/// implementation instead of two copies drifting apart.
+	private func resetToSystemNavigationBarAppearance() {
+		navigationItem.standardAppearance = nil
+		navigationItem.compactAppearance = nil
+		navigationItem.scrollEdgeAppearance = nil
+		navigationController?.navigationBar.tintColor = nil
+		navigationItem.leftBarButtonItem?.tintColor = nil
+		navigationItem.rightBarButtonItems?.forEach { $0.tintColor = nil }
+		applyPaletteTintToCustomTitleViews(nil)
+	}
+
 	func applySurfacePaletteNavigationBarAppearance() {
+		guard AppDefaults.shared.useTintedNavigationBar else {
+			SurfacePaletteNavigationBarAwareLogging.logger.debug("applySurfacePaletteNavigationBarAppearance: \(type(of: self)) tinting disabled, resetting to system appearance")
+			resetToSystemNavigationBarAppearance()
+			return
+		}
+
 		let isDark = traitCollection.userInterfaceStyle == .dark
 		let palette = AppDefaults.shared.surfaceTint
 		let hexSet = isDark ? palette.darkHexSet : palette.lightHexSet
@@ -90,28 +115,15 @@ extension SurfacePaletteNavigationBarAware {
 		// each adopting screen actually repaints. Remove once confirmed.
 		SurfacePaletteNavigationBarAwareLogging.logger.debug("applySurfacePaletteNavigationBarAppearance: \(type(of: self)) palette=\(String(describing: palette), privacy: .public) isDark=\(isDark, privacy: .public) hexSet=\(hexSet == nil ? "nil" : "present", privacy: .public)")
 
-		guard let hexSet else {
-			navigationItem.standardAppearance = nil
-			navigationItem.compactAppearance = nil
-			navigationItem.scrollEdgeAppearance = nil
-			navigationController?.navigationBar.tintColor = nil
-			// Symmetric with the tintColor assignment below: a previous non-.default
-			// palette may have left an explicit tintColor sitting on these items,
-			// which -- unlike the bar's own .tintColor -- doesn't get reset just by
-			// clearing the appearance/bar tint above. Reset to nil so they fall back
-			// to the normal cascade/dynamic system color again.
-			navigationItem.leftBarButtonItem?.tintColor = nil
-			navigationItem.rightBarButtonItems?.forEach { $0.tintColor = nil }
-			applyPaletteTintToCustomTitleViews(nil)
+		guard hexSet != nil else {
+			resetToSystemNavigationBarAppearance()
 			return
 		}
 
 		let appearance = UINavigationBarAppearance()
 		appearance.configureWithDefaultBackground()
-		if let backgroundColor = UIColor(cssHex: hexSet.navigationBarBackground) {
-			appearance.backgroundColor = backgroundColor
-		}
-		let tintColor = UIColor(cssHex: hexSet.navigationBarTint)
+		appearance.backgroundColor = Assets.Colors.navigationBarBackground(for: traitCollection)
+		let tintColor = Assets.Colors.navigationBarTint(for: traitCollection)
 		if let tintColor {
 			appearance.titleTextAttributes = [.foregroundColor: tintColor]
 			appearance.largeTitleTextAttributes = [.foregroundColor: tintColor]

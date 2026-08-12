@@ -133,8 +133,11 @@ final class SurfacePalettePreviewCell: UITableViewCell {
 
 		let palette = AppDefaults.shared.surfaceTint
 		let hexSet = traitCollection.userInterfaceStyle == .dark ? palette.darkHexSet : palette.lightHexSet
-		let navigationBarBackgroundHex = hexSet?.navigationBarBackground
-		let navigationBarTintHex = hexSet?.navigationBarTint
+		// With the toggle off, the real nav bar won't be tinted regardless of
+		// palette (see SurfacePaletteNavigationBarAware), so the preview needs to
+		// match rather than always showing what the palette *would* look like.
+		let navigationBarBackgroundHex = AppDefaults.shared.useTintedNavigationBar ? hexSet?.navigationBarBackground : nil
+		let navigationBarTintHex = AppDefaults.shared.useTintedNavigationBar ? hexSet?.navigationBarTint : nil
 		navBarSwatch.backgroundColor = navigationBarBackgroundHex.flatMap { UIColor(cssHex: $0) } ?? .systemBackground
 		navBarSwatch.subviews.first?.backgroundColor = navigationBarTintHex.flatMap { UIColor(cssHex: $0) } ?? .label
 
