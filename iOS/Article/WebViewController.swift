@@ -195,7 +195,11 @@ final class WebViewController: UIViewController {
 		// colors previously only re-resolved on the next full renderPage.
 		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: WebViewController, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
+			// TEMPORARY (nectar-theme-background-toolbar-plan.md item 2 investigation) --
+			// remove once the live-switch background bug is confirmed fixed on-device.
+			Self.logger.debug("registerForTraitChanges: fired previous=\(previousTraitCollection.userInterfaceStyle.rawValue, privacy: .public) new=\(self.traitCollection.userInterfaceStyle.rawValue, privacy: .public) webViewTrait=\(self.webView?.traitCollection.userInterfaceStyle.rawValue ?? -1, privacy: .public) inAppPalette=\(AppDefaults.userInterfaceColorPalette.rawValue, privacy: .public) articleID=\(self.article?.articleID ?? "nil", privacy: .public)")
 			self.applyResolvedBackgroundColors()
+			self.logCSSColorSchemeAgreement(context: "registerForTraitChanges")
 		}
 
 		// Configure the tap zones
@@ -543,7 +547,7 @@ final class WebViewController: UIViewController {
 		if AppDefaults.shared.useSystemBrowser {
 			UIApplication.shared.open(url, options: [:])
 		} else {
-			openURLInSafariViewController(url)
+			openURLInAppBrowser(url)
 		}
 	}
 }
@@ -684,7 +688,7 @@ extension WebViewController: WKNavigationDelegate {
 						guard didOpen == false else {
 							return
 						}
-						self.openURLInSafariViewController(url)
+						self.openURLInAppBrowser(url)
 					}
 				}
 
@@ -982,6 +986,19 @@ private extension WebViewController {
 
 				webView.scrollView.setZoomScale(1.0, animated: false)
 
+				// Pinch-zoom is disabled unconditionally (not a Settings
+				// toggle -- reading position/layout, not appearance).
+				// setZoomScale above is only a one-time reset, not a lock:
+				// disabling the pinch gesture recognizer is what actually
+				// prevents zooming; the min/max clamp is defense-in-depth
+				// for any other path that might still try to set a scale.
+				// Reasserted on every dequeue, same pooling concern as
+				// scrollsToTop/showsVerticalScrollIndicator below --
+				// PreloadedWebView instances are reused, not recreated.
+				webView.scrollView.pinchGestureRecognizer?.isEnabled = false
+				webView.scrollView.minimumZoomScale = 1.0
+				webView.scrollView.maximumZoomScale = 1.0
+
 				// Tapping the status bar performs scrollsToTop on the first eligible
 				// scroll view, which jumps the article back to its beginning and
 				// discards the reader's place. PreloadedWebView instances are pooled
@@ -1146,6 +1163,8 @@ private extension WebViewController {
 
 		let isDark = webView.traitCollection.userInterfaceStyle == .dark
 		let colors = Self.resolvedArticleColors(isDark: isDark)
+		// TEMPORARY (nectar-theme-background-toolbar-plan.md item 2 investigation).
+		Self.logger.debug("applyResolvedBackgroundColors: isDark=\(isDark, privacy: .public) background=\(colors.background.cssHexString, privacy: .public) articleID=\(self.article?.articleID ?? "nil", privacy: .public)")
 		webView.backgroundColor = colors.background
 		webView.underPageBackgroundColor = colors.background
 		webView.scrollView.backgroundColor = colors.background
@@ -1154,6 +1173,27 @@ private extension WebViewController {
 		// text color on every render, not just on the next bars-toggle -- otherwise they
 		// keep showing whatever was last set, stale, through an article/theme change.
 		updateNotchAndPageCounterVisibility(resolvedBackground: colors.background, resolvedText: colors.text)
+	}
+
+	// TEMPORARY (nectar-theme-background-toolbar-plan.md item 2 investigation) --
+	// confirms whether WKWebView's own prefers-color-scheme media query has
+	// actually re-evaluated by the time the native trait-change handler fires,
+	// or whether it lags behind. Remove alongside the other temporary logging
+	// in this investigation once confirmed. Called only from the
+	// registerForTraitChanges closure above, not from inside
+	// applyResolvedBackgroundColors() itself -- that function also runs from
+	// renderPage() before loadHTMLString has committed a document, where a JS
+	// evaluation would just fail harmlessly and add noise. The trait-change
+	// path is the one that matters for this repro (already-open article), and
+	// it's guaranteed to have a loaded document.
+	private func logCSSColorSchemeAgreement(context: String) {
+		webView?.evaluateJavaScript("JSON.stringify({prefersDark: window.matchMedia('(prefers-color-scheme: dark)').matches, bodyBackground: getComputedStyle(document.body).backgroundColor})") { result, error in
+			if let error {
+				Self.logger.debug("\(context, privacy: .public): CSS-side check failed, error=\(error.localizedDescription, privacy: .public)")
+				return
+			}
+			Self.logger.debug("\(context, privacy: .public): CSS-side reports \(String(describing: result), privacy: .public)")
+		}
 	}
 
 	/// Precedence: override background (if set) -> theme's own background ->
@@ -1166,18 +1206,8 @@ private extension WebViewController {
 	/// its own call site.
 	private static func resolvedArticleColors(isDark: Bool) -> (background: UIColor, text: UIColor) {
 		let theme = ArticleThemesManager.shared.currentTheme
-		let themeColors = ArticleThemeColorExtractor.colors(for: theme)
 		let overrides = AppDefaults.shared.articleThemeOverrides
-		let background: UIColor
-		if isDark, let hex = overrides.backgroundColorDarkHex ?? overrides.backgroundColorHex, let overrideColor = UIColor(cssHex: hex) {
-			background = overrideColor
-		} else if !isDark, let hex = overrides.backgroundColorHex, let overrideColor = UIColor(cssHex: hex) {
-			background = overrideColor
-		} else {
-			background = isDark ? themeColors.backgroundColorDark : themeColors.backgroundColor
-		}
-		let text = isDark ? themeColors.textColorDark : themeColors.textColor
-		return (background, text)
+		return ArticleResolvedColors.resolved(theme: theme, isDark: isDark, overrideBackgroundColorHex: overrides.backgroundColorHex, overrideBackgroundColorDarkHex: overrides.backgroundColorDarkHex)
 	}
 
 	func finalScrollPosition(scrollingUp: Bool) -> CGFloat {
@@ -1671,7 +1701,34 @@ private extension WebViewController {
 			guard didOpen == false else {
 				return
 			}
-			self.openURLInSafariViewController(url)
+			self.openURLInAppBrowser(url)
+		}
+	}
+
+	/// Routes an in-app link open through the AO3-authenticated browser
+	/// (see AO3AuthenticatedWebViewController) when the URL is an AO3
+	/// domain, or SFSafariViewController otherwise -- the common case is
+	/// unchanged. Every in-app "open this URL" path in this file should
+	/// call this rather than openURLInSafariViewController(_:) directly,
+	/// so AO3 links get the persistent-session browser regardless of
+	/// which path (link tap, share sheet, showActivityDialog) they came
+	/// through.
+	///
+	/// No AO3SessionStore.isSignedIn check here -- unlike the plan's
+	/// original sketch. AO3AuthenticatedWebViewController's own
+	/// persistent WKWebsiteDataStore remembers a sign-in performed
+	/// directly inside it (WebKit's normal cookie persistence, nothing
+	/// this code needs to manage), so there's no "signed out" case that
+	/// needs to fall back to a different browser -- an AO3 link always
+	/// goes to the dedicated browser, whether or not a session exists
+	/// yet.
+	func openURLInAppBrowser(_ url: URL) {
+		if AO3LinkListImporter.isAO3Host(url) {
+			let ao3ViewController = AO3AuthenticatedWebViewController(url: url)
+			let navigationController = UINavigationController(rootViewController: ao3ViewController)
+			present(navigationController, animated: true)
+		} else {
+			openURLInSafariViewController(url)
 		}
 	}
 

@@ -12,6 +12,7 @@
 		03BB10C63EBB6682AE758D17 /* StatsVisibilityCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = A668DF87CBAB972204DAB988 /* StatsVisibilityCell.swift */; };
 		043291147B3052FD66395025 /* FindInArticleActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2594B99073E3744C3DCD2F2B /* FindInArticleActivity.swift */; };
 		047567E697676EC2560CA38A /* AddComboTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5EC3A464FBA86925E9E4C3C /* AddComboTableViewCell.swift */; };
+		051629DAC8490854B37312FB /* AO3AuthenticatedWebViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108C9610E408E3D80E40596C /* AO3AuthenticatedWebViewController.swift */; };
 		057BD9C465F313B558B6521C /* AddFeedSelectFolderTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = D9CF9FA05BD676DCDB04BB7D /* AddFeedSelectFolderTableViewCell.xib */; };
 		08BFA0E4BEC0ECAF6534281B /* OPMLImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E99DF16E2818DD03F982E08 /* OPMLImportCoordinator.swift */; };
 		09F915C31580999C48FF4096 /* AO3ChallengeSolverViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03FA655E91A7DA58F5D44E0 /* AO3ChallengeSolverViewController.swift */; };
@@ -293,6 +294,7 @@
 		0F11DBDF4CBFCE07856F8BF8 /* AccentColorIconHexSetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColorIconHexSetTests.swift; sourceTree = "<group>"; };
 		0F4E8089B7BBA0E2BC04A499 /* SearchFeedDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchFeedDelegate.swift; sourceTree = "<group>"; };
 		0FE81F5962A251B5AA63A59B /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreenPad.storyboard; sourceTree = "<group>"; };
+		108C9610E408E3D80E40596C /* AO3AuthenticatedWebViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3AuthenticatedWebViewController.swift; sourceTree = "<group>"; };
 		110FA7FA5A10A599860574EA /* AccentColorTableViewControllerSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColorTableViewControllerSelectionTests.swift; sourceTree = "<group>"; };
 		127FB44DB2E710B002378022 /* ArticleThemeColorExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeColorExtractor.swift; sourceTree = "<group>"; };
 		138A81C39C635A84A3FBA3C2 /* PseudoFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PseudoFeed.swift; sourceTree = "<group>"; };
@@ -591,6 +593,7 @@
 		14B6A4B13A0F87D8BA1CE1F7 /* Article */ = {
 			isa = PBXGroup;
 			children = (
+				108C9610E408E3D80E40596C /* AO3AuthenticatedWebViewController.swift */,
 				57646577CFAB7EF51E7575C3 /* ArticleIconSchemeHandler.swift */,
 				5EC887B424297E7132E79D2A /* ArticleSearchBar.swift */,
 				D133E112B098068EC5B50D35 /* ArticleViewController.swift */,
@@ -1276,6 +1279,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BE43C5ED1F77EEF08E709078 /* AO3AccountSettingsView.swift in Sources */,
+				051629DAC8490854B37312FB /* AO3AuthenticatedWebViewController.swift in Sources */,
 				09F915C31580999C48FF4096 /* AO3ChallengeSolverViewController.swift in Sources */,
 				9B0C9B5A28FAA99197FF0CE2 /* AO3LinkListImportView.swift in Sources */,
 				3DA20BFB7C763BE1E5A29D1E /* AO3LoginViewController.swift in Sources */,

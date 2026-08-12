@@ -80,6 +80,7 @@ import Images
 			await WebViewConfiguration.compileContentBlockingRules()
 		}
 		AppDefaults.registerDefaults()
+		AppDefaults.shared.migrateNavigationBarTintingDefaultIfNeeded()
 
 		let isFirstRun = AppDefaults.shared.isFirstRun
 		if isFirstRun {

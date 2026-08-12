@@ -104,6 +104,9 @@
     "All Unread" : {
       "comment" : "All Unread pseudo-feed title"
     },
+    "AO3" : {
+      "comment" : "AO3 in-app browser fallback title"
+    },
     "AO3 Needs Verification" : {
       "comment" : "AO3 Cloudflare challenge prompt title"
     },
@@ -247,6 +250,9 @@
     },
     "Copy Home Page URL" : {
       "comment" : "Command"
+    },
+    "Couldn't Load Page" : {
+      "comment" : "AO3 in-app browser load error title"
     },
     "CSV" : {
       "comment" : "Export format"
@@ -1080,6 +1086,9 @@
     },
     "Timeline Layout" : {
       "comment" : "Timeline Layout"
+    },
+    "Tinted Navigation Bar" : {
+      "comment" : "Tinted navigation bar toggle row"
     },
     "Title" : {
       "comment" : "Sort field"
