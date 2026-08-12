@@ -82,6 +82,16 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		collectionView.dragDelegate = self
 		collectionView.dropDelegate = self
 		becomeFirstResponder()
+		// Main.storyboard sets this screen's own navigationItem.title to
+		// "Feeds" (kept -- this screen's own nav bar still needs it).
+		// Nothing overrode backButtonTitle/backButtonDisplayMode, so
+		// anything pushed on top of this screen (the timeline) picked up
+		// iOS's default "back button shows the previous screen's title"
+		// behavior, rendering a "< Feeds" back button instead of a bare
+		// chevron. .minimal (iOS 14+, fine on this iOS 17 target) shows
+		// just the chevron for whatever's pushed on top of this screen,
+		// without touching this screen's own title.
+		navigationItem.backButtonDisplayMode = .minimal
     }
 
 	func configureCurrentActivityButton() {

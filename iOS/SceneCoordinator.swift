@@ -1834,6 +1834,26 @@ struct SidebarItemNode: Hashable, Sendable {
 	/// can race with the direct fetch; it's the same primitive
 	/// `WebViewController`'s scroll-position queue already uses for an
 	/// analogous "about to do my own synchronous flush" situation.
+	///
+	/// **Second race, previously unhandled:** `fetchAndMergeArticlesAsync(animated:completion:)`
+	/// silently returns without calling `completion` at all when
+	/// `timelineFeed` is `nil` -- see that function's own doc comment.
+	/// That's the normal state whenever the article the person was
+	/// just reading isn't reachable through whatever sidebar item is
+	/// currently selected (a smart feed that doesn't include this
+	/// feed's articles, search results, a "continue reading" surface,
+	/// a notification, or a Handoff/deep link -- anything other than
+	/// "tapped a row while this feed was the selected sidebar item").
+	/// Series-nav articles are AO3 feed articles specifically, so this
+	/// is a real, reachable path, not a hypothetical one. Previously
+	/// this meant the pop-to-timeline "flash" happened and then nothing
+	/// -- deterministic silent failure for anyone who doesn't normally
+	/// reach these articles via their own feed's timeline row. Fixed by
+	/// falling back to selecting the target article's own feed in the
+	/// sidebar first (mirroring `selectSidebarItemAndArticle`'s
+	/// established node-lookup -> `selectSidebarItem(indexPath:completion:)`
+	/// shape) whenever the direct fetch didn't land the article, rather
+	/// than assuming `timelineFeed` already scopes to it.
 	func navigateToTimelineAndSelectArticle(_ articleID: String) {
 		fetchAndMergeArticlesQueue.cancelPendingCalls()
 
@@ -1858,7 +1878,8 @@ struct SidebarItemNode: Hashable, Sendable {
 
 		selectArticle(nil)
 		mainTimelineViewController?.focus()
-		fetchAndMergeArticlesAsync(animated: true) { [weak self] in
+
+		let onArticleSelected: () -> Void = { [weak self] in
 			self?.selectArticleInCurrentFeed(articleID)
 			// Deliberately NOT calling clearNavigationFlag() here. This
 			// completion typically runs *before* the pop-to-timeline
@@ -1873,6 +1894,54 @@ struct SidebarItemNode: Hashable, Sendable {
 			// leaves that to happen there. The asyncAfter fallback above
 			// remains as a backstop for the case where deselectIfNecessary()
 			// never fires at all (e.g. non-collapsed split view).
+		}
+
+		fetchAndMergeArticlesAsync(animated: true) { [weak self] in
+			guard let self else { return }
+			if self.articles.contains(where: { $0.articleID == articleID }) {
+				onArticleSelected()
+				return
+			}
+			// Not in the currently-selected feed's articles even after a
+			// fresh fetch -- either timelineFeed didn't contain this
+			// article (the common case this fix targets) or the fetch
+			// genuinely came back without it yet. Try to route to the
+			// article's own feed in the sidebar before giving up.
+			self.selectFeedInSidebarAndArticle(articleID: articleID, fallback: onArticleSelected)
+		}
+	}
+
+	/// Fallback path for `navigateToTimelineAndSelectArticle` when the
+	/// currently-selected sidebar item's timeline doesn't contain
+	/// `articleID` after a fresh fetch. Looks the article up directly
+	/// from the account's own storage (independent of `self.articles`,
+	/// which only reflects whatever `timelineFeed` currently scopes to)
+	/// to find its `feedID`, locates that feed's sidebar node, and
+	/// selects it before retrying the article selection -- the same
+	/// node-lookup -> `selectSidebarItem(indexPath:completion:)` shape
+	/// `selectSidebarItemAndArticle` already uses for restoring a feed
+	/// selection from a notification/Handoff payload. If any step can't
+	/// resolve (no matching article in storage, no sidebar node for its
+	/// feed, or no index path for that node), falls through to `fallback`
+	/// directly so the caller's own selection attempt still runs and
+	/// still no-ops visibly via `selectArticleInCurrentFeed`'s existing
+	/// debug log, rather than leaving the flow stuck with no completion
+	/// at all.
+	private func selectFeedInSidebarAndArticle(articleID: String, fallback: @escaping () -> Void) {
+		guard let account = AccountManager.shared.accounts.first,
+			  let article = account.fetchArticles(.articleIDs([articleID])).first else {
+			fallback()
+			return
+		}
+
+		guard let sidebarItemNode = findSidebarItemNode(feedID: article.feedID, beginningAt: treeController.rootNode),
+			  let sidebarItemIndexPath = indexPathFor(sidebarItemNode) else {
+			fallback()
+			return
+		}
+
+		selectSidebarItem(indexPath: sidebarItemIndexPath) { [weak self] in
+			self?.selectArticleInCurrentFeed(articleID)
 		}
 	}
 

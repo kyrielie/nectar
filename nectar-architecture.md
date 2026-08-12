@@ -670,7 +670,13 @@ observer too:
 
 **Accent Color** (`.accentColorDidChange`): `SceneDelegate`,
 `MainFeedCollectionViewController`, `MainTimelineModernViewController`,
-`AccentColorTableViewController`.
+`AccentColorTableViewController`, `ArticleViewController` (repaints its nav
+bar via `applySurfacePaletteNavigationBarAppearance()` -- added along with
+its `.surfaceTintDidChange` observer below; previously this screen relied
+only on the generic, non-synchronous `UserDefaults.didChangeNotification`,
+which produced stale top-nav-bar colors on a live in-app palette switch,
+fixed only by a full `viewDidLoad` re-run from exiting and re-entering the
+article).
 
 **Surface Palette** (`.surfaceTintDidChange`): `ArticleSearchBar`, which
 bakes `barBackground` into a `CGColor` once in `didMoveToSuperview()` and so
@@ -684,7 +690,8 @@ gets recomputed; `MainTimelineModernViewController`, same reasoning;
 `ColorPaletteTableViewController`, `AccentColorTableViewController`, and
 `SettingsBackgroundPalette`/`SurfacePaletteAware` (SwiftUI-facing), which
 repaint the Settings screens' own `settingsBackground`/
-`settingsCellBackground` fills; `SettingsViewController`. `Vibrant*` views
+`settingsCellBackground` fills; `SettingsViewController`; `ArticleViewController`,
+which repaints its nav bar the same way the two screens below do. `Vibrant*` views
 (`VibrantLabel`/`VibrantButton`/`VibrantTableViewCell`) deliberately don't
 observe it, since they already re-read `.vibrantText` on every
 highlight/selection state toggle, which happens far more often than a
