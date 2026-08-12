@@ -555,3 +555,27 @@ updateNectarSeriesLink = withEncodedArg(options => {
 		}
 	});
 });
+
+// Preface-flash fix: swaps #bodyContainer's content in place instead of a
+// full loadHTMLString reload, for the two cases where the page needs to be
+// re-rendered after the initial synthetic-preface render but the document
+// itself hasn't changed (AO3ChapterFetcher finishing, successfully or not --
+// see WebViewController's ao3ChapterFetchDidComplete(_:)/ao3ChapterFetchDidFail(_:)).
+// template.html funnels preface + article content + series footer through one
+// [[body]] substitution into #bodyContainer, so one swap covers all three.
+//
+// processPage() (main.js) re-runs after the swap since DOMContentLoaded --
+// which is what triggers it originally -- doesn't fire again for an
+// innerHTML mutation. This is safe to call a second time here: every step it
+// runs (wrapFrames, stripStyles, flattenPreElements, applyVersalCaps, etc.)
+// operates only on elements currently in the document, addressed fresh by
+// selector each call, and none of them stash cross-call state at the
+// document/window level -- the old #bodyContainer subtree (and anything
+// those steps previously did to it) is simply gone, replaced by nodes that
+// have not been processed yet, same as a first pass on initial load.
+updateArticleBody = withEncodedArg(options => {
+	const container = document.getElementById("bodyContainer");
+	if (!container) return;
+	container.innerHTML = options.html;
+	processPage();
+});

@@ -239,6 +239,8 @@ a.footnote {
    .ao3SeriesFooterEntry container already wraps via flex-wrap), so it
    keeps nowrap. */
 .ao3SeriesPrefaceLinks {
+	display: block;
+	margin-top: 0.2em;
 	font-size: 0.95em;
 }
 .ao3SeriesFooterLinks {
