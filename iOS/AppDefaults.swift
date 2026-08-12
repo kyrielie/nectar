@@ -1067,31 +1067,23 @@ final class AppDefaults: Sendable {
 		let defaults: [String: Any] = [Key.userInterfaceColorPalette: UserInterfaceColorPalette.automatic.rawValue,
 										Key.timelineGroupByFeed: false,
 										Key.refreshClearsReadArticles: false,
-										Key.timelineNumberOfLines: 3,
+										Key.timelineNumberOfLines: 2,
 										Key.timelineIconDimension: IconSize.medium.rawValue,
-										Key.timelineTagDisplayMode: TagDisplayMode.badges.rawValue,
-									Key.badgeColorMode: BadgeColorPalette.default.rawValue,
+										Key.timelineTagDisplayMode: TagDisplayMode.compact.rawValue,
+									Key.badgeColorMode: BadgeColorPalette.monochrome.rawValue,
 										Key.accentColor: AccentColor.default.rawValue,
 										Key.timelineSortDirection: ComparisonResult.orderedDescending.rawValue,
 								Key.timelineSortField: ArticleSorter.SortField.date.rawValue,
 										Key.articleFullscreenAvailable: false,
-										Key.articleFullscreenEnabled: true,
-										Key.articleBackSwipeEnabled: false,
+										Key.articleFullscreenEnabled: false,
+										Key.articleBackSwipeEnabled: true,
 									Key.articlePagingSwipeEnabled: true,
 										Key.showFeedNameInReaderView: false,
-									Key.showPrevNextArticleButtons: false,
-									Key.showTableOfContentsAndFind: true,
-									Key.hideNotchInFullScreen: true,
-									Key.pageCounterDisplayMode: PageCounterDisplayMode.percentage.rawValue,
-									Key.showLastUpdatedLabel: false,
+									Key.showPrevNextArticleButtons: true,
+									Key.showLastUpdatedLabel: true,
 									Key.showArticleScrollbar: true,
 									Key.statsVisible: true,
-										// "Promenade" (Themes/Promenade.nnwtheme), not Self.defaultThemeName --
-										// that constant is a sentinel meaning "use the app's built-in fallback
-										// ArticleTheme.defaultTheme" (see ArticleThemesManager), a distinct
-										// concept from "which theme a fresh install starts on." Changing
-										// Self.defaultThemeName itself would repurpose that fallback sentinel.
-										Key.currentThemeName: "Promenade",
+										Key.currentThemeName: Self.defaultThemeName,
 									   Key.splitViewPreferredDisplayMode: UISplitViewController.DisplayMode.oneBesideSecondary.rawValue]
 		AppDefaults.store.register(defaults: defaults)
 	}

@@ -15,14 +15,6 @@
 //
 
 import UIKit
-import os
-
-// TEMPORARY, alongside the debug logging in applySurfacePaletteNavigationBarAppearance()
-// below -- see that method's doc comment. Remove both together once the
-// top-toolbar-colors-wrong-on-live-switch fix is confirmed on-device.
-private enum SurfacePaletteNavigationBarAwareLogging {
-	static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.ranchero.Nectar", category: "SurfacePaletteNavigationBarAware")
-}
 
 @MainActor
 protocol SurfacePaletteNavigationBarAware: UIViewController {
@@ -82,13 +74,6 @@ extension SurfacePaletteNavigationBarAware {
 		let isDark = traitCollection.userInterfaceStyle == .dark
 		let palette = AppDefaults.shared.surfaceTint
 		let hexSet = isDark ? palette.darkHexSet : palette.lightHexSet
-
-		// TEMPORARY diagnostic logging (top-toolbar-colors-wrong-on-live-switch
-		// investigation, see ArticleViewController's dedicated-notification
-		// observers) -- prints who's calling, and the resolved palette, so a
-		// console trace during a live in-app palette switch shows whether/when
-		// each adopting screen actually repaints. Remove once confirmed.
-		SurfacePaletteNavigationBarAwareLogging.logger.debug("applySurfacePaletteNavigationBarAppearance: \(type(of: self)) palette=\(String(describing: palette), privacy: .public) isDark=\(isDark, privacy: .public) hexSet=\(hexSet == nil ? "nil" : "present", privacy: .public)")
 
 		guard let hexSet else {
 			navigationItem.standardAppearance = nil
