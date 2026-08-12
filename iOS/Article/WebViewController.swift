@@ -308,7 +308,12 @@ final class WebViewController: UIViewController {
 				return
 			}
 			self.article = refetchedArticle
-			self.loadWebView(reason: "ao3ChapterFetchDidComplete(\(fetchedArticleID))")
+			// Preface flash fix: this used to be loadWebView(reason:), a full
+			// reload of the whole document. AO3ChapterFetcher finishing just
+			// swaps in richer content for the same article that's already on
+			// screen -- an in-place DOM update instead of a navigation avoids
+			// the visible blank-and-repaint. See updateArticleBodyInPlace(reason:).
+			self.updateArticleBodyInPlace(reason: "ao3ChapterFetchDidComplete(\(fetchedArticleID))")
 			// Task 8: this notification also fires when the fetch's result
 			// was a detected regression stashed as a pending update rather
 			// than written to contentHTML -- offer the "view what changed?"
@@ -328,7 +333,10 @@ final class WebViewController: UIViewController {
 		      let article, article.articleID == fetchedArticleID else {
 			return
 		}
-		loadWebView(reason: "ao3ChapterFetchDidFail(\(fetchedArticleID))")
+		// Same preface-flash fix as the success path above -- a failure
+		// message appearing is a smaller update than a successful chapter
+		// fetch, and equally flash-prone under the old full-reload path.
+		updateArticleBodyInPlace(reason: "ao3ChapterFetchDidFail(\(fetchedArticleID))")
 	}
 
 	// MARK: Actions
@@ -1015,6 +1023,39 @@ private extension WebViewController {
 		}
 	}
 
+	/// Preface-flash fix (see ao3ChapterFetchDidComplete(_:)/ao3ChapterFetchDidFail(_:)):
+	/// re-renders the current article's body HTML and swaps it into the
+	/// already-loaded page's `#bodyContainer` via `main_ios.js`'s
+	/// `updateArticleBody`, instead of `loadWebView`'s full
+	/// `loadHTMLString` reload. `template.html` funnels the synthetic/real
+	/// preface, article content, and series footer through one `[[body]]`
+	/// substitution into `#bodyContainer`, so this one swap covers all
+	/// three without special-casing the preface.
+	///
+	/// Falls back to a full `loadWebView(reason:)` reload if there's no
+	/// existing web view to update in place (e.g. the notification landed
+	/// before the first render finished) -- same safety net a `nil` webView
+	/// would otherwise just silently no-op against.
+	private func updateArticleBodyInPlace(reason: String) {
+		guard let webView else {
+			loadWebView(reason: reason)
+			return
+		}
+		guard let article else { return }
+
+		let theme = ArticleThemesManager.shared.currentTheme
+		let rendering = ArticleRenderer.articleHTML(article: article, theme: theme, timelineFeed: coordinator?.timelineFeed)
+
+		guard let json = try? JSONEncoder().encode(UpdateArticleBodyOptions(html: rendering.html)) else {
+			Self.logger.debug("updateArticleBodyInPlace: failed to encode body HTML, falling back to full reload, reason=\(reason, privacy: .public)")
+			loadWebView(reason: reason)
+			return
+		}
+		let encoded = json.base64EncodedString()
+		Self.logger.debug("updateArticleBodyInPlace: articleID=\(article.articleID, privacy: .public) reason=\(reason, privacy: .public) bodyLength=\(rendering.html.count, privacy: .public)")
+		webView.evaluateJavaScript("updateArticleBody(\"\(encoded)\");")
+	}
+
 	func renderPage(_ webView: PreloadedWebView?) {
 		guard let webView = webView else { return }
 
@@ -1591,6 +1632,12 @@ private extension WebViewController {
 		let seriesKey: String
 		let label: String
 		let disabled: Bool
+	}
+
+	/// Options for `main_ios.js`'s `updateArticleBody` -- see
+	/// updateArticleBodyInPlace(reason:) above.
+	private struct UpdateArticleBodyOptions: Encodable {
+		let html: String
 	}
 
 	private func updateNectarSeriesLinkUI(key: SeriesNavKey, disabled: Bool) {

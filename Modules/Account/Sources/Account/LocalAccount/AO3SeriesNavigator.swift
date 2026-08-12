@@ -665,13 +665,21 @@ private extension AO3SeriesNavigator {
 
 			let completeToken = NotificationCenter.default.addObserver(forName: .ao3ChapterFetchDidComplete, object: nil, queue: .main) { note in
 				guard note.userInfo?[AO3ChapterFetchUserInfoKey.articleID] as? String == articleID else { return }
-				Self.logger.debug("AO3SeriesNavigator: downloadAndAwait succeeded, workID=\(workID, privacy: .public) articleID=\(articleID, privacy: .public)")
+				// Concrete type name, not `Self.` -- inside this @Sendable
+				// NotificationCenter closure, referencing the already-`nonisolated`
+				// `logger` via dynamic `Self` still gets flagged by the compiler
+				// as a main-actor-isolated access (a `Self`-vs-concrete-type
+				// isolation-checking quirk, not an actual isolation difference:
+				// `Self` == `AO3SeriesNavigator` unconditionally here, there's no
+				// subtyping in an enum). The concrete name sidesteps it.
+				AO3SeriesNavigator.logger.debug("AO3SeriesNavigator: downloadAndAwait succeeded, workID=\(workID, privacy: .public) articleID=\(articleID, privacy: .public)")
 				finish(.success(articleID))
 			}
 			let failToken = NotificationCenter.default.addObserver(forName: .ao3ChapterFetchDidFail, object: nil, queue: .main) { note in
 				guard note.userInfo?[AO3ChapterFetchUserInfoKey.articleID] as? String == articleID else { return }
 				let message = note.userInfo?[AO3ChapterFetchUserInfoKey.message] as? String ?? NSLocalizedString("Couldn't load this work", comment: "AO3 series navigation error")
-				Self.logger.debug("AO3SeriesNavigator: downloadAndAwait failed, workID=\(workID, privacy: .public) articleID=\(articleID, privacy: .public) message=\(message, privacy: .public)")
+				// Same Self-vs-concrete-type note as the success handler above.
+				AO3SeriesNavigator.logger.debug("AO3SeriesNavigator: downloadAndAwait failed, workID=\(workID, privacy: .public) articleID=\(articleID, privacy: .public) message=\(message, privacy: .public)")
 				finish(.failure(.fetchFailed(message)))
 			}
 			tokenBox.tokens = [completeToken, failToken]
