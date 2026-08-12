@@ -68,7 +68,7 @@ public enum AO3SessionStore {
 			// refresh-triggered fetches can happen while the device is
 			// locked (background refresh), and shouldn't silently drop an
 			// otherwise-valid session just because the screen is off.
-			kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+			kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
 		]
 		SecItemAdd(query as CFDictionary, nil)
 	}
@@ -88,7 +88,7 @@ public enum AO3SessionStore {
 			kSecAttrService as String: service,
 			kSecAttrAccount as String: account,
 			kSecReturnData as String: true,
-			kSecMatchLimit as String: kSecMatchLimitOne,
+			kSecMatchLimit as String: kSecMatchLimitOne
 		]
 		var result: AnyObject?
 		let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -102,7 +102,7 @@ public enum AO3SessionStore {
 		let query: [String: Any] = [
 			kSecClass as String: kSecClassGenericPassword,
 			kSecAttrService as String: service,
-			kSecAttrAccount as String: account,
+			kSecAttrAccount as String: account
 		]
 		SecItemDelete(query as CFDictionary)
 	}

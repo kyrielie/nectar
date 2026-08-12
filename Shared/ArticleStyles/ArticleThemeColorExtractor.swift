@@ -319,7 +319,7 @@ private extension UIColor {
 		"maroon": "#800000",
 		"olive": "#808000",
 		"orange": "#FFA500",
-		"gold": "#FFD700",
+		"gold": "#FFD700"
 	]
 
 	/// Parses a CSS color value: `#RGB`/`#RRGGBB`, `rgb()`/`rgba()`, or one of the

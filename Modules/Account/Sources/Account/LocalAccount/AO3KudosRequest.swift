@@ -78,7 +78,7 @@ enum AO3KudosRequest {
 		request.httpBody = formURLEncodedBody([
 			"authenticity_token": csrfToken,
 			"kudo[commentable_id]": workID,
-			"kudo[commentable_type]": "Work",
+			"kudo[commentable_type]": "Work"
 		])
 		return request
 	}

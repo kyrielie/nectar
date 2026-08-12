@@ -173,7 +173,7 @@ private extension AO3KudosManager {
 				activityLog.didComplete(.ao3KudosManager, kind: kind, message: outcome == .alreadyKudosed ? "Already kudosed" : nil)
 				NotificationCenter.default.post(name: .ao3KudosDidSucceed, object: nil, userInfo: [
 					AO3KudosUserInfoKey.articleID: article.articleID,
-					AO3KudosUserInfoKey.workID: workID,
+					AO3KudosUserInfoKey.workID: workID
 				])
 			case .authError, .invalidWork, .rateLimited, .otherFailure:
 				// Not recorded as attempted -- a fresh token from a later
