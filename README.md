@@ -2,6 +2,9 @@
 
 # 🍎 Nectar
 
+<img width="100" height="100" alt="Nectar Icon" src="https://github.com/user-attachments/assets/8af38915-340c-4106-be1e-703983852ba9" />
+
+
 **An iOS feed reader for Archive of Our Own and [Ambrosia](https://github.com/kyrielie/ambrosia).**
 
 [![Install via AltStore](https://img.shields.io/badge/AltStore-Install-4185A9?style=for-the-badge)](https://kyrielie.github.io/nectar/source.json)
