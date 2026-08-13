@@ -148,8 +148,17 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 
 		let fullScreenTapZone = UIView()
 		fullScreenTapZone.translatesAutoresizingMaskIntoConstraints = false
+		// <= 150, not == 150 (.required): the system's own
+		// _UINavigationBarTitleControl bridges its actual available title
+		// width into a required constraint of its own, which varies with
+		// the title area's real size (observed as low as ~83pt). A required
+		// == 150 here always loses that fight and gets broken on every
+		// layout pass. <= lets this tap zone take up to 150pt when
+		// available and whatever narrower width the system actually grants
+		// otherwise, without contending with the system's constraint at all.
+		let widthConstraint = fullScreenTapZone.widthAnchor.constraint(lessThanOrEqualToConstant: 150)
 		NSLayoutConstraint.activate([
-			fullScreenTapZone.widthAnchor.constraint(equalToConstant: 150),
+			widthConstraint,
 			fullScreenTapZone.heightAnchor.constraint(equalToConstant: 44)
 		])
 		fullScreenTapZone.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapNavigationBar)))
