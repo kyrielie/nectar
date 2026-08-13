@@ -1,8 +1,11 @@
 <div align="center">
 
-# 🍯 Nectar
+# 🍎 Nectar
 
-**A fic-aware iOS feed reader for Archive of Our Own and [Ambrosia](https://github.com/kyrielie/ambrosia).**
+<img width="100" height="100" alt="Nectar Icon" src="https://github.com/user-attachments/assets/8af38915-340c-4106-be1e-703983852ba9" />
+
+
+**An iOS feed reader for Archive of Our Own and [Ambrosia](https://github.com/kyrielie/ambrosia).**
 
 [![Install via AltStore](https://img.shields.io/badge/AltStore-Install-4185A9?style=for-the-badge)](https://kyrielie.github.io/nectar/source.json)
 [![Latest release](https://img.shields.io/github/v/release/kyrielie/nectar?style=for-the-badge&label=release)](https://github.com/kyrielie/nectar/releases/latest)
@@ -15,7 +18,7 @@ Nectar reads Archive of Our Own's [RSS feeds](https://archiveofourown.org/faq/su
 
 Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) and uses its code and license, but is not affiliated with or supported by the NetNewsWire project. It is not associated with Archive of Our Own; it makes requests to AO3's servers only when you open a work. Your reading history and progress stay on your device and are never shared.
 
-> **Status:** beta software under active development. Expect rough edges.
+> **Status:** beta software under active development. Expect rough edges. 
 
 ---
 
