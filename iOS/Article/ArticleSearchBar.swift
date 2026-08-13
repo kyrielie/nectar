@@ -60,8 +60,7 @@ import UIKit
 		// read live on every draw, so it needs its own observer to repaint when
 		// Surface Tint changes while this search bar is already on screen --
 		// compare Assets.Colors.vibrantText's consumers, which re-read on every
-		// state toggle and so don't need one. See nectar-architecture.md, "App
-		// chrome color pipeline."
+		// state toggle and so don't need one. See app-chrome-palette.md.
 		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
 
 		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,

@@ -117,14 +117,13 @@ struct ArticlesTableUpdateTests {
 	// b2. saveReadingProgress propagates to a sibling articleID sharing the
 	// same bookKey, the same way mark() does for read/starred/loved -- see
 	// ArticleStatus.readingProgress's doc comment. (This test previously
-	// asserted the opposite. That assertion matched nectar-architecture.md's
-	// "Book identity" section, which describes readingProgress as "not yet"
-	// part of BookStateTable's write-through -- but ArticlesTable.
-	// saveReadingProgress already calls bookStateTable.setReadingProgress and
-	// unions in sibling articleIDs, so that doc is stale relative to the
-	// code, not the other way around: the "not yet" migration it describes
-	// has already happened. Flagging the doc as needing an update rather
-	// than silently leaving it wrong -- see nectar-architecture.md:118-122.)
+	// asserted the opposite, against a since-superseded claim that
+	// readingProgress was "not yet" part of BookStateTable's write-through
+	// -- but ArticlesTable.saveReadingProgress already calls
+	// bookStateTable.setReadingProgress and unions in sibling articleIDs,
+	// so that claim was stale relative to the code, not the other way
+	// around: the "not yet" migration it described has already happened.
+	// book-identity.md now documents the current, non-stale behavior.)
 	@Test("saveReadingProgress propagates to a sibling articleID sharing the same bookKey")
 	func readingProgressPropagatesToSiblingArticleIDs() async throws {
 		let db = TestFixtures.makeDatabase()

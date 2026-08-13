@@ -335,7 +335,7 @@ public enum FetchType {
 		// etc. for feeds that are really just mid-re-pair, not abandoned. The
 		// cost of not garbage-collecting stale rows here is a handful of small,
 		// harmless leftover settings rows -- not worth the risk of discarding
-		// live settings. See nectar-architecture.md notes on feed identity.
+		// live settings. See feed-repointing.md.
 
 		DispatchQueue.main.async {
 			self.database.cleanupDatabaseAtStartup(subscribedToFeedIDs: self.flattenedFeedsIDs)

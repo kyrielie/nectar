@@ -91,7 +91,7 @@ Nectar can parse Ambrosia's paged JSON feeds and SQLite transfers, plus AO3's ow
 
 ## Architecture
 
-See [`nectar-architecture.md`](./nectar-architecture.md) for how feed data flows from AO3/Ambrosia through to the app's UI — module layout, book identity, the SQLite transfer route, the reading-progress pipeline, and the theming system.
+See [`CLAUDE.md`](./CLAUDE.md) for the docs index — how feed data flows from AO3/Ambrosia through to the app's UI is split across topic docs under `docs/` (module layout, book identity, the SQLite transfer route, the reading-progress pipeline, the theming system, and more), each scoped to one system.
 
 ## Contributing
 

@@ -194,14 +194,15 @@ a.footnote {
 #ao3Preface dd {
 	margin: 0;
 }
-/* Wide rows (Fandom/Relationships/Characters/Additional Tags -- see
-   AO3PrefaceRow.isWide) can carry dozens or hundreds of values. Both the
-   label and the value list span every grid column instead of the value
-   list being confined to the "1fr" column beside its label -- the label
-   sits on its own line, and the (possibly very long, wrapping)
-   comma-joined tag list gets the preface's full width on the line below
-   it, rather than wasting that width down the label column while
-   cramming every tag into a narrow trailing column. */
+/* Wide rows (Fandom/Relationships/Characters/Additional Tags/Archive
+   Warning -- see AO3PrefaceRow.isWide) either carry dozens or hundreds of
+   values, or carry few values that are each a long fixed phrase (Archive
+   Warning). Both the label and the value list span every grid column
+   instead of the value list being confined to the "1fr" column beside its
+   label -- the label sits on its own line, and the (possibly very long,
+   wrapping) comma-joined tag list gets the preface's full width on the
+   line below it, rather than wasting that width down the label column
+   while cramming every tag into a narrow trailing column. */
 #ao3SyntheticPreface dt.wide,
 #ao3Preface dt.wide,
 #ao3SyntheticPreface dd.wide,

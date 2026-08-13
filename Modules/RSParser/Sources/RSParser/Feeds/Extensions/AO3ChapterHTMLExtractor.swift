@@ -736,8 +736,13 @@ private extension AO3ChapterHTMLExtractor {
 				// or hundreds of tags on a heavily-tagged work -- rendered
 				// wide (full preface width, own line) rather than confined
 				// to the label-adjacent column like the bounded rows
-				// (rating/warning/category, usually one or two values).
-				let isWide = classTokens.contains("fandom") || classTokens.contains("relationship") || classTokens.contains("character") || classTokens.contains("freeform")
+				// (rating/category, usually one or two short values).
+				// warning is bounded the same way value-count-wise, but
+				// each value is a long fixed AO3 phrase (up to "Creator
+				// Chose Not To Use Archive Warnings") and works commonly
+				// carry two or three at once -- wide for the same reason
+				// as the others, just long text instead of many entries.
+				let isWide = classTokens.contains("fandom") || classTokens.contains("relationship") || classTokens.contains("character") || classTokens.contains("freeform") || classTokens.contains("warning")
 				rows.append(AO3PrefaceRow(label: label, values: entries, isWide: isWide))
 
 				// Same rows, discrete text values -- for

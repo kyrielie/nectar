@@ -63,7 +63,7 @@ struct DatabaseKey {
 	// Dead: Article no longer has singular previousWorkURL/nextWorkURL
 	// fields (superseded by per-series navigation on ArticleSeriesEntry).
 	// Kept, unwritten/unread, rather than migrated away -- see
-	// nectar-architecture.md's SurfacePalette.HexSet note for the
+	// app-chrome-palette.md's "SurfacePalette.HexSet" section for the
 	// precedent. Do not reuse these column names for anything else.
 	static let previousWorkURL = "previousWorkURL"
 	static let nextWorkURL = "nextWorkURL"

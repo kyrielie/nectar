@@ -66,8 +66,8 @@ public final class Article: Hashable, Sendable {
 	// discarded every series membership but the first with a link. The
 	// `previousWorkURL`/`nextWorkURL` SQLite columns still exist
 	// (`Constants.previousWorkURL`/`nextWorkURL`) but are no longer
-	// written or read by this type -- see nectar-architecture.md's
-	// `SurfacePalette.HexSet` note for the precedent on leaving a dead
+	// written or read by this type -- see app-chrome-palette.md's
+	// "SurfacePalette.HexSet" section for the precedent on leaving a dead
 	// column in place rather than migrating it away.
 	// The most recent successful AO3ChapterFetcher fetch's completion time
 	// for this article, if any -- distinct from datePublished/dateModified
