@@ -57,7 +57,7 @@ import Testing
 	/// word-count data too, not just the original bare
 	/// `(workID, permalink, title)`. Values below read directly off the
 	/// fixture's own markup for that row.
-	@Test func workPermalinksParsesRichMetadataFromRealCapturedRow() {
+	@Test func workPermalinksParsesRichMetadataFromRealCapturedRow() throws {
 		let html = htmlFixtureString("ao3-series-listing.html")
 		let (works, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
 
