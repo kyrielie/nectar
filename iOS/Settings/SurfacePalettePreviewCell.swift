@@ -34,10 +34,13 @@
 //
 //  surface-palette-and-badge-colors-plan, section 2.4: three more swatches
 //  (Settings background, Settings cell, List background) added alongside
-//  the original five, wrapped into two rows of four rather than shrinking
-//  swatch size to fit eight in one line -- five columns at the existing
-//  80pt swatch width plus 12pt spacing already ran wider than a
-//  375pt-class screen before this change.
+//  the original five, for six total -- wrapped into two rows of three
+//  rather than four-and-two. Four columns at the existing 80pt swatch
+//  width plus 12pt spacing (356pt) still doesn't fit the ~330pt row width
+//  available on a 375pt-class screen once cell margins are subtracted, so
+//  a four-column top row conflicted the same way five did. Three columns
+//  (264pt) fits with room to spare, and divides the six swatches evenly
+//  with no filler views needed.
 //
 
 import UIKit
@@ -91,18 +94,16 @@ final class SurfacePalettePreviewCell: UITableViewCell {
 		let topRow = UIStackView(arrangedSubviews: [
 			column(swatch: searchBarSwatch, caption: searchBarLabel),
 			column(swatch: navBarSwatch, caption: navBarLabel),
-			column(swatch: fullScreenSwatch, caption: fullScreenLabel),
-			column(swatch: settingsBackgroundSwatch, caption: settingsBackgroundLabel)
+			column(swatch: fullScreenSwatch, caption: fullScreenLabel)
 		])
 		topRow.axis = .horizontal
 		topRow.distribution = .fillEqually
 		topRow.spacing = 12
 
 		let bottomRow = UIStackView(arrangedSubviews: [
+			column(swatch: settingsBackgroundSwatch, caption: settingsBackgroundLabel),
 			column(swatch: settingsCellSwatch, caption: settingsCellLabel),
-			column(swatch: listBackgroundSwatch, caption: listBackgroundLabel),
-			UIView(),
-			UIView()
+			column(swatch: listBackgroundSwatch, caption: listBackgroundLabel)
 		])
 		bottomRow.axis = .horizontal
 		bottomRow.distribution = .fillEqually

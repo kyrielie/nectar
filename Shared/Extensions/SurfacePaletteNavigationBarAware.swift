@@ -108,13 +108,6 @@ extension SurfacePaletteNavigationBarAware {
 		let palette = AppDefaults.shared.surfaceTint
 		let hexSet = isDark ? palette.darkHexSet : palette.lightHexSet
 
-		// TEMPORARY diagnostic logging (top-toolbar-colors-wrong-on-live-switch
-		// investigation, see ArticleViewController's dedicated-notification
-		// observers) -- prints who's calling, and the resolved palette, so a
-		// console trace during a live in-app palette switch shows whether/when
-		// each adopting screen actually repaints. Remove once confirmed.
-		SurfacePaletteNavigationBarAwareLogging.logger.debug("applySurfacePaletteNavigationBarAppearance: \(type(of: self)) palette=\(String(describing: palette), privacy: .public) isDark=\(isDark, privacy: .public) hexSet=\(hexSet == nil ? "nil" : "present", privacy: .public)")
-
 		guard hexSet != nil else {
 			resetToSystemNavigationBarAppearance()
 			return

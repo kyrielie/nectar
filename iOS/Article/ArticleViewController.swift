@@ -379,14 +379,6 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	}
 
 	@objc nonisolated func userDefaultsDidChange(_ note: Notification) {
-		// TEMPORARY diagnostic logging (top-toolbar-colors-wrong-on-live-switch
-		// investigation) -- left in deliberately for one more on-device pass to
-		// confirm how late/whether this generic notification lands relative to
-		// the dedicated surfaceTintDidChange(_:)/accentColorDidChange(_:)
-		// handlers below, which now do the actual nav-bar repaint. Remove once
-		// confirmed and once rightBarButtonItems()/applyArticleBackSwipeGating()
-		// below are confirmed to not also need a dedicated notification.
-		Self.logger.debug("userDefaultsDidChange: generic UserDefaults notification received")
 		Task { @MainActor in
 			coordinator.applyArticleBackSwipeGating()
 			navigationItem.rightBarButtonItems = rightBarButtonItems()
@@ -399,13 +391,10 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	}
 
 	@objc func surfaceTintDidChange(_ note: Notification) {
-		// TEMPORARY diagnostic logging -- see userDefaultsDidChange(_:) above.
-		Self.logger.debug("surfaceTintDidChange: repainting nav bar, palette=\(String(describing: AppDefaults.shared.surfaceTint), privacy: .public)")
 		applySurfacePaletteNavigationBarAppearance()
 	}
 
 	@objc func accentColorDidChange(_ note: Notification) {
-		// TEMPORARY diagnostic logging -- see userDefaultsDidChange(_:) above.
 		// Accent Color doesn't currently drive anything in
 		// applySurfacePaletteNavigationBarAppearance() (that reads surfaceTint
 		// only, per app-chrome-palette.md's own table), but this screen's
@@ -413,7 +402,6 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		// everywhere else, so observing this too keeps
 		// ArticleViewController's story consistent with the documented
 		// observer list rather than silently only covering Surface Palette.
-		Self.logger.debug("accentColorDidChange: repainting nav bar")
 		applySurfacePaletteNavigationBarAppearance()
 	}
 
