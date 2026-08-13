@@ -1,6 +1,6 @@
-/* Beetlejuice -- ported from the AO3 workskin "Beetlejuice" (BJ1.css,
-   github.com/NCFC-Wiki/Beetlejuice-theme-for-AO3, MIT licensed). Structure
-   follows the bundled Sepia.nnwtheme (same selectors, same iOS/macOS
+/* Beetlejuice
+
+   Structure follows the bundled Sepia.nnwtheme (same selectors, same iOS/macOS
    @supports split); values pulled from that skin's site-wide palette:
      body background     <- #111111 (its .region/fieldset/table background)
      body text            <- #eee

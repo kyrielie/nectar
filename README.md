@@ -97,6 +97,18 @@ See [`CLAUDE.md`](./CLAUDE.md) for the docs index — how feed data flows from A
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`Technotes/CodingGuidelines.md`](./Technotes/CodingGuidelines.md) before opening a PR.
 
+## Acknowledgments
+
+Nectar's AO3 HTML extractors were cross-checked against (not ported from)
+[nianeyna/ao3downloader](https://github.com/nianeyna/ao3downloader) (GPL-3.0)
+and [ArmindoFlores/ao3_api](https://github.com/ArmindoFlores/ao3_api) (MIT),
+and reference [otwarchive](https://github.com/otwcode/otwarchive)'s own
+markup structure (GPL-2.0-or-later) for context. Several bundled article
+themes are inspired by community AO3 workskins — see
+[`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md) for the full list of
+sources and licenses, including per-theme detail in each theme's own
+`Themes/*/License.md`.
+
 ## License
 
 Nectar is available under the same license as NetNewsWire — see [`LICENSE`](./LICENSE) (MIT).
