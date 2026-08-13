@@ -429,22 +429,21 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		}
 	}
 
-	/// Keeps the Top Toolbar row's detail label in sync with
-	/// `AppDefaults.shared.articleTopToolbarMode`. Called on appearance and
-	/// whenever the person changes the selection on
+	/// Keeps the Top Toolbar row's detail label in sync with the four
+	/// independent articleToolbarShowX toggles. Called on appearance and
+	/// whenever the person changes a switch on
 	/// ArticleToolbarCustomizerViewController -- this screen doesn't observe
 	/// UserDefaults.didChangeNotification itself, so it also re-reads on
 	/// every viewWillAppear, matching how articleThemeDetailLabel/
 	/// colorPaletteDetailLabel already stay in sync after a pushed screen
 	/// changes their underlying value and pops back here.
 	func updateArticleTopToolbarModeLabel() {
-		switch AppDefaults.shared.articleTopToolbarMode {
-		case .off:
-			articleTopToolbarModeDetailLabel.text = NSLocalizedString("Off", comment: "Article top toolbar mode: off")
-		case .tableOfContentsAndFind:
-			articleTopToolbarModeDetailLabel.text = NSLocalizedString("Table of Contents & Find", comment: "Article top toolbar mode: table of contents and find")
-		case .prevNextArticle:
-			articleTopToolbarModeDetailLabel.text = NSLocalizedString("Previous & Next Article", comment: "Article top toolbar mode: previous and next article")
+		let enabledCount = ArticleToolbarToggle.allCases.filter(AppDefaults.shared.isArticleToolbarToggleEnabled).count
+		if enabledCount == 0 {
+			articleTopToolbarModeDetailLabel.text = NSLocalizedString("Off", comment: "Article top toolbar: no buttons shown")
+		} else {
+			let format = NSLocalizedString("%d Shown", comment: "Article top toolbar: number of buttons shown")
+			articleTopToolbarModeDetailLabel.text = String(format: format, enabledCount)
 		}
 	}
 

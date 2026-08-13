@@ -20,7 +20,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	@IBOutlet private weak var nextUnreadBarButtonItem: UIBarButtonItem!
 	// Strong, unlike the other bar-button outlets here: these two are now
 	// conditionally left out of navigationItem.rightBarButtonItems (see
-	// rightBarButtonItems()/articleTopToolbarMode), and nothing else
+	// rightBarButtonItems()/articleToolbarShowPrevNext), and nothing else
 	// retains them when they're not currently in that array. Weak outlets
 	// with no other owner get deallocated, which crashed updateUI()'s
 	// isEnabled assignments below when the setting was off (Fatally
@@ -356,20 +356,23 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		currentWebViewController?.fullReload()
 	}
 
-	// Order preserved exactly as before articleTopToolbarMode existed:
-	// themeBarButtonItem first, then either TOC/Find (replaces, doesn't add
-	// alongside) or next/prev, driven by the single articleTopToolbarMode
-	// picker (ArticleToolbarCustomizerViewController) rather than the two
-	// independent, mutually-exclusive-by-construction switches this used to
-	// read.
+	// Order: theme, table of contents, find, previous/next -- each driven
+	// by its own independent AppDefaults toggle
+	// (ArticleToolbarCustomizerViewController), so any combination of the
+	// four can be present at once.
 	private func rightBarButtonItems() -> [UIBarButtonItem] {
-		var items: [UIBarButtonItem] = [themeBarButtonItem]
-		switch AppDefaults.shared.articleTopToolbarMode {
-		case .off:
-			break
-		case .tableOfContentsAndFind:
-			items.append(contentsOf: [tableOfContentsBarButtonItem, findInArticleBarButtonItem])
-		case .prevNextArticle:
+		let defaults = AppDefaults.shared
+		var items: [UIBarButtonItem] = []
+		if defaults.isArticleToolbarToggleEnabled(.theme) {
+			items.append(themeBarButtonItem)
+		}
+		if defaults.isArticleToolbarToggleEnabled(.tableOfContents) {
+			items.append(tableOfContentsBarButtonItem)
+		}
+		if defaults.isArticleToolbarToggleEnabled(.find) {
+			items.append(findInArticleBarButtonItem)
+		}
+		if defaults.isArticleToolbarToggleEnabled(.prevNext) {
 			items.append(contentsOf: [nextArticleBarButtonItem, prevArticleBarButtonItem])
 		}
 		return items

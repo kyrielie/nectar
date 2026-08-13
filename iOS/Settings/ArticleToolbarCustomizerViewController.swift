@@ -2,30 +2,30 @@
 //  ArticleToolbarCustomizerViewController.swift
 //  NetNewsWire-iOS
 //
-//  Article view top toolbar settings plan. Replaces the two independent,
-//  silently-conflicting showTableOfContentsAndFind/showPrevNextArticleButtons
-//  switches (formerly ArticlesRow 6-7) with a single push row -- same
-//  pattern as the existing Timeline Layout row -- to a 2-section
-//  UICollectionViewCompositionalLayout list, modeled on
-//  TimelineCustomizerCollectionViewController's shape but with the preview
-//  above the picker rather than below it: Preview (0), Top Toolbar (1).
+//  Replaces the two independent, silently-conflicting
+//  showTableOfContentsAndFind/showPrevNextArticleButtons switches (formerly
+//  ArticlesRow 6-7) with a push row -- same pattern as the existing
+//  Timeline Layout row -- to a 2-section UICollectionViewCompositionalLayout
+//  list, modeled on TimelineCustomizerCollectionViewController's shape but
+//  with the preview above the toggles rather than below: Preview (0),
+//  Top Toolbar (1).
 //
 //  Preview (0) is a single ArticleToolbarPreviewCell showing the real nav
-//  bar icons/order/either-or shape live, so the person sees the actual
-//  bar-button icons update as they choose, rather than inferring behavior
-//  from switch labels. Top Toolbar (1) is one ArticleTopToolbarModeCell per
-//  ArticleTopToolbarMode case, checkmark-style single-select -- selecting a
-//  row sets AppDefaults.shared.articleTopToolbarMode directly and reloads
-//  both sections in place (no pop-on-select, matching
-//  AccentColorTableViewController's reload-in-place shape).
+//  bar icons/order live, so the person sees the actual bar-button icons
+//  update as they flip switches, rather than inferring behavior from
+//  labels. Top Toolbar (1) is one ArticleToolbarToggleCell per
+//  ArticleToolbarToggle case (theme, table of contents, find, prev/next,
+//  in that fixed order) -- each an independent UISwitch row. All four are
+//  freely combinable; flipping one writes straight to its own AppDefaults
+//  property and reloads both sections in place.
 //
 //  Both sections reload on the generic UserDefaults.didChangeNotification --
-//  unlike Timeline Layout's per-setting notifications, articleTopToolbarMode's
-//  setter doesn't post a dedicated one, and ArticleViewController itself
-//  already relies on this same generic notification to repaint its real nav
-//  bar (see ArticleViewController.userDefaultsDidChange(_:)), so this
-//  screen's preview and the real reader deliberately stay on the same
-//  live-update path rather than gaining a second, parallel one.
+//  the toggle setters don't post a dedicated notification, and
+//  ArticleViewController itself already relies on this same generic
+//  notification to repaint its real nav bar (see
+//  ArticleViewController.userDefaultsDidChange(_:)), so this screen's
+//  preview and the real reader deliberately stay on the same live-update
+//  path rather than gaining a second, parallel one.
 //
 
 import UIKit
@@ -34,8 +34,6 @@ class ArticleToolbarCustomizerViewController: UICollectionViewController, Settin
 
 	var paletteBackgroundView: UIView { collectionView }
 
-	private var notificationObserver: NSObjectProtocol?
-
 	private var previewSection: Int { 0 }
 	private var pickerSection: Int { 1 }
 
@@ -43,7 +41,14 @@ class ArticleToolbarCustomizerViewController: UICollectionViewController, Settin
 		super.viewDidLoad()
 		title = NSLocalizedString("Top Toolbar", comment: "Article Top Toolbar screen title")
 
-		notificationObserver = NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
+		// Block-based observers only weakly capture self and are safe to
+		// leave registered for the process lifetime -- same as
+		// TimelineCustomizerCollectionViewController's own observers below,
+		// which don't store a token or remove themselves in deinit either.
+		// (Storing the returned token would also be a non-Sendable
+		// NSObjectProtocol stored property, which nonisolated deinit can't
+		// touch under Swift 6 strict concurrency.)
+		NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
 			Task { @MainActor in
 				self?.userDefaultsDidChange()
 			}
@@ -63,12 +68,6 @@ class ArticleToolbarCustomizerViewController: UICollectionViewController, Settin
 		configureSettingsPaletteBackground()
 	}
 
-	deinit {
-		if let notificationObserver {
-			NotificationCenter.default.removeObserver(notificationObserver)
-		}
-	}
-
 	// SettingsPaletteBackgroundHosting
 	func refreshPaletteCellBackgrounds() {
 		userDefaultsDidChange()
@@ -82,7 +81,7 @@ class ArticleToolbarCustomizerViewController: UICollectionViewController, Settin
 		)
 
 		collectionView.register(ArticleToolbarPreviewCell.self, forCellWithReuseIdentifier: ArticleToolbarPreviewCell.reuseIdentifier)
-		collectionView.register(ArticleTopToolbarModeCell.self, forCellWithReuseIdentifier: ArticleTopToolbarModeCell.reuseIdentifier)
+		collectionView.register(ArticleToolbarToggleCell.self, forCellWithReuseIdentifier: ArticleToolbarToggleCell.reuseIdentifier)
 
 		var config = UICollectionLayoutListConfiguration(appearance: .insetGrouped)
 		config.showsSeparators = false
@@ -103,19 +102,19 @@ class ArticleToolbarCustomizerViewController: UICollectionViewController, Settin
 		if section == previewSection {
 			return 1
 		}
-		return ArticleTopToolbarMode.allCases.count
+		return ArticleToolbarToggle.allCases.count
 	}
 
 	override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
 		if indexPath.section == previewSection {
 			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ArticleToolbarPreviewCell.reuseIdentifier, for: indexPath) as! ArticleToolbarPreviewCell
-			cell.configure(mode: AppDefaults.shared.articleTopToolbarMode)
+			cell.configure()
 			return cell
 		}
 
-		let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ArticleTopToolbarModeCell.reuseIdentifier, for: indexPath) as! ArticleTopToolbarModeCell
-		let mode = ArticleTopToolbarMode.allCases[indexPath.item]
-		cell.configure(mode: mode, isSelected: mode == AppDefaults.shared.articleTopToolbarMode)
+		let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ArticleToolbarToggleCell.reuseIdentifier, for: indexPath) as! ArticleToolbarToggleCell
+		let toggle = ArticleToolbarToggle.allCases[indexPath.item]
+		cell.configure(toggle: toggle, isOn: AppDefaults.shared.isArticleToolbarToggleEnabled(toggle))
 		return cell
 	}
 
@@ -147,17 +146,12 @@ class ArticleToolbarCustomizerViewController: UICollectionViewController, Settin
 		CGSize(width: collectionView.bounds.width, height: 50)
 	}
 
-	override func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
-		// Only the picker rows are interactive; the preview row isn't.
-		return indexPath.section == pickerSection
-	}
-
-	override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-		guard indexPath.section == pickerSection else { return }
-		let mode = ArticleTopToolbarMode.allCases[indexPath.item]
-		AppDefaults.shared.articleTopToolbarMode = mode
-		collectionView.reloadSections(IndexSet([previewSection, pickerSection]))
-	}
+	// No shouldSelectItemAt/didSelectItemAt override needed: neither the
+	// preview row nor the toggle rows respond to a tap on the row itself --
+	// each ArticleToolbarToggleCell's own UISwitch valueChanged target
+	// writes back to AppDefaults directly (see ArticleToolbarToggleCell),
+	// closer to StatsVisibilityCell's pattern than the old checkmark-row
+	// single-select this screen used to be.
 
 	// MARK: Notifications
 

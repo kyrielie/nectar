@@ -2,15 +2,14 @@
 //  ArticleToolbarPreviewCell.swift
 //  NetNewsWire-iOS
 //
-//  Article view top toolbar settings plan. Live preview row for
-//  ArticleToolbarCustomizerViewController -- a synthetic UINavigationBar
-//  built with the same icons, order, and either/or shape as
-//  ArticleViewController.rightBarButtonItems() (theme button always first,
-//  then either the table-of-contents/find pair or the prev/next pair, never
-//  both), rather than an embedded real ArticleViewController, since that
+//  Live preview row for ArticleToolbarCustomizerViewController -- a
+//  synthetic UINavigationBar built with the same icons and order as
+//  ArticleViewController.rightBarButtonItems() (theme, table of contents,
+//  find, then prev/next, each included only if its own AppDefaults toggle
+//  is on), rather than an embedded real ArticleViewController, since that
 //  controller needs a live Article, SceneCoordinator, and WebView machinery
 //  this settings screen has no reason to stand up. If
-//  rightBarButtonItems()'s ordering ever changes, configure(mode:) needs the
+//  rightBarButtonItems()'s ordering ever changes, configure() needs the
 //  matching change or this preview silently drifts from the real reader.
 //
 
@@ -48,22 +47,25 @@ final class ArticleToolbarPreviewCell: UICollectionViewListCell {
 		])
 	}
 
-	/// Mirrors ArticleViewController.rightBarButtonItems() exactly: theme
-	/// button always first, then either the table-of-contents/find pair
-	/// or the prev/next pair (array order [next, prev], matching that
-	/// method's own literal), never both.
-	func configure(mode: ArticleTopToolbarMode) {
-		let theme = UIBarButtonItem(image: Assets.Images.theme, style: .plain, target: nil, action: nil)
-		var items: [UIBarButtonItem] = [theme]
+	/// Mirrors ArticleViewController.rightBarButtonItems() exactly: theme,
+	/// table of contents, find, then prev/next (array order [next, prev],
+	/// matching that method's own literal) -- each included only if its
+	/// own AppDefaults toggle is currently on, so any combination (including
+	/// none) renders correctly.
+	func configure() {
+		let defaults = AppDefaults.shared
+		var items: [UIBarButtonItem] = []
 
-		switch mode {
-		case .off:
-			break
-		case .tableOfContentsAndFind:
-			let toc = UIBarButtonItem(image: Assets.Images.tableOfContents, style: .plain, target: nil, action: nil)
-			let find = UIBarButtonItem(image: Assets.Images.findInArticle, style: .plain, target: nil, action: nil)
-			items.append(contentsOf: [toc, find])
-		case .prevNextArticle:
+		if defaults.isArticleToolbarToggleEnabled(.theme) {
+			items.append(UIBarButtonItem(image: Assets.Images.theme, style: .plain, target: nil, action: nil))
+		}
+		if defaults.isArticleToolbarToggleEnabled(.tableOfContents) {
+			items.append(UIBarButtonItem(image: Assets.Images.tableOfContents, style: .plain, target: nil, action: nil))
+		}
+		if defaults.isArticleToolbarToggleEnabled(.find) {
+			items.append(UIBarButtonItem(image: Assets.Images.findInArticle, style: .plain, target: nil, action: nil))
+		}
+		if defaults.isArticleToolbarToggleEnabled(.prevNext) {
 			let next = UIBarButtonItem(image: Assets.Images.nextArticle, style: .plain, target: nil, action: nil)
 			let prev = UIBarButtonItem(image: Assets.Images.prevArticle, style: .plain, target: nil, action: nil)
 			items.append(contentsOf: [next, prev])
