@@ -3,9 +3,9 @@
 Tracks how the Nectar fork's source tree differs from upstream
 [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire), so a future audit
 (or an AI engineer onboarding onto this codebase) can see what changed without
-re-running a full file-by-file sweep from scratch. This complements
-`nectar-architecture.md`, which documents what the code *does*; this file tracks
-*where it differs from upstream* at the file level.
+re-running a full file-by-file sweep from scratch. This complements the
+topic docs indexed in `CLAUDE.md`, which document what the code *does*;
+this file tracks *where it differs from upstream* at the file level.
 
 ## Snapshot provenance
 
@@ -27,8 +27,15 @@ and they're not real diffs):
 |---|---|---|
 | Byte-identical carryover | 466 | Unmodified from upstream |
 | Modified from upstream | 173 | Same path, different content |
-| Nectar-original | 225 | No upstream counterpart (excludes 28 scratch/build-artifact files -- crash log samples, `.swiftpm` scheme files, `Package.resolved` -- not worth tracking as fork features) |
+| Nectar-original | 224 | No upstream counterpart (excludes 28 scratch/build-artifact files -- crash log samples, `.swiftpm` scheme files, `Package.resolved` -- not worth tracking as fork features) |
 | Upstream-only | 553 | No Nectar counterpart |
+
+Corrected from this audit's original 225/1 split: `nectar-architecture.md`
+was counted as Nectar-original when this snapshot was generated but has
+since been deleted (its content split into the topic docs indexed in
+`CLAUDE.md`). Removed from the itemized list below rather than left as a
+stale entry; the rest of this table's counts were not independently
+re-verified against that deletion.
 
 The upstream-only count splits into two very different buckets:
 
@@ -41,8 +48,8 @@ The upstream-only count splits into two very different buckets:
 - `Intents/` -- 3 files
 
 These 299 files are **out of scope entirely**, not deleted features:
-Nectar only builds the iOS target (per `nectar-architecture.md`'s Module Layout
-note that "several `#if os(macOS)` branches survive... but nothing macOS is
+Nectar only builds the iOS target (per `module-layout.md`'s note that
+"several `#if os(macOS)` branches survive... but nothing macOS is
 currently built or shipped"). `Mac/`, `Widget/`, `NetNewsWire.xcodeproj/`,
 `AppStore/`, `Appcasts/`, `AppleScript/`, and `Intents/` are all macOS-app-target
 or non-source-tree content upstream has no iOS-only equivalent for. Not itemized
@@ -54,7 +61,7 @@ itemized below.
 
 ## Deleted from upstream (intentional)
 
-Confirms `nectar-architecture.md`'s Module Layout note that the non-local account
+Confirms `module-layout.md`'s note that the non-local account
 backends are "fully deleted from the tree, not merely unreachable-but-compiled."
 
 **`Modules/Account/`** (69 files)
@@ -128,8 +135,8 @@ superseded by Nectar's `iOS/Settings/ArticleThemeListView.swift`. Worth calling
 out specifically: `Resources/Themes/` -- upstream's 25 built-in `.nnwtheme`
 bundles -- are gone entirely, replaced by Nectar's own 20+ themes listed under
 "Nectar-original" below. Confirm that's intentional (a full swap) rather than
-an accidental loss of upstream themes worth porting forward, since it wasn't
-called out explicitly in `nectar-architecture.md`.)
+an accidental loss of upstream themes worth porting forward, since it isn't
+called out explicitly in `theme-system.md` or any other current topic doc.)
 
 Full per-file list is mechanically reproducible (see Regeneration procedure) --
 not enumerated file-by-file here since the directory-level grouping above is the
@@ -318,10 +325,6 @@ This project's own documentation set (including this file).
 
 - `make-zip.sh`
 
-### `nectar-architecture.md/` (1 file)
-
-- `nectar-architecture.md`
-
 ### `project.yml/` (1 file)
 
 - `project.yml`
@@ -337,9 +340,9 @@ This project's own documentation set (including this file).
 Same path in both trees, different content. This is the highest-value list for
 code review or regression triage -- anything not here is either untouched or
 wholly new (see above). One-line reasons are given only where already confirmed
-by this session's tracing or by `nectar-architecture.md`; everything else is
-listed without a guessed reason, per this project's own rule against asserting
-things that haven't been verified by reading the code.
+by this session's tracing or by one of the topic docs indexed in `CLAUDE.md`;
+everything else is listed without a guessed reason, per this project's own
+rule against asserting things that haven't been verified by reading the code.
 
 ### `.github/` (1 file)
 
@@ -508,7 +511,7 @@ things that haven't been verified by reading the code.
 - `iOS/Add/AddComboTableViewCell.swift`
 - `iOS/Add/AddFeedViewController.swift`
 - `iOS/Add/SelectComboTableViewCell.swift`
-- `iOS/AppDefaults.swift` -- AccentColor/SurfacePalette/BadgeColorPalette enums added (see nectar-architecture.md App chrome color pipeline)
+- `iOS/AppDefaults.swift` -- AccentColor/SurfacePalette/BadgeColorPalette enums added (see app-chrome-palette.md)
 - `iOS/AppDelegate.swift`
 - `iOS/Article/ArticleSearchBar.swift`
 - `iOS/Article/ArticleViewController.swift`

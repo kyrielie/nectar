@@ -224,9 +224,9 @@ final class WebViewController: UIViewController {
 		// article's theme background, until the async renderPage() catches up a
 		// frame or more later. Passing the resolved colors explicitly closes that
 		// window. self.traitCollection is safe to read here (unlike the bare
-		// Assets.Colors namespace -- see nectar-architecture.md's "Article
-		// background/notch color pipeline"): the view is already loaded, so this
-		// is a real view's own trait collection, not the ambient current one.
+		// Assets.Colors namespace -- see article-color-pipeline.md): the
+		// view is already loaded, so this is a real view's own trait
+		// collection, not the ambient current one.
 		let initialColors = Self.resolvedArticleColors(isDark: traitCollection.userInterfaceStyle == .dark)
 		updateNotchAndPageCounterVisibility(resolvedBackground: initialColors.background, resolvedText: initialColors.text)
 
@@ -1102,8 +1102,8 @@ private extension WebViewController {
 	// CSS already updates live via @media prefers-color-scheme when the app's
 	// Appearance setting or the system trait changes, but these native UIKit-side
 	// colors were previously only resolved once per renderPage call and went stale
-	// until the article was reopened or the theme changed. See nectar-architecture.md,
-	// "Article background/notch color pipeline."
+	// until the article was reopened or the theme changed. See
+	// article-color-pipeline.md.
 	private func applyResolvedBackgroundColors() {
 		guard let webView else { return }
 

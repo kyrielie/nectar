@@ -478,7 +478,11 @@ extension ArticleRenderer {
 		}
 
 		appendRow("Rating:", article.ratings)
-		appendRow("Archive Warning:", article.warnings)
+		// isWide: matches AO3ChapterHTMLExtractor's real-fetch path -- see
+		// its comment on the "warning" class token for why (long fixed
+		// AO3 phrases, often two or three at once, not merely many
+		// values).
+		appendRow("Archive Warning:", article.warnings, isWide: true)
 		appendRow("Category:", article.categories)
 		// Fandom/Relationships/Characters render wide (full preface width,
 		// own line below the label) -- matching AO3ChapterHTMLExtractor's

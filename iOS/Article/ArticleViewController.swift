@@ -116,7 +116,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		// solely on the generic UserDefaults.didChangeNotification observer
 		// above to repaint the nav bar on a Surface Palette change, unlike
 		// every other SurfacePaletteNavigationBarAware-adopting screen (see
-		// nectar-architecture.md, "Live-update pipeline shape" -- its own
+		// app-chrome-palette.md, "Live-update pipeline shape" -- its own
 		// observer list never included ArticleViewController). That generic
 		// notification carries none of the same-thread, synchronous-before-
 		// the-setter-returns guarantee .surfaceTintDidChange/.accentColorDidChange
@@ -398,9 +398,9 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		// TEMPORARY diagnostic logging -- see userDefaultsDidChange(_:) above.
 		// Accent Color doesn't currently drive anything in
 		// applySurfacePaletteNavigationBarAppearance() (that reads surfaceTint
-		// only, per nectar-architecture.md's "App chrome color pipeline"
-		// table), but this screen's bar-button icons render via the system
-		// tint cascade same as everywhere else, so observing this too keeps
+		// only, per app-chrome-palette.md's own table), but this screen's
+		// bar-button icons render via the system tint cascade same as
+		// everywhere else, so observing this too keeps
 		// ArticleViewController's story consistent with the documented
 		// observer list rather than silently only covering Surface Palette.
 		Self.logger.debug("accentColorDidChange: repainting nav bar")
