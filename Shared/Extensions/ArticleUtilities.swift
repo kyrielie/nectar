@@ -96,8 +96,25 @@ extension Article {
 		return contentHTML ?? contentText ?? summary
 	}
 
+	// The later of datePublished/dateModified, not datePublished-first. This matters for
+	// AO3 items specifically: a search-results fetch (AO3SearchResultsExtractor) only ever
+	// has AO3's "last updated" date available, so it sets dateModified and leaves
+	// datePublished nil; a later full-content fetch (AO3ChapterHTMLExtractor) then supplies
+	// the real (and for any updated/multi-chapter work, earlier) datePublished. Preferring
+	// datePublished unconditionally made the timeline date jump backward the moment content
+	// finished fetching. Taking the later of the two keeps the timeline date stable and
+	// consistent with "when did this last change" across both fetch paths.
 	var logicalDatePublished: Date {
-		return datePublished ?? dateModified ?? status.dateArrived
+		switch (datePublished, dateModified) {
+		case let (.some(published), .some(modified)):
+			return max(published, modified)
+		case let (.some(published), nil):
+			return published
+		case let (nil, .some(modified)):
+			return modified
+		case (nil, nil):
+			return status.dateArrived
+		}
 	}
 
 }

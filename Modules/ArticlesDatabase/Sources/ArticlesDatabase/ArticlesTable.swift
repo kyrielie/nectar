@@ -38,6 +38,17 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	// properties and the two bookKey helpers), but the same file-scoped-
 	// `private` reasoning applies here just as much.
 	static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticlesTable")
+
+	// SQL equivalent of Article.logicalDatePublished (Shared/Extensions/ArticleUtilities.swift):
+	// the later of datePublished/dateModified, falling back to dateArrived when neither is set.
+	// SQLite's multi-argument max() returns NULL if *either* argument is NULL (unlike coalesce),
+	// so the outer coalesce is required -- max(datePublished, dateModified) only resolves
+	// anything when both columns are non-null; the three-argument fallback chain after it
+	// covers every case where at most one of the two is set. Previously this was
+	// `coalesce(datePublished, dateModified, dateArrived)` at every call site below, which
+	// (like logicalDatePublished's old implementation) preferred datePublished unconditionally
+	// even when dateModified was later -- see database.md.
+	static let logicalDatePublishedSQL = "coalesce(max(datePublished, dateModified), datePublished, dateModified, dateArrived)"
 	static let signposter = OSSignposter(subsystem: Bundle.main.bundleIdentifier!, category: .pointsOfInterest)
 
 	// TODO: update articleCutoffDate as time passes and based on user preferences.
@@ -1557,7 +1568,7 @@ nonisolated private extension ArticlesTable {
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
 		var whereClause = "feedID in \(placeholders) and read=0"
 		if let limit = limit {
-			whereClause.append(" order by coalesce(datePublished, dateModified, dateArrived) desc limit \(limit)")
+			whereClause.append(" order by \(Self.logicalDatePublishedSQL) desc limit \(limit)")
 		}
 
 		// Diagnostic: confirms the exact where-clause and feed count used
@@ -1583,7 +1594,7 @@ nonisolated private extension ArticlesTable {
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
 		var whereClause = "feedID in \(placeholders) and read=1"
 		if let limit = limit {
-			whereClause.append(" order by coalesce(datePublished, dateModified, dateArrived) desc limit \(limit)")
+			whereClause.append(" order by \(Self.logicalDatePublishedSQL) desc limit \(limit)")
 		}
 		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
@@ -1659,7 +1670,7 @@ nonisolated private extension ArticlesTable {
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
 		var whereClause = "feedID in \(placeholders) and starred=1"
 		if let limit = limit {
-			whereClause.append(" order by coalesce(datePublished, dateModified, dateArrived) desc limit \(limit)")
+			whereClause.append(" order by \(Self.logicalDatePublishedSQL) desc limit \(limit)")
 		}
 		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 		}
@@ -1684,7 +1695,7 @@ nonisolated private extension ArticlesTable {
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
 		var whereClause = "feedID in \(placeholders) and loved=1"
 		if let limit = limit {
-			whereClause.append(" order by coalesce(datePublished, dateModified, dateArrived) desc limit \(limit)")
+			whereClause.append(" order by \(Self.logicalDatePublishedSQL) desc limit \(limit)")
 		}
 		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
@@ -1766,7 +1777,7 @@ nonisolated private extension ArticlesTable {
 	}
 
 	func fetchLastUpdateDates(_ database: FMDatabase) -> [String: Date] {
-		guard let resultSet = database.executeQuery("SELECT feedID, MAX(coalesce(datePublished, dateModified, dateArrived)) as latestDate FROM articles natural join statuses GROUP BY feedID;", withArgumentsIn: []) else {
+		guard let resultSet = database.executeQuery("SELECT feedID, MAX(\(Self.logicalDatePublishedSQL)) as latestDate FROM articles natural join statuses GROUP BY feedID;", withArgumentsIn: []) else {
 			return [:]
 		}
 		defer {

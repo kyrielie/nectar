@@ -156,4 +156,96 @@ struct ArticlesTableUpdateTests {
 		#expect(firstArticles.first?.status.readingProgress == 0.42)
 		#expect(secondArticles.first?.status.readingProgress == 0.42)
 	}
+
+	// e. Regression guard for the AO3 "timeline date moves backward after
+	// content fetch" bug, at the storage layer. A search-results fetch
+	// (AO3SearchResultsExtractor) only ever supplies dateModified ("last
+	// updated" -- AO3 doesn't expose original publish date on that page),
+	// leaving datePublished nil; a later content fetch
+	// (AO3ChapterHTMLExtractor) supplies the real datePublished, which for
+	// any work updated after its original posting is *earlier* than
+	// dateModified. Article.init(parsedItem:) previously coerced a nil
+	// datePublished into a copy of dateModified before storage, which made
+	// the genuinely later real datePublished look like a legitimate change
+	// and overwrite that copy. This asserts both dates are now stored
+	// exactly as parsed, with no coercion -- see database.md.
+	// Article.logicalDatePublished's own later-of-the-two display/sort
+	// logic is covered separately in ArticleLogicalDatePublishedTests
+	// (Tests/NetNewsWire-iOSTests), since that property lives in Shared/
+	// (the app target), not this package.
+	@Test("datePublished and dateModified are each stored exactly as parsed, with no cross-field coercion, across a search-results fetch followed by a content fetch")
+	func datesAreStoredWithoutCoercionAcrossSearchResultsThenContentFetch() async throws {
+		let db = TestFixtures.makeDatabase()
+
+		let lastUpdated = Date(timeIntervalSince1970: 1_700_000_000) // the "later" date
+		let realPublished = Date(timeIntervalSince1970: 1_600_000_000) // earlier than lastUpdated
+
+		// Step 1: search-results fetch. Only dateModified is known.
+		let searchResultsItem = TestFixtures.makeParsedItem(
+			uniqueID: "u1",
+			feedURL: "https://example.com/feed",
+			ao3WorkID: "77777",
+			dateModified: lastUpdated
+		)
+		_ = await db.updateAsync(parsedItems: [searchResultsItem], feedID: "feed-1", deleteOlder: false)
+
+		let articleID = Article.calculatedArticleID(feedID: "feed-1", uniqueID: "u1")
+		let afterSearchResults = await db.fetchArticlesAsync(articleIDs: [articleID])
+		// datePublished must stay nil -- not coerced into a copy of dateModified.
+		#expect(afterSearchResults.first?.datePublished == nil)
+		#expect(afterSearchResults.first?.dateModified == lastUpdated)
+
+		// Step 2: content fetch. Now the real (earlier) datePublished is known,
+		// alongside the same dateModified.
+		let contentFetchItem = TestFixtures.makeParsedItem(
+			uniqueID: "u1",
+			feedURL: "https://example.com/feed",
+			ao3WorkID: "77777",
+			datePublished: realPublished,
+			dateModified: lastUpdated
+		)
+		_ = await db.updateAsync(parsedItems: [contentFetchItem], feedID: "feed-1", deleteOlder: false)
+
+		let afterContentFetch = await db.fetchArticlesAsync(articleIDs: [articleID])
+		#expect(afterContentFetch.first?.datePublished == realPublished)
+		#expect(afterContentFetch.first?.dateModified == lastUpdated)
+	}
+
+	// f. Regression guard for the same fix at the SQL ordering layer
+	// (ArticlesTable.logicalDatePublishedSQL): a limit-bounded fetch must
+	// order by the later of datePublished/dateModified, matching
+	// Article.logicalDatePublished, or a limited query could silently drop
+	// an article whose only known date is a later dateModified in favor of
+	// one with an earlier datePublished.
+	@Test("a limit-bounded unread fetch orders by the later of datePublished/dateModified")
+	func limitedFetchOrdersByLaterDate() async throws {
+		let db = TestFixtures.makeDatabase()
+
+		// "older": only datePublished, older than "newer"'s dateModified.
+		let older = TestFixtures.makeParsedItem(
+			uniqueID: "u-older",
+			feedURL: "https://example.com/feed",
+			datePublished: Date(timeIntervalSince1970: 1_000_000_000)
+		)
+		// "newer": only dateModified is known (the AO3 search-results
+		// shape), and it's later than "older"'s datePublished.
+		let newer = TestFixtures.makeParsedItem(
+			uniqueID: "u-newer",
+			feedURL: "https://example.com/feed",
+			dateModified: Date(timeIntervalSince1970: 2_000_000_000)
+		)
+		_ = await db.updateAsync(parsedItems: [older, newer], feedID: "feed-1", deleteOlder: false)
+
+		let olderArticleID = Article.calculatedArticleID(feedID: "feed-1", uniqueID: "u-older")
+		let newerArticleID = Article.calculatedArticleID(feedID: "feed-1", uniqueID: "u-newer")
+
+		// Only room for one -- if the SQL ordering wrongly preferred
+		// datePublished-over-dateModified, "older" (which has a
+		// datePublished at all) would win the limit=1 slot instead of
+		// "newer" (whose only date is later).
+		let limited = await db.fetchUnreadArticlesAsync(feedIDs: ["feed-1"], limit: 1)
+		#expect(limited.count == 1)
+		#expect(limited.first?.articleID == newerArticleID)
+		#expect(limited.first?.articleID != olderArticleID)
+	}
 }
