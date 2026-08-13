@@ -37,9 +37,13 @@ final class ContextMenuPreviewViewController: UIViewController {
 		])
 
 		// Items' times are all auto-set to 12:00, so only show day/month/year.
+		// AO3's scraped date-only strings are parsed as midnight UTC, so this
+		// must format in UTC too or the displayed day shifts back by one for
+		// any device timezone behind UTC (see ArticleStringFormatter.dateFormatter).
 		let dateFormatter = DateFormatter()
 		dateFormatter.dateStyle = .long
 		dateFormatter.timeStyle = .none
+		dateFormatter.timeZone = TimeZone(identifier: "UTC")
 		dateTimeLabel.text = dateFormatter.string(from: article.logicalDatePublished)
 
 		// When in landscape the context menu preview will force this controller into a tiny

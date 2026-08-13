@@ -233,6 +233,15 @@ struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		}
 		if !articleBodyDeclarations.isEmpty {
 			css += ".articleBody {\n\t\(articleBodyDeclarations.joined(separator: "\n\t"))\n}\n"
+			// #workskin content sits inside #bodyContainer (see template.html) and
+			// AO3 work skins are commonly authored with their own !important
+			// text-align/hyphens rules scoped under #workskin -- a single-ID
+			// selector like that beats a plain .articleBody rule even when both
+			// sides use !important, because ID specificity outranks class
+			// specificity regardless of source order. #bodyContainer #workskin
+			// uses two IDs, which outranks any #workskin .foo rule no matter how
+			// many classes it chains.
+			css += "#bodyContainer #workskin, #bodyContainer #workskin * {\n\t\(articleBodyDeclarations.joined(separator: "\n\t"))\n}\n"
 		}
 
 		if let linkColorHex {

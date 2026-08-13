@@ -1834,6 +1834,16 @@ struct SidebarItemNode: Hashable, Sendable {
 	/// can race with the direct fetch; it's the same primitive
 	/// `WebViewController`'s scroll-position queue already uses for an
 	/// analogous "about to do my own synchronous flush" situation.
+	///
+	/// Two remaining gaps, both handled explicitly below rather than left
+	/// to silently no-op: `fetchAndMergeArticlesAsync`'s completion is
+	/// documented to never fire at all if `timelineFeed` is `nil`, and an
+	/// unrelated concurrent fetch can still bump `fetchSerialNumber` via
+	/// `cancelPendingAsyncFetches()` even after the guard above, dropping
+	/// this flow's own completion. The `timelineFeed == nil` case selects
+	/// directly instead of calling the fetch at all; the other case gets a
+	/// 1.5s fallback that retries the direct selection if the primary
+	/// completion hasn't run by then.
 	func navigateToTimelineAndSelectArticle(_ articleID: String) {
 		fetchAndMergeArticlesQueue.cancelPendingCalls()
 
@@ -1858,7 +1868,19 @@ struct SidebarItemNode: Hashable, Sendable {
 
 		selectArticle(nil)
 		mainTimelineViewController?.focus()
+
+		guard timelineFeed != nil else {
+			// fetchAndMergeArticlesAsync's completion is guaranteed not to fire
+			// in this case (see its own guard) -- go straight to the fallback
+			// instead of waiting on a callback we know won't come.
+			selectArticleInCurrentFeed(articleID)
+			clearNavigationFlag()
+			return
+		}
+
+		var didSelect = false
 		fetchAndMergeArticlesAsync(animated: true) { [weak self] in
+			didSelect = true
 			self?.selectArticleInCurrentFeed(articleID)
 			// Deliberately NOT calling clearNavigationFlag() here. This
 			// completion typically runs *before* the pop-to-timeline
@@ -1873,6 +1895,20 @@ struct SidebarItemNode: Hashable, Sendable {
 			// leaves that to happen there. The asyncAfter fallback above
 			// remains as a backstop for the case where deselectIfNecessary()
 			// never fires at all (e.g. non-collapsed split view).
+		}
+
+		// Defensive fallback for the cancel-race case: if the completion above
+		// hasn't run shortly after the fetch should reasonably have finished,
+		// the request was likely dropped by an unrelated concurrent fetch
+		// bumping fetchSerialNumber (see the long comment above this function).
+		// Try the direct selection once more -- by now self.articles should
+		// reflect whatever DB state exists, since cache-hit series-nav targets
+		// are already persisted before this function is ever called.
+		// selectArticleInCurrentFeed is idempotent, so a harmless double-fire
+		// is possible if the primary completion lands just after this timer.
+		DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+			guard !didSelect else { return }
+			self?.selectArticleInCurrentFeed(articleID)
 		}
 	}
 
