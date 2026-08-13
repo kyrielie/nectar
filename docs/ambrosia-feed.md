@@ -202,8 +202,8 @@ uses this at OPML-import time: if an incoming feed URL resolves to the same
 collection key as an existing feed (just with a different host/port), the
 existing feed is repointed to the new URL instead of a duplicate sidebar
 entry being created. This is the client-side half of surviving a LAN IP
-change; see `nectar-architecture.md`'s "Feed LAN-IP repointing" section for
-the broader refresh-time repointing behavior (not duplicated here).
+change; see `feed-repointing.md` for the broader refresh-time repointing
+behavior (not duplicated here).
 
 ## Settings
 

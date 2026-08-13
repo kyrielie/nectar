@@ -57,7 +57,7 @@ import Foundation
 /// (which mirrors a chapter fetch, where AO3 returns HTTP 200 for a rate
 /// limit indistinguishable from a real page), a search-results fetch's rate
 /// limiting is a genuine HTTP 429 that `Downloader`'s existing per-host
-/// cooldown (see `nectar-architecture.md`, "AO3 preface rendering...")
+/// cooldown (see `ao3-preface-rendering.md`)
 /// already intercepts before any HTML reaches this extractor. Task 9's
 /// checkpoint 2 (fetch path, not yet built) is expected to surface that
 /// cooldown as its own `.rateLimited` case on a *fetcher*-level result type

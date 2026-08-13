@@ -9,7 +9,9 @@ network or database dependency, and lives in `RSParser` specifically so it
 can be reached from every AO3 ingestion path without a layering inversion
 (`Account` depends on `RSParser`, never the reverse). The networking/session/
 fetch-orchestration layer built on top of these extractors lives in the
-`Account` module — see `ao3-integration.md`.
+`Account` module — see `ao3-integration.md`. The subscription/wiring layer
+that actually invokes these extractors on incoming RSS/Atom items is
+documented separately in `ao3-direct-feed-ingestion.md`.
 
 All of these extractors operate on `HTMLLiteTree`/`HTMLLiteElement` — a
 lightweight parsed-HTML tree type shared with the rest of `RSParser`'s HTML

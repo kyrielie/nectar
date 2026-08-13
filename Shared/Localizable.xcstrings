@@ -1168,6 +1168,9 @@
     "We were unable to process the selected file.  Please ensure that it is a properly formatted OPML file." : {
       "comment" : "Import Failed Message"
     },
+    "When on, the top navigation bar picks up the Surface Palette's tint color, matching the bottom toolbar. When off, the navigation bar stays plain system appearance regardless of the selected palette." : {
+      "comment" : "Tinted navigation bar toggle footer"
+    },
     "When you love a work in Nectar, it also leaves a kudos on that work on AO3, using your signed-in AO3 account." : {
       "comment" : "AO3 kudos-on-like footer, signed in"
     },
