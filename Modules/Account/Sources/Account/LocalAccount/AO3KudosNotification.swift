@@ -2,9 +2,8 @@
 //  AO3KudosNotification.swift
 //  Account
 //
-//  Nectar AO3 direct-reading support, Task 6 ("kudos-on-like") -- see
-//  nectar-ao3-features-plan-FINAL.md. Mirrors AO3ChapterNotification's
-//  shape.
+//  Nectar AO3 direct-reading support, Task 6 ("kudos-on-like"). Mirrors
+//  AO3ChapterNotification's shape.
 //
 //  Only .ao3KudosDidSucceed is posted so far -- plumbing for a future
 //  haptic/UI hookup (a later checkpoint). No corresponding "did fail"

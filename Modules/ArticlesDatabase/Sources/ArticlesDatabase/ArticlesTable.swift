@@ -34,7 +34,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	// Not private -- used from every MARK region in this file (23 call
 	// sites across "Self.logger"/"Self.signposter"), several of which
 	// move to their own files below. Not called out explicitly in the
-	// cleanup plan's 3.1 list (which only names the seven stored
+	// original cleanup pass's list (which only names the seven stored
 	// properties and the two bookKey helpers), but the same file-scoped-
 	// `private` reasoning applies here just as much.
 	static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticlesTable")
@@ -1079,8 +1079,8 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	// MARK: - Pending content update (Task 8: content archival & destructive-update protection)
 	//
-	// A single pending-update slot on the article row (see the plan's "keep
-	// both" storage shape), written directly here rather than through the
+	// A single pending-update slot on the article row ("keep both" storage
+	// shape), written directly here rather than through the
 	// ordinary ParsedItem/changesFrom diff path -- ParsedItem has no field
 	// for it, since it only ever exists between AO3ChapterFetcher detecting
 	// a likely-destructive edit and the person resolving it. articleID-

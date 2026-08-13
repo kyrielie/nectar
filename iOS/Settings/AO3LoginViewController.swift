@@ -2,8 +2,7 @@
 //  AO3LoginViewController.swift
 //  NetNewsWire-iOS
 //
-//  Nectar AO3 direct-reading support, Workstream 3 ("optional AO3 login")
-//  -- see docs/ao3-merged-plan-nectar.md.
+//  Nectar AO3 direct-reading support, Workstream 3 ("optional AO3 login").
 //
 //  In-app WKWebView against AO3's real login page. Nectar never sees the
 //  password, only the resulting session: on success, every archiveofourown.org

@@ -2,10 +2,9 @@
 //  ArticleSQLiteExportTableTests.swift
 //  ArticlesDatabaseTests
 //
-//  Nectar cleanup plan v2, Phase 3c: direct coverage of
+//  Phase 3c: direct coverage of
 //  ArticlesDatabase.exportArticlesSQLite / ArticleSQLiteExportTable, which
-//  had zero coverage before this. Three cases, matching the plan's
-//  numbering: (1) feedIDs: nil exports everything, a non-empty set scopes
+//  had zero coverage before this. Three cases: (1) feedIDs: nil exports everything, a non-empty set scopes
 //  correctly, (2) the statuses export is scoped by the articles join, not
 //  re-filtered by feedID -- an orphaned status (no matching articles row)
 //  is excluded regardless of feedID scoping, (3) an already-existing

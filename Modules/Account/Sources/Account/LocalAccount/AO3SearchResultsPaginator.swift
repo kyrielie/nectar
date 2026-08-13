@@ -3,8 +3,7 @@
 //  Account
 //
 //  Nectar AO3 search-results refresh-cadence work, Workstream D
-//  ("Load more results" pagination) -- see
-//  nectar-ao3-search-refresh-plan.md.
+//  ("Load more results" pagination).
 //
 //  Same shape as AO3SeriesNavigator: a standalone @MainActor public enum
 //  for one-off, explicitly-triggered fetches that deliberately does NOT go

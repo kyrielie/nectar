@@ -2,8 +2,7 @@
 //  AO3SessionStore.swift
 //  Account
 //
-//  Nectar AO3 direct-reading support, Workstream 3 ("optional AO3 login")
-//  -- see docs/ao3-merged-plan-nectar.md.
+//  Nectar AO3 direct-reading support, Workstream 3 ("optional AO3 login").
 //
 //  Keychain-backed storage for a single AO3 session, captured via WKWebView
 //  login (AO3LoginViewController, iOS app target) and replayed as a

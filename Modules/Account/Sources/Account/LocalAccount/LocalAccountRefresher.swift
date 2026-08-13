@@ -185,7 +185,7 @@ import os
 		// AmbrosiaTransferFormatPreference + Self.url(for:)) never go through
 		// DownloadSession at all: DownloadSession's default 15s
 		// timeoutIntervalForRequest would kill a multi-minute whole-database
-		// transfer outright (plan section 2d), which is exactly why
+		// transfer outright, which is exactly why
 		// AmbrosiaSQLiteTransferFetcher uses its own dedicated URLSession with a
 		// 300s timeout instead. Route those feeds to it directly here and only
 		// hand the rest to DownloadSession.
@@ -198,8 +198,7 @@ import os
 		// uses, since a search-results page is a single GET, not something
 		// DownloadSession's conditional-GET/feed-parsing machinery is built
 		// for. This checkpoint fetches page 1 only -- "load more"
-		// pagination is a later checkpoint (see nectar-ao3-features-plan-FINAL.md,
-		// Task 9).
+		// pagination is a later checkpoint.
 		var downloadFeeds = Set<Feed>()
 		var sqliteFeeds = Set<Feed>()
 		var ao3SearchResultFeeds = Set<Feed>()
@@ -246,7 +245,7 @@ import os
 	/// (outstandingParseTasks + completeRefreshIfReady), so the refresh pass
 	/// doesn't report itself done while a walk is still in flight.
 	///
-	/// `.incomplete` (plan 3d) is reported via `didComplete`, not
+	/// `.incomplete` is reported via `didComplete`, not
 	/// `reportFeedRefreshError` -- it's a distinct, visible state, not a feed
 	/// error: the walk is retried automatically starting from wherever it
 	/// left off (AmbrosiaSQLiteTransferWalkStateStore) on the next scheduled
@@ -264,8 +263,8 @@ import os
 	///
 	/// NOT YET RESOLVED: `.incomplete` is currently surfaced only through the
 	/// ActivityLog completion message (visible in Settings > Activity Log).
-	/// The plan's 3d also calls for "a distinct status in the feed list
-	/// itself (not just logs)" -- wiring that into MainFeedCollectionViewCell/
+	/// A distinct status in the feed list itself (not just logs) is also
+	/// called for -- wiring that into MainFeedCollectionViewCell/
 	/// MainFeedRowIdentifier needs a closer look at how that cell already
 	/// surfaces per-feed state (if at all) before adding to it; flagged
 	/// rather than guessed at here.
@@ -325,7 +324,7 @@ import os
 	///
 	/// `deleteOlder: false` on the `updateAsync` call below, deliberately --
 	/// page 1 is a partial view of the search, not the whole feed (pagination
-	/// is lazy per the plan), so treating it as authoritative for pruning
+	/// is lazy), so treating it as authoritative for pruning
 	/// would delete every work that only shows up on page 2+.
 	@MainActor private func fetchAndImportAO3SearchResults(feed: Feed) {
 		guard let url = Self.url(for: feed), let account = feed.account else {
@@ -375,7 +374,7 @@ import os
 					// AO3SearchResultsFetcher's doc comment).
 					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "AO3 rate limit hit -- backing off before retrying"]), activityKind: activityKind)
 				case .cloudflareChallenge(let challengedURL):
-					// Also distinct, per the plan's explicit call-out: this
+					// Also distinct: this
 					// isn't AO3's own rate limit and shouldn't be read as one,
 					// nor folded into the generic parse-failure case, since a
 					// real markup change looks identical otherwise.
@@ -955,9 +954,8 @@ extension LocalAccountRefresher {
 	/// tag/user Atom/RSS feed URLs are NOT covered by that check today and
 	/// have no proactive throttle here at all, relying only on
 	/// Downloader's reactive per-host 429/Cloudflare-challenge handling.
-	/// That gap is tracked, not yet resolved either way -- see
-	/// nectar-audit-remediation-plan.md item 3b before assuming it needs
-	/// fixing; it may be fine as-is given how aggressively AO3 already
+	/// That gap is tracked, not yet resolved either way -- don't assume it
+	/// needs fixing; it may be fine as-is given how aggressively AO3 already
 	/// rate-limits.
 	private static func feedShouldBeSkipped(_ feed: Feed, _ redditURLToRefresh: String?) -> (Bool, String?) {
 		let (skipForDisallowedHost, disallowedHostReason) = feedShouldBeSkippedForDisallowedHostReasons(feed)
@@ -1048,7 +1046,7 @@ extension LocalAccountRefresher {
 	/// transfer-format preference is set to `.sqlite` and `feed.url` is a
 	/// recognized Ambrosia JSON route (per `AmbrosiaFeedIdentity`), swaps the
 	/// `.json` suffix for `.sqlite` -- applies uniformly to every
-	/// Ambrosia-paired feed, no per-feed override (plan 2f). Note: this only
+	/// Ambrosia-paired feed, no per-feed override. Note: this only
 	/// affects which URL DownloadSession is asked to fetch; DownloadSession
 	/// itself still treats the result as an ordinary feed request; the actual
 	/// `.sqlite`-vs-`.json` handling (decompression, import) happens where
@@ -1062,7 +1060,7 @@ extension LocalAccountRefresher {
 	/// params). Matched on host (reusing
 	/// `AO3LinkListImporter.permittedHosts`, the same AO3-domain allowlist
 	/// Task 3's paste-import already trusts, rather than a fresh
-	/// single-host check) + path, per the plan ("matched on host +
+	/// single-host check) + path ("matched on host +
 	/// path... not extension"). For the `/works` form, also requires a
 	/// `work_search[` query key -- matched with `hasPrefix` rather than an
 	/// exact key, since AO3 search URLs carry many distinct bracketed keys

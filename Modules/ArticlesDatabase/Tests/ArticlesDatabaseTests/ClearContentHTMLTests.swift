@@ -2,9 +2,9 @@
 //  ClearContentHTMLTests.swift
 //  ArticlesDatabaseTests
 //
-//  Nectar remediation plan, Part 1.1: direct coverage of
+//  Part 1.1: direct coverage of
 //  ArticlesTable.clearContentHTML (ArticlesTable.swift:665), the
-//  delete-vs-clear archival fix from nectar-combined-plan-2.md §3.3/D5.
+//  delete-vs-clear archival fix.
 //  This is the newest correctness-sensitive change in the codebase and had
 //  zero coverage before this file -- a regression here silently
 //  reintroduces the original bug (account.delete's full row/metadata loss

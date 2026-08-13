@@ -3,7 +3,7 @@
 //  Account
 //
 //  Nectar AO3 direct-reading support -- pasted-link-list import (one-time,
-//  no refreshable feed; see nectar-ao3-features-plan-FINAL.md Task 3).
+//  no refreshable feed; Task 3).
 //
 
 import Foundation

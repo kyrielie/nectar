@@ -2,9 +2,9 @@
 //  ContentHTMLCompressionTests.swift
 //  ArticlesDatabaseTests
 //
-//  Nectar cleanup plan v2, Phase 3d: pure-function coverage of
-//  ContentHTMLCompression, no database needed. Four cases, matching the
-//  plan's numbering: (1) compress/decompress round-trip for ordinary HTML,
+//  Phase 3d: pure-function coverage of
+//  ContentHTMLCompression, no database needed. Four cases: (1)
+//  compress/decompress round-trip for ordinary HTML,
 //  (2) nil/empty input passed through unchanged by both functions, (3)
 //  decompress on non-base64 input falls back to the stored string as-is,
 //  (4) decompress on valid base64 that isn't valid LZFSE data also falls

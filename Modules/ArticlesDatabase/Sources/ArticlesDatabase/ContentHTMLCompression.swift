@@ -2,11 +2,10 @@
 //  ContentHTMLCompression.swift
 //  ArticlesDatabase
 //
-//  Nectar Implementation Plan, Phase 3 ("compress contentHTML at rest").
+//  Compress contentHTML at rest (Wire Contract's compression reference).
 //
 //  Reuses the same NSData.compressed(using: .lzfse)/decompressed(using: .lzfse)
-//  Foundation API, per the Wire Contract's compression reference in the
-//  implementation plan.
+//  Foundation API.
 //
 //  articles.contentHTML is a TEXT column (see ArticlesDatabase.swift's
 //  `CREATE TABLE ... articles` statement) and FMDB's row accessors this
@@ -14,7 +13,7 @@
 //  so compressed bytes are base64-encoded into a String rather than switching
 //  the column to BLOB or adding a raw-bytes FMDB call path.
 //
-//  No migration path: per the plan, this is still in development, so there's
+//  No migration path: this is still in development, so there's
 //  no concern about pre-existing uncompressed rows in a dev database. decompress
 //  still falls back to returning the stored string as-is if it isn't valid
 //  base64/LZFSE, purely so a row written before this landed doesn't crash the
