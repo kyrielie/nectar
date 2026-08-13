@@ -74,6 +74,7 @@ struct ErrorLogView: View {
 			.font(.footnote)
 			.foregroundStyle(.secondary)
 			.frame(maxWidth: .infinity, alignment: .leading)
+			.padding(.horizontal)
 			.padding(.vertical, 12)
 	}
 }
