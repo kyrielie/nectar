@@ -32,12 +32,13 @@ cell added together). `.ao3Account` has no row enum: it's a single row that push
   `WebViewController`).
   Top Toolbar replaced two independent switches — Show Previous/Next
   Article Buttons and Show Table of Contents/Find Buttons — that used to
-  sit at `ArticlesRow` positions 6-7. Those two were mutually exclusive by
-  construction in `ArticleViewController.rightBarButtonItems()` (an `else
-  if`: table-of-contents/find wins if both happened to be on), but nothing
-  in the flat switch-row UI said so — a person could flip both on and only
-  the TOC/Find pair would actually show, with no explanation why the other
-  switch appeared to do nothing. See "Article Top Toolbar screen" below.
+  sit at `ArticlesRow` positions 6-7. Those two switches were mutually
+  exclusive by construction in `ArticleViewController.rightBarButtonItems()`
+  (an `else if`), so a person could flip both on and only the TOC/Find pair
+  would actually show. The current screen behind this row keeps that
+  history but no longer inherits the limitation: theme, table of contents,
+  find, and previous/next are each their own switch, freely combinable.
+  See "Article Top Toolbar screen" below.
 - **`.appearance`** (`AppearanceRow`): color palette (pushes
   `ColorPaletteTableViewController`, which also owns the
   `useTintedNavigationBar` switch — see `app-chrome-palette.md`), accent
@@ -97,53 +98,69 @@ repainting.
 `ArticleToolbarCustomizerViewController` is a 2-section
 `UICollectionViewCompositionalLayout` list, modeled on
 `TimelineCustomizerCollectionViewController`'s shape above but with the
-preview *above* the picker rather than below it: Preview (0), Top Toolbar
+preview *above* the toggles rather than below it: Preview (0), Top Toolbar
 (1).
 
 - **Preview (0)**: one `ArticleToolbarPreviewCell`, a real `UINavigationBar`
-  built with the same icons, order, and either/or shape as
-  `ArticleViewController.rightBarButtonItems()` (theme button always
-  first, then either the table-of-contents/find pair or the prev/next
-  pair, never both) — a synthetic bar rather than an embedded, real
-  `ArticleViewController`, since that controller needs a live `Article`,
-  `SceneCoordinator`, and WebView machinery this settings screen has no
-  reason to stand up. If `rightBarButtonItems()`'s ordering ever changes,
-  this cell's `configure(mode:)` needs the matching change or the preview
-  silently drifts from the real reader.
-- **Top Toolbar (1)**: three `ArticleTopToolbarModeCell` rows (Off / Table
-  of Contents & Find / Previous & Next Article), one per
-  `ArticleTopToolbarMode` case, checkmark-style single-select — replaces
-  the two independent, silently-conflicting switches this screen's
-  `ArticlesRow` push row used to be. Selecting a row sets
-  `AppDefaults.shared.articleTopToolbarMode` directly and reloads both
-  sections in place (no pop-on-select, matching
-  `AccentColorTableViewController`'s reload-in-place shape, not
-  `ColorPaletteTableViewController`'s older pop-on-select one).
+  built with the same icons and order as
+  `ArticleViewController.rightBarButtonItems()` (theme, table of contents,
+  find, then previous/next, each included only if its own toggle is on) —
+  a synthetic bar rather than an embedded, real `ArticleViewController`,
+  since that controller needs a live `Article`, `SceneCoordinator`, and
+  WebView machinery this settings screen has no reason to stand up. If
+  `rightBarButtonItems()`'s ordering ever changes, this cell's
+  `configure()` needs the matching change or the preview silently drifts
+  from the real reader.
+- **Top Toolbar (1)**: four `ArticleToolbarToggleCell` rows (Theme / Table
+  of Contents / Find in Article / Previous & Next Article), one per
+  `ArticleToolbarToggle` case, each a plain `UISwitch` row (same shape as
+  `StatsVisibilityCell`) — replaces the earlier checkmark-style
+  single-select picker, which itself had replaced the two independent,
+  silently-conflicting switches this screen's `ArticlesRow` push row used
+  to be. All four toggles are independent and freely combinable. Flipping
+  a switch writes straight to that toggle's own `AppDefaults` property
+  (via `AppDefaults.shared.setArticleToolbarToggleEnabled(_:_:)`); there's
+  no row-tap handling on this screen — selection is driven entirely by
+  each cell's own `UISwitch.valueChanged` target, not
+  `didSelectItemAt`/`shouldSelectItemAt`.
 
 Both sections reload on the generic `UserDefaults.didChangeNotification`
-— unlike Timeline Layout's per-setting notifications, `articleTopToolbarMode`'s
-setter doesn't post a dedicated one, and `ArticleViewController` itself
-already relies on this same generic notification to repaint its real nav
-bar (see `ArticleViewController.userDefaultsDidChange(_:)`), so this
-screen's preview and the real reader deliberately stay on the same
-live-update path rather than gaining a second, parallel one.
+— the toggle setters don't post a dedicated notification, and
+`ArticleViewController` itself already relies on this same generic
+notification to repaint its real nav bar (see
+`ArticleViewController.userDefaultsDidChange(_:)`), so this screen's
+preview and the real reader deliberately stay on the same live-update
+path rather than gaining a second, parallel one.
 
-`AppDefaults.shared.articleTopToolbarMode` (`ArticleTopToolbarMode`: `.off`
-/ `.tableOfContentsAndFind` / `.prevNextArticle`) is the single source of
-truth `ArticleViewController.rightBarButtonItems()` reads. The former
-`showTableOfContentsAndFind`/`showPrevNextArticleButtons` `Bool`
-properties are still present on `AppDefaults` (read/write, backing the
-same on-disk keys as before) but are no longer read by
+Four independent `Bool` properties on `AppDefaults` —
+`articleToolbarShowTheme`, `articleToolbarShowTableOfContents`,
+`articleToolbarShowFind`, `articleToolbarShowPrevNext` (registered
+defaults: theme/TOC/find true, prevNext false) — are the source of truth
+`ArticleViewController.rightBarButtonItems()` reads, one `if` per toggle
+in that fixed order, no `else`. `AppDefaults.isArticleToolbarToggleEnabled(_:)`/
+`setArticleToolbarToggleEnabled(_:_:)`, keyed by the `ArticleToolbarToggle`
+enum (`.theme`/`.tableOfContents`/`.find`/`.prevNext`), give a single
+dispatch point over the four properties so call sites (the customizer's
+row loop, the preview cell, the Settings summary label) don't each need
+their own four-way switch.
+
+The former `showTableOfContentsAndFind`/`showPrevNextArticleButtons`
+`Bool` properties are still present on `AppDefaults` (read/write, backing
+the same on-disk keys as before) but are no longer read by
 `ArticleViewController` or `SettingsViewController` directly — they exist
-now only so
-`AppDefaults.migrateArticleTopToolbarModeIfNeeded()` (called once from
-`AppDelegate`, guarded by `Key.hasMigratedArticleTopToolbarMode`, same
-shape as the pre-existing `migrateNavigationBarTintingDefaultIfNeeded()`)
-can derive `articleTopToolbarMode`'s initial value from whatever was
-already on disk, preserving `rightBarButtonItems()`'s old `else if`
-precedence exactly (table-of-contents/find wins if both legacy switches
-were somehow on) so upgrading users see no behavior change. A fresh
-install never has either legacy key explicitly set, so this migration
-lands on `.tableOfContentsAndFind` for a fresh install too — matching
-`articleTopToolbarMode`'s own registered default in `registerDefaults()`,
-so the two paths agree either way.
+now only so `AppDefaults.migrateArticleToolbarTogglesIfNeeded()` (called
+once from `AppDelegate`, guarded by
+`Key.hasMigratedArticleToolbarToggles`, same shape as the pre-existing
+`migrateNavigationBarTintingDefaultIfNeeded()`) can derive the four
+toggles' initial values from whatever was already on disk:
+`showTableOfContentsAndFind` maps onto both `articleToolbarShowTableOfContents`
+and `articleToolbarShowFind` (it used to govern that pair together), and
+`showPrevNextArticleButtons` maps onto `articleToolbarShowPrevNext`.
+`articleToolbarShowTheme` has no legacy source — the theme button was
+unconditionally present before this setting existed — so it simply keeps
+its registered `true` default regardless of what the migration does with
+the other three.
+
+The Settings row's detail label (`updateArticleTopToolbarModeLabel()`)
+no longer names a single mode; it shows "Off" when all four toggles are
+off, or "N Shown" for the count of toggles currently on.

@@ -34,6 +34,9 @@
         }
       }
     },
+    "%d Shown" : {
+      "comment" : "Article top toolbar: number of buttons shown"
+    },
     "%i Unread" : {
       "comment" : "14 Unread"
     },
@@ -426,7 +429,7 @@
       "comment" : "Filter Read Feeds"
     },
     "Find in Article" : {
-      "comment" : "Find in Article"
+      "comment" : "Article top toolbar toggle: find\nFind in Article"
     },
     "Finding feed" : {
       "comment" : "Finding feed"
@@ -766,7 +769,7 @@
       "comment" : "Ocean accent color"
     },
     "Off" : {
-      "comment" : "Page counter off"
+      "comment" : "Article top toolbar: no buttons shown\nPage counter off"
     },
     "OK" : {
       "comment" : "OK button"
@@ -845,6 +848,9 @@
     },
     "Previous" : {
       "comment" : "Inline series navigation link"
+    },
+    "Previous & Next Article" : {
+      "comment" : "Article top toolbar toggle: previous and next article"
     },
     "Previous Article" : {
       "comment" : "Previous Article"
@@ -1036,7 +1042,7 @@
       "comment" : "Dinosaurs swipe hint."
     },
     "Table of Contents" : {
-      "comment" : "Table of Contents"
+      "comment" : "Article top toolbar toggle: table of contents\nTable of Contents"
     },
     "Tag Display" : {
       "comment" : "Tag Display"
@@ -1061,7 +1067,7 @@
       "comment" : "Theme installed"
     },
     "Theme" : {
-      "comment" : "Theme navigation title\nTheme picker label"
+      "comment" : "Article top toolbar toggle: theme\nTheme navigation title\nTheme picker label"
     },
     "Theme installed" : {
       "comment" : "Theme installed"
@@ -1113,6 +1119,9 @@
     },
     "Top" : {
       "comment" : "Top margin label"
+    },
+    "Top Toolbar" : {
+      "comment" : "Article Top Toolbar screen title\nTop Toolbar"
     },
     "Total Storage Used" : {
       "comment" : "Manage Storage total row"
