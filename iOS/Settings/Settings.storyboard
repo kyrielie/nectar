@@ -521,72 +521,37 @@
                                             <outlet property="label" destination="Nct-d3-Fnm" id="Nct-dC-Fnm"/>
                                         </connections>
                                     </tableViewCell>
-                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="Nct-e1-Ppn" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
-                                        <rect key="frame" x="20" y="1239.5" width="374" height="51.5"/>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" accessoryType="disclosureIndicator" indentationWidth="10" id="Nct-tb1-Tlb" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="1239.5" width="374" height="51"/>
                                         <autoresizingMask key="autoresizingMask"/>
-                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Nct-e1-Ppn" id="Nct-e2-Ppn">
-                                            <rect key="frame" x="0.0" y="0.0" width="374" height="51.5"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Nct-tb1-Tlb" id="Nct-tb2-Tlb">
+                                            <rect key="frame" x="0.0" y="0.0" width="343.5" height="51"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
-                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="Show Previous/Next Article Buttons" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-e3-Ppn">
-                                                    <rect key="frame" x="20" y="15" width="265" height="21.5"/>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Top Toolbar" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-tb3-Tlb">
+                                                    <rect key="frame" x="20" y="15.5" width="98" height="20.5"/>
                                                     <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
                                                     <nil key="textColor"/>
                                                     <nil key="highlightedColor"/>
                                                 </label>
-                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-e4-Ppn" userLabel="Show Previous/Next Article Buttons">
-                                                    <rect key="frame" x="293" y="12" width="63" height="28"/>
-                                                    <color key="onTintColor" name="primaryAccentColor"/>
-                                                    <connections>
-                                                        <action selector="switchShowPrevNextArticleButtons:" destination="a0p-rk-skQ" eventType="valueChanged" id="Nct-e5-Ppn"/>
-                                                    </connections>
-                                                </switch>
-                                            </subviews>
-                                            <constraints>
-                                                <constraint firstItem="Nct-e4-Ppn" firstAttribute="leading" secondItem="Nct-e3-Ppn" secondAttribute="trailing" constant="8" symbolic="YES" id="Nct-e6-Ppn"/>
-                                                <constraint firstItem="Nct-e3-Ppn" firstAttribute="top" secondItem="Nct-e2-Ppn" secondAttribute="topMargin" id="Nct-e7-Ppn"/>
-                                                <constraint firstAttribute="bottomMargin" secondItem="Nct-e3-Ppn" secondAttribute="bottom" id="Nct-e8-Ppn"/>
-                                                <constraint firstAttribute="trailingMargin" secondItem="Nct-e4-Ppn" secondAttribute="trailing" id="Nct-e9-Ppn"/>
-                                                <constraint firstItem="Nct-e4-Ppn" firstAttribute="centerY" secondItem="Nct-e2-Ppn" secondAttribute="centerY" id="Nct-eA-Ppn"/>
-                                                <constraint firstItem="Nct-e3-Ppn" firstAttribute="leading" secondItem="Nct-e2-Ppn" secondAttribute="leadingMargin" id="Nct-eB-Ppn"/>
-                                            </constraints>
-                                        </tableViewCellContentView>
-                                        <connections>
-                                            <outlet property="label" destination="Nct-e3-Ppn" id="Nct-eC-Ppn"/>
-                                        </connections>
-                                    </tableViewCell>
-                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="Nct-f1-Toc" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
-                                        <rect key="frame" x="20" y="1291" width="374" height="51.5"/>
-                                        <autoresizingMask key="autoresizingMask"/>
-                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Nct-f1-Toc" id="Nct-f2-Toc">
-                                            <rect key="frame" x="0.0" y="0.0" width="374" height="51.5"/>
-                                            <autoresizingMask key="autoresizingMask"/>
-                                            <subviews>
-                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="Show Table of Contents/Find Buttons" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-f3-Toc">
-                                                    <rect key="frame" x="20" y="15" width="265" height="21.5"/>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Table of Contents &amp; Find" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-tb4-Tlb">
+                                                    <rect key="frame" x="258" y="15.5" width="77.5" height="20.5"/>
                                                     <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
                                                     <nil key="textColor"/>
                                                     <nil key="highlightedColor"/>
                                                 </label>
-                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" on="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-f4-Toc" userLabel="Show Table of Contents/Find Buttons">
-                                                    <rect key="frame" x="293" y="12" width="63" height="28"/>
-                                                    <color key="onTintColor" name="primaryAccentColor"/>
-                                                    <connections>
-                                                        <action selector="switchShowTableOfContentsAndFind:" destination="a0p-rk-skQ" eventType="valueChanged" id="Nct-f5-Toc"/>
-                                                    </connections>
-                                                </switch>
                                             </subviews>
                                             <constraints>
-                                                <constraint firstItem="Nct-f4-Toc" firstAttribute="leading" secondItem="Nct-f3-Toc" secondAttribute="trailing" constant="8" symbolic="YES" id="Nct-f6-Toc"/>
-                                                <constraint firstItem="Nct-f3-Toc" firstAttribute="top" secondItem="Nct-f2-Toc" secondAttribute="topMargin" id="Nct-f7-Toc"/>
-                                                <constraint firstAttribute="bottomMargin" secondItem="Nct-f3-Toc" secondAttribute="bottom" id="Nct-f8-Toc"/>
-                                                <constraint firstAttribute="trailingMargin" secondItem="Nct-f4-Toc" secondAttribute="trailing" id="Nct-f9-Toc"/>
-                                                <constraint firstItem="Nct-f4-Toc" firstAttribute="centerY" secondItem="Nct-f2-Toc" secondAttribute="centerY" id="Nct-fA-Toc"/>
-                                                <constraint firstItem="Nct-f3-Toc" firstAttribute="leading" secondItem="Nct-f2-Toc" secondAttribute="leadingMargin" id="Nct-fB-Toc"/>
+                                                <constraint firstItem="Nct-tb4-Tlb" firstAttribute="trailing" secondItem="Nct-tb2-Tlb" secondAttribute="trailingMargin" id="Nct-tb5-Tlb"/>
+                                                <constraint firstItem="Nct-tb4-Tlb" firstAttribute="centerY" secondItem="Nct-tb2-Tlb" secondAttribute="centerY" id="Nct-tb6-Tlb"/>
+                                                <constraint firstItem="Nct-tb3-Tlb" firstAttribute="leading" secondItem="Nct-tb2-Tlb" secondAttribute="leadingMargin" id="Nct-tb7-Tlb"/>
+                                                <constraint firstItem="Nct-tb3-Tlb" firstAttribute="centerY" secondItem="Nct-tb2-Tlb" secondAttribute="centerY" id="Nct-tb8-Tlb"/>
+                                                <constraint firstItem="Nct-tb4-Tlb" firstAttribute="leading" secondItem="Nct-tb3-Tlb" secondAttribute="trailing" constant="8" symbolic="YES" id="Nct-tb9-Tlb"/>
                                             </constraints>
                                         </tableViewCellContentView>
                                         <connections>
-                                            <outlet property="label" destination="Nct-f3-Toc" id="Nct-fC-Toc"/>
+                                            <outlet property="detail" destination="Nct-tb4-Tlb" id="Nct-tbA-Tlb"/>
+                                            <outlet property="label" destination="Nct-tb3-Tlb" id="Nct-tbB-Tlb"/>
                                         </connections>
                                     </tableViewCell>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="Nct-g1-Ntc" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
@@ -969,8 +934,7 @@
                         <outlet property="openLinksInNetNewsWire" destination="dhR-L2-PX3" id="z1b-pX-bwG"/>
                         <outlet property="refreshClearsReadArticlesSwitch" destination="duV-CN-JmH" id="xTd-jF-Ei1"/>
                         <outlet property="showFeedNameInReaderViewSwitch" destination="Nct-d4-Fnm" id="Nct-od-Fnm"/>
-                        <outlet property="showPrevNextArticleButtonsSwitch" destination="Nct-e4-Ppn" id="Nct-oe-Ppn"/>
-                        <outlet property="showTableOfContentsAndFindSwitch" destination="Nct-f4-Toc" id="Nct-of-Toc"/>
+                        <outlet property="articleTopToolbarModeDetailLabel" destination="Nct-tb4-Tlb" id="Nct-tbC-Tlb"/>
                         <outlet property="hideNotchInFullScreenSwitch" destination="Nct-g4-Ntc" id="Nct-og-Ntc"/>
                         <outlet property="pageCounterDisplayModeDetailLabel" destination="Nct-h4-Pgc" id="Nct-oh-Pgc"/>
                         <outlet property="disableArticleLinksSwitch" destination="Dis-a4-Lnk" id="Dis-oa-Lnk"/>
@@ -1120,6 +1084,30 @@
                 <placeholder placeholderIdentifier="IBFirstResponder" id="bHh-r9-jkX" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="3053.6231884057975" y="150.66964285714286"/>
+        </scene>
+        <!--Article Toolbar Customizer View Controller-->
+        <scene sceneID="Atb-Cx-Vc1">
+            <objects>
+                <collectionViewController storyboardIdentifier="ArticleToolbarCustomizerViewController" id="Atb-Cx-Vc2" customClass="ArticleToolbarCustomizerViewController" customModule="NetNewsWire" customModuleProvider="target" sceneMemberID="viewController">
+                    <collectionView key="view" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" dataMode="prototypes" id="Atb-Cx-Vc3">
+                        <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <collectionViewFlowLayout key="collectionViewLayout" automaticEstimatedItemSize="YES" minimumLineSpacing="20" minimumInteritemSpacing="10" sectionInsetReference="safeArea" id="Atb-Cx-Vc4">
+                            <size key="itemSize" width="414" height="128"/>
+                            <size key="headerReferenceSize" width="0.0" height="0.0"/>
+                            <size key="footerReferenceSize" width="0.0" height="0.0"/>
+                            <inset key="sectionInset" minX="0.0" minY="0.0" maxX="0.0" maxY="0.0"/>
+                        </collectionViewFlowLayout>
+                        <connections>
+                            <outlet property="dataSource" destination="Atb-Cx-Vc2" id="Atb-Cx-Vc5"/>
+                            <outlet property="delegate" destination="Atb-Cx-Vc2" id="Atb-Cx-Vc6"/>
+                        </connections>
+                    </collectionView>
+                </collectionViewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="Atb-Cx-Vc7" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="3053.6231884057975" y="400"/>
         </scene>
         <!--Navigation Controller-->
         <scene sceneID="Ezn-Ny-zye">

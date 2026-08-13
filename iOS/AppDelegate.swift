@@ -81,6 +81,7 @@ import Images
 		}
 		AppDefaults.registerDefaults()
 		AppDefaults.shared.migrateNavigationBarTintingDefaultIfNeeded()
+		AppDefaults.shared.migrateArticleTopToolbarModeIfNeeded()
 
 		let isFirstRun = AppDefaults.shared.isFirstRun
 		if isFirstRun {
