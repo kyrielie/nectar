@@ -1,4 +1,8 @@
-# Themes
+# .nnwtheme Format
+
+Bundle-file structure and authoring conventions for `.nnwtheme` themes. For
+the Swift-side theme system (`ArticleTheme`, `ArticleThemesManager`, color
+extraction, rendering integration), see `theme-system.md`.
 
 ## `.nnwtheme` Structure
 
