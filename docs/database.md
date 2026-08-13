@@ -143,6 +143,78 @@ specifically because `bookKeysForArticleIDs`/`articleIDsForBookKeys` run a
 through to book-level state — without an index this was a full table scan
 per tap.
 
+### Date fields: `datePublished`, `dateModified`, `dateArrived`
+
+Three distinct date columns, not interchangeable:
+
+- **`datePublished`** (articles) — the feed/source's own "originally published"
+  date: Atom's `published`, JSON Feed's `date_published`, AO3's `dl.stats`
+  "Published:" row. May be `nil` if the source never exposes it (see below).
+- **`dateModified`** (articles) — the feed/source's own "last updated" date:
+  Atom's `updated`, JSON Feed's `date_modified`, AO3's `dl.stats`
+  "Updated:"/"Completed:" row. `AtomParser` also falls back `dateModified` to
+  `datePublished` (and vice versa) when only one of Atom's two elements is
+  present in the feed itself — that in-parser fallback is unrelated to the
+  storage-layer one described below and is not affected by it.
+- **`dateArrived`** (statuses) — when the article/book entered the local
+  library (`ArticlesTable.swift:1637`'s "Recently Added" comment). Never
+  derived from the other two; always set once, at first insert.
+
+**AO3 items specifically expose these two dates across two separate
+fetches, not one:** `AO3SearchResultsExtractor` (a feed/search-results row)
+only has AO3's "last updated" text available and sets `dateModified`,
+leaving `datePublished` nil (`ao3-feeds.md` covers the extractor itself).
+`AO3ChapterHTMLExtractor` (the full work-page fetch, triggered later when
+the article is actually opened/read) parses both the real `datePublished`
+and `dateModified` from `dl.stats`. For any work updated after its original
+posting, the real `datePublished` that shows up on the second fetch is
+*earlier* than the `dateModified` already known from the first.
+
+**Storage rule: each column is written and updated exactly as parsed, with
+no cross-field coercion.** `Article.init(parsedItem:maximumDateAllowed:...)`
+(`Article+Database.swift`) previously copied `dateModified` into
+`datePublished` whenever `parsedItem.datePublished` was `nil`, before that
+value ever reached the database. That coercion is what caused the "timeline
+date moves backward after content fetch" bug: it made the DB's
+`datePublished` column hold a placeholder (the AO3 search-result's "last
+updated" date) instead of staying `nil`, and `changesFrom(_:)`'s
+if-changed-and-non-nil update rule (further down in the same file) then
+couldn't tell that placeholder apart from a genuine value — so the real,
+earlier `datePublished` supplied by the later content fetch always looked
+like a legitimate change and overwrote it. Both `datePublished` and
+`dateModified` are now stored independently: a genuinely `nil` value from
+the parser stays `nil` in the row (never coerced from the other field), and
+an existing non-nil value is only ever overwritten by a new non-nil value
+(the pre-existing "don't blank out data we already have" rule, unchanged).
+Both date columns can still be individually clamped to `nil` by
+`maximumDateAllowed` (a feed lying about a far-future date), independently
+of each other.
+
+**Display/sort rule: the later of the two wins, not `datePublished`
+unconditionally.** `Article.logicalDatePublished`
+(`Shared/Extensions/ArticleUtilities.swift`, used by the timeline cell,
+`ArticleSorter`, `SmartFeedArticleGrouping`, the in-article dateline, and
+the share-sheet preview) resolves to `max(datePublished, dateModified)`
+when both are set, falling back to whichever one is set, falling back to
+`status.dateArrived` when neither is. This is a display/sort-time decision,
+not a storage decision — the two fields keep their own, independently
+correct values in the database regardless of which one
+`logicalDatePublished` currently prefers.
+
+Any SQL query that orders by "the article's effective date" (four
+limit-bounded fetches in `ArticlesTable.swift`, plus the Dinosaurs debug
+screen's per-feed latest-date aggregate) uses the same logic via the shared
+`ArticlesTable.logicalDatePublishedSQL` SQL fragment,
+`coalesce(max(datePublished, dateModified), datePublished, dateModified,
+dateArrived)` — the outer `coalesce` is required because SQLite's
+multi-argument `max()` returns `NULL` if *either* argument is `NULL`
+(unlike `coalesce`), so `max(datePublished, dateModified)` only resolves
+anything when both columns are non-null. Any new query that needs "this
+article's effective/displayed date" for ordering or filtering should use
+`Self.logicalDatePublishedSQL` rather than hand-rolling
+`coalesce(datePublished, dateModified, dateArrived)` again, which silently
+reintroduces the datePublished-first bug at the SQL layer.
+
 ### `bookKey` and book-level state
 
 `bookKey` is a stable identity key for "the same book/fic," independent of

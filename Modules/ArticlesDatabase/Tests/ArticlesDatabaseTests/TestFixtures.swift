@@ -40,7 +40,9 @@ enum TestFixtures {
 		ao3WorkID: String? = nil,
 		isAnthology: Bool? = nil,
 		ao3SeriesID: String? = nil,
-		seriesName: String? = nil
+		seriesName: String? = nil,
+		datePublished: Date? = nil,
+		dateModified: Date? = nil
 	) -> ParsedItem {
 		ParsedItem(
 			syncServiceID: nil,
@@ -56,8 +58,8 @@ enum TestFixtures {
 			summary: summary,
 			imageURL: nil,
 			bannerImageURL: nil,
-			datePublished: nil,
-			dateModified: nil,
+			datePublished: datePublished,
+			dateModified: dateModified,
 			authors: nil,
 			tags: nil,
 			attachments: nil,

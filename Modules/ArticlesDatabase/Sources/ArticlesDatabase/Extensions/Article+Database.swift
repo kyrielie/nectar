@@ -113,11 +113,18 @@ extension Article {
 	convenience init(parsedItem: ParsedItem, maximumDateAllowed: Date, accountID: String, feedID: String, status: ArticleStatus) {
 		let authors = Author.authorsWithParsedAuthors(parsedItem.authors)
 
-		// Deal with future datePublished and dateModified dates.
+		// Deal with future datePublished and dateModified dates. Deliberately not falling back
+		// to dateModified when datePublished is nil here -- Article.logicalDatePublished (and
+		// ArticlesTable.logicalDatePublishedSQL) already do that fallback at read time. Doing
+		// it here too meant the persisted datePublished column held a placeholder (a copy of
+		// dateModified) rather than staying nil, so changesFrom(_:) below couldn't tell "no
+		// real datePublished yet" apart from "a real datePublished that happens to equal
+		// dateModified" -- when a later fetch (e.g. an AO3 content fetch following an earlier
+		// search-results-only fetch) supplied the real datePublished, it always looked like a
+		// genuine change and overwrote the placeholder, even when the placeholder (the earlier
+		// "last updated" date) was the more useful value to keep showing until then -- see
+		// database.md.
 		var datePublished = parsedItem.datePublished
-		if datePublished == nil {
-			datePublished = parsedItem.dateModified
-		}
 		if datePublished != nil, datePublished! > maximumDateAllowed {
 			datePublished = nil
 		}
