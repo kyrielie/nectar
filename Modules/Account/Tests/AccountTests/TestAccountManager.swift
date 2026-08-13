@@ -34,6 +34,14 @@ import RSWeb
 
 		let account = Account(dataFolder: accountFolder.absoluteString, type: type, accountID: accountID)
 
+		// AO3ChapterFetcher (and anything else that round-trips through
+		// an accountID rather than holding the Account directly) looks
+		// accounts up via AccountManager.shared.existingAccount(accountID:).
+		// This standalone Account isn't otherwise known to that registry,
+		// so register it here or any such lookup fails with "Account no
+		// longer exists" even though the account is very much alive.
+		AccountManager.shared.testOnly_registerAccount(account)
+
 		return account
 
 	}

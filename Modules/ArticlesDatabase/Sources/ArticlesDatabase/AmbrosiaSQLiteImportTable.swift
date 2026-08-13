@@ -168,51 +168,57 @@ enum AmbrosiaSQLiteImportTable {
 		}
 
 		// DatabaseBlock is declared `@Sendable`, so the compiler treats this
-		// closure as potentially concurrent even though runInTransactionSync
+		// closure as potentially concurrent even though runInDatabaseSync
 		// is a synchronous, single-threaded call -- this var is never touched
 		// from more than one thread at a time in practice.
 		nonisolated(unsafe) var importError: Error?
 		nonisolated(unsafe) var newIDs = Set<String>()
 		nonisolated(unsafe) var updatedIDs = Set<String>()
 
-		queue.runInTransactionSync { database in
+		// runInDatabaseSync, not runInTransactionSync: the transaction has to
+		// be committed (or rolled back) *before* DETACH runs, not after, and
+		// runInTransactionSync only COMMITs once the whole block has
+		// returned -- see the DETACH comment below for why that ordering
+		// matters. Transaction control is therefore handled by hand here.
+		queue.runInDatabaseSync { database in
 			guard database.executeUpdate("ATTACH DATABASE ? AS \(attachedSchemaName);", withArgumentsIn: [temporaryFilePath]) else {
 				importError = AmbrosiaSQLiteImportError.attachFailed
 				return
 			}
-			defer {
-				// DatabaseQueue opens every connection with
-				// setShouldCacheStatements(true), so the SELECT/UPDATE statements
-				// copyItems/copyCompressedContentHTML just ran against
-				// `attachedSchemaName` weren't finalized when their result sets
-				// were closed -- FMDB just sqlite3_reset() them and parks the
-				// compiled sqlite3_stmt in its cache, keyed by SQL text, for
-				// reuse on the next call with the same SQL. SQLite refuses to
-				// DETACH a database that any prepared statement still
-				// references, even one that's merely reset and not currently
-				// stepping. Left uncleared, DETACH below fails silently (its
-				// result was never checked), the alias stays attached, and the
-				// *next* importAmbrosiaSQLiteTransfer call's ATTACH under the
-				// same alias fails with attachFailed -- reproducible any time
-				// two imports run against the same DatabaseQueue in one
-				// process. Clearing the cache finalizes those statements first
-				// so DETACH actually succeeds.
-				database.clearCachedStatements()
-				if !database.executeUpdate("DETACH DATABASE \(attachedSchemaName);", withArgumentsIn: []) {
-					Self.logger.error("AmbrosiaSQLiteImportTable: DETACH DATABASE \(attachedSchemaName, privacy: .public) failed -- \(database.lastErrorMessage(), privacy: .public)")
-				}
-			}
 
+			database.beginTransaction()
 			do {
 				(newIDs, updatedIDs) = try Self.copyItems(feedID: feedID, database: database)
+				database.commit()
 			} catch {
 				importError = error
-				// Roll back explicitly: runInTransactionSync commits unconditionally
-				// on return, it doesn't inspect a thrown/rethrown error from inside
-				// the block, so an early exit here must be paired with a manual
-				// rollback to honor "no partial writes" on failure.
-				database.executeStatements("ROLLBACK;")
-				database.executeStatements("BEGIN TRANSACTION;")
+				database.rollback()
+			}
+
+			// DETACH must run only after the transaction that touched the
+			// attached database has itself been committed or rolled back --
+			// SQLite refuses to DETACH a database that's still part of an
+			// open transaction ("database ambrosia_transfer is locked"),
+			// independent of whether every statement against it has been
+			// finalized. Doing this inside runInTransactionSync's own outer
+			// transaction (COMMIT deferred until the whole block returns,
+			// with DETACH running before that) was exactly that case, and
+			// made DETACH fail every time -- silently, since its result was
+			// never checked. The alias then stayed attached, and the *next*
+			// importAmbrosiaSQLiteTransfer call's ATTACH under the same
+			// alias failed with attachFailed -- reproducible any time two
+			// imports run against the same DatabaseQueue in one process.
+			// Confirmed directly against sqlite3 (not just inferred from the
+			// symptom): the same ATTACH/BEGIN/DETACH/COMMIT ordering
+			// reproduces "database ... is locked" even with every statement
+			// explicitly finalized and statement caching disabled, and
+			// succeeds once DETACH is moved after COMMIT -- so clearing
+			// FMDB's statement cache first (the previous fix attempt here)
+			// was not actually what made this work; running DETACH outside
+			// the transaction is.
+			database.clearCachedStatements()
+			if !database.executeUpdate("DETACH DATABASE \(attachedSchemaName);", withArgumentsIn: []) {
+				Self.logger.error("AmbrosiaSQLiteImportTable: DETACH DATABASE \(attachedSchemaName, privacy: .public) failed -- \(database.lastErrorMessage(), privacy: .public)")
 			}
 		}
 
