@@ -98,7 +98,7 @@ public enum AO3SeriesListingExtractor {
 				relationships: AO3SearchResultsExtractor.tagTexts(in: li, tag: "li", classToken: "relationships"),
 				characters: AO3SearchResultsExtractor.tagTexts(in: li, tag: "li", classToken: "characters"),
 				freeformTags: AO3SearchResultsExtractor.tagTexts(in: li, tag: "li", classToken: "freeforms"),
-				warnings: AO3SearchResultsExtractor.tagTexts(in: li, tag: "li", classToken: "warnings"),
+				warnings: AO3SearchResultsExtractor.symbolTexts(in: li, classToken: "warnings"),
 				ratings: AO3SearchResultsExtractor.symbolTexts(in: li, classToken: "rating"),
 				categories: AO3SearchResultsExtractor.symbolTexts(in: li, classToken: "category"),
 				wordCount: AO3SearchResultsExtractor.intValue(fromDD: li, classToken: "words")

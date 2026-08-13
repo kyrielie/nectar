@@ -129,13 +129,22 @@ import Testing
 
 	@MainActor
 	@Test func absentLegacyKeysDefaultTogglesToRegisteredDefaults() {
-		// Direct stand-in for a fresh install: no legacy keys on disk at
-		// all (registerDefaults() not simulated here). bool(for:) on an
-		// absent key returns false, so both legacy switches read as off
-		// and the migration writes both to false -- matching what
-		// registerDefaults() would have registered anyway once it runs.
+		// Stand-in for a fresh install: legacy switches simulated absent.
+		// Can't rely on resetState()'s removeObject(forKey:) alone to
+		// produce that -- this is an app-hosted test target, so
+		// AppDelegate has already run registerDefaults() for real before
+		// this test executes, and that registration-domain default
+		// (showTableOfContentsAndFind: true) shows straight through once
+		// the explicit value is removed. bool(for:) only reads false on
+		// a truly absent key when nothing has registered a default for
+		// it -- not the case here. Force both legacy keys to false
+		// directly, the same way every other test in this file sets
+		// them explicitly, rather than trusting removal alone.
 		resetState()
 		defer { resetState() }
+
+		AppDefaults.shared.showTableOfContentsAndFind = false
+		AppDefaults.shared.showPrevNextArticleButtons = false
 
 		AppDefaults.shared.migrateArticleToolbarTogglesIfNeeded()
 

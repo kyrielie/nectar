@@ -54,6 +54,7 @@ import Articles
 
 	override func setUp() async throws {
 		TestingURLProtocol.reset()
+		DownloadCache.shared.removeAll()
 		AO3SeriesNavigator.resetWalkedStateForTesting()
 		account = TestAccountManager.shared.createAccount(type: .onMyMac)
 		_ = await account.importPastedAO3Links("https://archiveofourown.org/works/1")

@@ -146,6 +146,21 @@ import ActivityLog
 
 	// MARK: - API
 
+	/// Registers an `Account` that was constructed directly (bypassing
+	/// `createAccount` above) into this manager's lookup table, so
+	/// `existingAccount(accountID:)` can find it. Only for
+	/// `TestAccountManager` -- production code creates accounts via
+	/// `createAccount(type:)`, which registers as part of construction.
+	/// Without this, an `Account` built standalone (as `TestAccountManager`
+	/// does, to avoid needing a full `AccountManager.shared` reset per
+	/// test) is invisible to anything that round-trips through an
+	/// accountID instead of holding the `Account` directly -- e.g.
+	/// `AO3ChapterFetcher.download`, which looks the account up this way
+	/// and fails with "Account no longer exists" otherwise.
+	public func testOnly_registerAccount(_ account: Account) {
+		accountsDictionary[account.accountID] = account
+	}
+
 	public func createAccount(type: AccountType) -> Account {
 		let accountID = UUID().uuidString
 		let accountFolder = (accountsFolder as NSString).appendingPathComponent("\(type.rawValue)_\(accountID)")
