@@ -184,7 +184,7 @@ public struct ArticleStorageInfo: Sendable {
 			// URLs, read off the same live work-page fetch as the stats
 			// above, but stored as TEXT (URLs, not counts). Same additive,
 			// containsColumn-guarded pattern. Superseded by per-series
-			// navigation (inline series nav plan): Article no longer writes
+			// navigation: Article no longer writes
 			// or reads these columns, but the migration stays so an
 			// existing install's schema doesn't change shape, and the
 			// column names stay reserved (see Constants.swift).
@@ -318,8 +318,8 @@ public struct ArticleStorageInfo: Sendable {
 			// ParsedItem.swift's bookKey doc comment). Only bookKey itself is a stored
 			// column here; ao3SeriesID/isAnthology/seriesName are ParsedItem-only
 			// fields consumed at parse/import time and never persisted to `articles`,
-			// so this can't be driven off an ao3SeriesID column the way the plan for
-			// this fix originally assumed. Instead it's driven off Ambrosia's own wire
+			// so this can't be driven off an ao3SeriesID column the way this fix
+			// originally assumed. Instead it's driven off Ambrosia's own wire
 			// id scheme for a series-group item, "ambrosia-series-ao3:<id>" (confirmed
 			// against Ambrosia's LocalFeedServer output, not against anything in this
 			// repo) -- a pre-fix row still sitting on its old bookKey == uniqueID

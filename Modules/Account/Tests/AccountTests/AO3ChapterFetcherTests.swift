@@ -2,7 +2,7 @@
 //  AO3ChapterFetcherTests.swift
 //  AccountTests
 //
-//  Nectar AO3 direct-reading support, Workstream 2 test plan.
+//  Nectar AO3 direct-reading support, Workstream 2 test coverage.
 //
 //  Downloader.shared now has a TestingURLProtocol seam (see RSWeb's
 //  Downloader.swift and AO3SeriesNavigatorTests.swift for a real usage),

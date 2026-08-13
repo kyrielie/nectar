@@ -2,14 +2,14 @@
 //  AmbrosiaSQLiteImportTable.swift
 //  ArticlesDatabase
 //
-//  Nectar Implementation Plan, Phase 2 (SQLite transfer route, client side),
-//  section 2e "Import path" and the Wire Contract's status field mapping.
+//  SQLite transfer route (client side): Phase 2, section 2e "Import path"
+//  and the Wire Contract's status field mapping.
 //
 //  This does the entire import in one shot via ATTACH DATABASE + INSERT OR
 //  REPLACE ... SELECT, rather than reading every row into Swift structs --
-//  the plan explicitly calls this out as "the entire import," with no
-//  post-copy search reindexing and no BookReadStateTable writes (Explicit
-//  non-goals in the plan; confirmed accepted trade-off, do not add back in).
+//  this is the entire import, with no post-copy search reindexing and no
+//  BookReadStateTable writes (explicit non-goals; confirmed accepted
+//  trade-off, do not add back in).
 //
 //  bookKey is computed per row with a SQL CASE expression that mirrors
 //  ParsedItem.bookKey's precedence exactly (anthology series id/name, then
@@ -24,7 +24,7 @@ import RSDatabaseObjC
 import RSParser
 
 /// Manifest describing one page's position within a paginated `.sqlite`
-/// transfer walk (Nectar plan 3a/3c), read from the `transfer_manifest`
+/// transfer walk, read from the `transfer_manifest`
 /// table Ambrosia writes alongside `items` in every page file. Public so
 /// `AmbrosiaSQLiteTransferFetcher` (Account module) can read and validate a
 /// page before deciding whether to import it at all.
@@ -76,7 +76,7 @@ enum AmbrosiaSQLiteImportTable {
 	/// not-yet-attached file with a lightweight standalone `sqlite3_open`, not a
 	/// full `DatabaseQueue`/`FMDatabase` open against the app's own connection.
 	/// Must happen before ATTACH DATABASE, not inside the same transaction as
-	/// the import -- per the plan's 2b, do this check first and fail hard on
+	/// the import -- do this check first and fail hard on
 	/// mismatch before touching the app database at all.
 	static func readWireFormatVersion(atPath path: String) throws -> Int32 {
 		guard let standaloneDatabase = FMDatabase(path: path), standaloneDatabase.open() else {
@@ -99,7 +99,7 @@ enum AmbrosiaSQLiteImportTable {
 	/// page file, after first re-running the same wire-format-version check as
 	/// `readWireFormatVersion` (both must happen before ATTACH DATABASE, and
 	/// before any decision is made about whether this page is trustworthy
-	/// enough to import at all -- Nectar plan 3c).
+	/// enough to import at all.
 	///
 	/// Also verifies `page_row_count` against the actual row count in this
 	/// file's own `items` table: a page whose manifest disagrees with its own
@@ -335,8 +335,8 @@ enum AmbrosiaSQLiteImportTable {
 		// already accept.
 		// datePublished/dateModified are deliberately left out of this bulk
 		// INSERT...SELECT, the same way contentHTML is: the wire format sends
-		// date_published/date_modified as ISO 8601 TEXT (see the Wire Contract
-		// in docs/nectar-implementation-plan.md), but the local `articles`
+		// date_published/date_modified as ISO 8601 TEXT (see the Wire Contract),
+		// but the local `articles`
 		// table's datePublished/dateModified columns hold numeric
 		// timeIntervalSince1970 values -- every other write path gets that
 		// conversion for free because FMDB's dictionary/positional binding
@@ -384,7 +384,7 @@ enum AmbrosiaSQLiteImportTable {
 		//   reading_progress -> readingProgress
 		// dateArrived defaults to "now" (import time) since the wire payload
 		// carries no equivalent field and this is a fresh row, not a merge
-		// against existing status history -- consistent with the plan's
+		// against existing status history -- consistent with the
 		// explicit non-goal of not reconciling against prior bookReadState.
 		let insertStatusesSQL = """
 		INSERT OR REPLACE INTO statuses (

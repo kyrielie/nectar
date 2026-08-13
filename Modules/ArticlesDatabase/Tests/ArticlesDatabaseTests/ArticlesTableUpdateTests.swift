@@ -2,7 +2,7 @@
 //  ArticlesTableUpdateTests.swift
 //  ArticlesDatabaseTests
 //
-//  Phase 0.3 (a)-(d) of the database cleanup plan: regression guards for
+//  Phase 0.3 (a)-(d) of the database cleanup: regression guards for
 //  behavior that currently has no automated coverage. Written against
 //  ArticlesDatabase's public API only (ArticlesDatabase.swift:82-825), not
 //  ArticlesTable/BookStateTable/StatusesTable directly, so these keep

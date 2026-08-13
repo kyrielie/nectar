@@ -2,10 +2,9 @@
 //  AO3SearchResultsFetcher.swift
 //  Account
 //
-//  Nectar AO3 direct-reading support, Task 9 checkpoint 2's fetch path:
-//  retry/backoff + Cloudflare-challenge detection, wrapping
-//  RSParser.AO3SearchResultsExtractor -- see
-//  nectar-ao3-features-plan-FINAL.md, Task 9, "Feed routing & pagination".
+//  Nectar AO3 direct-reading support, Task 9 checkpoint 2's fetch path
+//  ("Feed routing & pagination"): retry/backoff + Cloudflare-challenge
+//  detection, wrapping RSParser.AO3SearchResultsExtractor.
 //
 //  Fetches through Downloader.shared (RSWeb), the same one-shot path
 //  AO3ChapterFetcher.download(workID:...) uses, so this inherits that
@@ -29,8 +28,8 @@ import RSWeb
 ///   immediately would just collide with that.
 /// - `.cloudflareChallenge`: a Cloudflare block/challenge page, which can
 ///   arrive as a 200, 403, or overlapping a 429 -- sniffed from the body
-///   independently of status code, per the plan's explicit call-out that
-///   this needs its own detection separate from AO3's own 429 handling.
+///   independently of status code, since it needs its own detection
+///   separate from AO3's own 429 handling.
 public enum AO3SearchResultsFetchOutcome {
 	case success([ParsedItem], hasNextPage: Bool, pageTitle: String?)
 	case noResults(pageTitle: String?)
@@ -51,13 +50,12 @@ public enum AO3SearchResultsFetcher {
 
 	/// Bounded retry budget for a single page fetch. Covers both 5xx
 	/// responses and request timeouts under one counter/backoff -- unlike
-	/// `AmbrosiaSQLiteTransferFetcher`'s per-page retry loop (which the plan
-	/// separately calls out a "consecutive-timeout giveup cap" for), this is
-	/// a single request, not a many-page walk, so one bounded loop covering
-	/// both failure kinds is the whole of what the plan's "separate...cap"
-	/// requirement needs here: either failure kind still stops retrying
+	/// `AmbrosiaSQLiteTransferFetcher`'s per-page retry loop (which has a
+	/// separate "consecutive-timeout giveup cap"), this is a single
+	/// request, not a many-page walk, so one bounded loop covering both
+	/// failure kinds is enough: either failure kind still stops retrying
 	/// after the same fixed number of attempts rather than continuing
-	/// forever, which is the behavior the plan asks for.
+	/// forever.
 	private static let maxAttempts = 3
 	private static let retryBackoffBaseSeconds: TimeInterval = 2
 	private static let maxBackoffSeconds: TimeInterval = 30

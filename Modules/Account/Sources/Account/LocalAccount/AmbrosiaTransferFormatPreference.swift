@@ -2,18 +2,16 @@
 //  AmbrosiaTransferFormatPreference.swift
 //  NetNewsWire
 //
-//  Nectar Implementation Plan, Phase 2, section 2f "Settings toggle."
-//
 //  A single preference, applied uniformly to every Ambrosia-paired feed --
-//  no per-feed override, no automatic size-based switching, per the plan.
-//  Lives in the Account module (rather than the iOS app's AppDefaults) so
+//  no per-feed override, no automatic size-based switching. Lives in the
+//  Account module (rather than the iOS app's AppDefaults) so
 //  LocalAccountRefresher.url(for:) -- which is what actually needs to read
 //  it on every refresh -- doesn't have to depend on the iOS app target. Uses
 //  NectarAppGroupUserDefaults.store (same app-group suite AppDefaults.store
 //  uses), so the iOS-side "Ambrosia transfer format: JSON / SQLite" UI (near
-//  existing Ambrosia-pairing UI, per the plan) can read/write the same key
-//  through this type rather than a second UserDefaults suite that could
-//  drift out of sync with it.
+//  the existing Ambrosia-pairing UI) can read/write the same key through
+//  this type rather than a second UserDefaults suite that could drift out
+//  of sync with it.
 //
 import Foundation
 

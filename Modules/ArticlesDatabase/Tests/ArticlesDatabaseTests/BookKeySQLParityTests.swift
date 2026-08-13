@@ -2,7 +2,7 @@
 //  BookKeySQLParityTests.swift
 //  ArticlesDatabaseTests
 //
-//  Phase 1.2 of the database cleanup plan: `ParsedItem.bookKey` (Swift) and
+//  Phase 1.2 of the database cleanup: `ParsedItem.bookKey` (Swift) and
 //  `AmbrosiaSQLiteImportTable.bookKeySQLExpression` (SQL) are meant to
 //  compute the identical value for the same inputs, per both files' own
 //  doc comments. Nothing before this test actually checked that. This is

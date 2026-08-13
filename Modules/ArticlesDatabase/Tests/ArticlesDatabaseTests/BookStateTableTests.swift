@@ -2,9 +2,9 @@
 //  BookStateTableTests.swift
 //  ArticlesDatabaseTests
 //
-//  Nectar cleanup plan v2, Phase 3b: direct coverage of BookStateTable,
+//  Phase 3b: direct coverage of BookStateTable,
 //  previously only exercised indirectly through ArticlesTable.mark/
-//  saveReadingProgress. Three cases, matching the plan's numbering:
+//  saveReadingProgress. Three cases:
 //  (1) a partial-column upsert leaves other columns alone, (2) kudosAttempt/
 //  setKudosAttempted's atomic two-column write survives an unrelated upsert,
 //  (3) state(for:) on empty/unknown bookKeys.

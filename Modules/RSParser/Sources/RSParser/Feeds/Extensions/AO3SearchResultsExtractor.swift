@@ -3,7 +3,7 @@
 //  RSParser
 //
 //  Nectar AO3 direct-reading support, Task 9 ("AO3 search-result extractor +
-//  pagination + author parsing") -- see nectar-ao3-features-plan-FINAL.md.
+//  pagination + author parsing").
 //  This file covers Task 9's first checkpoint only (the extractor and its
 //  selectors); feed routing/pagination/retry (checkpoint 2) and ignore-list
 //  wiring (checkpoint 3) are separate, later patches.

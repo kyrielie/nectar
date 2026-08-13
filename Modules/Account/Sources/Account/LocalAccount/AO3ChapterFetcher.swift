@@ -3,7 +3,7 @@
 //  Account
 //
 //  Nectar AO3 direct-reading support, Workstream 2 ("On-demand chapter
-//  fetch and storage") -- see docs/ao3-merged-plan-nectar.md. Workstream 3
+//  fetch and storage"). Workstream 3
 //  ("optional AO3 login") is layered on top of this file: see
 //  retryAuthenticated(...) below and AO3AuthenticatedFetcher.
 //

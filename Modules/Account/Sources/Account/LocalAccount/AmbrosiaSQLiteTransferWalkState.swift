@@ -14,7 +14,7 @@
 //  (wasteful), or a half-completed import could be mistaken for a finished
 //  one with no record that later pages never arrived.
 //
-//  UserDefaults-backed (the plan's alternative to a SwiftData model), using
+//  UserDefaults-backed rather than a SwiftData model, using
 //  NectarAppGroupUserDefaults.store -- the same app-group suite
 //  AmbrosiaTransferFormatPreference already uses -- this is scratch per-feed
 //  progress bookkeeping, not user data that needs a schema migration story

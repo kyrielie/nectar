@@ -2,7 +2,7 @@
 //  AO3RegressionThresholdTests.swift
 //  ArticlesTests
 //
-//  Nectar remediation plan, Part 1.2: direct coverage of
+//  Nectar remediation work, Part 1.2: direct coverage of
 //  AO3RegressionThreshold.isRegression (AO3RegressionThreshold.swift:42),
 //  Task 8's core destructive-update-detection mechanism, shared by
 //  AO3ChapterFetcher's content-level guard and Article+Database's

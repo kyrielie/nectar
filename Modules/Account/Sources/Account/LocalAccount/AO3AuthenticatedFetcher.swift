@@ -2,11 +2,10 @@
 //  AO3AuthenticatedFetcher.swift
 //  Account
 //
-//  Nectar AO3 direct-reading support, Workstream 3 ("optional AO3 login")
-//  -- see docs/ao3-merged-plan-nectar.md.
+//  Nectar AO3 direct-reading support, Workstream 3 ("optional AO3 login").
 //
 //  A single plain fetch with the stored AO3 session's Cookie header
-//  manually attached -- not a second cookie-jar URLSession (per the plan).
+//  manually attached -- not a second cookie-jar URLSession.
 //  Used exactly once, by AO3ChapterFetcher.retryAuthenticated(url:), on
 //  AO3ChapterExtractionOutcome.registrationRequired only.
 //

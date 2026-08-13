@@ -2,8 +2,7 @@
 //  AO3KudosFetcher.swift
 //  Account
 //
-//  Nectar AO3 direct-reading support, Task 6 ("kudos-on-like") -- see
-//  nectar-ao3-features-plan-FINAL.md.
+//  Nectar AO3 direct-reading support, Task 6 ("kudos-on-like").
 //
 //  The actual networking half of the kudos POST -- AO3KudosRequest (RSParser
 //  -- no, Account, pure) builds the request and parses the response; this

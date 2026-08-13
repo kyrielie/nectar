@@ -3,8 +3,8 @@
 //  NetNewsWire
 //
 //  Nectar AO3 direct-reading support. Originally Task 10 ("Prev/next/
-//  first navigation -- independent of the grouping toggle"), now the
-//  inline-series-navigation plan's Phase 4: `openSeriesWork` below
+//  first navigation -- independent of the grouping toggle"), now
+//  inline-series-navigation Phase 4: `openSeriesWork` below
 //  replaces every "first membership wins" per-article entry point this
 //  file used to expose (`fetchAdjacentWork`/`fetchFirstWorkInSeries`,
 //  deleted this pass) -- those collapsed a work's multiple series
