@@ -80,12 +80,14 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case enableBackSwipe = 3
 		case enablePagingSwipe = 4
 		case showFeedNameInReaderView = 5
-		case showPrevNextArticleButtons = 6
-		case showTableOfContentsAndFind = 7
-		case hideNotchInFullScreen = 8
-		case pageCounterDisplayMode = 9
-		case disableArticleLinks = 10
-		case showArticleScrollbar = 11
+		// Replaces the former independent showPrevNextArticleButtons (6)/
+		// showTableOfContentsAndFind (7) switches -- see
+		// ArticleToolbarCustomizerViewController's header comment for why.
+		case articleTopToolbar = 6
+		case hideNotchInFullScreen = 7
+		case pageCounterDisplayMode = 8
+		case disableArticleLinks = 9
+		case showArticleScrollbar = 10
 	}
 
 	private enum HelpRow: Int {
@@ -106,8 +108,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 	@IBOutlet var backSwipeEnabledSwitch: UISwitch!
 	@IBOutlet var pagingSwipeEnabledSwitch: UISwitch!
 	@IBOutlet var showFeedNameInReaderViewSwitch: UISwitch!
-	@IBOutlet var showPrevNextArticleButtonsSwitch: UISwitch!
-	@IBOutlet var showTableOfContentsAndFindSwitch: UISwitch!
+	@IBOutlet var articleTopToolbarModeDetailLabel: UILabel!
 	@IBOutlet var hideNotchInFullScreenSwitch: UISwitch!
 	@IBOutlet var pageCounterDisplayModeDetailLabel: UILabel!
 	@IBOutlet var disableArticleLinksSwitch: UISwitch!
@@ -181,8 +182,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		backSwipeEnabledSwitch.isOn = AppDefaults.shared.articleBackSwipeEnabled
 		pagingSwipeEnabledSwitch.isOn = AppDefaults.shared.articlePagingSwipeEnabled
 		showFeedNameInReaderViewSwitch.isOn = AppDefaults.shared.showFeedNameInReaderView
-		showPrevNextArticleButtonsSwitch.isOn = AppDefaults.shared.showPrevNextArticleButtons
-		showTableOfContentsAndFindSwitch.isOn = AppDefaults.shared.showTableOfContentsAndFind
+		updateArticleTopToolbarModeLabel()
 		hideNotchInFullScreenSwitch.isOn = AppDefaults.shared.hideNotchInFullScreen
 		updatePageCounterDisplayModeLabel()
 		disableArticleLinksSwitch.isOn = AppDefaults.shared.disableArticleLinks
@@ -299,6 +299,9 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 				// has been confirmed not to bleed into that ColorPicker.
 				let hostingController = Self.makeSurfacePaletteAwareHostingController(rootView: ArticleThemeListView())
 				self.navigationController?.pushViewController(hostingController, animated: true)
+			case .articleTopToolbar:
+				let articleToolbar = UIStoryboard.settings.instantiateController(ofType: ArticleToolbarCustomizerViewController.self)
+				self.navigationController?.pushViewController(articleToolbar, animated: true)
 			case .pageCounterDisplayMode:
 				if let sourceView = tableView.cellForRow(at: indexPath) {
 					let sourceRect = tableView.rectForRow(at: indexPath)
@@ -426,6 +429,25 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		}
 	}
 
+	/// Keeps the Top Toolbar row's detail label in sync with
+	/// `AppDefaults.shared.articleTopToolbarMode`. Called on appearance and
+	/// whenever the person changes the selection on
+	/// ArticleToolbarCustomizerViewController -- this screen doesn't observe
+	/// UserDefaults.didChangeNotification itself, so it also re-reads on
+	/// every viewWillAppear, matching how articleThemeDetailLabel/
+	/// colorPaletteDetailLabel already stay in sync after a pushed screen
+	/// changes their underlying value and pops back here.
+	func updateArticleTopToolbarModeLabel() {
+		switch AppDefaults.shared.articleTopToolbarMode {
+		case .off:
+			articleTopToolbarModeDetailLabel.text = NSLocalizedString("Off", comment: "Article top toolbar mode: off")
+		case .tableOfContentsAndFind:
+			articleTopToolbarModeDetailLabel.text = NSLocalizedString("Table of Contents & Find", comment: "Article top toolbar mode: table of contents and find")
+		case .prevNextArticle:
+			articleTopToolbarModeDetailLabel.text = NSLocalizedString("Previous & Next Article", comment: "Article top toolbar mode: previous and next article")
+		}
+	}
+
 	@IBAction func switchGroupByFeed(_ sender: Any) {
 		if groupByFeedSwitch.isOn {
 			AppDefaults.shared.timelineGroupByFeed = true
@@ -473,14 +495,6 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 
 	@IBAction func switchShowFeedNameInReaderView(_ sender: Any) {
 		AppDefaults.shared.showFeedNameInReaderView = showFeedNameInReaderViewSwitch.isOn
-	}
-
-	@IBAction func switchShowPrevNextArticleButtons(_ sender: Any) {
-		AppDefaults.shared.showPrevNextArticleButtons = showPrevNextArticleButtonsSwitch.isOn
-	}
-
-	@IBAction func switchShowTableOfContentsAndFind(_ sender: Any) {
-		AppDefaults.shared.showTableOfContentsAndFind = showTableOfContentsAndFindSwitch.isOn
 	}
 
 	@IBAction func switchHideNotchInFullScreen(_ sender: Any) {
@@ -547,8 +561,8 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		let liveTint = Assets.Colors.primaryAccent
 		for toggle in [groupByFeedSwitch, ambrosiaSQLiteTransferSwitch, refreshClearsReadArticlesSwitch,
 					   showLastUpdatedLabelSwitch, showFullscreenArticlesSwitch, backSwipeEnabledSwitch,
-					   pagingSwipeEnabledSwitch, showFeedNameInReaderViewSwitch, showPrevNextArticleButtonsSwitch,
-					   showTableOfContentsAndFindSwitch, hideNotchInFullScreenSwitch, disableArticleLinksSwitch,
+					   pagingSwipeEnabledSwitch, showFeedNameInReaderViewSwitch,
+					   hideNotchInFullScreenSwitch, disableArticleLinksSwitch,
 					   showArticleScrollbarSwitch, openLinksInNetNewsWire] {
 			toggle?.onTintColor = liveTint
 		}

@@ -20,7 +20,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	@IBOutlet private weak var nextUnreadBarButtonItem: UIBarButtonItem!
 	// Strong, unlike the other bar-button outlets here: these two are now
 	// conditionally left out of navigationItem.rightBarButtonItems (see
-	// rightBarButtonItems()/showPrevNextArticleButtons), and nothing else
+	// rightBarButtonItems()/articleTopToolbarMode), and nothing else
 	// retains them when they're not currently in that array. Weak outlets
 	// with no other owner get deallocated, which crashed updateUI()'s
 	// isEnabled assignments below when the setting was off (Fatally
@@ -356,13 +356,20 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		currentWebViewController?.fullReload()
 	}
 
-	// Order preserved exactly as before this setting existed: themeBarButtonItem first,
-	// then either TOC/Find (replaces, doesn't add alongside) or next/prev.
+	// Order preserved exactly as before articleTopToolbarMode existed:
+	// themeBarButtonItem first, then either TOC/Find (replaces, doesn't add
+	// alongside) or next/prev, driven by the single articleTopToolbarMode
+	// picker (ArticleToolbarCustomizerViewController) rather than the two
+	// independent, mutually-exclusive-by-construction switches this used to
+	// read.
 	private func rightBarButtonItems() -> [UIBarButtonItem] {
 		var items: [UIBarButtonItem] = [themeBarButtonItem]
-		if AppDefaults.shared.showTableOfContentsAndFind {
+		switch AppDefaults.shared.articleTopToolbarMode {
+		case .off:
+			break
+		case .tableOfContentsAndFind:
 			items.append(contentsOf: [tableOfContentsBarButtonItem, findInArticleBarButtonItem])
-		} else if AppDefaults.shared.showPrevNextArticleButtons {
+		case .prevNextArticle:
 			items.append(contentsOf: [nextArticleBarButtonItem, prevArticleBarButtonItem])
 		}
 		return items

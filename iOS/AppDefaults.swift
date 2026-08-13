@@ -487,6 +487,21 @@ enum PageCounterDisplayMode: String, CaseIterable, Sendable {
 	case pageCount
 }
 
+/// Which optional pair of buttons (if any) appears in the article reader's
+/// top toolbar alongside the always-present theme button. See
+/// ArticleViewController.rightBarButtonItems() and
+/// ArticleToolbarCustomizerViewController. Replaces the former independent
+/// showTableOfContentsAndFind/showPrevNextArticleButtons switches, which
+/// were mutually exclusive by construction (an `else if`) but presented in
+/// Settings as two switches that silently fought each other -- see
+/// AppDefaults.migrateArticleTopToolbarModeIfNeeded() for the one-time
+/// migration off those two keys.
+enum ArticleTopToolbarMode: String, CaseIterable, Sendable {
+	case off
+	case tableOfContentsAndFind
+	case prevNextArticle
+}
+
 extension Notification.Name {
 	public static let userInterfaceColorPaletteDidUpdate = Notification.Name("UserInterfaceColorPaletteDidUpdateNotification")
 	public static let timelineIconSizeDidChange = Notification.Name("TimelineIconSizeDidChangeNotification")
@@ -514,6 +529,7 @@ final class AppDefaults: Sendable {
 		static let firstRunDate = "firstRunDate"
 		static let hasShownAO3Onboarding = "hasShownAO3Onboarding"
 		static let hasMigratedNavigationBarTintingDefault = "hasMigratedNavigationBarTintingDefault"
+		static let hasMigratedArticleTopToolbarMode = "hasMigratedArticleTopToolbarMode"
 		static let timelineGroupByFeed = "timelineGroupByFeed"
 		static let refreshClearsReadArticles = "refreshClearsReadArticles"
 		static let timelineNumberOfLines = "timelineNumberOfLines"
@@ -533,6 +549,7 @@ final class AppDefaults: Sendable {
 		static let showFeedNameInReaderView = "showFeedNameInReaderView"
 		static let showPrevNextArticleButtons = "showPrevNextArticleButtons"
 		static let showTableOfContentsAndFind = "showTableOfContentsAndFind"
+		static let articleTopToolbarMode = "articleTopToolbarMode"
 		static let hideNotchInFullScreen = "hideNotchInFullScreen"
 		static let pageCounterDisplayMode = "pageCounterDisplayMode"
 		static let disableArticleLinks = "disableArticleLinks"
@@ -744,12 +761,37 @@ final class AppDefaults: Sendable {
 	/// Whether the reader view toolbar shows Table of Contents/Find buttons
 	/// instead of the previous/next article buttons. Opt-in (default false)
 	/// since it replaces, rather than adds to, the existing toolbar slot.
+	///
+	/// Retained read/write for migrateArticleTopToolbarModeIfNeeded() and
+	/// for anyone who still has this key on disk; ArticleViewController and
+	/// SettingsViewController no longer read either this or
+	/// showPrevNextArticleButtons directly -- articleTopToolbarMode below
+	/// is the single source of truth for both.
 	var showTableOfContentsAndFind: Bool {
 		get {
 			return AppDefaults.bool(for: Key.showTableOfContentsAndFind)
 		}
 		set {
 			AppDefaults.setBool(for: Key.showTableOfContentsAndFind, newValue)
+		}
+	}
+
+	/// Which optional pair of buttons (if any) appears in the article
+	/// reader's top toolbar -- see ArticleTopToolbarMode's doc comment.
+	/// Defaults to .tableOfContentsAndFind, matching the legacy
+	/// showTableOfContentsAndFind/showPrevNextArticleButtons registered
+	/// defaults below, in case this is read before
+	/// migrateArticleTopToolbarModeIfNeeded() has had a chance to run.
+	var articleTopToolbarMode: ArticleTopToolbarMode {
+		get {
+			guard let rawValue = AppDefaults.string(for: Key.articleTopToolbarMode),
+				  let mode = ArticleTopToolbarMode(rawValue: rawValue) else {
+				return .tableOfContentsAndFind
+			}
+			return mode
+		}
+		set {
+			AppDefaults.setString(for: Key.articleTopToolbarMode, newValue.rawValue)
 		}
 	}
 
@@ -1099,6 +1141,32 @@ final class AppDefaults: Sendable {
 		AppDefaults.setBool(for: Key.useTintedNavigationBar, true)
 	}
 
+	/// One-time migration off the two independent showTableOfContentsAndFind/
+	/// showPrevNextArticleButtons switches onto the single articleTopToolbarMode
+	/// picker (ArticleToolbarCustomizerViewController). Preserves each
+	/// person's existing on-disk choice exactly as ArticleViewController's old
+	/// rightBarButtonItems() `else if` resolved it -- showTableOfContentsAndFind
+	/// wins if both happened to be on -- so upgrading sees no behavior change.
+	/// bool(for:) reads registered defaults too (registerDefaults() sets
+	/// showTableOfContentsAndFind: true), so on a fresh install this still
+	/// lands on .tableOfContentsAndFind -- matching articleTopToolbarMode's
+	/// own registered default below, so the two paths agree either way.
+	/// If both legacy switches were explicitly set to false on disk (a
+	/// real prior choice, not just an unset default), migration lands on
+	/// .off, matching rightBarButtonItems()'s old behavior when neither
+	/// switch was on.
+	@MainActor func migrateArticleTopToolbarModeIfNeeded() {
+		guard !AppDefaults.bool(for: Key.hasMigratedArticleTopToolbarMode) else { return }
+		AppDefaults.setBool(for: Key.hasMigratedArticleTopToolbarMode, true)
+		if AppDefaults.bool(for: Key.showTableOfContentsAndFind) {
+			articleTopToolbarMode = .tableOfContentsAndFind
+		} else if AppDefaults.bool(for: Key.showPrevNextArticleButtons) {
+			articleTopToolbarMode = .prevNextArticle
+		} else {
+			articleTopToolbarMode = .off
+		}
+	}
+
 	@MainActor static func registerDefaults() {
 		let defaults: [String: Any] = [Key.userInterfaceColorPalette: UserInterfaceColorPalette.automatic.rawValue,
 										Key.timelineGroupByFeed: false,
@@ -1117,6 +1185,7 @@ final class AppDefaults: Sendable {
 										Key.showFeedNameInReaderView: false,
 									Key.showPrevNextArticleButtons: false,
 									Key.showTableOfContentsAndFind: true,
+									Key.articleTopToolbarMode: ArticleTopToolbarMode.tableOfContentsAndFind.rawValue,
 									Key.hideNotchInFullScreen: true,
 									Key.pageCounterDisplayMode: PageCounterDisplayMode.percentage.rawValue,
 									Key.showLastUpdatedLabel: false,
