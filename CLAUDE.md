@@ -26,6 +26,7 @@ task**, not this whole index cover-to-cover.
 - **Article background/notch color, or webview appearance live-update** → `article-color-pipeline.md`
 - **Accent Color / Surface Palette / nav bar tinting (app chrome)** → `app-chrome-palette.md`
 - **Article theme (`.nnwtheme`) system itself** → `theme-system.md`
+- **`.nnwtheme` bundle format / authoring / theme families** → `nnwtheme-format.md`
 - **Database schema / SQLite storage layer** → `database.md`
 - **Settings screen, any toggle, or "does setting X exist"** → `settings-screen.md` (main screen) **and** `ao3-authenticated-reading.md` (the separate AO3 account screen — easy to miss)
 - **Favicon / page metadata extraction** → `metadata-extraction.md`
@@ -84,6 +85,7 @@ it's trusted by default. Specifically:
 | `ArticleThemeColorExtractor`, `ArticleResolvedColors`, `WebViewController.applyResolvedBackgroundColors`/`registerForTraitChanges` | `article-color-pipeline.md` |
 | `SurfacePalette`, `AccentColor`, `SurfacePaletteNavigationBarAware`, `useTintedNavigationBar` | `app-chrome-palette.md` |
 | `.nnwtheme` bundles, `ArticleTheme`, `ArticleThemesManager`, `core.css`/`stylesheet.css` structure | `theme-system.md` |
+| `.nnwtheme` bundle-file layout, per-theme fonts, theme families, `template.html` conventions | `nnwtheme-format.md` |
 | `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |
 | Any row/case in `SettingsViewController`'s `*Row` enums, `Settings.storyboard`, or `AppDefaults` | `settings-screen.md` |
 | `HTMLMetadata`/favicon extraction | `metadata-extraction.md` |

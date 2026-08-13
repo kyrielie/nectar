@@ -310,7 +310,7 @@ enum AccentColor: Int, CaseIterable, Sendable {
 /// contract (which today only tints icons/progress fill, never backgrounds).
 /// Also independent of the light/dark/automatic `UserInterfaceColorPalette`
 /// setting: a palette tints chrome colors on top of whichever mode is
-/// active, and does not itself force a mode. See Technotes/Themes.md's
+/// active, and does not itself force a mode. See docs/nnwtheme-format.md's
 /// native-surface-color section for the reasoning.
 ///
 /// Named `SurfacePalette`, not `ColorPalette` -- `UserInterfaceColorPalette`

@@ -4,7 +4,7 @@
 //
 //  theme-settings-implementation-plan.md §7.2: the preview's sample body
 //  must itself satisfy the same structural contract real articles do
-//  (Technotes/Themes.md: #bodyContainer carries the articleBody class),
+//  (docs/nnwtheme-format.md: #bodyContainer carries the articleBody class),
 //  or the preview stops being representative again the next time someone
 //  edits it.
 //

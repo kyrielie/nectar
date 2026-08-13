@@ -276,4 +276,4 @@ contrast requirements, font-sourcing rules, and the constraints imposed by
 `ArticleThemeColorExtractor`/`ArticleThemeOverrides`/`core.css` on every
 theme (e.g. don't invent selectors that don't exist in the shared template;
 prefer reusing an existing muted color over inventing a new one). See also
-`Technotes/Themes.md` for the theme-family convention.
+`docs/nnwtheme-format.md` for the theme-family convention.

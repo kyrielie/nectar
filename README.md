@@ -98,7 +98,7 @@ See [`CLAUDE.md`](./CLAUDE.md) for the docs index — how feed data flows from A
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`Technotes/CodingGuidelines.md`](./Technotes/CodingGuidelines.md) before opening a PR.
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) before opening a PR.
 
 ## Acknowledgments
 

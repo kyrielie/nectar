@@ -209,7 +209,7 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 	/// `showFeedName` is true, to demonstrate a theme's icon styling -- the real
 	/// reader never shows a per-feed icon at all, preview does on purpose).
 	/// Keep this in sync with `applyVersalCaps`/`applyChapterDividers` in
-	/// `main.js` if either changes -- see Technotes/Themes.md.
+	/// `main.js` if either changes -- see docs/nnwtheme-format.md.
 	private static let versalAndDividerScript = """
 	<script>
 	function applyVersalCaps() {

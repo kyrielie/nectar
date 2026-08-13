@@ -24,7 +24,7 @@ import Foundation
 	/// Every class/id ArticleThemeOverrides.cssOverrideBlock or core.css's
 	/// theme-facing rules reference must exist in the default template.html, or the
 	/// override silently no-ops against the shipped default theme. This doesn't catch
-	/// custom themes with nonstandard markup (Technotes/Themes.md's "Custom
+	/// custom themes with nonstandard markup (docs/nnwtheme-format.md's "Custom
 	/// template.html" section covers that constraint separately, at the
 	/// .articleBody-must-survive level) -- it catches an override written against a
 	/// selector nobody checked against real markup.

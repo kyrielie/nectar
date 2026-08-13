@@ -20,7 +20,7 @@ public struct ArticleThemePlist: Codable, Equatable, Sendable {
 	/// with different accents/palettes. Does not affect storage, selection, deletion,
 	/// or import: each variant is still its own complete .nnwtheme bundle with its own
 	/// identity. Absent (nil) for the large majority of themes, which aren't part of a
-	/// family. See Technotes/Themes.md's "Theme families" section.
+	/// family. See docs/nnwtheme-format.md's "Theme families" section.
 	public let family: String?
 
 	/// Optional. This bundle's variant label within `family` (e.g. "Purple", "Moon").
