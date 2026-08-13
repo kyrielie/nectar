@@ -1014,6 +1014,13 @@ private extension WebViewController {
 				// needing a relaunch.
 				webView.scrollView.showsVerticalScrollIndicator = AppDefaults.shared.showArticleScrollbar
 
+				// Belt-and-suspenders alongside the page.html viewport meta zoom
+				// restriction (viewport-meta zoom blocking is sometimes inconsistent
+				// across WKWebView versions/content types). Same pooling concern as
+				// scrollsToTop/showsVerticalScrollIndicator above: reasserted on
+				// every dequeue rather than once at creation.
+				webView.scrollView.pinchGestureRecognizer?.isEnabled = false
+
 				self.view.setNeedsLayout()
 				self.view.layoutIfNeeded()
 
