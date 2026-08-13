@@ -480,7 +480,9 @@ rule against asserting things that haven't been verified by reading the code.
 
 ### `Technotes/` (1 file)
 
-- `Technotes/Themes.md`
+- `Technotes/Themes.md` -- since moved to `docs/nnwtheme-format.md`;
+  `Technotes/` itself was removed once every remaining file in it was
+  confirmed to be unmodified, unreferenced upstream boilerplate
 
 ### `Tests/` (1 file)
 
