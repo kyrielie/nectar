@@ -44,10 +44,16 @@ import os
 	private let baseURL: String?
 	private let timelineFeed: SidebarItem?
 
+	// AO3's scraped date-only strings are parsed as midnight UTC (see
+	// AO3ChapterHTMLExtractor.workPageDate(fromStatValue:)), so every
+	// formatter here that renders datePublished/dateModified must format
+	// in UTC too, or the displayed day shifts back by one for any device
+	// timezone behind UTC. Same fix as ArticleStringFormatter.dateFormatter.
 	private static let longDateFormatter: DateFormatter = {
 		let formatter = DateFormatter()
 		formatter.dateStyle = .long
 		formatter.timeStyle = .none
+		formatter.timeZone = TimeZone(identifier: "UTC")
 		return formatter
 	}()
 
@@ -55,6 +61,7 @@ import os
 		let formatter = DateFormatter()
 		formatter.dateStyle = .medium
 		formatter.timeStyle = .none
+		formatter.timeZone = TimeZone(identifier: "UTC")
 		return formatter
 	}()
 
@@ -62,6 +69,7 @@ import os
 		let formatter = DateFormatter()
 		formatter.dateStyle = .short
 		formatter.timeStyle = .none
+		formatter.timeZone = TimeZone(identifier: "UTC")
 		return formatter
 	}()
 
@@ -69,6 +77,7 @@ import os
 		let formatter = DateFormatter()
 		formatter.dateStyle = .none
 		formatter.timeStyle = .long
+		formatter.timeZone = TimeZone(identifier: "UTC")
 		return formatter
 	}()
 
@@ -76,6 +85,7 @@ import os
 		let formatter = DateFormatter()
 		formatter.dateStyle = .none
 		formatter.timeStyle = .medium
+		formatter.timeZone = TimeZone(identifier: "UTC")
 		return formatter
 	}()
 
@@ -83,6 +93,7 @@ import os
 		let formatter = DateFormatter()
 		formatter.dateStyle = .none
 		formatter.timeStyle = .short
+		formatter.timeZone = TimeZone(identifier: "UTC")
 		return formatter
 	}()
 
@@ -94,6 +105,7 @@ import os
 		let formatter = DateFormatter()
 		formatter.dateFormat = "yyyy-MM-dd"
 		formatter.locale = Locale(identifier: "en_US_POSIX")
+		formatter.timeZone = TimeZone(identifier: "UTC")
 		return formatter
 	}()
 

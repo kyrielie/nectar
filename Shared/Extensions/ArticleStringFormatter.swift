@@ -24,6 +24,7 @@ import RSParser
 		let formatter = DateFormatter()
 		formatter.dateStyle = .medium
 		formatter.timeStyle = .none
+		formatter.timeZone = TimeZone(identifier: "UTC")
 		return formatter
 	}()
 
