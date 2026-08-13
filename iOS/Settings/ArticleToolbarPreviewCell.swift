@@ -1,0 +1,88 @@
+//
+//  ArticleToolbarPreviewCell.swift
+//  NetNewsWire-iOS
+//
+//  Article view top toolbar settings plan. Live preview row for
+//  ArticleToolbarCustomizerViewController -- a synthetic UINavigationBar
+//  built with the same icons, order, and either/or shape as
+//  ArticleViewController.rightBarButtonItems() (theme button always first,
+//  then either the table-of-contents/find pair or the prev/next pair, never
+//  both), rather than an embedded real ArticleViewController, since that
+//  controller needs a live Article, SceneCoordinator, and WebView machinery
+//  this settings screen has no reason to stand up. If
+//  rightBarButtonItems()'s ordering ever changes, configure(mode:) needs the
+//  matching change or this preview silently drifts from the real reader.
+//
+
+import UIKit
+
+final class ArticleToolbarPreviewCell: UICollectionViewListCell {
+
+	static let reuseIdentifier = "ArticleToolbarPreviewCell"
+
+	private let navigationBar: UINavigationBar = {
+		let bar = UINavigationBar()
+		bar.translatesAutoresizingMaskIntoConstraints = false
+		bar.setItems([UINavigationItem(title: "")], animated: false)
+		return bar
+	}()
+
+	override init(frame: CGRect) {
+		super.init(frame: frame)
+		commonInit()
+	}
+
+	required init?(coder: NSCoder) {
+		super.init(coder: coder)
+		commonInit()
+	}
+
+	private func commonInit() {
+		contentView.addSubview(navigationBar)
+		NSLayoutConstraint.activate([
+			navigationBar.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+			navigationBar.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+			navigationBar.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+			navigationBar.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+			contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 60)
+		])
+	}
+
+	/// Mirrors ArticleViewController.rightBarButtonItems() exactly: theme
+	/// button always first, then either the table-of-contents/find pair
+	/// or the prev/next pair (array order [next, prev], matching that
+	/// method's own literal), never both.
+	func configure(mode: ArticleTopToolbarMode) {
+		let theme = UIBarButtonItem(image: Assets.Images.theme, style: .plain, target: nil, action: nil)
+		var items: [UIBarButtonItem] = [theme]
+
+		switch mode {
+		case .off:
+			break
+		case .tableOfContentsAndFind:
+			let toc = UIBarButtonItem(image: Assets.Images.tableOfContents, style: .plain, target: nil, action: nil)
+			let find = UIBarButtonItem(image: Assets.Images.findInArticle, style: .plain, target: nil, action: nil)
+			items.append(contentsOf: [toc, find])
+		case .prevNextArticle:
+			let next = UIBarButtonItem(image: Assets.Images.nextArticle, style: .plain, target: nil, action: nil)
+			let prev = UIBarButtonItem(image: Assets.Images.prevArticle, style: .plain, target: nil, action: nil)
+			items.append(contentsOf: [next, prev])
+		}
+
+		let navItem = UINavigationItem(title: "")
+		navItem.rightBarButtonItems = items
+		navigationBar.setItems([navItem], animated: false)
+	}
+
+	override func updateConfiguration(using state: UICellConfigurationState) {
+		var backgroundConfig: UIBackgroundConfiguration
+		if #available(iOS 18, *) {
+			backgroundConfig = UIBackgroundConfiguration.listCell().updated(for: state)
+		} else {
+			backgroundConfig = UIBackgroundConfiguration.listGroupedCell().updated(for: state)
+		}
+		backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
+		backgroundConfig.cornerRadius = 20
+		self.backgroundConfiguration = backgroundConfig
+	}
+}
