@@ -26,6 +26,7 @@
 		160932262102509A6EFAE87D /* UserNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 216807A46FBD5DF78D798052 /* UserNotificationManager.swift */; };
 		161EEF7A10D39FFDE099F82C /* StringSize+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B6ADB89F896FD708A068C2B /* StringSize+Extensions.swift */; };
 		17ECA2AB58BFCC3696329D93 /* SmallIconProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC8F675BDAC7097AD92EE79 /* SmallIconProvider.swift */; };
+		18F9949CAFE002FC668ACBF1 /* ArticleToolbarTogglesMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C6810A548986BA51A9AD16A /* ArticleToolbarTogglesMigrationTests.swift */; };
 		1972C53AA98236BAE950B6F5 /* Add.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3C9DF7E7DFECDF26888092CC /* Add.storyboard */; };
 		19E24EFDB2BB5C7E100C1070 /* VibrantTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90771F051165046C76928AF6 /* VibrantTableViewCell.swift */; };
 		1B2B49686487E047E81A22FD /* AddFeedFolderViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F44A24ABF6010736C5337D5 /* AddFeedFolderViewController.swift */; };
@@ -43,12 +44,15 @@
 		2427173469FEBE8E45DD73DA /* CSSImportExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC778ACAB880CE5CE33F581E /* CSSImportExtractor.swift */; };
 		269B136D0DA1AE26BFFE0C38 /* ErrorLog in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 4B2049C5BF9FEAFCC17442D8 /* ErrorLog */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		27FF4DD68F2839BFAE1795B1 /* StarredFeedDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 784CE2613B17D0CE900FEADC /* StarredFeedDelegate.swift */; };
+		28107A561843F0BE79C3B0AC /* ArticleToolbarToggleCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 654AF044ACE1A6F2295084A9 /* ArticleToolbarToggleCell.swift */; };
 		28941B759364AF916A7E8DEF /* ArticleCSVExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05A65F378EAD7DB12FD49393 /* ArticleCSVExporter.swift */; };
 		2BA4B293F8F08024211727E1 /* AboutContributor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03C308B9583C626190542515 /* AboutContributor.swift */; };
 		2C8F9C79DE24FD7749DCC1CB /* UIActivityViewController+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FD8A9552D28058672B186BC /* UIActivityViewController+Extras.swift */; };
 		2E62072084912D3696757EEE /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = EE84980D5340C6D89EC2425A /* Main.storyboard */; };
+		2E877919B18F08F71EBE6F19 /* ArticleToolbarPreviewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 438ED3D448CBD1127EA1AF1D /* ArticleToolbarPreviewCell.swift */; };
 		2FB28D8027B22088DE73028F /* SyncDatabase in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 826BB50324A86B430B4B4EF1 /* SyncDatabase */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		3017012F80100953303E528F /* FolderTreeControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F38D77657ECF9BB2FF29DD /* FolderTreeControllerDelegate.swift */; };
+		327E5443D552FC5EBD79FF7B /* ArticleLogicalDatePublishedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD2BC954F0CC18E69FE0F7B /* ArticleLogicalDatePublishedTests.swift */; };
 		3285C1FDAE9B53072301A90A /* PreloadedWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1750E93026BC13F09F692030 /* PreloadedWebView.swift */; };
 		32ECBE801B07B26BDAF76F54 /* InspectorIconHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B3244A2DB3E5474DF7A69FC /* InspectorIconHeaderView.swift */; };
 		33CFA5150EFD45D6C88775EB /* ArticleFeedNaming.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE3B190386F7EB708028C0C3 /* ArticleFeedNaming.swift */; };
@@ -203,6 +207,7 @@
 		D06200D851CCDE83C68EB5E8 /* ArticleActivityItemSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EDC270642BF19D867FF0D76 /* ArticleActivityItemSource.swift */; };
 		D0CA9A6DB8D6ECC99F8ECC0C /* FeedInspectorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50DC1CC4F968AB7E92801AF9 /* FeedInspectorViewController.swift */; };
 		D10F387F3F59B90BE9F3C76A /* MainFeedCollectionViewController+Drag.swift in Sources */ = {isa = PBXBuildFile; fileRef = 340E099F7150CB50B8FBC5C9 /* MainFeedCollectionViewController+Drag.swift */; };
+		D16EC1E8E8E2F2953AC68C38 /* ArticleToolbarCustomizerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9025E20CD7F56ACF08C5A46E /* ArticleToolbarCustomizerViewController.swift */; };
 		D24385C1CFDA8187B239CD4F /* MainTimelineDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59AF7CC16EB713B75FA9E683 /* MainTimelineDataSource.swift */; };
 		D3B2FBDDFF0C50EDA4501B3B /* ArticlesDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 7AA7C6FF61201945FA287D24 /* ArticlesDatabase */; };
 		D511641F9BA660F0D97A23B6 /* ReadFeedDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48955878779452CF41F91954 /* ReadFeedDelegate.swift */; };
@@ -341,6 +346,7 @@
 		41BDB1BD92E593E314FB0071 /* ArticleThemeOverrides.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeOverrides.swift; sourceTree = "<group>"; };
 		41E0038AD9E9339E319FBB28 /* ArticlesDatabase */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ArticlesDatabase; path = Modules/ArticlesDatabase; sourceTree = SOURCE_ROOT; };
 		4282386F19959AD746D614C4 /* ArticleThemePlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemePlist.swift; sourceTree = "<group>"; };
+		438ED3D448CBD1127EA1AF1D /* ArticleToolbarPreviewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleToolbarPreviewCell.swift; sourceTree = "<group>"; };
 		452F5904107DC49BDE569FEE /* RSTree */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RSTree; path = Modules/RSTree; sourceTree = SOURCE_ROOT; };
 		459AC2EE6DD0C5DD440DC4A9 /* RefreshInterval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshInterval.swift; sourceTree = "<group>"; };
 		473DF8E0A097A37599A298F6 /* SurfacePaletteAware.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfacePaletteAware.swift; sourceTree = "<group>"; };
@@ -382,14 +388,17 @@
 		62DF02339C37028C72EBA286 /* ContentRules.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ContentRules.json; sourceTree = "<group>"; };
 		632662E7A1CC49A18C4E6751 /* SFSafariViewController+Extras.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SFSafariViewController+Extras.h"; sourceTree = "<group>"; };
 		634024D7DB275B29230F60F5 /* AppNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNotifications.swift; sourceTree = "<group>"; };
+		654AF044ACE1A6F2295084A9 /* ArticleToolbarToggleCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleToolbarToggleCell.swift; sourceTree = "<group>"; };
 		67DA9E3DE55F00F8FDBD9AA6 /* LastOpenedFeedDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastOpenedFeedDelegate.swift; sourceTree = "<group>"; };
 		69C41E0B0165A72DC7F0E0C7 /* ArticleThemeListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeListView.swift; sourceTree = "<group>"; };
 		69F0C8FAC7D57E8F867B28D3 /* SceneCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneCoordinator.swift; sourceTree = "<group>"; };
 		6B0BB76AA9AF689160D5B231 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		6BD16CAF251AF57E68B82168 /* Nectar-dev.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Nectar-dev.entitlements"; sourceTree = "<group>"; };
 		6C0207EAE7D9FA945B9C5FE0 /* SurfacePaletteHexSetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfacePaletteHexSetTests.swift; sourceTree = "<group>"; };
+		6C6810A548986BA51A9AD16A /* ArticleToolbarTogglesMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleToolbarTogglesMigrationTests.swift; sourceTree = "<group>"; };
 		6C7B99107A73BC3141F4F0B9 /* CSSImportExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSSImportExtractorTests.swift; sourceTree = "<group>"; };
 		6DC22D7E9A6467F54770E524 /* HTMLMetadata */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HTMLMetadata; path = Modules/HTMLMetadata; sourceTree = SOURCE_ROOT; };
+		6DD2BC954F0CC18E69FE0F7B /* ArticleLogicalDatePublishedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleLogicalDatePublishedTests.swift; sourceTree = "<group>"; };
 		6E2F778291B96C0F1887747A /* ManageStorageViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageStorageViewModel.swift; sourceTree = "<group>"; };
 		7274C9602D13A4B0EF420321 /* ArticleThemesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemesManager.swift; sourceTree = "<group>"; };
 		74203E5D0371E05B8F1C0045 /* UIViewController+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIViewController+Extras.swift"; sourceTree = "<group>"; };
@@ -411,6 +420,7 @@
 		8DC1BC8906EFD78B8DDC7C87 /* BadgeColorTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgeColorTable.swift; sourceTree = "<group>"; };
 		8F85897E4F6D1161866E1071 /* Nectar-iOSTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "Nectar-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8FD8A9552D28058672B186BC /* UIActivityViewController+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIActivityViewController+Extras.swift"; sourceTree = "<group>"; };
+		9025E20CD7F56ACF08C5A46E /* ArticleToolbarCustomizerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleToolbarCustomizerViewController.swift; sourceTree = "<group>"; };
 		9048A16F604F87A5D1967AC8 /* MarkStatusCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkStatusCommand.swift; sourceTree = "<group>"; };
 		90771F051165046C76928AF6 /* VibrantTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VibrantTableViewCell.swift; sourceTree = "<group>"; };
 		914B043D76F6F372D9D20368 /* Dedication.rtf */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; path = Dedication.rtf; sourceTree = "<group>"; };
@@ -702,12 +712,14 @@
 				110FA7FA5A10A599860574EA /* AccentColorTableViewControllerSelectionTests.swift */,
 				C8A6E7B6A2FCD1F653F1FE71 /* ActivityItemSourceTests.swift */,
 				9A44B1DC23B3CF47E3C80D76 /* ArticleCSVExporterTests.swift */,
+				6DD2BC954F0CC18E69FE0F7B /* ArticleLogicalDatePublishedTests.swift */,
 				A3ECA72CB6133EA7B1AFE5C6 /* ArticleRendererSeriesNavigationTests.swift */,
 				2BD2C21916AA07DB85053663 /* ArticleRendererStripFakeParagraphIndentsTests.swift */,
 				E512053E9572D65A8EA03583 /* ArticleThemeColorExtractorTests.swift */,
 				26B7C99C4ABA370226735E19 /* ArticleThemePlistFamilyTests.swift */,
 				7DE280DE15D62A0E4A8F6B8B /* ArticleThemePreviewSampleTests.swift */,
 				FEA8F54E669A0B16741176F6 /* ArticleThemeSelectorCoverageTests.swift */,
+				6C6810A548986BA51A9AD16A /* ArticleToolbarTogglesMigrationTests.swift */,
 				A5994234741BCD86648B5DDA /* BadgeColorPaletteMigrationTests.swift */,
 				ADC91A90B641331B6CCBCF9A /* BadgeColorTableTests.swift */,
 				6C7B99107A73BC3141F4F0B9 /* CSSImportExtractorTests.swift */,
@@ -871,6 +883,9 @@
 				3108BD305F30192D74F96693 /* ArticleThemeImporter.swift */,
 				69C41E0B0165A72DC7F0E0C7 /* ArticleThemeListView.swift */,
 				BBBC5386FE8A011F4426330E /* ArticleThemePreviewWebView.swift */,
+				9025E20CD7F56ACF08C5A46E /* ArticleToolbarCustomizerViewController.swift */,
+				438ED3D448CBD1127EA1AF1D /* ArticleToolbarPreviewCell.swift */,
+				654AF044ACE1A6F2295084A9 /* ArticleToolbarToggleCell.swift */,
 				C57C16994F67428CD8F634FD /* BadgeColorPalettePreviewCell.swift */,
 				BFA195669F7F9AFCF2C21506 /* ColorPaletteTableViewController.swift */,
 				4820776BEC859D8546D325EC /* DinosaurRowView.swift */,
@@ -1331,6 +1346,9 @@
 				E3EA872D7681E3EFD87C7642 /* ArticleThemePlist.swift in Sources */,
 				A77B43D4A983A234308F375F /* ArticleThemePreviewWebView.swift in Sources */,
 				DA8A7BE427DA9DB1C3C87E32 /* ArticleThemesManager.swift in Sources */,
+				D16EC1E8E8E2F2953AC68C38 /* ArticleToolbarCustomizerViewController.swift in Sources */,
+				2E877919B18F08F71EBE6F19 /* ArticleToolbarPreviewCell.swift in Sources */,
+				28107A561843F0BE79C3B0AC /* ArticleToolbarToggleCell.swift in Sources */,
 				FA8CDAF71BB21BF13D4E43B5 /* ArticleUtilities.swift in Sources */,
 				35ABAA14B41EF11D49CDF39B /* ArticleViewController.swift in Sources */,
 				BB5B08305FC9A2AE0B7AE30B /* Assets.swift in Sources */,
@@ -1447,12 +1465,14 @@
 				BC6BBF8CA91C7AC3A39FE473 /* AccentColorTableViewControllerSelectionTests.swift in Sources */,
 				E5559C48B3DCA17AFE420F34 /* ActivityItemSourceTests.swift in Sources */,
 				B969EB6D6447E0689D0096E0 /* ArticleCSVExporterTests.swift in Sources */,
+				327E5443D552FC5EBD79FF7B /* ArticleLogicalDatePublishedTests.swift in Sources */,
 				FEB6AC1FCF90EA0C1EC23AB6 /* ArticleRendererSeriesNavigationTests.swift in Sources */,
 				5359FE92B04870B0444E56BA /* ArticleRendererStripFakeParagraphIndentsTests.swift in Sources */,
 				833EEF3FA1E0C63BF64D3547 /* ArticleThemeColorExtractorTests.swift in Sources */,
 				C20C0E058FE3B0E9D852FC28 /* ArticleThemePlistFamilyTests.swift in Sources */,
 				C6FC9492B7C4CFFFBEB2381A /* ArticleThemePreviewSampleTests.swift in Sources */,
 				46A03584715658D3B0EF7AD5 /* ArticleThemeSelectorCoverageTests.swift in Sources */,
+				18F9949CAFE002FC668ACBF1 /* ArticleToolbarTogglesMigrationTests.swift in Sources */,
 				E519EB4F5198C1393FA2E331 /* BadgeColorPaletteMigrationTests.swift in Sources */,
 				4D597014D78741A995F895A4 /* BadgeColorTableTests.swift in Sources */,
 				874C3DE4544F6828594EE0FF /* CSSImportExtractorTests.swift in Sources */,
