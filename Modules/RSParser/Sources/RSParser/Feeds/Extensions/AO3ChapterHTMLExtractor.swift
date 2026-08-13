@@ -312,8 +312,7 @@ private extension AO3ChapterHTMLExtractor {
 	/// confirmed against `ArmindoFlores/ao3_api`'s (MIT) `Work.authenticity_token`,
 	/// which reads the identical tag. Used by `AO3KudosManager` to leave a
 	/// kudos off the back of this same fetch rather than a dedicated
-	/// request -- see this file's header comment and the licensing note in
-	/// nectar-ao3-features-plan-FINAL.md. `nil` if the tag is missing
+	/// request -- see this file's header comment. `nil` if the tag is missing
 	/// (shouldn't happen on a real page, but not fatal to the rest of the
 	/// extraction).
 	static func csrfToken(root: HTMLLiteElement) -> String? {

@@ -3,7 +3,7 @@
 //  RSParser
 //
 //  Nectar AO3 direct-reading support, Task 7 ("Ignore lists (by work /
-//  by author)") -- see nectar-ao3-features-plan-FINAL.md.
+//  by author)").
 //
 //  Lives in RSParser, not Account, so every AO3-sourced ingestion path can
 //  reach it without a dependency inversion: native AO3 tag/user RSS/Atom
@@ -21,8 +21,7 @@
 //  becomes a persisted ParsedItem at all, so it never reaches
 //  Account.updateAsync, AO3ChapterFetcher, or the timeline.
 //
-//  Retroactivity: never offered, no exceptions (see the plan's Task 7
-//  section). Adding a rule here only ever affects items parsed after the
+//  Retroactivity: never offered, no exceptions. Adding a rule here only ever affects items parsed after the
 //  rule was added -- nothing here touches already-stored Articles, and
 //  there's no cleanup path for existing matches by design.
 //
@@ -69,7 +68,7 @@ public enum AO3IgnoreList {
 	/// matching `ParsedAuthor.url` as populated by whichever ingestion path
 	/// found it -- see this file's header comment for which paths do and
 	/// don't populate that field. Matched by exact string equality, not
-	/// display name (names collide; see the plan's Task 7 section).
+	/// display name (names collide).
 	public static var ignoredAuthorURLs: Set<String> {
 		get { Set(store.stringArray(forKey: authorURLsKey) ?? []) }
 		set { store.set(Array(newValue), forKey: authorURLsKey) }
@@ -104,7 +103,7 @@ public enum AO3IgnoreList {
 	/// author checks every author in `item.authors` against
 	/// `ignoredAuthorURLs` and excludes on any single match -- multi-author
 	/// default is "any ignored co-author is sufficient to hide the work,"
-	/// not "all must match" (see the plan's Task 7 section). Both checks
+	/// not "all must match". Both checks
 	/// are simply skipped (never excluded) when the relevant field isn't
 	/// populated -- an item with no `ao3WorkID` isn't an AO3 work to begin
 	/// with, and an author with no `url` can't be matched by-author,

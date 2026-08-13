@@ -16,7 +16,7 @@
 //  own session/configuration instead of the shared one, so the generous
 //  timeout doesn't leak into unrelated requests.
 //
-//  Gap detection (plan 3c): every page's `transfer_manifest` is read and
+//  Gap detection: every page's `transfer_manifest` is read and
 //  validated (via ArticlesDatabase.readAmbrosiaSQLiteTransferManifest)
 //  before a single row is imported. A page that fails this check is retried
 //  a bounded number of times; a walk_id mismatch on a resumed walk discards
@@ -52,13 +52,13 @@ enum AmbrosiaSQLiteTransferError: Error, CustomStringConvertible {
 /// Internal-only signaling for `fetchPageWithRetries`'s two non-retryable
 /// (or already-exhausted-retries) outcomes. Never surfaced to callers of
 /// `fetchAndImportWalk` as a thrown error -- both are handled inside the
-/// walk loop itself (plan 3c/3d).
+/// walk loop itself.
 private enum AmbrosiaSQLiteTransferWalkControl: Error {
 	case walkIDMismatch
 	case exhaustedRetries
 }
 
-/// Outcome of a full paginated `.sqlite` transfer walk (plan 3b/3d).
+/// Outcome of a full paginated `.sqlite` transfer walk.
 /// `.incomplete` is a first-class result, not an error: a walk that
 /// exhausted its per-page retry budget, or failed final-total validation,
 /// is reported this way so the caller can surface a distinct "sync
@@ -77,9 +77,8 @@ enum AmbrosiaSQLiteTransferFetcher {
 
 	/// Generous timeout for a whole-database transfer, as opposed to
 	/// DownloadSession's 15s default meant for ordinary feed-sized requests.
-	/// Not a magic number chosen here in isolation -- section 2d calls out
-	/// that a multi-minute transfer must not be killed "unconditionally,
-	/// regardless of anything else in this plan," so this errs long.
+	/// Not a magic number chosen here in isolation -- a multi-minute
+	/// transfer must not be killed unconditionally, so this errs long.
 	private static let timeoutIntervalForRequest: TimeInterval = 300
 
 	private static let session: URLSession = {
@@ -89,19 +88,18 @@ enum AmbrosiaSQLiteTransferFetcher {
 		return URLSession(configuration: configuration)
 	}()
 
-	/// Bounded retry budget for a single page (plan 3c/5.2) -- a
-	/// transfer_manifest that's missing or internally inconsistent, or an
-	/// ordinary transient network failure, gets this many attempts (with a
-	/// short exponential backoff) before the whole walk is given up on for
-	/// this refresh cycle and reported `.incomplete`. Proposed starting
-	/// value per the plan; open to adjusting based on how flaky observed
-	/// drops turn out to be in practice.
+	/// Bounded retry budget for a single page -- a transfer_manifest
+	/// that's missing or internally inconsistent, or an ordinary transient
+	/// network failure, gets this many attempts (with a short exponential
+	/// backoff) before the whole walk is given up on for this refresh
+	/// cycle and reported `.incomplete`. Open to adjusting based on how
+	/// flaky observed drops turn out to be in practice.
 	private static let maxAttemptsPerPage = 3
 	private static let retryBackoffBaseSeconds: TimeInterval = 1
 
 	/// Runs a full paginated walk for one Ambrosia `.sqlite` feed, resuming
 	/// from persisted `AmbrosiaSQLiteTransferWalkState` when one exists and
-	/// is still `.inProgress` (plan 3b.1). `baseURL` is the feed's page-less
+	/// is still `.inProgress`. `baseURL` is the feed's page-less
 	/// `.sqlite` URL (e.g. `.../feed/collection/<id>.sqlite`); this method
 	/// appends/replaces `page=` itself for every page.
 	static func fetchAndImportWalk(baseURL: URL, feedID: String, into articlesDatabase: ArticlesDatabase) async throws -> AmbrosiaSQLiteWalkResult {
@@ -142,7 +140,7 @@ enum AmbrosiaSQLiteTransferFetcher {
 			} catch AmbrosiaSQLiteTransferWalkControl.walkIDMismatch {
 				// The server restarted, or its cache entry was pruned/evicted
 				// and a page=1 request from something else regenerated it,
-				// between our last successful page and now (plan 3c). Do not
+				// between our last successful page and now. Do not
 				// attempt to append this page's rows onto the old walk's
 				// progress -- discard the stored state entirely and start a
 				// brand-new walk at page 1 with the new walk_id. Deliberate
@@ -213,7 +211,7 @@ enum AmbrosiaSQLiteTransferFetcher {
 			// they don't match, treat the *entire walk* as failed even
 			// though every individual page passed its own per-page check
 			// above -- the server's underlying candidate set can shift
-			// between page 1 and the last page of a long walk (plan 3c).
+			// between page 1 and the last page of a long walk.
 			if importedRowCountSoFar == manifest.expectedTotalRowCount {
 				AmbrosiaSQLiteTransferWalkStateStore.clear(feedID: feedID)
 				return .complete(pagesImported: pagesImportedThisCall, rowsImported: importedRowCountSoFar, articleChanges: ArticleChanges(new: newArticlesSoFar, updated: updatedArticlesSoFar, deleted: nil))
@@ -306,7 +304,7 @@ enum AmbrosiaSQLiteTransferFetcher {
 
 		do {
 			// Reads and validates transfer_manifest + PRAGMA user_version
-			// before anything is imported (plan 3c) -- a manifest that's
+			// before anything is imported -- a manifest that's
 			// missing or internally inconsistent, or a version mismatch,
 			// means this page's file must not be trusted at all.
 			let manifest = try await articlesDatabase.readAmbrosiaSQLiteTransferManifest(temporaryFilePath: temporaryFilePath, wireFormatVersion: AmbrosiaSQLiteWireFormat.version)

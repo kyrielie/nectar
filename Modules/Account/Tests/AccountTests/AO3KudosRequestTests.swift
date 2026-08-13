@@ -2,7 +2,7 @@
 //  AO3KudosRequestTests.swift
 //  AccountTests
 //
-//  Nectar AO3 direct-reading support, Task 6 ("kudos-on-like") test plan.
+//  Nectar AO3 direct-reading support, Task 6 ("kudos-on-like") test coverage.
 //
 //  Pure -- no network. Covers makeRequest's header/body shape and every
 //  outcome(statusCode:data:) branch against constructed responses, mirroring

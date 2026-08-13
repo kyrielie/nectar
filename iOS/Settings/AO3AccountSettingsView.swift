@@ -2,8 +2,7 @@
 //  AO3AccountSettingsView.swift
 //  NetNewsWire-iOS
 //
-//  Nectar AO3 direct-reading support, Workstream 3 ("optional AO3 login")
-//  -- see docs/ao3-merged-plan-nectar.md.
+//  Nectar AO3 direct-reading support, Workstream 3 ("optional AO3 login").
 //
 //  Pushed from SettingsViewController's new "Archive of Our Own" row,
 //  following the same UIHostingController-push pattern as AboutView and

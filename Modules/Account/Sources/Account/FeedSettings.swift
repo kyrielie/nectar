@@ -155,7 +155,7 @@ import Articles
 	/// always (re)fetches page 1, so this exists purely for "load more" to
 	/// know which page to request next -- not to gate the initial fetch.
 	/// Deleting and re-adding the same search-feed URL starts back at page 1
-	/// by design (see nectar-ao3-features-plan-FINAL.md, Task 9): this is a
+	/// by design: this is a
 	/// property of the feed subscription, not of any story's identity.
 	var ao3SearchLastFetchedPage: Int? {
 		didSet {

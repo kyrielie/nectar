@@ -2,7 +2,7 @@
 //  AO3SeriesNavigatorTests.swift
 //  AccountTests
 //
-//  Nectar inline-series-navigation plan, Phase 4: coverage for
+//  Nectar inline-series-navigation work, Phase 4: coverage for
 //  AO3SeriesNavigator.openSeriesWork, which replaced the old
 //  fetchAdjacentWork/fetchFirstWorkInSeries pair this file used to test
 //  (both deleted -- they collapsed a work's multiple series memberships

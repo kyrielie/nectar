@@ -2,8 +2,7 @@
 //  AO3KudosOnLikePreference.swift
 //  Account
 //
-//  Nectar AO3 direct-reading support, Task 6 ("kudos-on-like") -- see
-//  nectar-ao3-features-plan-FINAL.md.
+//  Nectar AO3 direct-reading support, Task 6 ("kudos-on-like").
 //
 //  Default-off gate for AO3KudosManager. Landing ahead of the Settings UI
 //  (a later checkpoint) so that AO3KudosManager's wiring into

@@ -2,17 +2,16 @@
 //  AO3KudosRequest.swift
 //  Account
 //
-//  Nectar AO3 direct-reading support, Task 6 ("kudos-on-like") -- see
-//  nectar-ao3-features-plan-FINAL.md. Pure request-shape/response-parsing
-//  logic, kept separate from AO3KudosFetcher's actual networking the same
-//  way AO3ChapterHTMLExtractor (RSParser, pure) is kept separate from
-//  AO3ChapterFetcher (Account, networking) -- lets the request/response
-//  shape be unit tested against fixture data with no network involved.
+//  Nectar AO3 direct-reading support, Task 6 ("kudos-on-like"). Pure
+//  request-shape/response-parsing logic, kept separate from
+//  AO3KudosFetcher's actual networking the same way AO3ChapterHTMLExtractor
+//  (RSParser, pure) is kept separate from AO3ChapterFetcher (Account,
+//  networking) -- lets the request/response shape be unit tested against
+//  fixture data with no network involved.
 //
 //  Endpoint, header names, and the kudo[...] form-field names are
 //  cross-checked against (not ported from) ArmindoFlores/ao3_api's
-//  (MIT-licensed) utils.kudos() for the general shape -- see the plan
-//  document's licensing note at its top. Per that note, this was
+//  (MIT-licensed) utils.kudos() for the general shape. This was
 //  reverse-engineered against the actual shape rather than copied.
 //
 
@@ -54,7 +53,7 @@ enum AO3KudosRequest {
 	/// Builds the POST request for leaving kudos on `workID`, using
 	/// `csrfToken` scraped from a real fetch of the work's own page (see
 	/// `AO3ChapterHTMLExtractor.csrfToken(root:)`) -- never invented
-	/// client-side, per Task 6's plan. `cookieHeaderValue` is passed
+	/// client-side. `cookieHeaderValue` is passed
 	/// through as-is (nil for a guest attempt); this function doesn't
 	/// decide guest vs. authenticated, only shapes the request for
 	/// whichever the caller already decided -- see `AO3KudosManager`.

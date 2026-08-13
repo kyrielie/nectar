@@ -2,10 +2,10 @@
 //  AmbrosiaSQLiteImportTableTests.swift
 //  ArticlesDatabaseTests
 //
-//  Nectar cleanup plan v2, Phase 3a: direct coverage of
+//  Phase 3a: direct coverage of
 //  AmbrosiaSQLiteImportTable.copyItems/readAndValidateManifest/importTransfer,
 //  the bulk ATTACH + INSERT OR REPLACE ... SELECT machinery that Phase 0's
-//  tests only exercised indirectly. Six cases, matching the plan's numbering:
+//  tests only exercised indirectly. Six cases:
 //  (1) new-vs-updated split, (2) INSERT OR REPLACE overwrite semantics,
 //  (3) contentHTML compress/store/decompress round-trip, (4) wire-format
 //  version mismatch throws before ATTACH, (5) page_row_count manifest
@@ -74,8 +74,8 @@ struct AmbrosiaSQLiteImportTableTests {
 		database.executeStatements("PRAGMA user_version = \(wireFormatVersion);")
 
 		let contentHTMLColumn = omitContentHTMLColumn ? "" : ", content_html TEXT NOT NULL"
-		// Full Wire Contract schema (docs/nectar-implementation-plan.md's "Wire
-		// schema" section) -- copyItems' INSERT...SELECT references every one
+		// Full Wire Contract schema ("Wire schema" section) -- copyItems'
+		// INSERT...SELECT references every one
 		// of these columns by name (t.url, t.summary, t.date_published, etc.),
 		// so a fixture missing any of them throws "no such column" the moment
 		// that SQL runs, not just the ones a given test cares about checking.
