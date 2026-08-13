@@ -58,7 +58,13 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		return true
 	}
 
-	private let refreshProgressView = RefreshProgressView(frame: .zero)
+	// Nonzero starting frame, not .zero -- as a UIBarButtonItem customView,
+	// UIKit bridges this view's starting frame into an internal
+	// 'UIView-Encapsulated-Layout-Width' constraint before Auto Layout's
+	// first pass resolves its real (label-driven) width. Starting from
+	// .zero makes that bridged constraint conflict with the bar's own
+	// leading/trailing pins on that first pass.
+	private let refreshProgressView = RefreshProgressView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
 	private var currentActivityButton: UIBarButtonItem?
 
 	var undoableCommands = [UndoableCommand]()

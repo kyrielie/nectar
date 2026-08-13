@@ -31,7 +31,10 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 	private lazy var feedTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(showFeedInspector(_:)))
 	private lazy var filterButton = UIBarButtonItem(image: Assets.Images.filter, style: .plain, target: self, action: #selector(toggleFilter(_:)))
 	private lazy var nextUnreadButton = UIBarButtonItem(image: Assets.Images.nextUnread, style: .plain, target: self, action: #selector(nextUnread(_:)))
-	private let refreshProgressView = RefreshProgressView(frame: .zero)
+	// Nonzero starting frame, not .zero -- see MainFeedCollectionViewController's
+	// refreshProgressView for why: as a UIBarButtonItem customView, .zero
+	// causes a spurious first-layout-pass constraint conflict.
+	private let refreshProgressView = RefreshProgressView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
 	private lazy var refreshBarItem = UIBarButtonItem(customView: refreshProgressView)
 	private var isToolbarProgressViewShowing = false
 	private var dataSource: UICollectionViewDiffableDataSource<Int, Article>?
