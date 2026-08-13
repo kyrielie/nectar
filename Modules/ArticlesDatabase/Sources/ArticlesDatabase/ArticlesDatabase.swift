@@ -402,6 +402,22 @@ public struct ArticleStorageInfo: Sendable {
 	public func importAmbrosiaSQLiteTransfer(temporaryFilePath: String, feedID: String, wireFormatVersion: Int32) throws -> ArticleChanges {
 		Self.logger.debug("ArticlesDatabase: importAmbrosiaSQLiteTransfer \(self.accountID, privacy: .public) feedID: \(feedID, privacy: .public)")
 		let (newIDs, updatedIDs) = try AmbrosiaSQLiteImportTable.importTransfer(temporaryFilePath: temporaryFilePath, feedID: feedID, expectedWireFormatVersion: wireFormatVersion, queue: queue)
+
+		// AmbrosiaSQLiteImportTable writes articles/statuses with raw SQL
+		// (INSERT OR REPLACE ... SELECT plus per-row UPDATEs) directly against
+		// the attached transfer file, bypassing ArticlesTable's normal save
+		// path entirely -- so nothing has dropped a stale articlesCache entry
+		// for any articleID this import just overwrote. Without this, a
+		// second import of a previously-seen id (a re-import with a changed
+		// title/word count/etc.) hands back -- and every later fetchArticles
+		// call for that id keeps handing back -- the first import's cached
+		// Article rather than the row this import just wrote. New ids can't
+		// already be cached, so only updatedIDs needs invalidating; same
+		// pattern ArticlesTable.saveUpdatedArticle uses after its own direct write.
+		if !updatedIDs.isEmpty {
+			articlesTable.removeArticleIDsFromCache(updatedIDs)
+		}
+
 		let newArticles = newIDs.isEmpty ? nil : articlesTable.fetchArticles(articleIDs: newIDs)
 		let updatedArticles = updatedIDs.isEmpty ? nil : articlesTable.fetchArticles(articleIDs: updatedIDs)
 		return ArticleChanges(new: newArticles, updated: updatedArticles, deleted: nil)
