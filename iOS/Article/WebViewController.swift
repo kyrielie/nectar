@@ -184,6 +184,7 @@ final class WebViewController: UIViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(handleSceneDidEnterBackground(_:)), name: UIScene.didEnterBackgroundNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidComplete(_:)), name: .ao3ChapterFetchDidComplete, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidFail(_:)), name: .ao3ChapterFetchDidFail, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(statusesDidChange(_:)), name: .StatusesDidChange, object: nil)
 
 		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,
 		// IPHONEOS_DEPLOYMENT_TARGET = 17.0), so use registerForTraitChanges rather
@@ -318,6 +319,28 @@ final class WebViewController: UIViewController {
 			// than written to contentHTML -- offer the "view what changed?"
 			// prompt in that case.
 			self.presentPendingContentUpdateAlertIfNeeded()
+		}
+	}
+
+	/// The loved/starred/read toggle actions in the full-screen press-and-hold
+	/// context menu call `coordinator.toggle...ForCurrentArticle()`, which
+	/// persists the change asynchronously (`markArticlesWithUndo` ->
+	/// `MarkStatusCommand` -> `markArticleIDs`, which is a `Task { await
+	/// account.markArticles(...) }`). Rebuilding the menu synchronously right
+	/// after firing that call -- the previous approach -- reads `self.article`
+	/// before the write has actually landed, so the row's icon/title still
+	/// showed the pre-toggle state. `ArticleViewController`'s own toolbar
+	/// avoids this by rebuilding from `.StatusesDidChange`, which only fires
+	/// once the write is done; mirror that here instead of racing it.
+	@objc func statusesDidChange(_ note: Notification) {
+		guard let articleIDs = note.userInfo?[Account.UserInfoKey.articleIDs] as? Set<String> else {
+			return
+		}
+		guard let article else {
+			return
+		}
+		if articleIDs.contains(article.articleID) {
+			refreshVisibleContextMenu()
 		}
 	}
 
@@ -1405,8 +1428,9 @@ private extension WebViewController {
 		// this was previously inverted here.
 		let readImage = article.status.read ? Assets.Images.circleOpen : Assets.Images.circleClosed
 		let action = UIAction(title: title, image: readImage, attributes: .keepsMenuPresented) { [weak self] _ in
+			// Menu rebuild happens from statusesDidChange(_:) once the toggle's
+			// async write actually lands -- see that method's doc comment.
 			self?.coordinator.toggleReadForCurrentArticle()
-			self?.refreshVisibleContextMenu()
 		}
 		return action
 	}
@@ -1419,8 +1443,9 @@ private extension WebViewController {
 		// starOpen) -- this was previously inverted here.
 		let starredImage = starred ? Assets.Images.starClosed : Assets.Images.starOpen
 		let action = UIAction(title: title, image: starredImage, attributes: .keepsMenuPresented) { [weak self] _ in
+			// Menu rebuild happens from statusesDidChange(_:) once the toggle's
+			// async write actually lands -- see that method's doc comment.
 			self?.coordinator.toggleStarredForCurrentArticle()
-			self?.refreshVisibleContextMenu()
 		}
 		return action
 	}
@@ -1433,8 +1458,9 @@ private extension WebViewController {
 		// heartOpen) -- this was previously inverted here.
 		let lovedImage = loved ? Assets.Images.heartClosed : Assets.Images.heartOpen
 		let action = UIAction(title: title, image: lovedImage, attributes: .keepsMenuPresented) { [weak self] _ in
+			// Menu rebuild happens from statusesDidChange(_:) once the toggle's
+			// async write actually lands -- see that method's doc comment.
 			self?.coordinator.toggleLovedForCurrentArticle()
-			self?.refreshVisibleContextMenu()
 		}
 		return action
 	}
