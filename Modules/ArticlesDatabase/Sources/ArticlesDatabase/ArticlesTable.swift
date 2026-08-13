@@ -31,6 +31,21 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	let retentionStyle: ArticlesDatabase.RetentionStyle
 	let articlesCache = OSAllocatedUnfairLock(initialState: [String: Article]())
 
+	// Not private (see the accountID comment above for why): callers outside
+	// this file that write articles via raw SQL rather than this table's own
+	// save methods -- AmbrosiaSQLiteImportTable's bulk ATTACH + INSERT OR
+	// REPLACE import, via ArticlesDatabase.importAmbrosiaSQLiteTransfer --
+	// still need to drop the now-stale cache entry for any articleID they
+	// just overwrote, the same way saveUpdatedArticle does below for its
+	// own direct write.
+	func removeArticleIDsFromCache(_ articleIDs: Set<String>) {
+		articlesCache.withLock { articlesCache in
+			for articleID in articleIDs {
+				articlesCache[articleID] = nil
+			}
+		}
+	}
+
 	// Not private -- used from every MARK region in this file (23 call
 	// sites across "Self.logger"/"Self.signposter"), several of which
 	// move to their own files below. Not called out explicitly in the
@@ -1904,14 +1919,6 @@ nonisolated private extension ArticlesTable {
 		articlesCache.withLock { articlesCache in
 			for article in articles {
 				articlesCache[article.articleID] = article
-			}
-		}
-	}
-
-	func removeArticleIDsFromCache(_ articleIDs: Set<String>) {
-		articlesCache.withLock { articlesCache in
-			for articleID in articleIDs {
-				articlesCache[articleID] = nil
 			}
 		}
 	}
