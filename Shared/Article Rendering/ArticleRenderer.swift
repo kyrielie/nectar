@@ -591,7 +591,7 @@ extension ArticleRenderer {
 	/// since HTML collapses plain spaces but not non-breaking ones -- typed
 	/// directly into the work's own text. That's real content, preserved
 	/// verbatim by both `AO3ChapterHTMLExtractor.serializedContentHTML` (the
-	/// on-demand/background-sweep refetch path) and Ambrosia's own
+	/// on-demand refetch path) and Ambrosia's own
 	/// `content_html` (the initial-import path), so it survives unchanged into
 	/// `article.body` and would otherwise stack on top of whatever indent the
 	/// app's own `ArticleThemeOverrides.paragraphIndent`/theme CSS applies --

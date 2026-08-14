@@ -5,20 +5,35 @@
 //  Nectar AO3 direct-reading support, Workstream 2 test coverage.
 //
 //  Downloader.shared now has a TestingURLProtocol seam (see RSWeb's
-//  Downloader.swift and AO3SeriesNavigatorTests.swift for a real usage),
-//  but AO3ChapterFetcher.download's own Cloudflare/registration-required/
-//  retry branches aren't exercised here yet -- this still only covers
-//  what's pure/synchronous: ao3WorkID(fromBookKey:)'s prefix parsing and
-//  isStale(article:)'s cadence-only staleness check, both against
-//  constructed Article fixtures rather than a live or stubbed fetch.
+//  Downloader.swift and AO3SeriesNavigatorTests.swift for a real usage).
+//  Most of this file still only covers what's pure/synchronous:
+//  ao3WorkID(fromBookKey:)'s prefix parsing and isStale(article:)'s
+//  cadence-only staleness check, both against constructed Article
+//  fixtures rather than a live or stubbed fetch --
+//  AO3ChapterFetcher.download's own Cloudflare/registration-required/
+//  retry branches still aren't exercised here. The one exception is the
+//  read-state fetchIfNeeded test below, which uses
+//  TestingURLProtocol.requestedURLs (populated regardless of whether a
+//  canned response is registered) just to confirm a request actually went
+//  out, without needing to exercise the rest of the download/extraction
+//  pipeline.
 //
 
 import XCTest
 import RSParser
+import RSWeb
 import Articles
 @testable import Account
 
 final class AO3ChapterFetcherTests: XCTestCase {
+
+	override func setUp() {
+		TestingURLProtocol.reset()
+	}
+
+	override func tearDown() {
+		TestingURLProtocol.reset()
+	}
 
 	// MARK: - ao3WorkID(fromBookKey:)
 
@@ -150,7 +165,6 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		XCTAssertTrue(AO3ChapterFetcher.shared.isStale(article: article))
 	}
 
-
 	// MARK: - fetchIfNeeded(for:) short-circuit
 
 	func testFetchIfNeededGateForNonAO3BookKey() {
@@ -163,6 +177,24 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		// relies on rather than asserting on network behavior.
 		let article = Self.makeArticle(contentHTML: nil, chapterCurrent: nil, ao3WorkID: nil)
 		XCTAssertNil(AO3ChapterFetcher.ao3WorkID(fromBookKey: article.bookKey))
+	}
+
+	/// Locks down the read-state fix: a read, stale, eligible article must
+	/// still trigger a network request from fetchIfNeeded, not be silently
+	/// dropped the way the old `!article.status.read` guard used to drop
+	/// it. Uses TestingURLProtocol.requestedURLs (populated for every
+	/// request regardless of whether a canned response is registered for
+	/// it) rather than asserting on the fetch's outcome, since this test
+	/// only cares whether a request was attempted at all.
+	func testFetchIfNeededStillFetchesReadArticle() {
+		let workID = "read-article-\(UUID().uuidString)"
+		let article = Self.makeArticle(contentHTML: nil, chapterCurrent: 3, ao3WorkID: workID, read: true)
+		let expectation = XCTNSNotificationExpectation(name: .ao3ChapterFetchDidFail, object: nil, notificationCenter: .default)
+
+		AO3ChapterFetcher.shared.fetchIfNeeded(for: article)
+
+		wait(for: [expectation], timeout: 2.0)
+		XCTAssertTrue(TestingURLProtocol.requestedURLs.contains { $0.absoluteString.contains("archiveofourown.org/works/\(workID)") })
 	}
 
 	// MARK: - isStale(article:) refetch cadence
@@ -412,7 +444,7 @@ final class AO3ChapterFetcherTests: XCTestCase {
 	func testRebuildParsedItemOverwritesStaleMetadataOnRefetch() {
 		// The other half of Q1's answer: an article that ALREADY has real
 		// metadata (search-results import or Ambrosia sync) must still get
-		// the live page's fresh values on a normal refetch/sweep, not keep
+		// the live page's fresh values on a normal refetch, not keep
 		// whatever was stored at import time -- the live page is the
 		// source of truth on every fetch, not just the first one.
 		let existingArticle = Self.makeArticle(
@@ -530,13 +562,13 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		return "\(metaGroup)<div id=\"workskin\">\(preface)\(chapters)</div>"
 	}
 
-	private static func makeArticle(contentHTML: String?, chapterCurrent: Int?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false, lastPrefaceFetchDate: Date? = nil, pendingUpdateContentHTML: String? = nil, wordCountRegressionFlaggedAt: Date? = nil, ao3ConfirmedMissingAt: Date? = nil, bookKeyOverride: String? = nil, summary: String? = "A test summary.", authors: Set<Author>? = nil, datePublished: Date? = nil, dateModified: Date? = nil, fandoms: [String]? = nil, additionalTags: [String]? = nil) -> Article {
+	private static func makeArticle(contentHTML: String?, chapterCurrent: Int?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false, lastPrefaceFetchDate: Date? = nil, pendingUpdateContentHTML: String? = nil, wordCountRegressionFlaggedAt: Date? = nil, ao3ConfirmedMissingAt: Date? = nil, bookKeyOverride: String? = nil, summary: String? = "A test summary.", authors: Set<Author>? = nil, datePublished: Date? = nil, dateModified: Date? = nil, fandoms: [String]? = nil, additionalTags: [String]? = nil, read: Bool = false) -> Article {
 		// Unique per call -- AO3ChapterFetcher.shared.attemptDates is a
 		// process-lifetime singleton cache keyed by articleID, so reusing a
 		// fixed ID across tests leaks already-noted/already-attempted state
 		// from one test into another depending on run order.
 		let articleID = "test-article-id-\(UUID().uuidString)"
-		let status = ArticleStatus(articleID: articleID, read: false, starred: false, dateArrived: Date())
+		let status = ArticleStatus(articleID: articleID, read: read, starred: false, dateArrived: Date())
 		let bookKey: String? = bookKeyOverride ?? ao3WorkID.map { "ao3-work:\($0)" }
 		return Article(
 			accountID: "test-account-id",
