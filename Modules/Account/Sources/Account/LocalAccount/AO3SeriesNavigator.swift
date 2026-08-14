@@ -172,7 +172,7 @@ public enum AO3SeriesNavigator {
 	///    too, no second fetch.
 	/// 3. **Fetch the computed page** (`.previous`/`.next` only, when the
 	///    target isn't on page 1) -- the single allowed second fetch,
-	///    paced by `AO3ChapterFetcher.secondsBetweenSweepRequests` before
+	///    paced by `AO3ChapterFetcher.secondsBetweenAO3PagedRequests` before
 	///    issuing it. The target's presence on this page is verified
 	///    against the actually-parsed listing, not assumed from the index
 	///    math alone -- if it's missing, this returns
@@ -485,7 +485,7 @@ private extension AO3SeriesNavigator {
 	/// between the ordinary page-1-then-computed-page fallback and Fix 5's
 	/// cached-pagination shortcut that skips straight here without ever
 	/// fetching page 1 this round. Paced by
-	/// `AO3ChapterFetcher.secondsBetweenSweepRequests` before issuing the
+	/// `AO3ChapterFetcher.secondsBetweenAO3PagedRequests` before issuing the
 	/// request, same anti-hammering precedent the original inline Step 3
 	/// used. Every work found on `targetPage` is stubbed (same dedup
 	/// against `existingByWorkID` Step 2 uses) before the membership check
@@ -498,7 +498,7 @@ private extension AO3SeriesNavigator {
 	/// rather than ever writing wrong content.
 	static func fetchTargetOnComputedPage(_ targetPage: Int, targetWorkID: String, ao3SeriesID: String, existingByWorkID: [String: Article], existingArticle: Article, account: Account) async -> Result<String, AO3SeriesNavigationError> {
 		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork fetching computed page \(targetPage, privacy: .public) for workID=\(targetWorkID, privacy: .public)")
-		try? await Task.sleep(nanoseconds: UInt64(AO3ChapterFetcher.secondsBetweenSweepRequests * 1_000_000_000))
+		try? await Task.sleep(nanoseconds: UInt64(AO3ChapterFetcher.secondsBetweenAO3PagedRequests * 1_000_000_000))
 
 		guard let pageNHTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: targetPage) else {
 			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
@@ -563,8 +563,9 @@ private extension AO3SeriesNavigator {
 	/// mapping) -- same shape `AO3ChapterFetcher.rebuildParsedItem`
 	/// already uses for its own existingArticle-carries-forward cases.
 	/// `lastPrefaceFetchDate` is carried forward too: the copy is exactly
-	/// as fresh as the source fetch was, not "just fetched now," so a
-	/// background sweep shouldn't treat it as newly-stale.
+	/// as fresh as the source fetch was, not "just fetched now," so
+	/// `AO3ChapterFetcher.isStale` shouldn't treat it as newly-stale on
+	/// the next open.
 	static func copiedParsedItem(from sourceArticle: Article, feedID: String) -> ParsedItem {
 		let workID = AO3ChapterFetcher.ao3WorkID(fromBookKey: sourceArticle.bookKey) ?? sourceArticle.uniqueID
 		let authors: Set<ParsedAuthor>? = sourceArticle.authors.map { authorSet in

@@ -69,21 +69,12 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// several separate works.
 	private static let anthologyBookKeyPrefixes = ["ao3-series:", "calibre-series:"]
 
-	/// Upper bound on how many articles one background sweep (see
-	/// `sweepStaleUnreadArticles`) fetches, and the delay between each --
-	/// deliberately conservative. The sweep is the one place in this file
-	/// capable of firing several AO3 requests back-to-back with no user
-	/// action in between (fetchIfNeeded's other caller,
-	/// WebViewController.setArticle, is naturally paced by how fast a
-	/// person can open articles); keeping it slow and bounded is the
-	/// actual mitigation here, not just Downloader's reactive 429 backoff.
-	private static let maxArticlesPerSweep = 5
 	// internal, not private -- AO3SeriesNavigator's bounded two-fetch
 	// series-listing walk (Phase 4c of the inline series navigation plan)
 	// reuses this exact pacing value between its page-1 and second-page
 	// fetches, rather than inventing a second "don't hammer AO3" constant
 	// for the same concern.
-	static let secondsBetweenSweepRequests: TimeInterval = 5
+	static let secondsBetweenAO3PagedRequests: TimeInterval = 5
 
 	private let attemptDates = OSAllocatedUnfairLock(initialState: [String: Date]())
 
@@ -93,26 +84,6 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// text isn't loading (see `lastFetchFailureMessage(forArticleID:)`)
 	/// instead of the failure being visible only in the Activity Log.
 	private let failureMessages = OSAllocatedUnfairLock(initialState: [String: String]())
-
-	/// Account IDs a background sweep is currently running for -- guards
-	/// against two AccountRefreshDidFinish notifications in quick
-	/// succession starting overlapping sweeps for the same account.
-	private let sweepingAccountIDs = OSAllocatedUnfairLock(initialState: Set<String>())
-
-	init() {
-		// Complements the open-time trigger in fetchIfNeeded: without
-		// this, an AO3-work article that's never opened never picks up a
-		// formatting change or a settled work's new comments/kudos/hits,
-		// no matter how long it sits unread. Scoped to unread articles
-		// only (see sweepStaleUnreadArticles) and throttled (see
-		// maxArticlesPerSweep/secondsBetweenSweepRequests above).
-		NotificationCenter.default.addObserver(forName: .AccountRefreshDidFinish, object: nil, queue: .main) { [weak self] note in
-			guard let self, let account = note.object as? Account else { return }
-			Task { @MainActor in
-				await self.sweepStaleUnreadArticles(in: account)
-			}
-		}
-	}
 
 	/// The reason the most recent fetch attempt for this article failed, if
 	/// any -- `nil` if the article has never had a failed fetch, or if its
@@ -130,6 +101,14 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// Fire-and-forget; callers observe `.ao3ChapterFetchDidComplete` to know
 	/// when to reload.
 	///
+	/// Read state is irrelevant here by design: this only ever runs from
+	/// WebViewController.setArticle, i.e. the user has this article open
+	/// right now, which is reason enough to honor the refetch cadence
+	/// (AO3PrefaceRefetchPreference) regardless of whether it was marked
+	/// read on a previous visit. `isStale` and the anti-hammering floor in
+	/// downloadIfNeeded are what actually decide whether a request goes out
+	/// -- this function's only job is "the user opened this."
+	///
 	/// An anthology/combined-series bookKey (`ao3-series:`/
 	/// `calibre-series:` -- see `ParsedItem.bookKey`) never resolves to an
 	/// `ao3WorkID` at all: a Calibre-merged anthology isn't one AO3 work,
@@ -143,17 +122,6 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	public func fetchIfNeeded(for article: Article) {
 		guard let workID = Self.ao3WorkID(fromBookKey: article.bookKey) else {
 			noteAnthologyUnsupportedIfNeeded(for: article)
-			return
-		}
-		// Task 8: once an article is read, it no longer auto-refetches on
-		// open -- only the explicit "Check for updates" action
-		// (checkForUpdates(for:)) fires a fetch for a read article now.
-		// Unread articles keep today's on-open-fetch behavior unchanged
-		// (that's what delivers first-read content), and the background
-		// sweep (sweepStaleUnreadArticles) was already scoped to unread
-		// only, so this mainly closes the one seam that didn't respect
-		// that: reopening an already-read article.
-		guard !article.status.read else {
 			return
 		}
 		guard isStale(article: article) else {
@@ -260,11 +228,11 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	func isStale(article: Article) -> Bool {
 		// Task 8: an unresolved pending-update diff or a metadata-level
 		// regression flag both mean "leave contentHTML exactly as
-		// archived until the person acts" -- skip both the background
-		// sweep and on-open fetching for either state. checkForUpdates
-		// (the explicit per-article action) bypasses this function
-		// entirely for the flag case, but still separately blocks on
-		// pendingUpdateContentHTML itself -- see its own doc comment.
+		// archived until the person acts" -- skip on-open fetching for
+		// either state. checkForUpdates (the explicit per-article action)
+		// bypasses this function entirely for the flag case, but still
+		// separately blocks on pendingUpdateContentHTML itself -- see its
+		// own doc comment.
 		guard article.pendingUpdateContentHTML == nil else {
 			return false
 		}
@@ -312,59 +280,6 @@ extension AO3ChapterFetcher {
 	/// themselves.
 	static func bookKey(forWorkID workID: String) -> String {
 		"\(ao3WorkIDBookKeyPrefix)\(workID)"
-	}
-
-	/// Checks the account's unread articles for stale AO3-work content and
-	/// calls `fetchIfNeeded` for a bounded, throttled batch -- see
-	/// `maxArticlesPerSweep`/`secondsBetweenSweepRequests`. Scoped to
-	/// unread rather than every article in the account: unread is both
-	/// what someone's actually about to read and, for any account with a
-	/// real archive, a small fraction of total stored articles, so this
-	/// doesn't turn into an unbounded full-account crawl on every refresh.
-	@MainActor
-	func sweepStaleUnreadArticles(in account: Account) async {
-		let alreadySweeping = sweepingAccountIDs.withLock { ids in
-			if ids.contains(account.accountID) {
-				return true
-			}
-			ids.insert(account.accountID)
-			return false
-		}
-		guard !alreadySweeping else {
-			return
-		}
-		defer {
-			_ = sweepingAccountIDs.withLock { $0.remove(account.accountID) }
-		}
-
-		let unread = await account.fetchArticlesAsync(.unread(nil))
-		let eligible = unread
-			.filter { Self.ao3WorkID(fromBookKey: $0.bookKey) != nil }
-			.filter { !isOwnedByAO3SearchFeed($0) }
-			.filter { isStale(article: $0) }
-			.prefix(Self.maxArticlesPerSweep)
-
-		for article in eligible {
-			fetchIfNeeded(for: article)
-			try? await Task.sleep(nanoseconds: UInt64(Self.secondsBetweenSweepRequests * 1_000_000_000))
-		}
-	}
-
-	/// "No proactive content fetch for search-feed items" (Task 9's own
-	/// "Feed routing & pagination" section): `bookKey`/`ao3WorkID` look
-	/// identical whether an article came from a native AO3 tag/user RSS
-	/// feed or an AO3 search-results feed, so telling them apart here needs
-	/// an explicit feed-kind check, not just the bookKey scan above.
-	/// Reuses `LocalAccountRefresher.isAO3SearchResultsFeed(_:)` (same
-	/// module) rather than duplicating its host+path+query matching.
-	/// Only `WebViewController.setArticle` (open-time) triggers a fetch for
-	/// a search-feed-sourced article.
-	@MainActor
-	private func isOwnedByAO3SearchFeed(_ article: Article) -> Bool {
-		guard let feed = article.feed, let feedURL = URL(string: feed.url) else {
-			return false
-		}
-		return LocalAccountRefresher.isAO3SearchResultsFeed(feedURL)
 	}
 
 	/// Logs the anthology/combined-series case to the Activity Log once
@@ -810,7 +725,7 @@ nonisolated extension AO3ChapterFetcher {
 		// for a stub meant "nil forever." An article that already has real
 		// metadata (search-results/Ambrosia import) gets the same
 		// always-overwrite treatment on every refetch, so a Check-for-
-		// updates or background sweep can't get stuck on stale metadata
+		// updates or open-time refetch can't get stuck on stale metadata
 		// either -- the live page is the source of truth, not whatever's
 		// already in the database.
 		let metadata = extraction.metadata

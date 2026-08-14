@@ -10,6 +10,18 @@ ingested either as native AO3 tag/user feed subscriptions, AO3 search
 subscriptions, or Ambrosia-sourced library items, and this layer is what
 keeps their content current after the initial parse.
 
+### Fetch triggers, philosophy
+
+Every AO3 network request traces back to something the user directly did:
+opening an article, tapping "Check for updates," or tapping a series
+First/Previous/Next navigation link (itself opening a different article).
+Nothing fetches AO3 content on the user's behalf while they aren't
+present — not on a timer, not in response to an account refresh
+finishing, not speculatively for something they haven't looked at yet. A
+future automatic trigger (a background sweep, a refresh-driven prefetch,
+etc.) would contradict this deliberately, not by omission — see "Fetch
+paths and triggers" below for the full, current list.
+
 ## `AO3ChapterFetcher` — on-demand chapter fetch and storage
 
 The central piece: `AO3ChapterFetcher.shared` fetches an AO3 work's live
@@ -47,16 +59,14 @@ alone on failure" philosophy.
 
 ### Fetch paths and triggers
 
-1. **Open-time**: `WebViewController.setArticle` calls `fetchIfNeeded(for:)`
-   when an article is displayed.
-2. **Background sweep**: on `.AccountRefreshDidFinish`, `sweepStaleUnreadArticles(in:)`
-   walks unread articles for stale AO3 content, bounded by
-   `maxArticlesPerSweep` (5) and paced by `secondsBetweenSweepRequests` (5s,
-   `internal` rather than `private` so `AO3SeriesNavigator`'s own bounded
-   walk — see below — reuses the exact same pacing constant rather than
-   inventing a second "don't hammer AO3" number). `sweepingAccountIDs`
-   guards against two overlapping sweeps for the same account being started
-   by back-to-back refresh-finished notifications.
+Every AO3 network request traces back to a user action — see "Fetch
+triggers, philosophy" above. Concretely, that's:
+
+1. **Open-time, unconditionally**: `WebViewController.setArticle` calls
+   `fetchIfNeeded(for:)` whenever an article is displayed, regardless of
+   read state. `isStale`'s cadence check and the anti-hammering floor in
+   `downloadIfNeeded` are what actually gate whether a request goes out —
+   this is the only automatic AO3 fetch trigger in the app.
 
 The primary fetch is always anonymous — `Downloader` already forces
 `httpShouldSetCookies = false`/`.never` app-wide, so no per-request change
@@ -251,7 +261,7 @@ regardless of series length, via a fixed sequence:
 3. **Fetch the computed page** — only for `.previous`/`.next` whose target
    wasn't on page 1. The target page number is computed from
    `targetIndex`/page size, paced by
-   `AO3ChapterFetcher.secondsBetweenSweepRequests` before the request. The
+   `AO3ChapterFetcher.secondsBetweenAO3PagedRequests` before the request. The
    target's presence is *verified against the actually-parsed listing*,
    never trusted from the index math alone — a mismatch returns
    `.seriesListingMismatch` rather than trying a third page. This
@@ -305,7 +315,7 @@ actually flows through them, to see the whole path from tap to opened work:
 
 A stall with no further log lines after `AO3SeriesNavigator: openSeriesWork
 fetching computed page N ...` means the second listing fetch (or the
-`AO3ChapterFetcher.secondsBetweenSweepRequests` pacing sleep before it) is
+`AO3ChapterFetcher.secondsBetweenAO3PagedRequests` pacing sleep before it) is
 still in flight -- that sleep is real wall-clock time, not a bug, before
 the second `fetchListingPage` call goes out.
 
