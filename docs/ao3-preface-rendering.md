@@ -1,12 +1,12 @@
 # AO3 preface rendering and on-demand chapter fetch
 
 How an article's AO3-style metadata preface gets rendered (synthesized vs.
-fetched-and-real), when a chapter is fetched from AO3 on-demand vs. via
-background sweep, and the networking/rate-limit layer that fetch goes
-through. See `ao3-feeds.md` for the underlying HTML extractors, and
-`ao3-direct-feed-ingestion.md` for the separate RSS/Atom subscription path
-(this doc's fetch/render logic applies to both Ambrosia-sourced and
-direct-feed AO3 articles once opened in the reader).
+fetched-and-real), when a chapter is fetched from AO3 on-demand, and the
+networking/rate-limit layer that fetch goes through. See `ao3-feeds.md`
+for the underlying HTML extractors, and `ao3-direct-feed-ingestion.md`
+for the separate RSS/Atom subscription path (this doc's fetch/render
+logic applies to both Ambrosia-sourced and direct-feed AO3 articles once
+opened in the reader).
 
 Two independent paths feed the same `AO3PrefaceRenderer` markup
 (`<dl class='tags'>` of flat `<dt>`/`<dd>` pairs): `ArticleRenderer.
@@ -50,8 +50,8 @@ Next links need the same full-width treatment regardless of entry count.
 
 `AO3ChapterFetcher.fetchIfNeeded(for:)` is called from
 `WebViewController.setArticle(_:updateView:)` (i.e. whenever an
-article is opened in the reader) and, since the fixes below, also from a
-throttled background sweep. It requires `article.bookKey` to have the
+article is opened in the reader), regardless of the article's read
+state. It requires `article.bookKey` to have the
 `ao3-work:` prefix (`AO3ChapterFetcher.ao3WorkID(fromBookKey:)` returns
 `nil` otherwise):
 
@@ -78,21 +78,17 @@ throttled background sweep. It requires `article.bookKey` to have the
   unavailable" notice still only fires when `contentHTML == nil`, which
   never happens for an Ambrosia-sourced row, so the failure message
   currently surfaces only in the Activity Log, not inline in the reader.
-- **Non-anthology (single-work) articles no longer depend solely on being
-  opened.** `AO3ChapterFetcher.init` now observes
-  `.AccountRefreshDidFinish` and runs `sweepStaleUnreadArticles(in:)` on
-  each account after a refresh: it fetches the account's unread articles,
-  filters to those with a resolvable `ao3WorkID` and a stale `isStale`
-  result, and calls `fetchIfNeeded` for up to `maxArticlesPerSweep` (5) of
-  them, sleeping `secondsBetweenSweepRequests` (5s) between each — scoped
-  to unread and bounded/throttled deliberately, since this is the one
-  path that can fire several AO3 requests back-to-back with no user
-  action in between. `sweepingAccountIDs` guards against two
-  `AccountRefreshDidFinish` notifications in quick succession starting
-  overlapping sweeps for the same account. An unread single-work article
-  can now pick up new formatting/content on the sync cadence rather than
-  only the next time it's opened; read articles and combined-series
-  articles are unaffected by the sweep.
+- **Content only ever updates via an open or an explicit "Check for
+  updates," never in the background.** There is no sweep, timer, or
+  refresh-triggered fetch of any kind: an AO3-work article that sits
+  unread and unopened does not pick up new formatting, comments, kudos,
+  or hit counts on its own, no matter how long it sits there or how many
+  account refreshes happen in the meantime. The only way its stored
+  content becomes current again is the person opening it (which runs
+  `fetchIfNeeded` above, regardless of read state) or tapping "Check for
+  updates" (`checkForUpdates(for:)`, unconditional on read state and on
+  `isStale`'s cadence check). This applies equally to read and unread
+  articles — there is no read-state distinction anywhere in this path.
 
 CSS for the preface (`#ao3SyntheticPreface`/`#ao3Preface`, `dl.tags`
 grid layout with `dt`/`dd` on the same row) now lives in `Shared/Article

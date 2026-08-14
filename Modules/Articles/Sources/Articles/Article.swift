@@ -94,7 +94,7 @@ public final class Article: Hashable, Sendable {
 	// Article+Database.changesFrom when an incoming feed-reported
 	// wordCount alone looks like a regression against the previously
 	// stored wordCount, with no contentHTML fetch involved. Checked by
-	// AO3ChapterFetcher.isStale before the background sweep/on-open fetch,
+	// AO3ChapterFetcher.isStale before the on-open fetch,
 	// same as pendingUpdateContentHTML above.
 	public let wordCountRegressionFlaggedAt: Date?
 	// Set only through a dedicated Account call (AO3ChapterFetcher.download's
