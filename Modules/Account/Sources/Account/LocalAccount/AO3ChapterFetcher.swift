@@ -486,6 +486,19 @@ nonisolated extension AO3ChapterFetcher {
 					case .notSignedIn:
 						fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "This work is only available to registered AO3 users")
 						return
+					case .notFoundOnRetry:
+						// Anonymous fetch said .registrationRequired, and the
+						// authenticated retry came back .notFound -- same
+						// "AO3 confirms gone" signal as the .notFound
+						// branch's identical case below, just reached from
+						// the other anonymous-fetch outcome. Both agree the
+						// work isn't there, so this sets ao3ConfirmedMissingAt
+						// too rather than being folded into .otherFailure.
+						if let account = AccountManager.shared.existingAccount(accountID: accountID) {
+							await account.setAO3ConfirmedMissingAsync(forArticleID: articleID)
+						}
+						fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "No chapter content found (gated or removed work)")
+						return
 					case .otherFailure(let retryMessage):
 						fail(articleID: articleID, kind: kind, activityLog: activityLog, message: retryMessage)
 						return

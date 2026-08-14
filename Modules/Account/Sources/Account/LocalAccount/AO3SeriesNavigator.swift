@@ -452,32 +452,6 @@ private extension AO3SeriesNavigator {
 		return (record.pageSize, record.totalPages)
 	}
 
-	/// Invalidates any recorded walk for the given series IDs under
-	/// `feedID` -- called by AO3ChapterFetcher.checkForUpdates(for:) when a
-	/// fetch changes an article's own chapter content, since that content
-	/// change can shift the article's position within any series it
-	/// belongs to (a new chapter can itself be posted as a new series
-	/// entry) in a way a stale cached walk wouldn't reflect. `nonisolated`
-	/// rather than a member of the `@MainActor` AO3SeriesNavigator type
-	/// above, since checkForUpdates(for:) is itself nonisolated and calls
-	/// this synchronously, with no actor hop -- safe because the
-	/// underlying storage (seriesWalkedRecords) is lock-protected at file
-	/// scope, not actor-isolated. Static rather than a member of
-	/// AO3SeriesNavigator for the same reason walkKey/isWalkRecent/
-	/// markWalked above are: this is namespaced under AO3SeriesNavigator
-	/// for discoverability, not because it needs the type's own isolation.
-	nonisolated static func invalidateWalk(feedID: String, ao3SeriesIDs: [String]) {
-		guard !ao3SeriesIDs.isEmpty else {
-			return
-		}
-		let keys = ao3SeriesIDs.map { walkKey(feedID: feedID, ao3SeriesID: $0) }
-		seriesWalkedRecords.withLock { records in
-			for key in keys {
-				records.removeValue(forKey: key)
-			}
-		}
-	}
-
 	/// Existing articles under `feedID`, keyed by AO3 work id (recovered
 	/// from `bookKey` -- always present for AO3-sourced articles per
 	/// every producer in this codebase: `JSONFeedParser` for
@@ -821,6 +795,45 @@ private extension AO3SeriesNavigator {
 			tokenBox.tokens = [completeToken, failToken]
 
 			AO3ChapterFetcher.shared.download(workID: workID, articleID: articleID, accountID: account.accountID, feedID: feedID)
+		}
+	}
+}
+
+// MARK: - Cross-file walk-cache invalidation
+
+extension AO3SeriesNavigator {
+
+	/// Invalidates any recorded walk for the given series IDs under
+	/// `feedID` -- called by AO3ChapterFetcher.checkForUpdates(for:) when a
+	/// fetch changes an article's own chapter content, since that content
+	/// change can shift the article's position within any series it
+	/// belongs to (a new chapter can itself be posted as a new series
+	/// entry) in a way a stale cached walk wouldn't reflect. `nonisolated`
+	/// rather than a member of the `@MainActor` AO3SeriesNavigator type
+	/// above, since checkForUpdates(for:) is itself nonisolated and calls
+	/// this synchronously, with no actor hop -- safe because the
+	/// underlying storage (seriesWalkedRecords) is lock-protected at file
+	/// scope, not actor-isolated. Deliberately declared in a plain
+	/// (internal-access) extension rather than alongside walkKey/
+	/// isWalkRecent/markWalked/walkedPagination in the `private extension`
+	/// above: those are only ever called from within this file, but this
+	/// one is called from AO3ChapterFetcher.swift, and `private extension`
+	/// caps every member's effective access at `fileprivate` -- file-scoped,
+	/// not just extension-scoped -- which would make this uncallable from
+	/// another file in the same module despite `nonisolated static` looking
+	/// unrestricted. Static rather than a member of AO3SeriesNavigator for
+	/// the same reason walkKey/isWalkRecent/markWalked are: this is
+	/// namespaced under AO3SeriesNavigator for discoverability, not because
+	/// it needs the type's own actor isolation.
+	nonisolated static func invalidateWalk(feedID: String, ao3SeriesIDs: [String]) {
+		guard !ao3SeriesIDs.isEmpty else {
+			return
+		}
+		let keys = ao3SeriesIDs.map { walkKey(feedID: feedID, ao3SeriesID: $0) }
+		seriesWalkedRecords.withLock { records in
+			for key in keys {
+				records.removeValue(forKey: key)
+			}
 		}
 	}
 }

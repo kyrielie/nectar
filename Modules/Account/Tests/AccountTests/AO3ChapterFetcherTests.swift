@@ -9,8 +9,8 @@
 //  but AO3ChapterFetcher.download's own Cloudflare/registration-required/
 //  retry branches aren't exercised here yet -- this still only covers
 //  what's pure/synchronous: ao3WorkID(fromBookKey:)'s prefix parsing and
-//  isStale(article:)'s chapter-count comparison, both against constructed
-//  Article fixtures rather than a live or stubbed fetch.
+//  isStale(article:)'s cadence-only staleness check, both against
+//  constructed Article fixtures rather than a live or stubbed fetch.
 //
 
 import XCTest
@@ -83,23 +83,73 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		XCTAssertTrue(AO3ChapterFetcher.shared.isStale(article: article))
 	}
 
-	func testIsStaleWithMatchingChapterCount() {
-		let article = Self.makeArticle(contentHTML: Self.workPageFixture(chapterCount: 3), chapterCurrent: 3)
+	// testIsStaleWithMatchingChapterCount, testIsStaleWithBehindChapterCount,
+	// and testIsStaleWithNoChapterCurrentMetadata (chapter-count-comparison
+	// coverage) removed: isStale no longer reads chapterCurrent at all (Fix
+	// 3, ao3-unnecessary-fetch-fixes-plan.md) -- chapterCurrent can be
+	// rewritten by an unthrottled feed-summary reparse independent of what
+	// this fetcher's own last download wrote, so comparing against it made
+	// an unrelated feed refresh capable of forcing a content refetch it had
+	// no real evidence for. Staleness is cadence-only now; that behavior is
+	// covered by the cadence tests below and by
+	// testIsStaleWithNoLastPrefaceFetchDateIsStale.
+
+	// MARK: - isStale(article:) early-return guards
+
+	func testIsStaleWithPendingContentUpdateIsNotStale() {
+		// A live regression review is in progress -- don't fire a second
+		// fetch out from under it. Content/cadence would otherwise say
+		// stale here (no lastPrefaceFetchDate), so this specifically
+		// confirms the guard, not just a coincidentally-false result.
+		let article = Self.makeArticle(
+			contentHTML: Self.workPageFixture(chapterCount: 3),
+			chapterCurrent: 3,
+			pendingUpdateContentHTML: "<div id=\"workskin\">pending</div>"
+		)
 		XCTAssertFalse(AO3ChapterFetcher.shared.isStale(article: article))
 	}
 
-	func testIsStaleWithBehindChapterCount() {
-		let article = Self.makeArticle(contentHTML: Self.workPageFixture(chapterCount: 2), chapterCurrent: 4)
+	func testIsStaleWithWordCountRegressionFlaggedIsNotStale() {
+		// Task 8's metadata-only regression watch -- same "leave it alone
+		// until the person acts" contract as pendingUpdateContentHTML.
+		let article = Self.makeArticle(
+			contentHTML: Self.workPageFixture(chapterCount: 3),
+			chapterCurrent: 3,
+			wordCountRegressionFlaggedAt: Date()
+		)
+		XCTAssertFalse(AO3ChapterFetcher.shared.isStale(article: article))
+	}
+
+	func testIsStaleWithConfirmedMissingIsNotStale() {
+		// Fix 3's actual new guard: AO3 has confirmed this work is gone
+		// (see AO3ChapterFetcher.download's set/clear call sites) --
+		// don't keep retrying every cadence interval forever. Content and
+		// cadence would otherwise say stale here (no lastPrefaceFetchDate
+		// recorded, same as an ordinary never-fetched row), so this is
+		// what actually exercises the guard rather than a result that
+		// would hold either way.
+		let article = Self.makeArticle(
+			contentHTML: nil,
+			chapterCurrent: nil,
+			ao3ConfirmedMissingAt: Date()
+		)
+		XCTAssertFalse(AO3ChapterFetcher.shared.isStale(article: article))
+	}
+
+	func testIsStaleWithClearedConfirmedMissingFallsThroughToCadence() {
+		// A cleared flag (nil again, as AO3ChapterFetcher.download's
+		// success path and ArticlesTable.clearContentHTML both do) must
+		// not leave any residual "don't fetch" state behind -- confirms
+		// the guard is a pure read of the current value, not something
+		// that latches once set.
+		let article = Self.makeArticle(
+			contentHTML: nil,
+			chapterCurrent: nil,
+			ao3ConfirmedMissingAt: nil
+		)
 		XCTAssertTrue(AO3ChapterFetcher.shared.isStale(article: article))
 	}
 
-	func testIsStaleWithNoChapterCurrentMetadata() {
-		// No chapterCurrent to compare against -- shouldn't happen in
-		// practice for an AO3-gated article, but shouldn't be treated as
-		// stale on every call either. See isStale(article:)'s doc comment.
-		let article = Self.makeArticle(contentHTML: Self.workPageFixture(chapterCount: 1), chapterCurrent: nil)
-		XCTAssertFalse(AO3ChapterFetcher.shared.isStale(article: article))
-	}
 
 	// MARK: - fetchIfNeeded(for:) short-circuit
 
@@ -161,11 +211,16 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		XCTAssertTrue(AO3ChapterFetcher.shared.isStale(article: article))
 	}
 
-	func testIsStaleSettledArticleWithNoLastPrefaceFetchDateIsNotForcedStale() {
-		// A settled article that's never gone through a recorded chapter
-		// fetch (nil lastPrefaceFetchDate -- e.g. pre-dating this feature)
-		// is left alone by the cadence check rather than treated as
-		// perpetually overdue, even under .always.
+	func testIsStaleWithNoLastPrefaceFetchDateIsStale() {
+		// A settled-looking article (contentHTML present) that's never gone
+		// through a recorded chapter fetch (nil lastPrefaceFetchDate --
+		// e.g. an Ambrosia import, or any row never fetched through this
+		// mechanism) is now treated as due rather than left alone, since
+		// there's no prior fetch to have been "recent" against -- gated
+		// only by isAO3NetworkRequestAllowed at the call sites
+		// (fetchIfNeeded, checkForUpdates), unaffected by this function.
+		// True under every cadence preference, not just .always, since
+		// there's no date to compare a cadence interval against at all.
 		let previous = AO3PrefaceRefetchPreference.current
 		AO3PrefaceRefetchPreference.current = .always
 		defer { AO3PrefaceRefetchPreference.current = previous }
@@ -175,7 +230,7 @@ final class AO3ChapterFetcherTests: XCTestCase {
 			chapterCurrent: 3,
 			lastPrefaceFetchDate: nil
 		)
-		XCTAssertFalse(AO3ChapterFetcher.shared.isStale(article: article))
+		XCTAssertTrue(AO3ChapterFetcher.shared.isStale(article: article))
 	}
 
 	// MARK: - Ambrosia preface preservation (item 4)
@@ -184,17 +239,31 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		// ambrosia_preface_fixture.html is test2.json's real content_html
 		// verbatim: Ambrosia's own epub-derived preface, structurally
 		// nothing like an AO3 work page (no #workskin at all, calibre*
-		// classes instead of AO3's). AO3ChapterHTMLExtractor can't find a
-		// chapter count in it, so isStale correctly reports true here --
-		// this fixture, on its own, documents why AO3ChapterFetcher must
-		// never treat "extraction failed against Ambrosia's own preface" as
-		// a reason to overwrite that preface: rebuildParsedItem is only
-		// ever reached after a successful download+extraction (see the
-		// early returns in download's switch), so this stale/mismatched
-		// state is what triggers a fetch attempt, not what a failed one
-		// leaves behind.
-		let article = Self.makeArticle(contentHTML: Self.ambrosiaPrefaceFixture, chapterCurrent: 1)
-		XCTAssertTrue(AO3ChapterFetcher.shared.isStale(article: article))
+		// classes instead of AO3's). Pre-Fix-3, isStale re-ran extraction
+		// against stored contentHTML and this fixture's unparseable shape
+		// forced staleness regardless of cadence -- that path is gone now
+		// (isStale never calls AO3ChapterHTMLExtractor at all). This test
+		// previously happened to still pass, but only because its fixture
+		// had no lastPrefaceFetchDate, the same nil-date branch
+		// testIsStaleWithNoLastPrefaceFetchDateIsStale covers -- it wasn't
+		// actually exercising anything about the Ambrosia shape anymore.
+		// Rewritten with a recent lastPrefaceFetchDate so it tests what's
+		// now true: isStale's content check is a bare non-empty test, not
+		// a structural one, so a recently-fetched Ambrosia preface is
+		// correctly treated as settled despite a shape
+		// AO3ChapterHTMLExtractor can't parse. Guards against a future
+		// isStale change re-introducing an extraction-based check that
+		// would misfire on Ambrosia's own preface format.
+		let previous = AO3PrefaceRefetchPreference.current
+		AO3PrefaceRefetchPreference.current = .monthly
+		defer { AO3PrefaceRefetchPreference.current = previous }
+
+		let article = Self.makeArticle(
+			contentHTML: Self.ambrosiaPrefaceFixture,
+			chapterCurrent: 1,
+			lastPrefaceFetchDate: Date().addingTimeInterval(-60 * 60)
+		)
+		XCTAssertFalse(AO3ChapterFetcher.shared.isStale(article: article))
 	}
 
 	func testRebuildParsedItemPreservesIsAmbrosiaItemFromExistingArticle() {
@@ -461,7 +530,7 @@ final class AO3ChapterFetcherTests: XCTestCase {
 		return "\(metaGroup)<div id=\"workskin\">\(preface)\(chapters)</div>"
 	}
 
-	private static func makeArticle(contentHTML: String?, chapterCurrent: Int?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false, lastPrefaceFetchDate: Date? = nil, bookKeyOverride: String? = nil, summary: String? = "A test summary.", authors: Set<Author>? = nil, datePublished: Date? = nil, dateModified: Date? = nil, fandoms: [String]? = nil, additionalTags: [String]? = nil) -> Article {
+	private static func makeArticle(contentHTML: String?, chapterCurrent: Int?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false, lastPrefaceFetchDate: Date? = nil, pendingUpdateContentHTML: String? = nil, wordCountRegressionFlaggedAt: Date? = nil, ao3ConfirmedMissingAt: Date? = nil, bookKeyOverride: String? = nil, summary: String? = "A test summary.", authors: Set<Author>? = nil, datePublished: Date? = nil, dateModified: Date? = nil, fandoms: [String]? = nil, additionalTags: [String]? = nil) -> Article {
 		// Unique per call -- AO3ChapterFetcher.shared.attemptDates is a
 		// process-lifetime singleton cache keyed by articleID, so reusing a
 		// fixed ID across tests leaks already-noted/already-attempted state
@@ -489,6 +558,9 @@ final class AO3ChapterFetcherTests: XCTestCase {
 			fandoms: fandoms,
 			additionalTags: additionalTags,
 			lastPrefaceFetchDate: lastPrefaceFetchDate,
+			pendingUpdateContentHTML: pendingUpdateContentHTML,
+			wordCountRegressionFlaggedAt: wordCountRegressionFlaggedAt,
+			ao3ConfirmedMissingAt: ao3ConfirmedMissingAt,
 			isAmbrosiaItem: isAmbrosiaItem,
 			bookKey: bookKey,
 			status: status
