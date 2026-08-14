@@ -287,22 +287,6 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 		guard let coordinator, coordinator.isRootSplitCollapsed else {
 			return
 		}
-		// See SceneCoordinator.isNavigatingToTimelineArticle: its
-		// navigateToTimelineAndSelectArticle deliberately pops to this screen
-		// as one step of a "flash to timeline, then push the real target"
-		// sequence (series nav Next/Previous), not a genuine user
-		// back-navigation -- don't clear a selection that flow is actively
-		// (re)establishing, or may have already re-established by the time
-		// this runs. This is the one call site that's expected to consult
-		// the flag while it's still doing its job, so it's the one that
-		// consumes (clears) it -- navigateToTimelineAndSelectArticle
-		// deliberately leaves that to happen here rather than clearing it
-		// itself right after reselecting, which would close this guard
-		// window before this check ever ran.
-		guard !coordinator.isNavigatingToTimelineArticle else {
-			coordinator.isNavigatingToTimelineArticle = false
-			return
-		}
 
 		if coordinator.currentArticle != nil {
 			if let indexPath = collectionView?.indexPathsForSelectedItems?.first {

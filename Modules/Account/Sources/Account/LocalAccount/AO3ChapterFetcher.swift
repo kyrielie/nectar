@@ -201,6 +201,21 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 		guard Self.isAO3NetworkRequestAllowed(for: article) else {
 			return
 		}
+		// This fetch is about to potentially change article's own chapter
+		// content, which can shift its position within any series it
+		// belongs to (a newly posted chapter can itself land as a new
+		// series entry) -- invalidate any cached walk for those series so
+		// AO3SeriesNavigator's .first shortcut (Fix 4) and Step 2 pagination
+		// cache (Fix 5) don't keep trusting listing data this fetch may be
+		// about to make stale. Called before downloadIfNeeded rather than
+		// after, since the download itself is fire-and-forget from here
+		// (Task { @MainActor in ... } inside download(...)) and there's no
+		// completion point at this call site to hook a post-fetch
+		// invalidation into instead.
+		let ao3SeriesIDs = article.series?.compactMap(\.ao3ID) ?? []
+		if !ao3SeriesIDs.isEmpty {
+			AO3SeriesNavigator.invalidateWalk(feedID: article.feedID, ao3SeriesIDs: ao3SeriesIDs)
+		}
 		downloadIfNeeded(workID: workID, articleID: article.articleID, accountID: article.accountID, feedID: article.feedID)
 	}
 
@@ -221,20 +236,27 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 		return AmbrosiaAO3NetworkPreference.updatesEnabled
 	}
 
-	/// True when the article has no stored content yet, when the stored
-	/// content's own chapter count -- re-derived by walking the same
-	/// `#workskin` wrapper AO3ChapterHTMLExtractor produced, since the stored
-	/// contentHTML *is* that wrapper -- is behind `chapterCurrent` (the
-	/// feed-reported total, Workstream 1's territory), or when the chapter
-	/// count matches ("settled") but the user's chosen refetch cadence
-	/// (AO3PrefaceRefetchPreference) says the last successful fetch is old
-	/// enough to check again anyway -- otherwise a settled work's
-	/// comments/kudos/hits/formatting would never update again. A settled
-	/// article with no recorded lastPrefaceFetchDate (never fetched through
-	/// this mechanism) is left alone by the cadence check rather than being
-	/// treated as overdue, since there's no fetch time to measure the
-	/// interval from. Exposed internally for direct testing against
-	/// fixtures.
+	/// True when the article has no stored content yet, or when it does but
+	/// the user's chosen refetch cadence (AO3PrefaceRefetchPreference) says
+	/// the last successful fetch through this mechanism is old enough to
+	/// check again -- otherwise a work's comments/kudos/hits/formatting
+	/// would never update again. Staleness here is cadence-only: this no
+	/// longer compares the stored content's chapter count against the
+	/// feed-reported `chapterCurrent` (Workstream 1's territory) -- ordinary
+	/// AO3 tag/user RSS/Atom feeds have no refresh throttle of their own
+	/// (see refresh-throttling.md's "open gap" section), so `chapterCurrent`
+	/// could be rewritten by an unrelated feed-summary reparse independent
+	/// of, and often out of step with, what this fetcher's own last
+	/// download actually wrote -- comparing against it made an unthrottled
+	/// feed refresh capable of forcing a content refetch it had no real
+	/// evidence for. A content-present article with no recorded
+	/// lastPrefaceFetchDate (an Ambrosia import, or any row never fetched
+	/// through this mechanism) is now treated as due rather than left
+	/// alone, since there's no prior fetch to have been "recent" -- actual
+	/// network access is still gated separately by
+	/// isAO3NetworkRequestAllowed at the call sites (fetchIfNeeded,
+	/// checkForUpdates), unaffected by this function. Exposed internally
+	/// for direct testing against fixtures.
 	func isStale(article: Article) -> Bool {
 		// Task 8: an unresolved pending-update diff or a metadata-level
 		// regression flag both mean "leave contentHTML exactly as
@@ -249,27 +271,21 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 		guard article.wordCountRegressionFlaggedAt == nil else {
 			return false
 		}
+		// AO3 has confirmed this work is gone or inaccessible (see
+		// AO3ChapterFetcher.download's set/clear call sites) -- don't keep
+		// retrying it every cadence interval forever. Cleared automatically
+		// on a subsequent successful fetch, or when Manage Storage's "Clear
+		// Content" action clears contentHTML (see
+		// ArticlesTable.clearContentHTML), so this doesn't permanently lock
+		// a row out.
+		guard article.ao3ConfirmedMissingAt == nil else {
+			return false
+		}
 		guard let contentHTML = article.contentHTML, !contentHTML.isEmpty else {
 			return true
 		}
-		guard let chapterCurrent = article.chapterCurrent else {
-			// No chapter-count metadata at all -- shouldn't happen for an
-			// article whose bookKey resolved to ao3-work: (Workstream 1
-			// always sets chapterCurrent for AO3 items), but with nothing to
-			// compare against, don't treat that as stale on every call.
-			return false
-		}
-		let storedChapterCount: Int
-		if case .success(let result) = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: contentHTML) {
-			storedChapterCount = result.chapters.count
-		} else {
-			storedChapterCount = 0
-		}
-		if storedChapterCount < chapterCurrent {
-			return true
-		}
 		guard let lastPrefaceFetchDate = article.lastPrefaceFetchDate else {
-			return false
+			return true
 		}
 		return Date().timeIntervalSince(lastPrefaceFetchDate) >= AO3PrefaceRefetchPreference.current.timeInterval
 	}
@@ -493,13 +509,18 @@ nonisolated extension AO3ChapterFetcher {
 					// reader who actually has access still gets the
 					// cookie'd fetch instead of this silently never
 					// retrying. A truly deleted/moved work still comes
-					// back .notFound on the retry too -- one extra
-					// request when signed in, folded back into the same
-					// "gated or removed" message via .notSignedIn below --
-					// and retryAuthenticated only ever clears the stored
+					// back .notFound on the retry too, surfaced as its own
+					// .notFoundOnRetry case below (not folded into
+					// .notSignedIn -- the two are reached under different
+					// conditions, one with no session and one with a
+					// session that still can't see the work) -- and
+					// retryAuthenticated only ever clears the stored
 					// session on .signedOut, never on .notFound, so this
 					// doesn't risk logging a valid session out over an
-					// unrelated 404.
+					// unrelated 404. Both .notSignedIn and .notFoundOnRetry
+					// are AO3 confirming the work is gone or inaccessible
+					// by every means this fetcher has, so both set
+					// ao3ConfirmedMissingAt.
 					switch await retryAuthenticated(url: url) {
 					case .success(let result):
 						extraction = result
@@ -512,6 +533,15 @@ nonisolated extension AO3ChapterFetcher {
 						// alone; ArticleRenderer's contentHTML ?? contentText
 						// ?? summary chain already falls back to Workstream
 						// 1's blurb.
+						if let account = AccountManager.shared.existingAccount(accountID: accountID) {
+							await account.setAO3ConfirmedMissingAsync(forArticleID: articleID)
+						}
+						fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "No chapter content found (gated or removed work)")
+						return
+					case .notFoundOnRetry:
+						if let account = AccountManager.shared.existingAccount(accountID: accountID) {
+							await account.setAO3ConfirmedMissingAsync(forArticleID: articleID)
+						}
 						fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "No chapter content found (gated or removed work)")
 						return
 					case .otherFailure(let retryMessage):
@@ -562,6 +592,12 @@ nonisolated extension AO3ChapterFetcher {
 
 				activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: ActivityLog.dataSizeMessage(data), returnedFromCache: downloadResponse.returnedFromCache)
 				failureMessages.withLock { $0[articleID] = nil }
+				// A successful fetch means the work is reachable again --
+				// either it was a false-positive gate/404, or the author
+				// restored it. Clear so isStale can consider this article
+				// for auto-fetch again instead of being permanently
+				// skipped from a stale confirmed-missing flag.
+				await account.clearAO3ConfirmedMissingAsync(forArticleID: articleID)
 				postNotification(name: .ao3ChapterFetchDidComplete, articleID: articleID)
 
 				// Task 6 (kudos-on-like), piggyback path: this fetch's
@@ -601,9 +637,19 @@ nonisolated extension AO3ChapterFetcher {
 		/// `.registrationRequired` -- the session is expired or otherwise
 		/// invalid. Caller clears it.
 		case signedOut
+		/// The authenticated retry itself came back `.notFound` -- i.e.
+		/// both the anonymous fetch and the authenticated retry agree the
+		/// work is gone, which is the strongest signal available that this
+		/// is a confirmed deletion rather than a transient failure. Kept
+		/// distinct from `.otherFailure` (network error on the retry,
+		/// unexpected adult-content-gate shape) specifically so the caller
+		/// can set `ao3ConfirmedMissingAt` only for this case, without
+		/// having to pattern-match on `.otherFailure`'s message string.
+		case notFoundOnRetry
 		/// The retry reached AO3 but hit a different outcome
-		/// (`.adultContentGate`, `.notFound`) or a network-level failure --
-		/// not a login problem, so the stored session is left alone.
+		/// (`.adultContentGate`) or a network-level failure -- not a login
+		/// problem and not a confirmed deletion, so the stored session is
+		/// left alone and no confirmed-missing flag is set.
 		case otherFailure(message: String)
 	}
 
@@ -645,7 +691,7 @@ nonisolated extension AO3ChapterFetcher {
 			case .adultContentGate:
 				return .otherFailure(message: "Adult content gate encountered despite view_adult=true (unexpected)")
 			case .notFound:
-				return .otherFailure(message: "No chapter content found (gated or removed work)")
+				return .notFoundOnRetry
 			}
 		} catch {
 			// Network-level failure on the retry itself -- not a login

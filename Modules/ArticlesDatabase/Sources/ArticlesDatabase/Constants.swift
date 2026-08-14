@@ -74,6 +74,7 @@ struct DatabaseKey {
 	static let pendingUpdateContentHTML = "pendingUpdateContentHTML"
 	static let pendingUpdateDetectedAt = "pendingUpdateDetectedAt"
 	static let wordCountRegressionFlaggedAt = "wordCountRegressionFlaggedAt"
+	static let ao3ConfirmedMissingAt = "ao3ConfirmedMissingAt"
 
 	// ArticleStatus
 	static let read = "read"

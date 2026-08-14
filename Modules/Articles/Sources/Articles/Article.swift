@@ -97,6 +97,13 @@ public final class Article: Hashable, Sendable {
 	// AO3ChapterFetcher.isStale before the background sweep/on-open fetch,
 	// same as pendingUpdateContentHTML above.
 	public let wordCountRegressionFlaggedAt: Date?
+	// Set only through a dedicated Account call (AO3ChapterFetcher.download's
+	// "AO3 confirms gone" branches), not the ordinary ParsedItem/changesFrom
+	// diff -- a fetch that hits .notFound never reaches
+	// rebuildParsedItem/updateAsync at all, so there's no diff path to hook
+	// into even if we wanted one. A non-nil value here also means "don't
+	// auto-fetch this article again" -- see AO3ChapterFetcher.isStale.
+	public let ao3ConfirmedMissingAt: Date?
 	// True whenever this article's originating ParsedItem carried an
 	// `_ambrosia` extension object at all (regardless of which fields
 	// inside it were populated) -- i.e. it arrived from an Ambrosia feed or
@@ -110,7 +117,7 @@ public final class Article: Hashable, Sendable {
 	public let bookKey: String
 	public let status: ArticleStatus
 
-	public init(accountID: String, articleID: String?, feedID: String, uniqueID: String, title: String?, contentHTML: String?, contentText: String?, markdown: String?, url: String?, externalURL: String?, summary: String?, imageURL: String?, datePublished: Date?, dateModified: Date?, authors: Set<Author>?, wordCount: Int? = nil, chapterCurrent: Int? = nil, chapterTotal: Int? = nil, isComplete: Bool? = nil, fandoms: [String]? = nil, relationships: [String]? = nil, characters: [String]? = nil, ratings: [String]? = nil, warnings: [String]? = nil, categories: [String]? = nil, additionalTags: [String]? = nil, series: [ArticleSeriesEntry]? = nil, commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, lastPrefaceFetchDate: Date? = nil, pendingUpdateContentHTML: String? = nil, pendingUpdateDetectedAt: Date? = nil, wordCountRegressionFlaggedAt: Date? = nil, isAmbrosiaItem: Bool = false, bookKey: String? = nil, status: ArticleStatus) {
+	public init(accountID: String, articleID: String?, feedID: String, uniqueID: String, title: String?, contentHTML: String?, contentText: String?, markdown: String?, url: String?, externalURL: String?, summary: String?, imageURL: String?, datePublished: Date?, dateModified: Date?, authors: Set<Author>?, wordCount: Int? = nil, chapterCurrent: Int? = nil, chapterTotal: Int? = nil, isComplete: Bool? = nil, fandoms: [String]? = nil, relationships: [String]? = nil, characters: [String]? = nil, ratings: [String]? = nil, warnings: [String]? = nil, categories: [String]? = nil, additionalTags: [String]? = nil, series: [ArticleSeriesEntry]? = nil, commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, lastPrefaceFetchDate: Date? = nil, pendingUpdateContentHTML: String? = nil, pendingUpdateDetectedAt: Date? = nil, wordCountRegressionFlaggedAt: Date? = nil, ao3ConfirmedMissingAt: Date? = nil, isAmbrosiaItem: Bool = false, bookKey: String? = nil, status: ArticleStatus) {
 		self.accountID = accountID
 		self.feedID = feedID
 		self.uniqueID = uniqueID
@@ -145,6 +152,7 @@ public final class Article: Hashable, Sendable {
 		self.pendingUpdateContentHTML = pendingUpdateContentHTML
 		self.pendingUpdateDetectedAt = pendingUpdateDetectedAt
 		self.wordCountRegressionFlaggedAt = wordCountRegressionFlaggedAt
+		self.ao3ConfirmedMissingAt = ao3ConfirmedMissingAt
 		self.isAmbrosiaItem = isAmbrosiaItem
 		self.bookKey = bookKey ?? uniqueID
 		self.status = status
@@ -169,7 +177,7 @@ public final class Article: Hashable, Sendable {
 	// MARK: - Equatable
 
 	static public func ==(lhs: Article, rhs: Article) -> Bool {
-		return lhs.articleID == rhs.articleID && lhs.accountID == rhs.accountID && lhs.feedID == rhs.feedID && lhs.uniqueID == rhs.uniqueID && lhs.title == rhs.title && lhs.contentHTML == rhs.contentHTML && lhs.contentText == rhs.contentText && lhs.rawLink == rhs.rawLink && lhs.rawExternalLink == rhs.rawExternalLink && lhs.summary == rhs.summary && lhs.rawImageLink == rhs.rawImageLink && lhs.datePublished == rhs.datePublished && lhs.dateModified == rhs.dateModified && lhs.authors == rhs.authors && lhs.wordCount == rhs.wordCount && lhs.chapterCurrent == rhs.chapterCurrent && lhs.chapterTotal == rhs.chapterTotal && lhs.isComplete == rhs.isComplete && lhs.fandoms == rhs.fandoms && lhs.relationships == rhs.relationships && lhs.characters == rhs.characters && lhs.ratings == rhs.ratings && lhs.warnings == rhs.warnings && lhs.categories == rhs.categories && lhs.additionalTags == rhs.additionalTags && lhs.series == rhs.series && lhs.commentCount == rhs.commentCount && lhs.kudosCount == rhs.kudosCount && lhs.bookmarkCount == rhs.bookmarkCount && lhs.hitCount == rhs.hitCount && lhs.lastPrefaceFetchDate == rhs.lastPrefaceFetchDate && lhs.pendingUpdateContentHTML == rhs.pendingUpdateContentHTML && lhs.pendingUpdateDetectedAt == rhs.pendingUpdateDetectedAt && lhs.wordCountRegressionFlaggedAt == rhs.wordCountRegressionFlaggedAt && lhs.isAmbrosiaItem == rhs.isAmbrosiaItem && lhs.bookKey == rhs.bookKey
+		return lhs.articleID == rhs.articleID && lhs.accountID == rhs.accountID && lhs.feedID == rhs.feedID && lhs.uniqueID == rhs.uniqueID && lhs.title == rhs.title && lhs.contentHTML == rhs.contentHTML && lhs.contentText == rhs.contentText && lhs.rawLink == rhs.rawLink && lhs.rawExternalLink == rhs.rawExternalLink && lhs.summary == rhs.summary && lhs.rawImageLink == rhs.rawImageLink && lhs.datePublished == rhs.datePublished && lhs.dateModified == rhs.dateModified && lhs.authors == rhs.authors && lhs.wordCount == rhs.wordCount && lhs.chapterCurrent == rhs.chapterCurrent && lhs.chapterTotal == rhs.chapterTotal && lhs.isComplete == rhs.isComplete && lhs.fandoms == rhs.fandoms && lhs.relationships == rhs.relationships && lhs.characters == rhs.characters && lhs.ratings == rhs.ratings && lhs.warnings == rhs.warnings && lhs.categories == rhs.categories && lhs.additionalTags == rhs.additionalTags && lhs.series == rhs.series && lhs.commentCount == rhs.commentCount && lhs.kudosCount == rhs.kudosCount && lhs.bookmarkCount == rhs.bookmarkCount && lhs.hitCount == rhs.hitCount && lhs.lastPrefaceFetchDate == rhs.lastPrefaceFetchDate && lhs.pendingUpdateContentHTML == rhs.pendingUpdateContentHTML && lhs.pendingUpdateDetectedAt == rhs.pendingUpdateDetectedAt && lhs.wordCountRegressionFlaggedAt == rhs.wordCountRegressionFlaggedAt && lhs.ao3ConfirmedMissingAt == rhs.ao3ConfirmedMissingAt && lhs.isAmbrosiaItem == rhs.isAmbrosiaItem && lhs.bookKey == rhs.bookKey
 	}
 }
 

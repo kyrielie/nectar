@@ -1072,6 +1072,24 @@ public enum FetchType {
 		await database.resolvePendingContentUpdateAsync(articleID: articleID, accept: accept)
 	}
 
+	// MARK: - AO3 confirmed-missing
+
+	/// Marks an article's AO3 work as confirmed gone -- called by
+	/// AO3ChapterFetcher.download once both anonymous and authenticated
+	/// retry have exhausted with a `.notFound` response. See
+	/// ArticlesTable.setAO3ConfirmedMissing.
+	public func setAO3ConfirmedMissingAsync(forArticleID articleID: String) async {
+		await database.setAO3ConfirmedMissingAsync(articleID: articleID)
+	}
+
+	/// Clears a previously-set confirmed-missing flag -- called on a
+	/// successful fetch (author restored the work, or an earlier gate was a
+	/// false positive), unblocking AO3ChapterFetcher.isStale's auto-fetch
+	/// gate for this article again.
+	public func clearAO3ConfirmedMissingAsync(forArticleID articleID: String) async {
+		await database.clearAO3ConfirmedMissingAsync(articleID: articleID)
+	}
+
 	// MARK: - Last Opened (Last Opened smart feed)
 
 	/// Records that this book was just opened into the reader. bookKey-keyed and
