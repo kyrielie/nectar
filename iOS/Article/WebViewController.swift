@@ -1342,14 +1342,20 @@ private extension WebViewController {
 	/// Called from showBars()/hideBars() (no args -- reuses whatever color was last
 	/// resolved by renderPage()) and from renderPage() itself (explicit args, so the
 	/// notch cover/label track the theme's actual color on every render instead of
-	/// only refreshing on the next bars-toggle). Visibility is gated on
-	/// isFullScreenAvailable (device + the general "Enable Full Screen
-	/// Articles" setting) rather than the momentary articleFullscreenEnabled
-	/// flag that showBars()/hideBars() flip on every tap-to-reveal -- the
-	/// notch cover sits entirely above where a revealed nav bar renders, so
-	/// there's no visual conflict with keeping it up while bars are
-	/// momentarily peeked at, and tying it to the peek state was what made it
-	/// flicker in and out during ordinary reading/scrolling.
+	/// only refreshing on the next bars-toggle).
+	///
+	/// notchCoverView's visibility is gated on isFullScreenAvailable (device +
+	/// the general "Enable Full Screen Articles" setting) rather than the
+	/// momentary articleFullscreenEnabled flag that showBars()/hideBars() flip
+	/// on every tap-to-reveal -- the notch cover sits entirely above where a
+	/// revealed nav bar renders, so there's no visual conflict with keeping it
+	/// up while bars are momentarily peeked at, and tying it to the peek state
+	/// was what made it flicker in and out during ordinary reading/scrolling.
+	///
+	/// pageCounterLabel does NOT share that reasoning -- it reads as
+	/// fullscreen-reading chrome, not permanent chrome, so it's additionally
+	/// gated on articleFullscreenEnabled: hidden whenever the bars are
+	/// actually showing, even if fullscreen is available/enabled as a setting.
 	func updateNotchAndPageCounterVisibility(resolvedBackground: UIColor? = nil, resolvedText: UIColor? = nil) {
 		let pageCounterOn = AppDefaults.shared.pageCounterDisplayMode != .off
 		// The page counter implies notch-hiding on its own -- a visible
@@ -1370,7 +1376,13 @@ private extension WebViewController {
 			pageCounterLabel.textColor = resolvedText
 		}
 		notchCoverView.isHidden = !(shouldHideNotch && isFullScreenAvailable)
-		pageCounterLabel.isHidden = !(pageCounterOn && isFullScreenAvailable)
+		// Unlike notchCoverView above, the page counter is meant to read as
+		// fullscreen-reading chrome, not permanent chrome -- gate it on the
+		// actual current bars-hidden state (articleFullscreenEnabled, flipped
+		// by showBars()/hideBars()) rather than just isFullScreenAvailable's
+		// device/setting eligibility, or it stayed visible even with the bars
+		// showing.
+		pageCounterLabel.isHidden = !(pageCounterOn && isFullScreenAvailable && AppDefaults.shared.articleFullscreenEnabled)
 	}
 
 	func updateBottomSafeAreaForFullScreen() {
@@ -1521,10 +1533,10 @@ private extension WebViewController {
 	/// `AO3SeriesNavigator.fetchAdjacentWork`/`fetchFirstWorkInSeries` --
 	/// both deleted. This is the plan's Phase 4c/4d/4e flow: bounded
 	/// two-page series-listing walk via `AO3SeriesNavigator.openSeriesWork`,
-	/// return to the timeline via `SceneCoordinator.navigateToTimelineAndSelectArticle`
-	/// rather than staying inside the reader, and a JS repaint of the
-	/// tapped link's own text/disabled state via `updateNectarSeriesLink`
-	/// while the fetch is in flight.
+	/// direct selection via `SceneCoordinator.selectArticleDirectly` (stays
+	/// in the reader the whole time, no detour through the timeline), and a
+	/// JS repaint of the tapped link's own text/disabled state via
+	/// `updateNectarSeriesLink` while the fetch is in flight.
 	private func handleNectarSeriesLink(_ url: URL) {
 		guard let article, let account = article.account else { return }
 		guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
@@ -1605,7 +1617,7 @@ private extension WebViewController {
 				Self.logger.debug("handleNectarSeriesLink: openSeriesWork succeeded, newArticleID=\(newArticleID, privacy: .public)")
 				self.seriesNavState[key] = nil
 				self.updateNectarSeriesLinkUI(key: key, disabled: false)
-				self.coordinator.navigateToTimelineAndSelectArticle(newArticleID)
+				await self.coordinator.selectArticleDirectly(newArticleID, account: account)
 			case .failure(let error):
 				self.seriesNavState[key] = .failed(error.displayMessage)
 				self.updateNectarSeriesLinkUI(key: key, disabled: false)

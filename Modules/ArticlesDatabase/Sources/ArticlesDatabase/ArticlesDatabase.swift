@@ -96,7 +96,7 @@ public struct ArticleStorageInfo: Sendable {
 	/// schema change; a fresh install starts at user_version 0 and runs
 	/// every step up to currentSchemaVersion in one pass, same as an
 	/// existing install catching up.
-	nonisolated private static let currentSchemaVersion: UInt32 = 1
+	nonisolated private static let currentSchemaVersion: UInt32 = 2
 
 	public init(databaseFilePath: String, accountID: String, retentionStyle: RetentionStyle) {
 		Self.logger.debug("Articles Database init \(accountID, privacy: .public)")
@@ -234,6 +234,10 @@ public struct ArticleStorageInfo: Sendable {
 			if !self.articlesTable.containsColumn(DatabaseKey.wordCountRegressionFlaggedAt, in: database) {
 				Self.logger.debug("ArticlesDatabase: adding wordCountRegressionFlaggedAt column \(accountID, privacy: .public)")
 				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.wordCountRegressionFlaggedAt) DATE;")
+			}
+			if !self.articlesTable.containsColumn(DatabaseKey.ao3ConfirmedMissingAt, in: database) {
+				Self.logger.debug("ArticlesDatabase: adding ao3ConfirmedMissingAt column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.ao3ConfirmedMissingAt) DATE;")
 			}
 
 			// Phase 2 (reading behavior): per-article scroll position, replacing the old
@@ -952,6 +956,24 @@ public struct ArticleStorageInfo: Sendable {
 		}
 	}
 
+	// MARK: - AO3 confirmed-missing
+
+	public func setAO3ConfirmedMissingAsync(articleID: String) async {
+		await withCheckedContinuation { continuation in
+			_setAO3ConfirmedMissing(detectedAt: Date(), articleID: articleID) {
+				continuation.resume()
+			}
+		}
+	}
+
+	public func clearAO3ConfirmedMissingAsync(articleID: String) async {
+		await withCheckedContinuation { continuation in
+			_clearAO3ConfirmedMissing(articleID: articleID) {
+				continuation.resume()
+			}
+		}
+	}
+
 	// MARK: - Caches
 
 	/// Call to free up some memory. Should be done when the app is backgrounded, for instance.
@@ -1160,6 +1182,16 @@ private extension ArticlesDatabase {
 	func _resolvePendingContentUpdate(articleID: String, accept: Bool, completion: @escaping DatabaseCompletionBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.resolvePendingContentUpdate(articleID: articleID, accept: accept, completion)
+	}
+
+	func _setAO3ConfirmedMissing(detectedAt: Date, articleID: String, completion: @escaping DatabaseCompletionBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.setAO3ConfirmedMissing(detectedAt: detectedAt, articleID: articleID, completion)
+	}
+
+	func _clearAO3ConfirmedMissing(articleID: String, completion: @escaping DatabaseCompletionBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.clearAO3ConfirmedMissing(articleID: articleID, completion)
 	}
 
 	func _recordBookOpened(articleID: String, completion: @escaping DatabaseCompletionBlock) {
