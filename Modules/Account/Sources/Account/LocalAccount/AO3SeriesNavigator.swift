@@ -34,6 +34,34 @@ import RSWeb
 // checker with `nonisolated`/`Self.`/concrete-type-name spelling tricks.
 private let ao3SeriesNavigatorLogger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AO3SeriesNavigator")
 
+/// A recorded page-1 walk for one series: when it happened, and the
+/// pagination shape observed at the time (`pageSize` == the listing's
+/// per-page work count, `totalPages` == AO3SeriesListingExtractor's parsed
+/// total, `nil` if that page's listing didn't expose one -- mirrors
+/// `page1TotalPages`'s existing optionality in Step 2/3 below). Read back
+/// by `walkedPagination(feedID:ao3SeriesID:)` to let `.previous`/`.next`
+/// skip Step 2's page-1 fetch when the cached shape already answers the
+/// "which page is the target on" question (Fix 5) -- see that function's
+/// own doc comment for the recency/safety reasoning.
+private struct SeriesWalkRecord {
+	let date: Date
+	let pageSize: Int
+	let totalPages: Int?
+}
+
+// Same file-scope-not-a-member reasoning as ao3SeriesNavigatorLogger above:
+// AO3ChapterFetcher.checkForUpdates(for:) is itself `nonisolated` (it's a
+// member of the `nonisolated` Sendable AO3ChapterFetcher class) and needs
+// to invalidate this cache when an article's series content changes (see
+// invalidateWalk below) -- routing that through a `Task { @MainActor in
+// ... }` hop would make an otherwise-synchronous call site asynchronous
+// just to touch this one piece of state. Lock-protected at file scope
+// instead, mirroring the pattern AO3ChapterFetcher.attemptDates already
+// uses for its own cross-call anti-hammering state, rather than changing
+// AO3SeriesNavigator's own actor isolation (openSeriesWork's UI-facing
+// call sites are unaffected either way).
+private let seriesWalkedRecords = OSAllocatedUnfairLock(initialState: [String: SeriesWalkRecord]())
+
 public enum AO3SeriesNavigationError: Error, Sendable, Equatable {
 	/// The tapped link carried no usable target -- a `.previous`/`.next`
 	/// tap with no `workurl`, or an unparseable one.
@@ -72,8 +100,6 @@ public enum AO3SeriesNavigationError: Error, Sendable, Equatable {
 @MainActor
 public enum AO3SeriesNavigator {
 
-	private static var seriesWalkedDates: [String: Date] = [:]
-
 	public enum Direction: Sendable, Hashable {
 		case first
 		case previous
@@ -82,11 +108,11 @@ public enum AO3SeriesNavigator {
 
 	#if DEBUG
 	static func resetWalkedStateForTesting() {
-		seriesWalkedDates = [:]
+		seriesWalkedRecords.withLock { $0 = [:] }
 	}
 
-	static func markWalkedForTesting(feedID: String, ao3SeriesID: String) {
-		markWalked(feedID: feedID, ao3SeriesID: ao3SeriesID)
+	static func markWalkedForTesting(feedID: String, ao3SeriesID: String, pageSize: Int = 1, totalPages: Int? = 1) {
+		markWalked(feedID: feedID, ao3SeriesID: ao3SeriesID, pageSize: pageSize, totalPages: totalPages)
 	}
 	#endif
 
@@ -207,8 +233,27 @@ public enum AO3SeriesNavigator {
 		// currently-open work from getting stubbed as a duplicate.
 		let existingByWorkID = await existingArticlesByWorkID(feedID: existingArticle.feedID, account: account)
 
+		// Step 0.5: .first's own equivalent of Step 1 -- Step 1 itself is
+		// skipped entirely for .first below, since its target id isn't
+		// known without a listing fetch. But if this feed/series pair was
+		// walked recently, the index-1 work is already sitting in
+		// existingByWorkID from that walk's stub-import, so .first doesn't
+		// need a fresh page-1 fetch just to re-learn what it already
+		// knows. Falls through to Step 1/2 below (page 1 fetch) when no
+		// recent walk exists or no index-1 entry is found in it.
+		if direction == .first, isWalkRecent(feedID: existingArticle.feedID, ao3SeriesID: ao3SeriesID),
+		   let firstEntry = existingByWorkID.values.first(where: { article in
+			   article.series?.contains(where: { $0.ao3ID == ao3SeriesID && $0.index == 1 }) ?? false
+		   }) {
+			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork .first satisfied from recent walk, workID=\(firstEntry.bookKey, privacy: .public)")
+			let workID = AO3ChapterFetcher.ao3WorkID(fromBookKey: firstEntry.bookKey) ?? firstEntry.uniqueID
+			return await downloadAndAwait(workID: workID, existingArticleID: firstEntry.articleID, feedID: existingArticle.feedID, account: account)
+		}
+
 		// Step 1: cache check -- skipped entirely for .first, whose
-		// target id isn't known until page 1 is parsed below.
+		// target id isn't known until page 1 is parsed below (except for
+		// the recent-walk shortcut just above, .first's own equivalent of
+		// this step).
 		//
 		// A previously-fetched article (contentHTML != nil) returns
 		// immediately, no network activity at all. A previously-stubbed-
@@ -229,10 +274,10 @@ public enum AO3SeriesNavigator {
 
 			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork cache hit as stub without recent walk, attempting page-1 backfill, workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public)")
 			if let page1HTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: 1) {
-				let (page1Works, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: page1HTML)
+				let (page1Works, _, page1TotalPages) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: page1HTML)
 				let newPage1Works = page1Works.filter { existingByWorkID[$0.workID] == nil }
 				await stubImport(newPage1Works, feedID: existingArticle.feedID, account: account)
-				markWalked(feedID: existingArticle.feedID, ao3SeriesID: ao3SeriesID)
+				markWalked(feedID: existingArticle.feedID, ao3SeriesID: ao3SeriesID, pageSize: page1Works.count, totalPages: page1TotalPages)
 				ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork stub-hit backfill parsed workCount=\(page1Works.count, privacy: .public) newStubs=\(newPage1Works.count, privacy: .public)")
 			} else {
 				ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork stub-hit backfill page-1 fetch failed, proceeding to target workID=\(knownTargetWorkID, privacy: .public)")
@@ -271,7 +316,30 @@ public enum AO3SeriesNavigator {
 
 		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork no cache hit (same-feed or cross-feed), fetching page 1")
 
-		// Step 2: page 1, always.
+		// Fix 5: for .previous/.next only (.first is already routed around
+		// Step 2 by the recent-walk shortcut above when it applies), skip
+		// this unconditional page-1 fetch when a recent walk's cached
+		// pagination already answers "which page is the target on" and
+		// that page isn't page 1. fetchTargetOnComputedPage's own
+		// membership check below is what keeps this safe if the series
+		// shifted since the cached walk -- worst case is a
+		// .seriesListingMismatch, not wrong content written anywhere. If
+		// the cached math instead says the target should be on page 1, or
+		// the cached totalPages can't support the computed page (a
+		// shrunk/stale series), there's no cached listing content to
+		// check membership against -- fall through to the ordinary fresh
+		// fetch below, which also refreshes the cached pagination for
+		// next time.
+		if direction != .first, let knownTargetWorkID, let targetIndex,
+		   let cachedPagination = walkedPagination(feedID: existingArticle.feedID, ao3SeriesID: ao3SeriesID) {
+			let cachedTargetPage = Int((Double(targetIndex) / Double(cachedPagination.pageSize)).rounded(.up))
+			if cachedTargetPage > 1, let cachedTotalPages = cachedPagination.totalPages, cachedTargetPage <= cachedTotalPages {
+				ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork skipping page-1 fetch via cached pagination, going straight to page \(cachedTargetPage, privacy: .public), workID=\(knownTargetWorkID, privacy: .public) targetIndex=\(targetIndex, privacy: .public) cachedPageSize=\(cachedPagination.pageSize, privacy: .public)")
+				return await fetchTargetOnComputedPage(cachedTargetPage, targetWorkID: knownTargetWorkID, ao3SeriesID: ao3SeriesID, existingByWorkID: existingByWorkID, existingArticle: existingArticle, account: account)
+			}
+		}
+
+		// Step 2: page 1, always (unless the shortcut above already returned).
 		guard let page1HTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: 1) else {
 			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page 1 fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
 			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
@@ -288,7 +356,7 @@ public enum AO3SeriesNavigator {
 		let newPage1Works = page1Works.filter { existingByWorkID[$0.workID] == nil }
 		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page 1 parsed, workCount=\(page1Works.count, privacy: .public) newStubs=\(newPage1Works.count, privacy: .public)")
 		await stubImport(newPage1Works, feedID: existingArticle.feedID, account: account)
-		markWalked(feedID: existingArticle.feedID, ao3SeriesID: ao3SeriesID)
+		markWalked(feedID: existingArticle.feedID, ao3SeriesID: ao3SeriesID, pageSize: page1Works.count, totalPages: page1TotalPages)
 
 		let targetWorkID: String
 		switch direction {
@@ -342,51 +410,72 @@ public enum AO3SeriesNavigator {
 		}
 
 		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork fetching computed page \(targetPage, privacy: .public) for workID=\(targetWorkID, privacy: .public) targetIndex=\(targetIndex, privacy: .public) pageSize=\(pageSize, privacy: .public)")
-		try? await Task.sleep(nanoseconds: UInt64(AO3ChapterFetcher.secondsBetweenSweepRequests * 1_000_000_000))
-
-		guard let pageNHTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: targetPage) else {
-			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
-			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
-		}
-		let (pageNWorks, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: pageNHTML)
-		// Same filter as Step 2, against the same shared map -- page N is
-		// very unlikely to contain the current article, but a target
-		// reached via .previous/.next from a different session could
-		// already be present as a stub from an earlier tap.
-		let newPageNWorks = pageNWorks.filter { existingByWorkID[$0.workID] == nil }
-		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) parsed, workCount=\(pageNWorks.count, privacy: .public) newStubs=\(newPageNWorks.count, privacy: .public)")
-		await stubImport(newPageNWorks, feedID: existingArticle.feedID, account: account)
-
-		guard pageNWorks.contains(where: { $0.workID == targetWorkID }) else {
-			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork target not found on computed page \(targetPage, privacy: .public), workID=\(targetWorkID, privacy: .public) -- mismatch")
-			return .failure(.seriesListingMismatch)
-		}
-
-		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork target found on computed page \(targetPage, privacy: .public), workID=\(targetWorkID, privacy: .public)")
-		// Same stale-snapshot fallback as the page-1 branch above --
-		// existingByWorkID predates both stubImport calls (page 1's and
-		// this page's), so a work stubbed by either still needs the
-		// deterministic-ID fallback here.
-		let targetArticleID = existingByWorkID[targetWorkID]?.articleID ?? Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: targetWorkID)
-		return await downloadAndAwait(workID: targetWorkID, existingArticleID: targetArticleID, feedID: existingArticle.feedID, account: account)
+		return await fetchTargetOnComputedPage(targetPage, targetWorkID: targetWorkID, ao3SeriesID: ao3SeriesID, existingByWorkID: existingByWorkID, existingArticle: existingArticle, account: account)
 	}
 }
 
 private extension AO3SeriesNavigator {
 
-	static func walkKey(feedID: String, ao3SeriesID: String) -> String {
+	nonisolated static func walkKey(feedID: String, ao3SeriesID: String) -> String {
 		"\(feedID)|\(ao3SeriesID)"
 	}
 
 	static func isWalkRecent(feedID: String, ao3SeriesID: String) -> Bool {
-		guard let lastWalked = seriesWalkedDates[walkKey(feedID: feedID, ao3SeriesID: ao3SeriesID)] else {
+		let key = walkKey(feedID: feedID, ao3SeriesID: ao3SeriesID)
+		guard let record = seriesWalkedRecords.withLock({ $0[key] }) else {
 			return false
 		}
-		return Date().timeIntervalSince(lastWalked) < AO3PrefaceRefetchPreference.current.timeInterval
+		return Date().timeIntervalSince(record.date) < AO3PrefaceRefetchPreference.current.timeInterval
 	}
 
-	static func markWalked(feedID: String, ao3SeriesID: String) {
-		seriesWalkedDates[walkKey(feedID: feedID, ao3SeriesID: ao3SeriesID)] = Date()
+	static func markWalked(feedID: String, ao3SeriesID: String, pageSize: Int, totalPages: Int?) {
+		let key = walkKey(feedID: feedID, ao3SeriesID: ao3SeriesID)
+		let record = SeriesWalkRecord(date: Date(), pageSize: pageSize, totalPages: totalPages)
+		seriesWalkedRecords.withLock { $0[key] = record }
+	}
+
+	/// The cached pagination shape from the most recent walk, only when
+	/// that walk is still recent by the same cadence `isWalkRecent` checks
+	/// -- a stale walk's pagination is exactly as untrustworthy as a stale
+	/// walk's target-membership assumption, so this deliberately reuses
+	/// the same recency gate rather than having its own. `nil` whenever
+	/// `isWalkRecent` would also be `nil`/`false`, or when no walk has
+	/// happened at all for this feed/series pair.
+	static func walkedPagination(feedID: String, ao3SeriesID: String) -> (pageSize: Int, totalPages: Int?)? {
+		let key = walkKey(feedID: feedID, ao3SeriesID: ao3SeriesID)
+		guard let record = seriesWalkedRecords.withLock({ $0[key] }) else {
+			return nil
+		}
+		guard Date().timeIntervalSince(record.date) < AO3PrefaceRefetchPreference.current.timeInterval else {
+			return nil
+		}
+		return (record.pageSize, record.totalPages)
+	}
+
+	/// Invalidates any recorded walk for the given series IDs under
+	/// `feedID` -- called by AO3ChapterFetcher.checkForUpdates(for:) when a
+	/// fetch changes an article's own chapter content, since that content
+	/// change can shift the article's position within any series it
+	/// belongs to (a new chapter can itself be posted as a new series
+	/// entry) in a way a stale cached walk wouldn't reflect. `nonisolated`
+	/// rather than a member of the `@MainActor` AO3SeriesNavigator type
+	/// above, since checkForUpdates(for:) is itself nonisolated and calls
+	/// this synchronously, with no actor hop -- safe because the
+	/// underlying storage (seriesWalkedRecords) is lock-protected at file
+	/// scope, not actor-isolated. Static rather than a member of
+	/// AO3SeriesNavigator for the same reason walkKey/isWalkRecent/
+	/// markWalked above are: this is namespaced under AO3SeriesNavigator
+	/// for discoverability, not because it needs the type's own isolation.
+	nonisolated static func invalidateWalk(feedID: String, ao3SeriesIDs: [String]) {
+		guard !ao3SeriesIDs.isEmpty else {
+			return
+		}
+		let keys = ao3SeriesIDs.map { walkKey(feedID: feedID, ao3SeriesID: $0) }
+		seriesWalkedRecords.withLock { records in
+			for key in keys {
+				records.removeValue(forKey: key)
+			}
+		}
 	}
 
 	/// Existing articles under `feedID`, keyed by AO3 work id (recovered
@@ -416,6 +505,53 @@ private extension AO3SeriesNavigator {
 			result[workID] = article
 		}
 		return result
+	}
+
+	/// The single allowed second listing-page fetch (Step 3), shared
+	/// between the ordinary page-1-then-computed-page fallback and Fix 5's
+	/// cached-pagination shortcut that skips straight here without ever
+	/// fetching page 1 this round. Paced by
+	/// `AO3ChapterFetcher.secondsBetweenSweepRequests` before issuing the
+	/// request, same anti-hammering precedent the original inline Step 3
+	/// used. Every work found on `targetPage` is stubbed (same dedup
+	/// against `existingByWorkID` Step 2 uses) before the membership check
+	/// below, so a work stubbed here is still picked up if the person
+	/// navigates to it directly later even if this call's own target
+	/// verification fails. `pageNWorks.contains(where:)` is the actual
+	/// safety net for both callers: a stale cached `pageSize`/`totalPages`
+	/// (Fix 5's shortcut) or a series that simply changed shape between
+	/// page-1 parse and now both fail here as `.seriesListingMismatch`
+	/// rather than ever writing wrong content.
+	static func fetchTargetOnComputedPage(_ targetPage: Int, targetWorkID: String, ao3SeriesID: String, existingByWorkID: [String: Article], existingArticle: Article, account: Account) async -> Result<String, AO3SeriesNavigationError> {
+		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork fetching computed page \(targetPage, privacy: .public) for workID=\(targetWorkID, privacy: .public)")
+		try? await Task.sleep(nanoseconds: UInt64(AO3ChapterFetcher.secondsBetweenSweepRequests * 1_000_000_000))
+
+		guard let pageNHTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: targetPage) else {
+			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
+			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
+		}
+		let (pageNWorks, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: pageNHTML)
+		// Same filter as Step 2, against the same shared map -- page N is
+		// very unlikely to contain the current article, but a target
+		// reached via .previous/.next from a different session could
+		// already be present as a stub from an earlier tap.
+		let newPageNWorks = pageNWorks.filter { existingByWorkID[$0.workID] == nil }
+		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) parsed, workCount=\(pageNWorks.count, privacy: .public) newStubs=\(newPageNWorks.count, privacy: .public)")
+		await stubImport(newPageNWorks, feedID: existingArticle.feedID, account: account)
+
+		guard pageNWorks.contains(where: { $0.workID == targetWorkID }) else {
+			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork target not found on computed page \(targetPage, privacy: .public), workID=\(targetWorkID, privacy: .public) -- mismatch")
+			return .failure(.seriesListingMismatch)
+		}
+
+		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork target found on computed page \(targetPage, privacy: .public), workID=\(targetWorkID, privacy: .public)")
+		// Same stale-snapshot fallback as the page-1 branch in
+		// openSeriesWork -- existingByWorkID predates this page's
+		// stubImport call (and, for the fresh-fetch caller, page 1's too),
+		// so a work stubbed by either still needs the deterministic-ID
+		// fallback here.
+		let targetArticleID = existingByWorkID[targetWorkID]?.articleID ?? Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: targetWorkID)
+		return await downloadAndAwait(workID: targetWorkID, existingArticleID: targetArticleID, feedID: existingArticle.feedID, account: account)
 	}
 
 	/// `GET https://archiveofourown.org/series/<id>` for page 1 (bare, no

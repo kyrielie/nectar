@@ -70,6 +70,12 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// so repeated viewDidAppear calls don't keep re-adding the dependency.
 	private var hasConfiguredContentPopFailureRequirement = false
 
+	// Set once the nav-bar tap-to-hide-bars gesture recognizer has been added
+	// to parentNavController.navigationBar, so repeated viewDidAppear calls
+	// don't keep re-adding it. Mirrors hasConfiguredContentPopFailureRequirement
+	// above.
+	private var hasConfiguredNavigationBarTapGesture = false
+
 	var article: Article? {
 		didSet {
 			Self.logger.debug("ArticleViewController: article didSet: \(self.article?.accountID ?? "nil") \(self.article?.articleID ?? "nil") \(self.article?.title ?? "nil")")
@@ -146,23 +152,19 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		navigationItem.compactAppearance = appearance
 		applySurfacePaletteNavigationBarAppearance()
 
-		let fullScreenTapZone = UIView()
-		fullScreenTapZone.translatesAutoresizingMaskIntoConstraints = false
-		// <= 150, not == 150 (.required): the system's own
-		// _UINavigationBarTitleControl bridges its actual available title
-		// width into a required constraint of its own, which varies with
-		// the title area's real size (observed as low as ~83pt). A required
-		// == 150 here always loses that fight and gets broken on every
-		// layout pass. <= lets this tap zone take up to 150pt when
-		// available and whatever narrower width the system actually grants
-		// otherwise, without contending with the system's constraint at all.
-		let widthConstraint = fullScreenTapZone.widthAnchor.constraint(lessThanOrEqualToConstant: 150)
-		NSLayoutConstraint.activate([
-			widthConstraint,
-			fullScreenTapZone.heightAnchor.constraint(equalToConstant: 44)
-		])
-		fullScreenTapZone.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapNavigationBar)))
-		navigationItem.titleView = fullScreenTapZone
+		// The nav-bar tap-to-hide-bars target used to live in a fullScreenTapZone
+		// UIView set as navigationItem.titleView, width-capped at <= 150pt. That
+		// cap only bounded the view's max width -- the actual width came from the
+		// system's _UINavigationBarTitleControl, which was observed squeezing the
+		// title area down to ~83pt independent of our constraint, with no public
+		// way to force it wider even when fewer right bar buttons were showing.
+		// As long as the tap target lived inside titleView its size couldn't
+		// track button count. Replaced with a gesture recognizer on the bar
+		// itself (added in configureNavigationBarTapGestureIfNeeded(on:), called
+		// from viewDidAppear) plus an exclusion-zone delegate check in
+		// gestureRecognizer(_:shouldReceive:) below, which recomputes the
+		// excluded bands from rightBarButtonItems().count on every touch. No
+		// title text is ever set on this screen, so titleView is simply left nil.
 		navigationItem.rightBarButtonItems = rightBarButtonItems()
 
 		let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
@@ -269,6 +271,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			}
 			coordinator.applyArticleBackSwipeGating()
 			configureContentPopFailureRequirementIfNeeded(on: parentNavController)
+			configureNavigationBarTapGestureIfNeeded(on: parentNavController)
 		}
 	}
 
@@ -685,6 +688,51 @@ extension ArticleViewController: UIGestureRecognizerDelegate {
 		return point.x > 40
     }
 
+	// Tap-passthrough with an exclusion zone: the nav-bar tap gesture added in
+	// configureNavigationBarTapGestureIfNeeded(on:) covers the whole bar, so
+	// this rejects touches that fall over the back button or the visible right
+	// bar button items and lets those controls handle them instead. Both
+	// exclusion widths below are estimates, not measured -- same category of
+	// approximation the old titleView <= 150pt cap already was, just now
+	// correctly tracking button count instead of a fixed number:
+	//   - trailing: 44pt per visible right bar button item, matching the
+	//     standard system tap-target width used elsewhere in the app.
+	//   - leading: a conservative 80pt constant for the back button. Its actual
+	//     width varies with chevron-only vs. chevron+label, which depends on
+	//     the previous screen's title and available space, and there's no
+	//     public API to read its real frame.
+	// If bug 5 turns out to be a hit-testing problem (the gesture never
+	// receiving touches at all) rather than an undersized tap zone, this
+	// change won't fix that on its own -- but it removes titleView layout as a
+	// variable, which was one of the two live hypotheses in that
+	// investigation. isFullScreenAvailable (and this whole flow) is
+	// phone-only, so no iPad-specific exclusion logic is needed here.
+	func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+		// Same parentNavController resolution used in viewDidAppear/
+		// configureNavigationBarTapGestureIfNeeded(on:): this is the nav bar the
+		// gesture was actually installed on.
+		guard let parentNavController = navigationController?.parent as? UINavigationController else {
+			return true
+		}
+		let navigationBar = parentNavController.navigationBar
+
+		let location = touch.location(in: navigationBar)
+
+		let backButtonExclusionWidth: CGFloat = 80
+		if location.x < backButtonExclusionWidth {
+			return false
+		}
+
+		let perButtonWidth: CGFloat = 44
+		let rightButtonCount = navigationItem.rightBarButtonItems?.count ?? 0
+		let trailingExclusionWidth = CGFloat(rightButtonCount) * perButtonWidth
+		if location.x > navigationBar.bounds.width - trailingExclusionWidth {
+			return false
+		}
+
+		return true
+	}
+
 }
 
 // MARK: Private
@@ -713,6 +761,20 @@ private extension ArticleViewController {
 		}
 		contentPopGesture.require(toFail: pagingPanGesture)
 		hasConfiguredContentPopFailureRequirement = true
+	}
+
+	/// Adds the tap-to-hide-bars gesture recognizer directly to the nav bar,
+	/// replacing the old titleView-hosted tap zone. No subview is added to the
+	/// bar and no private view internals are touched; gestureRecognizer(_:
+	/// shouldReceive:) below rejects touches that land in the back-button or
+	/// right-bar-button-item bands so taps on those controls still reach them
+	/// normally.
+	func configureNavigationBarTapGestureIfNeeded(on parentNavController: UINavigationController) {
+		guard !hasConfiguredNavigationBarTapGesture else { return }
+		let tapGesture = UITapGestureRecognizer(target: self, action: #selector(didTapNavigationBar))
+		tapGesture.delegate = self
+		parentNavController.navigationBar.addGestureRecognizer(tapGesture)
+		hasConfiguredNavigationBarTapGesture = true
 	}
 
 }

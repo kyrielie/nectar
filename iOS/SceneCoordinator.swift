@@ -74,23 +74,6 @@ struct SidebarItemNode: Hashable, Sendable {
 	private var fetchSerialNumber = 0
 	private let fetchRequestQueue = FetchRequestQueue()
 
-	// Set for the duration of navigateToTimelineAndSelectArticle's flow (see
-	// that function): its opening selectArticle(nil) deliberately pops to the
-	// timeline as one step of a "flash to timeline, then push the real
-	// target" sequence, not a genuine user back-navigation. That pop triggers
-	// MainTimelineModernViewController.viewDidAppear, but its completion is
-	// delayed by the split-view transition -- long enough that this whole
-	// function has often already fetched and re-selected the real target
-	// article by the time viewDidAppear's own deselectIfNecessary() call
-	// fires. deselectIfNecessary() has no other way to distinguish that from
-	// "the user tapped back," so it was clearing the correctly-selected
-	// article right out from under a just-completed series-nav Next/Previous
-	// tap. Consulted (not just set) in
-	// MainTimelineModernViewController.deselectIfNecessary() so the guard
-	// holds regardless of which of the two racing transitions'
-	// viewDidAppear/deselect call actually lands second.
-	var isNavigatingToTimelineArticle = false
-
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "SceneCoordinator")
 
 	// Which Containers are expanded
@@ -1775,141 +1758,41 @@ struct SidebarItemNode: Hashable, Sendable {
 		selectArticle(article)
 	}
 
-	/// Inline-series-navigation plan, Phase 4d: sends the user back to the
-	/// timeline, then opens `articleID` once it's actually present in
-	/// `self.articles` -- distinct from `selectArticleInCurrentFeed`
-	/// above, which stays inside the article reader and only searches
-	/// whatever `self.articles` already holds.
+	/// Inline-series-navigation plan, Phase 4d (revised): switches straight
+	/// to `articleID` in the article reader -- no visible detour through the
+	/// timeline first.
 	///
-	/// "Return to timeline" here means `selectArticle(nil)` -- the same
-	/// call every other "leave the detail column" site in this file uses
-	/// (`navigateToFeeds()`, `selectSidebarItem`'s deselect branch,
-	/// `beginSearching()`, `endSearching()`). It unconditionally performs
-	/// `rootSplitViewController.show(.supplementary)` and clears
-	/// `articleViewController?.article`, which is what actually pops the
-	/// detail column. `navigateToTimeline()` itself is not that primitive
-	/// -- it's a keyboard-focus helper for iPad hardware-shortcut callers
-	/// where both columns are already visible side by side, so it only
-	/// selects an article when none is selected and otherwise just shifts
-	/// first-responder status; when `currentArticle != nil` (true on every
-	/// real invocation of this flow, since the user is mid-article when
-	/// they tap a series nav link) it was a UI no-op, leaving the reader
-	/// on screen. `mainTimelineViewController?.focus()` is kept here too,
-	/// for parity with `navigateToTimeline()`'s own first-responder shift.
+	/// This replaces an earlier `navigateToTimelineAndSelectArticle`, which
+	/// called `selectArticle(nil)` (pop to timeline) before re-selecting the
+	/// real target once it was fetched. That produced a visible flash back
+	/// to the timeline before the new article opened, most noticeable on
+	/// `.previous`, since a cache hit there tends to complete fast enough
+	/// for the flash to actually register before the re-select lands.
+	/// `selectArticle(_:)` itself never pops to the timeline for a non-nil
+	/// article -- it goes straight to `rootSplitViewController.show(.secondary)`
+	/// -- so the flash was entirely a side effect of that intermediate nil
+	/// step, not something `selectArticle` requires.
 	///
-	/// `articleID` here was very likely just stub-imported (or newly
-	/// fetched) by `AO3SeriesNavigator.openSeriesWork`, so it may not be
-	/// in `self.articles` yet -- that array is only refreshed by
-	/// `accountDidDownloadArticles` -> `queueFetchAndMergeArticles()`,
-	/// an asynchronous, debounced path with no signal this call can wait
-	/// on directly. The naive `navigateToTimeline(); selectArticleInCurrentFeed(id)`
-	/// sequence races that refresh: `selectArticleInCurrentFeed` can run
-	/// before the merge has surfaced the new article, silently no-op'ing.
+	/// The old flow also routed selection through `self.articles`, which is
+	/// scoped to whatever feed/filter the timeline happens to be showing --
+	/// a freshly-imported series-nav target might not be in it (wrong feed,
+	/// or filtered out by the current read-status/sort settings), which is
+	/// what the old `timelineFeed == nil` guard and 1.5s fallback existed
+	/// to work around. Fetching the article directly from the account by ID
+	/// sidesteps that dependency entirely: no timeline-feed race to guard
+	/// against, since this never asks the timeline for anything.
 	///
-	/// Fix: don't rely on the notification-driven queue for this flow.
-	/// Call `fetchAndMergeArticlesAsync(animated:completion:)` directly
-	/// and only select from inside its completion, after `self.articles`
-	/// has actually been rebuilt.
-	///
-	/// **Resolved risk, formerly flagged here as unverified:** this
-	/// bypasses `fetchAndMergeArticlesQueue`'s coalescing by design (see
-	/// above), but the series-navigation flow that calls this also posts
-	/// one or more `.AccountDidDownloadArticles` notifications of its own
-	/// on the way here (each `stubImport` batch, then the final
-	/// `AO3ChapterFetcher.download`'s `updateAsync`) -- `accountDidDownloadArticles`
-	/// reacts to each by calling `queueFetchAndMergeArticles()`, and
-	/// `CoalescingQueue.add` restarts its debounce timer on every call, so
-	/// that queue is essentially always freshly armed right as this
-	/// function starts. If that debounced call fires while the direct
-	/// fetch below is still in flight, `fetchAndMergeArticlesAsync` (the
-	/// no-arg, notification-driven path) calls `fetchUnsortedArticlesAsync`
-	/// -> `cancelPendingAsyncFetches()` -> `fetchRequestQueue.cancelAllRequests()`,
-	/// which marks the in-flight `FetchRequestOperation` canceled.
-	/// `FetchRequestOperation.run`'s `process()` skips `resultBlock`
-	/// entirely for a canceled operation, so the `completion` closure
-	/// below -- and therefore `selectArticleInCurrentFeed` -- silently
-	/// never runs: the person is left on the timeline with nothing
-	/// selected. Calling `cancelPendingCalls()` here drops any coalesced
-	/// call still pending from this flow's own notifications before it
-	/// can race with the direct fetch; it's the same primitive
-	/// `WebViewController`'s scroll-position queue already uses for an
-	/// analogous "about to do my own synchronous flush" situation.
-	///
-	/// Two remaining gaps, both handled explicitly below rather than left
-	/// to silently no-op: `fetchAndMergeArticlesAsync`'s completion is
-	/// documented to never fire at all if `timelineFeed` is `nil`, and an
-	/// unrelated concurrent fetch can still bump `fetchSerialNumber` via
-	/// `cancelPendingAsyncFetches()` even after the guard above, dropping
-	/// this flow's own completion. The `timelineFeed == nil` case selects
-	/// directly instead of calling the fetch at all; the other case gets a
-	/// 1.5s fallback that retries the direct selection if the primary
-	/// completion hasn't run by then.
-	func navigateToTimelineAndSelectArticle(_ articleID: String) {
-		fetchAndMergeArticlesQueue.cancelPendingCalls()
-
-		isNavigatingToTimelineArticle = true
-		// Defensive fallback: deselectIfNecessary() only clears this flag if
-		// it actually runs, which requires the pop-to-timeline transition's
-		// viewDidAppear to fire at all (collapsed split view, i.e. iPhone).
-		// On a non-collapsed layout, or if that transition never completes
-		// for some other reason, nothing would otherwise ever reset this --
-		// permanently disabling deselectIfNecessary's normal "user backed
-		// out of the article" cleanup for the rest of the session. This
-		// timer is that backstop, not the primary reset path.
-		var didClearNavigationFlag = false
-		let clearNavigationFlag = { [weak self] in
-			guard !didClearNavigationFlag else { return }
-			didClearNavigationFlag = true
-			self?.isNavigatingToTimelineArticle = false
-		}
-		DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-			clearNavigationFlag()
-		}
-
-		selectArticle(nil)
-		mainTimelineViewController?.focus()
-
-		guard timelineFeed != nil else {
-			// fetchAndMergeArticlesAsync's completion is guaranteed not to fire
-			// in this case (see its own guard) -- go straight to the fallback
-			// instead of waiting on a callback we know won't come.
-			selectArticleInCurrentFeed(articleID)
-			clearNavigationFlag()
+	/// `queueFetchAndMergeArticles()` is still kicked off so the timeline
+	/// list reflects the new article whenever the person does return to it,
+	/// but selection itself doesn't wait on that.
+	func selectArticleDirectly(_ articleID: String, account: Account) async {
+		let fetchedArticles = await account.fetchArticlesAsync(.articleIDs([articleID]))
+		guard let article = fetchedArticles.first(where: { $0.articleID == articleID }) else {
+			Self.logger.debug("SceneCoordinator: selectArticleDirectly did not find articleID=\(articleID, privacy: .public) in account after fetch")
 			return
 		}
-
-		var didSelect = false
-		fetchAndMergeArticlesAsync(animated: true) { [weak self] in
-			didSelect = true
-			self?.selectArticleInCurrentFeed(articleID)
-			// Deliberately NOT calling clearNavigationFlag() here. This
-			// completion typically runs *before* the pop-to-timeline
-			// transition's own delayed viewDidAppear/deselectIfNecessary()
-			// call lands (see the long comment above isNavigatingToTimelineArticle) --
-			// clearing the flag right after reselecting the real article
-			// closes the guard window before deselectIfNecessary() gets a
-			// chance to consult it, so it sees the flag already false and
-			// wrongly deselects the article this flow just selected.
-			// deselectIfNecessary() itself clears the flag once it actually
-			// consults it (self-consuming, one-shot), so this completion
-			// leaves that to happen there. The asyncAfter fallback above
-			// remains as a backstop for the case where deselectIfNecessary()
-			// never fires at all (e.g. non-collapsed split view).
-		}
-
-		// Defensive fallback for the cancel-race case: if the completion above
-		// hasn't run shortly after the fetch should reasonably have finished,
-		// the request was likely dropped by an unrelated concurrent fetch
-		// bumping fetchSerialNumber (see the long comment above this function).
-		// Try the direct selection once more -- by now self.articles should
-		// reflect whatever DB state exists, since cache-hit series-nav targets
-		// are already persisted before this function is ever called.
-		// selectArticleInCurrentFeed is idempotent, so a harmless double-fire
-		// is possible if the primary completion lands just after this timer.
-		DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-			guard !didSelect else { return }
-			self?.selectArticleInCurrentFeed(articleID)
-		}
+		selectArticle(article)
+		queueFetchAndMergeArticles()
 	}
 
 	func importTheme(filename: String) {
@@ -2564,8 +2447,7 @@ private extension SceneCoordinator {
 	func fetchAndMergeArticlesAsync(animated: Bool = true, completion: (() -> Void)? = nil) {
 
 		// completion is never called if timelineFeed is nil -- callers that need
-		// a guaranteed callback (e.g. navigateToTimelineAndSelectArticle) must
-		// not rely on this alone; see its own defensive fallback.
+		// a guaranteed callback must not rely on this alone.
 		guard let timelineFeed = timelineFeed else {
 			return
 		}

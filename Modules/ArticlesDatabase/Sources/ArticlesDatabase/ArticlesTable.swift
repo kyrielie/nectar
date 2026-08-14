@@ -692,10 +692,11 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	/// content-bearing columns.
 	///
 	/// pendingUpdateContentHTML/pendingUpdateDetectedAt/
-	/// wordCountRegressionFlaggedAt are nulled in the same operation: a
-	/// staged pending-update diff has nothing left to be relative to once
-	/// contentHTML is gone, and leaving wordCountRegressionFlaggedAt set
-	/// would permanently block AO3ChapterFetcher's isStale check from ever
+	/// wordCountRegressionFlaggedAt/ao3ConfirmedMissingAt are nulled in the
+	/// same operation: a staged pending-update diff has nothing left to be
+	/// relative to once contentHTML is gone, and leaving
+	/// wordCountRegressionFlaggedAt or ao3ConfirmedMissingAt set would
+	/// permanently block AO3ChapterFetcher's isStale check from ever
 	/// refetching this article -- silently locking a content-cleared row
 	/// out of ever being repopulated.
 	///
@@ -713,7 +714,8 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				DatabaseKey.contentText: NSNull(),
 				DatabaseKey.pendingUpdateContentHTML: NSNull(),
 				DatabaseKey.pendingUpdateDetectedAt: NSNull(),
-				DatabaseKey.wordCountRegressionFlaggedAt: NSNull()
+				DatabaseKey.wordCountRegressionFlaggedAt: NSNull(),
+				DatabaseKey.ao3ConfirmedMissingAt: NSNull()
 			]
 			for articleID in articleIDs {
 				self.updateRowsWithDictionary(clearedColumns, whereKey: DatabaseKey.articleID, matches: articleID, database: database)
@@ -1140,6 +1142,35 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				self.updateRowsWithDictionary(d, whereKey: DatabaseKey.articleID, matches: articleID, database: database)
 			}
 			database.executeUpdate("update articles set pendingUpdateContentHTML = NULL, pendingUpdateDetectedAt = NULL where articleID = ?", withArgumentsIn: [articleID])
+			self.removeArticleIDsFromCache(Set([articleID]))
+			DispatchQueue.main.async {
+				completion()
+			}
+		}
+	}
+
+	// MARK: - AO3 confirmed-missing
+	//
+	// Set once AO3ChapterFetcher.download has exhausted both anonymous and
+	// authenticated retry and gotten a confirmed `.notFound` back -- see
+	// AO3ChapterFetcher's own set/clear call sites for which branches
+	// qualify. Checked by AO3ChapterFetcher.isStale before contentHTML's
+	// nil-check, same guard style as wordCountRegressionFlaggedAt above.
+
+	func setAO3ConfirmedMissing(detectedAt: Date, articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
+		queue.runInTransaction { database in
+			let d: DatabaseDictionary = [DatabaseKey.ao3ConfirmedMissingAt: detectedAt]
+			self.updateRowsWithDictionary(d, whereKey: DatabaseKey.articleID, matches: articleID, database: database)
+			self.removeArticleIDsFromCache(Set([articleID]))
+			DispatchQueue.main.async {
+				completion()
+			}
+		}
+	}
+
+	func clearAO3ConfirmedMissing(articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
+		queue.runInTransaction { database in
+			database.executeUpdate("update articles set ao3ConfirmedMissingAt = NULL where articleID = ?", withArgumentsIn: [articleID])
 			self.removeArticleIDsFromCache(Set([articleID]))
 			DispatchQueue.main.async {
 				completion()
