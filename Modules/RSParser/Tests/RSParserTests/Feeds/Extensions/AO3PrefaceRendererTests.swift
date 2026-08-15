@@ -65,7 +65,7 @@ import Testing
 
 	@Test func ambrosiaSourcedEntryFirstLinkedPreviousNextGrayed() {
 		// Ambrosia's _ambrosia.series entries carry ao3_id but never a
-		// previous/next-work-URL key (plan's 3b revision note, confirmed
+		// previous/next-work-URL key (confirmed
 		// against JSONFeedParser.parseAmbrosiaSeries) -- a synthetic-
 		// preface series row must still render a live, tappable First
 		// link while Previous/Next fall out as the grayed, unlinked
@@ -95,8 +95,7 @@ import Testing
 	}
 
 	@Test func percentEncodingRoundTripsReservedCharsInWorkURL() {
-		// Regression coverage for the escaping gap called out in the
-		// plan's 3a: a work permalink carrying its own query string
+		// Regression coverage for a work permalink carrying its own query string
 		// ("&"/"="/"?", all three stripped from
 		// .nectarSeriesQueryValueAllowed) must have every one of those
 		// percent-encoded before assembly, or they'd corrupt this app's

@@ -1,10 +1,10 @@
 # Settings screen structure
 
 `SettingsViewController` (`iOS/Settings/`) is a `UITableViewController`
-driven by `Settings.storyboard`'s static cells, sectioned by
-`SettingsSection: Int` (7 sections, in table order): `.feeds`,
-`.timeline`, `.articles`, `.appearance`, `.troubleshooting`, `.help`,
-`.ao3Account`. Most sections have a corresponding `*Row: Int` enum
+driven by `Settings.storyboard`'s static cells, sectioned by the nested
+`SettingsViewController.Section: Int` (7 sections, in table order):
+`.feeds`, `.timeline`, `.articles`, `.appearance`, `.troubleshooting`,
+`.help`, `.ao3Account`. Most sections have a corresponding `*Row: Int` enum
 (`FeedsRow`, `TimelineRow`, `ArticlesRow`, `AppearanceRow`,
 `TroubleshootingRow`, `HelpRow`) whose `.allCases.count` (where declared
 `CaseIterable`) or manual row count drives `numberOfRowsInSection` against
@@ -15,10 +15,26 @@ Scrollbar" row is a recent, representative example of this pattern: a new
 cell added together). `.ao3Account` has no row enum: it's a single row that pushes
 `AO3AccountSettingsView` directly (see below).
 
+**`FeedsRow` is currently out of sync with the storyboard**: the enum
+only declares 3 cases (`importSubscriptions`/`exportSubscriptions`/
+`exportArticles`), but the storyboard's `.feeds` section has a 4th static
+cell, "Use SQLite Feed Transfer" (`ambrosiaSQLiteTransferSwitch`, backed
+by `AmbrosiaTransferFormatPreference` — see below). `numberOfRowsInSection`
+falls through to `default: return super.tableView(...)` for `.feeds`, so
+the storyboard's real row count (4) is what's returned and the switch row
+displays and works correctly; it's just untyped, with no `FeedsRow` case
+and no entry in `didSelectRowAt`'s switch (harmless here since a switch
+row's own `UISwitch.valueChanged` target handles the interaction, not row
+selection — but the same pattern for a tappable/disclosure row would
+silently no-op on tap).
+
 ## Row inventory by section
 
-- **`.feeds`** (`FeedsRow`): import subscriptions, export subscriptions,
-  export articles (CSV).
+- **`.feeds`** (`FeedsRow`, plus one untyped row — see above): import
+  subscriptions, export subscriptions, export articles (CSV), and "Use
+  SQLite Feed Transfer" (toggles `AmbrosiaTransferFormatPreference.current`
+  between `.sqlite`/`.json`, read by `LocalAccountRefresher.url(for:)` —
+  see `sqlite-transfer.md`).
 - **`.timeline`** (`TimelineRow`): sort field, sort direction, group by
   feed, "refresh clears read articles," Timeline Layout (pushes
   `TimelineCustomizerCollectionViewController`, below), show-last-updated
@@ -67,11 +83,10 @@ Two storage tiers exist beyond `Settings.storyboard`'s rows:
   Account-module code (`AO3ChapterFetcher`, `AO3KudosManager`) can read
   them without depending on the iOS app target: `AO3PrefaceRefetchPreference`,
   `AO3KudosOnLikePreference`, `AmbrosiaAO3NetworkPreference`,
-  `AmbrosiaTransferFormatPreference`. All of the AO3-related ones are
-  exposed via `AO3AccountSettingsView`, per above; whether
-  `AmbrosiaTransferFormatPreference` has any UI at all has not been
-  checked as part of this doc pass — flagged as an open item in the
-  investigation checklist.
+  `AmbrosiaTransferFormatPreference`. The three AO3-related ones are
+  exposed via `AO3AccountSettingsView`, per above; `AmbrosiaTransferFormatPreference`
+  has its own UI too, but on this screen rather than that one — the "Use
+  SQLite Feed Transfer" row in `.feeds`, see above.
 
 ## Timeline Layout screen
 

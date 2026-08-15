@@ -76,7 +76,11 @@ already-authenticated attempt already on record for that `bookKey`) and
 one re-attempt policy (a prior *guest* kudos attempt is retried once
 signed in — a guest and authenticated kudos are AO3-side distinct
 identities — but an authenticated attempt, successful or not, is never
-retried automatically):
+retried automatically). The "already on record" check and the
+guest/authenticated distinction are backed by `BookStateTable`'s
+`kudosAttemptedAt`/`kudosAttemptedAuthenticated` columns, read/written via
+`Account.kudosAttempt(bookKey:)`/`setKudosAttempted(bookKey:authenticated:)`
+— see `book-identity.md` for the full column list:
 
 - **Piggyback path** (`attemptKudosIfNeeded`, called from
   `AO3ChapterFetcher.download`'s success handler) — reuses the CSRF token

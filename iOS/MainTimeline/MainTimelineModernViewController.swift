@@ -562,9 +562,9 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 		// iPad popover anchor -- match the existing `MarkAsReadAlertController.alert(sourceType:)`
 		// pattern (it accepts UIBarButtonItem/UIView/CGRect via a small protocol) rather than
 		// reinventing anchor logic; this app is not iPad-only-safe to skip, since
-		// TARGETED_DEVICE_FAMILY = 1,2 still builds for iPad (per the July audit -- see that
-		// doc's open item on iPad support, unresolved, not this plan's concern to fix, but the
-		// popover anchor here must not crash on iPad regardless).
+		// TARGETED_DEVICE_FAMILY = 1,2 still builds for iPad, and overall iPad-readiness is an
+		// open question tracked in docs/investigate-later.md ("iPad support status") -- but the
+		// popover anchor here must not crash on iPad regardless of how that's resolved.
 		if let barButtonItem = sourceType as? UIBarButtonItem {
 			alert.popoverPresentationController?.barButtonItem = barButtonItem
 		}
@@ -1133,9 +1133,9 @@ private extension MainTimelineModernViewController {
 			self?.restoreSelectionIfNecessary(adjustScroll: false)
 			// Re-derive footer visibility/state on every snapshot apply --
 			// this fires on ordinary article updates as well as on a feed
-			// switch (traced here rather than assumed, per the plan's own
-			// "needs verification" note on where updateUI() vs applyChanges
-			// actually gets called when timelineFeed changes). A feed
+			// switch (traced here rather than assumed -- verified against
+			// where updateUI() vs applyChanges actually gets called when
+			// timelineFeed changes). A feed
 			// switch always ends in an applyChanges call (the new feed's
 			// articles are re-fetched and re-applied), so this is the
 			// single reliable hook rather than duplicating the check in
@@ -1278,8 +1278,8 @@ extension MainTimelineModernViewController {
 /// results" (disabled, last outcome had hasNextPage false or .noResults),
 /// error (reuses the same message strings
 /// LocalAccountRefresher.fetchAndImportAO3SearchResults already produces
-/// for rate-limit/registration/Cloudflare, per the plan's own call-out not
-/// to write new copy).
+/// for rate-limit/registration/Cloudflare, deliberately reusing that copy
+/// rather than writing new strings for the same underlying failures).
 private final class AO3LoadMoreFooterView: UICollectionReusableView {
 
 	enum State: Equatable {

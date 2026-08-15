@@ -2,8 +2,7 @@
 //  StatsVisibilityCell.swift
 //  NetNewsWire-iOS
 //
-//  Personalization & Theming plan, item 6 ("Stats-visibility toggles").
-//  A plain UISwitch row, same shape the badge-palette picker rows use -- this setting
+//  Stats-visibility toggles. A plain UISwitch row, same shape the badge-palette picker rows use -- this setting
 //  is a boolean, not a ranged slider value, so it doesn't fit the
 //  TimelineCustomizerCell/TickMarkSlider machinery the number-of-lines and
 //  tag-display-mode rows use.

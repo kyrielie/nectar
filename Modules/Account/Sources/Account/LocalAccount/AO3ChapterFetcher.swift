@@ -148,7 +148,11 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 
 	/// Explicit "Check for updates" action -- always available per-article
 	/// regardless of read state, unlike `fetchIfNeeded`'s automatic paths.
-	/// There is deliberately no bulk "check all" equivalent (per the plan).
+	/// There is deliberately no bulk "check all" equivalent: an unbounded
+	/// bulk refetch across every subscribed AO3 work would be exactly the
+	/// kind of unthrottled, server-unfriendly bulk fetch this fetcher's
+	/// cadence-only staleness check (see docs/ao3-preface-rendering.md)
+	/// exists to avoid; per-article is deliberate, not an oversight.
 	/// Still a no-op for an anthology/combined-series bookKey (same as
 	/// `fetchIfNeeded`), and still blocked while an unresolved
 	/// `pendingUpdateContentHTML` diff exists for this article -- a second

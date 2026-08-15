@@ -2,7 +2,7 @@
 //  AccentColorIconHexSetTests.swift
 //  NetNewsWire-iOSTests
 //
-//  surface-palette-and-badge-colors-plan follow-up ("independently
+//  See docs/app-chrome-palette.md ("Badge Colors") -- "independently
 //  assignable icon colors per AccentColor case"): coverage for
 //  AccentColor.IconHexSet and Assets.Colors.iconColor(_:fallback:).
 //  Guards two properties specifically called out in the implementation

@@ -277,11 +277,13 @@ all of the above comes together for a given article:
 
 ## Authoring new themes
 
-`.claude/skills/nnwtheme-porter/SKILL.md` and
-`.claude/skills/nnwtheme-header-design/SKILL.md` document the workflow for
+`.claude/skills/nnwtheme-porter/SKILL.md`,
+`.claude/skills/nnwtheme-header-design/SKILL.md`, and
+`.claude/skills/nnwtheme-builder/SKILL.md` document the workflow for
 porting a new theme (typically from an AO3 workskin) into a `.nnwtheme`
 bundle, including the generator script's per-theme dict schema, palette
-contrast requirements, font-sourcing rules, and the constraints imposed by
+contrast requirements, font-sourcing rules, verified AO3 markup this app
+actually renders, and the constraints imposed by
 `ArticleThemeColorExtractor`/`ArticleThemeOverrides`/`core.css` on every
 theme (e.g. don't invent selectors that don't exist in the shared template;
 prefer reusing an existing muted color over inventing a new one). See also

@@ -207,7 +207,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 					// still requires the person to paste their actual tag,
 					// user, or work feed link. Whether a plain (non-.atom)
 					// AO3 page URL autodiscovers via FeedFinder is
-					// unverified (see the plan's Workstream 4 note); the
+					// unverified; the
 					// safest starting point that's definitely still correct
 					// either way is the bare domain.
 					self?.coordinator.showAddFeed(initialFeed: "https://archiveofourown.org/", initialFeedName: nil)
@@ -237,7 +237,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		NotificationCenter.default.addObserver(self, selector: #selector(feedIconDidBecomeAvailable(_:)), name: .feedIconDidBecomeAvailable, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(feedSettingDidChange(_:)), name: .feedSettingDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange(_:)), name: .accentColorDidChange, object: nil)
-		// surface-palette-and-badge-colors-plan, section 2.3: repaint the
+		// See docs/app-chrome-palette.md: repaint the
 		// non-sidebar list background when the surface palette changes.
 		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
 

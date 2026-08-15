@@ -1,17 +1,24 @@
 # Investigate later
 
-Open questions that had temporary diagnostic logging attached to them in
-the code, where that logging was removed during a vibecoding-cleanup pass
-(dead scaffolding, dangling citations to planning docs that don't exist
-in the tree) before the underlying question was actually resolved.
-Removing the logging did not answer the question — it just means the
-question is now tracked here in prose instead of in code comments, and
-whoever picks it back up should re-add equivalent instrumentation rather
-than assume either "it must be fine" or "it must still be broken."
+Open questions that no longer have a home elsewhere in the docs, found
+during a vibecoding-cleanup pass while resolving dangling citations to
+planning docs that don't exist anywhere in the tree. Two kinds of entry:
 
-Each entry: what was being investigated, what the logging looked like
-before removal, and the working theory, so it can be reconstructed
-without archaeology.
+- Questions that had temporary diagnostic logging attached to them in the
+  code, where that logging was removed as dead scaffolding before the
+  underlying question was actually resolved. Removing the logging did
+  not answer the question — it just means the question is now tracked
+  here in prose instead of in code comments, and whoever picks it back
+  up should re-add equivalent instrumentation rather than assume either
+  "it must be fine" or "it must still be broken."
+- Open, unresolved questions that were attributed to a specific
+  planning/audit document that turned out not to exist in the tree, with
+  no indication the underlying question was ever actually answered
+  elsewhere.
+
+Each entry: what was being investigated, what evidence (logging or
+otherwise) previously existed, and the working theory, so it can be
+reconstructed without archaeology.
 
 ## Native UIKit colors possibly lagging WKWebView's `prefers-color-scheme` on live appearance switch
 
@@ -85,3 +92,31 @@ on whichever screen happens to trigger it first. Reproduce by switching
 Surface Palette while each of the three screens is on screen, at both
 scroll-edge and mid-scroll positions. Fold the finding into
 `docs/app-chrome-palette.md` once confirmed.
+
+## iPad support status
+
+**Where:** referenced from `iOS/MainTimeline/MainTimelineModernViewController.swift`
+(a popover-anchor comment), previously citing "the July audit" as the
+place this was tracked.
+
+**Question:** `xcconfig/common/NetNewsWire_ios_target_common.xcconfig` sets
+`TARGETED_DEVICE_FAMILY = 1,2`, so the app still builds and installs on
+iPad, but nothing in the tree suggests iPad has had deliberate layout
+attention beyond scattered popover-anchor guards (like the one that
+pointed here) needed just to avoid a crash on `UIAlertController`
+presentation. Whether the app is meant to be a real supported iPad
+experience, an iPhone-only experience that happens to still build for
+iPad, or something in between, isn't stated anywhere in the current docs.
+
+**Status:** the "July audit" this was attributed to is not present
+anywhere in the current tree -- another dangling reference, found and
+resolved during the vibecoding cleanup pass. Whatever findings that audit
+had about iPad support, if any, weren't carried into any current doc.
+
+**To resume:** decide (and document in `CLAUDE.md`'s routing table once
+decided) whether iPad is in scope; if it is, audit `UISplitViewController`/
+regular-vs-compact size-class handling across `SceneCoordinator.swift`
+and the Settings/MainFeed/MainTimeline/Article view controllers, since
+none of the current docs describe any iPad-specific layout path. If it's
+explicitly out of scope, consider setting `TARGETED_DEVICE_FAMILY = 1`
+so the build configuration matches reality.

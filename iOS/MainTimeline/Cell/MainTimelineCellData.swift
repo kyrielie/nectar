@@ -79,7 +79,7 @@ enum BadgeCategory: Sendable {
 	/// nil when no rating was extracted. An empty array (rating extracted,
 	/// explicitly zero warnings) is distinct from nil and both are valid —
 	/// callers must render nil as "not available," never as "confirmed
-	/// none," per the fork plan's correctness requirement for this field.
+	/// none."
 	let ratings: [String]?
 	let warnings: [String]?
 

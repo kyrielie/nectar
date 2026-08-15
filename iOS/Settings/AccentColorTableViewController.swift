@@ -2,8 +2,7 @@
 //  AccentColorTableViewController.swift
 //  NetNewsWire-iOS
 //
-//  Personalization & Theming plan, item 3 ("App-wide accent color").
-//  Mirrors ColorPaletteTableViewController's list-picker pattern exactly --
+//  App-wide accent color, mirroring ColorPaletteTableViewController's list-picker pattern exactly --
 //  same static-checkmark-row shape, same singular "Cell" reuse identifier
 //  convention. Wired into Settings.storyboard as a second row
 //  (AppearanceRow.accentColor) below Color Palette in the Appearance
@@ -17,12 +16,12 @@
 //  same asset-catalog colors Assets.swift itself falls back to (AccentColor's
 //  own contract: nil hex means "use the asset catalog"), not a placeholder.
 //
-//  surface-palette-and-badge-colors-plan, section 3.2: grown from a flat
+//  See docs/app-chrome-palette.md ("Badge Colors"): grown from a flat
 //  single-section list with unconditional pop-on-select to three sections
 //  -- Accent Colors, Badge Colors, Preview -- mirroring
 //  ColorPaletteTableViewController's guard-and-reload-in-place selection
 //  shape (which itself came from the now-merged SurfacePaletteTableViewController).
-//  icon-and-badge-palette-plan follow-up: Accent Color selection no longer
+//  Accent Color selection no longer
 //  pops either -- now that this screen also hosts Badge Colors and Preview,
 //  popping on every accent tap kicked the person back out to the main
 //  Settings menu before they could reach those. Both sections now reload
@@ -174,7 +173,8 @@ final class AccentColorTableViewController: UITableViewController, SettingsPalet
 			// in place instead, matching how .badgePalette below already
 			// behaves.
 			//
-			// surface-palette-followup-plan, Issue C: the row's tap
+			// See docs/app-chrome-palette.md ("Badge Colors", reentrancy
+			// guards): the row's tap
 			// highlight used to rely on the ambient window.tintColor,
 			// which SceneDelegate.handleAccentColorDidChange reassigns
 			// the instant AppDefaults.shared.accentColor's setter posts
@@ -211,8 +211,8 @@ final class AccentColorTableViewController: UITableViewController, SettingsPalet
 				tableView.reloadSections(IndexSet([Section.accentColors.rawValue, Section.preview.rawValue]), with: .none)
 			})
 		case .badgePalette:
-			// Pre-existing off-by-one, fixed alongside the icon-and-badge-palette-plan
-			// changes: BadgeColorPalette's raw values are 1-based
+			// Pre-existing off-by-one, fixed alongside the Badge Colors
+			// work (see docs/app-chrome-palette.md, "Badge Colors"): BadgeColorPalette's raw values are 1-based
 			// (.monochrome = 1) but indexPath.row is 0-based, so
 			// `BadgeColorPalette(rawValue: indexPath.row)` silently no-op'd
 			// on row 0 and selected the wrong case on every other row. Row
