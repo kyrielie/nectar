@@ -2,9 +2,8 @@
 //  AO3SearchResultsFetchCoordinator.swift
 //  NetNewsWire-iOS
 //
-//  Nectar AO3 search-results refresh-cadence work, Workstream C
-//  (WKWebView HTML-harvest fallback) -- see
-//  nectar-ao3-search-refresh-plan.md.
+//  Nectar AO3 search-results refresh-cadence work: WKWebView HTML-harvest
+//  fallback -- see docs/ao3-integration.md.
 //
 //  Presented as an opt-in prompt, not automatically: callers invoke
 //  `fetch(...)`, and on `.needsVerification` show their own "AO3 needs

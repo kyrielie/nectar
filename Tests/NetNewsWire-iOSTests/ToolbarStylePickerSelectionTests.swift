@@ -3,7 +3,7 @@
 //  NetNewsWire-iOSTests
 //
 //  Coverage for ColorPaletteTableViewController's toolbarStyle section --
-//  toolbar-style-plan.md, section 2.7 -- exercised the same way
+//  see docs/app-chrome-palette.md -- exercised the same way
 //  AccentColorTableViewControllerSelectionTests.swift covers that screen's
 //  own selection/reentrancy contract: directly against the controller, no
 //  navigation controller or UI test harness, since this is about state

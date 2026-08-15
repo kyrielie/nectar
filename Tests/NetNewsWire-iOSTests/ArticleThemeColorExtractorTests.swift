@@ -3,8 +3,8 @@
 //  NetNewsWire-iOSTests
 //
 //  Coverage for the @supports/@supports-not brace-block stripping in
-//  ArticleThemeColorExtractor.stripBraceBlocks (nectar-theme-pipeline-fixes-plan.md
-//  item #5): confirms the widened regex strips both the `@supports (...)` and
+//  ArticleThemeColorExtractor.stripBraceBlocks (see docs/article-color-pipeline.md):
+//  confirms the widened regex strips both the `@supports (...)` and
 //  `@supports not (...)` forms, and documents the known single-paren-depth limit
 //  on compound conditions rather than silently regressing on it.
 //

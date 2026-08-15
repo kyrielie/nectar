@@ -2,8 +2,8 @@
 //  ArticleRendererSeriesNavigationTests.swift
 //  NetNewsWire-iOSTests
 //
-//  Coverage for inline series navigation (nectar-inline-series-nav-
-//  implementation-plan.md, Phase 3), synthetic-preface (pre-fetch,
+//  Coverage for inline series navigation (see docs/ao3-preface-rendering.md),
+//  synthetic-preface (pre-fetch,
 //  Ambrosia-sourced) path: ArticleRenderer.ao3SyntheticPrefaceHTML's Series
 //  row and ArticleRenderer.ao3SyntheticSeriesFooterHTML, both added by this
 //  pass. Deliberately tests these two static functions directly rather than

@@ -528,8 +528,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		buttonItems.forEach { $0.tintColor = tintColor }
 	}
 
-	// Section 3 of color-palette-plan.md ("Wire the two new nav-bar
-	// properties"). applySurfacePaletteNavigationBarAppearance() now comes
+	// See docs/app-chrome-palette.md.
+	// applySurfacePaletteNavigationBarAppearance() now comes
 	// from the shared SurfacePaletteNavigationBarAware protocol (see
 	// Shared/Extensions/SurfacePaletteNavigationBarAware.swift) so
 	// MainTimelineModernViewController/MainFeedCollectionViewController can

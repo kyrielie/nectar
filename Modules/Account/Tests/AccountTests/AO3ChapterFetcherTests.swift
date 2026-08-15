@@ -100,8 +100,8 @@ final class AO3ChapterFetcherTests: XCTestCase {
 
 	// testIsStaleWithMatchingChapterCount, testIsStaleWithBehindChapterCount,
 	// and testIsStaleWithNoChapterCurrentMetadata (chapter-count-comparison
-	// coverage) removed: isStale no longer reads chapterCurrent at all (Fix
-	// 3, ao3-unnecessary-fetch-fixes-plan.md) -- chapterCurrent can be
+	// coverage) removed: isStale no longer reads chapterCurrent at all
+	// (see docs/ao3-preface-rendering.md) -- chapterCurrent can be
 	// rewritten by an unthrottled feed-summary reparse independent of what
 	// this fetcher's own last download wrote, so comparing against it made
 	// an unrelated feed refresh capable of forcing a content refetch it had

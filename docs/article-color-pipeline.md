@@ -78,15 +78,19 @@ themes need their own light/dark colors, so this pipeline needs its own
 live-invalidation hook that the dynamic-color approach got automatically.
 
 **Open investigation, not yet resolved as of this doc:** `WebViewController`
-currently carries temporary debug logging (`Self.logger.debug(...)` calls
+previously carried temporary debug logging (`Self.logger.debug(...)` calls
 in the `registerForTraitChanges` handler and in
 `applyResolvedBackgroundColors()`, plus a `logCSSColorSchemeAgreement`
 helper) checking whether WKWebView's own `prefers-color-scheme` media
 query has actually re-evaluated by the time the native trait-change
-handler fires, or lags behind it. In-code comments attribute this to
-"nectar-theme-background-toolbar-plan.md item 2" — that file is not
-present anywhere in the current tree (same dangling-reference pattern as
-elsewhere in this doc set; see `refresh-throttling.md` and
-`sqlite-transfer.md` for others). Remove the temporary logging once
-whichever engineer is running this investigation confirms the fix
-on-device, and fold the finding into this doc.
+handler fires, or lags behind it. That logging (and the now-unused
+`logCSSColorSchemeAgreement` helper) has been removed as part of a
+vibecoding cleanup pass, since the citation backing it
+("nectar-theme-background-toolbar-plan.md item 2") turned out to be a
+dangling reference to a file that doesn't exist anywhere in the tree
+(same pattern flagged elsewhere in this doc set; see
+`refresh-throttling.md` and `sqlite-transfer.md` for others), and the
+investigation itself was still unconfirmed. The open question is now
+tracked in `docs/investigate-later.md` rather than inline
+logging — see that doc before re-investigating, and re-add equivalent
+logging there if picking this back up.

@@ -2,9 +2,10 @@
 //  AO3SeriesListingExtractor.swift
 //  RSParser
 //
-//  Nectar AO3 direct-reading support, Task 10 ("Prev/next/first
-//  navigation -- independent of the grouping toggle") -- see
-//  nectar-ao3-features-plan-FINAL.md. AO3's work page carries
+//  Nectar AO3 direct-reading support: prev/next/first
+//  navigation, independent of the grouping toggle. See
+//  docs/ao3-feeds.md ("AO3SeriesListingExtractor — series listing pages").
+//  AO3's work page carries
 //  previous/next Work links but no "first work in series" link anywhere
 //  (see AO3ChapterHTMLExtractor.previousNextWorkURLs's doc comment) --
 //  reaching work #1 needs the series-listing page itself
@@ -22,8 +23,9 @@
 //  -- also cross-checked against ao3downloader's
 //  parse_soup.get_work_metadata_from_list, which reads a work blurb the
 //  identical way: `li.work-<id>` then `h4.heading a` for title+permalink,
-//  read for approach only, reimplemented independently here, per the
-//  licensing note in nectar-ao3-features-plan-FINAL.md). Only the
+//  read for approach only, reimplemented independently here -- see
+//  THIRD-PARTY-NOTICES.md and docs/ao3-feeds.md ("Licensing & attribution")).
+//  Only the
 //  container's own class (`series work index group`, vs search results'
 //  plain `work index group`) differs -- not relied on here, since the
 //  row selector alone is sufficient and already proven stable across

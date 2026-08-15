@@ -5,26 +5,25 @@
 //  Created by Maurice Parker on 3/15/20.
 //  Copyright © 2020 Ranchero Software. All rights reserved.
 //
-//  surface-palette-and-badge-colors-plan, section 1: absorbs the standalone
-//  Surface Palette screen (formerly SurfacePaletteTableViewController,
-//  deleted) as a second section here, plus a third section holding the
-//  live SurfacePalettePreviewCell -- same three-section shape that screen
-//  already had, moved verbatim rather than redesigned. Section 0
-//  (UserInterfaceColorPalette, light/dark/automatic) is unchanged.
+//  Absorbs the standalone Surface Palette screen (formerly
+//  SurfacePaletteTableViewController, deleted) as a second section here,
+//  plus a third section holding the live SurfacePalettePreviewCell --
+//  same three-section shape that screen already had, moved verbatim
+//  rather than redesigned. Section 0 (UserInterfaceColorPalette,
+//  light/dark/automatic) is unchanged.
 //
-//  nectar-navbar-toggle-plan.md, item 3: the toolbar-style setting is its
-//  own section, rather than a row mixed into the Surface Palette list --
-//  it's a separate, mutually-exclusive three-way choice (System/Blend/
-//  Tinted), not one of the palette choices, and living inside that list
-//  read as though it were another palette option.
-//
-//  toolbar-style-plan.md: replaced the original boolean useTintedNavigationBar
-//  UISwitch row with a three-row, checkmark-based picker -- same selection
-//  pattern the Surface Palette section below already uses -- once tinting
-//  stopped being a single on/off gate and became one of three mutually
-//  exclusive toolbar styles (System/Blend/Tinted) applied to both the top
-//  nav bar and bottom toolbar together. See SurfacePaletteNavigationBarAware
-//  and ArticleViewController.applyToolbarStyle().
+//  The toolbar-style setting is its own section, rather than a row mixed
+//  into the Surface Palette list -- it's a separate, mutually-exclusive
+//  three-way choice (System/Blend/Tinted), not one of the palette
+//  choices, and living inside that list read as though it were another
+//  palette option. It replaced the original boolean
+//  useTintedNavigationBar UISwitch row with a three-row, checkmark-based
+//  picker -- same selection pattern the Surface Palette section above
+//  already uses -- once tinting stopped being a single on/off gate and
+//  became one of three mutually exclusive toolbar styles (System/Blend/
+//  Tinted) applied to both the top nav bar and bottom toolbar together.
+//  See docs/app-chrome-palette.md, SurfacePaletteNavigationBarAware, and
+//  ArticleViewController.applyToolbarStyle().
 //
 
 import UIKit

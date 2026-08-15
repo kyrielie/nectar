@@ -8,19 +8,18 @@
 //  selectors); feed routing/pagination/retry (checkpoint 2) and ignore-list
 //  wiring (checkpoint 3) are separate, later patches.
 //
-//  Selectors below are the ones the plan calls "confirmed" -- validated
-//  against production AO3 markup by ao3downloader's own
+//  Selectors below are the ones confirmed by cross-checking against
+//  production AO3 markup, using ao3downloader's own
 //  parse_soup.get_work_metadata_from_list (GPL-3.0, (c) nianeyna), read for
-//  approach only and reimplemented independently here in Swift, per the
-//  licensing note in nectar-ao3-features-plan-FINAL.md ("Licensing &
-//  attribution"): no ao3downloader source was transcribed, only its
+//  approach only and reimplemented independently here in Swift -- see
+//  THIRD-PARTY-NOTICES.md and docs/ao3-feeds.md ("Licensing & attribution"):
+//  no ao3downloader source was transcribed, only its
 //  documented selector choices and the shape of the data they target.
 //
 //  Live-fetch confirmation (2026-08-04): this session had web access but
-//  only through a markdown-extracting fetch tool, not raw HTML -- exactly
-//  the caveat the plan's "Environment & harness" section calls out ("a
-//  markdown-extracting fetch tool won't show you raw CSS class names").
-//  A real https://archiveofourown.org/works listing was fetched and
+//  only through a markdown-extracting fetch tool, not raw HTML, which
+//  means it can confirm structure/content shape but not literal CSS class
+//  names. A real https://archiveofourown.org/works listing was fetched and
 //  confirmed the *shape* this extractor assumes: title+author links,
 //  a Fandoms line, a symbols row, a Tags block (with bolded warning tags),
 //  a Summary blockquote, one "Part <N> of <name>" line per series
@@ -32,7 +31,7 @@
 //  not independently re-verified here -- if the checkpoint 2 fetch path
 //  comes back with a lot of .noResults on pages that clearly have results,
 //  this file's selectors are the first thing to recheck against a saved
-//  View Source capture (see the plan's "What only the user can do").
+//  View Source capture.
 //
 //  Deliberately out of scope for this checkpoint, per the plan's own
 //  checkpoint split: feed routing/pagination bookkeeping/retry+Cloudflare

@@ -3,7 +3,7 @@
 //  NetNewsWire
 //
 //  Extracted from ArticleViewController.applySurfacePaletteNavigationBarAppearance()
-//  (color-palette-plan.md, section 3), which was the only screen wiring its
+//  (see docs/app-chrome-palette.md), which was the only screen wiring its
 //  UINavigationBarAppearance to AppDefaults.shared.surfaceTint. Neither
 //  MainTimelineModernViewController nor MainFeedCollectionViewController did
 //  the same, even though both already track other surface-tint-driven colors
@@ -15,14 +15,6 @@
 //
 
 import UIKit
-import os
-
-// TEMPORARY, alongside the debug logging in applySurfacePaletteNavigationBarAppearance()
-// below -- see that method's doc comment. Remove both together once the
-// top-toolbar-colors-wrong-on-live-switch fix is confirmed on-device.
-private enum SurfacePaletteNavigationBarAwareLogging {
-	static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.ranchero.Nectar", category: "SurfacePaletteNavigationBarAware")
-}
 
 @MainActor
 protocol SurfacePaletteNavigationBarAware: UIViewController {
@@ -165,7 +157,6 @@ extension SurfacePaletteNavigationBarAware {
 	func applySurfacePaletteNavigationBarAppearance() {
 		switch AppDefaults.shared.toolbarStyle {
 		case .system:
-			SurfacePaletteNavigationBarAwareLogging.logger.debug("applySurfacePaletteNavigationBarAppearance: \(type(of: self)) toolbarStyle .system, resetting to system appearance")
 			resetToSystemNavigationBarAppearance()
 		case .tinted:
 			applyTintedNavigationBarAppearance()

@@ -3,7 +3,7 @@
 //  NetNewsWire-iOSTests
 //
 //  Coverage for ArticleThemePlist's Family/FamilyVariant fields
-//  (theme-settings-implementation-plan.md §7.3): confirms the two new
+//  (see docs/nnwtheme-format.md): confirms the two new
 //  optional keys decode correctly when present, and confirms every
 //  existing Info.plist with no Family/FamilyVariant keys keeps decoding
 //  cleanly with nil -- no migration needed for the 28+ themes that aren't
