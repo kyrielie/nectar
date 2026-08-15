@@ -40,8 +40,19 @@ Resolved once per render in `WebViewController.renderPage()`/
 and `notchCoverView` together so all three always agree: override
 background (`ArticleThemeOverrides.backgroundColorHex`/
 `backgroundColorDarkHex`, if set) → the theme's own extracted background →
-a black/white fallback if neither is present. The same function is also
-the one consumer outside `WebViewController`:
+a black/white fallback if neither is present. `ArticleResolvedColors.current(isDark:)`
+is a convenience wrapper over `resolved(...)` that reads the live globals
+(current theme, current overrides) itself — originally a `private static`
+helper local to `WebViewController` (`resolvedArticleColors(isDark:)`,
+still present there as a thin wrapper over `.current(isDark:)`), promoted
+onto `ArticleResolvedColors` once `app-chrome-palette.md`'s `ToolbarStyle`
+`.blend` state needed the exact same computation for the article reader's
+top nav bar and bottom toolbar. This means `ArticleResolvedColors.resolved(...)`'s
+output now feeds two independent consumers — the webview/notch-cover
+pipeline described in this doc, and `.blend`-mode toolbar color — so a
+future change to this function's precedence order (override → theme →
+fallback) needs both in mind, not just the webview. The function is also
+the one other consumer outside `WebViewController`:
 `iOS/Settings/ArticleThemePreviewWebView.swift` (a SwiftUI-facing live
 theme preview, used somewhere in the theme-editing/picker Settings flow —
 not yet investigated in detail here) calls it directly to resolve preview

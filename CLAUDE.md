@@ -53,10 +53,11 @@ codebase moves faster than docs do. See "Keeping this current" below.
   file (`docs/nectar-audit-remediation-plan.md`,
   `docs/nectar-implementation-plan.md`, `ao3-merged-plan.md`,
   `ao3-merged-plan-nectar.md`, `nectar-ao3-features-plan-FINAL.md`,
-  `nectar-theme-background-toolbar-plan.md`, and — present in one
-  snapshot of this repo, absent from a later one — `nectar-fixes-plan-3.md`)
-  that is not present anywhere in the current tree. This is now a
-  six-plus-file pattern, not a one-off. `.gitignore` only excludes
+  `nectar-theme-background-toolbar-plan.md`, `toolbar-style-plan.md`,
+  `nectar-navbar-toggle-plan.md`, and — present in one snapshot of this
+  repo, absent from a later one — `nectar-fixes-plan-3.md`) that is not
+  present anywhere in the current tree. This is now an eight-plus-file
+  pattern, not a one-off. `.gitignore` only excludes
   `plans/`, not `docs/`, so gitignore status alone doesn't explain it —
   treat the cause as an open question (see "Keeping this current" below),
   not a solved mystery, and don't assume a missing file means the work
@@ -83,7 +84,7 @@ it's trusted by default. Specifically:
 | `AO3ChapterFetcher`, `AO3ChapterHTMLExtractor`, `AO3PrefaceRenderer`, `Downloader`'s per-host 429 handling | `ao3-preface-rendering.md` |
 | `AO3SessionStore`, `AO3AuthenticatedFetcher`, `AO3AuthenticatedWebViewController`, `AO3ChallengeSessionStore`, `AO3KudosManager`, `AO3AccountSettingsView`, or any `NectarAppGroupUserDefaults`-backed AO3 preference | `ao3-authenticated-reading.md` |
 | `ArticleThemeColorExtractor`, `ArticleResolvedColors`, `WebViewController.applyResolvedBackgroundColors`/`registerForTraitChanges` | `article-color-pipeline.md` |
-| `SurfacePalette`, `AccentColor`, `SurfacePaletteNavigationBarAware`, `useTintedNavigationBar` | `app-chrome-palette.md` |
+| `SurfacePalette`, `AccentColor`, `SurfacePaletteNavigationBarAware`, `ToolbarStyle`/`toolbarStyle` | `app-chrome-palette.md` |
 | `.nnwtheme` bundles, `ArticleTheme`, `ArticleThemesManager`, `core.css`/`stylesheet.css` structure | `theme-system.md` |
 | `.nnwtheme` bundle-file layout, per-theme fonts, theme families, `template.html` conventions | `nnwtheme-format.md` |
 | `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |

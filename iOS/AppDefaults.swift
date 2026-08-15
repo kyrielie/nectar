@@ -481,6 +481,34 @@ enum SurfacePalette: Int, CaseIterable, Sendable {
 	}
 }
 
+/// Replaces the old boolean `useTintedNavigationBar` with three
+/// mutually-exclusive states, applied to both the article reader's top nav
+/// bar and bottom toolbar together -- see `SurfacePaletteNavigationBarAware`
+/// and `app-chrome-palette.md`. `system` takes the place of the old `false`
+/// (plain system appearance, both bars translucent); `tinted` takes the
+/// place of the old `true` (both bars filled from the active Surface
+/// Palette's `navigationBarBackground`/`navigationBarTint`); `blend` is new
+/// (both bars filled with the article's own resolved background color, via
+/// `ArticleResolvedColors.current(isDark:)`). Named `system` rather than
+/// `default` because `default` collides with Swift's `switch`/`case`
+/// keyword in every exhaustive switch over this type.
+enum ToolbarStyle: String, CaseIterable, Sendable {
+	case system
+	case blend
+	case tinted
+
+	var description: String {
+		switch self {
+		case .system:
+			return NSLocalizedString("Default", comment: "Default toolbar style")
+		case .blend:
+			return NSLocalizedString("Blend", comment: "Blend toolbar style")
+		case .tinted:
+			return NSLocalizedString("Tinted", comment: "Tinted toolbar style")
+		}
+	}
+}
+
 enum PageCounterDisplayMode: String, CaseIterable, Sendable {
 	case off
 	case percentage
@@ -529,7 +557,13 @@ final class AppDefaults: Sendable {
 		static let lastImageCacheFlushDate = "lastImageCacheFlushDate"
 		static let firstRunDate = "firstRunDate"
 		static let hasShownAO3Onboarding = "hasShownAO3Onboarding"
+		/// Unused as of toolbarStyle's introduction -- kept only so the
+		/// now-dead migrateNavigationBarTintingDefaultIfNeeded() history
+		/// (removed) is still legible from an old value on-disk. See
+		/// hasMigratedToolbarStyleDefault below for the current migration's
+		/// own gate.
 		static let hasMigratedNavigationBarTintingDefault = "hasMigratedNavigationBarTintingDefault"
+		static let hasMigratedToolbarStyleDefault = "hasMigratedToolbarStyleDefault"
 		static let hasMigratedArticleToolbarToggles = "hasMigratedArticleToolbarToggles"
 		static let timelineGroupByFeed = "timelineGroupByFeed"
 		static let refreshClearsReadArticles = "refreshClearsReadArticles"
@@ -539,7 +573,13 @@ final class AppDefaults: Sendable {
 		static let badgeColorMode = "badgeColorMode"
 		static let accentColor = "accentColor"
 		static let surfaceTint = "surfaceTint"
+		/// Legacy Bool key, no longer backed by a live property -- read
+		/// directly via AppDefaults.store by migrateToolbarStyleDefaultIfNeeded()
+		/// only, to carry an upgrader's prior tinted/not-tinted choice onto
+		/// the new toolbarStyle key below. Do not reintroduce a property for
+		/// this key.
 		static let useTintedNavigationBar = "useTintedNavigationBar"
+		static let toolbarStyle = "toolbarStyle"
 		static let statsVisible = "statsVisible"
 		static let timelineSortDirection = "timelineSortDirection"
 		static let timelineSortField = "timelineSortField"
@@ -1036,22 +1076,25 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	/// Whether SurfacePalette drives the top nav bar's own tinted fill
-	/// (navigationBarBackground/navigationBarTint) via
-	/// SurfacePaletteNavigationBarAware, or the bar stays plain system
-	/// appearance -- the bottom toolbar's model -- regardless of the active
-	/// palette. Default false: a fresh install gets the bottom toolbar's
-	/// simpler, always-correct behavior for the top bar too. Existing
-	/// installs on a non-.default palette are migrated to true once at
-	/// launch -- see migrateNavigationBarTintingDefaultIfNeeded() below --
-	/// so this default doesn't silently strip an already-chosen palette's
-	/// most visible chrome on upgrade.
-	var useTintedNavigationBar: Bool {
+	/// Which of the three ToolbarStyle states the article reader's top nav
+	/// bar and bottom toolbar render in -- see ToolbarStyle and
+	/// SurfacePaletteNavigationBarAware. Default `.system`: a fresh install
+	/// gets the bottom toolbar's simpler, always-correct plain-system
+	/// behavior for both bars. Existing installs on a non-.default palette
+	/// with the old useTintedNavigationBar on are migrated to `.tinted` once
+	/// at launch -- see migrateToolbarStyleDefaultIfNeeded() below -- so this
+	/// default doesn't silently strip an already-chosen palette's most
+	/// visible chrome on upgrade.
+	var toolbarStyle: ToolbarStyle {
 		get {
-			return AppDefaults.bool(for: Key.useTintedNavigationBar)
+			guard let rawValue = AppDefaults.string(for: Key.toolbarStyle),
+				  let style = ToolbarStyle(rawValue: rawValue) else {
+				return .system
+			}
+			return style
 		}
 		set {
-			AppDefaults.setBool(for: Key.useTintedNavigationBar, newValue)
+			AppDefaults.setString(for: Key.toolbarStyle, newValue.rawValue)
 			NotificationCenter.default.post(name: .surfaceTintDidChange, object: nil)
 		}
 	}
@@ -1184,18 +1227,34 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	/// One-shot: preserves the tinted top bar for anyone who already had a
-	/// non-.default SurfacePalette active before useTintedNavigationBar
-	/// existed, so shipping a false default doesn't read as a regression.
-	/// Call once at launch, after registerDefaults(). Writes directly via
-	/// AppDefaults.store rather than the useTintedNavigationBar property
+	/// One-shot: ports an upgrader's prior tinted-bar choice onto the new
+	/// three-state toolbarStyle, so shipping toolbarStyle's .system default
+	/// doesn't read as a regression for anyone who'd already turned tinting
+	/// on. Two cases, checked in order:
+	///   1. The old useTintedNavigationBar Bool key is true (a real prior
+	///      install that had the switch on, whether the person set it
+	///      themselves or case 2 below already set it for them on an
+	///      earlier launch) -> toolbarStyle = .tinted.
+	///   2. useTintedNavigationBar is absent/false, but surfaceTint is
+	///      already non-.default -- the same "predates this setting
+	///      entirely" case the original migrateNavigationBarTintingDefaultIfNeeded()
+	///      handled, preserved here so an install upgrading directly from
+	///      before useTintedNavigationBar existed still lands on .tinted
+	///      instead of silently losing its palette's most visible chrome.
+	/// Otherwise toolbarStyle keeps its registered .system default, so no
+	/// write happens. Call once at launch, after registerDefaults(). Writes
+	/// directly via AppDefaults.store rather than the toolbarStyle property
 	/// setter, to avoid posting .surfaceTintDidChange to a view hierarchy
-	/// that doesn't exist yet this early in launch.
-	@MainActor func migrateNavigationBarTintingDefaultIfNeeded() {
-		guard !AppDefaults.bool(for: Key.hasMigratedNavigationBarTintingDefault) else { return }
-		AppDefaults.setBool(for: Key.hasMigratedNavigationBarTintingDefault, true)
-		guard surfaceTint != .default else { return }
-		AppDefaults.setBool(for: Key.useTintedNavigationBar, true)
+	/// that doesn't exist yet this early in launch. Gated by its own flag
+	/// (hasMigratedToolbarStyleDefault), separate from the now-unused
+	/// hasMigratedNavigationBarTintingDefault, since an install that already
+	/// ran that older migration still needs this one to actually populate
+	/// toolbarStyle.
+	@MainActor func migrateToolbarStyleDefaultIfNeeded() {
+		guard !AppDefaults.bool(for: Key.hasMigratedToolbarStyleDefault) else { return }
+		AppDefaults.setBool(for: Key.hasMigratedToolbarStyleDefault, true)
+		guard AppDefaults.bool(for: Key.useTintedNavigationBar) || surfaceTint != .default else { return }
+		AppDefaults.setString(for: Key.toolbarStyle, ToolbarStyle.tinted.rawValue)
 	}
 
 	/// One-time migration off the two independent showTableOfContentsAndFind/
@@ -1244,7 +1303,7 @@ final class AppDefaults: Sendable {
 									Key.pageCounterDisplayMode: PageCounterDisplayMode.percentage.rawValue,
 									Key.showLastUpdatedLabel: false,
 									Key.showArticleScrollbar: true,
-									Key.useTintedNavigationBar: false,
+									Key.toolbarStyle: ToolbarStyle.system.rawValue,
 									Key.statsVisible: true,
 										// "Promenade" (Themes/Promenade.nnwtheme), not Self.defaultThemeName --
 										// that constant is a sentinel meaning "use the app's built-in fallback
@@ -1257,7 +1316,7 @@ final class AppDefaults: Sendable {
 	}
 }
 
-private extension AppDefaults {
+extension AppDefaults {
 
 	static var firstRunDate: Date? {
 		get {

@@ -173,6 +173,9 @@
     "Berry" : {
       "comment" : "Berry accent color\nBerry surface palette"
     },
+    "Blend" : {
+      "comment" : "Blend toolbar style"
+    },
     "Blocked by a Cloudflare challenge -- try again later" : {
       "comment" : "AO3 load more error"
     },
@@ -309,7 +312,10 @@
       "comment" : "Deactivate"
     },
     "Default" : {
-      "comment" : "Default\nDefault accent color\nDefault badge color palette\nDefault surface palette"
+      "comment" : "Default\nDefault accent color\nDefault badge color palette\nDefault surface palette\nDefault toolbar style"
+    },
+    "Default: the top navigation bar and bottom toolbar use plain system appearance. Blend: both bars match the current article's background color. Tinted: both bars pick up the Surface Palette's tint color." : {
+      "comment" : "Toolbar style picker footer"
     },
     "Delete" : {
       "comment" : "Delete button"
@@ -1096,8 +1102,8 @@
     "Timeline Layout" : {
       "comment" : "Timeline Layout"
     },
-    "Tinted Navigation Bar" : {
-      "comment" : "Tinted navigation bar toggle row"
+    "Tinted" : {
+      "comment" : "Tinted toolbar style"
     },
     "Title" : {
       "comment" : "Sort field"
@@ -1179,9 +1185,6 @@
     },
     "We were unable to process the selected file.  Please ensure that it is a properly formatted OPML file." : {
       "comment" : "Import Failed Message"
-    },
-    "When on, the top navigation bar picks up the Surface Palette's tint color, matching the bottom toolbar. When off, the navigation bar stays plain system appearance regardless of the selected palette." : {
-      "comment" : "Tinted navigation bar toggle footer"
     },
     "When you love a work in Nectar, it also leaves a kudos on that work on AO3, using your signed-in AO3 account." : {
       "comment" : "AO3 kudos-on-like footer, signed in"

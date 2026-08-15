@@ -1181,9 +1181,7 @@ private extension WebViewController {
 	/// supplies isDark from whichever trait collection is actually valid at
 	/// its own call site.
 	private static func resolvedArticleColors(isDark: Bool) -> (background: UIColor, text: UIColor) {
-		let theme = ArticleThemesManager.shared.currentTheme
-		let overrides = AppDefaults.shared.articleThemeOverrides
-		return ArticleResolvedColors.resolved(theme: theme, isDark: isDark, overrideBackgroundColorHex: overrides.backgroundColorHex, overrideBackgroundColorDarkHex: overrides.backgroundColorDarkHex)
+		return ArticleResolvedColors.current(isDark: isDark)
 	}
 
 	func finalScrollPosition(scrollingUp: Bool) -> CGFloat {

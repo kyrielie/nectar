@@ -201,8 +201,9 @@ struct Assets {
 				: AppDefaults.shared.surfaceTint.lightHexSet?.vibrantText
 			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "vibrantTextColor")!
 		}
-		/// Backs the top nav bar's own tinted fill when
-		/// `AppDefaults.shared.useTintedNavigationBar` is on (see
+		/// Backs the top nav bar's (and, since toolbarStyle's introduction,
+		/// the bottom toolbar's) tinted fill when
+		/// `AppDefaults.shared.toolbarStyle == .tinted` (see
 		/// `SurfacePaletteNavigationBarAware`). Genuinely needs a real fallback --
 		/// there's no sensible "leave it unset" for a background fill once tinting
 		/// is on and the hex fails to parse -- so this follows the
