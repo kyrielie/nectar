@@ -57,6 +57,36 @@ dangling reference (see also the Wire Contract note in
 `sqlite-transfer.md`). Treat this as an open, untracked gap until that
 file is found or the gap is re-triaged.
 
+## AO3 prefetch queue budget
+
+Separate from, and not a fix for, the open gap above: `AO3PrefetchQueue`
+(backing `AO3PrefetchNewWorksPreference`, off by default — see
+`ao3-integration.md`'s "Fetch triggers, philosophy") is its own
+deliberately bounded and paced request source, not a general per-feed
+throttle. Every newly-discovered AO3-work article from an ordinary
+tag/user feed refresh, across every feed in that refresh pass, funnels
+through this one shared actor:
+
+- **Paced** at `AO3ChapterFetcher.secondsBetweenAO3PagedRequests` (5s)
+  between each `fetchIfNeeded` call it fires — the same constant
+  `AO3SeriesNavigator`'s own page-1-to-computed-page pacing uses, rather
+  than a second "don't hammer AO3" number.
+- **Capped** at `AO3PrefetchQueue.maxArticlesPerRefreshCycle` (20)
+  fetches per top-level refresh pass, reset via
+  `resetForNewRefreshCycle()` alongside `LocalAccountRefresher`'s own
+  `newArticlesCount` reset. Articles beyond the cap in one pass are
+  dropped from the queue, not carried into the next refresh's budget —
+  a first-time subscription to a very active feed falls back to
+  ordinary open-time fetching for whatever didn't fit, rather than this
+  preference turning into a slow full-backlog crawl across many
+  refreshes.
+
+This budget exists because prefetching is inherently a burstier request
+pattern than the rest of this app's AO3 traffic (one request per article
+someone actually opens) — it's sized to cover ordinary day-to-day feed
+activity, not to bound a large backlog import, and hasn't been tuned
+against real subscription sizes.
+
 ## Background refresh budget and interrupted-feed retry
 
 iOS background refresh runs on `BGTaskScheduler`
