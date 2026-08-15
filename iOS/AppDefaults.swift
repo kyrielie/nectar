@@ -519,16 +519,18 @@ enum PageCounterDisplayMode: String, CaseIterable, Sendable {
 /// the theme button -- see ArticleViewController.rightBarButtonItems()
 /// and ArticleToolbarCustomizerViewController. Each case is an
 /// independent on/off switch (AppDefaults.articleToolbarShowTheme/
-/// ShowTableOfContents/ShowFind/ShowPrevNext), freely combinable, rather
-/// than a single mutually-exclusive picker -- see
+/// ShowTableOfContents/ShowFind/ShowPrevNext/ShowLock), freely
+/// combinable, rather than a single mutually-exclusive picker -- see
 /// AppDefaults.migrateArticleToolbarTogglesIfNeeded() for the one-time
 /// migration off the older showTableOfContentsAndFind/
-/// showPrevNextArticleButtons pair.
+/// showPrevNextArticleButtons pair. lock has no legacy switch to migrate
+/// from (like theme), so it just keeps its registered default below.
 enum ArticleToolbarToggle: CaseIterable, Sendable {
 	case theme
 	case tableOfContents
 	case find
 	case prevNext
+	case lock
 }
 
 extension Notification.Name {
@@ -594,6 +596,7 @@ final class AppDefaults: Sendable {
 		static let articleToolbarShowTableOfContents = "articleToolbarShowTableOfContents"
 		static let articleToolbarShowFind = "articleToolbarShowFind"
 		static let articleToolbarShowPrevNext = "articleToolbarShowPrevNext"
+		static let articleToolbarShowLock = "articleToolbarShowLock"
 		static let hideNotchInFullScreen = "hideNotchInFullScreen"
 		static let pageCounterDisplayMode = "pageCounterDisplayMode"
 		static let disableArticleLinks = "disableArticleLinks"
@@ -869,17 +872,34 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	/// Single dispatch point over the four articleToolbarShowX properties,
-	/// keyed by ArticleToolbarToggle case -- used anywhere the four toggles
+	/// Whether the temporary gesture-lock button appears in the article
+	/// reader's top toolbar. Off by default -- this is an opt-in extra,
+	/// not something everyone needs cluttering the bar. See
+	/// ArticleViewController.lockBarButtonItem/toggleGesturesLocked(_:)
+	/// and SceneCoordinator.isArticleGesturesLocked for the lock itself,
+	/// which is a transient, in-memory, per-session state -- unlike this
+	/// property, it is deliberately not backed by AppDefaults/UserDefaults.
+	var articleToolbarShowLock: Bool {
+		get {
+			return AppDefaults.bool(for: Key.articleToolbarShowLock)
+		}
+		set {
+			AppDefaults.setBool(for: Key.articleToolbarShowLock, newValue)
+		}
+	}
+
+	/// Single dispatch point over the five articleToolbarShowX properties,
+	/// keyed by ArticleToolbarToggle case -- used anywhere the five toggles
 	/// need to be read or written generically (ArticleToolbarCustomizerViewController's
 	/// row loop, SettingsViewController's summary label) instead of via a
-	/// four-way switch at each call site.
+	/// five-way switch at each call site.
 	func isArticleToolbarToggleEnabled(_ toggle: ArticleToolbarToggle) -> Bool {
 		switch toggle {
 		case .theme: return articleToolbarShowTheme
 		case .tableOfContents: return articleToolbarShowTableOfContents
 		case .find: return articleToolbarShowFind
 		case .prevNext: return articleToolbarShowPrevNext
+		case .lock: return articleToolbarShowLock
 		}
 	}
 
@@ -889,6 +909,7 @@ final class AppDefaults: Sendable {
 		case .tableOfContents: articleToolbarShowTableOfContents = enabled
 		case .find: articleToolbarShowFind = enabled
 		case .prevNext: articleToolbarShowPrevNext = enabled
+		case .lock: articleToolbarShowLock = enabled
 		}
 	}
 
@@ -1299,6 +1320,7 @@ final class AppDefaults: Sendable {
 									Key.articleToolbarShowTableOfContents: true,
 									Key.articleToolbarShowFind: true,
 									Key.articleToolbarShowPrevNext: false,
+									Key.articleToolbarShowLock: false,
 									Key.hideNotchInFullScreen: true,
 									Key.pageCounterDisplayMode: PageCounterDisplayMode.percentage.rawValue,
 									Key.showLastUpdatedLabel: false,

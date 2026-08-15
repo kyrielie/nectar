@@ -48,6 +48,13 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	private lazy var themeBarButtonItem = UIBarButtonItem(image: Assets.Images.theme, style: .plain, target: self, action: #selector(showThemePicker(_:)))
 	private lazy var findInArticleBarButtonItem = UIBarButtonItem(image: Assets.Images.findInArticle, style: .plain, target: self, action: #selector(beginFind(_:)))
 	private lazy var tableOfContentsBarButtonItem = UIBarButtonItem(image: Assets.Images.tableOfContents, style: .plain, target: self, action: #selector(showTableOfContents(_:)))
+	// Optional gesture-lock toggle (AppDefaults.articleToolbarShowLock). SF
+	// Symbol rather than an Assets.Images entry, unlike the other three bar
+	// buttons above -- see toggleGesturesLocked(_:), which flips the image
+	// between "lock"/"lock.open" in place, the same way toggleLoved(_:)
+	// flips heartBarButtonItem's image, rather than rebuilding
+	// rightBarButtonItems() on every tap.
+	private lazy var lockBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "lock.open"), style: .plain, target: self, action: #selector(toggleGesturesLocked(_:)))
 
 	@IBOutlet private var searchBar: ArticleSearchBar!
 	@IBOutlet private var searchBarBottomConstraint: NSLayoutConstraint!
@@ -222,7 +229,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		let controller = createWebViewController(article, updateView: true)
 
 		self.pageViewController.setViewControllers([controller], direction: .forward, animated: false, completion: nil)
-		pageViewController.scrollViewInsidePageControl?.isScrollEnabled = AppDefaults.shared.articlePagingSwipeEnabled
+		pageViewController.scrollViewInsidePageControl?.isScrollEnabled = AppDefaults.shared.articlePagingSwipeEnabled && !coordinator.isArticleGesturesLocked
 		if AppDefaults.shared.logicalArticleFullscreenEnabled {
 			controller.hideBars()
 		}
@@ -252,7 +259,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		// WebViewController.showBars()/hideBars(), so it never took effect unless
 		// fullscreen reading mode was in use.
 		coordinator.hideHomeIndicator()
-		pageViewController.scrollViewInsidePageControl?.isScrollEnabled = AppDefaults.shared.articlePagingSwipeEnabled
+		pageViewController.scrollViewInsidePageControl?.isScrollEnabled = AppDefaults.shared.articlePagingSwipeEnabled && !coordinator.isArticleGesturesLocked
 		super.viewWillAppear(animated)
 	}
 
@@ -404,6 +411,9 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		}
 		if defaults.isArticleToolbarToggleEnabled(.prevNext) {
 			items.append(contentsOf: [nextArticleBarButtonItem, prevArticleBarButtonItem])
+		}
+		if defaults.isArticleToolbarToggleEnabled(.lock) {
+			items.append(lockBarButtonItem)
 		}
 		return items
 	}
@@ -583,6 +593,26 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 				: NSLocalizedString("Loved", comment: "Loved")
 		}
 		coordinator.toggleLovedForCurrentArticle()
+	}
+
+	/// Flips the transient, session-only SceneCoordinator.isArticleGesturesLocked
+	/// flag and immediately re-applies both gates it feeds: back-swipe (via
+	/// applyArticleBackSwipeGating(), same call viewDidAppear/
+	/// userDefaultsDidChange(_:) already make) and paging (isScrollEnabled,
+	/// set directly here since nothing else re-derives it outside
+	/// viewDidLoad/viewWillAppear). Locked always wins over whichever swipe
+	/// settings the person has chosen; unlocking simply falls back to
+	/// AppDefaults.shared.articlePagingSwipeEnabled/articleBackSwipeEnabled,
+	/// unchanged.
+	@objc func toggleGesturesLocked(_ sender: Any) {
+		let newFlag = !coordinator.isArticleGesturesLocked
+		coordinator.isArticleGesturesLocked = newFlag
+		lockBarButtonItem.image = UIImage(systemName: newFlag ? "lock" : "lock.open")
+		lockBarButtonItem.accLabelText = newFlag
+			? NSLocalizedString("Selected - Lock Gestures", comment: "Selected - Lock Gestures")
+			: NSLocalizedString("Lock Gestures", comment: "Lock Gestures")
+		coordinator.applyArticleBackSwipeGating()
+		pageViewController.scrollViewInsidePageControl?.isScrollEnabled = AppDefaults.shared.articlePagingSwipeEnabled && !newFlag
 	}
 
 	@objc func showThemePicker(_ sender: Any) {
