@@ -9,7 +9,7 @@ Reads:
 
 Version fields come from environment variables, set by the workflow:
   VERSION, BUILD_VERSION, RELEASE_DATE, RELEASE_NOTES,
-  DOWNLOAD_URL, SIZE_BYTES, MIN_OS_VERSION
+  DOWNLOAD_URL, SIZE_BYTES, MIN_OS_VERSION, MARKETING_VERSION_DISPLAY
 """
 import json
 import os
@@ -49,6 +49,11 @@ def main():
     download_url = os.environ["DOWNLOAD_URL"]
     size_bytes = int(os.environ["SIZE_BYTES"])
     min_os_version = os.environ.get("MIN_OS_VERSION", "")
+    # Display-only version string (e.g. the git tag, "0.4.2"), decoupled
+    # from the upstream-pinned MARKETING_VERSION/CURRENT_PROJECT_VERSION
+    # pair so releases are distinguishable in the AltStore/SideStore UI
+    # without touching the shared NetNewsWire xcconfig.
+    marketing_version_display = os.environ.get("MARKETING_VERSION_DISPLAY", "")
 
     new_entry = {
         "version": version,
@@ -60,19 +65,32 @@ def main():
     }
     if min_os_version:
         new_entry["minOSVersion"] = min_os_version
+    if marketing_version_display:
+        new_entry["marketingVersion"] = marketing_version_display
 
     # Start from the existing published source (to keep version history),
     # falling back to the template on first publish.
     merged = existing if existing is not None else json.loads(json.dumps(template))
 
-    # Refresh all hand-edited, non-version fields from the template every run,
-    # so editing source.template.json on main always takes effect.
-    for key in ("name", "subtitle", "description", "iconURL", "headerURL",
-                "website", "tintColor", "featuredApps"):
-        if key in template:
-            merged[key] = template[key]
+    # Refresh every hand-edited, top-level source field from the template
+    # on every run, so editing source.template.json on main always takes
+    # effect -- including "news" and any field added later (fediUsername,
+    # nsfw, headerURL, etc). Only "apps" is excluded: its version history
+    # is merged separately below, not overwritten wholesale.
+    #
+    # NOTE: this previously used a hardcoded field tuple with plain
+    # `if key in template: merged[key] = ...`, plus a *separate*
+    # `merged.setdefault("news", ...)` line. setdefault only writes when
+    # the key is absent from `merged` -- but `merged` starts as the
+    # *existing* published source.json, which already has a "news" key
+    # (even if "[]") after the very first publish. So template edits to
+    # "news" (and any field outside the tuple) silently stopped applying
+    # after day one. Mirroring the whole template here removes that trap.
+    for key, value in template.items():
+        if key == "apps":
+            continue
+        merged[key] = value
     merged.setdefault("apps", [])
-    merged.setdefault("news", template.get("news", []))
 
     template_app = template["apps"][0]
     bundle_id = template_app["bundleIdentifier"]

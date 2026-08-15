@@ -25,12 +25,14 @@ task**, not this whole index cover-to-cover.
 - **Refresh not firing, firing too often, or background refresh** → `refresh-throttling.md`
 - **Article background/notch color, or webview appearance live-update** → `article-color-pipeline.md`
 - **Accent Color / Surface Palette / nav bar tinting (app chrome)** → `app-chrome-palette.md`
+- **Badge Colors (timeline rating/category/warning pill tinting)** → `app-chrome-palette.md`
 - **Article theme (`.nnwtheme`) system itself** → `theme-system.md`
 - **`.nnwtheme` bundle format / authoring / theme families** → `nnwtheme-format.md`
 - **Database schema / SQLite storage layer** → `database.md`
 - **Settings screen, any toggle, or "does setting X exist"** → `settings-screen.md` (main screen) **and** `ao3-authenticated-reading.md` (the separate AO3 account screen — easy to miss)
 - **Favicon / page metadata extraction** → `metadata-extraction.md`
 - **"What differs from upstream NetNewsWire"** → `upstream-drift.md`
+- **A recurring Auto Layout / UIKit console warning** (before re-investigating one from scratch) → `console-warnings.md`
 - **An open question that used to have temporary debug logging attached to it** → `investigate-later.md`
 
 If nothing above fits, grep the codebase before assuming it's
@@ -85,7 +87,7 @@ it's trusted by default. Specifically:
 | `AO3ChapterFetcher`, `AO3ChapterHTMLExtractor`, `AO3PrefaceRenderer`, `Downloader`'s per-host 429 handling | `ao3-preface-rendering.md` |
 | `AO3SessionStore`, `AO3AuthenticatedFetcher`, `AO3AuthenticatedWebViewController`, `AO3ChallengeSessionStore`, `AO3KudosManager`, `AO3AccountSettingsView`, or any `NectarAppGroupUserDefaults`-backed AO3 preference | `ao3-authenticated-reading.md` |
 | `ArticleThemeColorExtractor`, `ArticleResolvedColors`, `WebViewController.applyResolvedBackgroundColors`/`registerForTraitChanges` | `article-color-pipeline.md` |
-| `SurfacePalette`, `AccentColor`, `SurfacePaletteNavigationBarAware`, `ToolbarStyle`/`toolbarStyle` | `app-chrome-palette.md` |
+| `SurfacePalette`, `AccentColor`, `SurfacePaletteNavigationBarAware`, `ToolbarStyle`/`toolbarStyle`, `BadgeColorPalette`, `BadgeColorTable` | `app-chrome-palette.md` |
 | `.nnwtheme` bundles, `ArticleTheme`, `ArticleThemesManager`, `core.css`/`stylesheet.css` structure | `theme-system.md` |
 | `.nnwtheme` bundle-file layout, per-theme fonts, theme families, `template.html` conventions | `nnwtheme-format.md` |
 | `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |

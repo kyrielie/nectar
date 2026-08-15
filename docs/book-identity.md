@@ -17,8 +17,14 @@ Calibre-derived series name, else the item's own AO3 work id, else the bare
 `uniqueID` as a last resort.
 
 `BookStateTable` (`ArticlesDatabase`) stores one row per `bookKey` — `read`,
-`starred`, `loved`, `scrollPosition`, `readingProgress`, `updatedAt` — and is
-now the *primary* store for read/starred/loved and scroll position:
+`starred`, `loved`, `scrollPosition`, `readingProgress`, `lastOpenedAt`,
+`updatedAt`, `kudosAttemptedAt`, `kudosAttemptedAuthenticated` — and is
+now the *primary* store for read/starred/loved and scroll position.
+`lastOpenedAt` is written by `Account.recordBookOpened(articleID:)`, read
+by the Last Opened smart feed — see `refresh-throttling.md`.
+`kudosAttemptedAt`/`kudosAttemptedAuthenticated` back `AO3KudosManager`'s
+per-`bookKey` kudos dedup/retry-once-signed-in logic — see
+`ao3-authenticated-reading.md`.
 
 - Marking read/starred/loved on any `articleID` looks up its `bookKey`
   (falling back to `uniqueID` for pre-migration rows with no `bookKey`

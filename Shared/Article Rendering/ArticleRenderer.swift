@@ -513,8 +513,8 @@ extension ArticleRenderer {
 		if let series = article.series, !series.isEmpty {
 			// isSeriesNavigation: true, same as AO3ChapterHTMLExtractor's
 			// real-fetch path -- ao3ID comes through even here (Ambrosia's
-			// `_ambrosia.series` entries do carry `ao3_id`, confirmed in
-			// the plan's 3b revision note), so a synthetic-preface First
+			// `_ambrosia.series` entries do carry `ao3_id`, see
+			// docs/ambrosia-feed.md), so a synthetic-preface First
 			// link can still be live. previousWorkURL/nextWorkURL are
 			// always nil on an Ambrosia-sourced entry (no such key in
 			// that wire format), so Previous/Next fall out of

@@ -2,7 +2,7 @@
 //  SurfacePaletteAware.swift
 //  NetNewsWire-iOS
 //
-//  surface-palette-followup-plan, Issue B. SwiftUI counterpart to
+//  See docs/app-chrome-palette.md ("Badge Colors"). SwiftUI counterpart to
 //  SettingsPaletteBackgroundHosting: that protocol assigns .backgroundColor
 //  on a UIView outlet, which is structurally inapplicable to a SwiftUI
 //  View. This gives the six UIHostingController-wrapped settings screens

@@ -126,7 +126,11 @@ given it"); `MainFeedCollectionViewController`, which repaints
 same reasoning; `ColorPaletteTableViewController`, `AccentColorTableViewController`,
 and `SettingsBackgroundPalette`/`SurfacePaletteAware` (SwiftUI-facing), which
 repaint the Settings screens' own `settingsBackground`/
-`settingsCellBackground` fills; `SettingsViewController`; `ArticleViewController`,
+`settingsCellBackground` fills; `SettingsViewController`;
+`TimelineCustomizerCollectionViewController`, `ManageStorageCollectionViewController`,
+and `ArticleToolbarCustomizerViewController` (each repainting its own
+`paletteBackgroundView`/collection background, same reasoning as the other
+Settings screens above); `ArticleViewController`,
 which repaints both its nav bar and bottom toolbar the same way the two
 screens above do (`toolbarStyle`'s setter reuses this exact notification,
 not a dedicated one — see below). `Vibrant*` views
@@ -366,3 +370,95 @@ reads `webView.traitCollection`) rather than the ambient current one — any
 *new* `Assets.Colors` property should follow that pattern, taking an
 explicit trait collection parameter, rather than copying the existing
 three properties' pattern.
+
+## Badge Colors (`BadgeColorPalette`) and per-`AccentColor` icon tinting
+
+A third, separate palette concept alongside Accent Color and Surface
+Palette: whether/how the rating/category/warning pills in `.badges` mode
+timeline rows render with their own tint. Fandom pills stay neutral in
+every palette (see `BadgeCategory`'s doc comment in
+`MainTimelineCellData.swift`).
+
+- **`BadgeColorPalette`** (`iOS/AppDefaults.swift`) — renamed from
+  `BadgeColorMode`, growing from a plain on/off into a real five-case
+  palette the same incremental way `AccentColor`/`SurfacePalette` did:
+  `.monochrome` (renamed from `.neutral`, same behavior — no-hue
+  `tertiarySystemFill`/`secondaryLabel`, not "no color"), `.default`,
+  `.semantic`, `.transparent` (new), `.accent` (new). Two tiers:
+  fixed-palette cases bake their hue/no-hue choice into the case itself;
+  `.accent` instead follows whatever `AccentColor` is currently active.
+  `.monochrome` kept raw value `1` deliberately, so no `UserDefaults`
+  migration was needed for a person with a previously-saved
+  `badgeColorMode == 1` — see
+  `Tests/NetNewsWire-iOSTests/BadgeColorPaletteMigrationTests.swift` for
+  the regression guard on that raw value specifically.
+- **`BadgeColorTable`** (`iOS/MainTimeline/Cell/BadgeColorTable.swift`) —
+  literal-string lookup tables (rating/category/warning → hex) per
+  `BadgeColorPalette` case, one set per case rather than a single
+  hardcoded set. Built from hex via `UIColor(cssHex:)`
+  (`ArticleThemeColorExtractor.swift`) rather than `Assets.xcassets`
+  colorset entries, since these are per-value lookup tables (five
+  ratings, six categories, six warnings, per palette) that don't map
+  cleanly onto one colorset per swatch — migrating to real colorset
+  entries later is a mechanical follow-up, not a behavior change.
+- **Where the picker lives:** Badge Colors selection moved off
+  `TimelineCustomizerCollectionViewController` (which used to have its
+  own toggle section) onto `AccentColorTableViewController`, which now
+  hosts three sections — Accent Colors, Badge Colors, Preview — instead
+  of a flat single-section list. Accent Color selection no longer pops
+  the screen on tap once it also hosted Badge Colors and Preview
+  (popping would kick the person back to the main Settings menu before
+  they could reach those); both sections now reload in place instead,
+  matching `ColorPaletteTableViewController`'s guard-and-reload shape.
+  `BadgeColorPalette`'s raw values are 1-based (`.monochrome == 1`) while
+  `indexPath.row` is 0-based — `BadgeColorPalette(rawValue: indexPath.row)`
+  is an off-by-one to watch for at any future selection-handling call
+  site.
+- **`AccentColor.IconHexSet`** — icon tinting independently assignable
+  per `AccentColor` case, delivered by adding more complete `AccentColor`
+  cases (`.ocean`, `.sunset`, ...) rather than building a per-icon
+  override UI; see
+  `Tests/NetNewsWire-iOSTests/AccentColorIconHexSetTests.swift` for the
+  `.default`-must-be-unchanged and every-case-has-a-complete-hex-set
+  guards.
+- **`BadgeColorPalettePreviewCell`** — live preview of the selected
+  `BadgeColorPalette`, shown on `AccentColorTableViewController` below
+  the badge-palette picker rows, reusing
+  `TimelineCustomizerCollectionViewController.previewArticle`. Uses a
+  single-cell `UICollectionView` (same `UICollectionLayoutListConfiguration`
+  Timeline Layout's own preview uses) rather than a bare
+  `MainTimelineCell(frame:)` inside a `UITableViewCell`, since a bare
+  instantiation might not reliably drive `updateConfiguration(using:)`
+  outside a live `UICollectionView`'s configuration-state cycle — see
+  `docs/console-warnings.md` for the transient-height console warning
+  this cell's layout is expected to produce.
+- **Settings background wiring** (`SettingsBackgroundPalette.swift`,
+  `SurfacePaletteAware.swift`): every pushed Settings screen paints its
+  table/collection background from `Assets.Colors.settingsBackground(for:)`
+  via shared `SettingsPaletteBackgroundHosting` (UIKit) /
+  `SurfacePaletteAware` (SwiftUI) wiring, factored out once rather than
+  repeated per controller. The SwiftUI variant exists because
+  `SettingsPaletteBackgroundHosting` assigns `.backgroundColor` on a
+  `UIView` outlet, which doesn't apply to a SwiftUI `View` — it covers
+  the six `UIHostingController`-wrapped settings screens (`AboutView`,
+  `AO3AccountSettingsView`, `ErrorLogView`, `AccountStatsView`,
+  `ActivityLogView`, `ArticleThemeListView`), giving them the same live
+  palette/accent tracking every UIKit settings screen has.
+  `ArticleThemeListView` is the one exception with its own internal
+  color-picking UI (a `ColorPicker` bound to article-theme colors,
+  unrelated to `Assets.Colors`) — confirmed not to bleed the wrapper's
+  `.tint(observer.accentColor)` into that picker.
+- **Reentrancy guards:** `AppDefaults.shared.surfaceTint`/`.accentColor`
+  post their `.surfaceTintDidChange`/`.accentColorDidChange` notifications
+  synchronously from their own setters, so a screen's own notification
+  handler can run *during* the `didSelectRowAt` call that triggered it,
+  before that call reaches its own `reloadSections`.
+  `ColorPaletteTableViewController` and `AccentColorTableViewController`
+  both guard against acting twice on the same change because of this.
+  Related: `AccentColorTableViewController`'s row-tap highlight sets an
+  explicit `selectedBackgroundView` sourced from the tapped row's own
+  color before changing `accentColor`, rather than relying on the
+  ambient `window.tintColor` — `SceneDelegate.handleAccentColorDidChange`
+  reassigns that ambient tint synchronously on the same notification, so
+  relying on it produced a truncated flash of the stale color mid-tap-animation.
+

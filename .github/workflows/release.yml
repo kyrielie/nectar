@@ -165,9 +165,16 @@ jobs:
           published_at=$(echo "$release_json" | jq -r '.published_at')
           body=$(echo "$release_json" | jq -r '.body // ""')
 
+          # Display-only version shown in AltStore/SideStore, independent of
+          # the upstream-pinned MARKETING_VERSION in xcconfig (which stays
+          # fixed across Nectar releases). Strips a leading "v" from tags
+          # like "v0.4.2" -- adjust here if the tagging convention changes.
+          marketing_version_display="${tag_name#v}"
+
           echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
           echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
           echo "published_at=$published_at" >> "$GITHUB_OUTPUT"
+          echo "marketing_version_display=$marketing_version_display" >> "$GITHUB_OUTPUT"
           {
             echo "body<<RELEASE_BODY_EOF"
             echo "$body"
@@ -282,6 +289,7 @@ jobs:
           DOWNLOAD_URL: ${{ steps.asset.outputs.download_url }}
           SIZE_BYTES: ${{ steps.asset.outputs.size }}
           MIN_OS_VERSION: ${{ steps.settings.outputs.min_os_version }}
+          MARKETING_VERSION_DISPLAY: ${{ steps.release.outputs.marketing_version_display }}
         run: |
           set -euo pipefail
 
@@ -299,6 +307,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ ! -f main/appstore/icon.png ]; then
+            echo "::error::main/appstore/icon.png is missing -- add and commit it before publishing a source." >&2
+            exit 1
+          fi
           cp main/appstore/icon.png pages/icon.png
           rm -rf pages/screenshots
           if [ -d main/appstore/screenshots ] && [ "$(ls -A main/appstore/screenshots 2>/dev/null)" ]; then

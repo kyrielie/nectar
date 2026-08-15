@@ -46,7 +46,8 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 		configureSettingsPaletteBackground()
 	}
 
-	// surface-palette-followup-plan: guards against the same reentrancy
+	// See docs/app-chrome-palette.md ("Badge Colors", reentrancy guards):
+	// guards against the same reentrancy
 	// AccentColorTableViewController's accentColorDidChange doc comment
 	// describes. AppDefaults.shared.surfaceTint's setter posts
 	// .surfaceTintDidChange synchronously, so when didSelectRowAt below

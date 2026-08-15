@@ -5,7 +5,7 @@
 //  Created by Stuart Breckenridge on 27/01/2026.
 //  Copyright © 2026 Ranchero Software. All rights reserved.
 //
-//  surface-palette-and-badge-colors-plan, section 3.4: the Badge Colors
+//  See docs/app-chrome-palette.md ("Badge Colors"): the Badge Colors
 //  toggle section is removed from this screen -- badge palette selection
 //  now lives on AccentColorTableViewController instead, with its own live
 //  preview. Every push of this screen is a fresh instance
@@ -24,8 +24,8 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController, Se
 
 	var paletteBackgroundView: UIView { collectionView }
 	/// Static rather than merely internal: this fixture article carries no
-	/// instance state, and BadgeColorPalettePreviewCell (surface-palette-
-	/// and-badge-colors-plan, section 3.3) needs to reach it without
+	/// instance state, and BadgeColorPalettePreviewCell (see
+	/// docs/app-chrome-palette.md, "Badge Colors") needs to reach it without
 	/// instantiating this whole view controller just to read one property.
 	static var previewArticle: Article {
 		var components = DateComponents()
@@ -147,8 +147,8 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController, Se
 
 	/// Fixed section layout: Number of Lines (0), Tag Display (1),
 	/// Stats Visibility (2), Preview (3). Badge Colors moved to
-	/// AccentColorTableViewController (section 3.2 of the
-	/// surface-palette-and-badge-colors-plan).
+	/// AccentColorTableViewController (see docs/app-chrome-palette.md,
+	/// "Badge Colors").
 	private var statsVisibilitySection: Int { 2 }
 	private var previewSection: Int { 3 }
 

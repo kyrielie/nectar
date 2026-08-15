@@ -2,7 +2,7 @@
 //  BadgeColorTableTests.swift
 //  NetNewsWire-iOSTests
 //
-//  icon-and-badge-palette-plan follow-up: coverage for BadgeColorTable's
+//  See docs/app-chrome-palette.md ("Badge Colors"): coverage for BadgeColorTable's
 //  restructuring from three BadgeColorPalette cases (neutral/default/
 //  semantic) to five (monochrome/default/semantic/transparent/accent).
 //  Specifically guards: (1) .monochrome's rename from .neutral is a

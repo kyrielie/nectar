@@ -85,7 +85,7 @@ import Articles
 		#expect(footer.contains("Part 4 of Some Series"))
 		#expect(footer.contains("href='nectar-series:previous?ao3id=1001&amp;workurl=https://archiveofourown.org/works/111'"))
 		// No next link captured -- Ambrosia's wire format never carries
-		// one (plan's 3b revision note) -- renders as the grayed, plain
+		// one (see docs/ambrosia-feed.md) -- renders as the grayed, plain
 		// label instead of a nectar-series:next href.
 		#expect(footer.contains("<span class='ao3SeriesNavDisabled'>Next</span>"))
 	}
@@ -108,7 +108,7 @@ import Articles
 		let preface = try #require(ArticleRenderer.ao3SyntheticPrefaceHTML(for: article))
 
 		// First is tappable purely off ao3ID -- Ambrosia's _ambrosia.series
-		// entries do carry ao3_id (plan's 3b revision note) even though
+		// entries do carry ao3_id (see docs/ambrosia-feed.md) even though
 		// this is the pre-fetch, no-real-page-yet path.
 		#expect(preface.contains("href='nectar-series:first?ao3id=2002'"))
 		#expect(preface.contains("href='nectar-series:next?ao3id=2002&amp;workurl=https://archiveofourown.org/works/222'"))

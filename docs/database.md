@@ -76,7 +76,7 @@ CREATE TABLE if not EXISTS articles (
   datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT,
   wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL,
   fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT,
-  categories TEXT, series TEXT
+  categories TEXT, additionalTags TEXT, series TEXT
   -- plus columns added by later ALTER TABLE migrations, see below
 );
 

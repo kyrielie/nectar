@@ -2,7 +2,7 @@
 //  BadgeColorPalettePreviewCell.swift
 //  NetNewsWire-iOS
 //
-//  surface-palette-and-badge-colors-plan, section 3.3. A live-rendered
+//  See docs/app-chrome-palette.md ("Badge Colors"). A live-rendered
 //  preview of the currently-selected BadgeColorPalette, shown on
 //  AccentColorTableViewController below the badge-palette picker rows.
 //  Reuses TimelineCustomizerCollectionViewController.previewArticle
@@ -15,8 +15,7 @@
 //  updateConfiguration(using:)-based background/corner styling, since that
 //  styling is normally refreshed by a live UICollectionView's
 //  configuration-state cycle. Rather than ship the unverified bare
-//  approach, this cell uses the plan's own documented fallback up front:
-//  a single-cell UICollectionView, with the same
+//  approach, this cell uses a single-cell UICollectionView up front, with the same
 //  UICollectionLayoutListConfiguration Timeline Layout's own preview uses,
 //  embedded in contentView -- MainTimelineCell is dequeued the normal way,
 //  not instantiated directly, so its configuration-state-driven styling

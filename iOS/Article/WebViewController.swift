@@ -664,12 +664,11 @@ extension WebViewController: WKNavigationDelegate {
 		if navigationAction.navigationType == .linkActivated {
 			let url = navigationAction.request.url
 
-			// nectar-series: links (inline series navigation, plan Phase
-			// 3a) are app-internal navigation, not the external-link case
+			// nectar-series: links (inline series navigation) are
+			// app-internal navigation, not the external-link case
 			// AppDefaults.shared.disableArticleLinks exists to guard --
 			// checked before that early-return so the toggle can't
-			// silently break this feature (confirmed hazard, plan's
-			// Revision notes).
+			// silently break this feature.
 			if url?.scheme == Self.nectarSeriesScheme {
 				decisionHandler(.cancel)
 				if let url {
@@ -751,8 +750,7 @@ extension WebViewController: WKUIDelegate {
 	func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
 		// nectar-series: links are never rendered with target="_blank", so
 		// this path shouldn't be reachable for them -- but block rather
-		// than assume, same "confirm, don't assume" caution the plan
-		// calls for on this mirror check (Phase 3a). No navigation
+		// than assume. No navigation
 		// side-effect here either way: decidePolicyFor navigationAction
 		// above is the one and only place a tap is actually handled.
 		if navigationAction.request.url?.scheme == Self.nectarSeriesScheme {
@@ -1469,8 +1467,8 @@ private extension WebViewController {
 	/// looks. Deliberately no bulk "check all" equivalent.
 	///
 	/// For an Ambrosia-sourced article with `AmbrosiaAO3NetworkPreference.updatesEnabled`
-	/// off, this still returns an action (per the plan: disabled with
-	/// an explanatory label, not removed) rather than nil, so the menu row
+	/// off, this still returns an action -- disabled with
+	/// an explanatory label, not removed -- rather than nil, so the menu row
 	/// stays present and tells the person why it's inert instead of
 	/// silently vanishing.
 	func checkForUpdatesAction() -> UIAction? {
@@ -1501,7 +1499,7 @@ private extension WebViewController {
 	/// `firstWorkInSeriesAction` context-menu trio and the interim
 	/// single-work `handleNectarSeriesLink` shim that called
 	/// `AO3SeriesNavigator.fetchAdjacentWork`/`fetchFirstWorkInSeries` --
-	/// both deleted. This is the plan's Phase 4c/4d/4e flow: bounded
+	/// both deleted. This is the current series-navigation flow: bounded
 	/// two-page series-listing walk via `AO3SeriesNavigator.openSeriesWork`,
 	/// direct selection via `SceneCoordinator.selectArticleDirectly` (stays
 	/// in the reader the whole time, no detour through the timeline), and a
@@ -1669,8 +1667,8 @@ private extension WebViewController {
 	/// which path (link tap, share sheet, showActivityDialog) they came
 	/// through.
 	///
-	/// No AO3SessionStore.isSignedIn check here -- unlike the plan's
-	/// original sketch. AO3AuthenticatedWebViewController's own
+	/// No AO3SessionStore.isSignedIn check here.
+	/// AO3AuthenticatedWebViewController's own
 	/// persistent WKWebsiteDataStore remembers a sign-in performed
 	/// directly inside it (WebKit's normal cookie persistence, nothing
 	/// this code needs to manage), so there's no "signed out" case that

@@ -42,9 +42,15 @@ mechanism referenced throughout the reading-progress section below.
    `account.fetchScrollPosition(forArticleID:)`, resolved through the same
    `bookKey`-first/`StatusesTable`-fallback lookup.
    `isAwaitingInitialScrollFetch` suppresses `viewDidLoad`'s unconditional
-   render-at-0 while this fetch is in flight, and `pendingLoadResets`
-   (a count, not a single boolean) suppresses the corresponding N
-   post-load scroll-reset events for overlapping loads.
+   render-at-0 while this fetch is in flight. Separately,
+   `isRestoringScrollPosition` (a single `Bool`, not a count) suppresses
+   `scrollPositionDidChange` samples during the restore script's own
+   multi-point settle (`DOMContentLoaded`/`load`/`fonts.ready`/
+   `ResizeObserver`-driven reflows), so a reset/attempt sampled before the
+   document reaches final height doesn't get treated as a real scroll and
+   overwrite the just-restored position. It's cleared either by the
+   `scrollRestoreComplete` JS confirmation message or, if that message
+   never arrives, a 5s failsafe timer (`scrollRestoreFailsafeWorkItem`).
 4. `SceneCoordinator.restoreWindowState` / Handoff resume instead read the
    single global `AppDefaults.shared.articleWindowScrollY`. `windowScrollY`'s
    `didSet` still writes that global on every scroll update, alongside the
@@ -54,6 +60,6 @@ mechanism referenced throughout the reading-progress section below.
    relaunch/Handoff specifically (every open article's scroll updates
    overwrite the one global slot), distinct from the same-session
    reopen race that has since been fixed via `isAwaitingInitialScrollFetch`
-   and `pendingLoadResets` (step 3 above).
+   and `isRestoringScrollPosition` (step 3 above).
 5. `readingProgress` is `bookKey`-shared the same way scroll
    position/read/starred/loved are — see `book-identity.md`.

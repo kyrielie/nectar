@@ -11,8 +11,8 @@ import UIKit
 /// so overrides and chrome (webview background, notch fill) can default to what the
 /// theme actually looks like instead of a generic system color.
 ///
-/// This is a small regex-based scanner, not a full CSS parser -- see the plan doc this
-/// was built against. It understands the patterns actually used across the shipped
+/// This is a small regex-based scanner, not a full CSS parser -- see docs/theme-system.md
+/// and docs/article-color-pipeline.md for the pipeline this sits in. It understands the patterns actually used across the shipped
 /// themes (Default, Appanoose, Biblioteca, Hyperlegible, NewsFax, Promenade, Sepia,
 /// Tiqoe Dark, Verdana Revival):
 ///   - literal `#hex`/`rgb()`/`rgba()` colors

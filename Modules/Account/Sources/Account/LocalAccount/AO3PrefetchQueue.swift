@@ -42,9 +42,10 @@ actor AO3PrefetchQueue {
 	/// to a very active feed falls back to today's open-time-only
 	/// behavior for whatever didn't fit this pass, rather than this
 	/// preference quietly turning into a slow full-backlog crawl across
-	/// many refreshes. See the plan doc's "Open items" for the
-	/// alternative (carry the remainder forward) if that trade turns out
-	/// to be wrong.
+	/// many refreshes. Carrying the remainder forward to the next cycle
+	/// instead is the natural alternative if this trade turns out to be
+	/// wrong in practice -- see docs/refresh-throttling.md for where this
+	/// cap sits in the broader throttling picture.
 	private static let maxArticlesPerRefreshCycle = 20
 
 	private var pending: [Article] = []
