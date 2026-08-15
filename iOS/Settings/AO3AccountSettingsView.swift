@@ -23,6 +23,7 @@ struct AO3AccountSettingsView: View {
 	@State private var refetchInterval = AO3PrefaceRefetchPreference.current
 	@State private var isKudosOnLikeEnabled = AO3KudosOnLikePreference.isEnabled
 	@State private var isAmbrosiaUpdatesEnabled = AmbrosiaAO3NetworkPreference.updatesEnabled
+	@State private var isPrefetchNewWorksEnabled = AO3PrefetchNewWorksPreference.isEnabled
 
 	var body: some View {
 		List {
@@ -58,6 +59,15 @@ struct AO3AccountSettingsView: View {
 				}
 			} footer: {
 				Text(NSLocalizedString("How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes.", comment: "AO3 preface refetch cadence footer"))
+			}
+
+			Section {
+				Toggle(NSLocalizedString("Fetch New Works Immediately", comment: "AO3 prefetch-on-arrival toggle label"), isOn: $isPrefetchNewWorksEnabled)
+					.onChange(of: isPrefetchNewWorksEnabled) { _, newValue in
+						AO3PrefetchNewWorksPreference.isEnabled = newValue
+					}
+			} footer: {
+				Text(NSLocalizedString("Downloads a work's text as soon as it appears in your tag and user feeds, instead of waiting until you open it. Uses more AO3 requests, but protects against a work being deleted or locked before you get to it. Off by default. Doesn't apply to AO3 search results, which never fetch content automatically.", comment: "AO3 prefetch-on-arrival toggle footer"))
 			}
 
 			Section {

@@ -5,8 +5,8 @@
 //  Live preview row for ArticleToolbarCustomizerViewController -- a
 //  synthetic UINavigationBar built with the same icons and order as
 //  ArticleViewController.rightBarButtonItems() (theme, table of contents,
-//  find, then prev/next, each included only if its own AppDefaults toggle
-//  is on), rather than an embedded real ArticleViewController, since that
+//  find, prev/next, then lock, each included only if its own AppDefaults
+//  toggle is on), rather than an embedded real ArticleViewController, since that
 //  controller needs a live Article, SceneCoordinator, and WebView machinery
 //  this settings screen has no reason to stand up. If
 //  rightBarButtonItems()'s ordering ever changes, configure() needs the
@@ -48,10 +48,14 @@ final class ArticleToolbarPreviewCell: UICollectionViewListCell {
 	}
 
 	/// Mirrors ArticleViewController.rightBarButtonItems() exactly: theme,
-	/// table of contents, find, then prev/next (array order [next, prev],
-	/// matching that method's own literal) -- each included only if its
-	/// own AppDefaults toggle is currently on, so any combination (including
-	/// none) renders correctly.
+	/// table of contents, find, prev/next (array order [next, prev],
+	/// matching that method's own literal), then lock -- each included
+	/// only if its own AppDefaults toggle is currently on, so any
+	/// combination (including none) renders correctly. The lock preview
+	/// is always drawn unlocked (SF Symbol "lock.open"): the lock state
+	/// itself is transient session state on SceneCoordinator, not an
+	/// AppDefaults value, so there's nothing for this settings screen to
+	/// read for it.
 	func configure() {
 		let defaults = AppDefaults.shared
 		var items: [UIBarButtonItem] = []
@@ -69,6 +73,9 @@ final class ArticleToolbarPreviewCell: UICollectionViewListCell {
 			let next = UIBarButtonItem(image: Assets.Images.nextArticle, style: .plain, target: nil, action: nil)
 			let prev = UIBarButtonItem(image: Assets.Images.prevArticle, style: .plain, target: nil, action: nil)
 			items.append(contentsOf: [next, prev])
+		}
+		if defaults.isArticleToolbarToggleEnabled(.lock) {
+			items.append(UIBarButtonItem(image: UIImage(systemName: "lock.open"), style: .plain, target: nil, action: nil))
 		}
 
 		let navItem = UINavigationItem(title: "")

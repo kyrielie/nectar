@@ -95,6 +95,20 @@ struct SidebarItemNode: Hashable, Sendable {
 	var isTimelineViewControllerPending = false
 	var isArticleViewControllerPending = false
 
+	/// Temporary, in-memory session lock on both article paging and
+	/// back-swipe, toggled from ArticleViewController's optional lock
+	/// bar-button item (see AppDefaults.articleToolbarShowLock). Not
+	/// persisted to AppDefaults/UserDefaults on purpose -- this is meant
+	/// as a momentary "don't let a stray swipe move me off this article"
+	/// guard for the current session, not a standing preference, so it
+	/// always starts unlocked on a fresh launch and unlocking here just
+	/// falls back to whatever articleBackSwipeEnabled/
+	/// articlePagingSwipeEnabled already say. See
+	/// applyArticleBackSwipeGating() below and the two
+	/// scrollViewInsidePageControl?.isScrollEnabled sites in
+	/// ArticleViewController.
+	var isArticleGesturesLocked = false
+
 	/// `Bool` to track whether a refresh is scheduled.
 	private var isNavigationBarSubtitleRefreshScheduled: Bool = false
 
@@ -593,11 +607,13 @@ struct SidebarItemNode: Hashable, Sendable {
 	///
 	/// This needs to be called any time the setting could have taken effect
 	/// without a view appearing/reappearing: when the Settings switch changes
-	/// (via userDefaultsDidChange()), and whenever WebViewController
-	/// shows/hides the toolbars, since setNavigationBarHidden/setToolbarHidden
-	/// reset isEnabled back to true as a side effect.
+	/// (via userDefaultsDidChange()), whenever WebViewController shows/hides
+	/// the toolbars, since setNavigationBarHidden/setToolbarHidden reset
+	/// isEnabled back to true as a side effect, and whenever
+	/// isArticleGesturesLocked flips (from ArticleViewController's lock
+	/// bar-button action), since that's ANDed into `allowed` below.
 	func applyArticleBackSwipeGating() {
-		let allowed = AppDefaults.shared.articleBackSwipeEnabled
+		let allowed = AppDefaults.shared.articleBackSwipeEnabled && !isArticleGesturesLocked
 		let navigationControllers = Set([mainTimelineViewController?.navigationController?.parent as? UINavigationController,
 										  articleViewController?.navigationController?.parent as? UINavigationController].compactMap { $0 })
 		for navigationController in navigationControllers {

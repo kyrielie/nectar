@@ -18,9 +18,23 @@ First/Previous/Next navigation link (itself opening a different article).
 Nothing fetches AO3 content on the user's behalf while they aren't
 present — not on a timer, not in response to an account refresh
 finishing, not speculatively for something they haven't looked at yet. A
-future automatic trigger (a background sweep, a refresh-driven prefetch,
-etc.) would contradict this deliberately, not by omission — see "Fetch
-paths and triggers" below for the full, current list.
+future automatic trigger (a background sweep, etc.) would contradict this
+deliberately, not by omission — see "Fetch paths and triggers" below for
+the full, current list.
+
+**One deliberate, opt-in exception**: `AO3PrefetchNewWorksPreference`
+(off by default). A native AO3 tag/user RSS feed has no way to fetch
+content at listing time, so a work that's deleted, locked, or moved
+between being listed and the person opening it fails its one and only
+fetch attempt — `AO3ChapterFetcher` sets `ao3ConfirmedMissingAt` and
+never retries (see "Eligibility and staleness" below), and the work's
+text is gone for good, even though its metadata survived in the feed.
+With this preference on, a newly-discovered AO3-work article is handed to
+`AO3PrefetchQueue` at refresh time instead of waiting for the person to
+open it, trading some upfront AO3 traffic for a chance at capturing the
+text before it can disappear. This is why it needs an explicit opt-in
+rather than being on by default: it's the one case in this app where
+content is fetched before the person has looked at anything.
 
 ## `AO3ChapterFetcher` — on-demand chapter fetch and storage
 
@@ -66,7 +80,21 @@ triggers, philosophy" above. Concretely, that's:
    `fetchIfNeeded(for:)` whenever an article is displayed, regardless of
    read state. `isStale`'s cadence check and the anti-hammering floor in
    `downloadIfNeeded` are what actually gate whether a request goes out —
-   this is the only automatic AO3 fetch trigger in the app.
+   this is the only automatic-and-on-by-default AO3 fetch trigger in the
+   app.
+2. **Refresh-time, opt-in only**: with `AO3PrefetchNewWorksPreference`
+   enabled, `LocalAccountRefresher` hands every newly-discovered
+   AO3-work article from an ordinary tag/user RSS/Atom feed refresh to
+   `AO3PrefetchQueue.enqueue(_:)`. The queue calls `fetchIfNeeded(for:)`
+   for each one, paced by `AO3ChapterFetcher.secondsBetweenAO3PagedRequests`
+   and capped at 20 fetches per top-level refresh pass
+   (`AO3PrefetchQueue.maxArticlesPerRefreshCycle`) — articles beyond that
+   cap in a single pass are dropped from the queue, not carried into the
+   next refresh, and fall back to open-time fetching like any other
+   article. Deliberately excludes AO3 search-results-feed items (see
+   `isAO3SearchResultsFeed`) — search results are a browse/preview list
+   the person hasn't subscribed to the way a tag/user feed is, and keep
+   the existing "no proactive content fetch" behavior. Off by default.
 
 The primary fetch is always anonymous — `Downloader` already forces
 `httpShouldSetCookies = false`/`.never` app-wide, so no per-request change

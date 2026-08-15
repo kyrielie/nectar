@@ -359,6 +359,9 @@
     "Downloading metadata" : {
       "comment" : "Downloading metadata"
     },
+    "Downloads a work's text as soon as it appears in your tag and user feeds, instead of waiting until you open it. Uses more AO3 requests, but protects against a work being deleted or locked before you get to it. Off by default. Doesn't apply to AO3 search results, which never fetch content automatically." : {
+      "comment" : "AO3 prefetch-on-arrival toggle footer"
+    },
     "Duplicate Theme" : {
       "comment" : "Duplicate Theme"
     },
@@ -421,6 +424,9 @@
     },
     "Fetch AO3 Updates for Library Works" : {
       "comment" : "Ambrosia AO3 updates toggle label"
+    },
+    "Fetch New Works Immediately" : {
+      "comment" : "AO3 prefetch-on-arrival toggle label"
     },
     "Fetching" : {
       "comment" : "Fetching"
@@ -600,6 +606,9 @@
     },
     "Local accounts do not sync your feeds across devices." : {
       "comment" : "Local"
+    },
+    "Lock Gestures" : {
+      "comment" : "Article top toolbar toggle: lock gestures\nLock Gestures"
     },
     "Loved" : {
       "comment" : "Loved"
@@ -959,6 +968,9 @@
     },
     "Selected - Filter Read Feeds" : {
       "comment" : "Selected - Filter Read Feeds"
+    },
+    "Selected - Lock Gestures" : {
+      "comment" : "Selected - Lock Gestures"
     },
     "Selected - Loved" : {
       "comment" : "Selected - Loved"

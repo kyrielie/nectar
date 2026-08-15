@@ -156,6 +156,16 @@ import os
 		downloadSessionIsComplete = false
 		interruptedFeedURLs.removeAll()
 		paginationProgress.reset()
+		// Gives AO3PrefetchQueue a fresh per-refresh-pass budget, alongside
+		// newArticlesCount above -- cheap no-op when
+		// AO3PrefetchNewWorksPreference is off, since nothing is ever
+		// enqueued in that case. Fire-and-forget: this always reaches the
+		// actor well before any feed's updateAsync below could possibly
+		// complete and try to enqueue against it, so there's no ordering
+		// requirement to enforce here.
+		Task {
+			await AO3PrefetchQueue.shared.resetForNewRefreshCycle()
+		}
 
 		// Create a pending activity for each feed that will be fetched,
 		// to be completed later by the DownloadSessionDelegate callbacks.
@@ -631,6 +641,33 @@ import os
 
 			self.newArticlesCount += articleChanges.new?.count ?? 0
 			self.updatedArticlesCount += articleChanges.updated?.count ?? 0
+
+			// AO3PrefetchNewWorksPreference's opt-in "fetch new works
+			// immediately" path -- deliberately only hooked into this
+			// ordinary RSS/Atom updateAsync call, not
+			// fetchAndImportAO3SearchResults's own updateAsync call
+			// below, so AO3 search-results-feed items keep their existing
+			// "no proactive content fetch" treatment unchanged. Filtering
+			// on ao3WorkID(fromBookKey:) and isAO3NetworkRequestAllowed
+			// here (rather than leaving it to fetchIfNeeded alone) keeps
+			// non-AO3 and Ambrosia-network-disabled articles from
+			// spending a slot of AO3PrefetchQueue's bounded per-cycle
+			// budget on a call that was always going to no-op.
+			if AO3PrefetchNewWorksPreference.isEnabled, let newArticles = articleChanges.new, !newArticles.isEmpty {
+				// articleChanges.new is a Set<Article> (see ArticleChanges in
+				// ArticlesDatabase.swift); AO3PrefetchQueue.enqueue(_:) takes
+				// [Article], so this needs an explicit Array(...) conversion
+				// rather than relying on filter's return type.
+				let candidates: [Article] = Array(newArticles).filter { article in
+					AO3ChapterFetcher.ao3WorkID(fromBookKey: article.bookKey) != nil
+						&& AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article)
+				}
+				if !candidates.isEmpty {
+					Task {
+						await AO3PrefetchQueue.shared.enqueue(candidates)
+					}
+				}
+			}
 
 			// contentHash is only meaningful for single-page feeds: a merged multi-page
 			// feed has no single "page body" to compare against on the next refresh, and
