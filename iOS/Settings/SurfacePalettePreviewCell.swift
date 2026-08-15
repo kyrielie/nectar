@@ -2,20 +2,19 @@
 //  SurfacePalettePreviewCell.swift
 //  NetNewsWire-iOS
 //
-//  color-palette-plan.md, section 4 ("Preview UI"). A live-rendered
-//  preview of the currently-selected SurfacePalette, built in code (no
-//  storyboard prototype). Originally registered on the standalone
-//  SurfacePaletteTableViewController screen; that screen was merged into
-//  ColorPaletteTableViewController (surface-palette-and-badge-colors-plan,
-//  section 1), which now registers and reloads this cell instead -- the
-//  cell itself is unchanged, it doesn't care which controller owns it.
-//  This stays inside the existing UITableViewController/storyboard scene
-//  rather than converting it to a UICollectionViewController, since that
-//  conversion would require hand-editing the storyboard's controller/view
-//  type in raw XML with no way to verify the result in Interface Builder.
-//  Functionally this still delivers the same "real component, live
-//  colors, reloads on the palette-change notification" behavior the plan
-//  calls for.
+//  See docs/app-chrome-palette.md ("SurfacePalettePreviewCell"). A
+//  live-rendered preview of the currently-selected SurfacePalette, built
+//  in code (no storyboard prototype). Originally registered on the
+//  standalone SurfacePaletteTableViewController screen; that screen was
+//  merged into ColorPaletteTableViewController, which now registers and
+//  reloads this cell instead -- the cell itself is unchanged, it doesn't
+//  care which controller owns it. This stays inside the existing
+//  UITableViewController/storyboard scene rather than converting it to a
+//  UICollectionViewController, since that conversion would require
+//  hand-editing the storyboard's controller/view type in raw XML with no
+//  way to verify the result in Interface Builder. Functionally this
+//  still delivers a real component with live colors that reloads on the
+//  palette-change notification.
 //
 //  Reads Assets.Colors.barBackground(for:)/vibrantText(for:)/
 //  fullScreenBackground(for:)/settingsBackground(for:)/

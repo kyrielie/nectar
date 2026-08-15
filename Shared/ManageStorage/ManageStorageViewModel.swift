@@ -3,8 +3,10 @@
 //  NetNewsWire
 //
 //  Manual, size-sorted cleanup tool -- not a retention policy. There is no
-//  automatic eviction of archived article content; see Task 5 of
-//  nectar-ao3-features-plan-FINAL.md for the reasoning.
+//  automatic eviction of archived article content: users may want to keep
+//  a completed, no-longer-updating work's full text indefinitely, so
+//  storage pressure is surfaced here for a person to act on manually
+//  rather than the app silently deciding what to discard.
 //
 
 import Foundation

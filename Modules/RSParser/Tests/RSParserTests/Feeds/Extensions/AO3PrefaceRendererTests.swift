@@ -4,8 +4,8 @@
 //
 //  Created for the Nectar fork.
 //
-//  Coverage for inline series navigation (nectar-inline-series-nav-
-//  implementation-plan.md, Phase 3). AO3ChapterHTMLExtractorTests already
+//  Coverage for inline series navigation (see docs/ao3-preface-rendering.md).
+//  AO3ChapterHTMLExtractorTests already
 //  covers the footer builder (seriesFooterHTML) end-to-end against real and
 //  synthetic fixtures, including the escaping/muted-label cases -- this
 //  file targets AO3PrefaceRenderer.html(id:data:)'s isSeriesNavigation

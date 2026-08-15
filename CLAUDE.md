@@ -31,6 +31,7 @@ task**, not this whole index cover-to-cover.
 - **Settings screen, any toggle, or "does setting X exist"** → `settings-screen.md` (main screen) **and** `ao3-authenticated-reading.md` (the separate AO3 account screen — easy to miss)
 - **Favicon / page metadata extraction** → `metadata-extraction.md`
 - **"What differs from upstream NetNewsWire"** → `upstream-drift.md`
+- **An open question that used to have temporary debug logging attached to it** → `investigate-later.md`
 
 If nothing above fits, grep the codebase before assuming it's
 undocumented — this split is complete as of the date below, but the

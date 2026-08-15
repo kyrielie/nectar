@@ -114,7 +114,8 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// `ao3WorkID` at all: a Calibre-merged anthology isn't one AO3 work,
 	/// so there's no single live page to refetch from (fetching and
 	/// merging every member work was scoped out of Workstream 2 -- see
-	/// ao3-merged-plan.md's "Deferred" section). That's out of scope to
+	/// docs/ao3-preface-rendering.md, "Anthology/combined-series
+	/// articles"). That's out of scope to
 	/// fix here, but leaving it a bare no-op made it indistinguishable
 	/// from "nothing needed checking" -- `noteAnthologyUnsupportedIfNeeded`
 	/// logs it once per article instead, so it shows up in the Activity

@@ -156,17 +156,15 @@ support `.blend` at all (see "Toolbar Style" below), so there's nothing on
 those screens for these notifications to invalidate.
 
 **Open investigation, not yet resolved:** `applySurfacePaletteNavigationBarAppearance()`
-and `ArticleViewController` currently carry temporary diagnostic logging
-("top-toolbar-colors-wrong-on-live-switch investigation") tracing which
-adopting screen actually repaints, and when, during a live in-app palette
-switch — this looks like the same observer-list gap the Accent Color
-paragraph above describes (`ArticleViewController` previously missing
-dedicated `.surfaceTintDidChange`/`.accentColorDidChange` observers), and
-the `toolbarStyle` bugfix below (the transparent-scroll-edge issue) may be
-a related or overlapping symptom of the same root cause — but this hasn't
-been confirmed on-device. The logging stays in place through the
-`toolbarStyle` work described below; remove it, and fold the finding here,
-once confirmed.
+was carrying temporary diagnostic logging ("top-toolbar-colors-wrong-on-live-switch
+investigation") tracing which adopting screen actually repaints, and when,
+during a live in-app palette switch. The logging has been removed as part
+of a vibecoding cleanup pass (it was cheap to re-add and had accumulated
+alongside other stale scaffolding) — the underlying question is still
+open and is now tracked in `docs/investigate-later.md` instead of inline
+logging. See that doc for the working theory (same observer-list gap the
+Accent Color paragraph above describes) and what re-adding the logging
+would take if this needs to be picked back up.
 
 `SurfacePalette.HexSet` originally also carried `controlBackground` and
 `sectionHeader` fields; both were removed (along with the corresponding
@@ -309,6 +307,17 @@ color describing whichever article happened to be open elsewhere (or was
 last open), not anything meaningfully tied to the feed list or timeline
 itself. `.tinted` has no equivalent restriction and applies to all three
 screens, matching its behavior from before `toolbarStyle` existed.
+
+**`SurfacePalettePreviewCell`** (`iOS/Settings/SurfacePalettePreviewCell.swift`):
+a live-rendered preview of the currently-selected `SurfacePalette`, built
+in code rather than a storyboard prototype cell, registered and reloaded
+by `ColorPaletteTableViewController` on the palette-change notification.
+Reads `Assets.Colors.barBackground(for:)`/`vibrantText(for:)`/
+`fullScreenBackground(for:)`/`settingsBackground(for:)`/
+`settingsCellBackground(for:)`/`listBackground(for:)` directly rather
+than re-deriving hex values from `AppDefaults.shared.surfaceTint` itself,
+since those accessors already encode the fallback contract (`.default`
+→ asset catalog) the preview needs.
 
 ## The bottom `UIToolbar`
 

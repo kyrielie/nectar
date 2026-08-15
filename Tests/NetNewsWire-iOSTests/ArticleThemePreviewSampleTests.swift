@@ -2,7 +2,7 @@
 //  ArticleThemePreviewSampleTests.swift
 //  NetNewsWire-iOSTests
 //
-//  theme-settings-implementation-plan.md §7.2: the preview's sample body
+//  The preview's sample body
 //  must itself satisfy the same structural contract real articles do
 //  (docs/nnwtheme-format.md: #bodyContainer carries the articleBody class),
 //  or the preview stops being representative again the next time someone

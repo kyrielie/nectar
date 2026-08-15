@@ -3,8 +3,8 @@
 //  NetNewsWire-iOS
 //
 //  Created for Settings → Theme.
-//  Reverts the Gallery/Customize split (theme-settings-implementation-plan.md):
-//  back to a single screen. Theme selection is a plain dropdown Picker instead
+//  Reverts an earlier Gallery/Customize two-screen split back to a
+//  single screen. Theme selection is a plain dropdown Picker instead
 //  of a swatch-grid gallery -- no per-theme WKWebView or color-swatch preview
 //  cells, just the theme's name plus a short light/dark-vs-single-palette tag
 //  so that disclosure doesn't require opening each theme to find out. Font,

@@ -2,8 +2,9 @@
 //  AO3OnboardingView.swift
 //  NetNewsWire-iOS
 //
-//  Nectar AO3 direct-reading support, Workstream 4 ("onboarding") -- see
-//  docs/ao3-merged-plan-nectar.md.
+//  Nectar AO3 direct-reading support: first-run onboarding, shown when a
+//  fresh local account has no subscribed feeds yet. See
+//  AppDefaults.shared.hasShownAO3Onboarding in docs/settings-screen.md.
 //
 //  Shown once, only when the local account has zero subscribed feeds (see
 //  MainFeedCollectionViewController.presentAO3OnboardingIfNeeded()).

@@ -1260,7 +1260,7 @@ struct SidebarItemNode: Hashable, Sendable {
 		// version threaded AppDefaults.shared.articleWindowScrollY (a single value shared by
 		// every article) through to ArticleViewController.restoreScrollPosition, which forced
 		// whichever article was scrolled last, anywhere in the app, onto whatever article was
-		// being restored here. See Phase A0 in nectar-plan-v3.md.
+		// being restored here.
 		articleViewController?.article = article
 	}
 

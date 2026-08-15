@@ -9,7 +9,7 @@
 //  comment. Two independent legacy signals can each trigger the migration to
 //  .tinted (the old useTintedNavigationBar Bool key being true, or a
 //  non-.default surfaceTint predating that key entirely) -- see
-//  toolbar-style-plan.md, Part 2.1.
+//  docs/app-chrome-palette.md.
 //
 
 import Testing
