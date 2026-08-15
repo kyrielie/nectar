@@ -2,7 +2,7 @@
 //  SurfacePaletteNavigationBarAwareToolbarStyleTests.swift
 //  NetNewsWire-iOSTests
 //
-//  toolbar-style-plan.md, Part 1 + 2.2: regression coverage for
+//  docs/app-chrome-palette.md: regression coverage for
 //  - the top-nav-bar-transparent-at-scroll-edge bugfix
 //    (resetToSystemNavigationBarAppearance() now respects
 //    wantsTransparentScrollEdgeAppearance instead of always nil-ing

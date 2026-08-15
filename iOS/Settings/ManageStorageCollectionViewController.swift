@@ -5,8 +5,9 @@
 //  Manual, size-sorted cleanup tool -- Instapaper/Pocket's "manage storage"
 //  pattern, not NetNewsWire's own "expire unread articles after N days."
 //  There is no automatic eviction of archived article content; deleting a
-//  row here is the only way an article's stored contentHTML goes away. See
-//  Task 5 of nectar-ao3-features-plan-FINAL.md.
+//  row here is the only way an article's stored contentHTML goes away.
+//  See docs/settings-screen.md ("Troubleshooting" row) and
+//  Shared/ManageStorage/ManageStorageViewModel.swift for the rationale.
 //
 
 import UIKit
@@ -110,7 +111,7 @@ final class ManageStorageCollectionViewController: UICollectionViewController, S
 			cell.accessories = []
 		}
 
-		// nectar-combined-plan-2.md §3.4: clearing content here only nulls
+		// Clearing content here only nulls
 		// the cleared rows' columns -- it doesn't shrink the on-disk
 		// database file, since SQLite only reclaims freed page space on
 		// VACUUM, which this screen never runs (an explicit, infrequent

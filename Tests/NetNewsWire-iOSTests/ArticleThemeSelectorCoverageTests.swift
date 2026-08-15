@@ -2,7 +2,7 @@
 //  ArticleThemeSelectorCoverageTests.swift
 //  NetNewsWire-iOSTests
 //
-//  theme-settings-implementation-plan.md §7.1: catches the class of bug
+//  Catches the class of bug
 //  this codebase has hit repeatedly -- CSS written against a selector that
 //  sounds plausible (.headerBar, .articleContent, #nnwFooter) but doesn't
 //  exist in the real default template.html, so the rule silently no-ops.
@@ -12,7 +12,8 @@
 //  against reintroducing the specific invented selectors an earlier,
 //  unverified plan proposed (.articleContent, .barContent, #nnwFooter,
 //  .headerBar, .datelineBar -- real only in some hand-written themes'
-//  own bundles, never in the default template).
+//  own bundles, never in the default template). See docs/theme-system.md
+//  for ArticleThemeOverrides.cssOverrideBlock itself.
 //
 
 import Testing

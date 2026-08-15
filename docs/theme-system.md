@@ -256,6 +256,15 @@ all of the above comes together for a given article:
   style tag.
 - `articleCSS` runs the composed style string through `MacroProcessor` with
   `styleSubstitutions()` to fill in any remaining CSS-side template tokens.
+- `ArticleRenderer.stripFakeParagraphIndents` removes leading `&nbsp;`
+  sequences and literal-space "fake indents" from the start of `<p>` tag
+  content, without disturbing the tag's own attributes or the rest of the
+  paragraph's text/whitespace. Some AO3/Ambrosia source HTML hand-indents
+  paragraphs this way instead of using CSS `text-indent`; left alone, it
+  double-indents under themes that already apply their own paragraph
+  indent via CSS. See
+  `Tests/NetNewsWire-iOSTests/ArticleRendererStripFakeParagraphIndentsTests.swift`
+  for the exact cases covered.
 
 ## Notifications summary
 

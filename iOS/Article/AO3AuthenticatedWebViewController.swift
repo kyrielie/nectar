@@ -2,8 +2,8 @@
 //  AO3AuthenticatedWebViewController.swift
 //  NetNewsWire-iOS
 //
-//  Nectar fixes plan 3, item 3 ("Open AO3 links using the AO3 user's
-//  Nectar login, if signed in"). See docs/nectar-fixes-plan-3.md.
+//  Opens AO3 links using the AO3 user's Nectar login, if signed in --
+//  see docs/ao3-authenticated-reading.md.
 //
 //  SFSafariViewController always uses the system's shared Safari
 //  cookie jar, with no API to hand it a custom cookie store -- so an

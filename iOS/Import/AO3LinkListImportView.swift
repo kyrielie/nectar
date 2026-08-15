@@ -3,7 +3,8 @@
 //  Nectar
 //
 //  Pasted AO3 link-list import (one-time, no refreshable feed) -- see
-//  nectar-ao3-features-plan-FINAL.md Task 3 and Account.importPastedAO3Links(_:).
+//  Account.importPastedAO3Links(_:) and the `nectar-import://` handling
+//  described in docs/ao3-feeds.md and docs/refresh-throttling.md.
 //
 
 import SwiftUI

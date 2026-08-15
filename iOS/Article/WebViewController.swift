@@ -29,8 +29,7 @@ final class WebViewController: UIViewController {
 		static let scrollRestoreComplete = "scrollRestoreComplete"
 	}
 
-	// Inline series navigation (nectar-inline-series-nav-implementation-
-	// plan.md, Phase 3a) -- the private, non-web URL scheme
+	// Inline series navigation (see docs/ao3-feeds.md) -- the private, non-web URL scheme
 	// AO3PrefaceRenderer's First/Previous/Next links use
 	// (`nectar-series:<direction>?ao3id=...&workurl=...`), recognized in
 	// decidePolicyFor navigationAction below.
@@ -57,10 +56,10 @@ final class WebViewController: UIViewController {
 	// is not a safe way to identify it.
 	private var webView: PreloadedWebView?
 
-	// Inline series navigation (nectar-inline-series-nav-implementation-
-	// plan.md, Phase 4e). Per-(series, direction) in-flight/failure state
-	// for the links AO3PrefaceRenderer renders directly into the article
-	// -- replaces Task 10's single-slot `seriesNavigationInFlight`/
+	// Inline series navigation (see docs/ao3-feeds.md). Per-(series, direction)
+	// in-flight/failure state for the links AO3PrefaceRenderer renders
+	// directly into the article -- replaces an earlier single-slot
+	// `seriesNavigationInFlight`/
 	// `isFetchingFirstWorkInSeries`/`seriesNavigationFailureMessage`
 	// (deleted along with the context-menu actions they backed, see
 	// handleNectarSeriesLink below). Two different series' Previous
@@ -196,11 +195,7 @@ final class WebViewController: UIViewController {
 		// colors previously only re-resolved on the next full renderPage.
 		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: WebViewController, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
-			// TEMPORARY (nectar-theme-background-toolbar-plan.md item 2 investigation) --
-			// remove once the live-switch background bug is confirmed fixed on-device.
-			Self.logger.debug("registerForTraitChanges: fired previous=\(previousTraitCollection.userInterfaceStyle.rawValue, privacy: .public) new=\(self.traitCollection.userInterfaceStyle.rawValue, privacy: .public) webViewTrait=\(self.webView?.traitCollection.userInterfaceStyle.rawValue ?? -1, privacy: .public) inAppPalette=\(AppDefaults.userInterfaceColorPalette.rawValue, privacy: .public) articleID=\(self.article?.articleID ?? "nil", privacy: .public)")
 			self.applyResolvedBackgroundColors()
-			self.logCSSColorSchemeAgreement(context: "registerForTraitChanges")
 		}
 
 		// Configure the tap zones
@@ -1139,8 +1134,6 @@ private extension WebViewController {
 
 		let isDark = webView.traitCollection.userInterfaceStyle == .dark
 		let colors = Self.resolvedArticleColors(isDark: isDark)
-		// TEMPORARY (nectar-theme-background-toolbar-plan.md item 2 investigation).
-		Self.logger.debug("applyResolvedBackgroundColors: isDark=\(isDark, privacy: .public) background=\(colors.background.cssHexString, privacy: .public) articleID=\(self.article?.articleID ?? "nil", privacy: .public)")
 		webView.backgroundColor = colors.background
 		webView.underPageBackgroundColor = colors.background
 		webView.scrollView.backgroundColor = colors.background
@@ -1149,27 +1142,6 @@ private extension WebViewController {
 		// text color on every render, not just on the next bars-toggle -- otherwise they
 		// keep showing whatever was last set, stale, through an article/theme change.
 		updateNotchAndPageCounterVisibility(resolvedBackground: colors.background, resolvedText: colors.text)
-	}
-
-	// TEMPORARY (nectar-theme-background-toolbar-plan.md item 2 investigation) --
-	// confirms whether WKWebView's own prefers-color-scheme media query has
-	// actually re-evaluated by the time the native trait-change handler fires,
-	// or whether it lags behind. Remove alongside the other temporary logging
-	// in this investigation once confirmed. Called only from the
-	// registerForTraitChanges closure above, not from inside
-	// applyResolvedBackgroundColors() itself -- that function also runs from
-	// renderPage() before loadHTMLString has committed a document, where a JS
-	// evaluation would just fail harmlessly and add noise. The trait-change
-	// path is the one that matters for this repro (already-open article), and
-	// it's guaranteed to have a loaded document.
-	private func logCSSColorSchemeAgreement(context: String) {
-		webView?.evaluateJavaScript("JSON.stringify({prefersDark: window.matchMedia('(prefers-color-scheme: dark)').matches, bodyBackground: getComputedStyle(document.body).backgroundColor})") { result, error in
-			if let error {
-				Self.logger.debug("\(context, privacy: .public): CSS-side check failed, error=\(error.localizedDescription, privacy: .public)")
-				return
-			}
-			Self.logger.debug("\(context, privacy: .public): CSS-side reports \(String(describing: result), privacy: .public)")
-		}
 	}
 
 	/// Precedence: override background (if set) -> theme's own background ->

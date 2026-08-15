@@ -3,7 +3,7 @@
 //  NetNewsWire-iOSTests
 //
 //  Coverage for ArticleRenderer.stripFakeParagraphIndents
-//  (nectar-theme-pipeline-fixes-plan.md item #7): confirms leading
+//  (see docs/theme-system.md, "Rendering integration"): confirms leading
 //  &nbsp;-sequence and literal-space fake indents are removed from the start
 //  of paragraph content, that a `<p>` tag's own attributes survive, and that
 //  the rest of the paragraph's text and unrelated whitespace are untouched.
