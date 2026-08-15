@@ -17,6 +17,11 @@ import Articles
 
 final class ArticleViewController: UIViewController, SurfacePaletteNavigationBarAware {
 
+	// The only SurfacePaletteNavigationBarAware adopter with an actual article
+	// on screen to blend the bar with -- see supportsBlendToolbarStyle's own
+	// doc comment. MainFeed/MainTimeline stay on the protocol's default false.
+	var supportsBlendToolbarStyle: Bool { true }
+
 	@IBOutlet private weak var nextUnreadBarButtonItem: UIBarButtonItem!
 	// Strong, unlike the other bar-button outlets here: these two are now
 	// conditionally left out of navigationItem.rightBarButtonItems (see
@@ -142,15 +147,28 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		// same reasoning and pattern as WebViewController.viewDidLoad().
 		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: ArticleViewController, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
-			self.applySurfacePaletteNavigationBarAppearance()
+			self.applyToolbarStyle()
 		}
 
-		let appearance = UINavigationBarAppearance()
-		appearance.configureWithDefaultBackground()
-		navigationItem.standardAppearance = appearance
-		navigationItem.scrollEdgeAppearance = appearance
-		navigationItem.compactAppearance = appearance
-		applySurfacePaletteNavigationBarAppearance()
+		// .blend's top-nav-bar color and both toolbarStyle branches' bottom-
+		// toolbar color depend on the current article theme and any theme
+		// override, neither of which .surfaceTintDidChange/.accentColorDidChange
+		// cover -- without these, switching themes or editing an override color
+		// with an article already open would leave a stale toolbar color
+		// showing until the article is re-entered. See app-chrome-palette.md,
+		// "Live-update pipeline shape."
+		NotificationCenter.default.addObserver(self, selector: #selector(articleThemeDidChange(_:)), name: .CurrentArticleThemeDidChangeNotification, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(articleThemeOverridesDidChange(_:)), name: .articleThemeOverridesDidChange, object: nil)
+
+		// The opaque baseline this screen always wants, regardless of
+		// toolbarStyle's scroll-edge behavior, now lives entirely inside
+		// SurfacePaletteNavigationBarAware.resetToSystemNavigationBarAppearance()
+		// (wantsTransparentScrollEdgeAppearance == false, the default this
+		// screen doesn't override) -- setting it here too used to immediately
+		// get wiped out by that same reset path running one line below,
+		// which was the top-nav-bar-transparent-at-scroll-edge bug. One
+		// definition of the baseline now, not two that can drift.
+		applyToolbarStyle()
 
 		// The nav-bar tap-to-hide-bars target used to live in a fullScreenTapZone
 		// UIView set as navigationItem.titleView, width-capped at <= 150pt. That
@@ -403,7 +421,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	}
 
 	@objc func surfaceTintDidChange(_ note: Notification) {
-		applySurfacePaletteNavigationBarAppearance()
+		applyToolbarStyle()
 	}
 
 	@objc func accentColorDidChange(_ note: Notification) {
@@ -414,7 +432,90 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		// everywhere else, so observing this too keeps
 		// ArticleViewController's story consistent with the documented
 		// observer list rather than silently only covering Surface Palette.
+		applyToolbarStyle()
+	}
+
+	// toolbarStyle == .blend reads the current article theme and any
+	// per-theme override for its color -- see applyBottomToolbarStyle()/
+	// SurfacePaletteNavigationBarAware.applyBlendNavigationBarAppearance().
+	// Neither of these notifications existed on this screen's observer list
+	// before .blend needed them.
+	@objc func articleThemeDidChange(_ note: Notification) {
+		applyToolbarStyle()
+	}
+
+	@objc func articleThemeOverridesDidChange(_ note: Notification) {
+		applyToolbarStyle()
+	}
+
+	/// Single call site for both halves of toolbarStyle: the shared top nav
+	/// bar appearance (SurfacePaletteNavigationBarAware, also adopted by
+	/// MainFeed/MainTimeline) and this screen's own bottom UIToolbar, which
+	/// has no equivalent shared protocol -- MainFeed/MainTimeline don't have
+	/// a bottom toolbar at all. Called together, always, from every place
+	/// either one used to be called alone, so the two bars can't drift out
+	/// of sync with each other, which is the entire point of this setting.
+	func applyToolbarStyle() {
 		applySurfacePaletteNavigationBarAppearance()
+		applyBottomToolbarStyle()
+	}
+
+	/// Bottom UIToolbar equivalent of SurfacePaletteNavigationBarAware's nav
+	/// bar handling. No prior appearance customization existed for this
+	/// toolbar at all (it only ever set toolbarItems, the buttons) -- confirmed
+	/// by grep, zero UIToolbarAppearance/standardAppearance/isTranslucent
+	/// references anywhere in the tree before this. UIToolbar has no
+	/// standard/scroll-edge split the way UINavigationBar does, so there's
+	/// only one appearance slot pair (standardAppearance/compactAppearance)
+	/// to set, not three.
+	private func applyBottomToolbarStyle() {
+		guard let toolbar = navigationController?.toolbar else { return }
+
+		let toolbarButtonItems: [UIBarButtonItem] = [readBarButtonItem, starBarButtonItem, heartBarButtonItem, nextUnreadBarButtonItem, actionBarButtonItem]
+
+		switch AppDefaults.shared.toolbarStyle {
+		case .system:
+			// UIToolbar.standardAppearance is non-optional (unlike
+			// UINavigationItem.standardAppearance, and unlike this toolbar's
+			// own compactAppearance) -- nil cannot be assigned to it, full
+			// stop, so there's no way to "clear" it back to an absent value
+			// the way the nav bar's own .system reset can for adopters with
+			// wantsTransparentScrollEdgeAppearance == true. A fresh,
+			// unconfigured UIToolbarAppearance() is standardAppearance's own
+			// implicit default value on a toolbar nothing has ever touched
+			// (confirmed by grep: zero UIToolbarAppearance/standardAppearance
+			// references anywhere in the tree before this feature) -- so
+			// assigning a new one back is what reproduces that untouched
+			// look, not a workaround for the compiler.
+			toolbar.standardAppearance = UIToolbarAppearance()
+			toolbar.compactAppearance = nil
+			toolbar.tintColor = nil
+			toolbarButtonItems.forEach { $0.tintColor = nil }
+		case .tinted:
+			let backgroundColor = Assets.Colors.navigationBarBackground(for: traitCollection)
+			let tintColor = Assets.Colors.navigationBarTint(for: traitCollection)
+			applyOpaqueBottomToolbarAppearance(toolbar, buttonItems: toolbarButtonItems, backgroundColor: backgroundColor, tintColor: tintColor)
+		case .blend:
+			let isDark = traitCollection.userInterfaceStyle == .dark
+			let colors = ArticleResolvedColors.current(isDark: isDark)
+			applyOpaqueBottomToolbarAppearance(toolbar, buttonItems: toolbarButtonItems, backgroundColor: colors.background, tintColor: colors.text)
+		}
+	}
+
+	private func applyOpaqueBottomToolbarAppearance(_ toolbar: UIToolbar, buttonItems: [UIBarButtonItem], backgroundColor: UIColor, tintColor: UIColor?) {
+		let appearance = UIToolbarAppearance()
+		appearance.configureWithDefaultBackground()
+		appearance.backgroundColor = backgroundColor
+		toolbar.standardAppearance = appearance
+		toolbar.compactAppearance = appearance
+		if let tintColor {
+			toolbar.tintColor = tintColor
+		}
+		// Same reasoning as the nav bar's own per-item tint reassignment in
+		// SurfacePaletteNavigationBarAware.applyOpaqueNavigationBarAppearance():
+		// a UIBarButtonItem already on screen doesn't reliably repaint just
+		// because the toolbar's own .tintColor was reassigned after the fact.
+		buttonItems.forEach { $0.tintColor = tintColor }
 	}
 
 	// Section 3 of color-palette-plan.md ("Wire the two new nav-bar

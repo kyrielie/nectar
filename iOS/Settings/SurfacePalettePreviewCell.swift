@@ -134,11 +134,17 @@ final class SurfacePalettePreviewCell: UITableViewCell {
 
 		let palette = AppDefaults.shared.surfaceTint
 		let hexSet = traitCollection.userInterfaceStyle == .dark ? palette.darkHexSet : palette.lightHexSet
-		// With the toggle off, the real nav bar won't be tinted regardless of
-		// palette (see SurfacePaletteNavigationBarAware), so the preview needs to
-		// match rather than always showing what the palette *would* look like.
-		let navigationBarBackgroundHex = AppDefaults.shared.useTintedNavigationBar ? hexSet?.navigationBarBackground : nil
-		let navigationBarTintHex = AppDefaults.shared.useTintedNavigationBar ? hexSet?.navigationBarTint : nil
+		// Only toolbarStyle == .tinted actually pulls the real nav bar's color
+		// from the Surface Palette (see SurfacePaletteNavigationBarAware) --
+		// .system and .blend don't, so the preview needs to match rather than
+		// always showing what the palette *would* look like. .blend in
+		// particular is deliberately palette-independent (it reads the
+		// article's own resolved background instead), so it falls back here
+		// the same as .system rather than showing a value the real bar
+		// wouldn't actually use.
+		let isTinted = AppDefaults.shared.toolbarStyle == .tinted
+		let navigationBarBackgroundHex = isTinted ? hexSet?.navigationBarBackground : nil
+		let navigationBarTintHex = isTinted ? hexSet?.navigationBarTint : nil
 		navBarSwatch.backgroundColor = navigationBarBackgroundHex.flatMap { UIColor(cssHex: $0) } ?? .systemBackground
 		navBarSwatch.subviews.first?.backgroundColor = navigationBarTintHex.flatMap { UIColor(cssHex: $0) } ?? .label
 

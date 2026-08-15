@@ -12,11 +12,19 @@
 //  already had, moved verbatim rather than redesigned. Section 0
 //  (UserInterfaceColorPalette, light/dark/automatic) is unchanged.
 //
-//  nectar-navbar-toggle-plan.md, item 3: the tinted-nav-bar setting is its
-//  own section with a real UISwitch, rather than a row mixed into the
-//  Surface Palette list -- it's a boolean on/off setting, not one of the
-//  mutually-exclusive palette choices, and living inside that list read as
-//  though it were another palette option.
+//  nectar-navbar-toggle-plan.md, item 3: the toolbar-style setting is its
+//  own section, rather than a row mixed into the Surface Palette list --
+//  it's a separate, mutually-exclusive three-way choice (System/Blend/
+//  Tinted), not one of the palette choices, and living inside that list
+//  read as though it were another palette option.
+//
+//  toolbar-style-plan.md: replaced the original boolean useTintedNavigationBar
+//  UISwitch row with a three-row, checkmark-based picker -- same selection
+//  pattern the Surface Palette section below already uses -- once tinting
+//  stopped being a single on/off gate and became one of three mutually
+//  exclusive toolbar styles (System/Blend/Tinted) applied to both the top
+//  nav bar and bottom toolbar together. See SurfacePaletteNavigationBarAware
+//  and ArticleViewController.applyToolbarStyle().
 //
 
 import UIKit
@@ -27,20 +35,10 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 
 	private enum Section: Int, CaseIterable {
 		case interfaceStyle = 0
-		case navigationBarTinting = 1
+		case toolbarStyle = 1
 		case surfacePalette = 2
 		case preview = 3
 	}
-
-	// Built programmatically and reused across cellForRowAt calls for its one
-	// row: this row is a boolean setting with a real UISwitch, not a
-	// selectable option like the palette rows, so it doesn't fit the
-	// storyboard's plain "Cell" identifier the other sections dequeue.
-	private lazy var navigationBarTintingSwitch: UISwitch = {
-		let toggle = UISwitch()
-		toggle.addTarget(self, action: #selector(navigationBarTintingSwitchChanged), for: .valueChanged)
-		return toggle
-	}()
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -67,21 +65,13 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 	// only needs to fire for changes that originate elsewhere (e.g. the
 	// Surface Palette preview being changed from another screen).
 	//
-	// The navigation-bar-tinting switch's own valueChanged handler sets this
-	// too, for the same reason: useTintedNavigationBar's setter now posts
-	// .surfaceTintDidChange synchronously as well.
+	// The toolbarStyle picker's own didSelectRowAt handling sets this too,
+	// for the same reason: toolbarStyle's setter posts .surfaceTintDidChange
+	// synchronously as well, same as surfaceTint's own setter.
 	private var isHandlingSurfacePaletteSelection = false
 
 	@objc private func surfaceTintDidChange(_ note: Notification) {
 		guard !isHandlingSurfacePaletteSelection else { return }
-		reloadPreviewSection()
-	}
-
-	@objc private func navigationBarTintingSwitchChanged() {
-		isHandlingSurfacePaletteSelection = true
-		AppDefaults.shared.useTintedNavigationBar = navigationBarTintingSwitch.isOn
-		isHandlingSurfacePaletteSelection = false
-
 		reloadPreviewSection()
 	}
 
@@ -114,8 +104,8 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 		switch Section(rawValue: section) {
 		case .interfaceStyle, .none:
 			return UserInterfaceColorPalette.allCases.count
-		case .navigationBarTinting:
-			return 1
+		case .toolbarStyle:
+			return ToolbarStyle.allCases.count
 		case .surfacePalette:
 			return SurfacePalette.allCases.count
 		case .preview:
@@ -125,7 +115,7 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 
 	override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
 		switch Section(rawValue: section) {
-		case .interfaceStyle, .navigationBarTinting, .none:
+		case .interfaceStyle, .toolbarStyle, .none:
 			return nil
 		case .surfacePalette:
 			return NSLocalizedString("Surface Palette", comment: "Surface palette section header")
@@ -136,8 +126,8 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 
 	override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
 		switch Section(rawValue: section) {
-		case .navigationBarTinting:
-			return NSLocalizedString("When on, the top navigation bar picks up the Surface Palette's tint color, matching the bottom toolbar. When off, the navigation bar stays plain system appearance regardless of the selected palette.", comment: "Tinted navigation bar toggle footer")
+		case .toolbarStyle:
+			return NSLocalizedString("Default: the top navigation bar and bottom toolbar use plain system appearance. Blend: both bars match the current article's background color. Tinted: both bars pick up the Surface Palette's tint color.", comment: "Toolbar style picker footer")
 		default:
 			return nil
 		}
@@ -149,12 +139,11 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 			let cell = tableView.dequeueReusableCell(withIdentifier: SurfacePalettePreviewCell.reuseIdentifier, for: indexPath) as! SurfacePalettePreviewCell
 			cell.configure()
 			return cell
-		case .navigationBarTinting:
+		case .toolbarStyle:
 			let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-			cell.textLabel?.text = NSLocalizedString("Tinted Navigation Bar", comment: "Tinted navigation bar toggle row")
-			cell.selectionStyle = .none
-			cell.accessoryView = navigationBarTintingSwitch
-			navigationBarTintingSwitch.isOn = AppDefaults.shared.useTintedNavigationBar
+			let rowStyle = ToolbarStyle.allCases[indexPath.row]
+			cell.textLabel?.text = rowStyle.description
+			cell.accessoryType = rowStyle == AppDefaults.shared.toolbarStyle ? .checkmark : .none
 			return cell
 		case .surfacePalette:
 			let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
@@ -182,8 +171,18 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 				AppDefaults.userInterfaceColorPalette = colorPalette
 			}
 			tableView.reloadSections(IndexSet(integer: Section.interfaceStyle.rawValue), with: .none)
-		case .navigationBarTinting:
-			break // handled by navigationBarTintingSwitch's own valueChanged target
+		case .toolbarStyle:
+			let style = ToolbarStyle.allCases[indexPath.row]
+
+			isHandlingSurfacePaletteSelection = true
+			AppDefaults.shared.toolbarStyle = style
+			isHandlingSurfacePaletteSelection = false
+
+			// Same reasoning as the .surfacePalette case below: one combined
+			// reload, after setting, covering both the row that changed and
+			// the preview -- not two separate reloadSections calls that could
+			// race with UIKit's own post-selection checkmark bookkeeping.
+			tableView.reloadSections(IndexSet([Section.toolbarStyle.rawValue, Section.preview.rawValue]), with: .none)
 		case .surfacePalette:
 			guard let surfacePalette = SurfacePalette(rawValue: indexPath.row) else { return }
 
