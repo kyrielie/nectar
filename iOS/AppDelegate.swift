@@ -80,7 +80,7 @@ import Images
 			await WebViewConfiguration.compileContentBlockingRules()
 		}
 		AppDefaults.registerDefaults()
-		AppDefaults.shared.migrateNavigationBarTintingDefaultIfNeeded()
+		AppDefaults.shared.migrateToolbarStyleDefaultIfNeeded()
 		AppDefaults.shared.migrateArticleToolbarTogglesIfNeeded()
 
 		let isFirstRun = AppDefaults.shared.isFirstRun
