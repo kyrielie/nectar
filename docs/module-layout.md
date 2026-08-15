@@ -14,7 +14,10 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   `warnings`, `categories`, `series`, plus the book-identity fields
   `ao3WorkID`, `isAnthology`, `ao3SeriesID`, and `seriesName` (the
   Calibre-derived fallback name for an anthology with no AO3 series id).
-  `ParsedItem` also carries `isAmbrosiaItem` (true whenever an `_ambrosia`
+  `ParsedItem` also carries `tags: Set<String>?` — the standard JSON Feed
+  1.1 field, not an `_ambrosia` one — which becomes `Article.additionalTags`
+  (renamed, converted to a sorted `[String]?` for stable ordering; see
+  `Modules/Articles`, below). `ParsedItem` also carries `isAmbrosiaItem` (true whenever an `_ambrosia`
   object is present at all, regardless of which fields inside it are
   populated) and a computed `bookKey`, used for identifying "the same book"
   across feeds/re-subscriptions/re-imports — see `book-identity.md`.
@@ -29,10 +32,11 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   second, independent ingestion path that doesn't go through
   `JSONFeedParser` at all — see `ao3-direct-feed-ingestion.md`.
 - **Modules/Articles** — the persisted domain model. `Article` mirrors
-  `ParsedItem` 1:1, including the Ambrosia fields, `markdown`, and
-  `bookKey` (always resolves to at least `uniqueID`, so it's
+  `ParsedItem` field-for-field, including the Ambrosia fields, `markdown`,
+  and `bookKey` (always resolves to at least `uniqueID`, so it's
   non-optional), and a `summary: String?` distinct from
-  `contentHTML`/`contentText`. `ArticleStatus` holds per-article mutable
+  `contentHTML`/`contentText` — with one exception: `ParsedItem.tags`
+  becomes `Article.additionalTags`, above. `ArticleStatus` holds per-article mutable
   state — `read`, `starred`, `loved`, and `readingProgress: Double?`
   (local UI state, not synced, same tier as scroll position).
 - **Modules/ArticlesDatabase** — SQLite-backed persistence for articles,

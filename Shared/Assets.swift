@@ -104,8 +104,7 @@ struct Assets {
 		// `static let`s that captured Assets.Colors.secondaryAccent's value once,
 		// at first access -- Swift only evaluates a struct's `static let` a single
 		// time per process, so AccentColor picker changes never reached these five
-		// (see AccentColor's doc comment, and the personalization plan's item 3,
-		// which flagged this exact gap). Recomputed as `static var`s instead: each
+		// (see AccentColor's doc comment). Recomputed as `static var`s instead: each
 		// access re-reads the live accent color and builds a fresh IconImage.
 		// IconImage.init is cheap (no image processing beyond an async luminance
 		// preload), so recomputing per access is fine.
@@ -234,7 +233,7 @@ struct Assets {
 				: AppDefaults.shared.surfaceTint.lightHexSet?.fullScreenBackground
 			return hex.flatMap { RSColor(cssHex: $0) } ?? RSColor(named: "fullScreenBackgroundColor")!
 		}
-		/// surface-palette-and-badge-colors-plan, section 2.2. Backdrop for
+		/// See docs/app-chrome-palette.md. Backdrop for
 		/// settings/list table and collection views.
 		static func settingsBackground(for traitCollection: UITraitCollection) -> RSColor {
 			let hex = traitCollection.userInterfaceStyle == .dark

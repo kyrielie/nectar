@@ -152,7 +152,7 @@ existing upstream files. Grouped by top-level directory.
 
 - `.github/workflows/release.yml`
 
-### `Modules/` (77 files)
+### `Modules/` (79 files)
 
 - `Modules/Account/Sources/Account/AO3LinkListImporter.swift`
 - `Modules/Account/Sources/Account/LocalAccount/AO3AuthenticatedFetcher.swift`
@@ -165,6 +165,8 @@ existing upstream files. Grouped by top-level directory.
 - `Modules/Account/Sources/Account/LocalAccount/AO3KudosOnLikePreference.swift`
 - `Modules/Account/Sources/Account/LocalAccount/AO3KudosRequest.swift`
 - `Modules/Account/Sources/Account/LocalAccount/AO3PrefaceRefetchPreference.swift`
+- `Modules/Account/Sources/Account/LocalAccount/AO3PrefetchNewWorksPreference.swift`
+- `Modules/Account/Sources/Account/LocalAccount/AO3PrefetchQueue.swift`
 - `Modules/Account/Sources/Account/LocalAccount/AO3SearchResultsFetcher.swift`
 - `Modules/Account/Sources/Account/LocalAccount/AO3SearchResultsImporter.swift`
 - `Modules/Account/Sources/Account/LocalAccount/AO3SearchResultsPaginator.swift`
@@ -283,12 +285,21 @@ Names: `Aldine.nnwtheme`, `Beetlejuice.nnwtheme`, `Black & White.nnwtheme`, `Bro
 
 - `buildscripts/theme-generation/generate_ported_themes.py`
 
-### `docs/` (6 files)
+### `docs/` (22 files)
 
-This project's own documentation set (including this file).
+This project's own documentation set (including this file). Declared as
+6 files as of this audit's original snapshot; the topic-doc set has grown
+substantially since (new docs split out, `console-warnings.md` added,
+then `investigate-later.md` added during a later vibecoding-cleanup
+pass) and was not kept in sync here — see the correction note above for
+`nectar-architecture.md`'s deletion, which is one but not the only cause.
+The overall Summary table's 224 Nectar-original total has not been
+recomputed to reflect this specific +16; treat it as a further stale
+input on top of the already-noted `nectar-architecture.md` discrepancy.
 
-### `iOS/` (31 files)
+### `iOS/` (32 files)
 
+- `iOS/Article/AO3AuthenticatedWebViewController.swift`
 - `iOS/Article/ShareAO3SeriesLinkActivity.swift`
 - `iOS/Article/TableOfContentsViewController.swift`
 - `iOS/Import/AO3LinkListImportView.swift`

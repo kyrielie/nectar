@@ -13,7 +13,7 @@ import Articles
 
 	/// Which field the timeline is sorted by. `.date` is the only field NNW
 	/// supported before this; `.wordCount`, `.title`, and `.author` are the
-	/// Ambrosia-fork additions from the fork plan's Phase 1 step 4.
+	/// Ambrosia-fork additions.
 	enum SortField: Int, Sendable, CaseIterable {
 		case date = 0
 		case wordCount = 1

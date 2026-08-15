@@ -1,20 +1,33 @@
 {
     "name": "Nectar",
-    "subtitle": "A feed reader.",
-    "description": "Nectar is a feed reader for iOS.",
+    "subtitle": "Source for Nectar, an AO3 & Ambrosia reader",
+    "description": "Personal AltStore source publishing Nectar, a fork of NetNewsWire for reading Archive of Our Own and Ambrosia feeds. Beta software, updated automatically from GitHub Releases.",
     "iconURL": "https://kyrielie.github.io/nectar/icon.png",
     "website": "https://github.com/kyrielie/nectar",
     "tintColor": "#4185A9",
+    "nsfw": false,
+    "news": [
+        {
+            "title": "Welcome to Nectar",
+            "identifier": "nectar-source-intro",
+            "caption": "A fic-aware AO3 & Ambrosia reader, sideloaded via AltStore.",
+            "date": "2026-08-15",
+            "tintColor": "#4185A9",
+            "notify": false,
+            "url": "https://github.com/kyrielie/nectar",
+            "appID": "com.kyrielie.nectar"
+        }
+    ],
     "apps": [
         {
             "name": "Nectar",
             "bundleIdentifier": "com.kyrielie.nectar",
             "developerName": "kyrielie",
-            "subtitle": "A feed reader.",
-            "localizedDescription": "Nectar is a feed reader for iOS.",
+            "subtitle": "Fic-aware AO3 & Ambrosia reader",
+            "localizedDescription": "Nectar reads Archive of Our Own's RSS feeds and loads each work's full text with saved reading position, offline-friendly caching, and a distraction-free reader. It's also the companion app for Ambrosia, a local fanfiction library with fic-specific metadata -- word count, chapters, fandom, rating, warnings, series -- for large personal collections AO3's own feeds can't cover.",
             "iconURL": "https://kyrielie.github.io/nectar/icon.png",
             "tintColor": "#4185A9",
-            "category": "other",
+            "category": "entertainment",
             "screenshots": [
                 "https://kyrielie.github.io/nectar/screenshots/1.png",
                 "https://kyrielie.github.io/nectar/screenshots/2.png",
@@ -32,6 +45,5 @@
                 }
             }
         }
-    ],
-    "news": []
+    ]
 }

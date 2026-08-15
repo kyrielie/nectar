@@ -2,8 +2,8 @@
 //  ArticleCSVExporterTests.swift
 //  NetNewsWire-iOSTests
 //
-//  Nectar remediation plan, Part 1.4: direct coverage of
-//  ArticleCSVExporter (Shared/Exporters/ArticleCSVExporter.swift), Task 4's
+//  Direct coverage of
+//  ArticleCSVExporter (Shared/Exporters/ArticleCSVExporter.swift)'s
 //  CSV export, previously untested despite being reachable from Settings
 //  and MainFeedCollectionViewController.
 //

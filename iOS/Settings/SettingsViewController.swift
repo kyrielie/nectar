@@ -28,7 +28,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case ao3Account = 6
 	}
 
-	/// surface-palette-followup-plan, Issue B. Wraps `rootView` with
+	/// See docs/app-chrome-palette.md ("Badge Colors"). Wraps `rootView` with
 	/// `SurfacePaletteAware` and wires a `SurfacePaletteObserver` to the
 	/// hosting controller's own `traitCollection` (never
 	/// `UITraitCollection.current` -- see `SurfacePaletteObserver`'s doc
@@ -291,7 +291,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case .articles:
 			switch ArticlesRow(rawValue: indexPath.row) {
 			case .theme:
-				// Scope note (surface-palette-followup-plan, Issue B): this is
+				// Scope note (see docs/app-chrome-palette.md, "Badge Colors"): this is
 				// the only one of the six SurfacePaletteAware screens with its
 				// own internal color-picking UI (the ColorPicker below, bound
 				// to article-theme colors, unrelated to Assets.Colors). The
@@ -455,11 +455,13 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		}
 	}
 
-	/// Phase 2f's settings toggle: "Ambrosia transfer format: JSON / SQLite,"
-	/// applied uniformly to every Ambrosia-paired feed via
-	/// AmbrosiaTransferFormatPreference (read by LocalAccountRefresher.url(for:)
-	/// on each refresh) -- no per-feed override, no automatic size-based
-	/// switching, per the plan.
+	/// "Ambrosia transfer format: JSON / SQLite," applied uniformly to
+	/// every Ambrosia-paired feed via AmbrosiaTransferFormatPreference
+	/// (read by LocalAccountRefresher.url(for:) on each refresh) -- no
+	/// per-feed override, no automatic size-based switching. A single
+	/// global toggle is simpler for a person to reason about than a
+	/// format that silently varies by feed or by response size; see
+	/// docs/sqlite-transfer.md for the format itself.
 	@IBAction func switchAmbrosiaTransferFormat(_ sender: Any) {
 		AmbrosiaTransferFormatPreference.current = ambrosiaSQLiteTransferSwitch.isOn ? .sqlite : .json
 	}

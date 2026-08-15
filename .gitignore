@@ -115,3 +115,4 @@ fastlane/test_output
 
 .claude/
 
+testresults.txt

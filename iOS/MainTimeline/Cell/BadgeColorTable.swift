@@ -2,8 +2,8 @@
 //  BadgeColorTable.swift
 //  NetNewsWire-iOS
 //
-//  Personalization & Theming plan, item 2 ("Toggleable colored badges"),
-//  restructured by surface-palette-and-badge-colors-plan section 3 from a
+//  Toggleable colored badges, restructured (see docs/app-chrome-palette.md,
+//  "Badge Colors") from a
 //  single hardcoded hex set into one set per BadgeColorPalette case --
 //  `.default` is today's set, renamed not redesigned; `.semantic` is new.
 //  Literal-string lookup tables for rating/category/warning pill tinting
@@ -20,7 +20,7 @@
 //  light/dark-adaptive; migrating these to real colorset entries later is
 //  a mechanical follow-up, not a behavior change.
 //
-//  icon-and-badge-palette-plan grew BadgeColorPalette from three cases
+//  See docs/app-chrome-palette.md ("Badge Colors"): BadgeColorPalette grew from three cases
 //  (neutral/default/semantic) to five (monochrome/default/semantic/
 //  transparent/accent). `.neutral` was renamed to `.monochrome` --
 //  same behavior, clearer name (it's not "no color," it's specifically

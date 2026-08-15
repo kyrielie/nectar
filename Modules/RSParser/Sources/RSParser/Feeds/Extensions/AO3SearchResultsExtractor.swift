@@ -33,8 +33,8 @@
 //  this file's selectors are the first thing to recheck against a saved
 //  View Source capture.
 //
-//  Deliberately out of scope for this checkpoint, per the plan's own
-//  checkpoint split: feed routing/pagination bookkeeping/retry+Cloudflare
+//  Deliberately out of scope for this checkpoint (see docs/ao3-feeds.md):
+//  feed routing/pagination bookkeeping/retry+Cloudflare
 //  handling (checkpoint 2), and AO3IgnoreList wiring (checkpoint 3).
 //
 //  Date/language/stats selectors (dd.language, p.datetime,
@@ -492,13 +492,13 @@ private extension AO3SearchResultsExtractor {
 	/// genuinely different shape from the work page's own
 	/// `dd.series span.series span.position` markup that
 	/// `AO3ChapterHTMLExtractor.seriesEntries(fromDD:)` parses (see that
-	/// function's own doc comment) -- deliberately not shared with it, per
-	/// the plan. Live-fetch confirmation (see file header) found this
+	/// function's own doc comment) -- deliberately kept separate since the
+	/// two markup shapes have nothing in common to share. Live-fetch
+	/// confirmation (see file header) found this
 	/// exact "Part <N> of <linked name>" text shape, including multiple
 	/// `<li>`s back to back for a work in more than one series.
 	static func seriesEntries(fromLI li: HTMLLiteElement) -> [ParsedSeriesEntry] {
-		// `ul[class="series"]` is an exact-attribute selector in the
-		// plan's own notation -- AO3's real element carries only this one
+		// `ul[class="series"]` is an exact-attribute selector -- AO3's real element carries only this one
 		// class, so a direct string comparison (not a token-membership
 		// check) matches it precisely.
 		guard let seriesUL = firstDescendant(of: li, where: { $0.tag == "ul" && $0.attributes["class"] == "series" }) else {

@@ -2,7 +2,7 @@
 //  SettingsBackgroundPalette.swift
 //  NetNewsWire-iOS
 //
-//  surface-palette-and-badge-colors-plan, section 2.3. Shared wiring for
+//  See docs/app-chrome-palette.md ("Badge Colors"). Shared wiring for
 //  every pushed Settings screen (and the root Settings screen itself) that
 //  paints its table/collection view background from
 //  Assets.Colors.settingsBackground(for:) -- same three-notification shape

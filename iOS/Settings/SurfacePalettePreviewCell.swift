@@ -31,7 +31,7 @@
 //  default" contract, just inlined since there's no shared accessor to
 //  call.
 //
-//  surface-palette-and-badge-colors-plan, section 2.4: three more swatches
+//  See docs/app-chrome-palette.md ("Badge Colors"): three more swatches
 //  (Settings background, Settings cell, List background) added alongside
 //  the original five, for six total -- wrapped into two rows of three
 //  rather than four-and-two. Four columns at the existing 80pt swatch

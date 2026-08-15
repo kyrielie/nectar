@@ -2,7 +2,7 @@
 //  BadgeColorPaletteMigrationTests.swift
 //  NetNewsWire-iOSTests
 //
-//  icon-and-badge-palette-plan follow-up: BadgeColorPalette.neutral was
+//  See docs/app-chrome-palette.md ("Badge Colors"): BadgeColorPalette.neutral was
 //  renamed to .monochrome, and the case set grew from three to five.
 //  This guards the "no UserDefaults migration needed" claim in
 //  BadgeColorPalette's doc comment directly, at the raw-value level
@@ -35,8 +35,7 @@ import Testing
 
 	@Test func rawValueOneStillResolvesToACase() {
 		// Direct stand-in for "a device with badgeColorMode already
-		// persisted as 1 loads correctly post-update" from the
-		// implementation plan's testing checklist.
+		// persisted as 1 loads correctly post-update."
 		#expect(BadgeColorPalette(rawValue: 1) == .monochrome)
 	}
 

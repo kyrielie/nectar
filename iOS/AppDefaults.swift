@@ -59,8 +59,7 @@ enum TagDisplayMode: Int, CaseIterable, Sendable {
 /// with their own tint. Fandom pills stay neutral in every palette -- see
 /// MainTimelineCellData's BadgeCategory doc comment for why.
 ///
-/// Renamed from `BadgeColorMode` (surface-palette-and-badge-colors-plan,
-/// section 3) -- what used to be a plain on/off is now a real palette,
+/// Renamed from `BadgeColorMode` (see docs/app-chrome-palette.md, "Badge Colors") -- what used to be a plain on/off is now a real palette,
 /// grown the same incremental way `AccentColor`/`SurfacePalette` did.
 ///
 /// Five cases, two tiers:
@@ -128,7 +127,7 @@ enum AccentColor: Int, CaseIterable, Sendable {
 	case forest = 3
 	case slate = 4
 	case berry = 5
-	/// icon-and-badge-palette-plan follow-up: four additional theme cases,
+	/// See docs/app-chrome-palette.md ("Badge Colors"): four additional theme cases,
 	/// added instead of building a per-icon override UI (explicitly out of
 	/// scope, see IconHexSet's doc comment above) -- the variety a person
 	/// wants from customizable icon colors is delivered by adding more
