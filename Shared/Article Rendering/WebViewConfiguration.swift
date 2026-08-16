@@ -137,9 +137,9 @@ private extension WebViewConfiguration {
 
 	static let articleScripts: [WKUserScript] = {
 #if os(iOS)
-		let filenames = ["main", "main_ios", "newsfoot"]
+		let filenames = ["main", "main_ios", "newsfoot", "annotations"]
 #else
-		let filenames = ["main", "main_mac", "newsfoot"]
+		let filenames = ["main", "main_mac", "newsfoot", "annotations"]
 #endif
 
 		let scripts = filenames.map { filename in

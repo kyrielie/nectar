@@ -38,4 +38,16 @@ function loadAnnotations(bodyHTML) {
 	return { Annotations: module.exports, document, window };
 }
 
-module.exports = { loadAnnotations };
+// Mirrors annotations.js's own toBase64/fromBase64 (UTF-8-safe, not plain
+// btoa/atob) so tests calling the evaluateJavaScript-shaped entry points
+// (renderAnnotationsEncoded, addHighlightFromSelection) can encode
+// arguments and decode results the same way WebViewController does.
+function encodeArgs(value) {
+	return Buffer.from(JSON.stringify(value), "utf8").toString("base64");
+}
+
+function decodeResult(base64) {
+	return JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
+}
+
+module.exports = { loadAnnotations, encodeArgs, decodeResult };
