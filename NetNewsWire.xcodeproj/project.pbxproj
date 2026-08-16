@@ -154,6 +154,7 @@
 		8ED12C1BC67095900FF0F335 /* TimelineKeyboardShortcuts.plist in Resources */ = {isa = PBXBuildFile; fileRef = B085BA6F278DFCC129CB03D0 /* TimelineKeyboardShortcuts.plist */; };
 		8FA96DEBDCC1EC46330CB4D1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 22AE046256E7B985A23CADFD /* Assets.xcassets */; };
 		924F75C5CADAD10FD3CEA85D /* MainFeedCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DEAEE0BE816E70A138FC68 /* MainFeedCollectionViewCell.swift */; };
+		92C363C7AA0B767E6882E4B9 /* annotations.js in Resources */ = {isa = PBXBuildFile; fileRef = FC9E92E117DFBD707EEB7DAD /* annotations.js */; };
 		9312288350C9917AE661D5B1 /* RSWeb in Frameworks */ = {isa = PBXBuildFile; productRef = 83E2FFE2B1504687524EE79A /* RSWeb */; };
 		93B229C79AFA636B5FBFFB87 /* VibrantButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4DABD7FB5DCD099429D9D7F /* VibrantButton.swift */; };
 		9671352A9C9E3EAC74C7B126 /* AddFeedSelectFolderTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8E7A9D222B2E9794D52A03B /* AddFeedSelectFolderTableViewCell.swift */; };
@@ -532,6 +533,7 @@
 		F786753E4D2A1B8926DC47BB /* AccountStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStatsView.swift; sourceTree = "<group>"; };
 		F8E7A9D222B2E9794D52A03B /* AddFeedSelectFolderTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFeedSelectFolderTableViewCell.swift; sourceTree = "<group>"; };
 		FC778ACAB880CE5CE33F581E /* CSSImportExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSSImportExtractor.swift; sourceTree = "<group>"; };
+		FC9E92E117DFBD707EEB7DAD /* annotations.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = annotations.js; sourceTree = "<group>"; };
 		FCF1C72C8F04830B0695D3CF /* UnreadFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnreadFeed.swift; sourceTree = "<group>"; };
 		FD95AF6A5995BE98B14E2940 /* AccentColorTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccentColorTableViewController.swift; sourceTree = "<group>"; };
 		FE0E55EECD7D9E39899A599B /* ArticleSpecifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleSpecifier.swift; sourceTree = "<group>"; };
@@ -834,6 +836,7 @@
 		8CE52D280B09EAC3DC66A38A /* Article Rendering */ = {
 			isa = PBXGroup;
 			children = (
+				FC9E92E117DFBD707EEB7DAD /* annotations.js */,
 				16041D264569E10AB01010A0 /* ArticleRenderer.swift */,
 				A41A67C71540DE45997625FE /* ArticleRenderingSpecialCases.swift */,
 				8CB3642DC7A3A654C2C59EB7 /* core.css */,
@@ -1274,6 +1277,7 @@
 				C72A57D10E174D84437CA709 /* Thanks.rtf in Resources */,
 				7CAA2A034C48057DB61628F3 /* Themes in Resources */,
 				8ED12C1BC67095900FF0F335 /* TimelineKeyboardShortcuts.plist in Resources */,
+				92C363C7AA0B767E6882E4B9 /* annotations.js in Resources */,
 				1F14F639D9CD2C4A08B8C510 /* blank.html in Resources */,
 				A6995CCB304B3852839EE86F /* core.css in Resources */,
 				8ECA534F1C23FE68C64E29AA /* main.js in Resources */,
