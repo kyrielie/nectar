@@ -153,6 +153,7 @@ targets:
     dependencies:
       - target: Nectar-iOS
       - package: Articles
+      - package: Account
       - package: RSCore
     configFiles:
       Debug: xcconfig/NetNewsWire_iOSTests_target.xcconfig
