@@ -1054,6 +1054,46 @@ public enum FetchType {
 		await database.fetchScrollPositionAsync(articleID: articleID)
 	}
 
+	// MARK: - Annotations (highlights + notes)
+
+	public func saveAnnotation(_ annotation: Annotation) async {
+		await database.saveAnnotation(annotation)
+	}
+
+	public func deleteAnnotation(annotationID: String) async {
+		await database.deleteAnnotation(annotationID: annotationID)
+	}
+
+	public func updateAnnotationNote(annotationID: String, note: String?) async {
+		await database.updateAnnotationNote(annotationID: annotationID, note: note)
+	}
+
+	public func updateAnnotationColor(annotationID: String, color: Annotation.Color) async {
+		await database.updateAnnotationColor(annotationID: annotationID, color: color)
+	}
+
+	public func markAnnotationOrphaned(annotationID: String, at date: Date) async {
+		await database.markAnnotationOrphaned(annotationID: annotationID, at: date)
+	}
+
+	public func reanchorAnnotation(annotationID: String, startOffset: Int, endOffset: Int, quoteExact: String, quotePrefix: String, quoteSuffix: String) async {
+		await database.reanchorAnnotation(annotationID: annotationID, startOffset: startOffset, endOffset: endOffset, quoteExact: quoteExact, quotePrefix: quotePrefix, quoteSuffix: quoteSuffix)
+	}
+
+	public func fetchAnnotations(forArticleID articleID: String) async -> [Annotation] {
+		await database.fetchAnnotations(articleID: articleID)
+	}
+
+	/// Cross-chapter listing: every annotation for every article sharing this bookKey.
+	public func fetchAnnotations(forBookKey bookKey: String) async -> [Annotation] {
+		await database.fetchAnnotations(bookKey: bookKey)
+	}
+
+	/// Every annotation in this account, unscoped.
+	public func fetchAllAnnotations() async -> [Annotation] {
+		await database.fetchAllAnnotations()
+	}
+
 	// MARK: - Pending content update (Task 8: content archival & destructive-update protection)
 
 	/// Stashes a freshly fetched contentHTML as a pending update instead of

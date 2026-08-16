@@ -14,6 +14,7 @@ struct DatabaseTableName {
 	static let articles = "articles"
 	static let statuses = "statuses"
 	static let bookState = "bookState"
+	static let annotations = "annotations"
 }
 
 struct DatabaseKey {
@@ -119,4 +120,18 @@ struct DatabaseKey {
 	// Search
 	static let body = "body"
 	static let rowID = "rowid"
+
+	// Annotations (highlights + notes)
+	static let annotationID = "annotationID"
+	static let quoteExact = "quoteExact"
+	static let quotePrefix = "quotePrefix"
+	static let quoteSuffix = "quoteSuffix"
+	static let rootSelector = "rootSelector"
+	static let startOffset = "startOffset"
+	static let endOffset = "endOffset"
+	static let color = "color"
+	static let note = "note"
+	static let createdAt = "createdAt"
+	static let orphanedAt = "orphanedAt"
+	static let lastReanchoredAt = "lastReanchoredAt"
 }

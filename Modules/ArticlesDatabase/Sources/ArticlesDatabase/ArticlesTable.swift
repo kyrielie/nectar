@@ -27,6 +27,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	let queue: DatabaseQueue
 	let statusesTable: StatusesTable
 	let bookStateTable: BookStateTable
+	let annotationsTable: AnnotationsTable
 	let searchTable: SearchTable
 	let retentionStyle: ArticlesDatabase.RetentionStyle
 	let articlesCache = OSAllocatedUnfairLock(initialState: [String: Article]())
@@ -83,6 +84,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		self.queue = queue
 		self.statusesTable = StatusesTable(queue: queue)
 		self.bookStateTable = BookStateTable(queue: queue)
+		self.annotationsTable = AnnotationsTable(queue: queue)
 		self.retentionStyle = retentionStyle
 
 		self.searchTable = SearchTable(queue: queue)
@@ -1244,6 +1246,131 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			self.bookStateTable.setKudosAttempted(at: Date(), authenticated: authenticated, bookKey: bookKey, database)
 			DispatchQueue.main.async {
 				completion?()
+			}
+		}
+	}
+
+	// MARK: - Annotations (highlights + notes)
+	//
+	// bookKey is resolved here at write time (bookKeysForArticleIDs, the
+	// same helper the read/starred/loved propagation path above uses) rather
+	// than trusted from whatever the caller passed in on `annotation` --
+	// per Annotation.swift's doc comment, a stale/caller-supplied bookKey
+	// would silently break the cross-chapter "all highlights in this book"
+	// listing the moment an article's own bookKey resolution changes.
+
+	func saveAnnotationAsync(_ annotation: Annotation, _ completion: DatabaseCompletionBlock?) {
+		queue.runInTransaction { database in
+			let resolvedBookKey = self.bookKeysForArticleIDs(Set([annotation.articleID]), database).first
+			let resolved = Annotation(
+				annotationID: annotation.annotationID,
+				articleID: annotation.articleID,
+				bookKey: resolvedBookKey,
+				quoteExact: annotation.quoteExact,
+				quotePrefix: annotation.quotePrefix,
+				quoteSuffix: annotation.quoteSuffix,
+				rootSelector: annotation.rootSelector,
+				startOffset: annotation.startOffset,
+				endOffset: annotation.endOffset,
+				color: annotation.color,
+				note: annotation.note,
+				createdAt: annotation.createdAt,
+				updatedAt: annotation.updatedAt,
+				orphanedAt: annotation.orphanedAt,
+				lastReanchoredAt: annotation.lastReanchoredAt
+			)
+			self.annotationsTable.save(resolved, database)
+			DispatchQueue.main.async {
+				completion?()
+			}
+		}
+	}
+
+	func deleteAnnotationAsync(annotationID: String, _ completion: DatabaseCompletionBlock?) {
+		queue.runInDatabase { database in
+			self.annotationsTable.deleteAnnotation(annotationID: annotationID, database)
+			DispatchQueue.main.async {
+				completion?()
+			}
+		}
+	}
+
+	func updateAnnotationNoteAsync(annotationID: String, note: String?, _ completion: DatabaseCompletionBlock?) {
+		queue.runInDatabase { database in
+			self.annotationsTable.updateNote(annotationID: annotationID, note: note, at: Date(), database)
+			DispatchQueue.main.async {
+				completion?()
+			}
+		}
+	}
+
+	func updateAnnotationColorAsync(annotationID: String, color: Annotation.Color, _ completion: DatabaseCompletionBlock?) {
+		queue.runInDatabase { database in
+			self.annotationsTable.updateColor(annotationID: annotationID, color: color, at: Date(), database)
+			DispatchQueue.main.async {
+				completion?()
+			}
+		}
+	}
+
+	func markAnnotationOrphanedAsync(annotationID: String, at date: Date, _ completion: DatabaseCompletionBlock?) {
+		queue.runInDatabase { database in
+			self.annotationsTable.markOrphaned(annotationID: annotationID, at: date, database)
+			DispatchQueue.main.async {
+				completion?()
+			}
+		}
+	}
+
+	func reanchorAnnotationAsync(
+		annotationID: String,
+		startOffset: Int,
+		endOffset: Int,
+		quoteExact: String,
+		quotePrefix: String,
+		quoteSuffix: String,
+		_ completion: DatabaseCompletionBlock?
+	) {
+		queue.runInDatabase { database in
+			self.annotationsTable.reanchor(
+				annotationID: annotationID,
+				startOffset: startOffset,
+				endOffset: endOffset,
+				quoteExact: quoteExact,
+				quotePrefix: quotePrefix,
+				quoteSuffix: quoteSuffix,
+				at: Date(),
+				database
+			)
+			DispatchQueue.main.async {
+				completion?()
+			}
+		}
+	}
+
+	func fetchAnnotationsAsync(articleID: String, _ completion: @escaping @Sendable ([Annotation]) -> Void) {
+		queue.runInDatabase { database in
+			let annotations = self.annotationsTable.fetchAnnotations(articleID: articleID, database)
+			DispatchQueue.main.async {
+				completion(annotations)
+			}
+		}
+	}
+
+	func fetchAnnotationsAsync(bookKey: String, _ completion: @escaping @Sendable ([Annotation]) -> Void) {
+		queue.runInDatabase { database in
+			let annotations = self.annotationsTable.fetchAnnotations(bookKey: bookKey, database)
+			DispatchQueue.main.async {
+				completion(annotations)
+			}
+		}
+	}
+
+	func fetchAllAnnotationsAsync(_ completion: @escaping @Sendable ([Annotation]) -> Void) {
+		queue.runInDatabase { database in
+			let annotations = self.annotationsTable.fetchAllAnnotations(database)
+			DispatchQueue.main.async {
+				completion(annotations)
 			}
 		}
 	}
