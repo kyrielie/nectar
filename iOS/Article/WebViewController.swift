@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import SwiftUI
 @preconcurrency import WebKit
 import RSCore
 import RSWeb
@@ -27,6 +28,8 @@ final class WebViewController: UIViewController {
 		static let showFeedInspector = "showFeedInspector"
 		static let debugLog = "debugLog"
 		static let scrollRestoreComplete = "scrollRestoreComplete"
+		static let textWasSelected = "textWasSelected"
+		static let annotationWasTapped = "annotationWasTapped"
 	}
 
 	// Inline series navigation (see docs/ao3-feeds.md) -- the private, non-web URL scheme
@@ -55,6 +58,11 @@ final class WebViewController: UIViewController {
 	// see loadWebViewGeneration below for why that could happen, and why subviews[0]
 	// is not a safe way to identify it.
 	private var webView: PreloadedWebView?
+
+	/// Remembered so the popover's note-icon button (which creates a
+	/// highlight without the person picking a color first) has a
+	/// reasonable default rather than always falling back to yellow.
+	private var lastUsedHighlightColor: Annotation.Color = .yellow
 
 	// Inline series navigation (see docs/ao3-feeds.md). Per-(series, direction)
 	// in-flight/failure state for the links AO3PrefaceRenderer renders
@@ -649,6 +657,7 @@ extension WebViewController: WKNavigationDelegate {
 				oldWebView.removeFromSuperview()
 			}
 		}
+		loadAndRenderAnnotations()
 	}
 
 	func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -808,9 +817,224 @@ extension WebViewController: WKScriptMessageHandler {
 			// article got shorter than the saved position, so the browser clamped
 			// to max scroll).
 			windowScrollY = reportedScrollY
+		case MessageName.textWasSelected:
+			textWasSelected(body: message.body as? [String: Any])
+		case MessageName.annotationWasTapped:
+			annotationWasTapped(body: message.body as? [String: Any])
 		default:
 			return
 		}
+	}
+
+}
+
+// MARK: Annotations (highlights + notes)
+
+extension WebViewController {
+
+	/// Fetches this article's saved annotations and hands them to
+	/// annotations.js's renderAnnotationsEncoded, which resolves each one
+	/// against the freshly rendered DOM and draws its highlight. Any
+	/// annotation renderAnnotationsEncoded reports as "moved" gets its
+	/// stored anchor updated to match (so the next render's stored-offset
+	/// fast path hits instead of re-searching every time); anything
+	/// reported "orphaned" is marked as such, not deleted, so a note is
+	/// never silently lost -- see Annotation.orphanedAt.
+	func loadAndRenderAnnotations() {
+		guard let article, let account = article.account else { return }
+		let articleID = article.articleID
+
+		Task {
+			let annotations = await account.fetchAnnotations(forArticleID: articleID)
+			guard !annotations.isEmpty else { return }
+
+			// Guard against the person navigating to a different article
+			// before this fetch resolves -- same shape as setArticle's
+			// scrollPosition-fetch guard just above it in this file.
+			guard self.article?.articleID == articleID else {
+				Self.logger.debug("loadAndRenderAnnotations: articleID changed before annotation fetch resolved, discarding for articleID=\(articleID, privacy: .public)")
+				return
+			}
+
+			guard let json = try? JSONEncoder().encode(annotations) else { return }
+			let encoded = json.base64EncodedString()
+
+			self.webView?.evaluateJavaScript("renderAnnotationsEncoded(\"\(encoded)\")") { result, error in
+				if let error {
+					Self.logger.error("loadAndRenderAnnotations: renderAnnotationsEncoded() JS call failed: \(error.localizedDescription, privacy: .public)")
+					return
+				}
+				guard let b64 = result as? String, let data = Data(base64Encoded: b64) else {
+					Self.logger.error("loadAndRenderAnnotations: renderAnnotationsEncoded() returned an unexpected result type or invalid base64")
+					return
+				}
+				guard let report = try? JSONDecoder().decode(ReanchorReport.self, from: data) else {
+					Self.logger.error("loadAndRenderAnnotations: failed to decode ReanchorReport from renderAnnotationsEncoded() result")
+					return
+				}
+				self.reconcile(report, account: account)
+			}
+		}
+	}
+
+	private func reconcile(_ report: ReanchorReport, account: Account) {
+		Task {
+			for moved in report.moved {
+				await account.reanchorAnnotation(
+					annotationID: moved.annotationID,
+					startOffset: moved.startOffset,
+					endOffset: moved.endOffset,
+					quoteExact: moved.quoteExact,
+					quotePrefix: moved.quotePrefix,
+					quoteSuffix: moved.quoteSuffix
+				)
+			}
+			for orphanedID in report.orphanedIDs {
+				await account.markAnnotationOrphaned(annotationID: orphanedID, at: Date())
+			}
+		}
+	}
+
+	/// The person selected some text: show the color-swatch/note popover
+	/// anchored to the selection, per HighlightColorPopover's doc comment.
+	func textWasSelected(body: [String: Any]?) {
+		guard let webView,
+			  let body,
+			  let x = body["x"] as? Double,
+			  let y = body["y"] as? Double,
+			  let width = body["width"] as? Double,
+			  let height = body["height"] as? Double else {
+			return
+		}
+
+		// Same webview-safe-area-offset + coordinate-conversion shape
+		// showFullScreenImage uses just above, for the same reason: the
+		// rect JS reports is in the web content's own coordinate space, not
+		// this view controller's.
+		let adjustedY = CGFloat(y) + webView.safeAreaInsets.top
+		let rect = CGRect(x: CGFloat(x), y: adjustedY, width: CGFloat(width), height: CGFloat(height))
+		let convertedRect = webView.convert(rect, to: view)
+
+		presentHighlightColorPopover(sourceRect: convertedRect)
+	}
+
+	private func presentHighlightColorPopover(sourceRect: CGRect) {
+		let popover = HighlightColorPopover(
+			onSelectColor: { [weak self] color in
+				self?.dismiss(animated: true)
+				self?.saveHighlightFromSelection(color: color, thenOpenNoteEditor: false)
+			},
+			onAddNote: { [weak self] in
+				self?.dismiss(animated: true)
+				self?.saveHighlightFromSelection(color: self?.lastUsedHighlightColor ?? .yellow, thenOpenNoteEditor: true)
+			}
+		)
+
+		let hostingController = UIHostingController(rootView: popover)
+		hostingController.modalPresentationStyle = .popover
+		hostingController.preferredContentSize = CGSize(width: 220, height: 56)
+		if let presentationController = hostingController.popoverPresentationController {
+			presentationController.sourceView = view
+			presentationController.sourceRect = sourceRect
+			presentationController.permittedArrowDirections = [.up, .down]
+			presentationController.delegate = self
+		}
+		present(hostingController, animated: true)
+	}
+
+	/// Calls annotations.js's addHighlightFromSelection to resolve the
+	/// still-live selection into a selector and draw the highlight
+	/// immediately, then persists the result. If the selection didn't
+	/// survive (the person dismissed the popover, scrolled, etc.) this
+	/// does nothing -- there's no stale selector to fall back to, since
+	/// the whole point of resolving against the live selection rather than
+	/// capturing it earlier is that it's still authoritative at this exact
+	/// moment.
+	private func saveHighlightFromSelection(color: Annotation.Color, thenOpenNoteEditor: Bool) {
+		guard let article, let account = article.account else { return }
+
+		lastUsedHighlightColor = color
+		let annotationID = UUID().uuidString
+		let args: [String: String] = ["annotationID": annotationID, "color": color.rawValue]
+		guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else { return }
+		let encodedArgs = argsJSON.base64EncodedString()
+
+		webView?.evaluateJavaScript("addHighlightFromSelection(\"\(encodedArgs)\")") { [weak self] result, error in
+			guard let self else { return }
+			if let error {
+				Self.logger.error("saveHighlightFromSelection: addHighlightFromSelection() JS call failed: \(error.localizedDescription, privacy: .public)")
+				return
+			}
+			guard let b64 = result as? String, let data = Data(base64Encoded: b64) else {
+				Self.logger.error("saveHighlightFromSelection: addHighlightFromSelection() returned an unexpected result type or invalid base64")
+				return
+			}
+			guard let selector = try? JSONDecoder().decode(AnnotationSelector.self, from: data) else {
+				// Not necessarily an error -- addHighlightFromSelection legitimately
+				// returns base64("null") when the selection didn't survive.
+				return
+			}
+
+			let now = Date()
+			let annotation = Annotation(
+				annotationID: selector.annotationID,
+				articleID: article.articleID,
+				bookKey: nil, // resolved from articleID at save time -- see ArticlesTable.saveAnnotationAsync
+				quoteExact: selector.quoteExact,
+				quotePrefix: selector.quotePrefix,
+				quoteSuffix: selector.quoteSuffix,
+				rootSelector: selector.rootSelector,
+				startOffset: selector.startOffset,
+				endOffset: selector.endOffset,
+				color: color,
+				note: nil,
+				createdAt: now,
+				updatedAt: now
+			)
+
+			Task {
+				await account.saveAnnotation(annotation)
+			}
+
+			if thenOpenNoteEditor {
+				self.openNoteEditor(for: annotation)
+			}
+		}
+	}
+
+	/// The person tapped an existing highlight: open its note editor
+	/// (creating one if this highlight has no note yet).
+	func annotationWasTapped(body: [String: Any]?) {
+		guard let article, let account = article.account,
+			  let body, let annotationID = body["annotationID"] as? String else {
+			return
+		}
+
+		Task {
+			let annotations = await account.fetchAnnotations(forArticleID: article.articleID)
+			guard let annotation = annotations.first(where: { $0.annotationID == annotationID }) else { return }
+			self.openNoteEditor(for: annotation)
+		}
+	}
+
+	/// The note-editor sheet itself isn't built yet -- this is the single
+	/// hook point both the "tap an existing highlight" and "add note from
+	/// the color popover" paths call into, so wiring the real editor in
+	/// later only means filling in this one function.
+	private func openNoteEditor(for annotation: Annotation) {
+		Self.logger.debug("openNoteEditor: annotationID=\(annotation.annotationID, privacy: .public) (note editor not yet implemented)")
+	}
+
+}
+
+extension WebViewController: UIPopoverPresentationControllerDelegate {
+
+	func adaptivePresentationStyle(for controller: UIPresentationController) -> UIModalPresentationStyle {
+		// Force true popover presentation even on compact-width (iPhone)
+		// size classes, where UIKit would otherwise adapt this to a full
+		// sheet -- a full sheet is the wrong weight for "pick one of five
+		// colors."
+		.none
 	}
 
 }
@@ -917,6 +1141,35 @@ private struct ImageClickMessage: Codable {
 	let height: Float
 	let imageTitle: String?
 	let imageURL: String
+}
+
+/// The shape annotations.js's renderAnnotationsEncoded/addHighlightFromSelection
+/// return over the evaluateJavaScript base64-JSON bridge. `AnnotationSelector`
+/// mirrors the plain-object shape addHighlightFromSelection resolves a live
+/// selection down to; ReanchorReport mirrors renderAnnotations' per-render
+/// {moved, orphanedIDs} report.
+private struct AnnotationSelector: Codable {
+	let annotationID: String
+	let color: String
+	let quoteExact: String
+	let quotePrefix: String
+	let quoteSuffix: String
+	let rootSelector: String
+	let startOffset: Int
+	let endOffset: Int
+}
+
+private struct ReanchorReport: Codable {
+	struct Moved: Codable {
+		let annotationID: String
+		let startOffset: Int
+		let endOffset: Int
+		let quoteExact: String
+		let quotePrefix: String
+		let quoteSuffix: String
+	}
+	let moved: [Moved]
+	let orphanedIDs: [String]
 }
 
 // MARK: Private
@@ -1029,6 +1282,8 @@ private extension WebViewController {
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.showFeedInspector)
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.debugLog)
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.scrollRestoreComplete)
+				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.textWasSelected)
+				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.annotationWasTapped)
 
 				// Add handlers
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.imageWasClicked)
@@ -1036,6 +1291,8 @@ private extension WebViewController {
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.showFeedInspector)
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.debugLog)
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.scrollRestoreComplete)
+				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.textWasSelected)
+				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.annotationWasTapped)
 
 				self.renderPage(webView)
 			}
