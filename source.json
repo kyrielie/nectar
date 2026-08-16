@@ -1,7 +1,7 @@
 {
     "name": "Nectar",
-    "subtitle": "A feed reader.",
-    "description": "Nectar is a feed reader for iOS.",
+    "subtitle": "Source for Nectar, an AO3 & Ambrosia reader",
+    "description": "Personal AltStore source publishing Nectar, a fork of NetNewsWire for reading Archive of Our Own and Ambrosia feeds. Beta software, updated automatically from GitHub Releases.",
     "iconURL": "https://kyrielie.github.io/nectar/icon.png",
     "website": "https://github.com/kyrielie/nectar",
     "tintColor": "#4185A9",
@@ -10,11 +10,11 @@
             "name": "Nectar",
             "bundleIdentifier": "com.kyrielie.nectar",
             "developerName": "kyrielie",
-            "subtitle": "A feed reader.",
-            "localizedDescription": "Nectar is a feed reader for iOS.",
+            "subtitle": "Fic-aware AO3 & Ambrosia reader",
+            "localizedDescription": "Nectar reads Archive of Our Own's RSS feeds and loads each work's full text with saved reading position, offline-friendly caching, and a distraction-free reader. It's also the companion app for Ambrosia, a local fanfiction library with fic-specific metadata -- word count, chapters, fandom, rating, warnings, series -- for large personal collections AO3's own feeds can't cover.",
             "iconURL": "https://kyrielie.github.io/nectar/icon.png",
             "tintColor": "#4185A9",
-            "category": "other",
+            "category": "entertainment",
             "screenshots": [
                 "https://kyrielie.github.io/nectar/screenshots/1.png",
                 "https://kyrielie.github.io/nectar/screenshots/2.png",
@@ -34,15 +34,28 @@
             "versions": [
                 {
                     "version": "7.1.1",
-                    "buildVersion": "7108.27",
-                    "date": "2026-08-15T08:37:08Z",
-                    "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.1.0...v0.1.1",
-                    "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.1.1/Nectar-unsigned.ipa",
-                    "size": 4541548,
-                    "minOSVersion": "17.0"
+                    "buildVersion": "7108.28",
+                    "date": "2026-08-16T06:55:47Z",
+                    "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.1.1...v0.1.2",
+                    "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.1.2/Nectar-unsigned.ipa",
+                    "size": 4548207,
+                    "minOSVersion": "17.0",
+                    "marketingVersion": "0.1.2"
                 }
             ]
         }
     ],
-    "news": []
+    "news": [
+        {
+            "title": "Welcome to Nectar",
+            "identifier": "nectar-source-intro",
+            "caption": "A fic-aware AO3 & Ambrosia reader, sideloaded via AltStore.",
+            "date": "2026-08-15",
+            "tintColor": "#4185A9",
+            "notify": false,
+            "url": "https://github.com/kyrielie/nectar",
+            "appID": "com.kyrielie.nectar"
+        }
+    ],
+    "nsfw": false
 }
