@@ -62,7 +62,14 @@ final class WebViewController: UIViewController {
 	/// Remembered so the popover's note-icon button (which creates a
 	/// highlight without the person picking a color first) has a
 	/// reasonable default rather than always falling back to yellow.
-	private var lastUsedHighlightColor: Annotation.Color = .yellow
+	private var lastUsedHighlightColor: Annotation.Color = AppDefaults.shared.defaultAnnotationColor
+
+	/// Backing storage for awaitNextPageLoad(), resumed from
+	/// webView(_:didFinish:). An array, not a single optional, since more
+	/// than one caller could in principle await concurrently -- a single
+	/// continuation would silently drop a second awaiter rather than
+	/// resuming it.
+	private var nextPageLoadContinuations: [CheckedContinuation<Void, Never>] = []
 
 	// Inline series navigation (see docs/ao3-feeds.md). Per-(series, direction)
 	// in-flight/failure state for the links AO3PrefaceRenderer renders
@@ -192,6 +199,7 @@ final class WebViewController: UIViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidComplete(_:)), name: .ao3ChapterFetchDidComplete, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidFail(_:)), name: .ao3ChapterFetchDidFail, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(statusesDidChange(_:)), name: .StatusesDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(accountDidDownloadArticles(_:)), name: .AccountDidDownloadArticles, object: nil)
 
 		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,
 		// IPHONEOS_DEPLOYMENT_TARGET = 17.0), so use registerForTraitChanges rather
@@ -322,6 +330,59 @@ final class WebViewController: UIViewController {
 			// than written to contentHTML -- offer the "view what changed?"
 			// prompt in that case.
 			self.presentPendingContentUpdateAlertIfNeeded()
+		}
+	}
+
+	/// Re-anchoring's second hook point (the first is
+	/// resolvePendingContentUpdate/ao3ChapterFetchDidComplete above, for
+	/// the AO3-pending-diff path specifically): any *ordinary* content
+	/// update -- a regular feed refresh, an Ambrosia re-export, an
+	/// AO3ChapterFetcher fetch that didn't trip the regression guard --
+	/// goes through Account.updateAsync -> ArticlesTable.saveUpdatedArticle,
+	/// which isn't gated behind the pending-confirmation UI at all and so
+	/// carries no notification of its own to this view controller. Every
+	/// such update fires AccountDidDownloadArticles regardless of source
+	/// (see Account.sendNotificationAbout), so that's the one place this
+	/// can be caught generically rather than adding a new notification
+	/// per content-update call site.
+	///
+	/// Re-anchoring itself still runs entirely inside loadAndRenderAnnotations's
+	/// existing JS round trip once loadWebView triggers a fresh render --
+	/// this handler's only job is noticing that the currently-displayed
+	/// article's contentHTML just changed underneath it and re-fetching/
+	/// reloading, the same shape ao3ChapterFetchDidComplete already uses.
+	/// If this article isn't currently open in this WebViewController (or
+	/// contentHTML didn't actually change -- e.g. only kudosCount did),
+	/// there's nothing to do here: annotations for articles not currently
+	/// rendered anywhere re-anchor for free the next time they *are*
+	/// opened, since loadAndRenderAnnotations's re-anchor pass isn't
+	/// gated on "did content just change," only on "did a render just
+	/// happen."
+	@objc func accountDidDownloadArticles(_ note: Notification) {
+		guard let article, let updatedArticles = note.userInfo?[Account.UserInfoKey.updatedArticles] as? Set<Article>,
+		      let updatedArticle = updatedArticles.first(where: { $0.articleID == article.articleID }) else {
+			return
+		}
+		// updatedArticle is the incoming Article built from whatever
+		// ParsedItem/AO3 extraction triggered this update, which can
+		// carry a nil contentHTML for an update that didn't touch it
+		// (changesFrom's own "only write when non-nil" guard -- see
+		// Article+Database.swift) -- only reload if it actually differs
+		// from what's currently on screen, not on every unrelated field
+		// change (kudos/comment/bookmark counts, etc.) this same
+		// notification also covers.
+		guard let newContentHTML = updatedArticle.contentHTML, newContentHTML != article.contentHTML else {
+			return
+		}
+		let articleID = article.articleID
+		guard let account = article.account else { return }
+		Task {
+			let refetchedArticles = await account.fetchArticlesAsync(.articleIDs([articleID]))
+			guard let refetchedArticle = refetchedArticles.first, self.article?.articleID == articleID else {
+				return
+			}
+			self.article = refetchedArticle
+			self.loadWebView(reason: "accountDidDownloadArticles(\(articleID))")
 		}
 	}
 
@@ -658,6 +719,7 @@ extension WebViewController: WKNavigationDelegate {
 			}
 		}
 		loadAndRenderAnnotations()
+		resumeAwaitingPageLoads()
 	}
 
 	func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -859,7 +921,7 @@ extension WebViewController {
 			guard let json = try? JSONEncoder().encode(annotations) else { return }
 			let encoded = json.base64EncodedString()
 
-			self.webView?.evaluateJavaScript("renderAnnotationsEncoded(\"\(encoded)\")") { result, error in
+			self.webView?.evaluateJavaScript("Annotations.renderAnnotationsEncoded(\"\(encoded)\")") { result, error in
 				if let error {
 					Self.logger.error("loadAndRenderAnnotations: renderAnnotationsEncoded() JS call failed: \(error.localizedDescription, privacy: .public)")
 					return
@@ -892,6 +954,53 @@ extension WebViewController {
 			for orphanedID in report.orphanedIDs {
 				await account.markAnnotationOrphaned(annotationID: orphanedID, at: Date())
 			}
+		}
+	}
+
+	/// Scrolls to and briefly flashes the given annotation's highlight in
+	/// the currently loaded page, via annotations.js's scrollToAnnotation.
+	/// Unlike scrollToHeading (main_ios.js, iOS-only, uses the
+	/// withEncodedArg base64-JSON convention), annotations.js is
+	/// cross-platform and exposes its functions directly off the global
+	/// Annotations object with plain arguments -- no base64 encoding
+	/// needed for a single string ID. Fire-and-forget, same as
+	/// scrollToHeading; no-op if the annotation's mark isn't in the
+	/// rendered DOM (e.g. orphaned).
+	func scrollToAnnotation(annotationID: String) {
+		let escaped = annotationID.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+		webView?.evaluateJavaScript("Annotations.scrollToAnnotation(\"\(escaped)\")") { _, error in
+			if let error {
+				Self.logger.error("scrollToAnnotation: Annotations.scrollToAnnotation() JS call failed: \(error.localizedDescription, privacy: .public)")
+			}
+		}
+	}
+
+	/// Resolves once this WebViewController's webpage has finished
+	/// loading -- used by ArticleViewController.navigateToAnnotation to
+	/// wait past selectArticleDirectly's article-selection resolution
+	/// (which fires well before the new WebViewController's own didFinish
+	/// navigation callback) before calling scrollToAnnotation, since the
+	/// mark it needs to scroll to doesn't exist in the DOM until then.
+	/// If a load is already in flight, waits for that one; if the page
+	/// has already finished loading, resolves on the next load instead
+	/// of hanging forever, on the assumption that a caller awaiting this
+	/// wants the *result of a navigation*, not "has ever loaded."
+	func awaitNextPageLoad() async {
+		await withCheckedContinuation { continuation in
+			nextPageLoadContinuations.append(continuation)
+		}
+	}
+
+	/// Resumes every pending awaitNextPageLoad() caller. Called from
+	/// webView(_:didFinish:) in the WKNavigationDelegate extension below.
+	/// Backing storage is nextPageLoadContinuations, declared as a real
+	/// stored property alongside lastUsedHighlightColor near the top of
+	/// the class (extensions can't add stored properties).
+	fileprivate func resumeAwaitingPageLoads() {
+		let continuations = nextPageLoadContinuations
+		nextPageLoadContinuations = []
+		for continuation in continuations {
+			continuation.resume()
 		}
 	}
 
@@ -959,7 +1068,7 @@ extension WebViewController {
 		guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else { return }
 		let encodedArgs = argsJSON.base64EncodedString()
 
-		webView?.evaluateJavaScript("addHighlightFromSelection(\"\(encodedArgs)\")") { [weak self] result, error in
+		webView?.evaluateJavaScript("Annotations.addHighlightFromSelection(\"\(encodedArgs)\")") { [weak self] result, error in
 			guard let self else { return }
 			if let error {
 				Self.logger.error("saveHighlightFromSelection: addHighlightFromSelection() JS call failed: \(error.localizedDescription, privacy: .public)")
@@ -1046,7 +1155,7 @@ extension WebViewController {
 		let noteChanged = note != annotation.note
 
 		if colorChanged {
-			webView?.evaluateJavaScript("updateAnnotationColor(\"\(annotation.annotationID)\", \"\(color.rawValue)\")")
+			webView?.evaluateJavaScript("Annotations.updateAnnotationColor(\"\(annotation.annotationID)\", \"\(color.rawValue)\")")
 		}
 
 		Task {
@@ -1062,7 +1171,7 @@ extension WebViewController {
 	private func deleteAnnotation(_ annotation: Annotation, account: Account) {
 		// removeAnnotationHighlight unwraps the <mark> and normalizes the
 		// affected text nodes back together -- see annotations.js.
-		webView?.evaluateJavaScript("removeAnnotationHighlight(\"\(annotation.annotationID)\")")
+		webView?.evaluateJavaScript("Annotations.removeAnnotationHighlight(\"\(annotation.annotationID)\")")
 
 		Task {
 			await account.deleteAnnotation(annotationID: annotation.annotationID)

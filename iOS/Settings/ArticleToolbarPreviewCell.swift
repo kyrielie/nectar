@@ -77,6 +77,9 @@ final class ArticleToolbarPreviewCell: UICollectionViewListCell {
 		if defaults.isArticleToolbarToggleEnabled(.lock) {
 			items.append(UIBarButtonItem(image: UIImage(systemName: "lock.open"), style: .plain, target: nil, action: nil))
 		}
+		if defaults.isArticleToolbarToggleEnabled(.annotations) {
+			items.append(UIBarButtonItem(image: Assets.Images.annotations, style: .plain, target: nil, action: nil))
+		}
 
 		let navItem = UINavigationItem(title: "")
 		navItem.rightBarButtonItems = items

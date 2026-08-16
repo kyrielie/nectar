@@ -23,6 +23,10 @@ function loadAnnotations(bodyHTML) {
 	const window = dom.window;
 	const document = window.document;
 
+	// jsdom has no layout engine, so Element.scrollIntoView doesn't exist
+	// at all there (real WebKit always provides it).
+	window.Element.prototype.scrollIntoView = function () {};
+
 	const module = { exports: {} };
 	const fn = new Function(
 		"module",

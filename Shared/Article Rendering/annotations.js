@@ -372,6 +372,31 @@
 		});
 	}
 
+	// Scrolls the first <mark> for annotationID into view and adds a
+	// brief flash class (nnw-highlight-flash, styled in core.css) so the
+	// destination is obvious even against a highlight color the person
+	// might not immediately spot on a long page -- same "land in a
+	// specific spot, not just the general area" goal scrollToHeading
+	// serves for table-of-contents navigation, but keyed on an annotation
+	// ID against a real DOM node rather than a heading index. A range
+	// spanning multiple text nodes produces multiple <mark> elements (see
+	// wrapRange); scrolling to the first is sufficient since they're
+	// always visually contiguous.
+	function scrollToAnnotation(annotationID, options) {
+		options = options || {};
+		var rootSelector = options.rootSelector || DEFAULT_ROOT_SELECTOR;
+		var root = document.querySelector(rootSelector) || document;
+		var mark = root.querySelector('mark.' + HIGHLIGHT_CLASS + '[data-annotation-id="' + cssEscape(annotationID) + '"]');
+		if (!mark) return false;
+
+		mark.scrollIntoView({ block: "center" });
+		mark.classList.add("nnw-highlight-flash");
+		setTimeout(function () {
+			mark.classList.remove("nnw-highlight-flash");
+		}, 1500);
+		return true;
+	}
+
 	// ---- Selection capture ----------------------------------------------
 	//
 	// Turns a live Range (the person's current selection, or a
@@ -584,6 +609,7 @@
 		updateAnnotationColor: updateAnnotationColor,
 		addHighlightFromSelection: addHighlightFromSelection,
 		initAnnotations: initAnnotations,
+		scrollToAnnotation: scrollToAnnotation,
 
 		// Exposed for headless unit testing (annotations.test.js) of the
 		// pure algorithm pieces without needing to drive the whole
