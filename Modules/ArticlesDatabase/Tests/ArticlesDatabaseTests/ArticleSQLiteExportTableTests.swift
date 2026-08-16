@@ -112,6 +112,67 @@ struct ArticleSQLiteExportTableTests {
 		#expect(exportedArticleIDs.count == 1)
 	}
 
+	// MARK: - 2b. annotations scoped by the articles join, same shape as statuses
+
+	@Test("annotations export is scoped by the articles join: an annotation on an excluded article is not exported")
+	func annotationsScopedByArticlesJoin() async throws {
+		let db = TestFixtures.makeDatabase()
+		_ = await db.updateAsync(parsedItems: [TestFixtures.makeParsedItem(uniqueID: "u1", feedURL: "https://example.com/feed-a")], feedID: "feed-a", deleteOlder: false)
+		_ = await db.updateAsync(parsedItems: [TestFixtures.makeParsedItem(uniqueID: "u2", feedURL: "https://example.com/feed-b")], feedID: "feed-b", deleteOlder: false)
+
+		let now = Date(timeIntervalSince1970: 1_700_000_000)
+		await db.saveAnnotation(Annotation(
+			annotationID: "annotation-a",
+			articleID: "u1",
+			bookKey: nil,
+			quoteExact: "in scope",
+			quotePrefix: "",
+			quoteSuffix: "",
+			startOffset: 0,
+			endOffset: 8,
+			color: .yellow,
+			note: nil,
+			createdAt: now,
+			updatedAt: now
+		))
+		await db.saveAnnotation(Annotation(
+			annotationID: "annotation-b",
+			articleID: "u2",
+			bookKey: nil,
+			quoteExact: "out of scope",
+			quotePrefix: "",
+			quoteSuffix: "",
+			startOffset: 0,
+			endOffset: 12,
+			color: .yellow,
+			note: nil,
+			createdAt: now,
+			updatedAt: now
+		))
+
+		let destinationPath = tempPath()
+		defer { try? FileManager.default.removeItem(atPath: destinationPath) }
+		try db.exportArticlesSQLite(feedIDs: ["feed-a"], toPath: destinationPath)
+
+		guard let database = FMDatabase(path: destinationPath), database.open() else {
+			Issue.record("could not open exported file")
+			return
+		}
+		defer { database.close() }
+		guard let resultSet = database.executeQuery("SELECT annotationID FROM annotations;", withArgumentsIn: []) else {
+			Issue.record("could not query exported annotations")
+			return
+		}
+		defer { resultSet.close() }
+		var exportedAnnotationIDs = Set<String>()
+		while resultSet.next() {
+			if let annotationID = resultSet.swiftString(forColumn: "annotationID") {
+				exportedAnnotationIDs.insert(annotationID)
+			}
+		}
+		#expect(exportedAnnotationIDs == ["annotation-a"])
+	}
+
 	// MARK: - 3. destinationPath already existing fails, doesn't silently overwrite
 
 	@Test("exporting to a destinationPath that already contains an articles table throws rather than overwriting")

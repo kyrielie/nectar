@@ -1155,7 +1155,11 @@ extension WebViewController {
 		let noteChanged = note != annotation.note
 
 		if colorChanged {
-			webView?.evaluateJavaScript("Annotations.updateAnnotationColor(\"\(annotation.annotationID)\", \"\(color.rawValue)\")")
+			webView?.evaluateJavaScript("Annotations.updateAnnotationColor(\"\(annotation.annotationID)\", \"\(color.rawValue)\")") { _, error in
+				if let error {
+					Self.logger.error("saveNoteEdit: Annotations.updateAnnotationColor() JS call failed: \(error.localizedDescription, privacy: .public)")
+				}
+			}
 		}
 
 		Task {
@@ -1171,7 +1175,11 @@ extension WebViewController {
 	private func deleteAnnotation(_ annotation: Annotation, account: Account) {
 		// removeAnnotationHighlight unwraps the <mark> and normalizes the
 		// affected text nodes back together -- see annotations.js.
-		webView?.evaluateJavaScript("Annotations.removeAnnotationHighlight(\"\(annotation.annotationID)\")")
+		webView?.evaluateJavaScript("Annotations.removeAnnotationHighlight(\"\(annotation.annotationID)\")") { _, error in
+			if let error {
+				Self.logger.error("deleteAnnotation: Annotations.removeAnnotationHighlight() JS call failed: \(error.localizedDescription, privacy: .public)")
+			}
+		}
 
 		Task {
 			await account.deleteAnnotation(annotationID: annotation.annotationID)
