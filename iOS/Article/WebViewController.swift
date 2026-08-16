@@ -1017,12 +1017,56 @@ extension WebViewController {
 		}
 	}
 
-	/// The note-editor sheet itself isn't built yet -- this is the single
-	/// hook point both the "tap an existing highlight" and "add note from
-	/// the color popover" paths call into, so wiring the real editor in
-	/// later only means filling in this one function.
+	/// Presents the note-editor half-sheet for one annotation. Both entry
+	/// points (a fresh highlight from the popover's note-icon path, and
+	/// tapping an existing <mark>) converge here.
 	private func openNoteEditor(for annotation: Annotation) {
-		Self.logger.debug("openNoteEditor: annotationID=\(annotation.annotationID, privacy: .public) (note editor not yet implemented)")
+		guard let article, let account = article.account else { return }
+
+		let editorView = AnnotationEditorView(
+			annotation: annotation,
+			onSave: { [weak self] note, color in
+				self?.saveNoteEdit(annotation: annotation, note: note, color: color, account: account)
+			},
+			onDelete: { [weak self] in
+				self?.deleteAnnotation(annotation, account: account)
+			}
+		)
+
+		let hostingController = UIHostingController(rootView: editorView)
+		if let sheet = hostingController.sheetPresentationController {
+			sheet.detents = [.medium(), .large()]
+			sheet.prefersGrabberVisible = true
+		}
+		present(hostingController, animated: true)
+	}
+
+	private func saveNoteEdit(annotation: Annotation, note: String?, color: Annotation.Color, account: Account) {
+		let colorChanged = color != annotation.color
+		let noteChanged = note != annotation.note
+
+		if colorChanged {
+			webView?.evaluateJavaScript("updateAnnotationColor(\"\(annotation.annotationID)\", \"\(color.rawValue)\")")
+		}
+
+		Task {
+			if colorChanged {
+				await account.updateAnnotationColor(annotationID: annotation.annotationID, color: color)
+			}
+			if noteChanged {
+				await account.updateAnnotationNote(annotationID: annotation.annotationID, note: note)
+			}
+		}
+	}
+
+	private func deleteAnnotation(_ annotation: Annotation, account: Account) {
+		// removeAnnotationHighlight unwraps the <mark> and normalizes the
+		// affected text nodes back together -- see annotations.js.
+		webView?.evaluateJavaScript("removeAnnotationHighlight(\"\(annotation.annotationID)\")")
+
+		Task {
+			await account.deleteAnnotation(annotationID: annotation.annotationID)
+		}
 	}
 
 }
