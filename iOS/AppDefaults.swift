@@ -530,6 +530,7 @@ enum ArticleToolbarToggle: CaseIterable, Sendable {
 	case find
 	case prevNext
 	case lock
+	case annotations
 }
 
 extension Notification.Name {
@@ -596,6 +597,8 @@ final class AppDefaults: Sendable {
 		static let articleToolbarShowFind = "articleToolbarShowFind"
 		static let articleToolbarShowPrevNext = "articleToolbarShowPrevNext"
 		static let articleToolbarShowLock = "articleToolbarShowLock"
+		static let articleToolbarShowAnnotations = "articleToolbarShowAnnotations"
+		static let defaultAnnotationColor = "defaultAnnotationColor"
 		static let hideNotchInFullScreen = "hideNotchInFullScreen"
 		static let pageCounterDisplayMode = "pageCounterDisplayMode"
 		static let disableArticleLinks = "disableArticleLinks"
@@ -887,11 +890,42 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	/// Single dispatch point over the five articleToolbarShowX properties,
-	/// keyed by ArticleToolbarToggle case -- used anywhere the five toggles
+	/// Off by default, same reasoning as articleToolbarShowLock just above:
+	/// this is an opt-in extra, not something everyone needs cluttering the
+	/// bar. See WebViewController's annotations extension for the feature
+	/// this button surfaces.
+	var articleToolbarShowAnnotations: Bool {
+		get {
+			return AppDefaults.bool(for: Key.articleToolbarShowAnnotations)
+		}
+		set {
+			AppDefaults.setBool(for: Key.articleToolbarShowAnnotations, newValue)
+		}
+	}
+
+	/// The color HighlightColorPopover's note-icon path (which creates a
+	/// highlight without the person picking a color) falls back to, and
+	/// the starting selection in the annotations toolbar menu's "Default
+	/// Highlight Color" submenu below. Yellow, matching
+	/// HighlightColorPopover/AnnotationEditorView's own fallback default.
+	var defaultAnnotationColor: Annotation.Color {
+		get {
+			guard let rawValue = AppDefaults.string(for: Key.defaultAnnotationColor),
+				  let color = Annotation.Color(rawValue: rawValue) else {
+				return .yellow
+			}
+			return color
+		}
+		set {
+			AppDefaults.setString(for: Key.defaultAnnotationColor, newValue.rawValue)
+		}
+	}
+
+	/// Single dispatch point over the six articleToolbarShowX properties,
+	/// keyed by ArticleToolbarToggle case -- used anywhere the toggles
 	/// need to be read or written generically (ArticleToolbarCustomizerViewController's
 	/// row loop, SettingsViewController's summary label) instead of via a
-	/// five-way switch at each call site.
+	/// six-way switch at each call site.
 	func isArticleToolbarToggleEnabled(_ toggle: ArticleToolbarToggle) -> Bool {
 		switch toggle {
 		case .theme: return articleToolbarShowTheme
@@ -899,6 +933,7 @@ final class AppDefaults: Sendable {
 		case .find: return articleToolbarShowFind
 		case .prevNext: return articleToolbarShowPrevNext
 		case .lock: return articleToolbarShowLock
+		case .annotations: return articleToolbarShowAnnotations
 		}
 	}
 
@@ -909,6 +944,7 @@ final class AppDefaults: Sendable {
 		case .find: articleToolbarShowFind = enabled
 		case .prevNext: articleToolbarShowPrevNext = enabled
 		case .lock: articleToolbarShowLock = enabled
+		case .annotations: articleToolbarShowAnnotations = enabled
 		}
 	}
 

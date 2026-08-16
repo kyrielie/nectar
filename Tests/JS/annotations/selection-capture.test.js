@@ -190,6 +190,30 @@ test("addHighlightFromSelection round-trips non-Latin-1 text in the returned sel
 	assert.equal(result.quoteExact, "“café”");
 });
 
+test("scrollToAnnotation scrolls to and flashes an existing highlight, returning true", async () => {
+	const { Annotations, document } = loadAnnotations(
+		'<div class="articleBody"><p>Once upon a time there was a fox.</p></div>'
+	);
+	Annotations.renderAnnotations([{ annotationID: "a1", startOffset: 0, endOffset: 4, quoteExact: "Once" }]);
+
+	const found = Annotations.scrollToAnnotation("a1");
+
+	assert.equal(found, true);
+	const mark = document.querySelector('mark[data-annotation-id="a1"]');
+	assert.ok(mark.classList.contains("nnw-highlight-flash"), "expected the flash class to be added immediately");
+
+	await new Promise((resolve) => setTimeout(resolve, 1600));
+	assert.ok(!mark.classList.contains("nnw-highlight-flash"), "expected the flash class to be removed after the timeout");
+});
+
+test("scrollToAnnotation returns false for an annotation with no rendered mark", () => {
+	const { Annotations } = loadAnnotations('<div class="articleBody"><p>Nothing highlighted here.</p></div>');
+
+	const found = Annotations.scrollToAnnotation("does-not-exist");
+
+	assert.equal(found, false);
+});
+
 test("initAnnotations wires a tap on an existing mark to post annotationWasTapped", () => {
 	const { Annotations, document, window } = loadAnnotations(
 		'<div class="articleBody"><p>Once upon a time there was a fox.</p></div>'

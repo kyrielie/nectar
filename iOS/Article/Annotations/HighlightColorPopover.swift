@@ -103,4 +103,25 @@ extension Annotation.Color {
 			return NSLocalizedString("Purple", comment: "Highlight color")
 		}
 	}
+
+	/// UIKit equivalent of swiftUIColor, for call sites that can't use a
+	/// SwiftUI Color directly (e.g. UIAction.image below). Derived from
+	/// swiftUIColor rather than a separate hex literal, so there's still
+	/// only one place encoding each color's actual value.
+	var uiColor: UIColor {
+		UIColor(swiftUIColor)
+	}
+
+	/// A small filled-circle swatch, for UIMenu/UIAction images (the
+	/// annotations toolbar menu's "Default Highlight Color" submenu) --
+	/// UIKit menus can't host a SwiftUI Circle the way HighlightColorPopover
+	/// and AnnotationEditorView do.
+	var swatchImage: UIImage {
+		let diameter: CGFloat = 18
+		let renderer = UIGraphicsImageRenderer(size: CGSize(width: diameter, height: diameter))
+		return renderer.image { context in
+			uiColor.setFill()
+			context.cgContext.fillEllipse(in: CGRect(x: 0, y: 0, width: diameter, height: diameter))
+		}.withRenderingMode(.alwaysOriginal)
+	}
 }
