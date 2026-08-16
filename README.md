@@ -51,16 +51,16 @@ Nectar isn't on the App Store — it's distributed as an unsigned IPA you sidelo
 
 ### AltStore (recommended)
 
-AltStore keeps Nectar updated automatically, the same way the App Store would.
-
-1. Install [AltStore](https://altstore.io) (or [SideStore](https://sidestore.io)) if you haven't already, and pair it with your Apple ID.
-2. Add Nectar's source to AltStore:
+1. Install [AltStore](https://altstore.io) (or [SideStore](https://sidestore.io)) if you haven't already, and pair it with your Apple ID. *Sideloading installs applications to your phone using developer signing, so you will need to set up a server to approve the app. Follow the AltStore Classic or SideStore installation instructions. AltStore Classic requires a computer with AltServer installed.*
+2. Add Nectar's source:
 
    ```
    https://kyrielie.github.io/nectar/source.json
    ```
 
 3. Install **Nectar** from the source. AltStore will surface new releases here automatically going forward.
+
+*You can only install 3 sideloaded apps by default. Use https://github.com/LiveContainer/LiveContainer to install additional apps.*
 
 ### Sideloadly
 
