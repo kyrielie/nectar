@@ -60,7 +60,7 @@ Nectar isn't on the App Store — it's distributed as an unsigned IPA you sidelo
 
 3. Install **Nectar** from the source. AltStore will surface new releases here automatically going forward.
 
-*You can only install 3 sideloaded apps by default. Use https://github.com/LiveContainer/LiveContainer to install additional apps.*
+*You can only install 3 sideloaded apps by default. Use [LiveContainer](https://github.com/LiveContainer/LiveContainer) to install additional apps.*
 
 ### Sideloadly
 
