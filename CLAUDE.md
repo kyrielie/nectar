@@ -13,6 +13,7 @@ task**, not this whole index cover-to-cover.
 ## Read this first if you're fixing something in...
 
 - **Feed parsing / JSON Feed / `_ambrosia` extension** → `module-layout.md`, `ambrosia-feed.md`
+- **Annotations (highlights + notes), anchor resolution, the annotations toolbar/settings UI** → `annotations.md`
 - **AO3 RSS/Atom subscription (the feed itself)** → `ao3-direct-feed-ingestion.md`, `ao3-feeds.md`
 - **AO3 HTML extraction internals** (summary/work-page/series parsing) → `ao3-feeds.md`
 - **AO3 login/session, kudos-on-like, the in-app AO3 browser** → `ao3-authenticated-reading.md`
@@ -93,6 +94,7 @@ it's trusted by default. Specifically:
 | `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |
 | Any row/case in `SettingsViewController`'s `*Row` enums, `Settings.storyboard`, or `AppDefaults` | `settings-screen.md` |
 | `HTMLMetadata`/favicon extraction | `metadata-extraction.md` |
+| `AnnotationsTable`, `Annotation`, `annotations.js`, the `textWasSelected`/`annotationWasTapped` message-handler cases, `AnnotationCSVExporter`, the `annotations` table in `ArticleSQLiteExportTable` | `annotations.md` |
 | Anything you deliberately did differently from upstream NetNewsWire behavior | `upstream-drift.md` |
 
 If a change doesn't fit any row above — new system, new cross-cutting

@@ -161,13 +161,12 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 		guard
 			let annotationID = resultSet.swiftString(forColumn: DatabaseKey.annotationID),
 			let articleID = resultSet.swiftString(forColumn: DatabaseKey.articleID),
-			let quoteExact = resultSet.swiftString(forColumn: DatabaseKey.quoteExact)
+			let quoteExact = resultSet.swiftString(forColumn: DatabaseKey.quoteExact),
+			let createdAt = resultSet.date(forColumn: DatabaseKey.createdAt),
+			let updatedAt = resultSet.date(forColumn: DatabaseKey.updatedAt)
 		else {
 			return nil
 		}
-		let createdAt = resultSet.date(forColumn: DatabaseKey.createdAt)
-		let updatedAt = resultSet.date(forColumn: DatabaseKey.updatedAt)
-
 		let colorRawValue = resultSet.swiftString(forColumn: DatabaseKey.color) ?? Annotation.Color.yellow.rawValue
 		let color = Annotation.Color(rawValue: colorRawValue) ?? .yellow
 

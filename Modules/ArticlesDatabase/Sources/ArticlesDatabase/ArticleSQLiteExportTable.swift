@@ -111,5 +111,19 @@ enum ArticleSQLiteExportTable {
 		guard database.executeUpdate(createStatusesSQL, withArgumentsIn: []) else {
 			throw ArticleSQLiteExportError.exportFailed("statuses export: \(database.lastErrorMessage() ?? "unknown error")")
 		}
+
+		// Same join-scoped shape as statuses above: an annotation only
+		// belongs in this export if its owning article does. "Export All"
+		// (feedIDs nil) still goes through the join rather than a bare
+		// `SELECT * FROM annotations`, so a feed-scoped export never leaks
+		// annotations belonging to articles outside that scope.
+		let createAnnotationsSQL = """
+		CREATE TABLE \(attachedSchemaName).annotations AS
+		SELECT an.* FROM annotations AS an
+		INNER JOIN \(attachedSchemaName).articles AS a ON a.articleID = an.articleID;
+		"""
+		guard database.executeUpdate(createAnnotationsSQL, withArgumentsIn: []) else {
+			throw ArticleSQLiteExportError.exportFailed("annotations export: \(database.lastErrorMessage() ?? "unknown error")")
+		}
 	}
 }

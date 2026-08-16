@@ -62,6 +62,13 @@ struct SidebarItemNode: Hashable, Sendable {
 	private var mainTimelineViewController: MainTimelineModernViewController?
 	private var articleViewController: ArticleViewController?
 
+	/// Read-only access to the currently pushed ArticleViewController, for
+	/// callers outside the article column that need to hand off to its own
+	/// navigation methods (e.g. SettingsViewController's unscoped
+	/// annotations list, which has no ArticleViewController of its own to
+	/// call navigateToAnnotation(_:account:) on directly).
+	var currentArticleViewController: ArticleViewController? { articleViewController }
+
 	// The article column's own navigationController only ever contains the
 	// article itself; in collapsed mode, mainTimelineViewController's
 	// navigationController is the one that actually owns the shared pushed
