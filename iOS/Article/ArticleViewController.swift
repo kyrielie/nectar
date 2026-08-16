@@ -41,9 +41,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// Phase 5/6 fork additions. Code-constructed rather than @IBOutlet like the
 	// items above -- toolbarItems/navigationItem are already fully assembled in
 	// code in viewDidLoad, so there's no need to touch the storyboard for these.
-	// TODO: Assets.Images.heartOpen/heartClosed and Assets.Images.theme need
-	// actual asset catalog entries; not part of this patch series since asset
-	// catalogs aren't diffable as text.
+	// heartOpen/heartClosed/theme are SF Symbols (Assets.swift), not custom
+	// asset catalog entries -- no catalog work was ever needed here.
 	private lazy var heartBarButtonItem = UIBarButtonItem(image: Assets.Images.heartOpen, style: .plain, target: self, action: #selector(toggleLoved(_:)))
 	private lazy var themeBarButtonItem = UIBarButtonItem(image: Assets.Images.theme, style: .plain, target: self, action: #selector(showThemePicker(_:)))
 	private lazy var findInArticleBarButtonItem = UIBarButtonItem(image: Assets.Images.findInArticle, style: .plain, target: self, action: #selector(beginFind(_:)))

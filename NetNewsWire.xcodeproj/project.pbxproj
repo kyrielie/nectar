@@ -202,7 +202,6 @@
 		CB72FE59D6F52C9D8021E8BC /* AccentColorIconHexSetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F11DBDF4CBFCE07856F8BF8 /* AccentColorIconHexSetTests.swift */; };
 		CB9F96DC519B7E630593C813 /* AccountInspectorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D17F33EFF7E202EA0E4B2D6 /* AccountInspectorViewController.swift */; };
 		CCCA3EFF538578E81FFF6641 /* SettingsAccentColorLiveUpdateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0D7BA9E051981936DAE4604 /* SettingsAccentColorLiveUpdateTests.swift */; };
-		CD0BD796CB230B71C1DD21B3 /* SelectComboTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = C524E1BC7052B9A918A1187E /* SelectComboTableViewCell.swift */; };
 		CE6AEA88B40B9E5AE0B4C4D4 /* RSCore in Frameworks */ = {isa = PBXBuildFile; productRef = EB4746274BF6B6EBC374053C /* RSCore */; };
 		CF86B4943712AD0C8FBC1D82 /* RSDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 9466F0B22D9B4FBE54C457CF /* RSDatabase */; };
 		CF9DBE50EDA1B32E431DBF2F /* WebViewProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5166F0CA06F91706F124A446 /* WebViewProvider.swift */; };
@@ -474,7 +473,6 @@
 		C23829D0D655C1886F0FCF65 /* ArticleTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleTheme.swift; sourceTree = "<group>"; };
 		C2A5425DA3C15784F10FEAF4 /* CacheCleaner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheCleaner.swift; sourceTree = "<group>"; };
 		C3A9CE0DFDE5C67EA1FE1090 /* ActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityManager.swift; sourceTree = "<group>"; };
-		C524E1BC7052B9A918A1187E /* SelectComboTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectComboTableViewCell.swift; sourceTree = "<group>"; };
 		C57C16994F67428CD8F634FD /* BadgeColorPalettePreviewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgeColorPalettePreviewCell.swift; sourceTree = "<group>"; };
 		C5EC3A464FBA86925E9E4C3C /* AddComboTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddComboTableViewCell.swift; sourceTree = "<group>"; };
 		C7A4AE8B01600B72F1470293 /* GlobalKeyboardShortcuts.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = GlobalKeyboardShortcuts.plist; sourceTree = "<group>"; };
@@ -1101,7 +1099,6 @@
 				D9CF9FA05BD676DCDB04BB7D /* AddFeedSelectFolderTableViewCell.xib */,
 				91F7CD1B07FC2DB23C79CB15 /* AddFeedViewController.swift */,
 				DFA4D4952B174D2C16E22550 /* AddFolderViewController.swift */,
-				C524E1BC7052B9A918A1187E /* SelectComboTableViewCell.swift */,
 			);
 			path = Add;
 			sourceTree = "<group>";
@@ -1426,7 +1423,6 @@
 				FD8D85384459098FEF2C81B9 /* SceneDelegate.swift in Sources */,
 				8222CEB4C7C3F06117C6C538 /* SearchFeedDelegate.swift in Sources */,
 				419591A8A19FC7CDF0D8D604 /* SearchTimelineFeedDelegate.swift in Sources */,
-				CD0BD796CB230B71C1DD21B3 /* SelectComboTableViewCell.swift in Sources */,
 				7A4F335A77E42296CE60DC48 /* SettingsBackgroundPalette.swift in Sources */,
 				DF3F6786AE648A1E85898845 /* SettingsComboTableViewCell.swift in Sources */,
 				AB294D3AC5FA8AC5ACC3E027 /* SettingsViewController.swift in Sources */,
