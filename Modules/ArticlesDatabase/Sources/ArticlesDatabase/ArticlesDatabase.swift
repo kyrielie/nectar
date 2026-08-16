@@ -580,6 +580,110 @@ public struct ArticleStorageInfo: Sendable {
 		}
 	}
 
+	// MARK: - Annotations (highlights + notes)
+
+	/// Saves a new annotation, or replaces an existing one with the same
+	/// annotationID wholesale (annotationID is client-generated, so this
+	/// covers both create and edit). bookKey is re-resolved from articleID
+	/// at write time, not trusted from the passed-in Annotation -- see
+	/// ArticlesTable.saveAnnotationAsync.
+	public func saveAnnotation(_ annotation: Annotation) async {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		await withCheckedContinuation { continuation in
+			articlesTable.saveAnnotationAsync(annotation) {
+				continuation.resume()
+			}
+		}
+	}
+
+	public func deleteAnnotation(annotationID: String) async {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		await withCheckedContinuation { continuation in
+			articlesTable.deleteAnnotationAsync(annotationID: annotationID) {
+				continuation.resume()
+			}
+		}
+	}
+
+	public func updateAnnotationNote(annotationID: String, note: String?) async {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		await withCheckedContinuation { continuation in
+			articlesTable.updateAnnotationNoteAsync(annotationID: annotationID, note: note) {
+				continuation.resume()
+			}
+		}
+	}
+
+	public func updateAnnotationColor(annotationID: String, color: Annotation.Color) async {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		await withCheckedContinuation { continuation in
+			articlesTable.updateAnnotationColorAsync(annotationID: annotationID, color: color) {
+				continuation.resume()
+			}
+		}
+	}
+
+	/// Marks anchor resolution as having failed to relocate this
+	/// annotation's quote against current content -- see docs/annotations.md.
+	public func markAnnotationOrphaned(annotationID: String, at date: Date) async {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		await withCheckedContinuation { continuation in
+			articlesTable.markAnnotationOrphanedAsync(annotationID: annotationID, at: date) {
+				continuation.resume()
+			}
+		}
+	}
+
+	/// Writes back corrected offsets/selector text after a successful
+	/// re-anchor pass, clearing any prior orphaned mark -- see
+	/// docs/annotations.md.
+	public func reanchorAnnotation(annotationID: String, startOffset: Int, endOffset: Int, quoteExact: String, quotePrefix: String, quoteSuffix: String) async {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		await withCheckedContinuation { continuation in
+			articlesTable.reanchorAnnotationAsync(
+				annotationID: annotationID,
+				startOffset: startOffset,
+				endOffset: endOffset,
+				quoteExact: quoteExact,
+				quotePrefix: quotePrefix,
+				quoteSuffix: quoteSuffix
+			) {
+				continuation.resume()
+			}
+		}
+	}
+
+	public func fetchAnnotations(articleID: String) async -> [Annotation] {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		return await withCheckedContinuation { continuation in
+			articlesTable.fetchAnnotationsAsync(articleID: articleID) { annotations in
+				continuation.resume(returning: annotations)
+			}
+		}
+	}
+
+	/// Cross-chapter listing: every annotation for every article sharing this
+	/// bookKey, regardless of which feed/collection copy each was made on.
+	public func fetchAnnotations(bookKey: String) async -> [Annotation] {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		return await withCheckedContinuation { continuation in
+			articlesTable.fetchAnnotationsAsync(bookKey: bookKey) { annotations in
+				continuation.resume(returning: annotations)
+			}
+		}
+	}
+
+	/// Every annotation in this account's database, unscoped -- the
+	/// Settings "all my highlights" browse surface.
+	public func fetchAllAnnotations() async -> [Annotation] {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		return await withCheckedContinuation { continuation in
+			articlesTable.fetchAllAnnotationsAsync { annotations in
+				continuation.resume(returning: annotations)
+			}
+		}
+	}
+
 	public func fetchArticlesMatching(searchString: String, feedIDs: Set<String>) -> Set<Article> {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		return articlesTable.fetchArticlesMatching(searchString, feedIDs)
@@ -1011,9 +1115,15 @@ private extension ArticlesDatabase {
 
 	CREATE TABLE if not EXISTS bookState (bookKey TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOL NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE, updatedAt DATE NOT NULL, kudosAttemptedAt DATE, kudosAttemptedAuthenticated BOOL NOT NULL DEFAULT 0);
 
+	CREATE TABLE if not EXISTS annotations (annotationID TEXT NOT NULL PRIMARY KEY, articleID TEXT NOT NULL, bookKey TEXT, quoteExact TEXT NOT NULL, quotePrefix TEXT NOT NULL DEFAULT '', quoteSuffix TEXT NOT NULL DEFAULT '', rootSelector TEXT NOT NULL DEFAULT '.articleBody', startOffset INTEGER NOT NULL, endOffset INTEGER NOT NULL, color TEXT NOT NULL DEFAULT 'yellow', note TEXT, createdAt DATE NOT NULL, updatedAt DATE NOT NULL, orphanedAt DATE, lastReanchoredAt DATE);
+
 	CREATE INDEX if not EXISTS articles_feedID_datePublished_articleID on articles (feedID, datePublished, articleID);
 
 	CREATE INDEX if not EXISTS statuses_starred_index on statuses (starred);
+
+	CREATE INDEX if not EXISTS annotations_articleID_index on annotations(articleID);
+
+	CREATE INDEX if not EXISTS annotations_bookKey_index on annotations(bookKey);
 
 	CREATE VIRTUAL TABLE if not EXISTS search using fts4(title, body);
 
