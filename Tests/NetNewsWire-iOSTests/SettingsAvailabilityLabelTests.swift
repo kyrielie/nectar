@@ -25,6 +25,7 @@
 
 import Testing
 import UIKit
+import Account
 @testable import Nectar
 
 @Suite struct SettingsAvailabilityLabelTests {
