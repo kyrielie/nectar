@@ -30,14 +30,16 @@
 // -- persisted highlights need permanence across reflow and a real,
 // taggable DOM node, so that technique isn't reused here.
 //
-// Scope of this file as of this step: the pure anchor-resolution and
-// DOM-wrapping algorithm, plus the render/add/remove/update entry points
-// Swift will call, implemented against plain DOM APIs so they're testable
-// headlessly (see Tests/JS/annotations/). Selection capture, the
-// WKScriptMessageHandler postMessage calls themselves, and the Swift-side
-// message handlers come later -- this file exposes the functions Swift
-// will call, but nothing here reaches into window.webkit.messageHandlers
-// yet.
+// Scope of this file: the anchor-resolution and DOM-wrapping algorithm,
+// the render/add/remove/update entry points Swift calls via
+// evaluateJavaScript, and selection capture -- listening for
+// selectionchange and posting textWasSelected so the native side can show
+// a color-picker popover, plus computeSelectorForCurrentSelection, called
+// once a color is chosen, which turns the live selection into the same
+// quote/prefix/suffix/offset selector shape resolveAnnotation expects and
+// draws the highlight immediately. The Swift-side message handlers that
+// receive textWasSelected/annotationWasTapped, and the popover/note-editor
+// UI itself, live in WebViewController and the SwiftUI views next to it.
 
 (function (global) {
 	"use strict";
@@ -343,6 +345,23 @@
 		unwrapAnnotation(root, annotationID);
 	}
 
+	// ---- Base64 helpers (for the evaluateJavaScript call/response convention) --
+	//
+	// Self-contained rather than reused from main_ios.js's toBase64, since
+	// this file is cross-platform and can't assume an iOS-only script ran
+	// first (or at all, on macOS). Plain btoa()/atob() only handle Latin-1
+	// (code points 0-255) and throw on anything outside that range, which
+	// real article/quote text hits constantly -- curly quotes, em dashes,
+	// accented characters, emoji -- so both directions go through the
+	// encodeURIComponent/decodeURIComponent round trip below.
+	function toBase64(str) {
+		return global.btoa(unescape(encodeURIComponent(str)));
+	}
+
+	function fromBase64(str) {
+		return decodeURIComponent(escape(global.atob(str)));
+	}
+
 	function updateAnnotationColor(annotationID, colorName, options) {
 		options = options || {};
 		var rootSelector = options.rootSelector || DEFAULT_ROOT_SELECTOR;
@@ -353,12 +372,218 @@
 		});
 	}
 
+	// ---- Selection capture ----------------------------------------------
+	//
+	// Turns a live Range (the person's current selection, or a
+	// programmatically constructed one) into the same
+	// {quoteExact, quotePrefix, quoteSuffix, startOffset, endOffset,
+	// rootSelector} selector shape stored annotations use, by locating the
+	// range's boundaries within the same cumulative text index
+	// buildTextIndex produces elsewhere in this file. This is the
+	// selection-time counterpart to resolveAnnotation's render-time lookup
+	// -- same coordinate space, opposite direction.
+	function selectorForRange(range, root, rootSelector) {
+		var index = buildTextIndex(root);
+
+		var startOffset = null;
+		var endOffset = null;
+		var runningOffset = 0;
+
+		for (var i = 0; i < index.entries.length; i++) {
+			var entry = index.entries[i];
+			if (startOffset === null && entry.node === range.startContainer) {
+				startOffset = entry.start + range.startOffset;
+			}
+			if (entry.node === range.endContainer) {
+				endOffset = entry.start + range.endOffset;
+			}
+			runningOffset = entry.end;
+		}
+
+		if (startOffset === null || endOffset === null || endOffset <= startOffset) {
+			return null;
+		}
+
+		var quoteExact = index.text.slice(startOffset, endOffset);
+		var prefixLen = 32;
+		var suffixLen = 32;
+
+		return {
+			quoteExact: quoteExact,
+			quotePrefix: index.text.slice(Math.max(0, startOffset - prefixLen), startOffset),
+			quoteSuffix: index.text.slice(endOffset, Math.min(index.text.length, endOffset + suffixLen)),
+			rootSelector: rootSelector,
+			startOffset: startOffset,
+			endOffset: endOffset
+		};
+	}
+
+	// Called via evaluateJavaScript right after the person taps a color
+	// swatch: evaluateJavaScript("addHighlightFromSelection(\"<base64 JSON
+	// {annotationID, color, rootSelector?}>\")"). Computes the selector
+	// against the current selection, draws the highlight immediately so
+	// there's no visible delay before the person sees it highlighted,
+	// clears the selection, and returns the selector as a base64-encoded
+	// JSON string -- the same call/response shape getTableOfContents and
+	// updateFind already use -- so the native side can persist it. Returns
+	// the base64 encoding of the literal string "null" if there's no
+	// usable selection (e.g. the person dismissed the popover without a
+	// selection surviving), which the Swift side decodes and checks for
+	// same as any other JSON null.
+	function addHighlightFromSelection(encodedArgs) {
+		var args;
+		try {
+			args = JSON.parse(fromBase64(encodedArgs));
+		} catch (e) {
+			return toBase64("null");
+		}
+
+		var rootSelector = args.rootSelector || DEFAULT_ROOT_SELECTOR;
+		var root = document.querySelector(rootSelector);
+		var selection = global.getSelection ? global.getSelection() : null;
+
+		if (!root || !selection || selection.rangeCount === 0 || selection.isCollapsed) {
+			return toBase64("null");
+		}
+
+		var range = selection.getRangeAt(0);
+		if (!root.contains(range.commonAncestorContainer)) {
+			return toBase64("null");
+		}
+
+		var selector = selectorForRange(range, root, rootSelector);
+		if (!selector) {
+			return toBase64("null");
+		}
+
+		selection.removeAllRanges();
+
+		var index = buildTextIndex(root);
+		wrapRange(index.entries, selector.startOffset, selector.endOffset, args.annotationID, args.color);
+
+		return toBase64(
+			JSON.stringify({
+				annotationID: args.annotationID,
+				color: args.color,
+				quoteExact: selector.quoteExact,
+				quotePrefix: selector.quotePrefix,
+				quoteSuffix: selector.quoteSuffix,
+				rootSelector: selector.rootSelector,
+				startOffset: selector.startOffset,
+				endOffset: selector.endOffset
+			})
+		);
+	}
+
+	// ---- Bridge wiring: selectionchange -> textWasSelected, tap -> annotationWasTapped
+	//
+	// Debounced the same way find-in-page-adjacent interaction handling in
+	// this codebase already coalesces bursty events, just with a plain
+	// setTimeout here rather than a queue that needs to survive
+	// backgrounding -- this only needs to survive the handful of
+	// selectionchange events a single drag emits.
+	var SELECTION_DEBOUNCE_MS = 150;
+	var selectionDebounceTimer = null;
+
+	function postMessage(name, payload) {
+		try {
+			if (global.webkit && global.webkit.messageHandlers && global.webkit.messageHandlers[name]) {
+				global.webkit.messageHandlers[name].postMessage(payload);
+			}
+		} catch (e) {
+			// messageHandler not installed (e.g. Settings theme preview, which
+			// renders article HTML without the full WebViewController bridge)
+			// -- selection capture simply does nothing there, same fail-quiet
+			// shape as processPage's runStep wrapper in main.js.
+		}
+	}
+
+	function handleSelectionChange(options) {
+		options = options || {};
+		var rootSelector = options.rootSelector || DEFAULT_ROOT_SELECTOR;
+
+		if (selectionDebounceTimer) {
+			clearTimeout(selectionDebounceTimer);
+		}
+
+		selectionDebounceTimer = setTimeout(function () {
+			var root = document.querySelector(rootSelector);
+			var selection = global.getSelection ? global.getSelection() : null;
+
+			if (!root || !selection || selection.rangeCount === 0 || selection.isCollapsed) {
+				return;
+			}
+
+			var range = selection.getRangeAt(0);
+			if (!root.contains(range.commonAncestorContainer)) {
+				return;
+			}
+
+			var text = range.toString();
+			if (!text || !text.trim().length) {
+				return;
+			}
+
+			var rect = range.getBoundingClientRect();
+			postMessage("textWasSelected", {
+				x: rect.x,
+				y: rect.y,
+				width: rect.width,
+				height: rect.height
+			});
+		}, SELECTION_DEBOUNCE_MS);
+	}
+
+	function handleAnnotationTap(event) {
+		var mark = event.target && event.target.closest ? event.target.closest("mark." + HIGHLIGHT_CLASS) : null;
+		if (!mark) return;
+
+		var annotationID = mark.getAttribute("data-annotation-id");
+		if (!annotationID) return;
+
+		event.preventDefault();
+		postMessage("annotationWasTapped", { annotationID: annotationID });
+	}
+
+	// Wires the two DOM listeners above. Safe to call more than once per
+	// document (e.g. if a future caller re-inits after a partial content
+	// swap) -- document-level listeners aren't duplicated meaningfully
+	// enough to matter here, but init is still named/idempotent-in-intent
+	// rather than folded into top-level script execution, so a future
+	// caller has an explicit, single place to hook re-initialization into.
+	function initAnnotations(options) {
+		options = options || {};
+		document.addEventListener("selectionchange", function () {
+			handleSelectionChange(options);
+		});
+		document.addEventListener("click", handleAnnotationTap);
+	}
+
+	// evaluateJavaScript-callable wrapper around renderAnnotations: takes a
+	// base64-encoded JSON array of annotations, returns the base64-encoded
+	// JSON {moved, orphanedIDs} report. Called by WebViewController once,
+	// after DOMContentLoaded, with the full annotation set fetched for the
+	// current article.
+	function renderAnnotationsEncoded(encodedArgs) {
+		var annotations;
+		try {
+			annotations = JSON.parse(fromBase64(encodedArgs));
+		} catch (e) {
+			return toBase64(JSON.stringify({ moved: [], orphanedIDs: [] }));
+		}
+		var report = renderAnnotations(annotations);
+		return toBase64(JSON.stringify(report));
+	}
+
 	var Annotations = {
 		// Exposed for the Swift-callable entry points.
 		renderAnnotations: renderAnnotations,
+		renderAnnotationsEncoded: renderAnnotationsEncoded,
 		addAnnotationHighlight: addAnnotationHighlight,
 		removeAnnotationHighlight: removeAnnotationHighlight,
 		updateAnnotationColor: updateAnnotationColor,
+		addHighlightFromSelection: addHighlightFromSelection,
+		initAnnotations: initAnnotations,
 
 		// Exposed for headless unit testing (annotations.test.js) of the
 		// pure algorithm pieces without needing to drive the whole
@@ -371,6 +596,7 @@
 			similarity: similarity,
 			wrapRange: wrapRange,
 			unwrapAnnotation: unwrapAnnotation,
+			selectorForRange: selectorForRange,
 			HIGHLIGHT_CLASS: HIGHLIGHT_CLASS,
 			SIMILARITY_FLOOR: SIMILARITY_FLOOR
 		}

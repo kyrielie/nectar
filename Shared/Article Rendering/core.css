@@ -284,3 +284,39 @@ a.footnote {
 .ao3SeriesFooterName {
 	font-weight: 500;
 }
+
+/* Annotations (highlights + notes) -- persisted <mark> wraps drawn by
+   annotations.js's renderAnnotations/addAnnotationHighlight. Colors are
+   stored as a palette key (e.g. "yellow"), not a raw hex value, and
+   resolved here through CSS custom properties so a theme (or the
+   dark-mode media query) can supply its own set of highlight colors that
+   read correctly against that theme's background without touching the
+   stored data or the JS at all -- same layering the rest of this file
+   already uses for AO3 preface colors. A theme that doesn't define these
+   variables falls back to the defaults below. */
+mark.nnw-highlight {
+	/* Not a native <mark>'s default yellow-on-transparent; every highlight
+	   always carries an explicit data-annotation-color, so the bare
+	   selector below only matters as a safety net if that attribute is
+	   ever missing. */
+	background-color: var(--nnw-highlight-yellow, #FFD60A);
+	color: inherit;
+	border-radius: 0.15em;
+	padding: 0 0.05em;
+	cursor: pointer;
+}
+mark.nnw-highlight[data-annotation-color="yellow"] {
+	background-color: var(--nnw-highlight-yellow, #FFD60A);
+}
+mark.nnw-highlight[data-annotation-color="red"] {
+	background-color: var(--nnw-highlight-red, #FF453A);
+}
+mark.nnw-highlight[data-annotation-color="green"] {
+	background-color: var(--nnw-highlight-green, #30D158);
+}
+mark.nnw-highlight[data-annotation-color="blue"] {
+	background-color: var(--nnw-highlight-blue, #0A84FF);
+}
+mark.nnw-highlight[data-annotation-color="purple"] {
+	background-color: var(--nnw-highlight-purple, #BF5AF2);
+}

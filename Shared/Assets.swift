@@ -88,6 +88,7 @@ struct Assets {
 		static let theme = RSImage(symbol: "doc.richtext")!
 		static let findInArticle = RSImage(symbol: "magnifyingglass")!
 		static let tableOfContents = RSImage(symbol: "list.bullet")!
+		static let annotationAddNote = RSImage(symbol: "note.text.badge.plus")!
 
 		// Loved smart feed icon: filled heart, system red by default --
 		// replaces the starredFeed-borrowed placeholder in
