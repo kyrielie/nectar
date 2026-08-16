@@ -54,6 +54,11 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// flips heartBarButtonItem's image, rather than rebuilding
 	// rightBarButtonItems() on every tap.
 	private lazy var lockBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "lock.open"), style: .plain, target: self, action: #selector(toggleGesturesLocked(_:)))
+	// Unlike the other bar-button items above (each a single direct
+	// action), this one opens a menu on tap -- see annotationsMenu().
+	// primaryAction/target/action are all nil, and menu: is set instead;
+	// UIBarButtonItem presents its menu on tap when constructed this way.
+	private lazy var annotationsBarButtonItem = UIBarButtonItem(image: Assets.Images.annotations, primaryAction: nil, menu: annotationsMenu())
 
 	@IBOutlet private var searchBar: ArticleSearchBar!
 	@IBOutlet private var searchBarBottomConstraint: NSLayoutConstraint!
@@ -414,6 +419,9 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		if defaults.isArticleToolbarToggleEnabled(.lock) {
 			items.append(lockBarButtonItem)
 		}
+		if defaults.isArticleToolbarToggleEnabled(.annotations) {
+			items.append(annotationsBarButtonItem)
+		}
 		return items
 	}
 
@@ -633,6 +641,100 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			let navController = UINavigationController(rootViewController: tocViewController)
 			navController.modalPresentationStyle = .fullScreen
 			self.present(navController, animated: true)
+		}
+	}
+
+	private func annotationsMenu() -> UIMenu {
+		let thisChapter = UIAction(
+			title: NSLocalizedString("This Chapter", comment: "Annotations menu: this chapter"),
+			image: UIImage(systemName: "doc.text")
+		) { [weak self] _ in
+			self?.showAnnotationsList(scope: .article)
+		}
+		let wholeBook = UIAction(
+			title: NSLocalizedString("All of This Book", comment: "Annotations menu: whole book"),
+			image: UIImage(systemName: "books.vertical")
+		) { [weak self] _ in
+			self?.showAnnotationsList(scope: .book)
+		}
+		let listMenu = UIMenu(title: "", options: .displayInline, children: [thisChapter, wholeBook])
+
+		let colorActions = Annotation.Color.allCases.map { color in
+			UIAction(
+				title: color.accessibilityLabel,
+				image: color.swatchImage,
+				state: AppDefaults.shared.defaultAnnotationColor == color ? .on : .off
+			) { _ in
+				AppDefaults.shared.defaultAnnotationColor = color
+			}
+		}
+		let colorMenu = UIMenu(
+			title: NSLocalizedString("Default Highlight Color", comment: "Annotations menu: default color submenu"),
+			image: UIImage(systemName: "paintpalette"),
+			children: colorActions
+		)
+
+		return UIMenu(title: "", children: [listMenu, UIMenu(title: "", options: .displayInline, children: [colorMenu])])
+	}
+
+	/// scope is expressed relative to the currently open article (rather
+	/// than passing an articleID/bookKey directly from annotationsMenu())
+	/// so this stays correct even if the person paged to a different
+	/// article between opening the toolbar menu and this closure firing --
+	/// re-reads `article` at call time, not capture time.
+	private enum AnnotationsMenuScope {
+		case article
+		case book
+	}
+
+	private func showAnnotationsList(scope: AnnotationsMenuScope) {
+		guard let article, let account = article.account else { return }
+
+		let listScope: AnnotationsListView.Scope
+		switch scope {
+		case .article:
+			listScope = .article(articleID: article.articleID)
+		case .book:
+			listScope = .book(bookKey: article.bookKey)
+		}
+
+		let listView = AnnotationsListView(account: account, scope: listScope) { [weak self] annotation in
+			self?.navigateToAnnotation(annotation, account: account)
+		}
+		let hostingController = UIHostingController(rootView: NavigationStack { listView })
+		navigationController?.pushViewController(hostingController, animated: true)
+	}
+
+	/// Shared by both the toolbar-menu list (above) and the Settings
+	/// unscoped list -- tapping a row either scrolls the already-open
+	/// article (same articleID) or navigates there first via
+	/// SceneCoordinator.selectArticleDirectly, then scrolls, mirroring the
+	/// direct-navigation pattern that method's own doc comment describes
+	/// for "open a specific article and land in a specific spot." Takes
+	/// `account` explicitly rather than re-deriving it, since Annotation
+	/// doesn't store an accountID -- account is whatever AnnotationsListView
+	/// itself fetched the annotation from.
+	func navigateToAnnotation(_ annotation: Annotation, account: Account) {
+		if article?.articleID == annotation.articleID {
+			currentWebViewController?.scrollToAnnotation(annotationID: annotation.annotationID)
+			navigationController?.popToViewController(self, animated: true)
+			return
+		}
+
+		Task { [weak self] in
+			guard let self else { return }
+			await self.coordinator.selectArticleDirectly(annotation.articleID, account: account)
+			// selectArticleDirectly resolves once the Article model is
+			// selected, not once the new WebViewController has actually
+			// finished loading that content -- scrollToAnnotation would
+			// find nothing yet if fired immediately. awaitNextPageLoad
+			// resolves off WebViewController's own didFinish navigation
+			// callback (loadAndRenderAnnotations' own hook point), so
+			// this waits for the real signal rather than guessing at a
+			// delay.
+			await self.currentWebViewController?.awaitNextPageLoad()
+			self.currentWebViewController?.scrollToAnnotation(annotationID: annotation.annotationID)
+			self.navigationController?.popToViewController(self, animated: true)
 		}
 	}
 

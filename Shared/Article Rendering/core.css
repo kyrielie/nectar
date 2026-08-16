@@ -320,3 +320,16 @@ mark.nnw-highlight[data-annotation-color="blue"] {
 mark.nnw-highlight[data-annotation-color="purple"] {
 	background-color: var(--nnw-highlight-purple, #BF5AF2);
 }
+
+/* Brief attention-flash applied by annotations.js's scrollToAnnotation
+   after navigating here from the annotations list screen -- a ring
+   rather than a background-color pulse, since the mark's background is
+   already its own highlight color and a color pulse on top of that would
+   just look like a color change, not "look here." */
+@keyframes nnw-highlight-flash {
+	0% { box-shadow: 0 0 0 3px var(--nnw-highlight-flash-ring, rgba(10, 132, 255, 0.6)); }
+	100% { box-shadow: 0 0 0 3px transparent; }
+}
+mark.nnw-highlight.nnw-highlight-flash {
+	animation: nnw-highlight-flash 1.5s ease-out;
+}

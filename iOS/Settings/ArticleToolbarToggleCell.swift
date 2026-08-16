@@ -70,6 +70,8 @@ final class ArticleToolbarToggleCell: UICollectionViewListCell {
 			return NSLocalizedString("Previous & Next Article", comment: "Article top toolbar toggle: previous and next article")
 		case .lock:
 			return NSLocalizedString("Lock Gestures", comment: "Article top toolbar toggle: lock gestures")
+		case .annotations:
+			return NSLocalizedString("Highlights", comment: "Article top toolbar toggle: annotations")
 		}
 	}
 
