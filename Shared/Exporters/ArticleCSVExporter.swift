@@ -107,13 +107,6 @@ import Articles
 	}
 
 	private static func rowString(for columns: [String]) -> String {
-		return columns.map(escapedCSVField).joined(separator: ",")
-	}
-
-	private static func escapedCSVField(_ field: String) -> String {
-		guard field.contains(",") || field.contains("\"") || field.contains("\n") || field.contains("\r") else {
-			return field
-		}
-		return "\"\(field.replacingOccurrences(of: "\"", with: "\"\""))\""
+		return CSVFormatting.rowString(for: columns)
 	}
 }

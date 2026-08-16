@@ -80,6 +80,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case disableArticleLinks = 2
 		case showFeedNameInReaderView = 3
 		case fullScreenReading = 4
+		case annotations = 5
 	}
 
 	private enum HelpRow: Int {
@@ -88,6 +89,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 
 	private weak var exportOPMLAccount: Account?
 	private weak var exportArticlesCSVAccount: Account?
+	private weak var exportAnnotationsAccount: Account?
 
 	@IBOutlet var timelineSortFieldDetailLabel: UILabel!
 	@IBOutlet var timelineSortDirectionDetailLabel: UILabel!
@@ -285,6 +287,19 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 			case .fullScreenReading:
 				let fullScreenReading = UIStoryboard.settings.instantiateController(ofType: FullScreenReadingViewController.self)
 				self.navigationController?.pushViewController(fullScreenReading, animated: true)
+			case .annotations:
+				let hostingController = Self.makeSurfacePaletteAwareHostingController(rootView: AnnotationsSettingsView(
+					onExportCSV: { [weak self] sourceView, sourceRect in
+						self?.exportAnnotationsCSVAccountPicker(sourceView: sourceView, sourceRect: sourceRect)
+					},
+					onExportSQLite: { [weak self] sourceView, sourceRect in
+						self?.exportAnnotationsSQLiteAccountPicker(sourceView: sourceView, sourceRect: sourceRect)
+					},
+					onNavigateToAnnotation: { [weak self] annotation, account in
+						self?.navigateToAnnotationFromSettings(annotation, account: account)
+					}
+				))
+				self.navigationController?.pushViewController(hostingController, animated: true)
 			default:
 				break
 			}
@@ -710,6 +725,117 @@ private extension SettingsViewController {
 		let docPicker = UIDocumentPickerViewController(forExporting: [tempFile])
 		docPicker.modalPresentationStyle = .formSheet
 		self.present(docPicker, animated: true)
+	}
+
+	// MARK: - Annotations export
+	//
+	// Direct analogue of exportArticlesCSV/exportArticlesCSVDocumentPicker
+	// above: account picker (skipped if only one account), then straight
+	// to CSV -- unlike the article export flow there's no separate
+	// format-picker step here, since SQLite export for annotations is
+	// reached through the existing "Export Articles" SQLite flow already
+	// (annotations ride along automatically, see
+	// ArticleSQLiteExportTable.copyItems), not a second, annotations-only
+	// SQLite path. This entry point is reachable only from
+	// AnnotationsSettingsView -- unlike article export, there's no
+	// separate Feeds-section duplicate of this row, since the two calls
+	// would be identical and the annotations screen is already the
+	// natural place to find it.
+
+	func exportAnnotationsCSVAccountPicker(sourceView: UIView, sourceRect: CGRect) {
+		if AccountManager.shared.accounts.count == 1 {
+			exportAnnotationsAccount = AccountManager.shared.accounts.first!
+			exportAnnotationsCSVDocumentPicker()
+			return
+		}
+
+		let title = NSLocalizedString("Choose an account with the highlights to export", comment: "Export Account")
+		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+
+		if let popoverController = alert.popoverPresentationController {
+			popoverController.sourceView = view
+			popoverController.sourceRect = sourceRect
+		}
+
+		for account in AccountManager.shared.sortedAccounts {
+			let action = UIAlertAction(title: account.nameForDisplay, style: .default) { [weak self] _ in
+				self?.exportAnnotationsAccount = account
+				self?.exportAnnotationsCSVDocumentPicker()
+			}
+			alert.addAction(action)
+		}
+
+		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
+		alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
+
+		self.present(alert, animated: true)
+	}
+
+	func exportAnnotationsCSVDocumentPicker() {
+		guard let account = exportAnnotationsAccount else { return }
+
+		let accountName = account.nameForDisplay.replacingOccurrences(of: " ", with: "").trimmingCharacters(in: .whitespaces)
+		let filename = "Highlights-\(accountName).csv"
+		let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+
+		Task {
+			let annotations = await account.fetchAllAnnotations()
+			let articleIDs = Set(annotations.map(\.articleID))
+			let articles = await account.fetchArticlesAsync(.articleIDs(articleIDs))
+			let articlesByID = Dictionary(uniqueKeysWithValues: articles.map { ($0.articleID, $0) })
+			let rows = annotations.map { annotation in (annotation, articlesByID[annotation.articleID]) }
+
+			do {
+				let csvString = AnnotationCSVExporter.CSVString(with: rows)
+				try csvString.write(to: tempFile, atomically: true, encoding: String.Encoding.utf8)
+			} catch {
+				self.presentError(title: "CSV Export Error", message: error.localizedDescription)
+				return
+			}
+
+			let docPicker = UIDocumentPickerViewController(forExporting: [tempFile])
+			docPicker.modalPresentationStyle = .formSheet
+			self.present(docPicker, animated: true)
+		}
+	}
+
+	// SQLite export for annotations doesn't have its own document-picker
+	// path: annotations already ride along with the existing "Export
+	// Articles" -> SQLite flow (exportArticlesSQLiteDocumentPicker above),
+	// since ArticleSQLiteExportTable now copies the annotations table as
+	// part of that same full-database snapshot. This just routes to that
+	// existing flow with the account already chosen, rather than
+	// duplicating the SQLite export logic here.
+	func exportAnnotationsSQLiteAccountPicker(sourceView: UIView, sourceRect: CGRect) {
+		if AccountManager.shared.accounts.count == 1 {
+			exportArticlesCSVAccount = AccountManager.shared.accounts.first!
+			exportArticlesSQLiteDocumentPicker()
+			return
+		}
+		exportArticlesCSVAccountPicker(sourceView: sourceView, sourceRect: sourceRect)
+	}
+
+	/// Settings' unscoped annotations list has no open article behind it
+	/// (unlike ArticleViewController.navigateToAnnotation's same-article
+	/// case), so this always dismisses Settings first, then delegates to
+	/// ArticleViewController.navigateToAnnotation(_:account:) itself via
+	/// SceneCoordinator.currentArticleViewController -- reusing that
+	/// method's own selectArticleDirectly + awaitNextPageLoad + scroll
+	/// sequence rather than re-deriving it here. If there's no article
+	/// column pushed yet (compact-width, timeline still on screen),
+	/// selectArticleDirectly on the coordinator alone still selects and
+	/// pushes the article; navigateToAnnotation's same-article fast path
+	/// then finds articleID already matching and just scrolls.
+	func navigateToAnnotationFromSettings(_ annotation: Annotation, account: Account) {
+		guard let rootSplit = presentingParentController as? RootSplitViewController else { return }
+		let coordinator = rootSplit.coordinator
+
+		self.dismiss(animated: true) {
+			Task {
+				await coordinator?.selectArticleDirectly(annotation.articleID, account: account)
+				coordinator?.currentArticleViewController?.navigateToAnnotation(annotation, account: account)
+			}
+		}
 	}
 
 	func exportOPMLDocumentPicker() {
