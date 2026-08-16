@@ -56,7 +56,7 @@ import UIKit
 
 		let liveTint = Assets.Colors.primaryAccent
 		for toggle in [controller.groupByFeedSwitch, controller.refreshClearsReadArticlesSwitch,
-					   controller.showLastUpdatedLabelSwitch, controller.backSwipeEnabledSwitch,
+					   controller.showLastUpdatedLabelSwitch, controller.showFeedNameInReaderViewSwitch,
 					   controller.disableArticleLinksSwitch, controller.openLinksInNetNewsWire] {
 			#expect(toggle?.onTintColor == liveTint)
 		}

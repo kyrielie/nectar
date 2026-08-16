@@ -517,13 +517,12 @@ rule against asserting things that haven't been verified by reading the code.
 - `buildscripts/crash-logs.sh`
 - `buildscripts/quiet_build_and_test.sh`
 
-### `iOS/` (49 files)
+### `iOS/` (48 files)
 
 - `iOS/Account/Account.storyboard`
 - `iOS/AccountStats/AccountStatsView.swift`
 - `iOS/Add/AddComboTableViewCell.swift`
 - `iOS/Add/AddFeedViewController.swift`
-- `iOS/Add/SelectComboTableViewCell.swift`
 - `iOS/AppDefaults.swift` -- AccentColor/SurfacePalette/BadgeColorPalette enums added (see app-chrome-palette.md)
 - `iOS/AppDelegate.swift`
 - `iOS/Article/ArticleSearchBar.swift`

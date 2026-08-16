@@ -9,52 +9,34 @@ driven by `Settings.storyboard`'s static cells, sectioned by the nested
 `TroubleshootingRow`, `HelpRow`) whose `.allCases.count` (where declared
 `CaseIterable`) or manual row count drives `numberOfRowsInSection` against
 the storyboard's static cells — adding a row means adding both the enum
-case and the matching storyboard cell in lockstep (the "Show Article
-Scrollbar" row is a recent, representative example of this pattern: a new
-`ArticlesRow` case, a new `@IBOutlet`/`@IBAction`, and a new storyboard
-cell added together). `.ao3Account` has no row enum: it's a single row that pushes
-`AO3AccountSettingsView` directly (see below).
-
-**`FeedsRow` is currently out of sync with the storyboard**: the enum
-only declares 3 cases (`importSubscriptions`/`exportSubscriptions`/
-`exportArticles`), but the storyboard's `.feeds` section has a 4th static
-cell, "Use SQLite Feed Transfer" (`ambrosiaSQLiteTransferSwitch`, backed
-by `AmbrosiaTransferFormatPreference` — see below). `numberOfRowsInSection`
-falls through to `default: return super.tableView(...)` for `.feeds`, so
-the storyboard's real row count (4) is what's returned and the switch row
-displays and works correctly; it's just untyped, with no `FeedsRow` case
-and no entry in `didSelectRowAt`'s switch (harmless here since a switch
-row's own `UISwitch.valueChanged` target handles the interaction, not row
-selection — but the same pattern for a tappable/disclosure row would
-silently no-op on tap).
+case and the matching storyboard cell in lockstep. `.ao3Account` has no
+row enum: it's a single row that pushes `AO3AccountSettingsView` directly
+(see below).
 
 ## Row inventory by section
 
-- **`.feeds`** (`FeedsRow`, plus one untyped row — see above): import
-  subscriptions, export subscriptions, export articles (CSV), and "Use
-  SQLite Feed Transfer" (toggles `AmbrosiaTransferFormatPreference.current`
-  between `.sqlite`/`.json`, read by `LocalAccountRefresher.url(for:)` —
-  see `sqlite-transfer.md`).
+- **`.feeds`** (`FeedsRow`): import subscriptions, export subscriptions
+  (renamed "Export Feeds" — re-importing a feed you already have, for
+  example after its network address changed, updates it automatically;
+  you don't need to delete the old feed first), export articles (CSV or
+  SQLite), and Feed Transfer Format — a disclosure row presenting a
+  JSON/SQLite picker, backed by `AmbrosiaTransferFormatPreference.current`
+  and read by `LocalAccountRefresher.url(for:)` on every refresh (see
+  `sqlite-transfer.md`). This row only affects feeds that support the
+  SQLite transfer protocol; most feeds are unaffected, which is why the
+  explanation lives in the picker's own action-sheet message rather than
+  the section footer (the footer already covers what exporting includes,
+  and the two settings are otherwise unrelated).
 - **`.timeline`** (`TimelineRow`): sort field, sort direction, group by
   feed, "refresh clears read articles," Timeline Layout (pushes
   `TimelineCustomizerCollectionViewController`, below), show-last-updated
   label.
-- **`.articles`** (`ArticlesRow`, 11 cases): theme picker, "open links in
-  NetNewsWire," full-screen articles, back-swipe, paging-swipe,
-  feed-name-in-reader, **Top Toolbar** (pushes
-  `ArticleToolbarCustomizerViewController`, below), hide-notch-in-fullscreen,
-  page-counter display mode, disable article links, show article scrollbar
-  (see `AppDefaults.shared.showArticleScrollbar`, consumed in
-  `WebViewController`).
-  Top Toolbar replaced two independent switches — Show Previous/Next
-  Article Buttons and Show Table of Contents/Find Buttons — that used to
-  sit at `ArticlesRow` positions 6-7. Those two switches were mutually
-  exclusive by construction in `ArticleViewController.rightBarButtonItems()`
-  (an `else if`), so a person could flip both on and only the TOC/Find pair
-  would actually show. The current screen behind this row keeps that
-  history but no longer inherits the limitation: theme, table of contents,
-  find, and previous/next are each their own switch, freely combinable.
-  See "Article Top Toolbar screen" below.
+- **`.articles`** (`ArticlesRow`, 5 cases): theme picker, "open links in
+  Nectar," disable article links, feed-name-in-reader, and **Full Screen
+  Reading** — a disclosure row pushing `FullScreenReadingViewController`
+  (below). The first four affect the normal, non-fullscreen reading view;
+  everything that only matters once you're actually in fullscreen reading
+  mode now lives on the pushed screen instead of mixed into this list.
 - **`.appearance`** (`AppearanceRow`): color palette (pushes
   `ColorPaletteTableViewController`, which also owns the
   `useTintedNavigationBar` switch — see `app-chrome-palette.md`), accent
@@ -85,8 +67,8 @@ Two storage tiers exist beyond `Settings.storyboard`'s rows:
   `AO3KudosOnLikePreference`, `AmbrosiaAO3NetworkPreference`,
   `AmbrosiaTransferFormatPreference`. The three AO3-related ones are
   exposed via `AO3AccountSettingsView`, per above; `AmbrosiaTransferFormatPreference`
-  has its own UI too, but on this screen rather than that one — the "Use
-  SQLite Feed Transfer" row in `.feeds`, see above.
+  has its own UI too, but on this screen rather than that one — the "Feed
+  Transfer Format" row in `.feeds`, see above.
 
 ## Timeline Layout screen
 
@@ -108,6 +90,28 @@ per-setting notifications (`.timelineNumberOfLinesDidChange`,
 `.accentColorDidChange`/`.surfaceTintDidChange` for live palette/tint
 repainting.
 
+## Full Screen Reading screen
+
+`FullScreenReadingViewController` is a static-cell `UITableViewController`,
+pushed from `.articles`'s Full Screen Reading row, grouping every setting
+that only does anything once you're actually in fullscreen reading mode:
+three bare (no header) sections — Gestures (enable full screen articles,
+back-swipe, paging-swipe, show article scrollbar), Top Toolbar (pushes
+`ArticleToolbarCustomizerViewController`, below), and a third section
+holding Page Counter and Hide Notch in Full Screen.
+
+Hide Notch and Page Counter interact: `WebViewController` forces
+notch-hiding whenever Page Counter is anything other than Off, independent
+of Hide Notch's own stored `AppDefaults` value. Rather than let the Hide
+Notch switch keep showing its raw stored state while silently disagreeing
+with what's actually on screen, `updateHideNotchAvailability()` disables
+the switch outright (fixing it to "on") whenever Page Counter is active —
+the same disabled-control pattern `AO3AccountSettingsView` already uses
+for "Check for Updates" when its own prerequisite toggle is off, rather
+than an inline per-row reason label. The "why" lives in this section's
+footer instead. Hide Notch's own `AppDefaults` value is never touched by
+this — only what the switch displays and whether it's interactive.
+
 ## Article Top Toolbar screen
 
 `ArticleToolbarCustomizerViewController` is a 2-section
@@ -122,7 +126,7 @@ preview *above* the toggles rather than below it: Preview (0), Top Toolbar
   find, then previous/next, each included only if its own toggle is on) —
   a synthetic bar rather than an embedded, real `ArticleViewController`,
   since that controller needs a live `Article`, `SceneCoordinator`, and
-  WebView machinery this settings screen has no reason to stand up. If
+  WebView machinery this screen has no reason to stand up. If
   `rightBarButtonItems()`'s ordering ever changes, this cell's
   `configure()` needs the matching change or the preview silently drifts
   from the real reader.
@@ -131,12 +135,13 @@ preview *above* the toggles rather than below it: Preview (0), Top Toolbar
   `ArticleToolbarToggle` case, each a plain `UISwitch` row (same shape as
   `StatsVisibilityCell`) — replaces the earlier checkmark-style
   single-select picker, which itself had replaced the two independent,
-  silently-conflicting switches this screen's `ArticlesRow` push row used
-  to be. All four toggles are independent and freely combinable. Flipping
-  a switch writes straight to that toggle's own `AppDefaults` property
-  (via `AppDefaults.shared.setArticleToolbarToggleEnabled(_:_:)`); there's
-  no row-tap handling on this screen — selection is driven entirely by
-  each cell's own `UISwitch.valueChanged` target, not
+  silently-conflicting switches this screen used to be reached by, back
+  when it was a push row directly on the Articles list. All four toggles
+  are independent and freely combinable. Flipping a switch writes straight
+  to that toggle's own `AppDefaults` property (via
+  `AppDefaults.shared.setArticleToolbarToggleEnabled(_:_:)`); there's no
+  row-tap handling on this screen — selection is driven entirely by each
+  cell's own `UISwitch.valueChanged` target, not
   `didSelectItemAt`/`shouldSelectItemAt`.
 
 Both sections reload on the generic `UserDefaults.didChangeNotification`
@@ -176,6 +181,7 @@ unconditionally present before this setting existed — so it simply keeps
 its registered `true` default regardless of what the migration does with
 the other three.
 
-The Settings row's detail label (`updateArticleTopToolbarModeLabel()`)
-no longer names a single mode; it shows "Off" when all four toggles are
-off, or "N Shown" for the count of toggles currently on.
+The Top Toolbar row's detail label (`updateArticleTopToolbarModeLabel()`,
+on `FullScreenReadingViewController`) no longer names a single mode; it
+shows "Off" when all four toggles are off, or "N Shown" for the count of
+toggles currently on.
