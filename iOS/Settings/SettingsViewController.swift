@@ -62,6 +62,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case importSubscriptions = 0
 		case exportSubscriptions = 1
 		case exportArticles = 2
+		case feedTransferFormat = 3
 	}
 
 	private enum TimelineRow: Int {
@@ -76,18 +77,9 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 	private enum ArticlesRow: Int, CaseIterable {
 		case theme = 0
 		case openLinksInNetNewsWire = 1
-		case enableFullScreenArticles = 2
-		case enableBackSwipe = 3
-		case enablePagingSwipe = 4
-		case showFeedNameInReaderView = 5
-		// Replaces the former independent showPrevNextArticleButtons (6)/
-		// showTableOfContentsAndFind (7) switches -- see
-		// ArticleToolbarCustomizerViewController's header comment for why.
-		case articleTopToolbar = 6
-		case hideNotchInFullScreen = 7
-		case pageCounterDisplayMode = 8
-		case disableArticleLinks = 9
-		case showArticleScrollbar = 10
+		case disableArticleLinks = 2
+		case showFeedNameInReaderView = 3
+		case fullScreenReading = 4
 	}
 
 	private enum HelpRow: Int {
@@ -100,19 +92,14 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 	@IBOutlet var timelineSortFieldDetailLabel: UILabel!
 	@IBOutlet var timelineSortDirectionDetailLabel: UILabel!
 	@IBOutlet var groupByFeedSwitch: UISwitch!
-	@IBOutlet var ambrosiaSQLiteTransferSwitch: UISwitch!
+	@IBOutlet var groupByFeedReasonLabel: UILabel!
+	@IBOutlet var feedTransferFormatDetailLabel: UILabel!
 	@IBOutlet var refreshClearsReadArticlesSwitch: UISwitch!
+	@IBOutlet var clearReadArticlesReasonLabel: UILabel!
 	@IBOutlet var articleThemeDetailLabel: UILabel!
 	@IBOutlet var showLastUpdatedLabelSwitch: UISwitch!
-	@IBOutlet var showFullscreenArticlesSwitch: UISwitch!
-	@IBOutlet var backSwipeEnabledSwitch: UISwitch!
-	@IBOutlet var pagingSwipeEnabledSwitch: UISwitch!
 	@IBOutlet var showFeedNameInReaderViewSwitch: UISwitch!
-	@IBOutlet var articleTopToolbarModeDetailLabel: UILabel!
-	@IBOutlet var hideNotchInFullScreenSwitch: UISwitch!
-	@IBOutlet var pageCounterDisplayModeDetailLabel: UILabel!
 	@IBOutlet var disableArticleLinksSwitch: UISwitch!
-	@IBOutlet var showArticleScrollbarSwitch: UISwitch!
 	@IBOutlet var colorPaletteDetailLabel: UILabel!
 	@IBOutlet var accentColorDetailLabel: UILabel!
 	@IBOutlet var openLinksInNetNewsWire: UISwitch!
@@ -160,33 +147,23 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		} else {
 			groupByFeedSwitch.isOn = false
 		}
+		updateGroupByFeedAvailability()
 
-		ambrosiaSQLiteTransferSwitch.isOn = (AmbrosiaTransferFormatPreference.current == .sqlite)
+		updateFeedTransferFormatLabel()
 
 		if AppDefaults.shared.refreshClearsReadArticles {
 			refreshClearsReadArticlesSwitch.isOn = true
 		} else {
 			refreshClearsReadArticlesSwitch.isOn = false
 		}
+		updateClearReadArticlesReasonLabel()
 
 		articleThemeDetailLabel.text = ArticleThemesManager.shared.currentTheme.name
 
 		showLastUpdatedLabelSwitch.isOn = AppDefaults.shared.showLastUpdatedLabel
 
-		if AppDefaults.shared.articleFullscreenAvailable {
-			showFullscreenArticlesSwitch.isOn = true
-		} else {
-			showFullscreenArticlesSwitch.isOn = false
-		}
-
-		backSwipeEnabledSwitch.isOn = AppDefaults.shared.articleBackSwipeEnabled
-		pagingSwipeEnabledSwitch.isOn = AppDefaults.shared.articlePagingSwipeEnabled
 		showFeedNameInReaderViewSwitch.isOn = AppDefaults.shared.showFeedNameInReaderView
-		updateArticleTopToolbarModeLabel()
-		hideNotchInFullScreenSwitch.isOn = AppDefaults.shared.hideNotchInFullScreen
-		updatePageCounterDisplayModeLabel()
 		disableArticleLinksSwitch.isOn = AppDefaults.shared.disableArticleLinks
-		showArticleScrollbarSwitch.isOn = AppDefaults.shared.showArticleScrollbar
 
 		colorPaletteDetailLabel.text = String(describing: AppDefaults.userInterfaceColorPalette)
 		applyAccentColorTinting()
@@ -226,9 +203,9 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case .articles:
 			// This app is iPhone-only, so all ArticlesRow cases are always shown.
 			// (Previously this branched on userInterfaceIdiom == .phone, which left
-			// the row count stuck at the pre-Phase-5/6 case count on non-phone
-			// idioms; since there is no non-phone idiom here, that branch was both
-			// dead and, after ArticlesRow grew to 6 cases, wrong.)
+			// the row count stuck at a stale case count on non-phone idioms; since
+			// there is no non-phone idiom here, that branch was both dead and, once
+			// ArticlesRow's case count changed, wrong.)
 			return ArticlesRow.allCases.count
 		case .troubleshooting:
 			// The storyboard's troubleshooting section still has a trailing
@@ -265,6 +242,12 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 					let sourceRect = tableView.rectForRow(at: indexPath)
 					exportArticlesCSV(sourceView: sourceView, sourceRect: sourceRect)
 				}
+			case .feedTransferFormat:
+				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
+				if let sourceView = tableView.cellForRow(at: indexPath) {
+					let sourceRect = tableView.rectForRow(at: indexPath)
+					presentFeedTransferFormatPicker(sourceView: sourceView, sourceRect: sourceRect)
+				}
 			default:
 				break
 			}
@@ -299,15 +282,9 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 				// has been confirmed not to bleed into that ColorPicker.
 				let hostingController = Self.makeSurfacePaletteAwareHostingController(rootView: ArticleThemeListView())
 				self.navigationController?.pushViewController(hostingController, animated: true)
-			case .articleTopToolbar:
-				let articleToolbar = UIStoryboard.settings.instantiateController(ofType: ArticleToolbarCustomizerViewController.self)
-				self.navigationController?.pushViewController(articleToolbar, animated: true)
-			case .pageCounterDisplayMode:
-				if let sourceView = tableView.cellForRow(at: indexPath) {
-					let sourceRect = tableView.rectForRow(at: indexPath)
-					presentPageCounterDisplayModePicker(sourceView: sourceView, sourceRect: sourceRect)
-				}
-				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
+			case .fullScreenReading:
+				let fullScreenReading = UIStoryboard.settings.instantiateController(ofType: FullScreenReadingViewController.self)
+				self.navigationController?.pushViewController(fullScreenReading, animated: true)
 			default:
 				break
 			}
@@ -416,35 +393,34 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		let direction = AppDefaults.shared.timelineSortDirection
 		timelineSortFieldDetailLabel.text = field.displayName
 		timelineSortDirectionDetailLabel.text = direction == .orderedAscending ? field.ascendingLabel : field.descendingLabel
+		updateGroupByFeedAvailability()
 	}
 
-	func updatePageCounterDisplayModeLabel() {
-		switch AppDefaults.shared.pageCounterDisplayMode {
-		case .off:
-			pageCounterDisplayModeDetailLabel.text = NSLocalizedString("Off", comment: "Page counter off")
-		case .percentage:
-			pageCounterDisplayModeDetailLabel.text = NSLocalizedString("Percentage", comment: "Page counter percentage")
-		case .pageCount:
-			pageCounterDisplayModeDetailLabel.text = NSLocalizedString("Page Count", comment: "Page counter page count")
-		}
+	/// Reflects ArticleArray.sorted(by:sortDirection:groupByFeed:)'s actual
+	/// gating: groupByFeed only affects output when sortField == .date.
+	/// Called from viewWillAppear and from updateTimelineSortLabels(), so
+	/// picking a different Sort Field updates this row's state in the same
+	/// pass that updates the Sort By/Order labels.
+	func updateGroupByFeedAvailability() {
+		let available = AppDefaults.shared.timelineSortField == .date
+		groupByFeedSwitch.isEnabled = available
+		groupByFeedReasonLabel.text = available ? nil : NSLocalizedString("Only applies when sorted by Date", comment: "Group by Feed inapplicable reason")
+		groupByFeedReasonLabel.isHidden = available
 	}
 
-	/// Keeps the Top Toolbar row's detail label in sync with the four
-	/// independent articleToolbarShowX toggles. Called on appearance and
-	/// whenever the person changes a switch on
-	/// ArticleToolbarCustomizerViewController -- this screen doesn't observe
-	/// UserDefaults.didChangeNotification itself, so it also re-reads on
-	/// every viewWillAppear, matching how articleThemeDetailLabel/
-	/// colorPaletteDetailLabel already stay in sync after a pushed screen
-	/// changes their underlying value and pops back here.
-	func updateArticleTopToolbarModeLabel() {
-		let enabledCount = ArticleToolbarToggle.allCases.filter(AppDefaults.shared.isArticleToolbarToggleEnabled).count
-		if enabledCount == 0 {
-			articleTopToolbarModeDetailLabel.text = NSLocalizedString("Off", comment: "Article top toolbar: no buttons shown")
-		} else {
-			let format = NSLocalizedString("%d Shown", comment: "Article top toolbar: number of buttons shown")
-			articleTopToolbarModeDetailLabel.text = String(format: format, enabledCount)
-		}
+	/// Best-effort snapshot of SceneCoordinator.isReadArticlesFiltered for
+	/// whatever feed/folder is currently open, taken once per appearance --
+	/// not live while Settings is open, since Filter Read Articles has no
+	/// dedicated change notification to observe. Unlike
+	/// updateGroupByFeedAvailability(), this never disables the switch: the
+	/// setting takes effect the moment the Read Articles filter is next
+	/// turned on for any feed, so disabling it here would overclaim a
+	/// precision this snapshot doesn't have.
+	func updateClearReadArticlesReasonLabel() {
+		let coordinator = (presentingParentController as? RootSplitViewController)?.coordinator
+		let filterOnNow = coordinator?.isReadArticlesFiltered ?? false
+		clearReadArticlesReasonLabel.text = filterOnNow ? nil : NSLocalizedString("Only applies when the Read Articles filter is on", comment: "Clear read articles inapplicable reason")
+		clearReadArticlesReasonLabel.isHidden = filterOnNow
 	}
 
 	@IBAction func switchGroupByFeed(_ sender: Any) {
@@ -455,15 +431,50 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		}
 	}
 
+	func updateFeedTransferFormatLabel() {
+		feedTransferFormatDetailLabel.text = AmbrosiaTransferFormatPreference.current == .sqlite
+			? NSLocalizedString("SQLite", comment: "Feed transfer format")
+			: NSLocalizedString("JSON", comment: "Feed transfer format")
+	}
+
 	/// "Ambrosia transfer format: JSON / SQLite," applied uniformly to
 	/// every Ambrosia-paired feed via AmbrosiaTransferFormatPreference
 	/// (read by LocalAccountRefresher.url(for:) on each refresh) -- no
 	/// per-feed override, no automatic size-based switching. A single
-	/// global toggle is simpler for a person to reason about than a
+	/// global picker is simpler for a person to reason about than a
 	/// format that silently varies by feed or by response size; see
 	/// docs/sqlite-transfer.md for the format itself.
-	@IBAction func switchAmbrosiaTransferFormat(_ sender: Any) {
-		AmbrosiaTransferFormatPreference.current = ambrosiaSQLiteTransferSwitch.isOn ? .sqlite : .json
+	func presentFeedTransferFormatPicker(sourceView: UIView, sourceRect: CGRect) {
+		let title = NSLocalizedString("Feed Transfer Format", comment: "Feed transfer format picker title")
+		let message = NSLocalizedString("Affects only feeds that support the SQLite transfer protocol. Most feeds are unaffected.", comment: "Feed transfer format picker explanation")
+		let alert = UIAlertController(title: title, message: message, preferredStyle: .actionSheet)
+
+		if let popoverController = alert.popoverPresentationController {
+			popoverController.sourceView = view
+			popoverController.sourceRect = sourceRect
+		}
+
+		let options: [(AmbrosiaTransferFormat, String)] = [
+			(.json, NSLocalizedString("JSON", comment: "Feed transfer format")),
+			(.sqlite, NSLocalizedString("SQLite", comment: "Feed transfer format"))
+		]
+
+		for (format, label) in options {
+			var actionTitle = label
+			if format == AmbrosiaTransferFormatPreference.current {
+				actionTitle = "✓ " + actionTitle
+			}
+			let action = UIAlertAction(title: actionTitle, style: .default) { [weak self] _ in
+				AmbrosiaTransferFormatPreference.current = format
+				self?.updateFeedTransferFormatLabel()
+			}
+			alert.addAction(action)
+		}
+
+		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
+		alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
+
+		self.present(alert, animated: true)
 	}
 
 	@IBAction func switchClearsReadArticles(_ sender: Any) {
@@ -478,36 +489,12 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		AppDefaults.shared.showLastUpdatedLabel = showLastUpdatedLabelSwitch.isOn
 	}
 
-	@IBAction func switchFullscreenArticles(_ sender: Any) {
-		if showFullscreenArticlesSwitch.isOn {
-			AppDefaults.shared.articleFullscreenAvailable = true
-		} else {
-			AppDefaults.shared.articleFullscreenAvailable = false
-		}
-	}
-
-	@IBAction func switchBackSwipeEnabled(_ sender: Any) {
-		AppDefaults.shared.articleBackSwipeEnabled = backSwipeEnabledSwitch.isOn
-	}
-
-	@IBAction func switchPagingSwipeEnabled(_ sender: Any) {
-		AppDefaults.shared.articlePagingSwipeEnabled = pagingSwipeEnabledSwitch.isOn
-	}
-
 	@IBAction func switchShowFeedNameInReaderView(_ sender: Any) {
 		AppDefaults.shared.showFeedNameInReaderView = showFeedNameInReaderViewSwitch.isOn
 	}
 
-	@IBAction func switchHideNotchInFullScreen(_ sender: Any) {
-		AppDefaults.shared.hideNotchInFullScreen = hideNotchInFullScreenSwitch.isOn
-	}
-
 	@IBAction func switchDisableArticleLinks(_ sender: Any) {
 		AppDefaults.shared.disableArticleLinks = disableArticleLinksSwitch.isOn
-	}
-
-	@IBAction func switchShowArticleScrollbar(_ sender: Any) {
-		AppDefaults.shared.showArticleScrollbar = showArticleScrollbarSwitch.isOn
 	}
 
 	@IBAction func switchBrowserPreference(_ sender: Any) {
@@ -560,11 +547,9 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		accentColorDetailLabel.text = AppDefaults.shared.accentColor.description
 
 		let liveTint = Assets.Colors.primaryAccent
-		for toggle in [groupByFeedSwitch, ambrosiaSQLiteTransferSwitch, refreshClearsReadArticlesSwitch,
-					   showLastUpdatedLabelSwitch, showFullscreenArticlesSwitch, backSwipeEnabledSwitch,
-					   pagingSwipeEnabledSwitch, showFeedNameInReaderViewSwitch,
-					   hideNotchInFullScreenSwitch, disableArticleLinksSwitch,
-					   showArticleScrollbarSwitch, openLinksInNetNewsWire] {
+		for toggle in [groupByFeedSwitch, refreshClearsReadArticlesSwitch,
+					   showLastUpdatedLabelSwitch, showFeedNameInReaderViewSwitch,
+					   disableArticleLinksSwitch, openLinksInNetNewsWire] {
 			toggle?.onTintColor = liveTint
 		}
 	}
@@ -745,39 +730,6 @@ private extension SettingsViewController {
 		let docPicker = UIDocumentPickerViewController(forExporting: [tempFile])
 		docPicker.modalPresentationStyle = .formSheet
 		self.present(docPicker, animated: true)
-	}
-
-	func presentPageCounterDisplayModePicker(sourceView: UIView, sourceRect: CGRect) {
-		let title = NSLocalizedString("Page Counter", comment: "Page counter picker title")
-		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
-
-		if let popoverController = alert.popoverPresentationController {
-			popoverController.sourceView = view
-			popoverController.sourceRect = sourceRect
-		}
-
-		let options: [(PageCounterDisplayMode, String)] = [
-			(.off, NSLocalizedString("Off", comment: "Page counter off")),
-			(.percentage, NSLocalizedString("Percentage", comment: "Page counter percentage")),
-			(.pageCount, NSLocalizedString("Page Count", comment: "Page counter page count"))
-		]
-
-		for (mode, label) in options {
-			var actionTitle = label
-			if mode == AppDefaults.shared.pageCounterDisplayMode {
-				actionTitle = "✓ " + actionTitle
-			}
-			let action = UIAlertAction(title: actionTitle, style: .default) { [weak self] _ in
-				AppDefaults.shared.pageCounterDisplayMode = mode
-				self?.updatePageCounterDisplayModeLabel()
-			}
-			alert.addAction(action)
-		}
-
-		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
-		alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
-
-		self.present(alert, animated: true)
 	}
 
 	func presentSortFieldPicker(sourceView: UIView, sourceRect: CGRect) {
