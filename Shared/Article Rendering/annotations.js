@@ -52,6 +52,27 @@
 	// guessing at the wrong occurrence.
 	var SIMILARITY_FLOOR = 0.5;
 
+	// quotePrefix/quoteSuffix capture window, in characters, on both sides
+	// of the quote. Wide enough that NLTokenizer (Swift side,
+	// AnnotationsListView) can usually recover the full surrounding
+	// sentence from prefix+quote+suffix, not just a fragment. Used both
+	// when a selection is first captured (selectorForRange) and whenever
+	// an annotation is reanchored (renderAnnotations) -- the reanchor path
+	// always recomputes against this current constant rather than reusing
+	// whatever length an existing annotation's stored quotePrefix happens
+	// to be, so annotations captured before this was widened still
+	// self-heal up to the new window the next time their chapter is
+	// rendered, the same way offset drift itself self-heals.
+	var CONTEXT_CHARS = 200;
+
+	// Same selector main_ios.js's tocNodes() uses to find navigable
+	// chapter/book headings (see that function's own comment for why both
+	// classes are matched). Duplicated here rather than imported --
+	// annotations.js is cross-platform and deliberately doesn't depend on
+	// an iOS-only script having run first (see this file's own
+	// toBase64/fromBase64 helpers below for the same reasoning).
+	var TOC_HEADING_SELECTOR = "h1, h2.heading, h2.toc-heading";
+
 	// ---- Text extraction -----------------------------------------------
 	//
 	// Builds the root's full inner text in a single TreeWalker pass
@@ -72,6 +93,60 @@
 			entries.push({ node: node, start: start, end: start + content.length });
 		}
 		return { text: text, entries: entries };
+	}
+
+	// ---- Chapter heading lookup (chapterTitle derivation) ------------------
+	//
+	// Finds every TOC_HEADING_SELECTOR match inside `root` (the same root
+	// buildTextIndex was just walked against for this annotation) and maps
+	// each heading element to its cumulative text offset within that same
+	// `entries` table, by locating the first text-index entry contained
+	// within the heading element. Deliberately scoped to `root`
+	// (annotation.rootSelector, default .articleBody), not `document` --
+	// tocNodes() in main_ios.js queries document-wide, which also matches
+	// the template's own chrome-level `.articleTitle h1` (the book's own
+	// title, rendered outside .articleBody); scoping to root here means
+	// that chrome heading is never considered a "chapter" for this
+	// purpose, and more importantly keeps heading offsets in the exact
+	// same coordinate space as the annotation's own startOffset/endOffset
+	// (both measured against the same buildTextIndex(root) call) rather
+	// than needing to translate between a document-wide index and a
+	// root-scoped one.
+	function buildHeadingIndex(root, entries) {
+		var headings = Array.from(root.querySelectorAll(TOC_HEADING_SELECTOR));
+		var index = [];
+		for (var i = 0; i < headings.length; i++) {
+			var heading = headings[i];
+			var offset = null;
+			for (var j = 0; j < entries.length; j++) {
+				if (heading.contains(entries[j].node)) {
+					offset = entries[j].start;
+					break;
+				}
+			}
+			if (offset !== null) {
+				index.push({ offset: offset, title: heading.textContent.trim() });
+			}
+		}
+		return index;
+	}
+
+	// The nearest preceding heading's title for a given text offset, or
+	// null if there's no heading before it at all (front matter, or an
+	// ordinary single-heading book whose one heading lives outside
+	// .articleBody and was therefore never indexed -- see
+	// buildHeadingIndex). headingIndex is assumed sorted in document
+	// order, which querySelectorAll already guarantees.
+	function nearestChapterTitle(headingIndex, offset) {
+		var best = null;
+		for (var i = 0; i < headingIndex.length; i++) {
+			if (headingIndex[i].offset <= offset) {
+				best = headingIndex[i];
+			} else {
+				break;
+			}
+		}
+		return best ? best.title : null;
 	}
 
 	// ---- Similarity scoring (for disambiguating multiple quote matches) --
@@ -307,15 +382,15 @@
 
 			if (resolution.status === "reanchored") {
 				var resolvedText = index.text.slice(startOffset, endOffset);
-				var prefixLen = (annotation.quotePrefix || "").length || 32;
-				var suffixLen = (annotation.quoteSuffix || "").length || 32;
+				var headingIndex = buildHeadingIndex(effectiveRoot, index.entries);
 				report.moved.push({
 					annotationID: annotation.annotationID,
 					startOffset: startOffset,
 					endOffset: endOffset,
 					quoteExact: resolvedText,
-					quotePrefix: index.text.slice(Math.max(0, startOffset - prefixLen), startOffset),
-					quoteSuffix: index.text.slice(endOffset, endOffset + suffixLen)
+					quotePrefix: index.text.slice(Math.max(0, startOffset - CONTEXT_CHARS), startOffset),
+					quoteSuffix: index.text.slice(endOffset, endOffset + CONTEXT_CHARS),
+					chapterTitle: nearestChapterTitle(headingIndex, startOffset)
 				});
 			}
 		});
@@ -430,16 +505,16 @@
 		}
 
 		var quoteExact = index.text.slice(startOffset, endOffset);
-		var prefixLen = 32;
-		var suffixLen = 32;
+		var headingIndex = buildHeadingIndex(root, index.entries);
 
 		return {
 			quoteExact: quoteExact,
-			quotePrefix: index.text.slice(Math.max(0, startOffset - prefixLen), startOffset),
-			quoteSuffix: index.text.slice(endOffset, Math.min(index.text.length, endOffset + suffixLen)),
+			quotePrefix: index.text.slice(Math.max(0, startOffset - CONTEXT_CHARS), startOffset),
+			quoteSuffix: index.text.slice(endOffset, Math.min(index.text.length, endOffset + CONTEXT_CHARS)),
 			rootSelector: rootSelector,
 			startOffset: startOffset,
-			endOffset: endOffset
+			endOffset: endOffset,
+			chapterTitle: nearestChapterTitle(headingIndex, startOffset)
 		};
 	}
 
@@ -495,7 +570,8 @@
 				quoteSuffix: selector.quoteSuffix,
 				rootSelector: selector.rootSelector,
 				startOffset: selector.startOffset,
-				endOffset: selector.endOffset
+				endOffset: selector.endOffset,
+				chapterTitle: selector.chapterTitle
 			})
 		);
 	}
@@ -645,8 +721,11 @@
 			wrapRange: wrapRange,
 			unwrapAnnotation: unwrapAnnotation,
 			selectorForRange: selectorForRange,
+			buildHeadingIndex: buildHeadingIndex,
+			nearestChapterTitle: nearestChapterTitle,
 			HIGHLIGHT_CLASS: HIGHLIGHT_CLASS,
-			SIMILARITY_FLOOR: SIMILARITY_FLOOR
+			SIMILARITY_FLOOR: SIMILARITY_FLOOR,
+			CONTEXT_CHARS: CONTEXT_CHARS
 		}
 	};
 

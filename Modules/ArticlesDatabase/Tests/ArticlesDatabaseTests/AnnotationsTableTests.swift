@@ -30,6 +30,7 @@ struct AnnotationsTableTests {
 		quoteExact: String = "a highlighted phrase",
 		color: Annotation.Color = .yellow,
 		note: String? = nil,
+		chapterTitle: String? = "Chapter 3: The Long Tide",
 		startOffset: Int = 10,
 		endOffset: Int = 31
 	) -> Annotation {
@@ -45,6 +46,7 @@ struct AnnotationsTableTests {
 			endOffset: endOffset,
 			color: color,
 			note: note,
+			chapterTitle: chapterTitle,
 			createdAt: now,
 			updatedAt: now
 		)
@@ -74,6 +76,7 @@ struct AnnotationsTableTests {
 			#expect(result.endOffset == annotation.endOffset)
 			#expect(result.color == annotation.color)
 			#expect(result.note == annotation.note)
+			#expect(result.chapterTitle == annotation.chapterTitle)
 			#expect(result.orphanedAt == nil)
 			#expect(result.lastReanchoredAt == nil)
 		}
@@ -105,6 +108,18 @@ struct AnnotationsTableTests {
 			table.save(annotation, database)
 			let fetched = table.fetchAnnotations(articleID: "article-1", database)
 			#expect(fetched.first?.note == nil)
+		}
+	}
+
+	@Test("a nil chapterTitle round-trips as nil (no heading before this annotation)")
+	func nilChapterTitleRoundTrips() {
+		let (db, table) = makeTable()
+		let annotation = makeAnnotation(chapterTitle: nil)
+
+		db.queue.runInDatabaseSync { database in
+			table.save(annotation, database)
+			let fetched = table.fetchAnnotations(articleID: "article-1", database)
+			#expect(fetched.first?.chapterTitle == nil)
 		}
 	}
 
@@ -242,6 +257,7 @@ struct AnnotationsTableTests {
 				quoteExact: "a highlighted phrase",
 				quotePrefix: "new prefix ",
 				quoteSuffix: " new suffix",
+				chapterTitle: "Chapter 4: Undertow",
 				at: Date(),
 				database
 			)
@@ -252,7 +268,33 @@ struct AnnotationsTableTests {
 			#expect(fetched?.endOffset == 61)
 			#expect(fetched?.quotePrefix == "new prefix ")
 			#expect(fetched?.quoteSuffix == " new suffix")
+			#expect(fetched?.chapterTitle == "Chapter 4: Undertow")
 			#expect(fetched?.lastReanchoredAt != nil)
+		}
+	}
+
+	@Test("reanchor can clear chapterTitle back to nil when the annotation moved before any heading")
+	func reanchorCanClearChapterTitleToNil() {
+		let (db, table) = makeTable()
+		let annotation = makeAnnotation(chapterTitle: "Chapter 3: The Long Tide")
+
+		db.queue.runInDatabaseSync { database in
+			table.save(annotation, database)
+
+			table.reanchor(
+				annotationID: annotation.annotationID,
+				startOffset: 0,
+				endOffset: 5,
+				quoteExact: "Front",
+				quotePrefix: "",
+				quoteSuffix: " matter",
+				chapterTitle: nil,
+				at: Date(),
+				database
+			)
+
+			let fetched = table.fetchAnnotations(articleID: "article-1", database).first
+			#expect(fetched?.chapterTitle == nil)
 		}
 	}
 }

@@ -13,6 +13,11 @@
 //
 
 // CREATE TABLE if not EXISTS annotations (annotationID TEXT NOT NULL PRIMARY KEY, articleID TEXT NOT NULL, bookKey TEXT, quoteExact TEXT NOT NULL, quotePrefix TEXT NOT NULL DEFAULT '', quoteSuffix TEXT NOT NULL DEFAULT '', rootSelector TEXT NOT NULL DEFAULT '.articleBody', startOffset INTEGER NOT NULL, endOffset INTEGER NOT NULL, color TEXT NOT NULL DEFAULT 'yellow', note TEXT, createdAt DATE NOT NULL, updatedAt DATE NOT NULL, orphanedAt DATE, lastReanchoredAt DATE);
+// chapterTitle TEXT was added later via an ALTER TABLE migration (see
+// ArticlesDatabase.swift's schema-version-3 block), not baked into this
+// CREATE TABLE statement -- the CREATE TABLE above still reflects only
+// what a schema-version-2 fresh install created; chapterTitle is nullable
+// and always added the same containsColumn-guarded way afterward.
 
 import Foundation
 import RSDatabase
@@ -64,9 +69,10 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 				\(DatabaseKey.annotationID), \(DatabaseKey.articleID), \(DatabaseKey.bookKey),
 				\(DatabaseKey.quoteExact), \(DatabaseKey.quotePrefix), \(DatabaseKey.quoteSuffix),
 				\(DatabaseKey.rootSelector), \(DatabaseKey.startOffset), \(DatabaseKey.endOffset),
-				\(DatabaseKey.color), \(DatabaseKey.note), \(DatabaseKey.createdAt), \(DatabaseKey.updatedAt),
+				\(DatabaseKey.color), \(DatabaseKey.note), \(DatabaseKey.chapterTitle),
+				\(DatabaseKey.createdAt), \(DatabaseKey.updatedAt),
 				\(DatabaseKey.orphanedAt), \(DatabaseKey.lastReanchoredAt)
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(\(DatabaseKey.annotationID)) DO UPDATE SET
 				\(DatabaseKey.articleID) = excluded.\(DatabaseKey.articleID),
 				\(DatabaseKey.bookKey) = excluded.\(DatabaseKey.bookKey),
@@ -78,6 +84,7 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 				\(DatabaseKey.endOffset) = excluded.\(DatabaseKey.endOffset),
 				\(DatabaseKey.color) = excluded.\(DatabaseKey.color),
 				\(DatabaseKey.note) = excluded.\(DatabaseKey.note),
+				\(DatabaseKey.chapterTitle) = excluded.\(DatabaseKey.chapterTitle),
 				\(DatabaseKey.updatedAt) = excluded.\(DatabaseKey.updatedAt),
 				\(DatabaseKey.orphanedAt) = excluded.\(DatabaseKey.orphanedAt),
 				\(DatabaseKey.lastReanchoredAt) = excluded.\(DatabaseKey.lastReanchoredAt)
@@ -86,7 +93,8 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 				annotation.annotationID, annotation.articleID, annotation.bookKey as Any,
 				annotation.quoteExact, annotation.quotePrefix, annotation.quoteSuffix,
 				annotation.rootSelector, annotation.startOffset, annotation.endOffset,
-				annotation.color.rawValue, annotation.note as Any, annotation.createdAt, annotation.updatedAt,
+				annotation.color.rawValue, annotation.note as Any, annotation.chapterTitle as Any,
+				annotation.createdAt, annotation.updatedAt,
 				annotation.orphanedAt as Any, annotation.lastReanchoredAt as Any
 			]
 		)
@@ -128,6 +136,11 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 	/// re-anchor pass (see docs/annotations.md), and clears any prior
 	/// orphaned mark -- a quote that re-resolves is no longer orphaned, even
 	/// if it briefly was on an earlier render.
+	/// chapterTitle is recomputed by annotations.js at the same point
+	/// quotePrefix/quoteSuffix are (see docs/annotations.md) -- a
+	/// reanchored offset can cross a chapter boundary in a heavily-edited
+	/// chapter, so it's written here alongside them rather than left
+	/// untouched.
 	func reanchor(
 		annotationID: String,
 		startOffset: Int,
@@ -135,6 +148,7 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 		quoteExact: String,
 		quotePrefix: String,
 		quoteSuffix: String,
+		chapterTitle: String?,
 		at date: Date,
 		_ database: FMDatabase
 	) {
@@ -146,12 +160,13 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 				\(DatabaseKey.quoteExact) = ?,
 				\(DatabaseKey.quotePrefix) = ?,
 				\(DatabaseKey.quoteSuffix) = ?,
+				\(DatabaseKey.chapterTitle) = ?,
 				\(DatabaseKey.lastReanchoredAt) = ?,
 				\(DatabaseKey.orphanedAt) = NULL,
 				\(DatabaseKey.updatedAt) = ?
 			WHERE \(DatabaseKey.annotationID) = ?
 			""",
-			withArgumentsIn: [startOffset, endOffset, quoteExact, quotePrefix, quoteSuffix, date, date, annotationID]
+			withArgumentsIn: [startOffset, endOffset, quoteExact, quotePrefix, quoteSuffix, chapterTitle as Any, date, date, annotationID]
 		)
 	}
 
@@ -182,6 +197,7 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 			endOffset: Int(resultSet.long(forColumn: DatabaseKey.endOffset)),
 			color: color,
 			note: resultSet.swiftString(forColumn: DatabaseKey.note),
+			chapterTitle: resultSet.swiftString(forColumn: DatabaseKey.chapterTitle),
 			createdAt: createdAt,
 			updatedAt: updatedAt,
 			orphanedAt: resultSet.columnIsNull(DatabaseKey.orphanedAt) ? nil : resultSet.date(forColumn: DatabaseKey.orphanedAt),

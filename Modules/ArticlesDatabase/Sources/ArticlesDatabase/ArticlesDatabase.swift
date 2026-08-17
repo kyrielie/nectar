@@ -96,7 +96,7 @@ public struct ArticleStorageInfo: Sendable {
 	/// schema change; a fresh install starts at user_version 0 and runs
 	/// every step up to currentSchemaVersion in one pass, same as an
 	/// existing install catching up.
-	nonisolated private static let currentSchemaVersion: UInt32 = 2
+	nonisolated private static let currentSchemaVersion: UInt32 = 3
 
 	public init(databaseFilePath: String, accountID: String, retentionStyle: RetentionStyle) {
 		Self.logger.debug("Articles Database init \(accountID, privacy: .public)")
@@ -362,6 +362,17 @@ public struct ArticleStorageInfo: Sendable {
 			// DB transaction back into an index lookup instead of O(n).
 			database.executeStatements("CREATE INDEX if not EXISTS articles_bookKey_index on articles(bookKey);")
 			database.executeStatements("CREATE INDEX if not EXISTS articles_uniqueID_index on articles(uniqueID);")
+
+			// Schema version 3: chapterTitle on annotations (docs/annotations.md).
+			// Nullable, same containsColumn-guarded ALTER TABLE pattern as
+			// bookKey above -- existing annotations get chapterTitle = nil
+			// until the next time their article is opened/re-anchored,
+			// self-healing the same way an upgraded quotePrefix/quoteSuffix
+			// capture window does.
+			if !self.articlesTable.annotationsTable.containsColumn("chapterTitle", in: database) {
+				Self.logger.debug("ArticlesDatabase: adding chapterTitle column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE annotations add column chapterTitle TEXT;")
+			}
 
 			database.executeStatements("CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);")
 			database.executeStatements("DROP TABLE if EXISTS tags;DROP INDEX if EXISTS tags_tagName_index;DROP INDEX if EXISTS articles_feedID_index;DROP INDEX if EXISTS statuses_read_index;DROP TABLE if EXISTS attachments;DROP TABLE if EXISTS attachmentsLookup;")
@@ -637,7 +648,7 @@ public struct ArticleStorageInfo: Sendable {
 	/// Writes back corrected offsets/selector text after a successful
 	/// re-anchor pass, clearing any prior orphaned mark -- see
 	/// docs/annotations.md.
-	public func reanchorAnnotation(annotationID: String, startOffset: Int, endOffset: Int, quoteExact: String, quotePrefix: String, quoteSuffix: String) async {
+	public func reanchorAnnotation(annotationID: String, startOffset: Int, endOffset: Int, quoteExact: String, quotePrefix: String, quoteSuffix: String, chapterTitle: String?) async {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		await withCheckedContinuation { continuation in
 			articlesTable.reanchorAnnotationAsync(
@@ -646,7 +657,8 @@ public struct ArticleStorageInfo: Sendable {
 				endOffset: endOffset,
 				quoteExact: quoteExact,
 				quotePrefix: quotePrefix,
-				quoteSuffix: quoteSuffix
+				quoteSuffix: quoteSuffix,
+				chapterTitle: chapterTitle
 			) {
 				continuation.resume()
 			}

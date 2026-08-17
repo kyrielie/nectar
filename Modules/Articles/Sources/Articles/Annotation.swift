@@ -47,6 +47,17 @@ public struct Annotation: Codable, Sendable, Hashable, Identifiable {
 	public let color: Color
 	/// nil = highlight with no note attached.
 	public let note: String?
+	/// The nearest preceding `<h1>`/`<h2 class="heading">`/`<h2
+	/// class="toc-heading">` heading inside the annotation's own
+	/// rootSelector, at the time this selector was last computed (initial
+	/// highlight, or a later re-anchor) -- see annotations.js's
+	/// nearestChapterTitle. nil when there's no such heading before this
+	/// annotation (front matter, or an ordinary single-heading book, where
+	/// that one heading is the book's own chrome-level title rendered
+	/// outside .articleBody and therefore never matched). Not recomputed
+	/// except at those two points, so it can go stale the same way
+	/// quotePrefix/quoteSuffix can -- self-heals on next re-anchor.
+	public let chapterTitle: String?
 	public let createdAt: Date
 	public let updatedAt: Date
 
@@ -71,6 +82,7 @@ public struct Annotation: Codable, Sendable, Hashable, Identifiable {
 		endOffset: Int,
 		color: Color,
 		note: String?,
+		chapterTitle: String? = nil,
 		createdAt: Date,
 		updatedAt: Date,
 		orphanedAt: Date? = nil,
@@ -87,6 +99,7 @@ public struct Annotation: Codable, Sendable, Hashable, Identifiable {
 		self.endOffset = endOffset
 		self.color = color
 		self.note = note
+		self.chapterTitle = chapterTitle
 		self.createdAt = createdAt
 		self.updatedAt = updatedAt
 		self.orphanedAt = orphanedAt

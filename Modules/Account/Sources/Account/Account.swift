@@ -1076,8 +1076,8 @@ public enum FetchType {
 		await database.markAnnotationOrphaned(annotationID: annotationID, at: date)
 	}
 
-	public func reanchorAnnotation(annotationID: String, startOffset: Int, endOffset: Int, quoteExact: String, quotePrefix: String, quoteSuffix: String) async {
-		await database.reanchorAnnotation(annotationID: annotationID, startOffset: startOffset, endOffset: endOffset, quoteExact: quoteExact, quotePrefix: quotePrefix, quoteSuffix: quoteSuffix)
+	public func reanchorAnnotation(annotationID: String, startOffset: Int, endOffset: Int, quoteExact: String, quotePrefix: String, quoteSuffix: String, chapterTitle: String?) async {
+		await database.reanchorAnnotation(annotationID: annotationID, startOffset: startOffset, endOffset: endOffset, quoteExact: quoteExact, quotePrefix: quotePrefix, quoteSuffix: quoteSuffix, chapterTitle: chapterTitle)
 	}
 
 	public func fetchAnnotations(forArticleID articleID: String) async -> [Annotation] {
