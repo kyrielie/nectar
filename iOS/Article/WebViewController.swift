@@ -62,7 +62,18 @@ final class WebViewController: UIViewController {
 	/// Remembered so the popover's note-icon button (which creates a
 	/// highlight without the person picking a color first) has a
 	/// reasonable default rather than always falling back to yellow.
-	private var lastUsedHighlightColor: Annotation.Color = AppDefaults.shared.defaultAnnotationColor
+	/// Non-nil (in view-coordinate space) exactly when annotationCreationMethod
+	/// is .nativeMenu and there's currently a live, non-empty text selection
+	/// -- i.e. a highlight *could* be created right now. Set/cleared from
+	/// textWasSelected(body:) based on annotations.js's `cleared` signal;
+	/// backs PreloadedWebViewAnnotationDelegate.isSelectionHighlightable
+	/// below, which buildMenu(with:) consults to decide whether to offer a
+	/// "Highlight" action in the system selection menu. Unused (stays nil)
+	/// in .popup/.off modes, since only .nativeMenu needs to answer "is
+	/// there a highlightable selection" without a rect to act on -- the
+	/// rect itself isn't needed for this mode (unlike .popup, which needs
+	/// it as the popover's sourceRect), only its presence/absence.
+	private var currentSelectionRect: CGRect?
 
 	/// Backing storage for awaitNextPageLoad(), resumed from
 	/// webView(_:didFinish:). An array, not a single optional, since more
@@ -718,6 +729,7 @@ extension WebViewController: WKNavigationDelegate {
 				oldWebView.removeFromSuperview()
 			}
 		}
+		initAnnotations()
 		loadAndRenderAnnotations()
 		resumeAwaitingPageLoads()
 	}
@@ -894,6 +906,34 @@ extension WebViewController: WKScriptMessageHandler {
 
 extension WebViewController {
 
+	/// Wires annotations.js's `selectionchange`/tap listeners for the
+	/// document that just finished loading, so a new text selection can
+	/// post `textWasSelected` and tapping an existing `<mark>` can post
+	/// `annotationWasTapped`. Must run on every navigation regardless of
+	/// whether this article has any saved annotations yet -- unlike
+	/// loadAndRenderAnnotations() below, this isn't gated on a non-empty
+	/// fetch, since a chapter with zero highlights still needs to support
+	/// creating its first one.
+	///
+	/// Reads AppDefaults.shared.annotationCreationMethod fresh on every
+	/// call (not cached) -- same "reasserted on every dequeue" convention
+	/// WebViewConfiguration/loadWebView already use for
+	/// showArticleScrollbar/pinchGestureRecognizer.isEnabled on this
+	/// pooled webview, so a Settings change takes effect the next time an
+	/// article loads rather than needing a relaunch, but doesn't apply
+	/// retroactively to whatever's already on screen.
+	func initAnnotations() {
+		let mode = AppDefaults.shared.annotationCreationMethod
+		guard let argsJSON = try? JSONSerialization.data(withJSONObject: ["mode": mode.rawValue]) else { return }
+		let encodedArgs = argsJSON.base64EncodedString()
+
+		webView?.evaluateJavaScript("Annotations.initAnnotations(\"\(encodedArgs)\")") { _, error in
+			if let error {
+				Self.logger.error("initAnnotations: Annotations.initAnnotations() JS call failed: \(error.localizedDescription, privacy: .public)")
+			}
+		}
+	}
+
 	/// Fetches this article's saved annotations and hands them to
 	/// annotations.js's renderAnnotationsEncoded, which resolves each one
 	/// against the freshly rendered DOM and draws its highlight. Any
@@ -921,11 +961,8 @@ extension WebViewController {
 			guard let json = try? JSONEncoder().encode(annotations) else { return }
 			let encoded = json.base64EncodedString()
 
-			self.webView?.evaluateJavaScript("Annotations.renderAnnotationsEncoded(\"\(encoded)\")") { result, error in
-				if let error {
-					Self.logger.error("loadAndRenderAnnotations: renderAnnotationsEncoded() JS call failed: \(error.localizedDescription, privacy: .public)")
-					return
-				}
+			do {
+				let result = try await self.webView?.evaluateJavaScript("Annotations.renderAnnotationsEncoded(\"\(encoded)\")")
 				guard let b64 = result as? String, let data = Data(base64Encoded: b64) else {
 					Self.logger.error("loadAndRenderAnnotations: renderAnnotationsEncoded() returned an unexpected result type or invalid base64")
 					return
@@ -935,6 +972,8 @@ extension WebViewController {
 					return
 				}
 				self.reconcile(report, account: account)
+			} catch {
+				Self.logger.error("loadAndRenderAnnotations: renderAnnotationsEncoded() JS call failed: \(error.localizedDescription, privacy: .public)")
 			}
 		}
 	}
@@ -994,8 +1033,8 @@ extension WebViewController {
 	/// Resumes every pending awaitNextPageLoad() caller. Called from
 	/// webView(_:didFinish:) in the WKNavigationDelegate extension below.
 	/// Backing storage is nextPageLoadContinuations, declared as a real
-	/// stored property alongside lastUsedHighlightColor near the top of
-	/// the class (extensions can't add stored properties).
+	/// stored property near the top of the class (extensions can't add
+	/// stored properties).
 	fileprivate func resumeAwaitingPageLoads() {
 		let continuations = nextPageLoadContinuations
 		nextPageLoadContinuations = []
@@ -1004,11 +1043,37 @@ extension WebViewController {
 		}
 	}
 
-	/// The person selected some text: show the color-swatch/note popover
-	/// anchored to the selection, per HighlightColorPopover's doc comment.
+	/// annotations.js reports both new selections (with a rect) and
+	/// selection-cleared events (`{cleared: true}`, no rect) through this
+	/// same handler -- see the `cleared` doc comment on
+	/// handleSelectionChange's postMessage calls in annotations.js.
+	///
+	/// What this does with either kind of message depends on
+	/// AppDefaults.shared.annotationCreationMethod, read fresh here rather
+	/// than cached, matching initAnnotations()'s doc comment above:
+	///  - .popup: a non-empty selection presents HighlightColorPopover, as
+	///    before. `cleared` payloads are ignored -- the popover, once
+	///    presented, has nothing left to dismiss based on this signal;
+	///    tapping a swatch or dismissing the popover already handles that.
+	///  - .nativeMenu: never presents the popover. Instead this just tracks
+	///    whether a highlightable selection currently exists
+	///    (currentSelectionRect), which PreloadedWebViewAnnotationDelegate's
+	///    isSelectionHighlightable exposes to buildMenu(with:) so it knows
+	///    whether to offer a "Highlight" action. A `cleared` payload resets
+	///    that back to nil.
+	///  - .off: this handler shouldn't fire at all, since annotations.js
+	///    skips wiring selectionchange entirely in that mode -- but if a
+	///    stale message arrives anyway (e.g. mode changed mid-session, see
+	///    initAnnotations()'s "next load" caveat), do nothing either way.
 	func textWasSelected(body: [String: Any]?) {
+		guard let body else { return }
+
+		if body["cleared"] as? Bool == true {
+			currentSelectionRect = nil
+			return
+		}
+
 		guard let webView,
-			  let body,
 			  let x = body["x"] as? Double,
 			  let y = body["y"] as? Double,
 			  let width = body["width"] as? Double,
@@ -1024,24 +1089,36 @@ extension WebViewController {
 		let rect = CGRect(x: CGFloat(x), y: adjustedY, width: CGFloat(width), height: CGFloat(height))
 		let convertedRect = webView.convert(rect, to: view)
 
-		presentHighlightColorPopover(sourceRect: convertedRect)
+		switch AppDefaults.shared.annotationCreationMethod {
+		case .popup:
+			presentHighlightColorPopover(sourceRect: convertedRect)
+		case .nativeMenu:
+			// No popover -- just remember that a highlightable selection
+			// exists. buildMenu(with:) reads isSelectionHighlightable the
+			// next time the system rebuilds its selection menu, which
+			// happens on its own without any push needed from here.
+			currentSelectionRect = convertedRect
+		case .off:
+			break
+		}
 	}
 
 	private func presentHighlightColorPopover(sourceRect: CGRect) {
 		let popover = HighlightColorPopover(
 			onSelectColor: { [weak self] color in
 				self?.dismiss(animated: true)
-				self?.saveHighlightFromSelection(color: color, thenOpenNoteEditor: false)
-			},
-			onAddNote: { [weak self] in
-				self?.dismiss(animated: true)
-				self?.saveHighlightFromSelection(color: self?.lastUsedHighlightColor ?? .yellow, thenOpenNoteEditor: true)
+				self?.saveHighlightFromSelection(color: color)
 			}
 		)
 
 		let hostingController = UIHostingController(rootView: popover)
 		hostingController.modalPresentationStyle = .popover
-		hostingController.preferredContentSize = CGSize(width: 220, height: 56)
+		// Sized for up to 3 swatches (28pt each, 14pt spacing, 16pt
+		// horizontal padding): 3*28 + 2*14 + 2*16 = 144. Fewer swatches
+		// (default color collides with blue/red) just leave the popover
+		// slightly wider than its content rather than needing a second
+		// size -- SwiftUI centers the HStack's content within it.
+		hostingController.preferredContentSize = CGSize(width: 144, height: 56)
 		if let presentationController = hostingController.popoverPresentationController {
 			presentationController.sourceView = view
 			presentationController.sourceRect = sourceRect
@@ -1059,10 +1136,15 @@ extension WebViewController {
 	/// the whole point of resolving against the live selection rather than
 	/// capturing it earlier is that it's still authoritative at this exact
 	/// moment.
-	private func saveHighlightFromSelection(color: Annotation.Color, thenOpenNoteEditor: Bool) {
+	///
+	/// Always saves-only now, for both callers (the popup's swatch tap and
+	/// the native menu's "Highlight" action): neither has a note-entry
+	/// exit any more. A note is added afterward by tapping the resulting
+	/// mark, which routes to annotationWasTapped -> AnnotationEditorView,
+	/// unchanged.
+	private func saveHighlightFromSelection(color: Annotation.Color) {
 		guard let article, let account = article.account else { return }
 
-		lastUsedHighlightColor = color
 		let annotationID = UUID().uuidString
 		let args: [String: String] = ["annotationID": annotationID, "color": color.rawValue]
 		guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else { return }
@@ -1104,10 +1186,6 @@ extension WebViewController {
 			Task {
 				await account.saveAnnotation(annotation)
 			}
-
-			if thenOpenNoteEditor {
-				self.openNoteEditor(for: annotation)
-			}
 		}
 	}
 
@@ -1126,9 +1204,24 @@ extension WebViewController {
 		}
 	}
 
+	/// The person chose "Highlight" from the system's native selection
+	/// menu (annotationCreationMethod == .nativeMenu). Reuses the exact
+	/// same save path the popup's swatch tap uses, resolving against
+	/// whatever selection is still live at the moment this fires -- the
+	/// system edit menu doesn't clear the underlying selection while it's
+	/// showing, so this is the same "still-authoritative live selection"
+	/// case saveHighlightFromSelection's doc comment describes, just
+	/// reached from a different UI. Uses the default color directly --
+	/// there's no color picker in this mode, per the plan, so this is
+	/// the native menu's single unconditional "Highlight" action -- see
+	/// PreloadedWebView.buildMenu.
+	func nativeMenuHighlightWasTapped() {
+		saveHighlightFromSelection(color: AppDefaults.shared.defaultAnnotationColor)
+	}
+
 	/// Presents the note-editor half-sheet for one annotation. Both entry
-	/// points (a fresh highlight from the popover's note-icon path, and
-	/// tapping an existing <mark>) converge here.
+	/// points (a fresh highlight, once its mark is tapped, and tapping an
+	/// existing <mark>) converge here.
 	private func openNoteEditor(for annotation: Annotation) {
 		guard let article, let account = article.account else { return }
 
@@ -1196,6 +1289,20 @@ extension WebViewController: UIPopoverPresentationControllerDelegate {
 		// sheet -- a full sheet is the wrong weight for "pick one of five
 		// colors."
 		.none
+	}
+
+}
+
+// MARK: PreloadedWebViewAnnotationDelegate
+
+extension WebViewController: PreloadedWebViewAnnotationDelegate {
+
+	/// Backed by currentSelectionRect, which only ever gets set in
+	/// .nativeMenu mode (see textWasSelected(body:)) -- so this is false by
+	/// construction in .popup/.off, without needing to re-check the mode
+	/// here too.
+	var isSelectionHighlightable: Bool {
+		currentSelectionRect != nil
 	}
 
 }
@@ -1435,6 +1542,12 @@ private extension WebViewController {
 				webView.navigationDelegate = self
 				webView.uiDelegate = self
 				webView.scrollView.delegate = self
+				// Same pooling concern as the three delegates just above:
+				// PreloadedWebView instances are reused across different
+				// WebViewControllers, so this must be reasserted on every
+				// dequeue rather than set once. Backs buildMenu(with:)'s
+				// native-menu "Highlight" action -- see PreloadedWebView.swift.
+				webView.annotationMenuDelegate = self
 				self.configureContextMenuInteraction()
 
 				// Remove possible existing message handlers
@@ -1462,6 +1575,15 @@ private extension WebViewController {
 
 	func renderPage(_ webView: PreloadedWebView?) {
 		guard let webView = webView else { return }
+
+		// A fresh document load means whatever selection currentSelectionRect
+		// was tracking, if any, no longer exists -- new HTML means no
+		// selection at all until the person makes a new one. Without this,
+		// a stale non-nil rect could momentarily make
+		// isSelectionHighlightable report true for a page that was just
+		// loaded and has no selection yet, offering "Highlight" with
+		// nothing live to resolve it against.
+		currentSelectionRect = nil
 
 		let theme = ArticleThemesManager.shared.currentTheme
 		let rendering: ArticleRenderer.Rendering

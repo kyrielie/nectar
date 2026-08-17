@@ -15,6 +15,7 @@ import Testing
 import Foundation
 import RSParser
 import RSDatabaseObjC
+import Articles
 @testable import ArticlesDatabase
 
 @Suite("ArticleSQLiteExportTable feedID scoping / statuses join / destination-exists")
@@ -120,10 +121,18 @@ struct ArticleSQLiteExportTableTests {
 		_ = await db.updateAsync(parsedItems: [TestFixtures.makeParsedItem(uniqueID: "u1", feedURL: "https://example.com/feed-a")], feedID: "feed-a", deleteOlder: false)
 		_ = await db.updateAsync(parsedItems: [TestFixtures.makeParsedItem(uniqueID: "u2", feedURL: "https://example.com/feed-b")], feedID: "feed-b", deleteOlder: false)
 
+		// articleID is never the raw uniqueID -- it's calculated from
+		// feedID+uniqueID (see Article.calculatedArticleID) -- so
+		// saveAnnotation has to be given the same value the articles table
+		// actually stores, or the export's INNER JOIN against articles
+		// matches nothing.
+		let articleIDInScope = Article.calculatedArticleID(feedID: "feed-a", uniqueID: "u1")
+		let articleIDOutOfScope = Article.calculatedArticleID(feedID: "feed-b", uniqueID: "u2")
+
 		let now = Date(timeIntervalSince1970: 1_700_000_000)
 		await db.saveAnnotation(Annotation(
 			annotationID: "annotation-a",
-			articleID: "u1",
+			articleID: articleIDInScope,
 			bookKey: nil,
 			quoteExact: "in scope",
 			quotePrefix: "",
@@ -137,7 +146,7 @@ struct ArticleSQLiteExportTableTests {
 		))
 		await db.saveAnnotation(Annotation(
 			annotationID: "annotation-b",
-			articleID: "u2",
+			articleID: articleIDOutOfScope,
 			bookKey: nil,
 			quoteExact: "out of scope",
 			quotePrefix: "",

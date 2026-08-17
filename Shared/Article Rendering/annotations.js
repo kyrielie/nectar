@@ -535,17 +535,29 @@
 			var root = document.querySelector(rootSelector);
 			var selection = global.getSelection ? global.getSelection() : null;
 
+			// Posting {cleared: true} here (rather than just returning
+			// silently, as before) lets the native side reset its cached
+			// "is there currently a highlightable selection" flag --
+			// needed by PreloadedWebView.buildMenu(with:) in native-menu
+			// mode, which has no other way to know a selection was
+			// dismissed/collapsed since its last build. The popup path
+			// (WebViewController.textWasSelected) simply ignores
+			// {cleared: true} payloads, since it has nothing to dismiss
+			// that wasn't already dismissed when a swatch was tapped.
 			if (!root || !selection || selection.rangeCount === 0 || selection.isCollapsed) {
+				postMessage("textWasSelected", { cleared: true });
 				return;
 			}
 
 			var range = selection.getRangeAt(0);
 			if (!root.contains(range.commonAncestorContainer)) {
+				postMessage("textWasSelected", { cleared: true });
 				return;
 			}
 
 			var text = range.toString();
 			if (!text || !text.trim().length) {
+				postMessage("textWasSelected", { cleared: true });
 				return;
 			}
 
@@ -578,9 +590,19 @@
 	// caller has an explicit, single place to hook re-initialization into.
 	function initAnnotations(options) {
 		options = options || {};
-		document.addEventListener("selectionchange", function () {
-			handleSelectionChange(options);
-		});
+		// mode "off" means selecting text shouldn't offer to create a
+		// highlight at all -- skip wiring selectionchange entirely rather
+		// than wiring it and having the native side ignore its messages,
+		// so there's no background work (or stray textWasSelected
+		// traffic) for a mode the person has turned off. The click
+		// listener below is unaffected by mode: tapping an *existing*
+		// highlight to view/edit it must always work regardless of how
+		// (or whether) new highlights can currently be created.
+		if (options.mode !== "off") {
+			document.addEventListener("selectionchange", function () {
+				handleSelectionChange(options);
+			});
+		}
 		document.addEventListener("click", handleAnnotationTap);
 	}
 

@@ -4,6 +4,9 @@
     "" : {
 
     },
+    "·" : {
+
+    },
     "“%@” has separate light and dark mode colors and follows your system appearance setting." : {
       "comment" : "Theme appearance footer, light+dark theme"
     },
@@ -80,6 +83,9 @@
     "Activity may contain feed URLs and other information you may not want to share publicly." : {
       "comment" : "Activity log privacy warning"
     },
+    "Add a note…" : {
+      "comment" : "Annotation editor: note field placeholder"
+    },
     "Add an AO3 Feed" : {
       "comment" : "AO3 onboarding primary action"
     },
@@ -88,6 +94,9 @@
     },
     "Add Folder" : {
       "comment" : "Add Folder"
+    },
+    "Add Note" : {
+      "comment" : "Highlight popover: add note button"
     },
     "Add to Loved" : {
       "comment" : "Command"
@@ -98,8 +107,20 @@
     "Added to Read Later" : {
       "comment" : "Read Later"
     },
+    "Adds a highlighter button to the article reader's top toolbar." : {
+      "comment" : "Annotations settings: toolbar button toggle footer"
+    },
+    "Affects only feeds that support the SQLite transfer protocol. Most feeds are unaffected." : {
+      "comment" : "Feed transfer format picker explanation"
+    },
     "All Articles" : {
       "comment" : "All Articles"
+    },
+    "All Highlights" : {
+      "comment" : "Annotations list navigation title: everything\nAnnotations settings: link to unscoped list"
+    },
+    "All of This Book" : {
+      "comment" : "Annotations menu: whole book"
     },
     "All Read" : {
       "comment" : "All Read pseudo-feed title"
@@ -179,6 +200,9 @@
     "Blocked by a Cloudflare challenge -- try again later" : {
       "comment" : "AO3 load more error"
     },
+    "Blue" : {
+      "comment" : "Highlight color"
+    },
     "Browser Verification" : {
       "comment" : "AO3 Cloudflare challenge status row label"
     },
@@ -198,6 +222,9 @@
       "comment" : "Import Account"
     },
     "Choose an account with the articles to export" : {
+      "comment" : "Export Account"
+    },
+    "Choose an account with the highlights to export" : {
       "comment" : "Export Account"
     },
     "Choose an account with the subscriptions to export" : {
@@ -260,6 +287,9 @@
     "Couldn't Load Page" : {
       "comment" : "AO3 in-app browser load error title"
     },
+    "Couldn't relocate this highlight" : {
+      "comment" : "Annotation row: orphaned highlight caption"
+    },
     "CSV" : {
       "comment" : "Export format"
     },
@@ -314,6 +344,9 @@
     "Default" : {
       "comment" : "Default\nDefault accent color\nDefault badge color palette\nDefault surface palette\nDefault toolbar style"
     },
+    "Default Highlight Color" : {
+      "comment" : "Annotations menu: default color submenu\nAnnotations settings: default color section header"
+    },
     "Default: the top navigation bar and bottom toolbar use plain system appearance. Blend: both bars match the current article's background color. Tinted: both bars pick up the Surface Palette's tint color." : {
       "comment" : "Toolbar style picker footer"
     },
@@ -335,8 +368,14 @@
     "Delete Folders" : {
       "comment" : "command"
     },
+    "Delete Highlight" : {
+      "comment" : "Annotation editor: confirm delete button\nAnnotation editor: delete button"
+    },
     "Delete Theme?" : {
       "comment" : "Delete Theme"
+    },
+    "Delete this highlight?" : {
+      "comment" : "Annotation editor: delete confirmation title"
     },
     "Delete This Theme" : {
       "comment" : "Delete current imported theme button"
@@ -413,11 +452,23 @@
     "Expanded" : {
       "comment" : "Expanded\nExpanded tag display mode"
     },
+    "Export" : {
+      "comment" : "Annotations settings: export section header"
+    },
     "Export Articles…" : {
       "comment" : "Command"
     },
+    "Export as CSV…" : {
+      "comment" : "Annotations settings: CSV export row"
+    },
+    "Export as SQLite…" : {
+      "comment" : "Annotations settings: SQLite export row"
+    },
     "Failed" : {
       "comment" : "Failed"
+    },
+    "Feed Transfer Format" : {
+      "comment" : "Feed transfer format picker title"
     },
     "Feeds" : {
       "comment" : "Feeds"
@@ -497,8 +548,23 @@
     "Graphite" : {
       "comment" : "Graphite accent color"
     },
+    "Green" : {
+      "comment" : "Highlight color"
+    },
     "Here" : {
       "comment" : "Here"
+    },
+    "Highlight" : {
+      "comment" : "Annotation editor navigation title"
+    },
+    "Highlight Color" : {
+      "comment" : "Annotation editor: color section header"
+    },
+    "Highlights" : {
+      "comment" : "Article top toolbar toggle: annotations"
+    },
+    "Highlights & Notes" : {
+      "comment" : "Annotations settings navigation title"
     },
     "How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes." : {
       "comment" : "AO3 preface refetch cadence footer"
@@ -546,6 +612,9 @@
     },
     "Invalid Address" : {
       "comment" : "Invalid Address"
+    },
+    "JSON" : {
+      "comment" : "Feed transfer format"
     },
     "Justify Text" : {
       "comment" : "Justify Text toggle"
@@ -749,6 +818,9 @@
     "No Errors Logged" : {
       "comment" : "Error log empty state"
     },
+    "No Highlights" : {
+      "comment" : "Annotations list empty state title"
+    },
     "No library connected yet." : {
       "comment" : "Empty state message"
     },
@@ -769,6 +841,9 @@
     },
     "Not Verified" : {
       "comment" : "AO3 Cloudflare challenge status: never verified"
+    },
+    "Note" : {
+      "comment" : "Annotation editor: note field section header"
     },
     "Notifications" : {
       "comment" : "Notifications"
@@ -797,6 +872,12 @@
     },
     "Only affects works added to your library from Ambrosia/Calibre. Off by default so Nectar makes no AO3 requests for a purely local archive unless you turn this on. When on, both chapter text and stats (kudos/comments/hits) stay in sync with the live AO3 version; a fetch that looks like it removed chapters or lost a large amount of text is held back for review instead of applied automatically. Works imported directly from an AO3 RSS feed always fetch live content -- there's no other way for them to get it." : {
       "comment" : "Ambrosia AO3 network toggle footer"
+    },
+    "Only applies when sorted by Date" : {
+      "comment" : "Group by Feed inapplicable reason"
+    },
+    "Only applies when the Read Articles filter is on" : {
+      "comment" : "Clear read articles inapplicable reason"
     },
     "Open" : {
       "comment" : "Open"
@@ -873,6 +954,9 @@
     "Previous Article" : {
       "comment" : "Previous Article"
     },
+    "Purple" : {
+      "comment" : "Highlight color"
+    },
     "Read Later" : {
       "comment" : "Command\nRead Later"
     },
@@ -887,6 +971,9 @@
     },
     "Recently Added" : {
       "comment" : "Recently Added pseudo-feed title"
+    },
+    "Red" : {
+      "comment" : "Highlight color"
     },
     "Reflects the current theme (%@) plus your overrides." : {
       "comment" : "Preview footer explaining theme + override layering"
@@ -939,6 +1026,9 @@
     "Running" : {
       "comment" : "Running"
     },
+    "Save" : {
+      "comment" : "Save button"
+    },
     "Search" : {
       "comment" : "Search"
     },
@@ -962,6 +1052,9 @@
     },
     "Select Next Up" : {
       "comment" : "Select Next Up"
+    },
+    "Select text in an article to highlight it." : {
+      "comment" : "Annotations list empty state message"
     },
     "Selected - Filter Read Articles" : {
       "comment" : "Selected - Filter Read Articles"
@@ -1005,6 +1098,9 @@
     "Show Stats" : {
       "comment" : "Stats visibility toggle"
     },
+    "Show Toolbar Button" : {
+      "comment" : "Annotations settings: toolbar button toggle"
+    },
     "Show Website" : {
       "comment" : "Show Website"
     },
@@ -1042,7 +1138,7 @@
       "comment" : "Sort field picker title"
     },
     "SQLite" : {
-      "comment" : "Export format"
+      "comment" : "Export format\nFeed transfer format"
     },
     "Stats Visibility" : {
       "comment" : "Stats Visibility"
@@ -1081,6 +1177,12 @@
     "The feed was added, but AO3 needs you to verify you're not a bot before its results can load. Verify now?" : {
       "comment" : "AO3 Cloudflare challenge prompt message"
     },
+    "The highlight and its note will be removed." : {
+      "comment" : "Annotation editor: delete confirmation message, with note"
+    },
+    "The highlight will be removed." : {
+      "comment" : "Annotation editor: delete confirmation message, no note"
+    },
     "The theme “%@” already exists. Overwrite it?" : {
       "comment" : "Overwrite theme"
     },
@@ -1095,6 +1197,12 @@
     },
     "These are limits of AO3's existing RSS mechanism itself, not of Nectar." : {
       "comment" : "AO3 RSS limitations section footer"
+    },
+    "This Book" : {
+      "comment" : "Annotations list navigation title: whole book"
+    },
+    "This Chapter" : {
+      "comment" : "Annotations list navigation title: single article\nAnnotations menu: this chapter"
     },
     "This device cannot send emails." : {
       "comment" : "This device cannot send emails."
@@ -1163,7 +1271,7 @@
       "comment" : "Unread"
     },
     "Untitled" : {
-      "comment" : "Article title\nFeed name"
+      "comment" : "Article title\nFallback article title\nFeed name"
     },
     "Updated %@" : {
       "comment" : "Updated"
@@ -1212,6 +1320,9 @@
     },
     "Works an author has archive-locked to registered users never appear in RSS at all, signed in or not -- RSS has no concept of an authenticated request. Nectar's AO3 sign-in above only helps once a locked work's link reaches Nectar some other way." : {
       "comment" : "AO3 RSS limitations: archive-locked works"
+    },
+    "Yellow" : {
+      "comment" : "Highlight color"
     },
     "You must have at least one active account." : {
       "comment" : "Missing active account"

@@ -10,16 +10,24 @@
 //  already does). WKWebView doesn't expose a supported way to inject a
 //  custom item into its native selection callout menu, so this is a
 //  separate, custom-presented view rather than an addition to the system
-//  edit menu.
+//  edit menu. This is the .popup AnnotationCreationMethod's UI; the
+//  .nativeMenu method instead injects into WKWebView's own selection
+//  callout -- see PreloadedWebView.buildMenu(with:).
 //
-//  One popover, two exits:
-//   - tap a color swatch -> highlight created with that color immediately,
-//     popover dismissed. The fast, one-tap path for "just highlight this."
-//   - tap the note icon -> highlight created with the last-used color,
-//     popover dismissed, and the note editor opens immediately, focused.
-//  Tapping an existing highlight always opens the note editor directly
-//  (WebViewController.annotationWasTapped), not this popover -- this view
-//  only ever handles the "new selection" case.
+//  One tap, one exit: tapping any swatch highlights immediately with that
+//  color and dismisses the popover. There is no "add note" affordance here
+//  -- notes are added afterward by tapping the resulting mark, which opens
+//  AnnotationEditorView the same way tapping any existing highlight does
+//  (WebViewController.annotationWasTapped).
+//
+//  Three swatches, not all five Annotation.Color cases: the person's
+//  current default color (AppDefaults.shared.defaultAnnotationColor,
+//  which can be any of the 5 -- set via AnnotationsSettingsView's picker),
+//  plus fixed blue and red as quick alternates. If the default color is
+//  itself blue or red, the duplicate is dropped rather than shown twice,
+//  so the popover can show 2 or 3 swatches depending on that setting.
+//  AnnotationEditorView's color picker and AnnotationsSettingsView's
+//  default-color picker are unaffected by this -- both still offer all 5.
 //
 
 import SwiftUI
@@ -28,18 +36,22 @@ import Articles
 struct HighlightColorPopover: View {
 
 	/// Called when a color swatch is tapped: create the highlight with
-	/// this color, no note editor.
+	/// this color immediately. The popover has no other exit.
 	var onSelectColor: (Annotation.Color) -> Void
 
-	/// Called when the note icon is tapped: create the highlight with the
-	/// last-used (or default) color, then open the note editor immediately.
-	var onAddNote: () -> Void
-
-	private static let swatchColors: [Annotation.Color] = Annotation.Color.allCases
+	/// The default color plus fixed blue/red, de-duplicated in place so a
+	/// default of blue or red doesn't produce a repeated swatch. Order is
+	/// preserved (default color first) rather than sorted, so the
+	/// person's own choice is always the leftmost/first swatch.
+	private var swatchColors: [Annotation.Color] {
+		let candidates: [Annotation.Color] = [AppDefaults.shared.defaultAnnotationColor, .blue, .red]
+		var seen = Set<Annotation.Color>()
+		return candidates.filter { seen.insert($0).inserted }
+	}
 
 	var body: some View {
 		HStack(spacing: 14) {
-			ForEach(Self.swatchColors, id: \.self) { color in
+			ForEach(swatchColors, id: \.self) { color in
 				Button {
 					onSelectColor(color)
 				} label: {
@@ -49,19 +61,6 @@ struct HighlightColorPopover: View {
 				}
 				.accessibilityLabel(color.accessibilityLabel)
 			}
-
-			Divider()
-				.frame(height: 24)
-
-			Button {
-				onAddNote()
-			} label: {
-				Image(uiImage: Assets.Images.annotationAddNote)
-					.resizable()
-					.scaledToFit()
-					.frame(width: 20, height: 20)
-			}
-			.accessibilityLabel(NSLocalizedString("Add Note", comment: "Highlight popover: add note button"))
 		}
 		.padding(.horizontal, 16)
 		.padding(.vertical, 12)
@@ -112,10 +111,15 @@ extension Annotation.Color {
 		UIColor(swiftUIColor)
 	}
 
-	/// A small filled-circle swatch, for UIMenu/UIAction images (the
-	/// annotations toolbar menu's "Default Highlight Color" submenu) --
-	/// UIKit menus can't host a SwiftUI Circle the way HighlightColorPopover
-	/// and AnnotationEditorView do.
+	/// A small filled-circle swatch, for UIMenu/UIAction images -- UIKit
+	/// menus can't host a SwiftUI Circle the way HighlightColorPopover and
+	/// AnnotationEditorView do. Currently unused: it backed the toolbar's
+	/// "Default Highlight Color" submenu in ArticleViewController.
+	/// annotationsMenu(), which was removed in favor of the single picker
+	/// in AnnotationsSettingsView (SwiftUI, uses swiftUIColor directly).
+	/// Left in place as a small, self-contained UIKit-bridging helper in
+	/// case a future UIMenu-based color picker needs it again -- flagging
+	/// for removal if that doesn't happen.
 	var swatchImage: UIImage {
 		let diameter: CGFloat = 18
 		let renderer = UIGraphicsImageRenderer(size: CGSize(width: diameter, height: diameter))
