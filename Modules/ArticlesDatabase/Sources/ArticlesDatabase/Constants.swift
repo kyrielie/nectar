@@ -131,6 +131,7 @@ struct DatabaseKey {
 	static let endOffset = "endOffset"
 	static let color = "color"
 	static let note = "note"
+	static let chapterTitle = "chapterTitle"
 	static let createdAt = "createdAt"
 	static let orphanedAt = "orphanedAt"
 	static let lastReanchoredAt = "lastReanchoredAt"

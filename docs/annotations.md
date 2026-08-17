@@ -8,14 +8,22 @@ rendered `template.html` — no EPUB, no PDF.
 ## Anchor model
 
 Each `Annotation` stores a W3C Web Annotation Data Model–style selector: an
-exact quote (`quoteExact`) plus a short prefix/suffix of surrounding text
-(`quotePrefix`/`quoteSuffix`, ~32 chars each) for disambiguation, alongside
-a character-offset position (`startOffset`/`endOffset`) into a
-`rootSelector`-scoped (default `.articleBody`) canonicalized "whole text"
-of the document. Both are stored together rather than either alone:
-position offsets break the instant `contentHTML` changes at all; a
-quote-only search is *O(n)* on every render and breaks silently if the
-same phrase appears twice.
+exact quote (`quoteExact`) plus a prefix/suffix of surrounding text
+(`quotePrefix`/`quoteSuffix`, `CONTEXT_CHARS` = 200 chars each — wide
+enough that the Swift side can usually recover the annotation's full
+surrounding sentence, not just a short fragment, via `NLTokenizer`; see
+"UI" below) for disambiguation, alongside a character-offset position
+(`startOffset`/`endOffset`) into a `rootSelector`-scoped (default
+`.articleBody`) canonicalized "whole text" of the document. Both are
+stored together rather than either alone: position offsets break the
+instant `contentHTML` changes at all; a quote-only search is *O(n)* on
+every render and breaks silently if the same phrase appears twice.
+
+Every annotation also carries `chapterTitle` (nullable): the nearest
+preceding `<h1>`/`<h2 class="heading">`/`<h2 class="toc-heading">`
+heading inside the same `rootSelector` root, at the time the selector was
+last computed. See "Anchor resolution" below for how it's derived and why
+it's scoped to `rootSelector` rather than the whole document.
 
 ## Database
 
@@ -32,6 +40,14 @@ can group without a join through `articles` on every query. A `nil`
 `bookKey` (unresolvable, same rare case `book-identity.md` describes)
 still leaves the annotation fully functional; it just won't appear in
 book-level grouping.
+
+`chapterTitle` (schema version 3) was added later via a
+`containsColumn`-guarded `ALTER TABLE annotations add column chapterTitle
+TEXT;`, the same backward-compatible pattern `bookKey` itself established
+— not baked into the original `CREATE TABLE`. Existing annotations get
+`chapterTitle = nil` until the next time they're opened/re-anchored,
+self-healing the same way an upgraded `quotePrefix`/`quoteSuffix` capture
+window does (see "Anchor resolution").
 
 `orphanedAt`/`lastReanchoredAt` track anchor-resolution health — an
 annotation whose quote can't be relocated is marked orphaned, never
@@ -88,6 +104,32 @@ concern.
    `{moved, orphanedIDs}` report per call rather than posting per-annotation
    — keeps the bridge chatty-message count bounded on chapters with many
    highlights.
+5. `chapterTitle` is derived by `buildHeadingIndex`/`nearestChapterTitle`
+   at the same two points `quotePrefix`/`quoteSuffix` are computed:
+   initial capture (`selectorForRange`) and every re-anchor
+   (`renderAnnotations`'s reanchor branch — a reanchored offset can cross
+   a chapter boundary in a heavily-edited chapter, so this is recomputed
+   on reanchor, not just on first save). `buildHeadingIndex` matches
+   `h1, h2.heading, h2.toc-heading` — the same selector `main_ios.js`'s
+   `tocNodes()` uses for the table-of-contents feature, duplicated locally
+   rather than imported (this file is cross-platform and doesn't assume an
+   iOS-only script ran first; see the `toBase64`/`fromBase64` note below)
+   — then maps each matched heading to a text offset within the *same*
+   `rootSelector`-scoped index the rest of the selector was resolved
+   against, and `nearestChapterTitle` picks the last heading at or before
+   a given offset.
+
+   This is deliberately scoped to `rootSelector` (default `.articleBody`),
+   not `document`: `template.html` renders a separate, chrome-level
+   `<h1>` inside `.articleTitle` (the feed-item title link), *outside*
+   `.articleBody` — `tocNodes()`'s document-wide query also matches that
+   `<h1>`, but scoping `buildHeadingIndex` to `rootSelector` naturally
+   excludes it, so an ordinary single-heading book (its own in-body title,
+   per Calibre's export shape — see `tocNodes()`'s own comment) yields
+   `chapterTitle` equal to that one in-body heading, not `null` and not
+   the chrome title. It also keeps heading offsets and annotation
+   offsets in the same coordinate space, since both come from one
+   `buildTextIndex(root)` call rather than two differently-scoped ones.
 
 Re-anchoring has no separate scheduled job or explicit database-side hook
 into the `pendingUpdateContentHTML`/ordinary-`changesFrom` content-mutation
@@ -95,11 +137,12 @@ paths (`database.md`, "Migrations of note"): it's a side effect of normal
 rendering. `WebViewController.loadAndRenderAnnotations()` calls
 `Annotations.renderAnnotationsEncoded` on every render (after
 `DOMContentLoaded`), decodes the returned report, and persists corrected
-offsets via `account.reanchorAnnotation` for anything reported `moved`, or
-`account.markAnnotationOrphaned` for anything in `orphanedIDs`. Since this
-runs unconditionally on every render, both the AO3 pending-update-apply
-path and ordinary feed-refresh content changes are covered by the same
-call site without needing to hook either explicitly.
+offsets and `chapterTitle` via `account.reanchorAnnotation` for anything
+reported `moved`, or `account.markAnnotationOrphaned` for anything in
+`orphanedIDs`. Since this runs unconditionally on every render, both the
+AO3 pending-update-apply path and ordinary feed-refresh content changes
+are covered by the same call site without needing to hook either
+explicitly.
 
 ## Message bridge
 
@@ -147,20 +190,35 @@ cross-platform and can't assume an iOS-only script ran first.
   own hex set; `HighlightColorPopover.swiftUIColor` mirrors the same five
   hex values in SwiftUI, kept in sync manually since there's no shared
   source of truth between CSS custom properties and SwiftUI `Color`.
-- **Toolbar button and menu**: `ArticleToolbarToggle` (`iOS/AppDefaults.swift`)
+- **Toolbar button**: `ArticleToolbarToggle` (`iOS/AppDefaults.swift`)
   has an `.annotations` case, backed by
   `AppDefaults.shared.articleToolbarShowAnnotations` (default `false`,
-  opt-in). `ArticleViewController.annotationsBarButtonItem` opens a `UIMenu`
-  (`annotationsMenu()`) rather than a direct action: "This Chapter" and
-  "All of This Book" both push `AnnotationsListView` with a different
-  fetch scope, plus a "Default Highlight Color" submenu writing
-  `AppDefaults.shared.defaultAnnotationColor`.
+  opt-in). `ArticleViewController.annotationsBarButtonItem` calls
+  `showAnnotationsList(_:)` directly, pushing `AnnotationsListView`
+  scoped to the current article's book (`.book(bookKey:)`) — there is no
+  toolbar menu with multiple scope choices; that was an earlier design
+  this doc previously (incorrectly) described.
 - **Annotations list**: `AnnotationsListView` (SwiftUI), one implementation
   for all three scopes (`.article`, `.book`, `.everything`) — only the
-  underlying `Account` fetch method differs. Rows show a color dot, the
-  truncated quote, note preview, chapter title, relative timestamp;
-  orphaned annotations (`orphanedAt != nil`) appear dimmed with a
-  "couldn't relocate this highlight" caption rather than being hidden.
+  underlying `Account` fetch method differs. Groups are keyed by
+  `articleID`; for a non-anthology book (one Ambrosia JSON Feed item per
+  work, per `ambrosia-feed.md`) that's always exactly one group, so the
+  section header is suppressed and the nav bar's `article.title` is the
+  only place the book title appears. Rows show a color dot; the full
+  sentence surrounding the highlight (reconstructed from
+  `quotePrefix`/`quoteExact`/`quoteSuffix` via `NLTokenizer(unit:
+  .sentence)`, with just the `quoteExact` portion given a
+  `annotation.color`-tinted background wash — not the raw, potentially
+  mid-sentence `quoteExact` slice on its own); the note preview; a
+  `chapterTitle` caption, shown only when it's non-empty and differs from
+  the group's own book title (suppresses the common case where a
+  single-heading book's one heading just repeats the title already shown
+  in the nav bar/section header — see "Anchor resolution" for why that's
+  usually `nil` or equal rather than something else). No per-row
+  timestamp or repeated book title — both were dropped as redundant with
+  the nav bar/section header. Orphaned annotations (`orphanedAt != nil`)
+  appear dimmed with a "couldn't relocate this highlight" caption rather
+  than being hidden.
   Tapping a row hands the chosen `Annotation` back via
   `onNavigateToAnnotation` — the caller (either
   `ArticleViewController.navigateToAnnotation` or
@@ -185,11 +243,18 @@ cross-platform and can't assume an iOS-only script ran first.
   as `ArticleCSVExporter.swift` — a `columnHeaders` array (`book`,
   `chapter`, `quote`, `note`, `color`, `created`, `link`) and a
   `CSVString(with:)` static function taking `[(Annotation, Article?)]`
-  (paired with the owning `Article` for book/chapter title and link,
-  which live on `Article`, not `Annotation`). Both `ArticleCSVExporter`
-  and `AnnotationCSVExporter` call the shared `CSVFormatting.rowString`/
-  `.escapedField` (`Shared/Exporters/CSVFormatting.swift`), pulled out so
-  the same escaping rules aren't hand-rolled twice.
+  (paired with the owning `Article` for book title and link, which live
+  on `Article`, not `Annotation`). The `chapter` column prefers
+  `annotation.chapterTitle` (real per-annotation data as of schema
+  version 3) and falls back to the book title (`article?.title`) only
+  when `chapterTitle` is `nil` — an annotation made before `chapterTitle`
+  existed and not yet re-anchored, or a genuinely single-heading book
+  with no distinct chapter to report. Before `chapterTitle` existed this
+  column was always `article?.title` — i.e., the book title, mislabeled
+  as chapter. Both `ArticleCSVExporter` and `AnnotationCSVExporter` call
+  the shared `CSVFormatting.rowString`/`.escapedField`
+  (`Shared/Exporters/CSVFormatting.swift`), pulled out so the same
+  escaping rules aren't hand-rolled twice.
   `SettingsViewController.exportAnnotationsCSVDocumentPicker` fetches
   every annotation via `account.fetchAllAnnotations()`, resolves each
   one's owning `Article` by `articleID`, and writes through the same
@@ -200,8 +265,10 @@ cross-platform and can't assume an iOS-only script ran first.
   `articles` export the same way `statuses` already is — an annotation
   only exports if its owning article does, so a feed-scoped export never
   leaks annotations outside that scope. This means the existing
-  `exportArticlesSQLite` path picks up annotations automatically; there is
-  no separate annotations-only SQLite export UI.
+  `exportArticlesSQLite` path picks up annotations automatically,
+  `chapterTitle` included (`SELECT an.*` — a new annotations column
+  requires no export-side change to be included); there is no separate
+  annotations-only SQLite export UI.
 
 ## Ambrosia integration
 
@@ -218,11 +285,22 @@ in scope here — that's a change to a server not in this repository.
 ## Tests
 
 - `Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/AnnotationsTableTests.swift`:
-  save/fetch round-trip, scoping by articleID/bookKey/unscoped, note/color
-  partial updates, delete, orphan/reanchor lifecycle.
+  save/fetch round-trip (including `chapterTitle`, both a set value and
+  `nil`), scoping by articleID/bookKey/unscoped, note/color partial
+  updates, delete, orphan/reanchor lifecycle (`reanchor` writing
+  `chapterTitle` alongside corrected offsets, including clearing it back
+  to `nil`).
 - `Tests/JS/annotations/anchor-resolution.test.js`,
   `selection-capture.test.js`: headless coverage of the pure
-  text/DOM-offset algorithm pieces exposed via `Annotations._internal`.
+  text/DOM-offset algorithm pieces exposed via `Annotations._internal`,
+  including `buildHeadingIndex`/`nearestChapterTitle` (root-scoping vs.
+  chrome-level headings outside `.articleBody`, nearest-preceding-heading
+  selection, `null` before any heading), `chapterTitle` appearing in both
+  `selectorForRange`'s/`addHighlightFromSelection`'s selector and
+  `renderAnnotations`'s `moved` report entries, and `CONTEXT_CHARS`
+  self-healing (a reanchor always recaptures at the current width, never
+  reusing whatever narrower length an existing annotation's stored
+  `quotePrefix` happens to be).
 - `Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/ArticleSQLiteExportTableTests.swift`
   covers the annotations-export join scoping alongside the pre-existing
   feedID/statuses-join/destination-exists cases.

@@ -1274,6 +1274,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				endOffset: annotation.endOffset,
 				color: annotation.color,
 				note: annotation.note,
+				chapterTitle: annotation.chapterTitle,
 				createdAt: annotation.createdAt,
 				updatedAt: annotation.updatedAt,
 				orphanedAt: annotation.orphanedAt,
@@ -1329,6 +1330,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		quoteExact: String,
 		quotePrefix: String,
 		quoteSuffix: String,
+		chapterTitle: String?,
 		_ completion: DatabaseCompletionBlock?
 	) {
 		queue.runInDatabase { database in
@@ -1339,6 +1341,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				quoteExact: quoteExact,
 				quotePrefix: quotePrefix,
 				quoteSuffix: quoteSuffix,
+				chapterTitle: chapterTitle,
 				at: Date(),
 				database
 			)

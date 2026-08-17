@@ -33,6 +33,7 @@ test("addHighlightFromSelection computes a selector and draws the mark immediate
 	assert.equal(result.quoteExact, "Once");
 	assert.equal(result.startOffset, 0);
 	assert.equal(result.endOffset, 4);
+	assert.equal(result.chapterTitle, null, "no heading in this fixture");
 
 	const mark = document.querySelector('mark[data-annotation-id="new-id"]');
 	assert.ok(mark, "the highlight should be drawn immediately, not after a round trip");
@@ -54,6 +55,41 @@ test("addHighlightFromSelection captures prefix/suffix context around the select
 	assert.equal(result.quoteExact, "a fox");
 	assert.ok(result.quotePrefix.endsWith("was "), `expected quotePrefix to end with "was ", got ${JSON.stringify(result.quotePrefix)}`);
 	assert.ok(result.quoteSuffix.startsWith(" in the"), `expected quoteSuffix to start with " in the", got ${JSON.stringify(result.quoteSuffix)}`);
+});
+
+test("addHighlightFromSelection captures up to CONTEXT_CHARS on each side, not the old 32-char window", () => {
+	const long = "word ".repeat(80).trim();
+	const { Annotations, document, window } = loadAnnotations(
+		`<div class="articleBody"><p>${long} TARGET ${long}</p></div>`
+	);
+	const textNode = document.querySelector("p").firstChild;
+	const fullText = textNode.textContent;
+	const start = fullText.indexOf("TARGET");
+	const end = start + "TARGET".length;
+	selectTextInNode(window, textNode, start, end);
+
+	const result = decodeResult(Annotations.addHighlightFromSelection(encodeArgs({ annotationID: "a1", color: "blue" })));
+
+	assert.equal(result.quotePrefix.length, Annotations._internal.CONTEXT_CHARS);
+	assert.equal(result.quoteSuffix.length, Annotations._internal.CONTEXT_CHARS);
+});
+
+test("addHighlightFromSelection includes chapterTitle for the nearest preceding heading", () => {
+	const { Annotations, document, window } = loadAnnotations(
+		'<div class="articleBody">'
+		+ '<h2 class="heading">Chapter 1: Arrival</h2>'
+		+ '<p>The fox waited by the door.</p>'
+		+ '</div>'
+	);
+	const textNode = document.querySelector("p").firstChild;
+	const fullText = textNode.textContent;
+	const start = fullText.indexOf("fox");
+	const end = start + "fox".length;
+	selectTextInNode(window, textNode, start, end);
+
+	const result = decodeResult(Annotations.addHighlightFromSelection(encodeArgs({ annotationID: "a1", color: "blue" })));
+
+	assert.equal(result.chapterTitle, "Chapter 1: Arrival");
 });
 
 test("addHighlightFromSelection clears the selection after drawing", () => {
