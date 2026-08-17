@@ -95,9 +95,6 @@
     "Add Folder" : {
       "comment" : "Add Folder"
     },
-    "Add Note" : {
-      "comment" : "Highlight popover: add note button"
-    },
     "Add to Loved" : {
       "comment" : "Command"
     },
@@ -345,7 +342,7 @@
       "comment" : "Default\nDefault accent color\nDefault badge color palette\nDefault surface palette\nDefault toolbar style"
     },
     "Default Highlight Color" : {
-      "comment" : "Annotations menu: default color submenu\nAnnotations settings: default color section header"
+      "comment" : "Annotations settings: default color section header"
     },
     "Default: the top navigation bar and bottom toolbar use plain system appearance. Blend: both bars match the current article's background color. Tinted: both bars pick up the Surface Palette's tint color." : {
       "comment" : "Toolbar style picker footer"
@@ -555,10 +552,13 @@
       "comment" : "Here"
     },
     "Highlight" : {
-      "comment" : "Annotation editor navigation title"
+      "comment" : "Annotation editor navigation title\nNative selection menu: highlight action"
     },
     "Highlight Color" : {
       "comment" : "Annotation editor: color section header"
+    },
+    "Highlight Creation" : {
+      "comment" : "Annotations settings: highlight creation method section header"
     },
     "Highlights" : {
       "comment" : "Article top toolbar toggle: annotations"
@@ -769,6 +769,9 @@
     "Name" : {
       "comment" : "Name"
     },
+    "Native Menu" : {
+      "comment" : "Highlight creation method: native menu"
+    },
     "Nav Bar" : {
       "comment" : "Surface palette preview: nav bar swatch caption"
     },
@@ -862,7 +865,7 @@
       "comment" : "Ocean accent color"
     },
     "Off" : {
-      "comment" : "Article top toolbar: no buttons shown\nPage counter off"
+      "comment" : "Article top toolbar: no buttons shown\nHighlight creation method: off\nPage counter off"
     },
     "OK" : {
       "comment" : "OK button"
@@ -935,6 +938,12 @@
     },
     "Please enter a valid http:// or https:// address." : {
       "comment" : "Invalid address message"
+    },
+    "Popup" : {
+      "comment" : "Highlight creation method: popup"
+    },
+    "Popup shows a color picker when you select text. Native Menu adds a Highlight option to the system's own selection menu. Off disables creating new highlights from text selection." : {
+      "comment" : "Annotations settings: highlight creation method section footer"
     },
     "Possible Content Change" : {
       "comment" : "Title"
@@ -1284,6 +1293,9 @@
     },
     "Use New Version" : {
       "comment" : "Command"
+    },
+    "Used by both Popup and Native Menu -- Popup's default swatch, and Native Menu's only color, both track this." : {
+      "comment" : "Annotations settings: default color section footer"
     },
     "Vacuum Databases" : {
       "comment" : "Vacuum databases button"
