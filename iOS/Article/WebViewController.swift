@@ -987,7 +987,8 @@ extension WebViewController {
 					endOffset: moved.endOffset,
 					quoteExact: moved.quoteExact,
 					quotePrefix: moved.quotePrefix,
-					quoteSuffix: moved.quoteSuffix
+					quoteSuffix: moved.quoteSuffix,
+					chapterTitle: moved.chapterTitle
 				)
 			}
 			for orphanedID in report.orphanedIDs {
@@ -1179,6 +1180,7 @@ extension WebViewController {
 				endOffset: selector.endOffset,
 				color: color,
 				note: nil,
+				chapterTitle: selector.chapterTitle,
 				createdAt: now,
 				updatedAt: now
 			)
@@ -1425,6 +1427,10 @@ private struct AnnotationSelector: Codable {
 	let rootSelector: String
 	let startOffset: Int
 	let endOffset: Int
+	/// See Annotation.chapterTitle -- computed by annotations.js's
+	/// nearestChapterTitle against the same root the rest of this
+	/// selector was resolved against.
+	let chapterTitle: String?
 }
 
 private struct ReanchorReport: Codable {
@@ -1435,6 +1441,7 @@ private struct ReanchorReport: Codable {
 		let quoteExact: String
 		let quotePrefix: String
 		let quoteSuffix: String
+		let chapterTitle: String?
 	}
 	let moved: [Moved]
 	let orphanedIDs: [String]

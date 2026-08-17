@@ -24,6 +24,7 @@
 //
 
 import SwiftUI
+import NaturalLanguage
 import Articles
 import Account
 
@@ -265,6 +266,11 @@ struct AnnotationsListView: View {
 private struct AnnotationRow: View {
 
 	let annotation: Annotation
+	/// Kept even though it's no longer displayed directly (the book title
+	/// already appears once, in the nav bar and/or the section header --
+	/// see AnnotationsListView.list) -- still needed to suppress a
+	/// redundant chapterCaption below for the common single-heading book,
+	/// where chapterTitle just equals the book title again.
 	let articleTitle: String
 
 	var body: some View {
@@ -275,7 +281,7 @@ private struct AnnotationRow: View {
 				.padding(.top, 4)
 
 			VStack(alignment: .leading, spacing: 4) {
-				Text(truncatedQuote)
+				Text(sentenceContext)
 					.font(.callout)
 					.foregroundStyle(.primary)
 					.lineLimit(2)
@@ -287,13 +293,11 @@ private struct AnnotationRow: View {
 						.lineLimit(1)
 				}
 
-				HStack(spacing: 4) {
-					Text(articleTitle)
-					Text("·")
-					Text(annotation.updatedAt, style: .relative)
+				if let chapterCaption {
+					Text(chapterCaption)
+						.font(.caption2)
+						.foregroundStyle(.tertiary)
 				}
-				.font(.caption2)
-				.foregroundStyle(.tertiary)
 
 				if annotation.orphanedAt != nil {
 					Label(
@@ -314,9 +318,81 @@ private struct AnnotationRow: View {
 		.opacity(annotation.orphanedAt != nil ? 0.5 : 1.0)
 	}
 
-	private var truncatedQuote: String {
+	/// Only shown for a genuine multi-heading (anthology/chaptered) book --
+	/// most books have exactly one heading total (their own title, per
+	/// annotations.js's nearestChapterTitle, which only looks inside
+	/// .articleBody), so chapterTitle there either equals articleTitle
+	/// (Calibre's repeated one-shot "toc-heading") or is nil (no heading
+	/// before this annotation at all). Either case would just repeat the
+	/// nav bar / section header title, so it's suppressed rather than shown.
+	private var chapterCaption: String? {
+		guard let chapterTitle = annotation.chapterTitle, !chapterTitle.isEmpty, chapterTitle != articleTitle else {
+			return nil
+		}
+		return chapterTitle
+	}
+
+	/// The full sentence surrounding the highlight, built from the stored
+	/// quotePrefix/quoteExact/quoteSuffix selector (see docs/annotations.md)
+	/// rather than just the raw quote -- gives the row real reading context
+	/// instead of a mid-sentence fragment. quotePrefix/quoteExact/quoteSuffix
+	/// are three independently-decoded Swift Strings concatenated directly
+	/// here, so the quote's Character-range within `combined` is exactly
+	/// [quotePrefix.count, quotePrefix.count + quoteExact.count) -- no
+	/// JS-side UTF-16 offset math involved. (Edge case, self-healing: if a
+	/// grapheme cluster was split exactly at the JS-side slice boundary,
+	/// this range can be off by one Character; the next re-anchor
+	/// recomputes prefix/suffix against the live DOM and corrects it, same
+	/// as annotations.js's other drift-healing paths.)
+	private var sentenceContext: AttributedString {
+		let prefix = annotation.quotePrefix
 		let quote = annotation.quoteExact
-		guard quote.count > 120 else { return quote }
-		return String(quote.prefix(120)) + "…"
+		let suffix = annotation.quoteSuffix
+		let combined = prefix + quote + suffix
+
+		guard !combined.isEmpty else {
+			return AttributedString(quote)
+		}
+
+		let quoteStart = combined.index(combined.startIndex, offsetBy: prefix.count)
+		let quoteEnd = combined.index(quoteStart, offsetBy: quote.count, limitedBy: combined.endIndex) ?? combined.endIndex
+
+		let tokenizer = NLTokenizer(unit: .sentence)
+		tokenizer.string = combined
+		var sentenceRange = combined.startIndex..<combined.endIndex
+		tokenizer.enumerateTokens(in: combined.startIndex..<combined.endIndex) { range, _ in
+			if range.contains(quoteStart) || range.lowerBound == quoteStart {
+				sentenceRange = range
+				return false
+			}
+			return true
+		}
+
+		let sentenceString = String(combined[sentenceRange])
+		var attributed = AttributedString(sentenceString)
+
+		let clippedStart = max(quoteStart, sentenceRange.lowerBound)
+		let clippedEnd = min(quoteEnd, sentenceRange.upperBound)
+		guard clippedStart < clippedEnd else {
+			return attributed
+		}
+
+		// Re-base clippedStart/clippedEnd from `combined`-relative indices
+		// onto `sentenceString`-relative indices (AttributedString.Index
+		// lookup requires indices from the exact string the AttributedString
+		// was initialized from, not from `combined`).
+		let startDistance = combined.distance(from: sentenceRange.lowerBound, to: clippedStart)
+		let endDistance = combined.distance(from: sentenceRange.lowerBound, to: clippedEnd)
+		guard
+			let localStart = sentenceString.index(sentenceString.startIndex, offsetBy: startDistance, limitedBy: sentenceString.endIndex),
+			let localEnd = sentenceString.index(sentenceString.startIndex, offsetBy: endDistance, limitedBy: sentenceString.endIndex),
+			let attrStart = AttributedString.Index(localStart, within: attributed),
+			let attrEnd = AttributedString.Index(localEnd, within: attributed)
+		else {
+			return attributed
+		}
+
+		attributed[attrStart..<attrEnd].backgroundColor = annotation.color.swiftUIColor.opacity(0.3)
+		return attributed
 	}
 }
