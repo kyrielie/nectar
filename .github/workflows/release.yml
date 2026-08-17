@@ -71,6 +71,14 @@ jobs:
             | grep -m1 '^\s*CURRENT_PROJECT_VERSION' | awk -F'= ' '{print $2}')
           build_version="${base_project_version}.${GITHUB_RUN_NUMBER}"
 
+          # Override MARKETING_VERSION with the release tag so the shipped
+          # .app's CFBundleShortVersionString (and therefore the version
+          # shown in Settings, via Bundle.main.versionNumber) matches the
+          # Nectar release instead of the upstream-pinned value in
+          # xcconfig/common/NetNewsWire_ios_target_common.xcconfig.
+          marketing_version="${{ inputs.tag }}"
+          marketing_version="${marketing_version#v}"
+
           set -o pipefail
           xcodebuild \
             -project NetNewsWire.xcodeproj \
@@ -80,6 +88,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CURRENT_PROJECT_VERSION="$build_version" \
+            MARKETING_VERSION="$marketing_version" \
             CODE_SIGN_IDENTITY="" \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             archive 2>&1 | tee "$build_log" | xcbeautify --renderer github-actions
@@ -165,10 +174,13 @@ jobs:
           published_at=$(echo "$release_json" | jq -r '.published_at')
           body=$(echo "$release_json" | jq -r '.body // ""')
 
-          # Display-only version shown in AltStore/SideStore, independent of
-          # the upstream-pinned MARKETING_VERSION in xcconfig (which stays
-          # fixed across Nectar releases). Strips a leading "v" from tags
-          # like "v0.4.2" -- adjust here if the tagging convention changes.
+          # Display-only version shown in AltStore/SideStore. As of the
+          # MARKETING_VERSION override in build-ipa-release and below, this
+          # is now the same tag-derived value as source.json's "version"
+          # field -- kept as a separate output because it's sourced from the
+          # tag directly here, without depending on the "Read build settings"
+          # step below. Strips a leading "v" from tags like "v0.4.2" --
+          # adjust here if the tagging convention changes.
           marketing_version_display="${tag_name#v}"
 
           echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
@@ -216,10 +228,22 @@ jobs:
         run: |
           set -euo pipefail
 
+          # MARKETING_VERSION is overridden here to match what build-ipa-release
+          # actually archives (see that job's Archive (unsigned) step): the
+          # release tag, not the upstream-pinned xcconfig default. Without
+          # this override, marketing_version below would report the
+          # xcconfig-pinned value, which becomes VERSION -> "version" in
+          # source.json (scripts/update_source.py) -- the field AltStore uses
+          # for update comparisons -- so it would stay stuck across releases
+          # even though the shipped .app's own version already changes.
+          tag_name="${{ steps.release.outputs.tag_name }}"
+          marketing_version_override="${tag_name#v}"
+
           settings=$(xcodebuild -showBuildSettings \
             -project NetNewsWire.xcodeproj \
             -scheme Nectar-iOS \
-            -destination "generic/platform=iOS" 2>xcodebuild-showbuildsettings.log) || {
+            -destination "generic/platform=iOS" \
+            MARKETING_VERSION="$marketing_version_override" 2>xcodebuild-showbuildsettings.log) || {
             echo "::error::xcodebuild -showBuildSettings failed. stderr was:"
             cat xcodebuild-showbuildsettings.log
             echo "::error::Available schemes in this checkout:"

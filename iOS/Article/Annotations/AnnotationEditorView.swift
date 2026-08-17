@@ -178,6 +178,7 @@ struct AnnotationEditorView: View {
 							}
 						}
 				}
+				.buttonStyle(.plain)
 				.accessibilityLabel(color.accessibilityLabel)
 				.accessibilityAddTraits(color == selectedColor ? .isSelected : [])
 			}

@@ -54,11 +54,12 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// flips heartBarButtonItem's image, rather than rebuilding
 	// rightBarButtonItems() on every tap.
 	private lazy var lockBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "lock.open"), style: .plain, target: self, action: #selector(toggleGesturesLocked(_:)))
-	// Unlike the other bar-button items above (each a single direct
-	// action), this one opens a menu on tap -- see annotationsMenu().
-	// primaryAction/target/action are all nil, and menu: is set instead;
-	// UIBarButtonItem presents its menu on tap when constructed this way.
-	private lazy var annotationsBarButtonItem = UIBarButtonItem(image: Assets.Images.annotations, primaryAction: nil, menu: annotationsMenu())
+	// Direct action, like tableOfContentsBarButtonItem above -- this used
+	// to open a two-item menu (This Chapter / All of This Book), but
+	// showAnnotationsList now always shows one grouped, whole-book view
+	// (see showAnnotationsList's own doc comment), so there's no longer a
+	// choice to present a menu for.
+	private lazy var annotationsBarButtonItem = UIBarButtonItem(image: Assets.Images.annotations, style: .plain, target: self, action: #selector(showAnnotationsList(_:)))
 
 	@IBOutlet private var searchBar: ArticleSearchBar!
 	@IBOutlet private var searchBarBottomConstraint: NSLayoutConstraint!
@@ -644,70 +645,53 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		}
 	}
 
-	private func annotationsMenu() -> UIMenu {
-		let thisChapter = UIAction(
-			title: NSLocalizedString("This Chapter", comment: "Annotations menu: this chapter"),
-			image: UIImage(systemName: "doc.text")
-		) { [weak self] _ in
-			self?.showAnnotationsList(scope: .article)
-		}
-		let wholeBook = UIAction(
-			title: NSLocalizedString("All of This Book", comment: "Annotations menu: whole book"),
-			image: UIImage(systemName: "books.vertical")
-		) { [weak self] _ in
-			self?.showAnnotationsList(scope: .book)
-		}
-		let listMenu = UIMenu(title: "", options: .displayInline, children: [thisChapter, wholeBook])
-
-		// "Default Highlight Color" used to live here as a second submenu.
-		// It's now set exclusively from AnnotationsSettingsView, alongside
-		// the new Highlight Creation (popup/native menu/off) setting --
-		// both are annotation-wide preferences, not per-menu-visit choices,
-		// so one home for them is clearer than two. See AnnotationsSettingsView.
-		return UIMenu(title: "", children: [listMenu])
-	}
-
-	/// scope is expressed relative to the currently open article (rather
-	/// than passing an articleID/bookKey directly from annotationsMenu())
-	/// so this stays correct even if the person paged to a different
-	/// article between opening the toolbar menu and this closure firing --
-	/// re-reads `article` at call time, not capture time.
-	private enum AnnotationsMenuScope {
-		case article
-		case book
-	}
-
-	private func showAnnotationsList(scope: AnnotationsMenuScope) {
+	/// Always shows the whole book's annotations, grouped by chapter --
+	/// there used to be a menu here choosing between "This Chapter" and
+	/// "All of This Book" as two separate screens, but a whole-book view
+	/// grouped by chapter (mirroring how TableOfContentsViewController
+	/// groups an anthology's chapters under each book heading) makes that
+	/// choice unnecessary: the chapter you were already reading is just
+	/// one of the groups in the same list. `article` is re-read here at
+	/// call time, not captured earlier, so this stays correct even if the
+	/// person paged to a different article before tapping the button.
+	@objc private func showAnnotationsList(_ sender: Any) {
 		guard let article, let account = article.account else { return }
 
-		let listScope: AnnotationsListView.Scope
-		switch scope {
-		case .article:
-			listScope = .article(articleID: article.articleID)
-		case .book:
-			listScope = .book(bookKey: article.bookKey)
-		}
-
-		let listView = AnnotationsListView(account: account, scope: listScope) { [weak self] annotation in
+		let listView = AnnotationsListView(account: account, scope: .book(bookKey: article.bookKey), title: article.title, onClose: { [weak self] in
+			self?.dismiss(animated: true)
+		}) { [weak self] annotation in
 			self?.navigateToAnnotation(annotation, account: account)
 		}
 		let hostingController = UIHostingController(rootView: NavigationStack { listView })
-		navigationController?.pushViewController(hostingController, animated: true)
+		let navController = UINavigationController(rootViewController: hostingController)
+		navController.modalPresentationStyle = .fullScreen
+		present(navController, animated: true)
 	}
 
-	/// Shared by both the toolbar-menu list (above) and the Settings
-	/// unscoped list -- tapping a row either scrolls the already-open
-	/// article (same articleID) or navigates there first via
+	/// Shared by both the toolbar-button list (showAnnotationsList above)
+	/// and the Settings unscoped list -- tapping a row either scrolls the
+	/// already-open article (same articleID) or navigates there first via
 	/// SceneCoordinator.selectArticleDirectly, then scrolls, mirroring the
 	/// direct-navigation pattern that method's own doc comment describes
 	/// for "open a specific article and land in a specific spot." Takes
 	/// `account` explicitly rather than re-deriving it, since Annotation
 	/// doesn't store an accountID -- account is whatever AnnotationsListView
 	/// itself fetched the annotation from.
+	///
+	/// The toolbar-button list is presented modally (see
+	/// showAnnotationsList), so returning to the article here means
+	/// dismissing that modal, not popping the shared navigation stack --
+	/// popToViewController(self:) would be a no-op (or worse, an incorrect
+	/// pop on whatever's actually on that stack) since the list is no
+	/// longer pushed onto it. The Settings unscoped list
+	/// (AnnotationsSettingsView) is reached by an entirely different
+	/// presentation chain owned by SettingsViewController, not this one,
+	/// so dismiss(animated:) here only ever affects the toolbar-button
+	/// path's own modal.
 	func navigateToAnnotation(_ annotation: Annotation, account: Account) {
 		if article?.articleID == annotation.articleID {
 			currentWebViewController?.scrollToAnnotation(annotationID: annotation.annotationID)
-			navigationController?.popToViewController(self, animated: true)
+			dismiss(animated: true)
 			return
 		}
 
@@ -724,7 +708,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			// delay.
 			await self.currentWebViewController?.awaitNextPageLoad()
 			self.currentWebViewController?.scrollToAnnotation(annotationID: annotation.annotationID)
-			self.navigationController?.popToViewController(self, animated: true)
+			self.dismiss(animated: true)
 		}
 	}
 

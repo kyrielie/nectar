@@ -114,12 +114,15 @@ extension Annotation.Color {
 	/// A small filled-circle swatch, for UIMenu/UIAction images -- UIKit
 	/// menus can't host a SwiftUI Circle the way HighlightColorPopover and
 	/// AnnotationEditorView do. Currently unused: it backed the toolbar's
-	/// "Default Highlight Color" submenu in ArticleViewController.
-	/// annotationsMenu(), which was removed in favor of the single picker
-	/// in AnnotationsSettingsView (SwiftUI, uses swiftUIColor directly).
-	/// Left in place as a small, self-contained UIKit-bridging helper in
-	/// case a future UIMenu-based color picker needs it again -- flagging
-	/// for removal if that doesn't happen.
+	/// "Default Highlight Color" submenu that used to live in
+	/// ArticleViewController's annotations UIMenu, before that button
+	/// became a direct action (see
+	/// ArticleViewController.showAnnotationsList's doc comment) with
+	/// color selection moved to AnnotationsSettingsView's picker (SwiftUI,
+	/// uses swiftUIColor directly). Left in place as a small,
+	/// self-contained UIKit-bridging helper in case a future UIMenu-based
+	/// color picker needs it again -- flagging for removal if that
+	/// doesn't happen.
 	var swatchImage: UIImage {
 		let diameter: CGFloat = 18
 		let renderer = UIGraphicsImageRenderer(size: CGSize(width: diameter, height: diameter))
