@@ -7,12 +7,14 @@
 //  AO3AccountSettingsView/ArticleThemeListView elsewhere in this app.
 //
 //  Contains: the unscoped AnnotationsListView (2.5's "see everything I've
-//  ever highlighted" surface -- the toolbar menu's two scoped entries in
-//  ArticleViewController.annotationsMenu() are the fast, in-context path;
-//  this is the browse-everything path), the toolbar-button toggle (so the
-//  button can be turned on without a trip through the separate Full
-//  Screen Reading toolbar customizer), the default highlight color
-//  picker, and the CSV/SQLite export entry points.
+//  ever highlighted" surface -- ArticleViewController's toolbar button,
+//  ArticleViewController.showAnnotationsList(_:), is the fast,
+//  in-context, whole-book path; this is the browse-everything path), the
+//  default highlight color picker, and the CSV/SQLite export entry
+//  points. The top-toolbar button's own on/off toggle lives solely in
+//  ArticleToolbarCustomizerViewController now -- see that type's header
+//  comment for why it's the single home for all top-toolbar button
+//  toggles.
 //
 //  Export and cross-article navigation both need UIKit-side machinery
 //  (UIDocumentPickerViewController, SceneCoordinator) this view has no
@@ -43,7 +45,6 @@ struct AnnotationsSettingsView: View {
 	/// SettingsViewController.navigateToAnnotationFromSettings.
 	var onNavigateToAnnotation: (_ annotation: Annotation, _ account: Account) -> Void
 
-	@AppStorage(AppDefaults.Key.articleToolbarShowAnnotations) private var showToolbarButton = false
 	@AppStorage(AppDefaults.Key.annotationCreationMethod) private var creationMethodRawValue = AnnotationCreationMethod.popup.rawValue
 	@State private var defaultColor: Annotation.Color = AppDefaults.shared.defaultAnnotationColor
 
@@ -81,12 +82,6 @@ struct AnnotationsSettingsView: View {
 						Text("All Highlights", comment: "Annotations settings: link to unscoped list")
 					}
 				}
-			}
-
-			Section {
-				Toggle(NSLocalizedString("Show Toolbar Button", comment: "Annotations settings: toolbar button toggle"), isOn: $showToolbarButton)
-			} footer: {
-				Text("Adds a highlighter button to the article reader's top toolbar.", comment: "Annotations settings: toolbar button toggle footer")
 			}
 
 			Section {
@@ -146,6 +141,7 @@ struct AnnotationsSettingsView: View {
 							}
 						}
 				}
+				.buttonStyle(.plain)
 				.accessibilityLabel(color.accessibilityLabel)
 				.accessibilityAddTraits(color == defaultColor ? .isSelected : [])
 			}

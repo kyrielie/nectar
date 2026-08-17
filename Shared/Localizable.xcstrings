@@ -104,9 +104,6 @@
     "Added to Read Later" : {
       "comment" : "Read Later"
     },
-    "Adds a highlighter button to the article reader's top toolbar." : {
-      "comment" : "Annotations settings: toolbar button toggle footer"
-    },
     "Affects only feeds that support the SQLite transfer protocol. Most feeds are unaffected." : {
       "comment" : "Feed transfer format picker explanation"
     },
@@ -115,9 +112,6 @@
     },
     "All Highlights" : {
       "comment" : "Annotations list navigation title: everything\nAnnotations settings: link to unscoped list"
-    },
-    "All of This Book" : {
-      "comment" : "Annotations menu: whole book"
     },
     "All Read" : {
       "comment" : "All Read pseudo-feed title"
@@ -240,7 +234,7 @@
       "comment" : "Manage Storage VACUUM explanation"
     },
     "Close" : {
-      "comment" : "Close"
+      "comment" : "Annotations list: close button accessibility label\nClose"
     },
     "Close Image" : {
       "comment" : "Close Image"
@@ -1107,9 +1101,6 @@
     "Show Stats" : {
       "comment" : "Stats visibility toggle"
     },
-    "Show Toolbar Button" : {
-      "comment" : "Annotations settings: toolbar button toggle"
-    },
     "Show Website" : {
       "comment" : "Show Website"
     },
@@ -1208,10 +1199,7 @@
       "comment" : "AO3 RSS limitations section footer"
     },
     "This Book" : {
-      "comment" : "Annotations list navigation title: whole book"
-    },
-    "This Chapter" : {
-      "comment" : "Annotations list navigation title: single article\nAnnotations menu: this chapter"
+      "comment" : "Annotations list navigation title: whole book, title unavailable"
     },
     "This device cannot send emails." : {
       "comment" : "This device cannot send emails."
