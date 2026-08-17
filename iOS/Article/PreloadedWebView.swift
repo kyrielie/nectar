@@ -17,6 +17,16 @@ import WebKit
 /// tells it when the person taps the injected "Highlight" action. Only
 /// consulted when AnnotationCreationMethod == .nativeMenu; buildMenu(with:)
 /// checks the mode itself before ever asking.
+///
+/// @MainActor because both the sole conformer (WebViewController, a
+/// UIViewController) and the sole caller (PreloadedWebView.buildMenu(with:),
+/// a UIView override called synchronously by UIKit on the main thread) are
+/// themselves main-actor-isolated -- without this, the protocol's
+/// requirements are nonisolated by default, and WebViewController's actual
+/// (isolated) implementation of isSelectionHighlightable doesn't satisfy a
+/// nonisolated requirement, which is a data-race error under Swift 6's
+/// strict concurrency checking, not just a warning.
+@MainActor
 protocol PreloadedWebViewAnnotationDelegate: AnyObject {
 	/// True only if there's a live, non-empty text selection inside the
 	/// loaded article's content right now.

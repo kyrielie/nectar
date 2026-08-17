@@ -1151,7 +1151,7 @@ extension WebViewController {
 		let encodedArgs = argsJSON.base64EncodedString()
 
 		webView?.evaluateJavaScript("Annotations.addHighlightFromSelection(\"\(encodedArgs)\")") { [weak self] result, error in
-			guard let self else { return }
+			guard self != nil else { return }
 			if let error {
 				Self.logger.error("saveHighlightFromSelection: addHighlightFromSelection() JS call failed: \(error.localizedDescription, privacy: .public)")
 				return
