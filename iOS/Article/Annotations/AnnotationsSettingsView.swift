@@ -44,7 +44,19 @@ struct AnnotationsSettingsView: View {
 	var onNavigateToAnnotation: (_ annotation: Annotation, _ account: Account) -> Void
 
 	@AppStorage(AppDefaults.Key.articleToolbarShowAnnotations) private var showToolbarButton = false
+	@AppStorage(AppDefaults.Key.annotationCreationMethod) private var creationMethodRawValue = AnnotationCreationMethod.popup.rawValue
 	@State private var defaultColor: Annotation.Color = AppDefaults.shared.defaultAnnotationColor
+
+	/// @AppStorage needs a primitive (String here, matching how
+	/// AnnotationCreationMethod is stored -- see AppDefaults.swift) rather
+	/// than the enum directly, so this bridges the two: the Picker below
+	/// binds to this, not to creationMethodRawValue.
+	private var creationMethod: Binding<AnnotationCreationMethod> {
+		Binding(
+			get: { AnnotationCreationMethod(rawValue: creationMethodRawValue) ?? .popup },
+			set: { creationMethodRawValue = $0.rawValue }
+		)
+	}
 
 	/// AnnotationsListView needs a single Account. Per docs/ambrosia-feed.md,
 	/// Nectar's usual shape is one local account, so the first (only, in
@@ -78,9 +90,27 @@ struct AnnotationsSettingsView: View {
 			}
 
 			Section {
+				Picker(selection: creationMethod) {
+					Text("Popup", comment: "Highlight creation method: popup").tag(AnnotationCreationMethod.popup)
+					Text("Native Menu", comment: "Highlight creation method: native menu").tag(AnnotationCreationMethod.nativeMenu)
+					Text("Off", comment: "Highlight creation method: off").tag(AnnotationCreationMethod.off)
+				} label: {
+					EmptyView()
+				}
+				.pickerStyle(.inline)
+				.labelsHidden()
+			} header: {
+				Text("Highlight Creation", comment: "Annotations settings: highlight creation method section header")
+			} footer: {
+				Text("Popup shows a color picker when you select text. Native Menu adds a Highlight option to the system's own selection menu. Off disables creating new highlights from text selection.", comment: "Annotations settings: highlight creation method section footer")
+			}
+
+			Section {
 				colorPicker
 			} header: {
 				Text("Default Highlight Color", comment: "Annotations settings: default color section header")
+			} footer: {
+				Text("Used by both Popup and Native Menu -- Popup's default swatch, and Native Menu's only color, both track this.", comment: "Annotations settings: default color section footer")
 			}
 
 			Section {
