@@ -454,7 +454,7 @@
                                             <rect key="frame" x="0.0" y="0.0" width="343.5" height="51"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
-                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Full Screen Reading" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-fsr-03">
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Reading Gestures &amp; Layout" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-fsr-03">
                                                     <rect key="frame" x="20" y="15.5" width="149" height="20.5"/>
                                                     <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
                                                     <nil key="textColor"/>
@@ -747,7 +747,7 @@
             </objects>
             <point key="canvasLocation" x="282.60869565217394" y="150.66964285714286"/>
         </scene>
-        <!--Full Screen Reading-->
+        <!--Reading Gestures & Layout-->
         <scene sceneID="FSR-sc-9x1">
             <objects>
                 <tableViewController storyboardIdentifier="FullScreenReadingViewController" clearsSelectionOnViewWillAppear="NO" id="FSR-vc-9x1" customClass="FullScreenReadingViewController" customModule="NetNewsWire" customModuleProvider="target" sceneMemberID="viewController">
@@ -1029,7 +1029,7 @@
                             <outlet property="delegate" destination="FSR-vc-9x1" id="FSR-dl-9x1"/>
                         </connections>
                     </tableView>
-                    <navigationItem key="navigationItem" title="Full Screen Reading" id="FSR-ni-9x1"/>
+                    <navigationItem key="navigationItem" title="Reading Gestures &amp; Layout" id="FSR-ni-9x1"/>
                     <connections>
                         <outlet property="showFullscreenArticlesSwitch" destination="2Md-2E-7Z4" id="FSR-o1-9x1"/>
                         <outlet property="backSwipeEnabledSwitch" destination="Nct-bk-Swt" id="FSR-o2-9x1"/>
