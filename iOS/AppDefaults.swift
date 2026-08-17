@@ -533,6 +533,28 @@ enum ArticleToolbarToggle: CaseIterable, Sendable {
 	case annotations
 }
 
+/// How a new highlight can be created from a text selection in an
+/// article -- a mutually-exclusive picker (unlike ArticleToolbarToggle
+/// above), not two independent booleans, since "both on at once" isn't a
+/// supported combination. Read fresh (not cached) by
+/// WebViewController.initAnnotations() on every navigation, same
+/// "reasserted on every dequeue" convention this file already uses for
+/// showArticleScrollbar/pinchGestureRecognizer.isEnabled on the pooled
+/// PreloadedWebView -- a change here takes effect the next time an
+/// article is (re)loaded, not instantly for whatever's on screen.
+enum AnnotationCreationMethod: String, CaseIterable, Sendable {
+	/// HighlightColorPopover: a small floating color-swatch popup shown
+	/// near the selection.
+	case popup
+	/// A "Highlight" item injected into WKWebView's own native
+	/// text-selection menu -- see PreloadedWebView.buildMenu(with:).
+	case nativeMenu
+	/// Neither -- selecting text does nothing. Existing highlights
+	/// remain fully viewable/editable via the annotations list and by
+	/// tapping an existing <mark>.
+	case off
+}
+
 extension Notification.Name {
 	public static let userInterfaceColorPaletteDidUpdate = Notification.Name("UserInterfaceColorPaletteDidUpdateNotification")
 	public static let timelineIconSizeDidChange = Notification.Name("TimelineIconSizeDidChangeNotification")
@@ -599,6 +621,7 @@ final class AppDefaults: Sendable {
 		static let articleToolbarShowLock = "articleToolbarShowLock"
 		static let articleToolbarShowAnnotations = "articleToolbarShowAnnotations"
 		static let defaultAnnotationColor = "defaultAnnotationColor"
+		static let annotationCreationMethod = "annotationCreationMethod"
 		static let hideNotchInFullScreen = "hideNotchInFullScreen"
 		static let pageCounterDisplayMode = "pageCounterDisplayMode"
 		static let disableArticleLinks = "disableArticleLinks"
@@ -918,6 +941,24 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			AppDefaults.setString(for: Key.defaultAnnotationColor, newValue.rawValue)
+		}
+	}
+
+	/// How a new highlight gets created from a text selection --
+	/// HighlightColorPopover.swift (popup), a native-menu "Highlight"
+	/// item (PreloadedWebView.buildMenu(with:)), or neither. Popup is
+	/// the default, matching this feature's original (only) behavior
+	/// before this setting existed.
+	var annotationCreationMethod: AnnotationCreationMethod {
+		get {
+			guard let rawValue = AppDefaults.string(for: Key.annotationCreationMethod),
+				  let method = AnnotationCreationMethod(rawValue: rawValue) else {
+				return .popup
+			}
+			return method
+		}
+		set {
+			AppDefaults.setString(for: Key.annotationCreationMethod, newValue.rawValue)
 		}
 	}
 

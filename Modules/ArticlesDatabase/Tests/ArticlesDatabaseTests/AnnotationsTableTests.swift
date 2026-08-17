@@ -132,9 +132,12 @@ struct AnnotationsTableTests {
 	@Test("fetchAllAnnotations returns every annotation regardless of articleID/bookKey")
 	func fetchAllReturnsEverything() {
 		let (db, table) = makeTable()
+		let first = makeAnnotation(annotationID: "a1", articleID: "article-1", bookKey: "book-1")
+		let second = makeAnnotation(annotationID: "a2", articleID: "article-2", bookKey: "book-2")
+
 		db.queue.runInDatabaseSync { database in
-			table.save(makeAnnotation(annotationID: "a1", articleID: "article-1", bookKey: "book-1"), database)
-			table.save(makeAnnotation(annotationID: "a2", articleID: "article-2", bookKey: "book-2"), database)
+			table.save(first, database)
+			table.save(second, database)
 
 			#expect(table.fetchAllAnnotations(database).count == 2)
 		}

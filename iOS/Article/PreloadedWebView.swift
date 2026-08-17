@@ -7,12 +7,34 @@
 //
 
 import Foundation
+import UIKit
 import WebKit
+
+/// Lets PreloadedWebView ask its owning WebViewController (via a weak
+/// delegate, set/reasserted on every dequeue the same way navigationDelegate/
+/// uiDelegate/scrollView.delegate already are -- see WebViewController.
+/// loadWebView) whether there's currently a highlightable selection, and
+/// tells it when the person taps the injected "Highlight" action. Only
+/// consulted when AnnotationCreationMethod == .nativeMenu; buildMenu(with:)
+/// checks the mode itself before ever asking.
+protocol PreloadedWebViewAnnotationDelegate: AnyObject {
+	/// True only if there's a live, non-empty text selection inside the
+	/// loaded article's content right now.
+	var isSelectionHighlightable: Bool { get }
+	func nativeMenuHighlightWasTapped()
+}
 
 final class PreloadedWebView: WKWebView {
 
 	private var isReady: Bool = false
 	private var readyCompletion: (() -> Void)?
+
+	/// See PreloadedWebViewAnnotationDelegate. Weak, and reasserted on
+	/// every dequeue by WebViewController.loadWebView -- not set once at
+	/// init -- because PreloadedWebView instances are pooled and reused
+	/// across different WebViewControllers (same reason navigationDelegate/
+	/// uiDelegate/scrollView.delegate are reasserted there too).
+	weak var annotationMenuDelegate: PreloadedWebViewAnnotationDelegate?
 
 	init(articleIconSchemeHandler: ArticleIconSchemeHandler) {
 		let configuration = WebViewConfiguration.configuration(with: articleIconSchemeHandler)
@@ -49,6 +71,44 @@ final class PreloadedWebView: WKWebView {
 		} else {
 			readyCompletion = completion
 		}
+	}
+
+	/// Strips WebKit's own "Share…" submenu from the native text-selection
+	/// callout menu -- the only place "Copy Link with Highlight" (WebKit's
+	/// built-in text-fragment link generator, unrelated to this app's own
+	/// highlight/annotation feature) lives. WebKit doesn't expose a
+	/// narrower identifier for that one item, so removing the whole
+	/// `.share` submenu is the only available lever (confirmed still
+	/// working this way as of iOS 18.2:
+	/// <https://developer.apple.com/forums/thread/770785>). This doesn't
+	/// lose sharing capability: the app has its own "Share" entry in the
+	/// custom long-press context menu (WebViewController.buildContextMenu/
+	/// shareAction), which is a separate menu system from this one.
+	override func buildMenu(with builder: UIMenuBuilder) {
+		super.buildMenu(with: builder)
+		builder.remove(menu: .share)
+
+		// Native-menu highlight creation: only relevant when the person
+		// has chosen .nativeMenu (not .popup or .off) in Annotations
+		// settings, and only when there's actually something selected to
+		// highlight right now. isSelectionHighlightable is tracked
+		// independently of this method's own call timing -- see
+		// WebViewController.textWasSelected(body:)/currentSelectionRect --
+		// since buildMenu(with:) can be invoked by UIKit at moments this
+		// class has no other hook into.
+		guard AppDefaults.shared.annotationCreationMethod == .nativeMenu,
+			  annotationMenuDelegate?.isSelectionHighlightable == true else {
+			return
+		}
+
+		let highlight = UIAction(
+			title: NSLocalizedString("Highlight", comment: "Native selection menu: highlight action"),
+			image: UIImage(systemName: "highlighter")
+		) { [weak self] _ in
+			self?.annotationMenuDelegate?.nativeMenuHighlightWasTapped()
+		}
+		let highlightMenu = UIMenu(title: "", options: .displayInline, children: [highlight])
+		builder.insertChild(highlightMenu, atStartOfMenu: .standardEdit)
 	}
 }
 

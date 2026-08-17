@@ -659,22 +659,12 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		}
 		let listMenu = UIMenu(title: "", options: .displayInline, children: [thisChapter, wholeBook])
 
-		let colorActions = Annotation.Color.allCases.map { color in
-			UIAction(
-				title: color.accessibilityLabel,
-				image: color.swatchImage,
-				state: AppDefaults.shared.defaultAnnotationColor == color ? .on : .off
-			) { _ in
-				AppDefaults.shared.defaultAnnotationColor = color
-			}
-		}
-		let colorMenu = UIMenu(
-			title: NSLocalizedString("Default Highlight Color", comment: "Annotations menu: default color submenu"),
-			image: UIImage(systemName: "paintpalette"),
-			children: colorActions
-		)
-
-		return UIMenu(title: "", children: [listMenu, UIMenu(title: "", options: .displayInline, children: [colorMenu])])
+		// "Default Highlight Color" used to live here as a second submenu.
+		// It's now set exclusively from AnnotationsSettingsView, alongside
+		// the new Highlight Creation (popup/native menu/off) setting --
+		// both are annotation-wide preferences, not per-menu-visit choices,
+		// so one home for them is clearer than two. See AnnotationsSettingsView.
+		return UIMenu(title: "", children: [listMenu])
 	}
 
 	/// scope is expressed relative to the currently open article (rather
