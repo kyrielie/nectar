@@ -1,6 +1,8 @@
 #include "./NetNewsWire_version.xcconfig"
 
 // High Level Settings common to both the iOS application and any extensions we bundle with it
+// Local/dev build default only. Release IPAs get this overridden to the
+// release tag by .github/workflows/release.yml (build-ipa-release job).
 MARKETING_VERSION = 7.1.1
 
 APP_GROUP_ID = group.$(ORGANIZATION_IDENTIFIER).NetNewsWire.iOS$(APP_GROUP_SUFFIX)
