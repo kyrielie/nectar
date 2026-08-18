@@ -39,6 +39,17 @@ struct HighlightColorPopover: View {
 	/// this color immediately. The popover has no other exit.
 	var onSelectColor: (Annotation.Color) -> Void
 
+	/// @AppStorage, not a plain AppDefaults.shared read, so a live palette
+	/// change (e.g. switching it on the Accent Color screen while this
+	/// popover happens to be up) recomputes body -- same convention
+	/// AnnotationsSettingsView already uses for annotationCreationMethod.
+	@AppStorage(AppDefaults.Key.highlightPalette) private var highlightPaletteRawValue = HighlightPalette.default.rawValue
+	@Environment(\.colorScheme) private var colorScheme
+
+	private var highlightPalette: HighlightPalette {
+		HighlightPalette(rawValue: highlightPaletteRawValue) ?? .default
+	}
+
 	/// The default color plus fixed blue/red, de-duplicated in place so a
 	/// default of blue or red doesn't produce a repeated swatch. Order is
 	/// preserved (default color first) rather than sorted, so the
@@ -56,7 +67,7 @@ struct HighlightColorPopover: View {
 					onSelectColor(color)
 				} label: {
 					Circle()
-						.fill(color.swiftUIColor)
+						.fill(color.swiftUIColor(palette: highlightPalette, isDark: colorScheme == .dark))
 						.frame(width: 28, height: 28)
 				}
 				.accessibilityLabel(color.accessibilityLabel)
@@ -69,23 +80,24 @@ struct HighlightColorPopover: View {
 
 extension Annotation.Color {
 
-	/// Same five hex values as core.css's mark.nnw-highlight defaults
-	/// (Apple's own system palette) -- kept in sync manually since SwiftUI
-	/// Color and CSS custom properties have no shared source of truth to
-	/// derive from; if core.css's defaults ever change, update this too.
-	var swiftUIColor: Color {
-		switch self {
-		case .yellow:
-			return Color(red: 1.00, green: 0.839, blue: 0.039) // #FFD60A
-		case .red:
-			return Color(red: 1.00, green: 0.271, blue: 0.227) // #FF453A
-		case .green:
-			return Color(red: 0.188, green: 0.820, blue: 0.345) // #30D158
-		case .blue:
-			return Color(red: 0.039, green: 0.518, blue: 1.00) // #0A84FF
-		case .purple:
-			return Color(red: 0.749, green: 0.353, blue: 0.949) // #BF5AF2
-		}
+	/// The live hex value for this color under the given palette/appearance
+	/// -- HighlightPalette.HexSet's own subscript does the actual lookup;
+	/// this just spells out the two params as named arguments at call
+	/// sites instead of a bare subscript. Takes palette/isDark explicitly
+	/// rather than reading AppDefaults.shared.highlightPalette or an
+	/// ambient trait collection internally, so every call site's result is
+	/// visibly tied to the exact palette/appearance it was computed
+	/// against -- see HighlightColorPopover's own call sites below for why
+	/// that matters for live SwiftUI updates (a computed property with a
+	/// hidden global read wouldn't trigger a body re-evaluation on its own
+	/// when the palette changes).
+	func hex(palette: HighlightPalette, isDark: Bool) -> String {
+		palette.hexSet(isDark: isDark)[self]
+	}
+
+	/// SwiftUI Color for this color under the given palette/appearance.
+	func swiftUIColor(palette: HighlightPalette, isDark: Bool) -> Color {
+		Color(uiColor(palette: palette, isDark: isDark))
 	}
 
 	var accessibilityLabel: String {
@@ -103,12 +115,15 @@ extension Annotation.Color {
 		}
 	}
 
-	/// UIKit equivalent of swiftUIColor, for call sites that can't use a
-	/// SwiftUI Color directly (e.g. UIAction.image below). Derived from
-	/// swiftUIColor rather than a separate hex literal, so there's still
-	/// only one place encoding each color's actual value.
-	var uiColor: UIColor {
-		UIColor(swiftUIColor)
+	/// UIKit equivalent of swiftUIColor(palette:isDark:), for call sites
+	/// that can't use a SwiftUI Color directly (e.g. UIAction.image
+	/// below). Falls back to the fixed pre-palette hex if `UIColor(cssHex:)`
+	/// somehow fails to parse a palette's hex (shouldn't happen for any
+	/// hardcoded HexSet literal, but keeps this non-optional the same way
+	/// AccentColorTableViewController's swatchImage falls back rather than
+	/// propagating an Optional for what's normally a static, valid string).
+	func uiColor(palette: HighlightPalette, isDark: Bool) -> UIColor {
+		UIColor(cssHex: hex(palette: palette, isDark: isDark)) ?? .systemYellow
 	}
 
 	/// A small filled-circle swatch, for UIMenu/UIAction images -- UIKit
@@ -119,15 +134,15 @@ extension Annotation.Color {
 	/// became a direct action (see
 	/// ArticleViewController.showAnnotationsList's doc comment) with
 	/// color selection moved to AnnotationsSettingsView's picker (SwiftUI,
-	/// uses swiftUIColor directly). Left in place as a small,
-	/// self-contained UIKit-bridging helper in case a future UIMenu-based
-	/// color picker needs it again -- flagging for removal if that
-	/// doesn't happen.
-	var swatchImage: UIImage {
+	/// uses swiftUIColor(palette:isDark:) directly). Left in place as a
+	/// small, self-contained UIKit-bridging helper in case a future
+	/// UIMenu-based color picker needs it again -- flagging for removal if
+	/// that doesn't happen.
+	func swatchImage(palette: HighlightPalette, isDark: Bool) -> UIImage {
 		let diameter: CGFloat = 18
 		let renderer = UIGraphicsImageRenderer(size: CGSize(width: diameter, height: diameter))
 		return renderer.image { context in
-			uiColor.setFill()
+			uiColor(palette: palette, isDark: isDark).setFill()
 			context.cgContext.fillEllipse(in: CGRect(x: 0, y: 0, width: diameter, height: diameter))
 		}.withRenderingMode(.alwaysOriginal)
 	}

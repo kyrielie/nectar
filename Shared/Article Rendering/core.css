@@ -294,31 +294,69 @@ a.footnote {
    stored data or the JS at all -- same layering the rest of this file
    already uses for AO3 preface colors. A theme that doesn't define these
    variables falls back to the defaults below. */
+/* Fallback hex below is HighlightPalette.default's own light/dark HexSet
+   (see AppDefaults.swift), split by @media rather than left as one
+   appearance-independent value -- previously every fallback here was
+   HighlightPalette.default's *dark* value only, applied unconditionally
+   in both appearances. These are fallbacks specifically: on every real
+   render, WebViewController sets the --nnw-highlight-* custom properties
+   directly (see WebViewController.applyHighlightPaletteColors()) from
+   whichever HighlightPalette + light/dark combination is actually active,
+   so these @media blocks only matter before that first injection lands,
+   or if a future render path forgets to call it. */
 mark.nnw-highlight {
 	/* Not a native <mark>'s default yellow-on-transparent; every highlight
 	   always carries an explicit data-annotation-color, so the bare
 	   selector below only matters as a safety net if that attribute is
 	   ever missing. */
-	background-color: var(--nnw-highlight-yellow, #FFD60A);
+	background-color: var(--nnw-highlight-yellow, #FFCC00);
 	color: inherit;
 	border-radius: 0.15em;
 	padding: 0 0.05em;
 	cursor: pointer;
 }
 mark.nnw-highlight[data-annotation-color="yellow"] {
-	background-color: var(--nnw-highlight-yellow, #FFD60A);
+	background-color: var(--nnw-highlight-yellow, #FFCC00);
 }
 mark.nnw-highlight[data-annotation-color="red"] {
-	background-color: var(--nnw-highlight-red, #FF453A);
+	background-color: var(--nnw-highlight-red, #FF3B30);
 }
 mark.nnw-highlight[data-annotation-color="green"] {
-	background-color: var(--nnw-highlight-green, #30D158);
+	background-color: var(--nnw-highlight-green, #34C759);
 }
 mark.nnw-highlight[data-annotation-color="blue"] {
-	background-color: var(--nnw-highlight-blue, #0A84FF);
+	background-color: var(--nnw-highlight-blue, #007AFF);
 }
 mark.nnw-highlight[data-annotation-color="purple"] {
-	background-color: var(--nnw-highlight-purple, #BF5AF2);
+	background-color: var(--nnw-highlight-purple, #AF52DE);
+}
+
+/* WebViewController.applyHighlightPaletteColors() sets a "-dark"-suffixed
+   custom property alongside each plain one (--nnw-highlight-yellow-dark
+   next to --nnw-highlight-yellow, etc.) precisely so this block has its
+   own distinct variable to read -- reusing the same --nnw-highlight-yellow
+   var here would always resolve to whichever value the light rule above
+   set it to, since a custom property has one value per element regardless
+   of which @media block references it, not two. */
+@media (prefers-color-scheme: dark) {
+	mark.nnw-highlight {
+		background-color: var(--nnw-highlight-yellow-dark, #FFD60A);
+	}
+	mark.nnw-highlight[data-annotation-color="yellow"] {
+		background-color: var(--nnw-highlight-yellow-dark, #FFD60A);
+	}
+	mark.nnw-highlight[data-annotation-color="red"] {
+		background-color: var(--nnw-highlight-red-dark, #FF453A);
+	}
+	mark.nnw-highlight[data-annotation-color="green"] {
+		background-color: var(--nnw-highlight-green-dark, #30D158);
+	}
+	mark.nnw-highlight[data-annotation-color="blue"] {
+		background-color: var(--nnw-highlight-blue-dark, #0A84FF);
+	}
+	mark.nnw-highlight[data-annotation-color="purple"] {
+		background-color: var(--nnw-highlight-purple-dark, #BF5AF2);
+	}
 }
 
 /* Brief attention-flash applied by annotations.js's scrollToAnnotation

@@ -46,7 +46,13 @@ struct AnnotationsSettingsView: View {
 	var onNavigateToAnnotation: (_ annotation: Annotation, _ account: Account) -> Void
 
 	@AppStorage(AppDefaults.Key.annotationCreationMethod) private var creationMethodRawValue = AnnotationCreationMethod.popup.rawValue
+	@AppStorage(AppDefaults.Key.highlightPalette) private var highlightPaletteRawValue = HighlightPalette.default.rawValue
+	@Environment(\.colorScheme) private var colorScheme
 	@State private var defaultColor: Annotation.Color = AppDefaults.shared.defaultAnnotationColor
+
+	private var highlightPalette: HighlightPalette {
+		HighlightPalette(rawValue: highlightPaletteRawValue) ?? .default
+	}
 
 	/// @AppStorage needs a primitive (String here, matching how
 	/// AnnotationCreationMethod is stored -- see AppDefaults.swift) rather
@@ -105,7 +111,7 @@ struct AnnotationsSettingsView: View {
 			} header: {
 				Text("Default Highlight Color", comment: "Annotations settings: default color section header")
 			} footer: {
-				Text("Used by both Popup and Native Menu -- Popup's default swatch, and Native Menu's only color, both track this.", comment: "Annotations settings: default color section footer")
+				Text("Used by both Popup and Native Menu -- Popup's default swatch, and Native Menu's only color, both track this. To change what these five colors actually look like, use Highlight Palette under Settings → Appearance → Accent Color.", comment: "Annotations settings: default color section footer")
 			}
 
 			Section {
@@ -131,7 +137,7 @@ struct AnnotationsSettingsView: View {
 					AppDefaults.shared.defaultAnnotationColor = color
 				} label: {
 					Circle()
-						.fill(color.swiftUIColor)
+						.fill(color.swiftUIColor(palette: highlightPalette, isDark: colorScheme == .dark))
 						.frame(width: 32, height: 32)
 						.overlay {
 							if color == defaultColor {

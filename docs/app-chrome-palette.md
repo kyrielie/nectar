@@ -432,6 +432,64 @@ every palette (see `BadgeCategory`'s doc comment in
   outside a live `UICollectionView`'s configuration-state cycle — see
   `docs/console-warnings.md` for the transient-height console warning
   this cell's layout is expected to produce.
+
+## Highlight Palette (`HighlightPalette`)
+
+A fourth axis alongside Accent Color/Surface Palette/Badge Colors, living
+in the same `AccentColorTableViewController` screen rather than a new
+picker screen — see `annotations.md`'s "Color palette" section for the
+full type shape (`HighlightPalette`, `iOS/AppDefaults.swift`) and how it
+resolves an `Annotation.Color` key to a hex value. Summary of what's
+specific to this screen and to the article-rendering pipeline (as opposed
+to the annotation UI proper, covered in `annotations.md`):
+
+- **Section**: `AccentColorTableViewController.Section.highlightPalette`,
+  a fourth section (Accent Colors / Badge Colors / Highlight Palette /
+  Preview) added the same incremental way Badge Colors itself grew this
+  screen from one section to three. Selection follows the exact
+  guard-and-reload-in-place shape `.badgePalette` already established:
+  `didSelectRowAt` sets `AppDefaults.shared.highlightPalette` and
+  explicitly reloads `[.highlightPalette, .preview]`; the
+  `.highlightPaletteDidChange` notification handler reloads `.preview`
+  only, for the same reentrancy reason `accentColorDidChange`'s own
+  handler does (the property's setter posts synchronously, so a second
+  reload of `.highlightPalette` from the notification handler would race
+  the selection handler's own explicit reload — see "Reentrancy guards"
+  above).
+- **Preview row**: the `.preview` section now holds two rows instead of
+  one (`AccentColorTableViewController.PreviewRow`) — the pre-existing
+  `BadgeColorPalettePreviewCell` first, then a new
+  `HighlightPalettePreviewCell` (`iOS/Settings/HighlightPalettePreviewCell.swift`)
+  showing five colored chips, one per `Annotation.Color` case, filled from
+  `AppDefaults.shared.highlightPalette.hexSet(isDark:)`. Deliberately
+  simpler than the badge preview: no `MainTimelineCell`/`UICollectionView`
+  reuse, since a highlight chip has no timeline-row chrome to reproduce —
+  a `UIStackView` of five fixed-height `UILabel`s reports a correct
+  intrinsic size on its own, so this cell needs none of
+  `BadgeColorPalettePreviewCell`'s self-measurement/height-constraint
+  dance.
+- **Live update on an open article**: unlike Accent Color/Surface
+  Palette/Badge Colors, which only affect native UIKit chrome, Highlight
+  Palette also affects `WKWebView` content already on screen. There is no
+  pre-existing "set a CSS custom property at render time" mechanism in
+  `WebViewController` to hook into (confirmed by grep — this is new
+  plumbing, not a reuse of `applyResolvedBackgroundColors()`'s pattern,
+  which only ever touches native `UIColor` properties, never webview
+  content). `WebViewController.applyHighlightPaletteColors()` runs
+  `document.documentElement.style.setProperty(...)` for all ten
+  `--nnw-highlight-*`/`-dark` custom properties, called both from
+  `webView(_:didFinish:)` (every render) and from a
+  `.highlightPaletteDidChange` observer (added in `viewDidLoad`,
+  alongside the existing five `MessageName` observer-registration
+  additions) — since an already-rendered `<mark>` reads the custom
+  property rather than a baked-in color, a live in-app palette switch
+  repaints it for free, no re-render or JS-side re-render call needed.
+  See `annotations.md` for why the dark-mode `@media` block needs its own
+  `-dark`-suffixed custom property rather than reusing the light one —
+  a custom property has one resolved value per element regardless of
+  which `@media` block references it, so reusing the same variable name
+  in both blocks would leave dark mode permanently reading whatever the
+  light rule last set it to.
 - **Settings background wiring** (`SettingsBackgroundPalette.swift`,
   `SurfacePaletteAware.swift`): every pushed Settings screen paints its
   table/collection background from `Assets.Colors.settingsBackground(for:)`

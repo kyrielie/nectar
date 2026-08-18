@@ -36,8 +36,14 @@ struct AnnotationEditorView: View {
 	var onDelete: () -> Void
 
 	@Environment(\.dismiss) private var dismiss
+	@Environment(\.colorScheme) private var colorScheme
+	@AppStorage(AppDefaults.Key.highlightPalette) private var highlightPaletteRawValue = HighlightPalette.default.rawValue
 	@State private var noteText: String
 	@State private var selectedColor: Annotation.Color
+
+	private var highlightPalette: HighlightPalette {
+		HighlightPalette(rawValue: highlightPaletteRawValue) ?? .default
+	}
 	@State private var isDeleteConfirmationPresented = false
 	@FocusState private var isNoteFieldFocused: Bool
 
@@ -168,7 +174,7 @@ struct AnnotationEditorView: View {
 					selectedColor = color
 				} label: {
 					Circle()
-						.fill(color.swiftUIColor)
+						.fill(color.swiftUIColor(palette: highlightPalette, isDark: colorScheme == .dark))
 						.frame(width: 32, height: 32)
 						.overlay {
 							if color == selectedColor {

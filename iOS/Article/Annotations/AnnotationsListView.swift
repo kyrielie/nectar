@@ -488,10 +488,17 @@ private struct AnnotationRow: View {
 	/// value to build both the display and the copy action from.
 	let articleLink: String?
 
+	@AppStorage(AppDefaults.Key.highlightPalette) private var highlightPaletteRawValue = HighlightPalette.default.rawValue
+	@Environment(\.colorScheme) private var colorScheme
+
+	private var highlightPalette: HighlightPalette {
+		HighlightPalette(rawValue: highlightPaletteRawValue) ?? .default
+	}
+
 	var body: some View {
 		HStack(alignment: .top, spacing: 12) {
 			Circle()
-				.fill(annotation.color.swiftUIColor)
+				.fill(annotation.color.swiftUIColor(palette: highlightPalette, isDark: colorScheme == .dark))
 				.frame(width: 12, height: 12)
 				.padding(.top, 4)
 
@@ -619,7 +626,7 @@ private struct AnnotationRow: View {
 			return attributed
 		}
 
-		attributed[attrStart..<attrEnd].backgroundColor = annotation.color.swiftUIColor.opacity(0.3)
+		attributed[attrStart..<attrEnd].backgroundColor = annotation.color.swiftUIColor(palette: highlightPalette, isDark: colorScheme == .dark).opacity(0.3)
 		return attributed
 	}
 }
