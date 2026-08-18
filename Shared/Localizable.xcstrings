@@ -4,9 +4,6 @@
     "" : {
 
     },
-    "·" : {
-
-    },
     "“%@” has separate light and dark mode colors and follows your system appearance setting." : {
       "comment" : "Theme appearance footer, light+dark theme"
     },
@@ -243,7 +240,7 @@
       "comment" : "Collapse"
     },
     "Collapsed" : {
-      "comment" : "Collapsed"
+      "comment" : "Annotations list: collapsed section header accessibility value\nCollapsed"
     },
     "Colors" : {
       "comment" : "Colors section header"
@@ -441,7 +438,7 @@
       "comment" : "Expand"
     },
     "Expanded" : {
-      "comment" : "Expanded\nExpanded tag display mode"
+      "comment" : "Annotations list: expanded section header accessibility value\nExpanded\nExpanded tag display mode"
     },
     "Export" : {
       "comment" : "Annotations settings: export section header"

@@ -14,6 +14,23 @@
 //  single grouped-by-chapter view covers the same need without asking
 //  which scope to open first.
 //
+//  Groups are keyed by (bookKey ?? articleID, chapterTitle) -- NOT by
+//  articleID alone. Two reasons this matters (see docs/book-identity.md,
+//  docs/annotations.md):
+//   1. The same book can have more than one articleID sharing one bookKey
+//      (duplicate collection feeds, resubscriptions) -- grouping by
+//      articleID alone split those into separate sections that repeated
+//      the same book title as both the nav bar title and a section
+//      header. Falling back to bookKey collapses genuine duplicates while
+//      still falling back to articleID for the rare unresolvable-bookKey
+//      case (see Annotation.bookKey's doc comment).
+//   2. A single book's chapters can themselves span more than one
+//      articleID (confirmed against a real multi-chapter book -- chapter
+//      identity here is carried by chapterTitle, not by articleID
+//      boundaries), so chapterTitle has to be part of the key too, or
+//      distinct chapters of the same book would incorrectly collapse into
+//      one section once grouping moved to bookKey.
+//
 //  Tapping a row has two cases: if the row's article is the one already
 //  open behind this screen, this view can't scroll the live webview
 //  itself (it has no reference to WebViewController), so it hands back
@@ -78,24 +95,42 @@ struct AnnotationsListView: View {
 
 	@State private var groups: [AnnotationGroup] = []
 	@State private var isLoading = true
+	/// Section headers are collapsible (see `list`/`sectionHeader(for:)`
+	/// below) -- a group's key present here means its rows are hidden.
+	/// Starts empty so every section opens expanded by default; not
+	/// persisted across screen presentations, same as the rest of this
+	/// view's transient @State.
+	@State private var collapsedGroupKeys: Set<GroupKey> = []
 
 	private struct Row: Identifiable {
 		let annotation: Annotation
-		let articleTitle: String
 
 		var id: String { annotation.annotationID }
 	}
 
-	/// One section per article/chapter, in the same shape
-	/// TableOfContentsViewController.chaptersByBook groups an anthology's
-	/// chapters under each book heading -- here every row sharing an
-	/// articleID becomes one section, headed by that article's title.
+	/// Grouping key: bookKey when the owning article resolves one, else
+	/// articleID (Annotation.bookKey's own fallback shape), paired with
+	/// chapterTitle so a book's distinct chapters don't collapse into one
+	/// section just because they share a bookKey -- see this file's header
+	/// comment.
+	private struct GroupKey: Hashable {
+		let bookOrArticleID: String
+		let chapterTitle: String?
+	}
+
+	/// One section per (book, chapter). `heading` is the text to show in
+	/// the section header when there's more than one group on screen:
+	/// chapterTitle when this group has one (the real-anthology case --
+	/// see mockup discussed with the person), otherwise the group's own
+	/// book/article title (the cross-book case in the .everything scope,
+	/// where different books need their own headers even though none of
+	/// them has chapters).
 	private struct AnnotationGroup: Identifiable {
-		let articleID: String
-		let articleTitle: String
+		let key: GroupKey
+		let heading: String
 		let rows: [Row]
 
-		var id: String { articleID }
+		var id: GroupKey { key }
 	}
 
 	private var navigationTitleText: String {
@@ -165,15 +200,18 @@ struct AnnotationsListView: View {
 			ForEach(groups) { group in
 				if groups.count > 1 {
 					Section {
-						rows(for: group)
+						if !collapsedGroupKeys.contains(group.key) {
+							rows(for: group)
+						}
 					} header: {
-						Text(group.articleTitle)
+						sectionHeader(for: group)
 					}
 				} else {
 					// A single group's header would just repeat the
 					// navigation title (the common non-anthology case,
 					// where there's only ever one chapter) -- omit it
-					// rather than show a redundant heading.
+					// rather than show a redundant heading. Nothing to
+					// collapse when it's the only section on screen.
 					Section {
 						rows(for: group)
 					}
@@ -182,13 +220,45 @@ struct AnnotationsListView: View {
 		}
 	}
 
+	/// A tappable section header that toggles `collapsedGroupKeys` for
+	/// this group. Plain-styled (not the system disclosure-button look)
+	/// to match the existing header's typography -- only the chevron
+	/// communicates state.
+	private func sectionHeader(for group: AnnotationGroup) -> some View {
+		let isCollapsed = collapsedGroupKeys.contains(group.key)
+		return Button {
+			withAnimation(.default) {
+				if isCollapsed {
+					collapsedGroupKeys.remove(group.key)
+				} else {
+					collapsedGroupKeys.insert(group.key)
+				}
+			}
+		} label: {
+			HStack {
+				Text(group.heading)
+				Spacer()
+				Image(systemName: "chevron.down")
+					.rotationEffect(.degrees(isCollapsed ? -90 : 0))
+					.font(.caption2.weight(.semibold))
+			}
+			.contentShape(Rectangle())
+		}
+		.buttonStyle(.plain)
+		.accessibilityElement(children: .combine)
+		.accessibilityAddTraits(.isButton)
+		.accessibilityValue(isCollapsed
+			? Text("Collapsed", comment: "Annotations list: collapsed section header accessibility value")
+			: Text("Expanded", comment: "Annotations list: expanded section header accessibility value"))
+	}
+
 	@ViewBuilder
 	private func rows(for group: AnnotationGroup) -> some View {
 		ForEach(group.rows) { row in
 			Button {
 				onNavigateToAnnotation(row.annotation)
 			} label: {
-				AnnotationRow(annotation: row.annotation, articleTitle: row.articleTitle)
+				AnnotationRow(annotation: row.annotation)
 			}
 			.buttonStyle(.plain)
 			.swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -225,24 +295,88 @@ struct AnnotationsListView: View {
 		let articles = await account.fetchArticlesAsync(.articleIDs(articleIDs))
 		let titlesByArticleID = Dictionary(uniqueKeysWithValues: articles.map { ($0.articleID, $0.title ?? NSLocalizedString("Untitled", comment: "Fallback article title")) })
 
-		// Grouped by articleID (chapter order isn't derivable from the
-		// annotations table alone -- see loadRows' Account.fetchAnnotations
-		// callers -- so groups are ordered by each group's most recently
-		// updated annotation, same recency-first ordering the old flat
-		// list used).
-		let rowsByArticleID = Dictionary(grouping: annotations, by: \.articleID)
-		groups = rowsByArticleID
-			.map { articleID, articleAnnotations -> AnnotationGroup in
-				let articleTitle = titlesByArticleID[articleID] ?? NSLocalizedString("Untitled", comment: "Fallback article title")
-				let rows = articleAnnotations
-					.sorted { $0.updatedAt > $1.updatedAt }
-					.map { Row(annotation: $0, articleTitle: articleTitle) }
-				return AnnotationGroup(articleID: articleID, articleTitle: articleTitle, rows: rows)
+		// Grouped by (bookKey ?? articleID, chapterTitle) -- see this file's
+		// header comment.
+		func normalizedChapterTitle(_ chapterTitle: String?) -> String? {
+			guard let trimmed = chapterTitle?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+				return nil
+			}
+			return trimmed
+		}
+
+		// Books/clusters (bookOrArticleID) are still ordered by recency --
+		// "which book did I highlight in most recently" is still the right
+		// question across different books in the .everything scope. But
+		// chapters *within* one book are reading order, not recency --
+		// annotations table has no stored chapter-position column (see
+		// docs/annotations.md), so this falls back to the leading integer
+		// in chapterTitle itself ("Chapter 9" -> 9), which is what
+		// annotations.js's nearestChapterTitle actually captures for a
+		// Calibre-style TOC heading. A chapterTitle with no leading number
+		// sorts after every group that has one, rather than crashing the
+		// whole book's ordering back to recency; a nil chapterTitle (no
+		// heading before this annotation at all -- front matter, or the
+		// single-heading non-anthology case) sorts first, ahead of
+		// Chapter 1, matching where that content actually sits in the book.
+		func leadingInteger(in string: String) -> Int? {
+			var digits = ""
+			for character in string {
+				if character.isNumber {
+					digits.append(character)
+				} else if !digits.isEmpty {
+					break
+				}
+			}
+			return digits.isEmpty ? nil : Int(digits)
+		}
+
+		func chapterSortOrder(_ chapterTitle: String?) -> Int {
+			guard let chapterTitle else { return Int.min }
+			return leadingInteger(in: chapterTitle) ?? Int.max
+		}
+
+		let clusterRecency = Dictionary(grouping: annotations, by: { $0.bookKey ?? $0.articleID })
+			.mapValues { clusterAnnotations in clusterAnnotations.map(\.updatedAt).max() ?? Date.distantPast }
+
+		let rowsByGroupKey = Dictionary(grouping: annotations) { annotation in
+			GroupKey(
+				bookOrArticleID: annotation.bookKey ?? annotation.articleID,
+				chapterTitle: normalizedChapterTitle(annotation.chapterTitle)
+			)
+		}
+		groups = rowsByGroupKey
+			.map { key, groupAnnotations -> AnnotationGroup in
+				let sortedAnnotations = groupAnnotations.sorted { $0.updatedAt > $1.updatedAt }
+				// Fallback heading when this group has no chapterTitle of
+				// its own: the owning article's title (the cross-book case
+				// in .everything, or a plain non-chaptered book). Any
+				// article's title in the group works here -- every
+				// annotation sharing a bookKey is understood to be the
+				// same book (see book-identity.md), so their titles should
+				// already agree.
+				let fallbackTitle = sortedAnnotations
+					.lazy
+					.compactMap { titlesByArticleID[$0.articleID] }
+					.first ?? NSLocalizedString("Untitled", comment: "Fallback article title")
+				let heading = key.chapterTitle ?? fallbackTitle
+				let rows = sortedAnnotations.map { Row(annotation: $0) }
+				return AnnotationGroup(key: key, heading: heading, rows: rows)
 			}
 			.sorted { lhs, rhs in
-				let lhsLatest = lhs.rows.first?.annotation.updatedAt ?? .distantPast
-				let rhsLatest = rhs.rows.first?.annotation.updatedAt ?? .distantPast
-				return lhsLatest > rhsLatest
+				let lhsClusterRecency = clusterRecency[lhs.key.bookOrArticleID] ?? .distantPast
+				let rhsClusterRecency = clusterRecency[rhs.key.bookOrArticleID] ?? .distantPast
+				if lhsClusterRecency != rhsClusterRecency {
+					return lhsClusterRecency > rhsClusterRecency
+				}
+				let lhsOrder = chapterSortOrder(lhs.key.chapterTitle)
+				let rhsOrder = chapterSortOrder(rhs.key.chapterTitle)
+				if lhsOrder != rhsOrder {
+					return lhsOrder < rhsOrder
+				}
+				// Same cluster, same (unparseable-or-absent) chapter order --
+				// stable tiebreaker so groups don't reshuffle from one
+				// loadRows() call to the next.
+				return lhs.heading < rhs.heading
 			}
 
 		isLoading = false
@@ -251,8 +385,8 @@ struct AnnotationsListView: View {
 	private func delete(_ annotation: Annotation) {
 		for index in groups.indices {
 			groups[index] = AnnotationGroup(
-				articleID: groups[index].articleID,
-				articleTitle: groups[index].articleTitle,
+				key: groups[index].key,
+				heading: groups[index].heading,
 				rows: groups[index].rows.filter { $0.annotation.annotationID != annotation.annotationID }
 			)
 		}
@@ -266,12 +400,6 @@ struct AnnotationsListView: View {
 private struct AnnotationRow: View {
 
 	let annotation: Annotation
-	/// Kept even though it's no longer displayed directly (the book title
-	/// already appears once, in the nav bar and/or the section header --
-	/// see AnnotationsListView.list) -- still needed to suppress a
-	/// redundant chapterCaption below for the common single-heading book,
-	/// where chapterTitle just equals the book title again.
-	let articleTitle: String
 
 	var body: some View {
 		HStack(alignment: .top, spacing: 12) {
@@ -281,22 +409,20 @@ private struct AnnotationRow: View {
 				.padding(.top, 4)
 
 			VStack(alignment: .leading, spacing: 4) {
+				// No lineLimit here -- chapterTitle is now the section
+				// header (AnnotationsListView.list), not a per-row caption,
+				// so there's nothing else competing for space in this row;
+				// truncating the one thing being shown just hides context
+				// the row exists to provide.
 				Text(sentenceContext)
 					.font(.callout)
 					.foregroundStyle(.primary)
-					.lineLimit(2)
 
 				if let note = annotation.note, !note.isEmpty {
 					Text(note)
 						.font(.caption)
 						.foregroundStyle(.secondary)
 						.lineLimit(1)
-				}
-
-				if let chapterCaption {
-					Text(chapterCaption)
-						.font(.caption2)
-						.foregroundStyle(.tertiary)
 				}
 
 				if annotation.orphanedAt != nil {
@@ -318,44 +444,59 @@ private struct AnnotationRow: View {
 		.opacity(annotation.orphanedAt != nil ? 0.5 : 1.0)
 	}
 
-	/// Only shown for a genuine multi-heading (anthology/chaptered) book --
-	/// most books have exactly one heading total (their own title, per
-	/// annotations.js's nearestChapterTitle, which only looks inside
-	/// .articleBody), so chapterTitle there either equals articleTitle
-	/// (Calibre's repeated one-shot "toc-heading") or is nil (no heading
-	/// before this annotation at all). Either case would just repeat the
-	/// nav bar / section header title, so it's suppressed rather than shown.
-	private var chapterCaption: String? {
-		guard let chapterTitle = annotation.chapterTitle, !chapterTitle.isEmpty, chapterTitle != articleTitle else {
-			return nil
-		}
-		return chapterTitle
+	/// Collapses runs of whitespace (including the newlines/indentation
+	/// annotations.js's buildTextIndex deliberately leaves untouched, since
+	/// its offsets have to stay byte-exact against the source HTML for
+	/// anchor resolution -- see docs/annotations.md's "Anchor resolution")
+	/// down to a single space, for display only. Doesn't trim the ends,
+	/// so quotePrefix/quoteExact/quoteSuffix still concatenate cleanly.
+	private func normalizedForDisplay(_ string: String) -> String {
+		string.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
 	}
 
 	/// The full sentence surrounding the highlight, built from the stored
 	/// quotePrefix/quoteExact/quoteSuffix selector (see docs/annotations.md)
 	/// rather than just the raw quote -- gives the row real reading context
-	/// instead of a mid-sentence fragment. quotePrefix/quoteExact/quoteSuffix
-	/// are three independently-decoded Swift Strings concatenated directly
-	/// here, so the quote's Character-range within `combined` is exactly
-	/// [quotePrefix.count, quotePrefix.count + quoteExact.count) -- no
-	/// JS-side UTF-16 offset math involved. (Edge case, self-healing: if a
-	/// grapheme cluster was split exactly at the JS-side slice boundary,
-	/// this range can be off by one Character; the next re-anchor
-	/// recomputes prefix/suffix against the live DOM and corrects it, same
-	/// as annotations.js's other drift-healing paths.)
+	/// instead of a mid-sentence fragment. Each of the three pieces is
+	/// whitespace-normalized independently before concatenation (see
+	/// normalizedForDisplay), then the quote's location within `combined`
+	/// is found by direct search rather than by offsetting `prefix.count`
+	/// Characters in: quotePrefix/quoteExact/quoteSuffix are three
+	/// independently-sliced UTF-16 substrings on the JS side, and if a
+	/// slice boundary lands mid-grapheme-cluster, decoding and
+	/// re-concatenating them in Swift can merge or split a Character
+	/// differently than the JS side counted it -- so a Character count
+	/// carried over from one string doesn't reliably locate a position in
+	/// the concatenation of a different pair of strings. Searching for the
+	/// literal quote text sidesteps that: `combined` is built to contain
+	/// `quote` by construction, so the search always succeeds. Search
+	/// starts as close as possible to the expected position (still using
+	/// prefix's length only as a starting *hint*, not as a trusted index)
+	/// so that a quote which happens to recur inside quotePrefix doesn't
+	/// win over the real occurrence.
 	private var sentenceContext: AttributedString {
-		let prefix = annotation.quotePrefix
-		let quote = annotation.quoteExact
-		let suffix = annotation.quoteSuffix
+		let prefix = normalizedForDisplay(annotation.quotePrefix)
+		let quote = normalizedForDisplay(annotation.quoteExact)
+		let suffix = normalizedForDisplay(annotation.quoteSuffix)
 		let combined = prefix + quote + suffix
 
-		guard !combined.isEmpty else {
+		guard !combined.isEmpty, !quote.isEmpty else {
 			return AttributedString(quote)
 		}
 
-		let quoteStart = combined.index(combined.startIndex, offsetBy: prefix.count)
-		let quoteEnd = combined.index(quoteStart, offsetBy: quote.count, limitedBy: combined.endIndex) ?? combined.endIndex
+		// A grapheme-boundary mismatch (see doc comment above) can only be
+		// off by a character or two, never by prefix's whole length -- 8
+		// characters of slack is generous cover for that while still
+		// skipping past an earlier, unrelated recurrence of `quote` inside
+		// a long quotePrefix.
+		let searchHintOffset = max(0, prefix.count - 8)
+		let searchStart = combined.index(combined.startIndex, offsetBy: searchHintOffset, limitedBy: combined.endIndex) ?? combined.startIndex
+		let quoteRange = combined.range(of: quote, range: searchStart..<combined.endIndex) ?? combined.range(of: quote)
+		guard let quoteRange else {
+			return AttributedString(combined)
+		}
+		let quoteStart = quoteRange.lowerBound
+		let quoteEnd = quoteRange.upperBound
 
 		let tokenizer = NLTokenizer(unit: .sentence)
 		tokenizer.string = combined
