@@ -211,6 +211,7 @@ final class WebViewController: UIViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidFail(_:)), name: .ao3ChapterFetchDidFail, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(statusesDidChange(_:)), name: .StatusesDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(accountDidDownloadArticles(_:)), name: .AccountDidDownloadArticles, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(highlightPaletteDidChange(_:)), name: .highlightPaletteDidChange, object: nil)
 
 		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,
 		// IPHONEOS_DEPLOYMENT_TARGET = 17.0), so use registerForTraitChanges rather
@@ -730,6 +731,7 @@ extension WebViewController: WKNavigationDelegate {
 			}
 		}
 		initAnnotations()
+		applyHighlightPaletteColors()
 		loadAndRenderAnnotations()
 		resumeAwaitingPageLoads()
 	}
@@ -932,6 +934,59 @@ extension WebViewController {
 				Self.logger.error("initAnnotations: Annotations.initAnnotations() JS call failed: \(error.localizedDescription, privacy: .public)")
 			}
 		}
+	}
+
+	/// Sets the ten --nnw-highlight-* CSS custom properties (light+dark pair
+	/// per Annotation.Color case) on the document root from
+	/// AppDefaults.shared.highlightPalette, so core.css's
+	/// mark.nnw-highlight[data-annotation-color="..."] rules resolve
+	/// against the selected palette instead of falling through to their
+	/// own hardcoded @media-branched fallback hex. There is no existing
+	/// "set a CSS custom property at render time" mechanism elsewhere in
+	/// this file to hook into -- see docs/annotations.md's "Color palette"
+	/// section -- so this is new plumbing, not a reuse of
+	/// applyResolvedBackgroundColors()'s pattern.
+	///
+	/// Sets both the light and dark values every time, rather than only
+	/// the currently-resolved appearance's five: core.css's own
+	/// `@media (prefers-color-scheme: dark)` block is what actually
+	/// switches between them live on a system/app appearance change,
+	/// the same mechanism applyResolvedBackgroundColors()'s doc comment
+	/// describes for the article-background pipeline -- setting only one
+	/// appearance's values here would leave the other appearance's
+	/// fallback CSS literal in effect until the next full injection.
+	///
+	/// Called from webView(_:didFinish:) on every render (so a freshly
+	/// loaded document always has the current palette applied before any
+	/// highlight is drawn) and again from highlightPaletteDidChange(_:)
+	/// (so a live in-app palette switch repaints an already-open
+	/// article's existing <mark> elements for free, since they read the
+	/// custom property rather than a baked-in color -- no re-render
+	/// needed). Does not need a registerForTraitChanges hook the way
+	/// applyResolvedBackgroundColors() does: these ten properties don't
+	/// themselves branch on light/dark (both are always set together,
+	/// above), so a system/app appearance change is handled entirely by
+	/// core.css's own @media block without any native-side re-injection.
+	func applyHighlightPaletteColors() {
+		let palette = AppDefaults.shared.highlightPalette
+		let light = palette.lightHexSet
+		let dark = palette.darkHexSet
+
+		var declarations = ""
+		for color in Annotation.Color.allCases {
+			declarations += "document.documentElement.style.setProperty('--nnw-highlight-\(color.rawValue)', '\(light[color])');"
+			declarations += "document.documentElement.style.setProperty('--nnw-highlight-\(color.rawValue)-dark', '\(dark[color])');"
+		}
+
+		webView?.evaluateJavaScript(declarations) { _, error in
+			if let error {
+				Self.logger.error("applyHighlightPaletteColors: JS injection failed: \(error.localizedDescription, privacy: .public)")
+			}
+		}
+	}
+
+	@objc func highlightPaletteDidChange(_ note: Notification) {
+		applyHighlightPaletteColors()
 	}
 
 	/// Fetches this article's saved annotations and hands them to
