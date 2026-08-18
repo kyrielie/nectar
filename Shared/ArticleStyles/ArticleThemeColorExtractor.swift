@@ -419,4 +419,28 @@ extension UIColor {
 		getRed(&red, green: &green, blue: &blue, alpha: &alpha)
 		return String(format: "#%02X%02X%02X", Int(red * 255), Int(green * 255), Int(blue * 255))
 	}
+
+	/// WCAG 2.x relative-luminance contrast ratio against another color,
+	/// per https://www.w3.org/TR/WCAG21/#dfn-contrast-ratio -- (L1+0.05)/(L2+0.05)
+	/// with L1 the lighter of the two relative luminances. Used by
+	/// HighlightPaletteHexSetTests to guard every HighlightPalette dark-mode
+	/// HexSet against the bug that motivated dark-mode-tuning them in the
+	/// first place: white article text on a highlight background that's
+	/// still a light-mode-style pastel is nearly unreadable. Order of the
+	/// two colors doesn't matter -- the ratio is symmetric by construction.
+	func contrastRatio(against other: UIColor) -> CGFloat {
+		func relativeLuminance(_ color: UIColor) -> CGFloat {
+			var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+			color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+			func linearize(_ component: CGFloat) -> CGFloat {
+				component <= 0.03928 ? component / 12.92 : pow((component + 0.055) / 1.055, 2.4)
+			}
+			return 0.2126 * linearize(red) + 0.7152 * linearize(green) + 0.0722 * linearize(blue)
+		}
+		let l1 = relativeLuminance(self)
+		let l2 = relativeLuminance(other)
+		let lighter = max(l1, l2)
+		let darker = min(l1, l2)
+		return (lighter + 0.05) / (darker + 0.05)
+	}
 }

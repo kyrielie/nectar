@@ -312,7 +312,26 @@ mark.nnw-highlight {
 	background-color: var(--nnw-highlight-yellow, #FFCC00);
 	color: inherit;
 	border-radius: 0.15em;
-	padding: 0 0.05em;
+	padding: 0.1em 0.05em;
+	/* Without this, a <mark> that wraps across multiple lines paints one
+	   single background box sized to its full bounding rect (start of
+	   first line to end of last line) rather than one box per visual
+	   line -- so on a tight line-height that box's top/bottom edges land
+	   inside the line above/below instead of only behind its own line,
+	   clipping that neighboring line's ascenders/descenders (tall
+	   letters like "l"/"h", or descenders like "g"/"y") under the
+	   highlight color. `clone` makes each visual line get its own
+	   independently-padded box instead, so the vertical padding above
+	   only ever pushes into this <mark>'s own leading/trailing, never
+	   into a neighboring line's text. -webkit- prefix required: this
+	   ships inside WKWebView (see docs/annotations.md), which only
+	   supports the prefixed property; unprefixed `box-decoration-break`
+	   is included too for forward-compatibility but currently has no
+	   effect in this environment.
+	   Test coverage: multi-line-highlight-clipping.test.js */
+	-webkit-box-decoration-break: clone;
+	box-decoration-break: clone;
+	line-height: inherit;
 	cursor: pointer;
 }
 mark.nnw-highlight[data-annotation-color="yellow"] {

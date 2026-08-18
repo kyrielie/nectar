@@ -228,12 +228,15 @@ cross-platform and can't assume an iOS-only script ran first.
     Nine cases ship: `.default` (Apple's own system-color light/dark
     pair -- unlike `SurfacePalette.default`, this is *not* nil in either
     appearance, since there's no pre-existing asset-catalog colorset for
-    highlight colors to fall back to), `.muted`, `.vivid`, `.sepia` (tuned
-    per-appearance, following the plan's original four), and five
-    additional "fun" palettes with a single hex per color shared across
-    both appearances rather than a tuned light/dark pair (`.mint`,
-    `.flourescent`, `.refresh`, `.warm`, `.neutral` -- mild enough by
-    design that a separate dark-mode tuning wasn't judged necessary).
+    highlight colors to fall back to), `.muted`, `.vivid`, `.sepia`, and
+    five additional "fun" palettes (`.mint`, `.flourescent`, `.refresh`,
+    `.warm`, `.neutral`). Every case, including the five "fun" palettes,
+    supplies its own distinct `darkHexSet` -- these five originally
+    reused their light-mode HexSet unchanged on the assumption that their
+    lower saturation made a separate dark-mode tuning unnecessary; that
+    assumption was wrong (see "Dark-mode contrast" below) and has been
+    corrected, so there is no longer a case in `HighlightPalette` where
+    light and dark share values.
     Picked via a fourth section (`highlightPalette`) on
     `AccentColorTableViewController`, alongside Accent Colors/Badge
     Colors/Preview -- see `app-chrome-palette.md`.
@@ -254,6 +257,40 @@ cross-platform and can't assume an iOS-only script ran first.
     theme-level override is wanted later, precedence against
     `HighlightPalette` would need to be defined; not built as part of
     this feature.
+  - **Dark-mode contrast** (bug fix): the reader's foreground text color
+    on a `<mark>` in dark mode is near-white (`color: inherit` on
+    `mark.nnw-highlight`), so a highlight background tuned for a
+    light-mode-style dark-on-light presentation makes that text nearly
+    unreadable. Every `HighlightPalette` case's `darkHexSet` is now
+    verified (`UIColor.contrastRatio(against:)`,
+    `Shared/ArticleStyles/ArticleThemeColorExtractor.swift`) to clear
+    4.5:1 white-text contrast (WCAG AA for normal body text) for all five
+    `Annotation.Color` slots -- this previously only applied to
+    `.default`/`.muted`/`.vivid`/`.sepia`'s hand-tuned dark values; the
+    five "fun" palettes (`.mint`/`.flourescent`/`.refresh`/`.warm`/`.neutral`)
+    originally reused their light-mode HexSet unchanged in dark mode
+    (measured: several slots were under 3:1), which is what this fixes.
+    Each dark value keeps its light-mode hue but is deepened and
+    re-saturated until it clears the threshold -- see
+    `HighlightPaletteHexSetTests.everyDarkHexSetColorMeetsWCAGAAContrastForWhiteText`.
+- **Multi-line highlight clipping** (bug fix): a `<mark>` that wraps
+  across a line break used to paint one single `background-color` box
+  sized to its whole bounding rect (from the start of its first line to
+  the end of its last), rather than one box per visual line. On a tight
+  `line-height`, that box's top/bottom edges landed inside the
+  neighboring line above/below instead of staying within its own line,
+  clipping that neighbor's ascenders/descenders (tall letters, or
+  descenders like "g"/"y") under the highlight color. Fixed in
+  `core.css`'s `mark.nnw-highlight` rule with
+  `-webkit-box-decoration-break: clone` (WKWebView only supports the
+  prefixed form; unprefixed `box-decoration-break` is included too for
+  forward-compatibility but has no effect here) plus non-zero vertical
+  `padding`, so each visual line gets its own independently-boxed and
+  padded background instead of one shared bounding box. Regression
+  coverage: `Tests/JS/annotations/multi-line-highlight-clipping.test.js`
+  (a text-level assertion against `core.css`, not a rendered-layout
+  test — jsdom has no layout engine to measure real clipping either
+  way).
 - **Toolbar button**: `ArticleToolbarToggle` (`iOS/AppDefaults.swift`)
   has an `.annotations` case, backed by
   `AppDefaults.shared.articleToolbarShowAnnotations` (default `false`,
@@ -389,3 +426,20 @@ in scope here — that's a change to a server not in this repository.
 - `Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/ArticleSQLiteExportTableTests.swift`
   covers the annotations-export join scoping alongside the pre-existing
   feedID/statuses-join/destination-exists cases.
+- `Tests/NetNewsWire-iOSTests/HighlightPaletteHexSetTests.swift`: coverage
+  for `HighlightPalette`'s `HexSet`s across all nine cases and both
+  appearances -- completeness/parseability, distinctness between cases,
+  every case's dark/light `HexSet`s being distinct (including the five
+  "fun" palettes, which originally incorrectly reused the light-mode
+  values), every dark-mode color clearing 4.5:1 white-text contrast
+  (`UIColor.contrastRatio(against:)`), `Annotation.Color`'s
+  `.uiColor(palette:isDark:)` resolving correctly against a given
+  palette/appearance pair, and the live `.highlightPaletteDidChange`
+  notification contract.
+- `Tests/JS/annotations/multi-line-highlight-clipping.test.js`: a narrow
+  regression test against `core.css`'s text (not its rendered effect --
+  jsdom has no layout engine to measure real clipping) asserting
+  `mark.nnw-highlight` still declares `-webkit-box-decoration-break:
+  clone` and non-zero vertical padding, so a future edit to that rule
+  doesn't silently drop the fix described under "Multi-line highlight
+  clipping" below.

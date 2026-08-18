@@ -81,20 +81,36 @@ import Articles
 		#expect(Set(lightYellows).count == lightYellows.count, "expected every HighlightPalette case to have a unique light yellow")
 	}
 
-	// MARK: - The five "fun" palettes deliberately share light/dark values
+	// MARK: - Every case, including the five "fun" palettes, tunes dark mode separately
 
-	@Test func mildPalettesShareLightAndDarkHexSets() {
-		for palette: HighlightPalette in [.mint, .flourescent, .refresh, .warm, .neutral] {
-			for color in Annotation.Color.allCases {
-				#expect(palette.lightHexSet[color] == palette.darkHexSet[color], "\(palette) is expected to use the same hex in both appearances")
-			}
+	@Test func everyCaseHasDistinctLightAndDarkHexSets() {
+		// White article text against several of the "fun" palettes'
+		// original light-mode pastels measured under 3:1 contrast --
+		// well below WCAG AA's 4.5:1 for body text -- so every case
+		// (not just .default/.muted/.vivid/.sepia) now supplies its own
+		// deepened dark-mode values rather than reusing lightHexSet.
+		for palette in HighlightPalette.allCases {
+			let allSame = Annotation.Color.allCases.allSatisfy { palette.lightHexSet[$0] == palette.darkHexSet[$0] }
+			#expect(!allSame, "\(palette) is expected to have at least one color differ between light and dark")
 		}
 	}
 
-	@Test func tunedPalettesHaveDistinctLightAndDarkHexSets() {
-		for palette: HighlightPalette in [.default, .muted, .vivid, .sepia] {
-			let allSame = Annotation.Color.allCases.allSatisfy { palette.lightHexSet[$0] == palette.darkHexSet[$0] }
-			#expect(!allSame, "\(palette) is expected to have at least one color differ between light and dark")
+	@Test func everyDarkHexSetColorMeetsWCAGAAContrastForWhiteText() {
+		// The concrete bug this guards against: a highlight rendered in
+		// dark mode uses the reader's foreground color (near-white) for
+		// text, so a highlight background that's still a light-mode-style
+		// pastel makes that text nearly unreadable. 4.5:1 is WCAG AA for
+		// normal-size body text.
+		for palette in HighlightPalette.allCases {
+			for color in Annotation.Color.allCases {
+				let hex = palette.darkHexSet[color]
+				guard let bg = UIColor(cssHex: hex) else {
+					Issue.record("\(palette).darkHexSet[\(color.rawValue)] = \(hex) does not parse")
+					continue
+				}
+				let ratio = bg.contrastRatio(against: .white)
+				#expect(ratio >= 4.5, "\(palette).darkHexSet[\(color.rawValue)] = \(hex) has white-text contrast \(ratio), below WCAG AA's 4.5")
+			}
 		}
 	}
 
