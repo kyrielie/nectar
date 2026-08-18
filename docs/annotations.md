@@ -168,16 +168,34 @@ cross-platform and can't assume an iOS-only script ran first.
 ## UI
 
 - **Selection → highlight**: `annotations.js` posts `textWasSelected`;
-  `WebViewController` presents `HighlightColorPopover` (SwiftUI, hosted via
-  `UIPopoverPresentationController`) with five color swatches plus a note
-  icon. Tapping a swatch calls `Annotations.addHighlightFromSelection`,
-  which draws the `<mark>` immediately and returns the computed selector
-  for `WebViewController` to persist via `account.saveAnnotation` — no
-  round trip before the highlight is visible. Tapping the note icon does
-  the same, then opens the note editor immediately.
+  which of three creation methods `WebViewController.textWasSelected`
+  dispatches to depends on `AppDefaults.shared.annotationCreationMethod`
+  (`AnnotationCreationMethod`: `.popup`, `.nativeMenu`, `.off` — default
+  `.popup`, chosen via `AnnotationsSettingsView`'s picker, see "Settings
+  entry point" below):
+  - `.popup` presents `HighlightColorPopover` (SwiftUI, hosted via
+    `UIPopoverPresentationController`) with two or three color swatches
+    — the person's default color (`AppDefaults.shared.defaultAnnotationColor`)
+    plus fixed blue and red as quick alternates, de-duplicated if the
+    default is itself blue or red. Not all five `Annotation.Color`
+    cases, and no note-entry affordance here at all.
+  - `.nativeMenu` injects a "Highlight" item into `WKWebView`'s own
+    native text-selection menu instead (`PreloadedWebView.buildMenu(with:)`,
+    gated on `AnnotationMenuDelegate.isSelectionHighlightable`), using
+    the default color only — no popover shown.
+  - `.off` does nothing on selection; existing highlights stay fully
+    viewable/editable via the annotations list and by tapping an
+    existing `<mark>`.
+  Either creation path calls `WebViewController.saveHighlightFromSelection`,
+  which calls `Annotations.addHighlightFromSelection` to resolve the
+  still-live selection into a selector, draws the `<mark>` immediately,
+  and persists the result via `account.saveAnnotation` — no round trip
+  before the highlight is visible. Neither path has a note-entry exit
+  any more: a note is always added afterward, by tapping the resulting
+  mark.
 - **Note editor**: `AnnotationEditorView` (SwiftUI, half-sheet via
-  `UIHostingController`), reachable both from the note-icon path (fresh
-  annotation) and from tapping an existing `<mark>`
+  `UIHostingController`, `.medium()`/`.large()` detents), reachable by
+  tapping any `<mark>` — freshly created or pre-existing —
   (`annotationWasTapped`). Shows the read-only quote, a note field, the
   five color swatches, and a destructive delete (with confirmation).
   Delete calls `Annotations.removeAnnotationHighlight` (unwraps the
@@ -199,26 +217,30 @@ cross-platform and can't assume an iOS-only script ran first.
   toolbar menu with multiple scope choices; that was an earlier design
   this doc previously (incorrectly) described.
 - **Annotations list**: `AnnotationsListView` (SwiftUI), one implementation
-  for all three scopes (`.article`, `.book`, `.everything`) — only the
-  underlying `Account` fetch method differs. Groups are keyed by
-  `articleID`; for a non-anthology book (one Ambrosia JSON Feed item per
-  work, per `ambrosia-feed.md`) that's always exactly one group, so the
-  section header is suppressed and the nav bar's `article.title` is the
-  only place the book title appears. Rows show a color dot; the full
-  sentence surrounding the highlight (reconstructed from
+  for both scopes (`Scope.book(bookKey:)`, `Scope.everything`) — only the
+  underlying `Account` fetch method differs. There is no third,
+  per-article scope; an earlier version of this doc described one, but
+  that menu is gone (see "Toolbar button" above). Groups are keyed by
+  `(bookKey ?? articleID, chapterTitle)`, not `articleID` alone — see the
+  view's own header comment for why chapterTitle has to be part of the
+  key (a single book's chapters can themselves span more than one
+  articleID). `heading` (the section header text) is `chapterTitle` when
+  the group has one, otherwise the group's own article title; when
+  there's only one group on screen the header is suppressed entirely
+  (redundant with the nav bar title) rather than shown. Rows show a color
+  dot; the full sentence surrounding the highlight (reconstructed from
   `quotePrefix`/`quoteExact`/`quoteSuffix` via `NLTokenizer(unit:
   .sentence)`, with just the `quoteExact` portion given a
   `annotation.color`-tinted background wash — not the raw, potentially
-  mid-sentence `quoteExact` slice on its own); the note preview; a
-  `chapterTitle` caption, shown only when it's non-empty and differs from
-  the group's own book title (suppresses the common case where a
-  single-heading book's one heading just repeats the title already shown
-  in the nav bar/section header — see "Anchor resolution" for why that's
-  usually `nil` or equal rather than something else). No per-row
-  timestamp or repeated book title — both were dropped as redundant with
-  the nav bar/section header. Orphaned annotations (`orphanedAt != nil`)
-  appear dimmed with a "couldn't relocate this highlight" caption rather
-  than being hidden.
+  mid-sentence `quoteExact` slice on its own); the note preview
+  (uncapped — a multi-paragraph note's line breaks render in full, not
+  clipped to one line); the row's article author byline
+  (`articleAuthors`, comma-joined sorted author names, omitted when the
+  article has none) — chapterTitle is not shown per-row, it's promoted to
+  the section header instead, as above. No per-row timestamp or repeated
+  book title — both were dropped as redundant with the nav bar/section
+  header. Orphaned annotations (`orphanedAt != nil`) appear dimmed with a
+  "couldn't relocate this highlight" caption rather than being hidden.
   A `.searchable(text:)` field filters `groups` client-side against a
   row's quote, note, and article title (`localizedStandardContains`,
   case-insensitive); a group left with no matching rows is dropped, and a
@@ -245,10 +267,14 @@ cross-platform and can't assume an iOS-only script ran first.
   re-deriving the same `awaitNextPageLoad`-then-scroll sequence.
 - **Settings entry point**: `ArticlesRow.annotations` in
   `SettingsViewController` pushes `AnnotationsSettingsView` (SwiftUI),
-  containing the unscoped `AnnotationsListView` (using the first account —
-  Nectar's usual shape is one local account, per `ambrosia-feed.md`), the
-  toolbar-button toggle, the default color picker, and the two export
-  rows below.
+  which contains a `NavigationLink` to the unscoped `AnnotationsListView`
+  (using the first account — Nectar's usual shape is one local account,
+  per `ambrosia-feed.md`), the `annotationCreationMethod` picker
+  (Popup/Native Menu/Off, see "Selection → highlight" above), the default
+  color picker, and the two export rows below. The article-toolbar
+  `.annotations` button toggle is a separate control, on a different
+  settings screen (`ArticleToolbarCustomizerViewController`) — not part
+  of `AnnotationsSettingsView`.
 
 ## Export
 
