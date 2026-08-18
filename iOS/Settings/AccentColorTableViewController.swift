@@ -29,6 +29,7 @@
 //
 
 import UIKit
+import Articles
 
 final class AccentColorTableViewController: UITableViewController, SettingsPaletteBackgroundHosting {
 
@@ -37,13 +38,22 @@ final class AccentColorTableViewController: UITableViewController, SettingsPalet
 	private enum Section: Int, CaseIterable {
 		case accentColors = 0
 		case badgePalette = 1
-		case preview = 2
+		case highlightPalette = 2
+		case preview = 3
 	}
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		tableView.register(BadgeColorPalettePreviewCell.self, forCellReuseIdentifier: BadgeColorPalettePreviewCell.reuseIdentifier)
+		tableView.register(HighlightPalettePreviewCell.self, forCellReuseIdentifier: HighlightPalettePreviewCell.reuseIdentifier)
 		NotificationCenter.default.addObserver(self, selector: #selector(badgeColorModeDidChange(_:)), name: .badgeColorModeDidChange, object: nil)
+		// Highlight Palette's own live preview lives in the same .preview
+		// section as Badge Colors' -- see tableView(_:cellForRowAt:) below,
+		// which distinguishes the two sub-previews inside one section the
+		// same way app-chrome-palette.md's "Where it lives in the UI" note
+		// anticipated. reloadSections(.preview) already covers both, so no
+		// separate reload scope is needed for this notification.
+		NotificationCenter.default.addObserver(self, selector: #selector(highlightPaletteDidChange(_:)), name: .highlightPaletteDidChange, object: nil)
 		// .accent badges (BadgeColorTable's accentDerived*Backgrounds) are
 		// computed from AppDefaults.shared.accentColor, not from
 		// badgeColorMode -- so selecting a different Accent Color on this
@@ -75,6 +85,17 @@ final class AccentColorTableViewController: UITableViewController, SettingsPalet
 	}
 
 	@objc private func badgeColorModeDidChange(_ note: Notification) {
+		tableView.reloadSections(IndexSet(integer: Section.preview.rawValue), with: .none)
+	}
+
+	@objc private func highlightPaletteDidChange(_ note: Notification) {
+		// Same scope-and-reasoning as badgeColorModeDidChange above: only
+		// .preview needs a reload here. didSelectRowAt's own explicit
+		// reload already moves the checkmark for a same-screen tap; a
+		// second reload of .highlightPalette from this notification would
+		// hit the same reentrancy issue accentColorDidChange's own doc
+		// comment describes, since AppDefaults.shared.highlightPalette's
+		// setter also posts synchronously.
 		tableView.reloadSections(IndexSet(integer: Section.preview.rawValue), with: .none)
 	}
 
@@ -113,9 +134,24 @@ final class AccentColorTableViewController: UITableViewController, SettingsPalet
 			return AccentColor.allCases.count
 		case .badgePalette:
 			return BadgeColorPalette.allCases.count
+		case .highlightPalette:
+			return HighlightPalette.allCases.count
 		case .preview:
-			return 1
+			// Two rows, not one: badge-palette preview first (pre-existing),
+			// then the highlight-palette swatch preview -- see PreviewRow
+			// below for which index is which. Kept as two distinct rows
+			// in one section, rather than a single combined cell, so each
+			// sub-preview's own reload/measurement logic
+			// (BadgeColorPalettePreviewCell.configure()'s self-sizing
+			// collection view vs. HighlightPalettePreviewCell's much
+			// simpler fixed-height swatch row) stays independent.
+			return PreviewRow.allCases.count
 		}
+	}
+
+	private enum PreviewRow: Int, CaseIterable {
+		case badgePalette = 0
+		case highlightPalette = 1
 	}
 
 	override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
@@ -124,28 +160,50 @@ final class AccentColorTableViewController: UITableViewController, SettingsPalet
 			return NSLocalizedString("Accent Color", comment: "Accent color section header")
 		case .badgePalette:
 			return NSLocalizedString("Badge Colors", comment: "Badge color palette section header")
+		case .highlightPalette:
+			return NSLocalizedString("Highlight Palette", comment: "Highlight palette section header")
 		case .preview:
 			return NSLocalizedString("Preview", comment: "Badge color palette preview section header")
 		}
 	}
 
 	override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-		guard Section(rawValue: section) == .badgePalette else { return nil }
-		return NSLocalizedString("Badges appear in the timeline when Tag Display is set to Badges in Timeline Layout. Accent palette badges follow your Accent Color choice above.", comment: "Badge color palette section footer")
+		switch Section(rawValue: section) {
+		case .badgePalette:
+			return NSLocalizedString("Badges appear in the timeline when Tag Display is set to Badges in Timeline Layout. Accent palette badges follow your Accent Color choice above.", comment: "Badge color palette section footer")
+		case .highlightPalette:
+			return NSLocalizedString("Changes what each of the five highlight colors actually looks like, everywhere a highlight is shown -- the color you pick for a given highlight (yellow, red, green, blue, purple) doesn't change.", comment: "Highlight palette section footer")
+		default:
+			return nil
+		}
 	}
 
 	override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
 		switch Section(rawValue: indexPath.section) {
 		case .preview:
-			let cell = tableView.dequeueReusableCell(withIdentifier: BadgeColorPalettePreviewCell.reuseIdentifier, for: indexPath) as! BadgeColorPalettePreviewCell
-			cell.configure()
-			return cell
+			switch PreviewRow(rawValue: indexPath.row) {
+			case .highlightPalette:
+				let cell = tableView.dequeueReusableCell(withIdentifier: HighlightPalettePreviewCell.reuseIdentifier, for: indexPath) as! HighlightPalettePreviewCell
+				cell.configure()
+				return cell
+			case .badgePalette, .none:
+				let cell = tableView.dequeueReusableCell(withIdentifier: BadgeColorPalettePreviewCell.reuseIdentifier, for: indexPath) as! BadgeColorPalettePreviewCell
+				cell.configure()
+				return cell
+			}
 		case .badgePalette:
 			let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
 			let rowPalette = BadgeColorPalette.allCases[indexPath.row]
 			cell.textLabel?.text = rowPalette.description
 			cell.imageView?.image = nil
 			cell.accessoryType = rowPalette == AppDefaults.shared.badgeColorMode ? .checkmark : .none
+			return cell
+		case .highlightPalette:
+			let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
+			let rowPalette = HighlightPalette.allCases[indexPath.row]
+			cell.textLabel?.text = rowPalette.description
+			cell.imageView?.image = Self.swatchImage(for: rowPalette)
+			cell.accessoryType = rowPalette == AppDefaults.shared.highlightPalette ? .checkmark : .none
 			return cell
 		case .accentColors, .none:
 			let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
@@ -223,6 +281,17 @@ final class AccentColorTableViewController: UITableViewController, SettingsPalet
 			let palette = BadgeColorPalette.allCases[indexPath.row]
 			AppDefaults.shared.badgeColorMode = palette
 			tableView.reloadSections(IndexSet([Section.badgePalette.rawValue, Section.preview.rawValue]), with: .none)
+		case .highlightPalette:
+			// Same guard-and-reload-in-place shape as .badgePalette above --
+			// AppDefaults.shared.highlightPalette's setter also posts its
+			// notification synchronously (highlightPaletteDidChange(_:)
+			// above), so this explicit reload is the one that actually
+			// moves the checkmark for a same-screen tap; the notification
+			// handler only touches .preview, matching accentColorDidChange's
+			// reentrancy-guard reasoning.
+			let palette = HighlightPalette.allCases[indexPath.row]
+			AppDefaults.shared.highlightPalette = palette
+			tableView.reloadSections(IndexSet([Section.highlightPalette.rawValue, Section.preview.rawValue]), with: .none)
 		case .preview:
 			break
 		}
@@ -266,6 +335,39 @@ final class AccentColorTableViewController: UITableViewController, SettingsPalet
 			let strokePath = UIBezierPath(ovalIn: rect.insetBy(dx: 0.5, dy: 0.5))
 			strokePath.lineWidth = 1
 			strokePath.stroke()
+		}.withRenderingMode(.alwaysOriginal)
+	}
+
+	/// A row of five small filled circles (yellow/red/green/blue/purple,
+	/// matching Annotation.Color's CaseIterable order) for a
+	/// HighlightPalette row -- distinct from swatchImage(for:) above
+	/// (AccentColor's own two-color split-circle), since a highlight
+	/// palette has five independent colors to show at once rather than a
+	/// primary/secondary pair. Uses the palette's own darkHexSet when the
+	/// current trait collection is dark, lightHexSet otherwise -- table
+	/// view cell images don't participate in dynamic-color resolution the
+	/// way UIColor(dynamicProvider:) does, so this is resolved once per
+	/// dequeue against traitCollection.userInterfaceStyle rather than left
+	/// to redraw automatically; a light/dark switch while this screen is
+	/// visible reaches this via refreshPaletteCellBackgrounds()'s existing
+	/// per-visible-cell pass triggering willDisplay -> this method again on
+	/// the next reload, same as swatchImage(for:) above already relies on
+	/// for AccentColor rows.
+	private static func swatchImage(for highlightPalette: HighlightPalette) -> UIImage {
+		let isDark = UITraitCollection.current.userInterfaceStyle == .dark
+		let hexSet = highlightPalette.hexSet(isDark: isDark)
+		let colors = Annotation.Color.allCases.map { UIColor(cssHex: hexSet[$0]) ?? .systemYellow }
+
+		let diameter: CGFloat = 20
+		let spacing: CGFloat = 4
+		let size = CGSize(width: CGFloat(colors.count) * diameter + CGFloat(colors.count - 1) * spacing, height: diameter)
+		let renderer = UIGraphicsImageRenderer(size: size)
+		return renderer.image { context in
+			for (index, color) in colors.enumerated() {
+				let rect = CGRect(x: CGFloat(index) * (diameter + spacing), y: 0, width: diameter, height: diameter)
+				color.setFill()
+				context.cgContext.fillEllipse(in: rect)
+			}
 		}.withRenderingMode(.alwaysOriginal)
 	}
 

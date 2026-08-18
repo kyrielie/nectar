@@ -202,12 +202,58 @@ cross-platform and can't assume an iOS-only script ran first.
   `<mark>`, `normalize()`s the affected text nodes) before
   `account.deleteAnnotation`.
 - **Color palette**: five fixed colors (`Annotation.Color`: yellow, red,
-  green, blue, purple), stored as a palette key, not a hex value. Resolved
-  at render time via CSS custom properties in `core.css`
-  (`mark.nnw-highlight[data-color="..."]`) so each theme can supply its
-  own hex set; `HighlightColorPopover.swiftUIColor` mirrors the same five
-  hex values in SwiftUI, kept in sync manually since there's no shared
-  source of truth between CSS custom properties and SwiftUI `Color`.
+  green, blue, purple), stored as a palette key, not a hex value. Which
+  actual hex value a key resolves to is controlled by two independent
+  axes:
+  - **Light/dark adaptation** (bug fix): `core.css`'s
+    `mark.nnw-highlight[data-annotation-color="..."]` rules read from
+    `--nnw-highlight-*`/`--nnw-highlight-*-dark` CSS custom properties,
+    with an `@media (prefers-color-scheme: dark)` block reading the
+    `-dark`-suffixed variant. Previously there was only one, appearance-
+    independent fallback hex per color (Apple's *dark*-mode system colors,
+    served unconditionally in both appearances) and no live-set custom
+    property at all -- highlights rendered identically, and too harshly,
+    in light mode. Fixed values still ship as the `@media`-branched
+    fallback hex in `core.css`, but on every real render
+    `WebViewController.applyHighlightPaletteColors()` sets all ten custom
+    properties directly, so the fallback only matters before that first
+    injection lands.
+  - **`HighlightPalette`** (`iOS/AppDefaults.swift`, `AppDefaults.shared.highlightPalette`,
+    `.highlightPaletteDidChange` notification) -- which set of five hex
+    values (one `HexSet` per light/dark appearance, same shape
+    `SurfacePalette.HexSet` established) an annotation's color *key*
+    resolves to. A person's saved `Annotation.color` is always one of the
+    five case names, never a hex value, so switching palettes re-tints
+    every existing highlight without touching a row of annotation data.
+    Nine cases ship: `.default` (Apple's own system-color light/dark
+    pair -- unlike `SurfacePalette.default`, this is *not* nil in either
+    appearance, since there's no pre-existing asset-catalog colorset for
+    highlight colors to fall back to), `.muted`, `.vivid`, `.sepia` (tuned
+    per-appearance, following the plan's original four), and five
+    additional "fun" palettes with a single hex per color shared across
+    both appearances rather than a tuned light/dark pair (`.mint`,
+    `.flourescent`, `.refresh`, `.warm`, `.neutral` -- mild enough by
+    design that a separate dark-mode tuning wasn't judged necessary).
+    Picked via a fourth section (`highlightPalette`) on
+    `AccentColorTableViewController`, alongside Accent Colors/Badge
+    Colors/Preview -- see `app-chrome-palette.md`.
+  - `HighlightColorPopover`/`AnnotationEditorView`/`AnnotationsListView`'s
+    color dots call `Annotation.Color.swiftUIColor(palette:isDark:)` (and
+    the UIKit-facing `.uiColor(palette:isDark:)`), each reading
+    `AppDefaults.shared.highlightPalette` via `@AppStorage` and
+    `\.colorScheme` via `@Environment` so a live palette switch or
+    light/dark change recomputes the swatch immediately -- there is still
+    no shared source of truth between CSS custom properties and SwiftUI
+    `Color`/UIKit `UIColor`, kept in sync manually the same way as before,
+    just against `HighlightPalette.HexSet` now instead of five bare
+    literals.
+  - No per-`.nnwtheme` highlight override exists (confirmed: no theme
+    bundle in `Themes/` defines a `--nnw-highlight-*` variable) --
+    `HighlightPalette` is a separate, app-level default the same way
+    `SurfacePalette`/`AccentColor` are, not theme-bundle content. If a
+    theme-level override is wanted later, precedence against
+    `HighlightPalette` would need to be defined; not built as part of
+    this feature.
 - **Toolbar button**: `ArticleToolbarToggle` (`iOS/AppDefaults.swift`)
   has an `.annotations` case, backed by
   `AppDefaults.shared.articleToolbarShowAnnotations` (default `false`,

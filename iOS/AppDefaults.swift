@@ -302,6 +302,172 @@ enum AccentColor: Int, CaseIterable, Sendable {
 	}
 }
 
+/// Which set of five hex values (yellow/red/green/blue/purple, matching
+/// Annotation.Color.allCases 1:1) an annotation's fixed color *key*
+/// resolves to at render/display time -- a person's saved
+/// Annotation.color is always one of the five case names, never a hex
+/// value, so switching palettes here re-tints every existing highlight
+/// without touching a single row of annotation data. See
+/// docs/annotations.md's "Color palette" section.
+///
+/// Same two-appearance HexSet shape SurfacePalette established just above
+/// (lightHexSet/darkHexSet, .default meaning "fall back to the existing
+/// fixed hex", one HexSet struct rather than a bare tuple so each field
+/// stays named and matched to its Annotation.Color case by name, not
+/// position). `.default`'s own light/dark values are *not* nil the way
+/// SurfacePalette.default's are, though -- unlike SurfacePalette, there is
+/// no pre-existing asset-catalog colorset for highlight colors to fall
+/// back to (core.css's mark.nnw-highlight rules previously had only a
+/// single hardcoded fallback hex per color, applied unconditionally in
+/// both appearances); .default's HexSets below are what that single
+/// fallback becomes once it's split into a real light/dark pair, so they
+/// carry real values rather than nil.
+enum HighlightPalette: Int, CaseIterable, Sendable {
+	case `default` = 0
+	/// Softer, lower-saturation tones for long reading sessions --
+	/// dark-mode values are deepened rather than lightened, so a
+	/// highlight stays a wash instead of glowing against a dark
+	/// background.
+	case muted = 1
+	/// Near-fluorescent in light mode for anyone who wants highlights to
+	/// pop; dark-mode values are lightened just enough to stay a wash
+	/// rather than reading as a light source.
+	case vivid = 2
+	/// Warm, paper-toned hues -- shares its name and aesthetic family
+	/// with SurfacePalette.sepia, but is otherwise independent: picking
+	/// SurfacePalette.sepia does not imply or require HighlightPalette.sepia,
+	/// the same way any other SurfacePalette/HighlightPalette combination
+	/// is unrelated.
+	case sepia = 3
+	/// Soft pastel greens/blues/grays/lavender/rose -- gentle, low-contrast
+	/// set. Same single hex per color as mint/flourescent/refresh/warm/
+	/// neutral below: mild enough by design that a separate dark-mode
+	/// tuning wasn't judged necessary, unlike .default/.muted/.vivid/.sepia
+	/// above, so lightHexSet and darkHexSet both return this same HexSet.
+	case mint = 4
+	/// Saturated pink/orange/yellow/teal/sky-blue -- brighter than Mint,
+	/// still mild enough to skip a separate dark-mode tuning.
+	case flourescent = 5
+	/// High-energy magenta/red/chartreuse/teal/indigo.
+	case refresh = 6
+	/// Muted teal/terracotta/gold/mauve/umber -- an earthier set than
+	/// Sepia's paper tones.
+	case warm = 7
+	/// Desaturated rust/tan/peach/steel-blue/olive.
+	case neutral = 8
+
+	var description: String {
+		switch self {
+		case .default:
+			return NSLocalizedString("Default", comment: "Default highlight palette")
+		case .muted:
+			return NSLocalizedString("Muted", comment: "Muted highlight palette")
+		case .vivid:
+			return NSLocalizedString("Vivid", comment: "Vivid highlight palette")
+		case .sepia:
+			return NSLocalizedString("Sepia", comment: "Sepia highlight palette")
+		case .mint:
+			return NSLocalizedString("Mint", comment: "Mint highlight palette")
+		case .flourescent:
+			return NSLocalizedString("Flourescent", comment: "Flourescent highlight palette")
+		case .refresh:
+			return NSLocalizedString("Refresh", comment: "Refresh highlight palette")
+		case .warm:
+			return NSLocalizedString("Warm", comment: "Warm highlight palette")
+		case .neutral:
+			return NSLocalizedString("Neutral", comment: "Neutral highlight palette")
+		}
+	}
+
+	/// One hex value per Annotation.Color case, named to match rather than
+	/// positional -- see HexSet's own doc comment above for why.
+	struct HexSet {
+		var yellow: String
+		var red: String
+		var green: String
+		var blue: String
+		var purple: String
+
+		/// core.css's mark.nnw-highlight[data-annotation-color="..."] rules
+		/// key on Annotation.Color's raw String value -- this maps the
+		/// same way, so WebViewController's injection call site can build
+		/// the custom-property name/value pairs from one dictionary
+		/// instead of a five-way switch.
+		var byColorKey: [String: String] {
+			[
+				Annotation.Color.yellow.rawValue: yellow,
+				Annotation.Color.red.rawValue: red,
+				Annotation.Color.green.rawValue: green,
+				Annotation.Color.blue.rawValue: blue,
+				Annotation.Color.purple.rawValue: purple
+			]
+		}
+
+		subscript(_ color: Annotation.Color) -> String {
+			switch color {
+			case .yellow: return yellow
+			case .red: return red
+			case .green: return green
+			case .blue: return blue
+			case .purple: return purple
+			}
+		}
+	}
+
+	var lightHexSet: HexSet {
+		switch self {
+		case .default:
+			// Apple's own light-mode system-color equivalents -- previously
+			// core.css/HighlightColorPopover served the *dark*-mode system
+			// colors (below) unconditionally in both appearances; this is
+			// the actual light-mode fix, not a newly invented palette.
+			return HexSet(yellow: "#FFCC00", red: "#FF3B30", green: "#34C759", blue: "#007AFF", purple: "#AF52DE")
+		case .muted:
+			return HexSet(yellow: "#E8D48A", red: "#D99C90", green: "#9DC2A0", blue: "#92B8D4", purple: "#B79CC7")
+		case .vivid:
+			return HexSet(yellow: "#FFEA00", red: "#FF1744", green: "#00C853", blue: "#2962FF", purple: "#D500F9")
+		case .sepia:
+			return HexSet(yellow: "#D9A441", red: "#C06A4D", green: "#8A9A5B", blue: "#5E8A9E", purple: "#96789A")
+		case .mint:
+			return HexSet(yellow: "#a0d084", red: "#9cb2e3", green: "#d5d6da", blue: "#b6add8", purple: "#de556f")
+		case .flourescent:
+			return HexSet(yellow: "#f1a5c7", red: "#f7c18e", green: "#f6e977", blue: "#85cbb3", purple: "#a4d3e6")
+		case .refresh:
+			return HexSet(yellow: "#e277cd", red: "#f9423a", green: "#cedc00", blue: "#00b2a9", purple: "#7474c1")
+		case .warm:
+			return HexSet(yellow: "#89afb4", red: "#d6735d", green: "#efcc82", blue: "#c093b2", purple: "#826860")
+		case .neutral:
+			return HexSet(yellow: "#c57955", red: "#d8b58f", green: "#f8cfb8", blue: "#bdc8d3", purple: "#b8b279")
+		}
+	}
+
+	var darkHexSet: HexSet {
+		switch self {
+		case .default:
+			// Apple's dark-mode system colors -- these are the exact five
+			// hex values core.css/HighlightColorPopover used to hardcode
+			// as their single, appearance-independent fallback.
+			return HexSet(yellow: "#FFD60A", red: "#FF453A", green: "#30D158", blue: "#0A84FF", purple: "#BF5AF2")
+		case .muted:
+			return HexSet(yellow: "#A68A3D", red: "#8A5147", green: "#4F7A56", blue: "#4A7396", purple: "#7C5F91")
+		case .vivid:
+			return HexSet(yellow: "#FFF176", red: "#FF6E6E", green: "#69F0AE", blue: "#6E9FFF", purple: "#EA80FC")
+		case .sepia:
+			return HexSet(yellow: "#A87A2E", red: "#8F4E38", green: "#64703F", blue: "#456B7A", purple: "#6B5470")
+		case .mint, .flourescent, .refresh, .warm, .neutral:
+			// Mild enough by design (see the case-level doc comments above)
+			// that a separate dark-mode tuning wasn't judged necessary --
+			// same HexSet as lightHexSet for these five, unlike
+			// .default/.muted/.vivid/.sepia above.
+			return lightHexSet
+		}
+	}
+
+	func hexSet(isDark: Bool) -> HexSet {
+		isDark ? darkHexSet : lightHexSet
+	}
+}
+
 /// Tints the native-chrome surface colors (bar backgrounds, nav bar, and the
 /// vibrant-text tint) as a set, independent of AccentColor -- this affects
 /// UIKit chrome backgrounds, never the WKWebView article content, and
@@ -585,6 +751,7 @@ extension Notification.Name {
 	public static let badgeColorModeDidChange = Notification.Name("BadgeColorModeDidChangeNotification")
 	public static let accentColorDidChange = Notification.Name("AccentColorDidChangeNotification")
 	public static let surfaceTintDidChange = Notification.Name("SurfaceTintDidChangeNotification")
+	public static let highlightPaletteDidChange = Notification.Name("HighlightPaletteDidChangeNotification")
 	public static let statsVisibilityDidChange = Notification.Name("StatsVisibilityDidChangeNotification")
 	public static let articleThemeOverridesDidChange = Notification.Name("ArticleThemeOverridesDidChangeNotification")
 }
@@ -619,6 +786,7 @@ final class AppDefaults: Sendable {
 		static let badgeColorMode = "badgeColorMode"
 		static let accentColor = "accentColor"
 		static let surfaceTint = "surfaceTint"
+		static let highlightPalette = "highlightPalette"
 		/// Legacy Bool key, no longer backed by a live property -- read
 		/// directly via AppDefaults.store by migrateToolbarStyleDefaultIfNeeded()
 		/// only, to carry an upgrader's prior tinted/not-tinted choice onto
@@ -1309,6 +1477,22 @@ final class AppDefaults: Sendable {
 		set {
 			AppDefaults.store.set(newValue.rawValue, forKey: Key.surfaceTint)
 			NotificationCenter.default.post(name: .surfaceTintDidChange, object: nil)
+		}
+	}
+
+	/// Which HighlightPalette an annotation's fixed color key resolves to.
+	/// Posts synchronously on set, same contract as accentColor/surfaceTint
+	/// above -- see those two setters' shared "Live-update pipeline shape"
+	/// writeup in docs/app-chrome-palette.md, which now also covers this
+	/// property.
+	var highlightPalette: HighlightPalette {
+		get {
+			let rawValue = AppDefaults.store.integer(forKey: Key.highlightPalette)
+			return HighlightPalette(rawValue: rawValue) ?? .default
+		}
+		set {
+			AppDefaults.store.set(newValue.rawValue, forKey: Key.highlightPalette)
+			NotificationCenter.default.post(name: .highlightPaletteDidChange, object: nil)
 		}
 	}
 
