@@ -219,6 +219,19 @@ cross-platform and can't assume an iOS-only script ran first.
   the nav bar/section header. Orphaned annotations (`orphanedAt != nil`)
   appear dimmed with a "couldn't relocate this highlight" caption rather
   than being hidden.
+  A `.searchable(text:)` field filters `groups` client-side against a
+  row's quote, note, and article title (`localizedStandardContains`,
+  case-insensitive); a group left with no matching rows is dropped, and a
+  collapsed section's collapse is suppressed (not cleared) while a search
+  is active so a match inside a collapsed section isn't hidden. Long-
+  pressing a row opens a context menu with "Copy Highlight"
+  (`copyText(annotation:articleAuthors:link:)`), which copies
+  `"quote"\n-author, chapter, link\n\n"note"` to `UIPasteboard` — author
+  falls back to "Unknown" rather than a blank field, chapter and link are
+  each dropped from the attribution line (not printed empty) when the
+  article has neither, and the note block is only included when the
+  annotation has one. See `CopyHighlightTextTests.swift` for the exact
+  format contract.
   Tapping a row hands the chosen `Annotation` back via
   `onNavigateToAnnotation` — the caller (either
   `ArticleViewController.navigateToAnnotation` or
