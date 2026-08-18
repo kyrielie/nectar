@@ -14,7 +14,6 @@
 //
 
 import UIKit
-import RSCore
 
 final class BottomToolbarPreviewCell: UICollectionViewListCell {
 

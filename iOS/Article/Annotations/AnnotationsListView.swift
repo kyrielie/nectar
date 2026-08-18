@@ -101,10 +101,6 @@ struct AnnotationsListView: View {
 	/// persisted across screen presentations, same as the rest of this
 	/// view's transient @State.
 	@State private var collapsedGroupKeys: Set<GroupKey> = []
-	/// Backing state for `.searchable(text:)` on `list`. Filtering
-	/// (`filteredGroups`) is purely client-side against the already-loaded
-	/// `groups` -- no new fetch.
-	@State private var searchText = ""
 
 	private struct Row: Identifiable {
 		let annotation: Annotation
@@ -115,17 +111,6 @@ struct AnnotationsListView: View {
 		/// don't necessarily share authors -- see loadRows'
 		/// authorsByArticleID.
 		let articleAuthors: String?
-		/// This row's own article title, independent of the group's
-		/// `heading` -- `heading` is chapter-title-first (see
-		/// AnnotationGroup's doc comment) and won't reliably contain the
-		/// book/article title, so search (filteredGroups) needs this
-		/// separately. Sourced from loadRows' titlesByArticleID.
-		let articleTitle: String
-		/// This row's article's preferred link (Article.preferredLink),
-		/// for the long-press "Copy Highlight" action below. nil when the
-		/// article has no resolvable link. Sourced from loadRows'
-		/// linksByArticleID.
-		let articleLink: String?
 
 		var id: String { annotation.annotationID }
 	}
@@ -180,11 +165,6 @@ struct AnnotationsListView: View {
 		}
 		.navigationTitle(Text(navigationTitleText))
 		.navigationBarTitleDisplayMode(.inline)
-		// Default .automatic placement renders under the nav bar and
-		// scrolls with the list -- same scroll-to-reveal behavior as
-		// MainTimelineModernViewController's UISearchController, no extra
-		// configuration needed to match it.
-		.searchable(text: $searchText, prompt: Text("Search Highlights", comment: "Annotations list: search field prompt"))
 		.toolbar {
 			// From the toolbar-button entry point this screen is presented
 			// modally, full-screen, with no system back chevron (see
@@ -224,20 +204,10 @@ struct AnnotationsListView: View {
 
 	private var list: some View {
 		List {
-			ForEach(filteredGroups) { group in
-				if filteredGroups.count > 1 {
+			ForEach(groups) { group in
+				if groups.count > 1 {
 					Section {
-						// Collapse is suppressed (not cleared) while a
-						// search is active: a collapsed group whose only
-						// remaining rows are the search match would
-						// otherwise stay hidden, and filtering would look
-						// broken. Leaving collapsedGroupKeys itself
-						// untouched means clearing the search goes
-						// straight back to whatever was collapsed before,
-						// with nothing to reconcile.
-						if searchText.isEmpty && collapsedGroupKeys.contains(group.key) {
-							EmptyView()
-						} else {
+						if !collapsedGroupKeys.contains(group.key) {
 							rows(for: group)
 						}
 					} header: {
@@ -254,23 +224,6 @@ struct AnnotationsListView: View {
 					}
 				}
 			}
-		}
-	}
-
-	/// `groups` filtered against `searchText`, matching a row's quote,
-	/// note, or article title (case-insensitive). A group left with zero
-	/// matching rows is dropped entirely rather than shown empty. Purely
-	/// client-side against the already-loaded `groups` -- no new fetch.
-	private var filteredGroups: [AnnotationGroup] {
-		guard !searchText.isEmpty else { return groups }
-		return groups.compactMap { group in
-			let rows = group.rows.filter { row in
-				row.annotation.quoteExact.localizedStandardContains(searchText)
-				|| (row.annotation.note?.localizedStandardContains(searchText) ?? false)
-				|| row.articleTitle.localizedStandardContains(searchText)
-			}
-			guard !rows.isEmpty else { return nil }
-			return AnnotationGroup(key: group.key, heading: group.heading, rows: rows)
 		}
 	}
 
@@ -312,16 +265,9 @@ struct AnnotationsListView: View {
 			Button {
 				onNavigateToAnnotation(row.annotation)
 			} label: {
-				AnnotationRow(annotation: row.annotation, articleAuthors: row.articleAuthors, articleLink: row.articleLink)
+				AnnotationRow(annotation: row.annotation, articleAuthors: row.articleAuthors)
 			}
 			.buttonStyle(.plain)
-			.contextMenu {
-				Button {
-					UIPasteboard.general.string = copyText(annotation: row.annotation, articleAuthors: row.articleAuthors, link: row.articleLink)
-				} label: {
-					Label(NSLocalizedString("Copy Highlight", comment: "Annotations list: copy highlight context menu action"), systemImage: "doc.on.doc")
-				}
-			}
 			.swipeActions(edge: .trailing, allowsFullSwipe: true) {
 				Button(role: .destructive) {
 					delete(row.annotation)
@@ -362,9 +308,6 @@ struct AnnotationsListView: View {
 			let names = (article.authors ?? []).compactMap(\.name).sorted()
 			return (article.articleID, names.isEmpty ? nil : names.joined(separator: ", "))
 		})
-		// For the long-press "Copy Highlight" action below -- same shape
-		// as authorsByArticleID, one lookup per unique articleID.
-		let linksByArticleID = Dictionary(uniqueKeysWithValues: articles.map { ($0.articleID, $0.preferredLink) })
 
 		// Grouped by (bookKey ?? articleID, chapterTitle) -- see this file's
 		// header comment.
@@ -430,14 +373,7 @@ struct AnnotationsListView: View {
 					.compactMap { titlesByArticleID[$0.articleID] }
 					.first ?? NSLocalizedString("Untitled", comment: "Fallback article title")
 				let heading = key.chapterTitle ?? fallbackTitle
-				let rows = sortedAnnotations.map {
-					Row(
-						annotation: $0,
-						articleAuthors: authorsByArticleID[$0.articleID] ?? nil,
-						articleTitle: titlesByArticleID[$0.articleID] ?? NSLocalizedString("Untitled", comment: "Fallback article title"),
-						articleLink: linksByArticleID[$0.articleID] ?? nil
-					)
-				}
+				let rows = sortedAnnotations.map { Row(annotation: $0, articleAuthors: authorsByArticleID[$0.articleID] ?? nil) }
 				return AnnotationGroup(key: key, heading: heading, rows: rows)
 			}
 			.sorted { lhs, rhs in
@@ -482,11 +418,6 @@ private struct AnnotationRow: View {
 	/// when the article has no authors with a name. See
 	/// AnnotationsListView.loadRows' authorsByArticleID.
 	let articleAuthors: String?
-	/// This row's article's preferred link. Only used by the containing
-	/// view's "Copy Highlight" context menu action, not by this view's own
-	/// body -- carried here so AnnotationsListView.rows(for:) has one row
-	/// value to build both the display and the copy action from.
-	let articleLink: String?
 
 	var body: some View {
 		HStack(alignment: .top, spacing: 12) {
@@ -506,13 +437,10 @@ private struct AnnotationRow: View {
 					.foregroundStyle(.primary)
 
 				if let note = annotation.note, !note.isEmpty {
-					// No lineLimit -- same reasoning as sentenceContext
-					// above: a note is real user content, and a real
-					// paragraph break the person typed shouldn't get
-					// silently clipped to one visual line.
 					Text(note)
 						.font(.caption)
 						.foregroundStyle(.secondary)
+						.lineLimit(1)
 				}
 
 				if let articleAuthors {
@@ -538,6 +466,16 @@ private struct AnnotationRow: View {
 		// caller can still show the editor/article even if scrollToAnnotation
 		// itself finds nothing to scroll to there).
 		.opacity(annotation.orphanedAt != nil ? 0.5 : 1.0)
+	}
+
+	/// Collapses runs of whitespace (including the newlines/indentation
+	/// annotations.js's buildTextIndex deliberately leaves untouched, since
+	/// its offsets have to stay byte-exact against the source HTML for
+	/// anchor resolution -- see docs/annotations.md's "Anchor resolution")
+	/// down to a single space, for display only. Doesn't trim the ends,
+	/// so quotePrefix/quoteExact/quoteSuffix still concatenate cleanly.
+	private func normalizedForDisplay(_ string: String) -> String {
+		string.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
 	}
 
 	/// The full sentence surrounding the highlight, built from the stored
@@ -622,51 +560,4 @@ private struct AnnotationRow: View {
 		attributed[attrStart..<attrEnd].backgroundColor = annotation.color.swiftUIColor.opacity(0.3)
 		return attributed
 	}
-}
-
-/// Collapses runs of whitespace (including the newlines/indentation
-/// annotations.js's buildTextIndex deliberately leaves untouched, since
-/// its offsets have to stay byte-exact against the source HTML for anchor
-/// resolution -- see docs/annotations.md's "Anchor resolution") down to a
-/// single space, for display only. Doesn't trim the ends, so
-/// quotePrefix/quoteExact/quoteSuffix still concatenate cleanly.
-/// Top-level (not a method on AnnotationRow) so both AnnotationRow's
-/// sentenceContext and copyText below can share it.
-private func normalizedForDisplay(_ string: String) -> String {
-	string.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-}
-
-/// Builds the string for the "Copy Highlight" context menu action:
-///
-///   "quote"
-///   -author, chapter, link
-///
-///   "note"
-///
-/// Author is never omitted -- articleAuthors is optional at the model
-/// level (an article can genuinely have none), so this falls back to
-/// "Unknown" rather than printing a leading comma or a bare dash. Chapter
-/// and link are each dropped from the attribution line, not printed
-/// empty, when the article has no chapter title or no resolvable link.
-/// The note block only appears when the annotation actually has a note --
-/// quote-only (highlight-only) annotations copy as just the quote and
-/// attribution line, no trailing empty block.
-private func copyText(annotation: Annotation, articleAuthors: String?, link: String?) -> String {
-	var lines = ["\"\(normalizedForDisplay(annotation.quoteExact))\""]
-
-	var attribution = ["-" + (articleAuthors ?? NSLocalizedString("Unknown", comment: "Annotation copy: unknown author fallback"))]
-	if let chapterTitle = annotation.chapterTitle, !chapterTitle.isEmpty {
-		attribution.append(chapterTitle)
-	}
-	if let link {
-		attribution.append(link)
-	}
-	lines.append(attribution.joined(separator: ", "))
-
-	if let note = annotation.note, !note.isEmpty {
-		lines.append("")
-		lines.append("\"\(note)\"")
-	}
-
-	return lines.joined(separator: "\n")
 }

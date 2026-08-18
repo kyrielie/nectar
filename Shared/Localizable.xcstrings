@@ -35,7 +35,7 @@
       }
     },
     "%d Shown" : {
-      "comment" : "Article bottom toolbar: number of buttons shown\nArticle top toolbar: number of buttons shown"
+      "comment" : "Article top toolbar: number of buttons shown"
     },
     "%i Unread" : {
       "comment" : "14 Unread"
@@ -191,9 +191,6 @@
     "Blue" : {
       "comment" : "Highlight color"
     },
-    "Bottom Toolbar" : {
-      "comment" : "Article Bottom Toolbar screen title\nBottom Toolbar"
-    },
     "Browser Verification" : {
       "comment" : "AO3 Cloudflare challenge status row label"
     },
@@ -204,7 +201,7 @@
       "comment" : "Cancel\nCancel button"
     },
     "Check for Updates" : {
-      "comment" : "AO3 preface refetch cadence picker label\nArticle top toolbar toggle: check for updates\nCommand"
+      "comment" : "AO3 preface refetch cadence picker label\nCommand"
     },
     "Check for Updates (Enable AO3 Updates in Settings)" : {
       "comment" : "Command, disabled: Ambrosia article with the AO3 network toggle off"
@@ -271,9 +268,6 @@
     },
     "Copy Feed URL" : {
       "comment" : "Command"
-    },
-    "Copy Highlight" : {
-      "comment" : "Annotations list: copy highlight context menu action"
     },
     "Copy Home Page URL" : {
       "comment" : "Command"
@@ -677,7 +671,7 @@
       "comment" : "Article top toolbar toggle: lock gestures\nLock Gestures"
     },
     "Loved" : {
-      "comment" : "Article bottom toolbar toggle: loved\nLoved"
+      "comment" : "Loved"
     },
     "Manage Storage" : {
       "comment" : "Manage Storage"
@@ -801,7 +795,7 @@
       "comment" : "Next Article"
     },
     "Next Unread" : {
-      "comment" : "Article bottom toolbar toggle: next unread\nNext Unread"
+      "comment" : "Next Unread"
     },
     "Next Unread Article" : {
       "comment" : "Next Unread Article"
@@ -862,7 +856,7 @@
       "comment" : "Ocean accent color"
     },
     "Off" : {
-      "comment" : "Article bottom toolbar: no buttons shown\nArticle top toolbar: no buttons shown\nHighlight creation method: off\nPage counter off"
+      "comment" : "Article top toolbar: no buttons shown\nHighlight creation method: off\nPage counter off"
     },
     "OK" : {
       "comment" : "OK button"
@@ -964,7 +958,7 @@
       "comment" : "Highlight color"
     },
     "Read Later" : {
-      "comment" : "Article bottom toolbar toggle: read later\nCommand\nRead Later"
+      "comment" : "Command\nRead Later"
     },
     "Reading Font" : {
       "comment" : "Reading Font picker label"
@@ -1044,9 +1038,6 @@
     "Search Bar" : {
       "comment" : "Surface palette preview: search bar swatch caption"
     },
-    "Search Highlights" : {
-      "comment" : "Annotations list: search field prompt"
-    },
     "Search: " : {
       "comment" : "Search smart feed title prefix"
     },
@@ -1090,13 +1081,13 @@
       "comment" : "Sepia accent color\nSepia surface palette"
     },
     "Settings" : {
-      "comment" : "Article top toolbar toggle: settings\nSurface palette preview: settings background swatch caption"
+      "comment" : "Surface palette preview: settings background swatch caption"
     },
     "Settings Cell" : {
       "comment" : "Surface palette preview: settings cell swatch caption"
     },
     "Share" : {
-      "comment" : "Article bottom toolbar toggle: share\nShare button"
+      "comment" : "Share button"
     },
     "Share AO3 Series Link" : {
       "comment" : "Command"
@@ -1234,9 +1225,6 @@
     "Toggle Loved Status" : {
       "comment" : "Toggle Loved Status"
     },
-    "Toggle Read" : {
-      "comment" : "Article bottom toolbar toggle: read"
-    },
     "Toggle Read Articles Filter" : {
       "comment" : "Toggle Read Articles Filter"
     },
@@ -1268,7 +1256,7 @@
       "comment" : "Transparent badge color palette"
     },
     "Unknown" : {
-      "comment" : "Annotation copy: unknown author fallback\nUnknown Value"
+      "comment" : "Unknown Value"
     },
     "unread" : {
       "comment" : "Unread label for accessibility"
