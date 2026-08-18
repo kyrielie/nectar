@@ -714,9 +714,9 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 
 		let listView = AnnotationsListView(account: account, scope: .book(bookKey: article.bookKey), title: article.title, onClose: { [weak self] in
 			self?.navigationController?.popViewController(animated: true)
-		}) { [weak self] annotation in
+		}, onNavigateToAnnotation: { [weak self] annotation in
 			self?.navigateToAnnotation(annotation, account: account)
-		}
+		})
 		// Pushed directly onto this controller's own navigation stack
 		// (same pattern as showThemePicker/showTableOfContents elsewhere
 		// in this file) rather than presented modally -- a modal
