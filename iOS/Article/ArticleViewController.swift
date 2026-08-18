@@ -22,21 +22,24 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// doc comment. MainFeed/MainTimeline stay on the protocol's default false.
 	var supportsBlendToolbarStyle: Bool { true }
 
-	@IBOutlet private weak var nextUnreadBarButtonItem: UIBarButtonItem!
-	// Strong, unlike the other bar-button outlets here: these two are now
-	// conditionally left out of navigationItem.rightBarButtonItems (see
-	// rightBarButtonItems()/articleToolbarShowPrevNext), and nothing else
-	// retains them when they're not currently in that array. Weak outlets
-	// with no other owner get deallocated, which crashed updateUI()'s
-	// isEnabled assignments below when the setting was off (Fatally
-	// unwrapped Optional value). readBarButtonItem/starBarButtonItem/
-	// actionBarButtonItem/nextUnreadBarButtonItem don't need this because
-	// they're unconditionally in toolbarItems, set once in viewDidLoad.
+	// Strong (see comment on the block below): conditionally left out of
+	// toolbarItems by bottomToolbarItems() same as the other four.
+	@IBOutlet private var nextUnreadBarButtonItem: UIBarButtonItem!
+	// Strong, unlike a plain @IBOutlet weak var: these five are now
+	// conditionally left out of toolbarItems by bottomToolbarItems() (see
+	// BottomToolbarToggle/AppDefaults.isBottomToolbarToggleEnabled(_:)), and
+	// nothing else retains them when they're not currently in that array.
+	// Weak outlets with no other owner get deallocated, which crashed
+	// updateUI()'s isEnabled assignments below when a toggle was off
+	// (Fatally unwrapped Optional value) -- same failure mode
+	// prevArticleBarButtonItem/nextArticleBarButtonItem already guard
+	// against below for the top-toolbar prevNext toggle, now needed here
+	// too since these five are no longer unconditionally in toolbarItems.
 	@IBOutlet private var prevArticleBarButtonItem: UIBarButtonItem!
 	@IBOutlet private var nextArticleBarButtonItem: UIBarButtonItem!
-	@IBOutlet private weak var readBarButtonItem: UIBarButtonItem!
-	@IBOutlet private weak var starBarButtonItem: UIBarButtonItem!
-	@IBOutlet private weak var actionBarButtonItem: UIBarButtonItem!
+	@IBOutlet private var readBarButtonItem: UIBarButtonItem!
+	@IBOutlet private var starBarButtonItem: UIBarButtonItem!
+	@IBOutlet private var actionBarButtonItem: UIBarButtonItem!
 
 	// Phase 5/6 fork additions. Code-constructed rather than @IBOutlet like the
 	// items above -- toolbarItems/navigationItem are already fully assembled in
@@ -60,6 +63,15 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// (see showAnnotationsList's own doc comment), so there's no longer a
 	// choice to present a menu for.
 	private lazy var annotationsBarButtonItem = UIBarButtonItem(image: Assets.Images.annotations, style: .plain, target: self, action: #selector(showAnnotationsList(_:)))
+	// Opens Settings scrolled to the Articles section -- independent of
+	// whatever's on screen in the reader, so safe to call regardless of
+	// the reader's own presentation state. See showSettingsFromToolbar(_:).
+	private lazy var settingsBarButtonItem = UIBarButtonItem(image: Assets.Images.settings, style: .plain, target: self, action: #selector(showSettingsFromToolbar(_:)))
+	// Per-article eligibility (AO3ChapterFetcher.canCheckForUpdates(for:))
+	// is not evaluated here -- this item is always constructed; updateUI()
+	// toggles isEnabled per-article each time `article` changes. See
+	// updateUI()'s checkForUpdatesBarButtonItem handling.
+	private lazy var checkForUpdatesBarButtonItem = UIBarButtonItem(image: Assets.Images.checkForUpdates, style: .plain, target: self, action: #selector(checkForUpdatesFromToolbar(_:)))
 
 	@IBOutlet private var searchBar: ArticleSearchBar!
 	@IBOutlet private var searchBarBottomConstraint: NSLayoutConstraint!
@@ -196,19 +208,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		// excluded bands from rightBarButtonItems().count on every touch. No
 		// title text is ever set on this screen, so titleView is simply left nil.
 		navigationItem.rightBarButtonItems = rightBarButtonItems()
-
-		let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
-		toolbarItems = [
-			readBarButtonItem,
-			flex(),
-			starBarButtonItem,
-			flex(),
-			heartBarButtonItem,
-			flex(),
-			nextUnreadBarButtonItem,
-			flex(),
-			actionBarButtonItem
-		]
+		toolbarItems = bottomToolbarItems()
 
 		pageViewController = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal, options: [:])
 		pageViewController.delegate = self
@@ -336,6 +336,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			starBarButtonItem.isEnabled = false
 			heartBarButtonItem.isEnabled = false
 			actionBarButtonItem.isEnabled = false
+			checkForUpdatesBarButtonItem.isEnabled = false
 			return
 		}
 
@@ -374,6 +375,22 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			heartBarButtonItem.image = Assets.Images.heartOpen
 			heartBarButtonItem.accLabelText = NSLocalizedString("Loved", comment: "Loved")
 		}
+
+		// Per-article eligibility for the top-toolbar Check for Updates
+		// button -- unlike the other top-toolbar toggles (theme/table of
+		// contents/find/prevNext/lock/annotations/settings), which only
+		// depend on a static AppDefaults toggle, this one also depends on
+		// AO3ChapterFetcher.canCheckForUpdates(for:), which varies per
+		// article and isn't re-evaluated by rightBarButtonItems() itself.
+		// Always-reserved-slot approach (shown, disabled, for an ineligible
+		// article) rather than vanishing entirely -- consistent with
+		// actionBarButtonItem's isEnabled-toggling shape just above, and
+		// keeps which icons occupy the top bar's slots stable article to
+		// article.
+		if AppDefaults.shared.isArticleToolbarToggleEnabled(.checkForUpdates) {
+			let eligible = AO3ChapterFetcher.shared.canCheckForUpdates(for: article)
+			checkForUpdatesBarButtonItem.isEnabled = eligible && AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article)
+		}
 	}
 
 	// MARK: Notifications
@@ -396,6 +413,33 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 
 	@objc func contentSizeCategoryDidChange(_ note: Notification) {
 		currentWebViewController?.fullReload()
+	}
+
+	private func flexibleSpaceBarButtonItem() -> UIBarButtonItem {
+		UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+	}
+
+	// Order: read, star, heart, next unread, action -- each driven by its
+	// own independent AppDefaults toggle (BottomToolbarCustomizerViewController),
+	// so any combination (including none) is valid, matching
+	// rightBarButtonItems()'s shape just below. flexibleSpace is only
+	// inserted between two consecutive present items, not before the
+	// first or after the last, so the bar doesn't start/end with dead
+	// space when fewer than five are enabled.
+	private func bottomToolbarItems() -> [UIBarButtonItem] {
+		let defaults = AppDefaults.shared
+		var items: [UIBarButtonItem] = []
+		let candidates: [(BottomToolbarToggle, UIBarButtonItem)] = [
+			(.read, readBarButtonItem), (.star, starBarButtonItem), (.heart, heartBarButtonItem),
+			(.nextUnread, nextUnreadBarButtonItem), (.action, actionBarButtonItem)
+		]
+		for (toggle, item) in candidates where defaults.isBottomToolbarToggleEnabled(toggle) {
+			if !items.isEmpty {
+				items.append(flexibleSpaceBarButtonItem())
+			}
+			items.append(item)
+		}
+		return items
 	}
 
 	// Order: theme, table of contents, find, previous/next -- each driven
@@ -423,6 +467,12 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		if defaults.isArticleToolbarToggleEnabled(.annotations) {
 			items.append(annotationsBarButtonItem)
 		}
+		if defaults.isArticleToolbarToggleEnabled(.settings) {
+			items.append(settingsBarButtonItem)
+		}
+		if defaults.isArticleToolbarToggleEnabled(.checkForUpdates) {
+			items.append(checkForUpdatesBarButtonItem)
+		}
 		return items
 	}
 
@@ -430,6 +480,11 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		Task { @MainActor in
 			coordinator.applyArticleBackSwipeGating()
 			navigationItem.rightBarButtonItems = rightBarButtonItems()
+			// A live change from BottomToolbarCustomizerViewController must
+			// repaint the open article's bottom bar immediately, matching
+			// how the top bar already behaves via rightBarButtonItems()
+			// just above.
+			toolbarItems = bottomToolbarItems()
 			// applySurfacePaletteNavigationBarAppearance() intentionally no
 			// longer runs from here -- see surfaceTintDidChange(_:) below.
 			// Left commented, not deleted, so the "before" behavior this patch
@@ -658,22 +713,45 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		guard let article, let account = article.account else { return }
 
 		let listView = AnnotationsListView(account: account, scope: .book(bookKey: article.bookKey), title: article.title, onClose: { [weak self] in
-			self?.dismiss(animated: true)
+			self?.navigationController?.popViewController(animated: true)
 		}) { [weak self] annotation in
 			self?.navigateToAnnotation(annotation, account: account)
 		}
-		// listView is NOT wrapped in its own NavigationStack here -- it's
-		// going straight into a UIKit UINavigationController below, and
-		// SwiftUI's navigationTitle/toolbar already propagate to the
-		// nearest UINavigationController's navigationItem without one.
-		// Wrapping it in a NavigationStack first used to create a second,
-		// independent nav bar (SwiftUI's own) nested inside the UIKit one,
-		// so the "Long Enough" title -- and only the inner bar's close
-		// button -- rendered twice, stacked on top of each other.
+		// Pushed directly onto this controller's own navigation stack
+		// (same pattern as showThemePicker/showTableOfContents elsewhere
+		// in this file) rather than presented modally -- a modal
+		// present/dismiss here left the person on the article's screen
+		// with no way back to the annotations list, since dismissing a
+		// modal and popping a nav stack are different operations and
+		// navigateToAnnotation's cross-article path relies on the latter
+		// (see that method's own doc comment). listView is NOT wrapped in
+		// its own NavigationStack -- it's going straight onto a UIKit
+		// UINavigationController (this one), and SwiftUI's
+		// navigationTitle/toolbar already propagate to the nearest
+		// UINavigationController's navigationItem without one. Wrapping it
+		// in a NavigationStack first used to create a second, independent
+		// nav bar (SwiftUI's own) nested inside the UIKit one, so the
+		// title -- and only the inner bar's close button -- rendered
+		// twice, stacked on top of each other.
 		let hostingController = UIHostingController(rootView: listView)
-		let navController = UINavigationController(rootViewController: hostingController)
-		navController.modalPresentationStyle = .fullScreen
-		present(navController, animated: true)
+		navigationController?.pushViewController(hostingController, animated: true)
+	}
+
+	@objc private func showSettingsFromToolbar(_ sender: Any) {
+		coordinator.showSettings(scrollToArticlesSection: true)
+	}
+
+	@objc private func checkForUpdatesFromToolbar(_ sender: Any) {
+		guard let article else { return }
+		guard AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article) else {
+			// The button is disabled (see updateUI()) whenever this guard
+			// would fail, so this shouldn't normally fire -- no user-visible
+			// messaging here, unlike the context-menu version's disabled
+			// title text (WebViewController.checkForUpdatesAction()), since
+			// a toolbar button has no room for that. Silent no-op.
+			return
+		}
+		AO3ChapterFetcher.shared.checkForUpdates(for: article)
 	}
 
 	/// Shared by both the toolbar-button list (showAnnotationsList above)
@@ -686,20 +764,24 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	/// doesn't store an accountID -- account is whatever AnnotationsListView
 	/// itself fetched the annotation from.
 	///
-	/// The toolbar-button list is presented modally (see
-	/// showAnnotationsList), so returning to the article here means
-	/// dismissing that modal, not popping the shared navigation stack --
-	/// popToViewController(self:) would be a no-op (or worse, an incorrect
-	/// pop on whatever's actually on that stack) since the list is no
-	/// longer pushed onto it. The Settings unscoped list
-	/// (AnnotationsSettingsView) is reached by an entirely different
+	/// The toolbar-button list is pushed onto this controller's own
+	/// navigation stack (see showAnnotationsList), so returning to the
+	/// article here means popping that stack, not dismissing a modal --
+	/// selectArticleDirectly mutates this same ArticleViewController
+	/// instance's `article` property in place (SceneCoordinator.swift's
+	/// selectArticleDirectly) rather than pushing a new view controller,
+	/// so the stack underneath the pushed AnnotationsListView is still
+	/// exactly [ArticleViewController] regardless of which annotation was
+	/// tapped -- popping always reveals the right thing, for both the
+	/// same-article and cross-article paths below. The Settings unscoped
+	/// list (AnnotationsSettingsView) is reached by an entirely different
 	/// presentation chain owned by SettingsViewController, not this one,
-	/// so dismiss(animated:) here only ever affects the toolbar-button
-	/// path's own modal.
+	/// so popViewController(animated:) here only ever affects the
+	/// toolbar-button path's own stack.
 	func navigateToAnnotation(_ annotation: Annotation, account: Account) {
 		if article?.articleID == annotation.articleID {
 			currentWebViewController?.scrollToAnnotation(annotationID: annotation.annotationID)
-			dismiss(animated: true)
+			navigationController?.popViewController(animated: true)
 			return
 		}
 
@@ -716,7 +798,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			// delay.
 			await self.currentWebViewController?.awaitNextPageLoad()
 			self.currentWebViewController?.scrollToAnnotation(annotationID: annotation.annotationID)
-			self.dismiss(animated: true)
+			self.navigationController?.popViewController(animated: true)
 		}
 	}
 

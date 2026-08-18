@@ -531,6 +531,28 @@ enum ArticleToolbarToggle: CaseIterable, Sendable {
 	case prevNext
 	case lock
 	case annotations
+	case settings
+	case checkForUpdates
+}
+
+/// One independent on/off switch per bottom-toolbar button
+/// (AppDefaults.bottomToolbarShowRead/ShowStar/ShowHeart/ShowNextUnread/
+/// ShowAction), same freely-combinable shape as ArticleToolbarToggle
+/// above but for ArticleViewController's bottom UIToolbar rather than its
+/// top navigation bar. Unlike ArticleToolbarToggle, every case here
+/// defaults to true (see registerDefaults()) -- these five buttons are
+/// the app's existing, always-on bottom bar; introducing this customizer
+/// must not silently empty the bar for people who never open the new
+/// settings screen. No 4-icon cap here (see
+/// BottomToolbarCustomizerViewController) -- the bottom bar's
+/// flexibleSpace-separated layout distributes evenly regardless of item
+/// count, unlike the top bar's fixed-width leading cluster.
+enum BottomToolbarToggle: CaseIterable, Sendable {
+	case read
+	case star
+	case heart
+	case nextUnread
+	case action
 }
 
 /// How a new highlight can be created from a text selection in an
@@ -620,6 +642,13 @@ final class AppDefaults: Sendable {
 		static let articleToolbarShowPrevNext = "articleToolbarShowPrevNext"
 		static let articleToolbarShowLock = "articleToolbarShowLock"
 		static let articleToolbarShowAnnotations = "articleToolbarShowAnnotations"
+		static let articleToolbarShowSettings = "articleToolbarShowSettings"
+		static let articleToolbarShowCheckForUpdates = "articleToolbarShowCheckForUpdates"
+		static let bottomToolbarShowRead = "bottomToolbarShowRead"
+		static let bottomToolbarShowStar = "bottomToolbarShowStar"
+		static let bottomToolbarShowHeart = "bottomToolbarShowHeart"
+		static let bottomToolbarShowNextUnread = "bottomToolbarShowNextUnread"
+		static let bottomToolbarShowAction = "bottomToolbarShowAction"
 		static let defaultAnnotationColor = "defaultAnnotationColor"
 		static let annotationCreationMethod = "annotationCreationMethod"
 		static let hideNotchInFullScreen = "hideNotchInFullScreen"
@@ -926,6 +955,33 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	/// Off by default, same reasoning as articleToolbarShowLock/
+	/// articleToolbarShowAnnotations above: an opt-in extra, not something
+	/// everyone needs cluttering the bar. Opens Settings, scrolled to the
+	/// Articles section -- see ArticleViewController.showSettingsFromToolbar.
+	var articleToolbarShowSettings: Bool {
+		get {
+			return AppDefaults.bool(for: Key.articleToolbarShowSettings)
+		}
+		set {
+			AppDefaults.setBool(for: Key.articleToolbarShowSettings, newValue)
+		}
+	}
+
+	/// Off by default, same reasoning as the other opt-in toolbar extras
+	/// above. Unlike those, this one's bar-button item also has per-article
+	/// eligibility on top of this toggle -- see
+	/// ArticleViewController.updateUI()'s checkForUpdatesBarButtonItem
+	/// handling, gated on AO3ChapterFetcher.canCheckForUpdates(for:).
+	var articleToolbarShowCheckForUpdates: Bool {
+		get {
+			return AppDefaults.bool(for: Key.articleToolbarShowCheckForUpdates)
+		}
+		set {
+			AppDefaults.setBool(for: Key.articleToolbarShowCheckForUpdates, newValue)
+		}
+	}
+
 	/// The color HighlightColorPopover's note-icon path (which creates a
 	/// highlight without the person picking a color) falls back to, and
 	/// the starting selection in the annotations toolbar menu's "Default
@@ -975,6 +1031,8 @@ final class AppDefaults: Sendable {
 		case .prevNext: return articleToolbarShowPrevNext
 		case .lock: return articleToolbarShowLock
 		case .annotations: return articleToolbarShowAnnotations
+		case .settings: return articleToolbarShowSettings
+		case .checkForUpdates: return articleToolbarShowCheckForUpdates
 		}
 	}
 
@@ -986,6 +1044,87 @@ final class AppDefaults: Sendable {
 		case .prevNext: articleToolbarShowPrevNext = enabled
 		case .lock: articleToolbarShowLock = enabled
 		case .annotations: articleToolbarShowAnnotations = enabled
+		case .settings: articleToolbarShowSettings = enabled
+		case .checkForUpdates: articleToolbarShowCheckForUpdates = enabled
+		}
+	}
+
+	/// Whether the "Toggle Read" button appears in the article reader's
+	/// bottom toolbar. Defaults to true -- see BottomToolbarToggle's own
+	/// doc comment for why this group's default differs from
+	/// ArticleToolbarToggle's opt-in-off-by-default extras.
+	var bottomToolbarShowRead: Bool {
+		get {
+			return AppDefaults.bool(for: Key.bottomToolbarShowRead)
+		}
+		set {
+			AppDefaults.setBool(for: Key.bottomToolbarShowRead, newValue)
+		}
+	}
+
+	/// Whether the "Toggle Starred" (Read Later) button appears in the
+	/// article reader's bottom toolbar. Defaults to true.
+	var bottomToolbarShowStar: Bool {
+		get {
+			return AppDefaults.bool(for: Key.bottomToolbarShowStar)
+		}
+		set {
+			AppDefaults.setBool(for: Key.bottomToolbarShowStar, newValue)
+		}
+	}
+
+	/// Whether the "Loved" heart button appears in the article reader's
+	/// bottom toolbar. Defaults to true.
+	var bottomToolbarShowHeart: Bool {
+		get {
+			return AppDefaults.bool(for: Key.bottomToolbarShowHeart)
+		}
+		set {
+			AppDefaults.setBool(for: Key.bottomToolbarShowHeart, newValue)
+		}
+	}
+
+	/// Whether the "Next Unread" button appears in the article reader's
+	/// bottom toolbar. Defaults to true.
+	var bottomToolbarShowNextUnread: Bool {
+		get {
+			return AppDefaults.bool(for: Key.bottomToolbarShowNextUnread)
+		}
+		set {
+			AppDefaults.setBool(for: Key.bottomToolbarShowNextUnread, newValue)
+		}
+	}
+
+	/// Whether the share/action button appears in the article reader's
+	/// bottom toolbar. Defaults to true.
+	var bottomToolbarShowAction: Bool {
+		get {
+			return AppDefaults.bool(for: Key.bottomToolbarShowAction)
+		}
+		set {
+			AppDefaults.setBool(for: Key.bottomToolbarShowAction, newValue)
+		}
+	}
+
+	/// Single dispatch point over the five bottomToolbarShowX properties,
+	/// same shape as isArticleToolbarToggleEnabled(_:) above.
+	func isBottomToolbarToggleEnabled(_ toggle: BottomToolbarToggle) -> Bool {
+		switch toggle {
+		case .read: return bottomToolbarShowRead
+		case .star: return bottomToolbarShowStar
+		case .heart: return bottomToolbarShowHeart
+		case .nextUnread: return bottomToolbarShowNextUnread
+		case .action: return bottomToolbarShowAction
+		}
+	}
+
+	func setBottomToolbarToggleEnabled(_ toggle: BottomToolbarToggle, _ enabled: Bool) {
+		switch toggle {
+		case .read: bottomToolbarShowRead = enabled
+		case .star: bottomToolbarShowStar = enabled
+		case .heart: bottomToolbarShowHeart = enabled
+		case .nextUnread: bottomToolbarShowNextUnread = enabled
+		case .action: bottomToolbarShowAction = enabled
 		}
 	}
 
@@ -1397,6 +1536,11 @@ final class AppDefaults: Sendable {
 									Key.articleToolbarShowFind: true,
 									Key.articleToolbarShowPrevNext: false,
 									Key.articleToolbarShowLock: false,
+									Key.bottomToolbarShowRead: true,
+									Key.bottomToolbarShowStar: true,
+									Key.bottomToolbarShowHeart: true,
+									Key.bottomToolbarShowNextUnread: true,
+									Key.bottomToolbarShowAction: true,
 									Key.hideNotchInFullScreen: true,
 									Key.pageCounterDisplayMode: PageCounterDisplayMode.percentage.rawValue,
 									Key.showLastUpdatedLabel: false,
