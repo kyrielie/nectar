@@ -72,9 +72,9 @@ struct AnnotationsListView: View {
 
 	/// Explicit close handler for callers that present this view
 	/// imperatively via UIKit (ArticleViewController.showAnnotationsList
-	/// wraps this in a UIHostingController inside a UINavigationController
-	/// and calls present(_:animated:) directly, entirely outside SwiftUI's
-	/// own presentation machinery) -- @Environment(\.dismiss) only gets a
+	/// wraps this in a UIHostingController and pushes it directly onto its
+	/// own UINavigationController, entirely outside SwiftUI's own
+	/// navigation machinery) -- @Environment(\.dismiss) only gets a
 	/// working handler wired up when SwiftUI itself performed the
 	/// presentation/push, so it's a silent no-op there. nil (the default)
 	/// falls back to dismiss(), which is correct for the Settings entry
@@ -104,6 +104,13 @@ struct AnnotationsListView: View {
 
 	private struct Row: Identifiable {
 		let annotation: Annotation
+		/// Comma-joined, sorted Author.name list for this row's article;
+		/// nil when the article has no authors with a name. Row-level
+		/// (not group-level) since a (bookKey, chapterTitle) group can, in
+		/// the .everything scope's cross-book case, span articles that
+		/// don't necessarily share authors -- see loadRows'
+		/// authorsByArticleID.
+		let articleAuthors: String?
 
 		var id: String { annotation.annotationID }
 	}
@@ -258,7 +265,7 @@ struct AnnotationsListView: View {
 			Button {
 				onNavigateToAnnotation(row.annotation)
 			} label: {
-				AnnotationRow(annotation: row.annotation)
+				AnnotationRow(annotation: row.annotation, articleAuthors: row.articleAuthors)
 			}
 			.buttonStyle(.plain)
 			.swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -294,6 +301,13 @@ struct AnnotationsListView: View {
 		let articleIDs = Set(annotations.map(\.articleID))
 		let articles = await account.fetchArticlesAsync(.articleIDs(articleIDs))
 		let titlesByArticleID = Dictionary(uniqueKeysWithValues: articles.map { ($0.articleID, $0.title ?? NSLocalizedString("Untitled", comment: "Fallback article title")) })
+		// Set<Author> iteration order isn't guaranteed stable between
+		// renders -- sort names before joining so a row's byline doesn't
+		// visually reorder itself across reloads.
+		let authorsByArticleID = Dictionary(uniqueKeysWithValues: articles.map { article -> (String, String?) in
+			let names = (article.authors ?? []).compactMap(\.name).sorted()
+			return (article.articleID, names.isEmpty ? nil : names.joined(separator: ", "))
+		})
 
 		// Grouped by (bookKey ?? articleID, chapterTitle) -- see this file's
 		// header comment.
@@ -359,7 +373,7 @@ struct AnnotationsListView: View {
 					.compactMap { titlesByArticleID[$0.articleID] }
 					.first ?? NSLocalizedString("Untitled", comment: "Fallback article title")
 				let heading = key.chapterTitle ?? fallbackTitle
-				let rows = sortedAnnotations.map { Row(annotation: $0) }
+				let rows = sortedAnnotations.map { Row(annotation: $0, articleAuthors: authorsByArticleID[$0.articleID] ?? nil) }
 				return AnnotationGroup(key: key, heading: heading, rows: rows)
 			}
 			.sorted { lhs, rhs in
@@ -400,6 +414,10 @@ struct AnnotationsListView: View {
 private struct AnnotationRow: View {
 
 	let annotation: Annotation
+	/// Comma-joined, sorted Author.name list for this row's article; nil
+	/// when the article has no authors with a name. See
+	/// AnnotationsListView.loadRows' authorsByArticleID.
+	let articleAuthors: String?
 
 	var body: some View {
 		HStack(alignment: .top, spacing: 12) {
@@ -423,6 +441,12 @@ private struct AnnotationRow: View {
 						.font(.caption)
 						.foregroundStyle(.secondary)
 						.lineLimit(1)
+				}
+
+				if let articleAuthors {
+					Text(articleAuthors)
+						.font(.caption2)
+						.foregroundStyle(.tertiary)
 				}
 
 				if annotation.orphanedAt != nil {

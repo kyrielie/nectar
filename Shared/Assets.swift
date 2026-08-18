@@ -65,6 +65,12 @@ struct Assets {
 		static let more = RSImage(symbol: "ellipsis.circle")!
 		static let nextArticle = RSImage(symbol: "chevron.down")!
 		static let circleOpen = RSImage(symbol: "circle")!
+		// Same SF Symbol Main.storyboard's actionBarButtonItem uses --
+		// duplicated here (not read from the storyboard) so
+		// BottomToolbarPreviewCell can render it without needing a live
+		// ArticleViewController instance to read the real item's image
+		// from. See ArticleViewController.actionBarButtonItem.
+		static let action = RSImage(symbol: "square.and.arrow.up")!
 		static var disclosure: RSImage { RSImage(named: "disclosure")! }
 		static let deactivate = RSImage(symbol: "minus.circle")!
 		static let currentActivity = RSImage(symbol: "text.pad.header")!
@@ -90,6 +96,9 @@ struct Assets {
 		static let tableOfContents = RSImage(symbol: "list.bullet")!
 		static let annotationAddNote = RSImage(symbol: "note.text.badge.plus")!
 		static let annotations = RSImage(symbol: "highlighter")!
+		// "gear" (smartFeed above) is already in use for something
+		// unrelated -- a distinct symbol avoids confusion between the two.
+		static let settings = RSImage(symbol: "gearshape")!
 
 		// Loved smart feed icon: filled heart, system red by default --
 		// replaces the starredFeed-borrowed placeholder in
