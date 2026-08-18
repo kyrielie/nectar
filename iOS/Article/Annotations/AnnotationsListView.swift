@@ -81,7 +81,7 @@ struct AnnotationsListView: View {
 	/// point below: that one reaches this view through a real SwiftUI
 	/// NavigationLink push, so dismiss() (pop, in that context) already
 	/// works.
-	var onClose: (() -> Void)? = nil
+	var onClose: (() -> Void)?
 
 	@Environment(\.dismiss) private var dismiss
 
