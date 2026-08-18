@@ -116,6 +116,7 @@
 		6A6169277BFDBC3B1FACF43C /* DinosaursViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C47592158ABEC8111DB9779 /* DinosaursViewModel.swift */; };
 		6B9747BEC3D508BF9DB96245 /* AccountStatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AA5C3AF2D66603B137286C /* AccountStatsViewModel.swift */; };
 		6CEBC97A08008CB67A28291A /* HTMLMetadata in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 4559831348CB9C8A2C698570 /* HTMLMetadata */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		6E6919569CA1F94DC5E50F36 /* HighlightPaletteHexSetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E93222DD033E865745C6A88 /* HighlightPaletteHexSetTests.swift */; };
 		6EC9F6DF1F0F19449A407F16 /* RSParser in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 8CB7900664FB4296957673EE /* RSParser */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		7185715ED660FCF5262FF749 /* ImageScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3472ABAEE5785D58F471F949 /* ImageScrollView.swift */; };
 		71CBD04D0572D50A98B3FB89 /* MainTimelineModernViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57FE45B6BA716CEB68E7E3D8 /* MainTimelineModernViewController.swift */; };
@@ -243,6 +244,7 @@
 		E519EB4F5198C1393FA2E331 /* BadgeColorPaletteMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5994234741BCD86648B5DDA /* BadgeColorPaletteMigrationTests.swift */; };
 		E5559C48B3DCA17AFE420F34 /* ActivityItemSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8A6E7B6A2FCD1F653F1FE71 /* ActivityItemSourceTests.swift */; };
 		E567DA284E710D8A673CE44D /* ArticleSorter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF226A5ECF752BAE9EED574B /* ArticleSorter.swift */; };
+		E5A04743D3E6E06F9B2F261D /* HighlightPalettePreviewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D9699C68E462B7A862D6B35 /* HighlightPalettePreviewCell.swift */; };
 		E5A87EEFF1E19D4BB211641D /* ContentRules.json in Resources */ = {isa = PBXBuildFile; fileRef = 62DF02339C37028C72EBA286 /* ContentRules.json */; };
 		E6A2290A54981CBEE83AE94B /* SyncDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 826BB50324A86B430B4B4EF1 /* SyncDatabase */; };
 		E7B682DAE0BAE82E357CFC6C /* ArticleThemeColorExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127FB44DB2E710B002378022 /* ArticleThemeColorExtractor.swift */; };
@@ -345,6 +347,7 @@
 		2A2CEA9E5E12154C49D84EF1 /* SidebarTreeControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarTreeControllerDelegate.swift; sourceTree = "<group>"; };
 		2ADC0A7692523D27CDB78B4E /* SettingsCellBackgroundHostingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsCellBackgroundHostingTests.swift; sourceTree = "<group>"; };
 		2BD2C21916AA07DB85053663 /* ArticleRendererStripFakeParagraphIndentsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleRendererStripFakeParagraphIndentsTests.swift; sourceTree = "<group>"; };
+		2D9699C68E462B7A862D6B35 /* HighlightPalettePreviewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighlightPalettePreviewCell.swift; sourceTree = "<group>"; };
 		2EDC270642BF19D867FF0D76 /* ArticleActivityItemSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleActivityItemSource.swift; sourceTree = "<group>"; };
 		2F619363B7BB3ECB98B4F29F /* main_ios.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = main_ios.js; sourceTree = "<group>"; };
 		30ED27154B94D45D159B5733 /* stylesheet.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = stylesheet.css; sourceTree = "<group>"; };
@@ -433,6 +436,7 @@
 		7BAE10E60861568C8E559341 /* NetNewsWire-iOS.xctestplan */ = {isa = PBXFileReference; path = "NetNewsWire-iOS.xctestplan"; sourceTree = "<group>"; };
 		7CE6D393FC4AFCF322513FB2 /* FetchRequestOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchRequestOperation.swift; sourceTree = "<group>"; };
 		7DE280DE15D62A0E4A8F6B8B /* ArticleThemePreviewSampleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemePreviewSampleTests.swift; sourceTree = "<group>"; };
+		7E93222DD033E865745C6A88 /* HighlightPaletteHexSetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighlightPaletteHexSetTests.swift; sourceTree = "<group>"; };
 		7F4665A8DDB114A0CD115297 /* ErrorHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorHandler.swift; sourceTree = "<group>"; };
 		8521720A8BD99B7FE4C42704 /* ActivityLogViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogViewModel.swift; sourceTree = "<group>"; };
 		8558D10A2225396DFF02A326 /* SingleLineUILabelSizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleLineUILabelSizer.swift; sourceTree = "<group>"; };
@@ -763,6 +767,7 @@
 				6C7B99107A73BC3141F4F0B9 /* CSSImportExtractorTests.swift */,
 				BB674085333B4C058A3C9F50 /* FullScreenReadingAccentColorLiveUpdateTests.swift */,
 				0F15597A347547A2DFAE19C6 /* FullScreenReadingHideNotchTests.swift */,
+				7E93222DD033E865745C6A88 /* HighlightPaletteHexSetTests.swift */,
 				F0D7BA9E051981936DAE4604 /* SettingsAccentColorLiveUpdateTests.swift */,
 				E07EBBC22B9309D68CCFEC78 /* SettingsAvailabilityLabelTests.swift */,
 				2ADC0A7692523D27CDB78B4E /* SettingsCellBackgroundHostingTests.swift */,
@@ -940,6 +945,7 @@
 				582127E86C4807B8A27FAD41 /* DinosaursView.swift */,
 				4BD14AFD73283E4A17F79029 /* ErrorLogView.swift */,
 				DD5CC56732A2595AAA4BED8C /* FullScreenReadingViewController.swift */,
+				2D9699C68E462B7A862D6B35 /* HighlightPalettePreviewCell.swift */,
 				58DD787FD23F8CE9B951A23E /* ManageStorageCollectionViewController.swift */,
 				C83404D704F2CDA8FAD0D667 /* Settings.storyboard */,
 				E671B8CA44751B167C2545E7 /* SettingsBackgroundPalette.swift */,
@@ -1445,6 +1451,7 @@
 				C57A406403A9BAC7B73BF45D /* FullScreenReadingViewController.swift in Sources */,
 				D84339611E2FFDFAA450A636 /* HidingReadArticlesState.swift in Sources */,
 				1696B7FE5F7BA095FDF23A2A /* HighlightColorPopover.swift in Sources */,
+				E5A04743D3E6E06F9B2F261D /* HighlightPalettePreviewCell.swift in Sources */,
 				B8BF35D77117124EECF85D47 /* IconImageCache.swift in Sources */,
 				9E9199F0CF1B5203C3E818A8 /* IconImageView.swift in Sources */,
 				E0CFD853361806ABA5CEABF3 /* IconView.swift in Sources */,
@@ -1551,6 +1558,7 @@
 				D04AD69BF7079B6525C0DC2B /* CopyHighlightTextTests.swift in Sources */,
 				1ABF6F936980011E836D3341 /* FullScreenReadingAccentColorLiveUpdateTests.swift in Sources */,
 				CEE0E5B31C0643495F161BBE /* FullScreenReadingHideNotchTests.swift in Sources */,
+				6E6919569CA1F94DC5E50F36 /* HighlightPaletteHexSetTests.swift in Sources */,
 				CCCA3EFF538578E81FFF6641 /* SettingsAccentColorLiveUpdateTests.swift in Sources */,
 				44DBF519E16D065A86BD8235 /* SettingsAvailabilityLabelTests.swift in Sources */,
 				77D09FF8A9378467C32A0FD2 /* SettingsCellBackgroundHostingTests.swift in Sources */,
