@@ -662,7 +662,15 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		}) { [weak self] annotation in
 			self?.navigateToAnnotation(annotation, account: account)
 		}
-		let hostingController = UIHostingController(rootView: NavigationStack { listView })
+		// listView is NOT wrapped in its own NavigationStack here -- it's
+		// going straight into a UIKit UINavigationController below, and
+		// SwiftUI's navigationTitle/toolbar already propagate to the
+		// nearest UINavigationController's navigationItem without one.
+		// Wrapping it in a NavigationStack first used to create a second,
+		// independent nav bar (SwiftUI's own) nested inside the UIKit one,
+		// so the "Long Enough" title -- and only the inner bar's close
+		// button -- rendered twice, stacked on top of each other.
+		let hostingController = UIHostingController(rootView: listView)
 		let navController = UINavigationController(rootViewController: hostingController)
 		navController.modalPresentationStyle = .fullScreen
 		present(navController, animated: true)
