@@ -340,13 +340,14 @@ enum HighlightPalette: Int, CaseIterable, Sendable {
 	/// is unrelated.
 	case sepia = 3
 	/// Soft pastel greens/blues/grays/lavender/rose -- gentle, low-contrast
-	/// set. Same single hex per color as mint/flourescent/refresh/warm/
-	/// neutral below: mild enough by design that a separate dark-mode
-	/// tuning wasn't judged necessary, unlike .default/.muted/.vivid/.sepia
-	/// above, so lightHexSet and darkHexSet both return this same HexSet.
+	/// light-mode set. Originally assumed mild enough that dark mode
+	/// could reuse the same HexSet unchanged; that assumption was wrong
+	/// (see darkHexSet below) -- white article text against several of
+	/// these pastels measured under 3:1 contrast, well below WCAG AA's
+	/// 4.5:1 for body text, so darkHexSet supplies its own deepened,
+	/// re-saturated values per color, same as every other case here.
 	case mint = 4
-	/// Saturated pink/orange/yellow/teal/sky-blue -- brighter than Mint,
-	/// still mild enough to skip a separate dark-mode tuning.
+	/// Saturated pink/orange/yellow/teal/sky-blue -- brighter than Mint.
 	case flourescent = 5
 	/// High-energy magenta/red/chartreuse/teal/indigo.
 	case refresh = 6
@@ -454,12 +455,24 @@ enum HighlightPalette: Int, CaseIterable, Sendable {
 			return HexSet(yellow: "#FFF176", red: "#FF6E6E", green: "#69F0AE", blue: "#6E9FFF", purple: "#EA80FC")
 		case .sepia:
 			return HexSet(yellow: "#A87A2E", red: "#8F4E38", green: "#64703F", blue: "#456B7A", purple: "#6B5470")
-		case .mint, .flourescent, .refresh, .warm, .neutral:
-			// Mild enough by design (see the case-level doc comments above)
-			// that a separate dark-mode tuning wasn't judged necessary --
-			// same HexSet as lightHexSet for these five, unlike
-			// .default/.muted/.vivid/.sepia above.
-			return lightHexSet
+		case .mint:
+			// White article text on these light-mode pastels was under
+			// 3:1 contrast in every slot (measured, not assumed) --
+			// nowhere near WCAG AA's 4.5:1 for body text -- so unlike the
+			// mint/flourescent/etc. block's original assumption, "mild"
+			// light-mode saturation does not imply dark mode is safe to
+			// reuse unchanged. Each dark value below is the same hue,
+			// deepened and re-saturated until white-text contrast clears
+			// 4.5:1 (verified per-color, not just at one sample point).
+			return HexSet(yellow: "#498027", red: "#20469B", green: "#52566A", blue: "#463487", purple: "#A31530")
+		case .flourescent:
+			return HexSet(yellow: "#AD1257", red: "#B65C00", green: "#7F7300", blue: "#2B8065", purple: "#1D7A9C")
+		case .refresh:
+			return HexSet(yellow: "#A31889", red: "#B30D00", green: "#717900", blue: "#008178", purple: "#333388")
+		case .warm:
+			return HexSet(yellow: "#417077", red: "#9E3419", green: "#976A09", blue: "#7A3C68", purple: "#6F5148")
+		case .neutral:
+			return HexSet(yellow: "#914722", red: "#8F5D25", green: "#B34205", blue: "#43607A", purple: "#7F7838")
 		}
 	}
 
