@@ -15,11 +15,17 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		case fullscreenChrome = 2
 	}
 
+	private enum TopToolbarRow: Int {
+		case topToolbar = 0
+		case bottomToolbar = 1
+	}
+
 	@IBOutlet var showFullscreenArticlesSwitch: UISwitch!
 	@IBOutlet var backSwipeEnabledSwitch: UISwitch!
 	@IBOutlet var pagingSwipeEnabledSwitch: UISwitch!
 	@IBOutlet var showArticleScrollbarSwitch: UISwitch!
 	@IBOutlet var articleTopToolbarModeDetailLabel: UILabel!
+	@IBOutlet var articleBottomToolbarModeDetailLabel: UILabel!
 	@IBOutlet var pageCounterDisplayModeDetailLabel: UILabel!
 	@IBOutlet var hideNotchInFullScreenSwitch: UISwitch!
 
@@ -37,6 +43,7 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		pagingSwipeEnabledSwitch.isOn = AppDefaults.shared.articlePagingSwipeEnabled
 		showArticleScrollbarSwitch.isOn = AppDefaults.shared.showArticleScrollbar
 		updateArticleTopToolbarModeLabel()
+		updateArticleBottomToolbarModeLabel()
 		updatePageCounterDisplayModeLabel()
 		updateHideNotchAvailability()
 		applyAccentColorTinting()
@@ -49,8 +56,16 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 	override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 		switch Section(rawValue: indexPath.section) {
 		case .topToolbar:
-			let articleToolbar = UIStoryboard.settings.instantiateController(ofType: ArticleToolbarCustomizerViewController.self)
-			self.navigationController?.pushViewController(articleToolbar, animated: true)
+			switch TopToolbarRow(rawValue: indexPath.row) {
+			case .topToolbar:
+				let articleToolbar = UIStoryboard.settings.instantiateController(ofType: ArticleToolbarCustomizerViewController.self)
+				self.navigationController?.pushViewController(articleToolbar, animated: true)
+			case .bottomToolbar:
+				let bottomToolbar = UIStoryboard.settings.instantiateController(ofType: BottomToolbarCustomizerViewController.self)
+				self.navigationController?.pushViewController(bottomToolbar, animated: true)
+			case nil:
+				break
+			}
 			tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
 		case .fullscreenChrome where indexPath.row == 0: // Page Counter
 			if let sourceView = tableView.cellForRow(at: indexPath) {
@@ -70,6 +85,16 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		} else {
 			let format = NSLocalizedString("%d Shown", comment: "Article top toolbar: number of buttons shown")
 			articleTopToolbarModeDetailLabel.text = String(format: format, enabledCount)
+		}
+	}
+
+	func updateArticleBottomToolbarModeLabel() {
+		let enabledCount = BottomToolbarToggle.allCases.filter(AppDefaults.shared.isBottomToolbarToggleEnabled).count
+		if enabledCount == 0 {
+			articleBottomToolbarModeDetailLabel.text = NSLocalizedString("Off", comment: "Article bottom toolbar: no buttons shown")
+		} else {
+			let format = NSLocalizedString("%d Shown", comment: "Article bottom toolbar: number of buttons shown")
+			articleBottomToolbarModeDetailLabel.text = String(format: format, enabledCount)
 		}
 	}
 

@@ -15,9 +15,11 @@
 //  update as they flip switches, rather than inferring behavior from
 //  labels. Top Toolbar (1) is one ArticleToolbarToggleCell per
 //  ArticleToolbarToggle case (theme, table of contents, find, prev/next,
-//  in that fixed order) -- each an independent UISwitch row. All four are
-//  freely combinable; flipping one writes straight to its own AppDefaults
-//  property and reloads both sections in place.
+//  lock, annotations, settings, check for updates, in that fixed order)
+//  -- each an independent UISwitch row, freely combinable up to a 4-icon
+//  cap (prevNext counts as 2 slots); flipping one writes straight to its
+//  own AppDefaults property and reloads both sections in place. See
+//  slotsUsed(excluding:) for the cap.
 //
 //  Both sections reload on the generic UserDefaults.didChangeNotification --
 //  the toggle setters don't post a dedicated notification, and
@@ -92,6 +94,20 @@ class ArticleToolbarCustomizerViewController: UICollectionViewController, Settin
 		collectionView.setCollectionViewLayout(layout, animated: false)
 	}
 
+	// MARK: Icon cap
+
+	/// Top-toolbar icon slots this cap applies to (matches
+	/// ArticleViewController.rightBarButtonItems()'s fixed-width leading
+	/// cluster) -- prevNext counts as 2 slots since it appends both
+	/// nextArticleBarButtonItem and prevArticleBarButtonItem.
+	private static let maxSlots = 4
+
+	private func slotsUsed(excluding toggle: ArticleToolbarToggle? = nil) -> Int {
+		ArticleToolbarToggle.allCases
+			.filter { $0 != toggle && AppDefaults.shared.isArticleToolbarToggleEnabled($0) }
+			.reduce(0) { $0 + ($1 == .prevNext ? 2 : 1) }
+	}
+
 	// MARK: UICollectionViewDataSource
 
 	override func numberOfSections(in collectionView: UICollectionView) -> Int {
@@ -114,7 +130,16 @@ class ArticleToolbarCustomizerViewController: UICollectionViewController, Settin
 
 		let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ArticleToolbarToggleCell.reuseIdentifier, for: indexPath) as! ArticleToolbarToggleCell
 		let toggle = ArticleToolbarToggle.allCases[indexPath.item]
-		cell.configure(toggle: toggle, isOn: AppDefaults.shared.isArticleToolbarToggleEnabled(toggle))
+		let isOn = AppDefaults.shared.isArticleToolbarToggleEnabled(toggle)
+		// A row already on stays interactive (so it can be turned back
+		// off); an off row past the cap becomes non-interactive, disabled
+		// like the same-shape precedent in
+		// FullScreenReadingViewController.updateHideNotchAvailability().
+		// Forward-only: existing over-cap configurations (from before this
+		// cap existed) aren't trimmed, they just can't add further icons.
+		let wouldAdd = toggle == .prevNext ? 2 : 1
+		let capReached = !isOn && (slotsUsed(excluding: toggle) + wouldAdd > Self.maxSlots)
+		cell.configure(toggle: toggle, isOn: isOn, isEnabled: !capReached)
 		return cell
 	}
 

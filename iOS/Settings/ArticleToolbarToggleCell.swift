@@ -52,10 +52,12 @@ final class ArticleToolbarToggleCell: UICollectionViewListCell {
 		toggle.addTarget(self, action: #selector(toggleChanged), for: .valueChanged)
 	}
 
-	func configure(toggle articleToolbarToggle: ArticleToolbarToggle, isOn: Bool) {
+	func configure(toggle articleToolbarToggle: ArticleToolbarToggle, isOn: Bool, isEnabled: Bool = true) {
 		toolbarToggle = articleToolbarToggle
 		label.text = Self.title(for: articleToolbarToggle)
+		label.isEnabled = isEnabled
 		toggle.isOn = isOn
+		toggle.isEnabled = isEnabled
 	}
 
 	private static func title(for toggle: ArticleToolbarToggle) -> String {
@@ -72,6 +74,10 @@ final class ArticleToolbarToggleCell: UICollectionViewListCell {
 			return NSLocalizedString("Lock Gestures", comment: "Article top toolbar toggle: lock gestures")
 		case .annotations:
 			return NSLocalizedString("Highlights", comment: "Article top toolbar toggle: annotations")
+		case .settings:
+			return NSLocalizedString("Settings", comment: "Article top toolbar toggle: settings")
+		case .checkForUpdates:
+			return NSLocalizedString("Check for Updates", comment: "Article top toolbar toggle: check for updates")
 		}
 	}
 
