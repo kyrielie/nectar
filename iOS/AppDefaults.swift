@@ -918,6 +918,102 @@ final class AppDefaults: Sendable {
 		static let splitViewPreferredDisplayMode = "splitViewPreferredDisplayMode"
 	}
 
+	/// Backup/restore plan: the explicit allowlist of `Key.*` entries that
+	/// are person-facing preferences, safe to write into a backup's
+	/// `Settings.plist` and safe to replay onto another device (or back
+	/// onto this one, on restore) if the person opts in.
+	///
+	/// This is deliberately an allowlist, not "every Key minus known
+	/// system/migration keys" -- `Key` is a plain struct of `static let`
+	/// strings, not a `CaseIterable` enum, so there's no `allCases` to
+	/// subtract from, and a subtraction approach would silently include
+	/// any new bookkeeping key added later unless someone remembered to
+	/// also add it to an exclusion list. An allowlist fails safe: a key
+	/// added to `Key` and forgotten here is simply never backed up, never
+	/// wrongly replayed onto a fresh install.
+	///
+	/// This array requires manual maintenance -- there is no compiler
+	/// check tying it to `Key`'s contents (65 keys as of this writing;
+	/// 44 included below, 21 excluded). `AppDefaultsBackupTests` has a
+	/// named test per excluded key below; adding a new `Key` entry without
+	/// deciding whether it belongs here is a review-time responsibility,
+	/// not something either the compiler or a generic test can catch.
+	///
+	/// Excluded, and why (not merely omitted -- see the corresponding
+	/// named test in AppDefaultsBackupTests for each):
+	/// - `firstRunDate`, `hasShownAO3Onboarding`,
+	///   `hasMigratedNavigationBarTintingDefault`,
+	///   `hasMigratedToolbarStyleDefault`, `hasMigratedArticleToolbarToggles`,
+	///   `didMigrateLegacyStateRestorationInfo`: one-time migration/onboarding
+	///   gates. Replaying `true` onto a fresh install would skip onboarding
+	///   or a migration step that install actually needs to run.
+	/// - `useTintedNavigationBar`: dead migration-source-of-truth only, per
+	///   its own doc comment above ("do not reintroduce a property for
+	///   this key") -- there's no live property reading this key for a
+	///   backup to meaningfully capture.
+	/// - `lastImageCacheFlushDate`, `lastRefresh`: bookkeeping timestamps,
+	///   not preferences a person set.
+	/// - `selectedArticle`, `selectedSidebarItem`: state restoration, not
+	///   a preference -- a stale value from a different device points at
+	///   nothing on this one.
+	/// - `hideReadFeeds`, `expandedContainers`, `smartFeedsHidingReadArticles`,
+	///   `feedsHidingReadArticles`, `foldersShowingReadArticles`,
+	///   `splitViewPreferredDisplayMode`: back `StateRestorationInfo`
+	///   (sidebar/timeline UI state), not a Settings-screen row.
+	/// - `articleFullscreenAvailable`: a device-capability flag (is
+	///   fullscreen even possible on this device), not a person-set
+	///   preference -- `articleFullscreenEnabled`, the actual toggle, is
+	///   included below.
+	/// - `addFeedAccountID`, `addFeedFolderName`, `addFolderAccountID`:
+	///   ephemeral last-used-account/folder state for the "Add Feed"
+	///   sheet, not something a person thinks of as a setting to back up.
+	static let backupEligibleKeys: [String] = [
+		Key.userInterfaceColorPalette,
+		Key.timelineGroupByFeed,
+		Key.refreshClearsReadArticles,
+		Key.timelineNumberOfLines,
+		Key.timelineIconDimension,
+		Key.timelineTagDisplayMode,
+		Key.badgeColorMode,
+		Key.accentColor,
+		Key.surfaceTint,
+		Key.highlightPalette,
+		Key.toolbarStyle,
+		Key.statsVisible,
+		Key.timelineSortDirection,
+		Key.timelineSortField,
+		Key.articleFullscreenEnabled,
+		Key.articleBackSwipeEnabled,
+		Key.articlePagingSwipeEnabled,
+		Key.showFeedNameInReaderView,
+		Key.showPrevNextArticleButtons,
+		Key.showTableOfContentsAndFind,
+		Key.articleToolbarShowTheme,
+		Key.articleToolbarShowTableOfContents,
+		Key.articleToolbarShowFind,
+		Key.articleToolbarShowPrevNext,
+		Key.articleToolbarShowLock,
+		Key.articleToolbarShowAnnotations,
+		Key.articleToolbarShowSettings,
+		Key.articleToolbarShowCheckForUpdates,
+		Key.articleToolbarUseOverflowMenu,
+		Key.bottomToolbarShowRead,
+		Key.bottomToolbarShowStar,
+		Key.bottomToolbarShowHeart,
+		Key.bottomToolbarShowNextUnread,
+		Key.bottomToolbarShowAction,
+		Key.defaultAnnotationColor,
+		Key.annotationCreationMethod,
+		Key.hideNotchInFullScreen,
+		Key.pageCounterDisplayMode,
+		Key.disableArticleLinks,
+		Key.showArticleScrollbar,
+		Key.showLastUpdatedLabel,
+		Key.articleThemeOverrides,
+		Key.useSystemBrowser,
+		Key.currentThemeName
+	]
+
 	let isDeveloperBuild: Bool = {
 		if let dev = Bundle.main.object(forInfoDictionaryKey: "DeveloperEntitlements") as? String, dev == "-dev" {
 			return true
