@@ -40,6 +40,8 @@ public enum ActivityKind: Sendable, Hashable {
 
 	case vacuumDatabase
 	case exportOPML
+	case exportBackup
+	case importBackup
 
 	// App-level
 
@@ -103,6 +105,10 @@ public enum ActivityKind: Sendable, Hashable {
 			return NSLocalizedString("Vacuuming database", bundle: .module, comment: "Activity kind")
 		case .exportOPML:
 			return NSLocalizedString("Exporting OPML", bundle: .module, comment: "Activity kind")
+		case .exportBackup:
+			return NSLocalizedString("Exporting backup", bundle: .module, comment: "Activity kind")
+		case .importBackup:
+			return NSLocalizedString("Restoring from backup", bundle: .module, comment: "Activity kind")
 		case .refreshFeedContent, .findFeed, .fetchFeedCandidate, .downloadFeedImage, .downloadFavicon, .downloadAvatar, .downloadHTMLMetadata, .fetchAO3Chapter, .skipAO3SeriesFetch, .leaveAO3Kudos:
 			return nil
 		}

@@ -284,6 +284,17 @@ private extension StatusesTable {
 		return Set(articleIDs.filter { cache[$0] == nil })
 	}
 
+	/// Drops every cached `ArticleStatus`. Needed alongside
+	/// `ArticlesTable.emptyCaches()` whenever `statuses` rows are written by
+	/// something other than this table's own mark/save paths -- currently
+	/// `BackupSQLiteImportTable`'s raw-SQL merge (see
+	/// `ArticlesDatabase.importBackupSnapshot`) -- since `StatusCache.addIfNotCached`
+	/// never overwrites an already-cached `ArticleStatus`, a stale cached
+	/// instance would otherwise keep reporting pre-merge values forever.
+	func emptyCaches() {
+		cache.emptyCache()
+	}
+
 	// MARK: - Creating
 
 	func saveStatuses(_ statuses: Set<ArticleStatus>, _ database: FMDatabase) {
@@ -360,5 +371,9 @@ private final class StatusCache: Sendable {
 		set {
 			state.withLock { $0.dictionary[articleID] = newValue }
 		}
+	}
+
+	func emptyCache() {
+		state.withLock { $0.dictionary = [String: ArticleStatus]() }
 	}
 }

@@ -1424,6 +1424,13 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	func emptyCaches() {
 		queue.runInDatabase { _ in
 			self.articlesCache.withLock { $0 = [String: Article]() }
+			// Same queue as this closure itself runs on, so this preserves
+			// FIFO ordering relative to any runInDatabaseSync fetch a caller
+			// issues right after calling emptyCaches() -- see
+			// StatusesTable.emptyCaches's doc comment for why this is needed
+			// at all (a stale cached ArticleStatus otherwise survives a
+			// backup-restore merge indefinitely).
+			self.statusesTable.emptyCaches()
 		}
 	}
 
