@@ -64,6 +64,9 @@
     "Downloading metadata %@" : {
       "comment" : "Activity kind — downloading HTML metadata — %@ is the URL"
     },
+    "Exporting backup" : {
+      "comment" : "Activity kind"
+    },
     "Exporting OPML" : {
       "comment" : "Activity kind",
       "localizations" : {
@@ -278,6 +281,9 @@
           }
         }
       }
+    },
+    "Restoring from backup" : {
+      "comment" : "Activity kind"
     },
     "Sending statuses" : {
       "comment" : "Activity kind",
