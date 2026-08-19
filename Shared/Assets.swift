@@ -63,6 +63,7 @@ struct Assets {
 		static let markBelowAsRead = RSImage(symbol: "arrowtriangle.down.circle")!
 		static let markAboveAsRead = RSImage(symbol: "arrowtriangle.up.circle")!
 		static let more = RSImage(symbol: "ellipsis.circle")!
+		static let command = RSImage(symbol: "command")!
 		static let nextArticle = RSImage(symbol: "chevron.down")!
 		static let circleOpen = RSImage(symbol: "circle")!
 		// Same SF Symbol Main.storyboard's actionBarButtonItem uses --

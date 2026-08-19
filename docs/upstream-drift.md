@@ -546,7 +546,7 @@ rule against asserting things that haven't been verified by reading the code.
 - `iOS/MainTimeline/MainTimelineModernViewController.swift` -- AO3/Ambrosia timeline additions, accent-color button retinting (see accent-color-light-dark-fix.patch)
 - `iOS/MainTimeline/MarkAsReadAlertController.swift`
 - `iOS/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json`
-- `iOS/Resources/Info.plist`
+- `iOS/Resources/Info.plist` -- `UIDesignRequiresCompatibility` = true, opts the app out of iOS 26 Liquid Glass rendering. Apple ignores this key once built with the iOS 27 SDK (confirmed in Apple's own key documentation and the iOS 27 beta release notes), so this is a temporary bridge, not a durable setting -- revisit before adopting Xcode 27.
 - `iOS/Resources/main_ios.js`
 - `iOS/Resources/page.html`
 - `iOS/RootSplitViewController.swift`
@@ -606,6 +606,12 @@ redoing the one-off version used to generate this file.
 
 ## Change log
 
+- **2026-08-18**: Added `UIDesignRequiresCompatibility` = true to
+  `iOS/Resources/Info.plist` to opt the app out of iOS 26 Liquid Glass
+  rendering while the UI is adapted. Annotated the existing
+  `iOS/Resources/Info.plist` entry under "Modified from upstream" ->
+  `iOS/` accordingly. Note this key is ignored once the app is built with
+  the iOS 27 SDK, so it's a temporary measure, not a long-term fix.
 - **2026-08-10**: First version of this file. Generated from a Repomix
   snapshot of upstream NetNewsWire (version identified via the snapshot's own
   `Technotes/Status.md` as iOS 7.1/7.1.1, Mac 7.1.1 -- exact commit SHA not

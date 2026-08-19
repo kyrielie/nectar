@@ -1,22 +1,26 @@
 //
-//  ArticleToolbarToggleCell.swift
+//  ArticleToolbarOverflowToggleCell.swift
 //  NetNewsWire-iOS
 //
-//  A plain UISwitch row, one per ArticleToolbarToggle case -- same shape
-//  as StatsVisibilityCell, applied to a UICollectionViewListCell instead
-//  of a UITableViewCell since this screen (like
-//  TimelineCustomizerCollectionViewController) is collection-view-based.
+//  A single switch row for AppDefaults.articleToolbarUseOverflowMenu --
+//  same UISwitch-row shape as ArticleToolbarToggleCell, but this one
+//  writes straight to the display-mode flag instead of dispatching
+//  through ArticleToolbarToggle/isArticleToolbarToggleEnabled(_:), since
+//  it isn't one of the eight per-function toggles. Shown as item 0 of
+//  ArticleToolbarCustomizerViewController's pickerSection, ahead of the
+//  per-ArticleToolbarToggle rows.
 //
 
 import UIKit
 
-final class ArticleToolbarToggleCell: UICollectionViewListCell {
+final class ArticleToolbarOverflowToggleCell: UICollectionViewListCell {
 
-	static let reuseIdentifier = "ArticleToolbarToggleCell"
+	static let reuseIdentifier = "ArticleToolbarOverflowToggleCell"
 
 	private let label: UILabel = {
 		let label = UILabel()
 		label.font = .preferredFont(forTextStyle: .body)
+		label.text = NSLocalizedString("Collapse into Overflow Menu", comment: "Article top toolbar: overflow display-mode switch")
 		label.translatesAutoresizingMaskIntoConstraints = false
 		return label
 	}()
@@ -26,8 +30,6 @@ final class ArticleToolbarToggleCell: UICollectionViewListCell {
 		toggle.translatesAutoresizingMaskIntoConstraints = false
 		return toggle
 	}()
-
-	private var toolbarToggle: ArticleToolbarToggle?
 
 	override init(frame: CGRect) {
 		super.init(frame: frame)
@@ -52,17 +54,12 @@ final class ArticleToolbarToggleCell: UICollectionViewListCell {
 		toggle.addTarget(self, action: #selector(toggleChanged), for: .valueChanged)
 	}
 
-	func configure(toggle articleToolbarToggle: ArticleToolbarToggle, isOn: Bool, isEnabled: Bool = true) {
-		toolbarToggle = articleToolbarToggle
-		label.text = articleToolbarToggle.title
-		label.isEnabled = isEnabled
+	func configure(isOn: Bool) {
 		toggle.isOn = isOn
-		toggle.isEnabled = isEnabled
 	}
 
 	@objc private func toggleChanged() {
-		guard let toolbarToggle else { return }
-		AppDefaults.shared.setArticleToolbarToggleEnabled(toolbarToggle, toggle.isOn)
+		AppDefaults.shared.articleToolbarUseOverflowMenu = toggle.isOn
 	}
 
 	override func updateConfiguration(using state: UICellConfigurationState) {

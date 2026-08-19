@@ -123,6 +123,7 @@
 		71E5F68E0A373B73B3A2F39B /* ImageViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD48DBC77EEC103B2847C0F7 /* ImageViewController.swift */; };
 		721289F963327CEE3BD64546 /* RefreshInterval.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459AC2EE6DD0C5DD440DC4A9 /* RefreshInterval.swift */; };
 		7529E873F9B45016B6EAA527 /* Settings.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C83404D704F2CDA8FAD0D667 /* Settings.storyboard */; };
+		76490D4B5C6F4D1CADD6FC52 /* ArticleToolbarOverflowToggleCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D661A39079D817B9677CAC /* ArticleToolbarOverflowToggleCell.swift */; };
 		772DDEFAD789846202A76844 /* TickMarkSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C3F719F3FC24AAE7F0B920F /* TickMarkSlider.swift */; };
 		77D09FF8A9378467C32A0FD2 /* SettingsCellBackgroundHostingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ADC0A7692523D27CDB78B4E /* SettingsCellBackgroundHostingTests.swift */; };
 		7A4F335A77E42296CE60DC48 /* SettingsBackgroundPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = E671B8CA44751B167C2545E7 /* SettingsBackgroundPalette.swift */; };
@@ -489,6 +490,7 @@
 		B2DF249B398D8ED1527BA9FE /* AO3SearchResultsFetchCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3SearchResultsFetchCoordinator.swift; sourceTree = "<group>"; };
 		B37850C27976FA93983E67A3 /* Credits.rtf */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; path = Credits.rtf; sourceTree = "<group>"; };
 		B4AA5C3AF2D66603B137286C /* AccountStatsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStatsViewModel.swift; sourceTree = "<group>"; };
+		B5D661A39079D817B9677CAC /* ArticleToolbarOverflowToggleCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleToolbarOverflowToggleCell.swift; sourceTree = "<group>"; };
 		B7EF8AEC62BAFF8805D52EC6 /* IconImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconImageView.swift; sourceTree = "<group>"; };
 		B8B1B49AB8B30C88EC7F5F47 /* TitleActivityItemSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TitleActivityItemSource.swift; sourceTree = "<group>"; };
 		BAC3DB1499C178FD818855B3 /* AO3LinkListImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3LinkListImportView.swift; sourceTree = "<group>"; };
@@ -934,6 +936,7 @@
 				69C41E0B0165A72DC7F0E0C7 /* ArticleThemeListView.swift */,
 				BBBC5386FE8A011F4426330E /* ArticleThemePreviewWebView.swift */,
 				9025E20CD7F56ACF08C5A46E /* ArticleToolbarCustomizerViewController.swift */,
+				B5D661A39079D817B9677CAC /* ArticleToolbarOverflowToggleCell.swift */,
 				438ED3D448CBD1127EA1AF1D /* ArticleToolbarPreviewCell.swift */,
 				654AF044ACE1A6F2295084A9 /* ArticleToolbarToggleCell.swift */,
 				C57C16994F67428CD8F634FD /* BadgeColorPalettePreviewCell.swift */,
@@ -1420,6 +1423,7 @@
 				A77B43D4A983A234308F375F /* ArticleThemePreviewWebView.swift in Sources */,
 				DA8A7BE427DA9DB1C3C87E32 /* ArticleThemesManager.swift in Sources */,
 				D16EC1E8E8E2F2953AC68C38 /* ArticleToolbarCustomizerViewController.swift in Sources */,
+				76490D4B5C6F4D1CADD6FC52 /* ArticleToolbarOverflowToggleCell.swift in Sources */,
 				2E877919B18F08F71EBE6F19 /* ArticleToolbarPreviewCell.swift in Sources */,
 				28107A561843F0BE79C3B0AC /* ArticleToolbarToggleCell.swift in Sources */,
 				FA8CDAF71BB21BF13D4E43B5 /* ArticleUtilities.swift in Sources */,
