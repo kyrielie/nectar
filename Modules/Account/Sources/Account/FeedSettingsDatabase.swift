@@ -12,6 +12,20 @@ import RSDatabaseObjC
 import RSWeb
 import Articles
 
+enum FeedSettingsRestoreError: Error, CustomStringConvertible {
+	case attachFailed(String)
+	case mergeFailed(String)
+
+	var description: String {
+		switch self {
+		case .attachFailed(let detail):
+			return "FeedSettings restore: ATTACH DATABASE failed (\(detail))"
+		case .mergeFailed(let detail):
+			return "FeedSettings restore: merge failed (\(detail))"
+		}
+	}
+}
+
 final class FeedSettingsDatabase: Sendable {
 	enum Column: String {
 		case feedID
@@ -254,6 +268,73 @@ final class FeedSettingsDatabase: Sendable {
 	func deleteSettings(for feedURL: String) {
 		serialDispatchQueue.async {
 			self.database.executeUpdate("DELETE FROM feedSettings WHERE feedURL = ?;", withArgumentsIn: [feedURL])
+		}
+	}
+
+	// MARK: - Backup/restore merge
+
+	/// Backup/restore plan, Correction 6: `INSERT OR IGNORE` keyed on
+	/// `feedURL` -- an existing local row always wins, the backup's row only
+	/// ever fills in a feed that has no local row at all. Not every column
+	/// here is disposable cache (`editedName`/`newArticleNotificationsEnabled`
+	/// are real user customization -- see Correction 6's own reasoning), but
+	/// with no per-row timestamp on this table to arbitrate a genuine
+	/// conflict, "keep local" is the only mechanically sound default for v1,
+	/// same conclusion the plan reaches for `statuses`' pre-timestamp era.
+	/// Mirrors `BackupSQLiteImportTable`'s ATTACH/BEGIN/DETACH ordering
+	/// exactly (see that file's extended comment on why DETACH must run only
+	/// after an explicit commit/rollback, not inside a deferred-COMMIT
+	/// block) -- this table doesn't have a `DatabaseQueue` wrapper the way
+	/// `ArticlesDatabase` does, so transaction control and DETACH are done
+	/// directly against `self.database` on `serialDispatchQueue`, the same
+	/// queue every other method on this type already confines its database
+	/// access to.
+	func mergeFromBackup(atPath backupPath: String) async throws {
+		try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+			serialDispatchQueue.async {
+				let attachedSchemaName = "feedSettings_restore"
+
+				guard self.database.executeUpdate("ATTACH DATABASE ? AS \(attachedSchemaName);", withArgumentsIn: [backupPath]) else {
+					continuation.resume(throwing: FeedSettingsRestoreError.attachFailed(self.database.lastErrorMessage() ?? "unknown error"))
+					return
+				}
+
+				var mergeError: Error?
+				self.database.beginTransaction()
+				let sql = """
+				INSERT OR IGNORE INTO feedSettings (
+				  feedURL, feedID, homePageURL, iconURL, faviconURL, editedName, contentHash,
+				  newArticleNotificationsEnabled, authors, conditionalGetInfoLastModified,
+				  conditionalGetInfoEtag, conditionalGetInfoDate, cacheControlInfoDateCreated,
+				  cacheControlInfoMaxAge, externalID, folderRelationship, lastCheckDate,
+				  lastResponseCode, ao3SearchLastFetchedPage
+				)
+				SELECT
+				  b.feedURL, b.feedID, b.homePageURL, b.iconURL, b.faviconURL, b.editedName, b.contentHash,
+				  b.newArticleNotificationsEnabled, b.authors, b.conditionalGetInfoLastModified,
+				  b.conditionalGetInfoEtag, b.conditionalGetInfoDate, b.cacheControlInfoDateCreated,
+				  b.cacheControlInfoMaxAge, b.externalID, b.folderRelationship, b.lastCheckDate,
+				  b.lastResponseCode, b.ao3SearchLastFetchedPage
+				FROM \(attachedSchemaName).feedSettings AS b;
+				"""
+				if self.database.executeUpdate(sql, withArgumentsIn: []) {
+					self.database.commit()
+				} else {
+					mergeError = FeedSettingsRestoreError.mergeFailed(self.database.lastErrorMessage() ?? "unknown error")
+					self.database.rollback()
+				}
+
+				self.database.clearCachedStatements()
+				if !self.database.executeUpdate("DETACH DATABASE \(attachedSchemaName);", withArgumentsIn: []) {
+					Self.logger.error("FeedSettingsDatabase: DETACH DATABASE \(attachedSchemaName, privacy: .public) failed -- \(self.database.lastErrorMessage() ?? "unknown error", privacy: .public)")
+				}
+
+				if let mergeError {
+					continuation.resume(throwing: mergeError)
+				} else {
+					continuation.resume()
+				}
+			}
 		}
 	}
 

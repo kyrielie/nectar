@@ -499,9 +499,19 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	/// updateUI() and toggleGesturesLocked(_:), wherever those currently
 	/// mutate a bar item's isEnabled/image in place -- a static UIMenu
 	/// doesn't observe those mutations the way an on-screen
-	/// UIBarButtonItem's own properties do.
+	/// UIBarButtonItem's own properties do. No-op (menu cleared, not
+	/// left stale) when overflow mode is off -- updateUI()/
+	/// toggleGesturesLocked(_:) call this unconditionally on every
+	/// state change regardless of which display mode is active, so
+	/// without this guard overflowBarButtonItem would carry a live,
+	/// populated (if unused) menu even in icon mode.
 	private func rebuildOverflowMenu() {
 		let defaults = AppDefaults.shared
+		guard defaults.articleToolbarUseOverflowMenu else {
+			overflowBarButtonItem.menu = nil
+			return
+		}
+
 		var actions: [UIAction] = []
 
 		if defaults.isArticleToolbarToggleEnabled(.theme) {

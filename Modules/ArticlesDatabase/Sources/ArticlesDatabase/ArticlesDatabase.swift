@@ -473,6 +473,36 @@ public struct ArticleStorageInfo: Sendable {
 		try ArticlesDatabaseFullSnapshotExportTable.exportFullSnapshot(toPath: destinationPath, queue: queue)
 	}
 
+	/// Backup/restore: non-destructive merge of a backup's full-snapshot
+	/// `DB.sqlite3` (produced by `exportFullSnapshot` above, on this device
+	/// or another one) into the live database -- articles, statuses,
+	/// bookState, and annotations, per-table merge rules documented on
+	/// `BackupSQLiteImportTable`. Every statement this issues is additive-only
+	/// (`INSERT OR IGNORE` or an `UPDATE` that only ever widens toward "more
+	/// true" or "more recent"); nothing is ever deleted, and nothing missing
+	/// from the backup is ever touched. Does not reindex `search` -- a
+	/// restored article's search row is picked up the same way any other
+	/// unindexed article's is, via the existing `indexUnindexedArticles()`
+	/// path, not something this import path needs to special-case.
+	public func importBackupSnapshot(backupDatabasePath: String) throws {
+		Self.logger.debug("ArticlesDatabase: importBackupSnapshot \(self.accountID, privacy: .public)")
+		try BackupSQLiteImportTable.importBackup(backupDatabasePath: backupDatabasePath, queue: queue)
+
+		// BackupSQLiteImportTable writes articles/statuses/bookState/annotations
+		// with raw SQL directly against the attached backup file, bypassing
+		// ArticlesTable/StatusesTable's normal save paths entirely -- so, same
+		// reasoning as importAmbrosiaSQLiteTransfer above, any cached Article
+		// for an articleID this import just touched (a conflicting statuses row
+		// merged in-place) needs to be dropped rather than left stale. articles
+		// merges are INSERT OR IGNORE only (no existing row is ever modified),
+		// so only statuses' conflict-merge path can change what an already-cached
+		// Article should report -- invalidate broadly here rather than trying to
+		// thread the exact conflicting-ID set back out of BackupSQLiteImportTable,
+		// since a restore is a rare, whole-database operation where cache-clear
+		// cost is a non-issue.
+		articlesTable.emptyCaches()
+	}
+
 	public func fetchArticles(feedID: String) -> Set<Article> {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		return articlesTable.fetchArticles(feedID)
