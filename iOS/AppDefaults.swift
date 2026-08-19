@@ -330,8 +330,11 @@ enum HighlightPalette: Int, CaseIterable, Sendable {
 	/// background.
 	case muted = 1
 	/// Near-fluorescent in light mode for anyone who wants highlights to
-	/// pop; dark-mode values are lightened just enough to stay a wash
-	/// rather than reading as a light source.
+	/// pop; dark-mode values are deepened like every other case below --
+	/// the original dark set reused these same near-fluorescent light
+	/// values unchanged, which read as a light source against dark-mode
+	/// article text rather than a wash (see "Dark-mode contrast" in
+	/// docs/annotations.md).
 	case vivid = 2
 	/// Warm, paper-toned hues -- shares its name and aesthetic family
 	/// with SurfacePalette.sepia, but is otherwise independent: picking
@@ -340,14 +343,16 @@ enum HighlightPalette: Int, CaseIterable, Sendable {
 	/// is unrelated.
 	case sepia = 3
 	/// Soft pastel greens/blues/grays/lavender/rose -- gentle, low-contrast
-	/// light-mode set. Originally assumed mild enough that dark mode
-	/// could reuse the same HexSet unchanged; that assumption was wrong
-	/// (see darkHexSet below) -- white article text against several of
-	/// these pastels measured under 3:1 contrast, well below WCAG AA's
-	/// 4.5:1 for body text, so darkHexSet supplies its own deepened,
-	/// re-saturated values per color, same as every other case here.
+	/// set. Originally shared this same HexSet for both lightHexSet and
+	/// darkHexSet on the assumption that the low saturation made a
+	/// separate dark-mode tuning unnecessary; measured contrast showed
+	/// that assumption was wrong (several slots under 3:1 against
+	/// dark-mode's near-white article text), so darkHexSet below is now
+	/// its own deepened set, same as every other case.
 	case mint = 4
 	/// Saturated pink/orange/yellow/teal/sky-blue -- brighter than Mint.
+	/// Same history as Mint above: originally shared lightHexSet/
+	/// darkHexSet, now has its own deepened dark set.
 	case flourescent = 5
 	/// High-energy magenta/red/chartreuse/teal/indigo.
 	case refresh = 6
@@ -442,37 +447,44 @@ enum HighlightPalette: Int, CaseIterable, Sendable {
 		}
 	}
 
+	/// Every value below is the same hue as its `lightHexSet` counterpart,
+	/// darkened in HSL lightness until it clears 4.5:1 contrast against
+	/// white (WCAG AA for normal body text) -- see
+	/// `UIColor.contrastRatio(against:)` and "Dark-mode contrast" in
+	/// docs/annotations.md. `.default`'s previous dark set was the exact
+	/// five hex values `core.css`/`HighlightColorPopover` used to
+	/// hardcode as their single, appearance-independent fallback
+	/// (Apple's dark-mode system colors); measured, every one of those
+	/// five failed 4.5:1 against white (yellow's ratio was ~1.41), so
+	/// they're deepened the same way as every other case here rather
+	/// than kept as-is -- see
+	/// `HighlightPaletteHexSetTests.everyDarkHexSetColorMeetsWCAGAAContrastForWhiteText`.
 	var darkHexSet: HexSet {
 		switch self {
 		case .default:
-			// Apple's dark-mode system colors -- these are the exact five
-			// hex values core.css/HighlightColorPopover used to hardcode
-			// as their single, appearance-independent fallback.
-			return HexSet(yellow: "#FFD60A", red: "#FF453A", green: "#30D158", blue: "#0A84FF", purple: "#BF5AF2")
+			return HexSet(yellow: "#8B7300", red: "#EA0D00", green: "#1E8738", blue: "#0072E6", purple: "#B033EF")
 		case .muted:
-			return HexSet(yellow: "#A68A3D", red: "#8A5147", green: "#4F7A56", blue: "#4A7396", purple: "#7C5F91")
+			// red/green/blue/purple already cleared 4.5:1 as hand-tuned;
+			// only yellow needed deepening further.
+			return HexSet(yellow: "#8A7333", red: "#8A5147", green: "#4F7A56", blue: "#4A7396", purple: "#7C5F91")
 		case .vivid:
-			return HexSet(yellow: "#FFF176", red: "#FF6E6E", green: "#69F0AE", blue: "#6E9FFF", purple: "#EA80FC")
+			return HexSet(yellow: "#837600", red: "#EC0000", green: "#0D874B", blue: "#1E6AFF", purple: "#C605E6")
 		case .sepia:
-			return HexSet(yellow: "#A87A2E", red: "#8F4E38", green: "#64703F", blue: "#456B7A", purple: "#6B5470")
+			// red/green/blue/purple already cleared 4.5:1 as hand-tuned;
+			// only yellow needed deepening further.
+			return HexSet(yellow: "#976E29", red: "#8F4E38", green: "#64703F", blue: "#456B7A", purple: "#6B5470")
 		case .mint:
-			// White article text on these light-mode pastels was under
-			// 3:1 contrast in every slot (measured, not assumed) --
-			// nowhere near WCAG AA's 4.5:1 for body text -- so unlike the
-			// mint/flourescent/etc. block's original assumption, "mild"
-			// light-mode saturation does not imply dark mode is safe to
-			// reuse unchanged. Each dark value below is the same hue,
-			// deepened and re-saturated until white-text contrast clears
-			// 4.5:1 (verified per-color, not just at one sample point).
-			return HexSet(yellow: "#498027", red: "#20469B", green: "#52566A", blue: "#463487", purple: "#A31530")
+			return HexSet(yellow: "#4F8232", red: "#4A72CC", green: "#727581", blue: "#7A6AB8", purple: "#D83654")
 		case .flourescent:
-			return HexSet(yellow: "#AD1257", red: "#B65C00", green: "#7F7300", blue: "#2B8065", purple: "#1D7A9C")
+			return HexSet(yellow: "#DD2376", red: "#B45E0D", green: "#837609", blue: "#378269", purple: "#2C7E9F")
 		case .refresh:
-			return HexSet(yellow: "#A31889", red: "#B30D00", green: "#717900", blue: "#008178", purple: "#333388")
+			return HexSet(yellow: "#CD2CAE", red: "#EA1107", green: "#737B00", blue: "#00837D", purple: "#6D6DBE")
 		case .warm:
-			return HexSet(yellow: "#417077", red: "#9E3419", green: "#976A09", blue: "#7A3C68", purple: "#6F5148")
+			// purple already cleared 4.5:1 as hand-tuned; the other four
+			// needed deepening.
+			return HexSet(yellow: "#527C82", red: "#C74E32", green: "#986E13", blue: "#A25F8D", purple: "#826860")
 		case .neutral:
-			return HexSet(yellow: "#914722", red: "#8F5D25", green: "#B34205", blue: "#43607A", purple: "#7F7838")
+			return HexSet(yellow: "#AE603C", red: "#9C6B36", green: "#C35313", blue: "#607890", purple: "#7C7742")
 		}
 	}
 
@@ -714,6 +726,56 @@ enum ArticleToolbarToggle: CaseIterable, Sendable {
 	case checkForUpdates
 }
 
+/// Single source of truth for each toggle's display name and icon --
+/// previously duplicated between ArticleToolbarToggleCell (title only)
+/// and ArticleToolbarPreviewCell (icons only). Adding a third consumer
+/// (ArticleViewController.rebuildOverflowMenu()) is what justifies
+/// pulling both up here instead of copying either a third time.
+extension ArticleToolbarToggle {
+
+	var title: String {
+		switch self {
+		case .theme:
+			return NSLocalizedString("Theme", comment: "Article top toolbar toggle: theme")
+		case .tableOfContents:
+			return NSLocalizedString("Table of Contents", comment: "Article top toolbar toggle: table of contents")
+		case .find:
+			return NSLocalizedString("Find in Article", comment: "Article top toolbar toggle: find")
+		case .prevNext:
+			return NSLocalizedString("Previous & Next Article", comment: "Article top toolbar toggle: previous and next article")
+		case .lock:
+			return NSLocalizedString("Lock Gestures", comment: "Article top toolbar toggle: lock gestures")
+		case .annotations:
+			return NSLocalizedString("Highlights", comment: "Article top toolbar toggle: annotations")
+		case .settings:
+			return NSLocalizedString("Settings", comment: "Article top toolbar toggle: settings")
+		case .checkForUpdates:
+			return NSLocalizedString("Check for Updates", comment: "Article top toolbar toggle: check for updates")
+		}
+	}
+
+	/// Static icon for this toggle. .lock and .prevNext have runtime-only
+	/// meaning beyond this (lock's open/closed state, prevNext's
+	/// available/unavailable state) -- callers that need that dynamic
+	/// state (ArticleViewController.rebuildOverflowMenu()) build their own
+	/// UIAction for those two cases instead of using this property. Safe
+	/// for ArticleToolbarPreviewCell, which never shows dynamic state (see
+	/// its own doc comment on the lock preview always being unlocked).
+	@MainActor
+	var icon: UIImage? {
+		switch self {
+		case .theme: return Assets.Images.theme
+		case .tableOfContents: return Assets.Images.tableOfContents
+		case .find: return Assets.Images.findInArticle
+		case .prevNext: return Assets.Images.nextArticle
+		case .lock: return UIImage(systemName: "lock.open")
+		case .annotations: return Assets.Images.annotations
+		case .settings: return Assets.Images.settings
+		case .checkForUpdates: return Assets.Images.checkForUpdates
+		}
+	}
+}
+
 /// One independent on/off switch per bottom-toolbar button
 /// (AppDefaults.bottomToolbarShowRead/ShowStar/ShowHeart/ShowNextUnread/
 /// ShowAction), same freely-combinable shape as ArticleToolbarToggle
@@ -825,6 +887,7 @@ final class AppDefaults: Sendable {
 		static let articleToolbarShowAnnotations = "articleToolbarShowAnnotations"
 		static let articleToolbarShowSettings = "articleToolbarShowSettings"
 		static let articleToolbarShowCheckForUpdates = "articleToolbarShowCheckForUpdates"
+		static let articleToolbarUseOverflowMenu = "articleToolbarUseOverflowMenu"
 		static let bottomToolbarShowRead = "bottomToolbarShowRead"
 		static let bottomToolbarShowStar = "bottomToolbarShowStar"
 		static let bottomToolbarShowHeart = "bottomToolbarShowHeart"
@@ -1160,6 +1223,22 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			AppDefaults.setBool(for: Key.articleToolbarShowCheckForUpdates, newValue)
+		}
+	}
+
+	/// Off by default, same reasoning as articleToolbarShowLock/
+	/// articleToolbarShowAnnotations/articleToolbarShowSettings above: an
+	/// opt-in display mode, not something existing users should suddenly
+	/// see change. When on, ArticleViewController.rightBarButtonItems()
+	/// collapses every enabled ArticleToolbarToggle into a single overflow
+	/// UIMenu (see ArticleViewController.rebuildOverflowMenu()) instead of
+	/// showing one bar item per toggle.
+	var articleToolbarUseOverflowMenu: Bool {
+		get {
+			return AppDefaults.bool(for: Key.articleToolbarUseOverflowMenu)
+		}
+		set {
+			AppDefaults.setBool(for: Key.articleToolbarUseOverflowMenu, newValue)
 		}
 	}
 

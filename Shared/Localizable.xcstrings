@@ -35,7 +35,7 @@
       }
     },
     "%d Shown" : {
-      "comment" : "Article top toolbar: number of buttons shown"
+      "comment" : "Article bottom toolbar: number of buttons shown\nArticle top toolbar: number of buttons shown"
     },
     "%i Unread" : {
       "comment" : "14 Unread"
@@ -191,6 +191,9 @@
     "Blue" : {
       "comment" : "Highlight color"
     },
+    "Bottom Toolbar" : {
+      "comment" : "Article Bottom Toolbar screen title\nBottom Toolbar"
+    },
     "Browser Verification" : {
       "comment" : "AO3 Cloudflare challenge status row label"
     },
@@ -200,8 +203,11 @@
     "Cancel" : {
       "comment" : "Cancel\nCancel button"
     },
+    "Changes what each of the five highlight colors actually looks like, everywhere a highlight is shown -- the color you pick for a given highlight (yellow, red, green, blue, purple) doesn't change." : {
+      "comment" : "Highlight palette section footer"
+    },
     "Check for Updates" : {
-      "comment" : "AO3 preface refetch cadence picker label\nCommand"
+      "comment" : "AO3 preface refetch cadence picker label\nArticle top toolbar toggle: check for updates\nCommand"
     },
     "Check for Updates (Enable AO3 Updates in Settings)" : {
       "comment" : "Command, disabled: Ambrosia article with the AO3 network toggle off"
@@ -239,6 +245,9 @@
     "Collapse" : {
       "comment" : "Collapse"
     },
+    "Collapse into Overflow Menu" : {
+      "comment" : "Article top toolbar: overflow display-mode switch"
+    },
     "Collapsed" : {
       "comment" : "Annotations list: collapsed section header accessibility value\nCollapsed"
     },
@@ -268,6 +277,9 @@
     },
     "Copy Feed URL" : {
       "comment" : "Command"
+    },
+    "Copy Highlight" : {
+      "comment" : "Annotations list: copy highlight context menu action"
     },
     "Copy Home Page URL" : {
       "comment" : "Command"
@@ -330,7 +342,7 @@
       "comment" : "Deactivate"
     },
     "Default" : {
-      "comment" : "Default\nDefault accent color\nDefault badge color palette\nDefault surface palette\nDefault toolbar style"
+      "comment" : "Default\nDefault accent color\nDefault badge color palette\nDefault highlight palette\nDefault surface palette\nDefault toolbar style"
     },
     "Default Highlight Color" : {
       "comment" : "Annotations settings: default color section header"
@@ -491,6 +503,9 @@
     "First Unread" : {
       "comment" : "First Unread"
     },
+    "Flourescent" : {
+      "comment" : "Flourescent highlight palette"
+    },
     "Folders" : {
       "comment" : "Folders"
     },
@@ -550,6 +565,9 @@
     },
     "Highlight Creation" : {
       "comment" : "Annotations settings: highlight creation method section header"
+    },
+    "Highlight Palette" : {
+      "comment" : "Highlight palette section header"
     },
     "Highlights" : {
       "comment" : "Article top toolbar toggle: annotations"
@@ -668,10 +686,10 @@
       "comment" : "Local"
     },
     "Lock Gestures" : {
-      "comment" : "Article top toolbar toggle: lock gestures\nLock Gestures"
+      "comment" : "Article top toolbar toggle: lock gestures\nLock Gestures\nOverflow menu: lock gestures"
     },
     "Loved" : {
-      "comment" : "Loved"
+      "comment" : "Article bottom toolbar toggle: loved\nLoved"
     },
     "Manage Storage" : {
       "comment" : "Manage Storage"
@@ -748,6 +766,9 @@
     "Menu: Go to Feed, Open Home Page, Copy Feed URL" : {
 
     },
+    "Mint" : {
+      "comment" : "Mint highlight palette"
+    },
     "Monochrome" : {
       "comment" : "Monochrome badge color palette"
     },
@@ -756,6 +777,9 @@
     },
     "Most Words First" : {
       "comment" : "Descending sort direction — word count"
+    },
+    "Muted" : {
+      "comment" : "Muted highlight palette"
     },
     "Name" : {
       "comment" : "Name"
@@ -776,6 +800,9 @@
     "NetNewsWire News" : {
       "comment" : "NetNewsWire News"
     },
+    "Neutral" : {
+      "comment" : "Neutral highlight palette"
+    },
     "New Article Notifications" : {
       "comment" : "New Article Notifications"
     },
@@ -792,10 +819,10 @@
       "comment" : "Inline series navigation link"
     },
     "Next Article" : {
-      "comment" : "Next Article"
+      "comment" : "Next Article\nOverflow menu: next article"
     },
     "Next Unread" : {
-      "comment" : "Next Unread"
+      "comment" : "Article bottom toolbar toggle: next unread\nNext Unread"
     },
     "Next Unread Article" : {
       "comment" : "Next Unread Article"
@@ -856,7 +883,7 @@
       "comment" : "Ocean accent color"
     },
     "Off" : {
-      "comment" : "Article top toolbar: no buttons shown\nHighlight creation method: off\nPage counter off"
+      "comment" : "Article bottom toolbar: no buttons shown\nArticle top toolbar: no buttons shown\nHighlight creation method: off\nPage counter off"
     },
     "OK" : {
       "comment" : "OK button"
@@ -952,13 +979,13 @@
       "comment" : "Article top toolbar toggle: previous and next article"
     },
     "Previous Article" : {
-      "comment" : "Previous Article"
+      "comment" : "Overflow menu: previous article\nPrevious Article"
     },
     "Purple" : {
       "comment" : "Highlight color"
     },
     "Read Later" : {
-      "comment" : "Command\nRead Later"
+      "comment" : "Article bottom toolbar toggle: read later\nCommand\nRead Later"
     },
     "Reading Font" : {
       "comment" : "Reading Font picker label"
@@ -979,7 +1006,7 @@
       "comment" : "Preview footer explaining theme + override layering"
     },
     "Refresh" : {
-      "comment" : "Refresh"
+      "comment" : "Refresh\nRefresh highlight palette"
     },
     "Remove" : {
       "comment" : "Remove\nRemove from Read Later"
@@ -1038,6 +1065,9 @@
     "Search Bar" : {
       "comment" : "Surface palette preview: search bar swatch caption"
     },
+    "Search Highlights" : {
+      "comment" : "Annotations list: search field prompt"
+    },
     "Search: " : {
       "comment" : "Search smart feed title prefix"
     },
@@ -1078,16 +1108,16 @@
       "comment" : "Semantic badge color palette"
     },
     "Sepia" : {
-      "comment" : "Sepia accent color\nSepia surface palette"
+      "comment" : "Sepia accent color\nSepia highlight palette\nSepia surface palette"
     },
     "Settings" : {
-      "comment" : "Surface palette preview: settings background swatch caption"
+      "comment" : "Article top toolbar toggle: settings\nSurface palette preview: settings background swatch caption"
     },
     "Settings Cell" : {
       "comment" : "Surface palette preview: settings cell swatch caption"
     },
     "Share" : {
-      "comment" : "Share button"
+      "comment" : "Article bottom toolbar toggle: share\nShare button"
     },
     "Share AO3 Series Link" : {
       "comment" : "Command"
@@ -1225,6 +1255,9 @@
     "Toggle Loved Status" : {
       "comment" : "Toggle Loved Status"
     },
+    "Toggle Read" : {
+      "comment" : "Article bottom toolbar toggle: read"
+    },
     "Toggle Read Articles Filter" : {
       "comment" : "Toggle Read Articles Filter"
     },
@@ -1256,7 +1289,10 @@
       "comment" : "Transparent badge color palette"
     },
     "Unknown" : {
-      "comment" : "Unknown Value"
+      "comment" : "Annotation copy: unknown author fallback\nUnknown Value"
+    },
+    "Unlock Gestures" : {
+      "comment" : "Overflow menu: unlock gestures"
     },
     "unread" : {
       "comment" : "Unread label for accessibility"
@@ -1279,7 +1315,7 @@
     "Use New Version" : {
       "comment" : "Command"
     },
-    "Used by both Popup and Native Menu -- Popup's default swatch, and Native Menu's only color, both track this." : {
+    "Used by both Popup and Native Menu -- Popup's default swatch, and Native Menu's only color, both track this. To change what these five colors actually look like, use Highlight Palette under Settings → Appearance → Accent Color." : {
       "comment" : "Annotations settings: default color section footer"
     },
     "Vacuum Databases" : {
@@ -1296,6 +1332,12 @@
     },
     "Verify Browser Access" : {
       "comment" : "AO3 Cloudflare challenge button\nAO3 Cloudflare challenge screen title"
+    },
+    "Vivid" : {
+      "comment" : "Vivid highlight palette"
+    },
+    "Warm" : {
+      "comment" : "Warm highlight palette"
     },
     "We reached the server, but couldn't process its feed list." : {
       "comment" : "OPML fetch import failed message"

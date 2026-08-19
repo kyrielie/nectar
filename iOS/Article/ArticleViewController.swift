@@ -72,6 +72,11 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// toggles isEnabled per-article each time `article` changes. See
 	// updateUI()'s checkForUpdatesBarButtonItem handling.
 	private lazy var checkForUpdatesBarButtonItem = UIBarButtonItem(image: Assets.Images.checkForUpdates, style: .plain, target: self, action: #selector(checkForUpdatesFromToolbar(_:)))
+	// Optional collapsed-toolbar mode (AppDefaults.articleToolbarUseOverflowMenu).
+	// Menu is rebuilt in place by rebuildOverflowMenu() rather than this item
+	// being recreated -- same shape as MainTimelineModernViewController's
+	// markAllAsReadButton/rebuildMarkAllAsReadMenu().
+	private lazy var overflowBarButtonItem = UIBarButtonItem(image: Assets.Images.command, menu: nil)
 
 	@IBOutlet private var searchBar: ArticleSearchBar!
 	@IBOutlet private var searchBarBottomConstraint: NSLayoutConstraint!
@@ -337,6 +342,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			heartBarButtonItem.isEnabled = false
 			actionBarButtonItem.isEnabled = false
 			checkForUpdatesBarButtonItem.isEnabled = false
+			rebuildOverflowMenu()
 			return
 		}
 
@@ -391,6 +397,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			let eligible = AO3ChapterFetcher.shared.canCheckForUpdates(for: article)
 			checkForUpdatesBarButtonItem.isEnabled = eligible && AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article)
 		}
+
+		rebuildOverflowMenu()
 	}
 
 	// MARK: Notifications
@@ -448,6 +456,12 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// four can be present at once.
 	private func rightBarButtonItems() -> [UIBarButtonItem] {
 		let defaults = AppDefaults.shared
+
+		if defaults.articleToolbarUseOverflowMenu {
+			rebuildOverflowMenu()
+			return overflowBarButtonItem.menu == nil ? [] : [overflowBarButtonItem]
+		}
+
 		var items: [UIBarButtonItem] = []
 		if defaults.isArticleToolbarToggleEnabled(.theme) {
 			items.append(themeBarButtonItem)
@@ -474,6 +488,75 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			items.append(checkForUpdatesBarButtonItem)
 		}
 		return items
+	}
+
+	/// Rebuilds overflowBarButtonItem.menu from the currently-enabled
+	/// ArticleToolbarToggle set plus live per-article/session state --
+	/// mirrors rightBarButtonItems()'s own ordering (theme, table of
+	/// contents, find, prev/next, lock, annotations, settings, check for
+	/// updates) so the two modes present functions in the same order.
+	/// Called from rightBarButtonItems() itself, and separately from
+	/// updateUI() and toggleGesturesLocked(_:), wherever those currently
+	/// mutate a bar item's isEnabled/image in place -- a static UIMenu
+	/// doesn't observe those mutations the way an on-screen
+	/// UIBarButtonItem's own properties do.
+	private func rebuildOverflowMenu() {
+		let defaults = AppDefaults.shared
+		var actions: [UIAction] = []
+
+		if defaults.isArticleToolbarToggleEnabled(.theme) {
+			actions.append(UIAction(title: ArticleToolbarToggle.theme.title, image: ArticleToolbarToggle.theme.icon) { [weak self] _ in
+				self?.showThemePicker(self as Any)
+			})
+		}
+		if defaults.isArticleToolbarToggleEnabled(.tableOfContents) {
+			actions.append(UIAction(title: ArticleToolbarToggle.tableOfContents.title, image: ArticleToolbarToggle.tableOfContents.icon) { [weak self] _ in
+				self?.showTableOfContents(self as Any)
+			})
+		}
+		if defaults.isArticleToolbarToggleEnabled(.find) {
+			actions.append(UIAction(title: ArticleToolbarToggle.find.title, image: ArticleToolbarToggle.find.icon) { [weak self] _ in
+				self?.beginFind()
+			})
+		}
+		if defaults.isArticleToolbarToggleEnabled(.prevNext) {
+			let nextTitle = NSLocalizedString("Next Article", comment: "Overflow menu: next article")
+			let prevTitle = NSLocalizedString("Previous Article", comment: "Overflow menu: previous article")
+			actions.append(UIAction(title: nextTitle, image: Assets.Images.nextArticle, attributes: coordinator.isNextArticleAvailable ? [] : .disabled) { [weak self] _ in
+				self?.coordinator.selectNextArticle()
+			})
+			actions.append(UIAction(title: prevTitle, image: Assets.Images.prevArticle, attributes: coordinator.isPrevArticleAvailable ? [] : .disabled) { [weak self] _ in
+				self?.coordinator.selectPrevArticle()
+			})
+		}
+		if defaults.isArticleToolbarToggleEnabled(.lock) {
+			let locked = coordinator.isArticleGesturesLocked
+			let title = locked
+				? NSLocalizedString("Unlock Gestures", comment: "Overflow menu: unlock gestures")
+				: NSLocalizedString("Lock Gestures", comment: "Overflow menu: lock gestures")
+			actions.append(UIAction(title: title, image: UIImage(systemName: locked ? "lock" : "lock.open")) { [weak self] _ in
+				self?.toggleGesturesLocked(self as Any)
+			})
+		}
+		if defaults.isArticleToolbarToggleEnabled(.annotations) {
+			actions.append(UIAction(title: ArticleToolbarToggle.annotations.title, image: ArticleToolbarToggle.annotations.icon) { [weak self] _ in
+				self?.showAnnotationsList(self as Any)
+			})
+		}
+		if defaults.isArticleToolbarToggleEnabled(.settings) {
+			actions.append(UIAction(title: ArticleToolbarToggle.settings.title, image: ArticleToolbarToggle.settings.icon) { [weak self] _ in
+				self?.showSettingsFromToolbar(self as Any)
+			})
+		}
+		if defaults.isArticleToolbarToggleEnabled(.checkForUpdates), let article {
+			let eligible = AO3ChapterFetcher.shared.canCheckForUpdates(for: article)
+				&& AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article)
+			actions.append(UIAction(title: ArticleToolbarToggle.checkForUpdates.title, image: ArticleToolbarToggle.checkForUpdates.icon, attributes: eligible ? [] : .disabled) { [weak self] _ in
+				self?.checkForUpdatesFromToolbar(self as Any)
+			})
+		}
+
+		overflowBarButtonItem.menu = actions.isEmpty ? nil : UIMenu(title: "", children: actions)
 	}
 
 	@objc nonisolated func userDefaultsDidChange(_ note: Notification) {
@@ -676,6 +759,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			: NSLocalizedString("Lock Gestures", comment: "Lock Gestures")
 		coordinator.applyArticleBackSwipeGating()
 		pageViewController.scrollViewInsidePageControl?.isScrollEnabled = AppDefaults.shared.articlePagingSwipeEnabled && !newFlag
+		rebuildOverflowMenu()
 	}
 
 	@objc func showThemePicker(_ sender: Any) {
