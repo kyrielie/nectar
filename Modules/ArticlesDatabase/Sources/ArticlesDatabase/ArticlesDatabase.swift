@@ -459,6 +459,20 @@ public struct ArticleStorageInfo: Sendable {
 		try ArticleSQLiteExportTable.exportArticles(feedIDs: feedIDs, toPath: destinationPath, queue: queue)
 	}
 
+	/// Backup/restore: an atomic, consistent copy of the *entire* database
+	/// file (`VACUUM INTO`) -- articles, statuses, bookState, annotations,
+	/// and the FTS `search` table, all in one call. Unlike
+	/// `exportArticlesSQLite` above, this is not feed-scoped and is not
+	/// meant for the per-feed "Export..." feature; it exists specifically
+	/// so BackupManager can restore a fully-populated, immediately-usable
+	/// database via `BackupSQLiteImportTable`, rather than replaying a
+	/// partial export and losing bookState/search. `destinationPath` must
+	/// not already exist.
+	public func exportFullSnapshot(toPath destinationPath: String) throws {
+		Self.logger.debug("ArticlesDatabase: exportFullSnapshot \(self.accountID, privacy: .public)")
+		try ArticlesDatabaseFullSnapshotExportTable.exportFullSnapshot(toPath: destinationPath, queue: queue)
+	}
+
 	public func fetchArticles(feedID: String) -> Set<Article> {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		return articlesTable.fetchArticles(feedID)
