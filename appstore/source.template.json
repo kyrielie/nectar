@@ -8,9 +8,9 @@
     "nsfw": false,
     "news": [
         {
-            "title": "Welcome to Nectar",
+            "title": "About Nectar",
             "identifier": "nectar-source-intro",
-            "caption": "Fanfiction reading app, sideloaded.",
+            "caption": "Fanfiction reading app, sideloaded. Since July 2026! Still in development, leave feedback using github!",
             "date": "2026-08-15",
             "tintColor": "#EFBF04",
             "notify": false,
