@@ -1084,9 +1084,15 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		queue.runInTransaction { database in
 			if let bookKey = self.bookKeysForArticleIDs([articleID], database).first {
 				self.bookStateTable.setScrollPosition(scrollPosition, bookKey: bookKey, database)
-			} else {
-				self.statusesTable.saveScrollPosition(scrollPosition, articleID: articleID, database)
 			}
+			// Always write through to statuses too -- same as saveReadingProgress
+			// below. bookKeysForArticleIDs always resolves a bookKey (it falls
+			// back to uniqueID -- see ParsedItem.bookKey's last-resort case),
+			// so the old if/else here meant this line never ran in practice and
+			// statuses.scrollPosition sat at its schema default forever.
+			// BackupSQLiteImportTable's statuses merge (arbitrated by
+			// lastOpenedAt) depends on this column holding the real value.
+			self.statusesTable.saveScrollPosition(scrollPosition, articleID: articleID, database)
 			DispatchQueue.main.async {
 				completion()
 			}

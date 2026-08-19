@@ -272,6 +272,19 @@ final class StatusesTable: DatabaseTable, Sendable {
 		}
 		updateRowsWithValue(date, valueKey: DatabaseKey.lastOpenedAt, whereKey: DatabaseKey.articleID, matches: Array(articleIDs), database: database)
 	}
+
+	/// Drops every cached `ArticleStatus`. Needed alongside
+	/// `ArticlesTable.emptyCaches()` whenever `statuses` rows are written by
+	/// something other than this table's own mark/save paths -- currently
+	/// `BackupSQLiteImportTable`'s raw-SQL merge (see
+	/// `ArticlesDatabase.importBackupSnapshot`) -- since `StatusCache.addIfNotCached`
+	/// never overwrites an already-cached `ArticleStatus`, a stale cached
+	/// instance would otherwise keep reporting pre-merge values forever.
+	/// Internal, not private-extension-scoped, since `ArticlesTable` (a
+	/// different file) is the caller.
+	func emptyCaches() {
+		cache.emptyCache()
+	}
 }
 
 // MARK: - Private
@@ -282,17 +295,6 @@ private extension StatusesTable {
 
 	func articleIDsWithNoCachedStatus(_ articleIDs: Set<String>) -> Set<String> {
 		return Set(articleIDs.filter { cache[$0] == nil })
-	}
-
-	/// Drops every cached `ArticleStatus`. Needed alongside
-	/// `ArticlesTable.emptyCaches()` whenever `statuses` rows are written by
-	/// something other than this table's own mark/save paths -- currently
-	/// `BackupSQLiteImportTable`'s raw-SQL merge (see
-	/// `ArticlesDatabase.importBackupSnapshot`) -- since `StatusCache.addIfNotCached`
-	/// never overwrites an already-cached `ArticleStatus`, a stale cached
-	/// instance would otherwise keep reporting pre-merge values forever.
-	func emptyCaches() {
-		cache.emptyCache()
 	}
 
 	// MARK: - Creating

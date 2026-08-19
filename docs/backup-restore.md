@@ -137,7 +137,13 @@ set.
      this import bypasses `ArticlesTable`/`StatusesTable`'s normal save
      paths entirely via raw SQL against the attached backup file, and any
      cached `Article` for an articleID a conflict-merge just touched
-     needs to be dropped rather than left stale.
+     needs to be dropped rather than left stale. `ArticlesTable.emptyCaches()`
+     itself drops both its own `articlesCache` and, via
+     `StatusesTable.emptyCaches()`, `StatusesTable`'s separate
+     `StatusCache` — `StatusCache.addIfNotCached` never overwrites an
+     already-cached `ArticleStatus`, so a status merged in place by
+     `BackupSQLiteImportTable` would otherwise keep being served from a
+     stale cached instance indefinitely, not just until the next miss.
    - **`Subscriptions.opml`** — `account.importOPML(_:completion:)`
      directly, reusing the existing add/reconcile logic (see
      "`reconcileRepairedFeeds` in a restore context" below) rather than a
