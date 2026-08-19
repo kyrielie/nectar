@@ -23,6 +23,9 @@
     "%@ words" : {
       "comment" : "Word count"
     },
+    "%d account(s) from this backup don't exist on this device and were skipped." : {
+      "comment" : "Restore summary — accounts skipped"
+    },
     "%d of %d" : {
       "comment" : "Results selection and count",
       "localizations" : {
@@ -127,6 +130,12 @@
     },
     "AO3 rate limit hit -- backing off before retrying" : {
       "comment" : "AO3 load more error"
+    },
+    "AO3 sign-in isn't included in backups — you'll need to sign in again after restoring." : {
+      "comment" : "AO3 sign-in-again notice"
+    },
+    "AO3 sign-in isn't included in backups — you'll need to sign in again." : {
+      "comment" : "AO3 sign-in-again notice, restore summary"
     },
     "AO3's tag and user RSS feeds only cover canonical tags -- a feed for a synonym or an uncommonly-spelled tag will come back empty even if the tag itself has works. Feeds can't combine multiple tags the way AO3's own filtered search results can." : {
       "comment" : "AO3 RSS limitations: canonical tags and combining"
@@ -616,6 +625,9 @@
         }
       }
     },
+    "Installed %d custom theme(s)." : {
+      "comment" : "Restore summary — themes installed"
+    },
     "Interface Font" : {
       "comment" : "Interface Font picker label"
     },
@@ -886,7 +898,7 @@
       "comment" : "Article bottom toolbar: no buttons shown\nArticle top toolbar: no buttons shown\nHighlight creation method: off\nPage counter off"
     },
     "OK" : {
-      "comment" : "OK button"
+      "comment" : "OK\nOK button"
     },
     "Oldest First" : {
       "comment" : "Ascending sort direction — date"
@@ -1043,6 +1055,24 @@
     },
     "Reset to Theme Default" : {
       "comment" : "Reset to Theme Default button"
+    },
+    "Restore" : {
+      "comment" : "Restore"
+    },
+    "Restore Complete" : {
+      "comment" : "Restore Complete"
+    },
+    "Restore Failed" : {
+      "comment" : "Restore Failed"
+    },
+    "Restore from Backup" : {
+      "comment" : "Restore from Backup"
+    },
+    "Restore, Including Settings" : {
+      "comment" : "Restore including settings"
+    },
+    "Restored %d account(s)." : {
+      "comment" : "Restore summary — accounts restored"
     },
     "Restricted to registered AO3 users" : {
       "comment" : "AO3 load more error"
@@ -1224,6 +1254,9 @@
     },
     "These are limits of AO3's existing RSS mechanism itself, not of Nectar." : {
       "comment" : "AO3 RSS limitations section footer"
+    },
+    "This backup also includes Settings. You can restore your feeds and reading history only, or also replace this device's Settings with the backup's." : {
+      "comment" : "Settings restore note"
     },
     "This Book" : {
       "comment" : "Annotations list navigation title: whole book, title unavailable"
