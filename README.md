@@ -57,7 +57,7 @@ Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWi
 
 ## Installation
 
-Nectar isn't on the App Store — it's distributed as an unsigned IPA you sideload yourself, via **AltStore** (auto-updating) or **Sideloadly** (manual, one release at a time).
+Nectar isn't on the App Store — it's distributed as an unsigned IPA you sideload yourself. There are many ways to sideload, but these are the only ones that I test:
 
 ### AltStore (recommended)
 
@@ -95,14 +95,9 @@ open NetNewsWire.xcodeproj
 
 Requires Xcode with an iOS 17+ SDK and the `Nectar-iOS` scheme.
 
-## Scope
-
-Nectar can parse Ambrosia's paged JSON feeds and SQLite transfers, plus AO3's own RSS feeds directly. It isn't meant to be a general-purpose feed reader, though it should technically work with any RSS/JSON feed.
-
-- If you don't use Ambrosia, use [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) instead.
-- If you do use Ambrosia, Nectar reads its plain feeds too — it just layers the fic-reader metadata on top when available.
-
 ## Architecture
+
+Nectar is built on top of NetNewsWire to take advantage of feed reading capability. It isn't meant to be a general-purpose feed reader, though it should technically work with any RSS/JSON feed. However it is designed to be archival, so there's no way to automatically delete things in the cache, so if you add newspapers the storage will be unmanageable. 
 
 See [`CLAUDE.md`](./CLAUDE.md) for the docs index — how feed data flows from AO3/Ambrosia through to the app's UI is split across topic docs under `docs/` (module layout, book identity, the SQLite transfer route, the reading-progress pipeline, the theming system, and more), each scoped to one system.
 
