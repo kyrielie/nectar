@@ -56,18 +56,39 @@ final class ArticleToolbarPreviewCell: UICollectionViewListCell {
 	/// itself is transient session state on SceneCoordinator, not an
 	/// AppDefaults value, so there's nothing for this settings screen to
 	/// read for it.
+	///
+	/// When AppDefaults.articleToolbarUseOverflowMenu is on, this renders
+	/// a single target-less command-glyph item instead -- matching the
+	/// real reader's collapsed-toolbar mode (see
+	/// ArticleViewController.rightBarButtonItems()/rebuildOverflowMenu()).
+	/// No UIMenu is attached here: every item in this cell is already
+	/// target/action-less (it's a preview, not a live control), so the
+	/// overflow item doesn't need one either.
 	func configure() {
 		let defaults = AppDefaults.shared
+
+		guard !defaults.articleToolbarUseOverflowMenu else {
+			let anyEnabled = ArticleToolbarToggle.allCases.contains {
+				defaults.isArticleToolbarToggleEnabled($0)
+			}
+			let navItem = UINavigationItem(title: "")
+			navItem.rightBarButtonItems = anyEnabled
+				? [UIBarButtonItem(image: Assets.Images.command, style: .plain, target: nil, action: nil)]
+				: []
+			navigationBar.setItems([navItem], animated: false)
+			return
+		}
+
 		var items: [UIBarButtonItem] = []
 
 		if defaults.isArticleToolbarToggleEnabled(.theme) {
-			items.append(UIBarButtonItem(image: Assets.Images.theme, style: .plain, target: nil, action: nil))
+			items.append(UIBarButtonItem(image: ArticleToolbarToggle.theme.icon, style: .plain, target: nil, action: nil))
 		}
 		if defaults.isArticleToolbarToggleEnabled(.tableOfContents) {
-			items.append(UIBarButtonItem(image: Assets.Images.tableOfContents, style: .plain, target: nil, action: nil))
+			items.append(UIBarButtonItem(image: ArticleToolbarToggle.tableOfContents.icon, style: .plain, target: nil, action: nil))
 		}
 		if defaults.isArticleToolbarToggleEnabled(.find) {
-			items.append(UIBarButtonItem(image: Assets.Images.findInArticle, style: .plain, target: nil, action: nil))
+			items.append(UIBarButtonItem(image: ArticleToolbarToggle.find.icon, style: .plain, target: nil, action: nil))
 		}
 		if defaults.isArticleToolbarToggleEnabled(.prevNext) {
 			let next = UIBarButtonItem(image: Assets.Images.nextArticle, style: .plain, target: nil, action: nil)
@@ -75,16 +96,16 @@ final class ArticleToolbarPreviewCell: UICollectionViewListCell {
 			items.append(contentsOf: [next, prev])
 		}
 		if defaults.isArticleToolbarToggleEnabled(.lock) {
-			items.append(UIBarButtonItem(image: UIImage(systemName: "lock.open"), style: .plain, target: nil, action: nil))
+			items.append(UIBarButtonItem(image: ArticleToolbarToggle.lock.icon, style: .plain, target: nil, action: nil))
 		}
 		if defaults.isArticleToolbarToggleEnabled(.annotations) {
-			items.append(UIBarButtonItem(image: Assets.Images.annotations, style: .plain, target: nil, action: nil))
+			items.append(UIBarButtonItem(image: ArticleToolbarToggle.annotations.icon, style: .plain, target: nil, action: nil))
 		}
 		if defaults.isArticleToolbarToggleEnabled(.settings) {
-			items.append(UIBarButtonItem(image: Assets.Images.settings, style: .plain, target: nil, action: nil))
+			items.append(UIBarButtonItem(image: ArticleToolbarToggle.settings.icon, style: .plain, target: nil, action: nil))
 		}
 		if defaults.isArticleToolbarToggleEnabled(.checkForUpdates) {
-			items.append(UIBarButtonItem(image: Assets.Images.checkForUpdates, style: .plain, target: nil, action: nil))
+			items.append(UIBarButtonItem(image: ArticleToolbarToggle.checkForUpdates.icon, style: .plain, target: nil, action: nil))
 		}
 
 		let navItem = UINavigationItem(title: "")

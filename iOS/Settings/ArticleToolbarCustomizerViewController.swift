@@ -13,13 +13,18 @@
 //  Preview (0) is a single ArticleToolbarPreviewCell showing the real nav
 //  bar icons/order live, so the person sees the actual bar-button icons
 //  update as they flip switches, rather than inferring behavior from
-//  labels. Top Toolbar (1) is one ArticleToolbarToggleCell per
-//  ArticleToolbarToggle case (theme, table of contents, find, prev/next,
-//  lock, annotations, settings, check for updates, in that fixed order)
-//  -- each an independent UISwitch row, freely combinable up to a 4-icon
-//  cap (prevNext counts as 2 slots); flipping one writes straight to its
-//  own AppDefaults property and reloads both sections in place. See
-//  slotsUsed(excluding:) for the cap.
+//  labels. Top Toolbar (1) is one ArticleToolbarOverflowToggleCell (item
+//  0, AppDefaults.articleToolbarUseOverflowMenu -- collapses the bar into
+//  a single overflow-menu icon, see ArticleViewController.rightBarButtonItems())
+//  followed by one ArticleToolbarToggleCell per ArticleToolbarToggle case
+//  (theme, table of contents, find, prev/next, lock, annotations,
+//  settings, check for updates, in that fixed order) -- each an
+//  independent UISwitch row, freely combinable up to a 4-icon cap
+//  (prevNext counts as 2 slots) UNLESS the overflow switch is on, in
+//  which case the cap doesn't apply (a menu has no fixed-width leading
+//  cluster to run out of room in). Flipping any switch writes straight
+//  to its own AppDefaults property and reloads both sections in place.
+//  See slotsUsed(excluding:) for the cap.
 //
 //  Both sections reload on the generic UserDefaults.didChangeNotification --
 //  the toggle setters don't post a dedicated notification, and
@@ -84,6 +89,7 @@ class ArticleToolbarCustomizerViewController: UICollectionViewController, Settin
 
 		collectionView.register(ArticleToolbarPreviewCell.self, forCellWithReuseIdentifier: ArticleToolbarPreviewCell.reuseIdentifier)
 		collectionView.register(ArticleToolbarToggleCell.self, forCellWithReuseIdentifier: ArticleToolbarToggleCell.reuseIdentifier)
+		collectionView.register(ArticleToolbarOverflowToggleCell.self, forCellWithReuseIdentifier: ArticleToolbarOverflowToggleCell.reuseIdentifier)
 
 		var config = UICollectionLayoutListConfiguration(appearance: .insetGrouped)
 		config.showsSeparators = false
@@ -118,7 +124,9 @@ class ArticleToolbarCustomizerViewController: UICollectionViewController, Settin
 		if section == previewSection {
 			return 1
 		}
-		return ArticleToolbarToggle.allCases.count
+		// +1 for the ArticleToolbarOverflowToggleCell at item 0, ahead of
+		// the per-ArticleToolbarToggle rows.
+		return ArticleToolbarToggle.allCases.count + 1
 	}
 
 	override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -128,8 +136,14 @@ class ArticleToolbarCustomizerViewController: UICollectionViewController, Settin
 			return cell
 		}
 
+		if indexPath.item == 0 {
+			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ArticleToolbarOverflowToggleCell.reuseIdentifier, for: indexPath) as! ArticleToolbarOverflowToggleCell
+			cell.configure(isOn: AppDefaults.shared.articleToolbarUseOverflowMenu)
+			return cell
+		}
+
 		let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ArticleToolbarToggleCell.reuseIdentifier, for: indexPath) as! ArticleToolbarToggleCell
-		let toggle = ArticleToolbarToggle.allCases[indexPath.item]
+		let toggle = ArticleToolbarToggle.allCases[indexPath.item - 1]
 		let isOn = AppDefaults.shared.isArticleToolbarToggleEnabled(toggle)
 		// A row already on stays interactive (so it can be turned back
 		// off); an off row past the cap becomes non-interactive, disabled
@@ -137,8 +151,13 @@ class ArticleToolbarCustomizerViewController: UICollectionViewController, Settin
 		// FullScreenReadingViewController.updateHideNotchAvailability().
 		// Forward-only: existing over-cap configurations (from before this
 		// cap existed) aren't trimmed, they just can't add further icons.
+		// The cap itself doesn't apply once the overflow switch is on --
+		// the bar's fixed-width leading cluster is what the cap protects,
+		// and a menu has no such constraint.
 		let wouldAdd = toggle == .prevNext ? 2 : 1
-		let capReached = !isOn && (slotsUsed(excluding: toggle) + wouldAdd > Self.maxSlots)
+		let capReached = !AppDefaults.shared.articleToolbarUseOverflowMenu
+			&& !isOn
+			&& (slotsUsed(excluding: toggle) + wouldAdd > Self.maxSlots)
 		cell.configure(toggle: toggle, isOn: isOn, isEnabled: !capReached)
 		return cell
 	}

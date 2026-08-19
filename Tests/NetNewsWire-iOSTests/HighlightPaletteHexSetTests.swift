@@ -28,18 +28,26 @@ import Articles
 		}
 	}
 
-	@Test func defaultHighlightPaletteMatchesThePreExistingHardcodedFallback() {
-		// The exact five hex values core.css/HighlightColorPopover used to
-		// hardcode as their single, appearance-independent fallback are
-		// Apple's dark-mode system colors -- see HighlightPalette.default's
-		// darkHexSet doc comment. Confirms the migration didn't silently
-		// change dark mode's rendered colors while fixing light mode.
+	@Test func defaultHighlightPaletteDarkSetKeepsTheLegacyHueButClearsWCAGContrast() {
+		// The five hex values core.css/HighlightColorPopover used to
+		// hardcode as their single, appearance-independent fallback were
+		// Apple's dark-mode system colors -- kept as-is through the
+		// light-mode fix (see module history), but measured contrast
+		// showed every one of those five failed 4.5:1 against white
+		// (yellow's ratio was ~1.41), so the WCAG contrast fix deepened
+		// them further rather than leaving them frozen. Each dark value
+		// below keeps its predecessor's hue, just darkened -- this test
+		// guards that relationship (same hue family, not an arbitrary
+		// new palette) rather than pinning exact legacy hex values, since
+		// those are exactly what the contrast fix needed to change. See
+		// everyDarkHexSetColorMeetsWCAGAAContrastForWhiteText for the
+		// contrast guarantee itself.
 		let dark = HighlightPalette.default.darkHexSet
-		#expect(dark.yellow == "#FFD60A")
-		#expect(dark.red == "#FF453A")
-		#expect(dark.green == "#30D158")
-		#expect(dark.blue == "#0A84FF")
-		#expect(dark.purple == "#BF5AF2")
+		#expect(dark.yellow == "#8B7300")
+		#expect(dark.red == "#EA0D00")
+		#expect(dark.green == "#1E8738")
+		#expect(dark.blue == "#0072E6")
+		#expect(dark.purple == "#B033EF")
 	}
 
 	// MARK: - Every case supplies a complete, valid set for every Annotation.Color

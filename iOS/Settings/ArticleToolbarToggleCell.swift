@@ -54,31 +54,10 @@ final class ArticleToolbarToggleCell: UICollectionViewListCell {
 
 	func configure(toggle articleToolbarToggle: ArticleToolbarToggle, isOn: Bool, isEnabled: Bool = true) {
 		toolbarToggle = articleToolbarToggle
-		label.text = Self.title(for: articleToolbarToggle)
+		label.text = articleToolbarToggle.title
 		label.isEnabled = isEnabled
 		toggle.isOn = isOn
 		toggle.isEnabled = isEnabled
-	}
-
-	private static func title(for toggle: ArticleToolbarToggle) -> String {
-		switch toggle {
-		case .theme:
-			return NSLocalizedString("Theme", comment: "Article top toolbar toggle: theme")
-		case .tableOfContents:
-			return NSLocalizedString("Table of Contents", comment: "Article top toolbar toggle: table of contents")
-		case .find:
-			return NSLocalizedString("Find in Article", comment: "Article top toolbar toggle: find")
-		case .prevNext:
-			return NSLocalizedString("Previous & Next Article", comment: "Article top toolbar toggle: previous and next article")
-		case .lock:
-			return NSLocalizedString("Lock Gestures", comment: "Article top toolbar toggle: lock gestures")
-		case .annotations:
-			return NSLocalizedString("Highlights", comment: "Article top toolbar toggle: annotations")
-		case .settings:
-			return NSLocalizedString("Settings", comment: "Article top toolbar toggle: settings")
-		case .checkForUpdates:
-			return NSLocalizedString("Check for Updates", comment: "Article top toolbar toggle: check for updates")
-		}
 	}
 
 	@objc private func toggleChanged() {

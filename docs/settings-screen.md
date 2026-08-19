@@ -123,26 +123,42 @@ preview *above* the toggles rather than below it: Preview (0), Top Toolbar
 - **Preview (0)**: one `ArticleToolbarPreviewCell`, a real `UINavigationBar`
   built with the same icons and order as
   `ArticleViewController.rightBarButtonItems()` (theme, table of contents,
-  find, then previous/next, each included only if its own toggle is on) —
-  a synthetic bar rather than an embedded, real `ArticleViewController`,
-  since that controller needs a live `Article`, `SceneCoordinator`, and
-  WebView machinery this screen has no reason to stand up. If
+  find, then previous/next, then lock/annotations/settings/check for
+  updates, each included only if its own toggle is on) — a synthetic bar
+  rather than an embedded, real `ArticleViewController`, since that
+  controller needs a live `Article`, `SceneCoordinator`, and WebView
+  machinery this screen has no reason to stand up. If
   `rightBarButtonItems()`'s ordering ever changes, this cell's
   `configure()` needs the matching change or the preview silently drifts
-  from the real reader.
-- **Top Toolbar (1)**: four `ArticleToolbarToggleCell` rows (Theme / Table
-  of Contents / Find in Article / Previous & Next Article), one per
-  `ArticleToolbarToggle` case, each a plain `UISwitch` row (same shape as
-  `StatsVisibilityCell`) — replaces the earlier checkmark-style
+  from the real reader. When `AppDefaults.articleToolbarUseOverflowMenu`
+  is on, `configure()` takes an early branch instead: it shows a single
+  target-less command-glyph (⌘) item if any toggle is enabled, or no
+  items at all if every toggle is off — mirroring
+  `ArticleViewController.rightBarButtonItems()`'s own overflow-mode
+  branch (see below) rather than the per-toggle icon list.
+- **Top Toolbar (1)**: `ArticleToolbarOverflowToggleCell` at item 0,
+  followed by one `ArticleToolbarToggleCell` per `ArticleToolbarToggle`
+  case (Theme / Table of Contents / Find in Article / Previous & Next
+  Article / Lock Gestures / Highlights / Settings / Check for Updates) —
+  `numberOfItemsInSection` for this section is
+  `ArticleToolbarToggle.allCases.count + 1` to account for the leading
+  overflow row. Both cell types are plain `UISwitch` rows (same shape as
+  `StatsVisibilityCell`), replacing the earlier checkmark-style
   single-select picker, which itself had replaced the two independent,
   silently-conflicting switches this screen used to be reached by, back
-  when it was a push row directly on the Articles list. All four toggles
-  are independent and freely combinable. Flipping a switch writes straight
-  to that toggle's own `AppDefaults` property (via
-  `AppDefaults.shared.setArticleToolbarToggleEnabled(_:_:)`); there's no
-  row-tap handling on this screen — selection is driven entirely by each
-  cell's own `UISwitch.valueChanged` target, not
-  `didSelectItemAt`/`shouldSelectItemAt`.
+  when it was a push row directly on the Articles list. All toggles are
+  independent and freely combinable up to a 4-icon cap
+  (`ArticleToolbarCustomizerViewController.maxSlots`; Previous & Next
+  Article counts as 2 slots) — **except** the cap is lifted entirely once
+  `ArticleToolbarOverflowToggleCell`'s switch
+  (`AppDefaults.articleToolbarUseOverflowMenu`) is on, since a menu has no
+  fixed-width leading cluster to run out of room in (see `capReached` in
+  `collectionView(_:cellForItemAt:)`). Flipping a switch writes straight
+  to its own `AppDefaults` property (`setArticleToolbarToggleEnabled(_:_:)`
+  for the per-function toggles, `articleToolbarUseOverflowMenu` directly
+  for the overflow row); there's no row-tap handling on this screen —
+  selection is driven entirely by each cell's own `UISwitch.valueChanged`
+  target, not `didSelectItemAt`/`shouldSelectItemAt`.
 
 Both sections reload on the generic `UserDefaults.didChangeNotification`
 — the toggle setters don't post a dedicated notification, and
@@ -185,3 +201,27 @@ The Top Toolbar row's detail label (`updateArticleTopToolbarModeLabel()`,
 on `FullScreenReadingViewController`) no longer names a single mode; it
 shows "Off" when all four toggles are off, or "N Shown" for the count of
 toggles currently on.
+
+`AppDefaults.articleToolbarUseOverflowMenu` (`Bool`, off by default, not
+in `registerDefaults()`'s dictionary — same implicit-false path as
+`articleToolbarShowLock`/`articleToolbarShowAnnotations`/
+`articleToolbarShowSettings`) is a display-mode switch, not a ninth
+per-function toggle: it doesn't gate whether a top-toolbar function is
+available, only whether the enabled set renders as one
+`UIBarButtonItem` per toggle (today's default) or collapses into a
+single command-glyph (⌘) button whose tap opens a native `UIMenu`
+listing every enabled function. `ArticleViewController.rightBarButtonItems()`
+branches on it first, before building any per-toggle item, and delegates
+menu construction to `rebuildOverflowMenu()`, which is also called from
+`updateUI()` (both the early `article == nil` return and its main body)
+and from `toggleGesturesLocked(_:)` — anywhere those methods mutate a
+bar item's `isEnabled`/`image` in place, since a static `UIMenu` doesn't
+observe those mutations the way an on-screen `UIBarButtonItem`'s own
+properties do. `ArticleToolbarToggle.title`/`.icon` (an extension on the
+enum itself, in `AppDefaults.swift`) is the single source of truth
+`rebuildOverflowMenu()`, `ArticleToolbarToggleCell`, and
+`ArticleToolbarPreviewCell` all read from for display name and icon —
+`.lock` and `.prevNext` are excluded from `.icon`'s use in
+`rebuildOverflowMenu()` since both have runtime-only state (lock's
+open/closed image, prevNext's next/previous availability) that a static
+per-case icon can't represent.
