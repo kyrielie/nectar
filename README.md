@@ -12,6 +12,11 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/kyrielie/nectar/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/kyrielie/nectar/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge)](./LICENSE)
 
+<h3 align="center">
+<a href="https://altdirect.app/?url=https://altdirect.app/?url=https://kyrielie.github.io/nectar/source.json"><img src="https://altdirect.app/assets/png/AltSource_Blue.png" target="_blank" width="200">
+</a>
+</h3>
+
 </div>
 
 Nectar reads Archive of Our Own's [RSS feeds](https://archiveofourown.org/faq/subscriptions-and-feeds?language_id=en#subscribetag) and loads each work's full text with the creator's own style enabled, so it feels like opening AO3 in a browser — but with saved reading position, offline-friendly caching, and a distraction-free reader. AO3's RSS feeds are limited by design (restricted works aren't included), so Nectar is also the companion app for [Ambrosia](https://github.com/kyrielie/ambrosia), a local fanfiction library that hosts a JSON Feed extension (`_ambrosia`) carrying fic-specific metadata — word count, chapter progress, fandom, rating, warnings, series, and book identity — for large personal collections that AO3's own feeds can't cover.
@@ -48,8 +53,6 @@ Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWi
 ## Installation
 
 Nectar isn't on the App Store — it's distributed as an unsigned IPA you sideload yourself, via **AltStore** (auto-updating) or **Sideloadly** (manual, one release at a time).
-
-https://altdirect.app/?url=https://kyrielie.github.io/nectar/source.json
 
 ### AltStore (recommended)
 
