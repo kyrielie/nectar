@@ -49,6 +49,8 @@ Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWi
 
 Nectar isn't on the App Store — it's distributed as an unsigned IPA you sideload yourself, via **AltStore** (auto-updating) or **Sideloadly** (manual, one release at a time).
 
+https://altdirect.app/?url=https://kyrielie.github.io/nectar/source.json
+
 ### AltStore (recommended)
 
 1. Install [AltStore](https://altstore.io) (or [SideStore](https://sidestore.io)) if you haven't already, and pair it with your Apple ID. *Sideloading installs applications to your phone using developer signing, so you will need to set up a server to approve the app. Follow the AltStore Classic or SideStore installation instructions. AltStore Classic requires a computer with AltServer installed.*
