@@ -260,6 +260,24 @@ indexing or were added while search was unavailable.
   one deliberate exception allowing a second table type direct queue access
   for an `ATTACH`-based bulk copy, everything else goes through
   `articlesTable`. See `ambrosia-feed.md` for the wire format this consumes.
+- **`ArticlesDatabaseFullSnapshotExportTable`** — `VACUUM INTO ?` against
+  the live database, exposed as `ArticlesDatabase.exportFullSnapshot(toPath:)`.
+  Unlike `ArticleSQLiteExportTable` above, this is an atomic, consistent,
+  whole-file copy that includes every table -- `bookState` and the FTS4
+  `search` table included -- not a per-feed `CREATE TABLE ... AS SELECT`
+  subset. Used only by device backup (see `backup-restore.md`); the
+  existing per-feed "Export…" feature keeps using
+  `ArticleSQLiteExportTable` as before, deliberately excluding `bookState`
+  and not meant to be restorable.
+- **`BackupSQLiteImportTable`** — the reverse of the snapshot export:
+  `ATTACH DATABASE`s a backup's `DB.sqlite3` (a full-snapshot export, from
+  this device or another one) on the same `DatabaseQueue` connection and
+  non-destructively merges `articles`/`statuses`/`bookState`/`annotations`
+  in, exposed as `ArticlesDatabase.importBackupSnapshot(backupDatabasePath:)`.
+  Every statement is additive-only (`INSERT OR IGNORE`, an OR-of-booleans,
+  or a later-`updatedAt`-wins `UPDATE`) -- never `DELETE` or
+  `INSERT OR REPLACE`. See `backup-restore.md` for the full per-table merge
+  rules and their reasoning.
 
 ### Public API shape
 

@@ -36,7 +36,12 @@ struct ArticlesDatabaseFullSnapshotExportTests {
 	/// yields, which fails the test loudly rather than hanging).
 	private func waitForIndexing(_ db: ArticlesDatabase, articleID: String) async {
 		for _ in 0..<50 {
-			var isIndexed = false
+			// DatabaseBlock is declared `@Sendable`, so the compiler treats
+			// this closure as potentially concurrent even though
+			// runInDatabaseSync is a synchronous, single-threaded call --
+			// this var is never touched from more than one thread at a time
+			// in practice. Same pattern as AmbrosiaSQLiteImportTable.importTransfer.
+			nonisolated(unsafe) var isIndexed = false
 			db.queue.runInDatabaseSync { database in
 				guard let resultSet = database.executeQuery("SELECT searchRowID FROM articles WHERE articleID = ?;", withArgumentsIn: [articleID]) else {
 					return
@@ -99,7 +104,10 @@ struct ArticlesDatabaseFullSnapshotExportTests {
 			return
 		}
 		defer { articlesCount.close() }
-		#expect(articlesCount.next())
+		// intWithCountResult() calls next() itself -- an extra next() call
+		// here would consume the row's single result before
+		// intWithCountResult() gets to read it, since a COUNT(*) query only
+		// ever returns one row.
 		#expect(articlesCount.intWithCountResult() == 1)
 	}
 

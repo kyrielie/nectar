@@ -26,6 +26,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case troubleshooting = 4
 		case help = 5
 		case ao3Account = 6
+		case backup = 7
 	}
 
 	/// See docs/app-chrome-palette.md ("Badge Colors"). Wraps `rootView` with
@@ -86,6 +87,11 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 
 	private enum HelpRow: Int {
 		case about = 0
+	}
+
+	private enum BackupRow: Int {
+		case backup = 0
+		case restore = 1
 	}
 
 	private weak var exportOPMLAccount: Account?
@@ -361,6 +367,23 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case .ao3Account:
 			let hosting = Self.makeSurfacePaletteAwareHostingController(rootView: AO3AccountSettingsView())
 			self.navigationController?.pushViewController(hosting, animated: true)
+		case .backup:
+			switch BackupRow(rawValue: indexPath.row) {
+			case .backup:
+				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
+				if let sourceView = tableView.cellForRow(at: indexPath) {
+					let sourceRect = tableView.rectForRow(at: indexPath)
+					exportBackupDocumentPicker(sourceView: sourceView, sourceRect: sourceRect)
+				}
+			case .restore:
+				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
+				if let sourceView = tableView.cellForRow(at: indexPath) {
+					let sourceRect = tableView.rectForRow(at: indexPath)
+					BackupRestoreCoordinator.begin(presentingController: self, sourceView: sourceView, sourceRect: sourceRect)
+				}
+			case nil:
+				break
+			}
 		default:
 			tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
 		}
@@ -737,6 +760,38 @@ private extension SettingsViewController {
 		let docPicker = UIDocumentPickerViewController(forExporting: [tempFile])
 		docPicker.modalPresentationStyle = .formSheet
 		self.present(docPicker, animated: true)
+	}
+
+	// MARK: - Backup export
+	//
+	// Direct analogue of exportArticlesSQLiteDocumentPicker above, matching
+	// the same UIDocumentPickerViewController(forExporting:) idiom
+	// (Correction 1) -- unlike the CSV/SQLite exports, this isn't scoped to
+	// a single account: BackupManager.exportBackup() covers every account,
+	// custom themes, and (if opted in) settings in one archive.
+
+	func exportBackupDocumentPicker(sourceView: UIView, sourceRect: CGRect) {
+		let includeSettings = AppDefaults.backupEligibleKeys.contains { AppDefaults.store.object(forKey: $0) != nil }
+
+		let zipURL: URL
+		do {
+			zipURL = try ActivityLog.shared.logActivity(owner: .app, kind: .exportBackup) {
+				try BackupManager.exportBackup(includeSettings: includeSettings)
+			}
+		} catch {
+			self.presentError(title: "Backup Error", message: error.localizedDescription)
+			return
+		}
+
+		let docPicker = UIDocumentPickerViewController(forExporting: [zipURL])
+		docPicker.modalPresentationStyle = .formSheet
+		self.present(docPicker, animated: true)
+		// BackupManager leaves zipURL's containing temp folder in place for
+		// the document picker to read from; nothing further to clean up
+		// here since it's already inside FileManager's temporaryDirectory,
+		// which the system reclaims on its own schedule -- matching every
+		// other tempFile export above, none of which explicitly delete
+		// their own temp output either.
 	}
 
 	// MARK: - Annotations export

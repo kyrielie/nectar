@@ -1322,13 +1322,16 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	/// Off by default, same reasoning as articleToolbarShowLock/
-	/// articleToolbarShowAnnotations/articleToolbarShowSettings above: an
-	/// opt-in display mode, not something existing users should suddenly
-	/// see change. When on, ArticleViewController.rightBarButtonItems()
-	/// collapses every enabled ArticleToolbarToggle into a single overflow
-	/// UIMenu (see ArticleViewController.rebuildOverflowMenu()) instead of
-	/// showing one bar item per toggle.
+	/// Off by default -- an opt-in display mode, not something existing
+	/// users should suddenly see change. Explicitly registered false in
+	/// registerDefaults(), same as articleToolbarShowLock (unlike
+	/// articleToolbarShowAnnotations/articleToolbarShowSettings/
+	/// articleToolbarShowCheckForUpdates above, which rely on
+	/// AppDefaults.bool(for:)'s implicit-false fallback instead). When
+	/// on, ArticleViewController.rightBarButtonItems() collapses every
+	/// enabled ArticleToolbarToggle into a single overflow UIMenu (see
+	/// ArticleViewController.rebuildOverflowMenu()) instead of showing
+	/// one bar item per toggle.
 	var articleToolbarUseOverflowMenu: Bool {
 		get {
 			return AppDefaults.bool(for: Key.articleToolbarUseOverflowMenu)

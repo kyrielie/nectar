@@ -2,16 +2,16 @@
 
 `SettingsViewController` (`iOS/Settings/`) is a `UITableViewController`
 driven by `Settings.storyboard`'s static cells, sectioned by the nested
-`SettingsViewController.Section: Int` (7 sections, in table order):
+`SettingsViewController.Section: Int` (8 sections, in table order):
 `.feeds`, `.timeline`, `.articles`, `.appearance`, `.troubleshooting`,
-`.help`, `.ao3Account`. Most sections have a corresponding `*Row: Int` enum
-(`FeedsRow`, `TimelineRow`, `ArticlesRow`, `AppearanceRow`,
-`TroubleshootingRow`, `HelpRow`) whose `.allCases.count` (where declared
-`CaseIterable`) or manual row count drives `numberOfRowsInSection` against
-the storyboard's static cells — adding a row means adding both the enum
-case and the matching storyboard cell in lockstep. `.ao3Account` has no
-row enum: it's a single row that pushes `AO3AccountSettingsView` directly
-(see below).
+`.help`, `.ao3Account`, `.backup`. Most sections have a corresponding
+`*Row: Int` enum (`FeedsRow`, `TimelineRow`, `ArticlesRow`,
+`AppearanceRow`, `TroubleshootingRow`, `HelpRow`, `BackupRow`) whose
+`.allCases.count` (where declared `CaseIterable`) or manual row count
+drives `numberOfRowsInSection` against the storyboard's static cells —
+adding a row means adding both the enum case and the matching storyboard
+cell in lockstep. `.ao3Account` has no row enum: it's a single row that
+pushes `AO3AccountSettingsView` directly (see below).
 
 ## Row inventory by section
 
@@ -51,6 +51,15 @@ row enum: it's a single row that pushes `AO3AccountSettingsView` directly
   inventory above at all** — see `ao3-authenticated-reading.md` for its
   full contents. Anyone auditing "every setting Nectar has" needs both
   this file and that one.
+- **`.backup`** (`BackupRow`, 2 cases): "Backup" (triggers
+  `exportBackupDocumentPicker(sourceView:sourceRect:)` directly, no
+  options screen) and "Restore from Backup…" (opens a `.zip` document
+  picker via `BackupRestoreCoordinator.begin`). Not a preference the way
+  every other section's rows are — both rows trigger an action rather
+  than reading/writing an `AppDefaults` key directly. See
+  `backup-restore.md` for the full export/import/merge behavior; this
+  entry is only about the row's presence and wiring, same scope as every
+  other bullet above.
 
 ## Settings living entirely outside this screen
 
@@ -202,22 +211,27 @@ on `FullScreenReadingViewController`) no longer names a single mode; it
 shows "Off" when all four toggles are off, or "N Shown" for the count of
 toggles currently on.
 
-`AppDefaults.articleToolbarUseOverflowMenu` (`Bool`, off by default, not
-in `registerDefaults()`'s dictionary — same implicit-false path as
-`articleToolbarShowLock`/`articleToolbarShowAnnotations`/
-`articleToolbarShowSettings`) is a display-mode switch, not a ninth
-per-function toggle: it doesn't gate whether a top-toolbar function is
-available, only whether the enabled set renders as one
-`UIBarButtonItem` per toggle (today's default) or collapses into a
-single command-glyph (⌘) button whose tap opens a native `UIMenu`
-listing every enabled function. `ArticleViewController.rightBarButtonItems()`
+`AppDefaults.articleToolbarUseOverflowMenu` (`Bool`, off by default,
+explicitly registered false in `registerDefaults()` — same as
+`articleToolbarShowLock`, unlike `articleToolbarShowAnnotations`/
+`articleToolbarShowSettings`/`articleToolbarShowCheckForUpdates`, which
+rely on `AppDefaults.bool(for:)`'s implicit-false fallback instead) is a
+display-mode switch, not a ninth per-function toggle: it doesn't gate
+whether a top-toolbar function is available, only whether the enabled
+set renders as one `UIBarButtonItem` per toggle (today's default) or
+collapses into a single command-glyph (⌘) button whose tap opens a
+native `UIMenu` listing every enabled function. `ArticleViewController.rightBarButtonItems()`
 branches on it first, before building any per-toggle item, and delegates
 menu construction to `rebuildOverflowMenu()`, which is also called from
 `updateUI()` (both the early `article == nil` return and its main body)
 and from `toggleGesturesLocked(_:)` — anywhere those methods mutate a
 bar item's `isEnabled`/`image` in place, since a static `UIMenu` doesn't
 observe those mutations the way an on-screen `UIBarButtonItem`'s own
-properties do. `ArticleToolbarToggle.title`/`.icon` (an extension on the
+properties do. Those two call sites run unconditionally regardless of
+display mode, so `rebuildOverflowMenu()` itself guards on the flag and
+clears `overflowBarButtonItem.menu` to `nil` when it's off, rather than
+leaving a live, populated (if unused) menu sitting on an item nobody
+reads in icon mode. `ArticleToolbarToggle.title`/`.icon` (an extension on the
 enum itself, in `AppDefaults.swift`) is the single source of truth
 `rebuildOverflowMenu()`, `ArticleToolbarToggleCell`, and
 `ArticleToolbarPreviewCell` all read from for display name and icon —

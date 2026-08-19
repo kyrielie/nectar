@@ -758,6 +758,34 @@ public enum FetchType {
 		try database.exportArticlesSQLite(feedIDs: feedIDs, toPath: destinationPath)
 	}
 
+	/// Backup/restore: pass-through to ArticlesDatabase.exportFullSnapshot,
+	/// needed because `database` itself is internal to this module.
+	/// Unlike `exportArticlesSQLite` above, this is the *entire* database
+	/// -- articles, statuses, bookState, annotations, and the FTS `search`
+	/// table -- suitable for a full restore rather than the per-feed
+	/// "Export..." feature. `destinationPath` must not already exist.
+	public func exportFullSnapshot(toPath destinationPath: String) throws {
+		try database.exportFullSnapshot(toPath: destinationPath)
+	}
+
+	/// Backup/restore: pass-through to
+	/// ArticlesDatabase.importBackupSnapshot(backupDatabasePath:) -- the
+	/// non-destructive articles/statuses/bookState/annotations merge, same
+	/// reasoning as exportFullSnapshot above (`database` is internal to this
+	/// module, so BackupManager can't call it directly).
+	public func importBackupSnapshot(backupDatabasePath: String) throws {
+		try database.importBackupSnapshot(backupDatabasePath: backupDatabasePath)
+	}
+
+	/// Backup/restore: pass-through to
+	/// FeedSettingsDatabase.mergeFromBackup(atPath:) -- `INSERT OR IGNORE`
+	/// keyed on feedURL, keep-local-backfill-missing (Correction 6). Same
+	/// "internal type, needs a public entry point" reasoning as the two
+	/// methods above.
+	public func mergeFeedSettings(fromBackupAtPath backupPath: String) async throws {
+		try await feedSettingsDatabase.mergeFromBackup(atPath: backupPath)
+	}
+
 	public func fetchArticles(_ fetchType: FetchType) -> Set<Article> {
 		switch fetchType {
 		case .starred(let limit):
