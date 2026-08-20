@@ -898,6 +898,16 @@ public enum FetchType {
 		await database.fetchTotalContentHTMLSize()
 	}
 
+	// MARK: - Cached images (image-link viewer precache/fallback)
+
+	public func fetchCachedImage(articleID: String, imageURL: String) async -> Data? {
+		await database.fetchCachedImage(articleID: articleID, imageURL: imageURL)
+	}
+
+	public func saveCachedImage(articleID: String, imageURL: String, imageData: Data, dateCached: Date = Date()) async {
+		await database.saveCachedImage(articleID: articleID, imageURL: imageURL, imageData: imageData, dateCached: dateCached)
+	}
+
 	// MARK: - Kudos-on-like (Task 6)
 
 	/// Whether/how a kudos POST has already been attempted for this book.

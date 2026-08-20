@@ -135,7 +135,7 @@ final class ManageStorageCollectionViewController: UICollectionViewController, S
 			}
 			var content = cell.defaultContentConfiguration()
 			content.text = row.title
-			content.secondaryText = self?.formattedSize(row.storedContentHTMLSize)
+			content.secondaryText = self?.formattedSize(row.storedContentHTMLSize + row.storedImagesSize)
 			cell.contentConfiguration = content
 			cell.accessories = []
 		}

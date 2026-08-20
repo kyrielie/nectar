@@ -28,6 +28,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	let statusesTable: StatusesTable
 	let bookStateTable: BookStateTable
 	let annotationsTable: AnnotationsTable
+	let cachedImagesTable: CachedImagesTable
 	let searchTable: SearchTable
 	let retentionStyle: ArticlesDatabase.RetentionStyle
 	let articlesCache = OSAllocatedUnfairLock(initialState: [String: Article]())
@@ -85,6 +86,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		self.statusesTable = StatusesTable(queue: queue)
 		self.bookStateTable = BookStateTable(queue: queue)
 		self.annotationsTable = AnnotationsTable(queue: queue)
+		self.cachedImagesTable = CachedImagesTable(queue: queue)
 		self.retentionStyle = retentionStyle
 
 		self.searchTable = SearchTable(queue: queue)
@@ -245,7 +247,25 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	}
 
 	func fetchArticleStorageInfo(limit: Int, _ database: FMDatabase) -> [ArticleStorageInfo] {
-		let query = "select articleID, title, bookKey, length(contentHTML) as storedSize from articles where contentHTML is not null order by storedSize desc limit ?;"
+		// LEFT JOINs a per-article sum of cached-image bytes so the sort
+		// key (and the where clause) accounts for images, not just
+		// contentHTML -- an article with cached images but no remaining
+		// contentHTML (e.g. text already cleared by a previous Manage
+		// Storage action) must still surface, so the where clause checks
+		// both columns rather than just "contentHTML is not null".
+		let query = """
+		select a.articleID, a.title, a.bookKey,
+		       length(a.contentHTML) as storedSize,
+		       coalesce(ci.imagesSize, 0) as storedImagesSize
+		from articles a
+		left join (
+		    select articleID, sum(length(imageData)) as imagesSize
+		    from cachedImages group by articleID
+		) ci on ci.articleID = a.articleID
+		where a.contentHTML is not null or ci.imagesSize is not null
+		order by storedSize + coalesce(ci.imagesSize, 0) desc
+		limit ?;
+		"""
 		guard let resultSet = database.executeQuery(query, withArgumentsIn: [limit]) else {
 			return []
 		}
@@ -261,7 +281,8 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			let title = resultSet.string(forColumn: DatabaseKey.title)
 			let bookKey = resultSet.string(forColumn: DatabaseKey.bookKey)
 			let storedSize = Int(resultSet.longLongInt(forColumn: "storedSize"))
-			result.append(ArticleStorageInfo(articleID: articleID, title: title, bookKey: bookKey, storedContentHTMLSize: storedSize))
+			let storedImagesSize = Int(resultSet.longLongInt(forColumn: "storedImagesSize"))
+			result.append(ArticleStorageInfo(articleID: articleID, title: title, bookKey: bookKey, storedContentHTMLSize: storedSize, storedImagesSize: storedImagesSize))
 		}
 		return result
 	}
@@ -278,7 +299,18 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	func fetchTotalContentHTMLSize(_ database: FMDatabase) -> Int {
 		// Same LENGTH() the per-row query above reads -- the compressed,
 		// base64-encoded size actually stored, not a decompressed estimate.
-		guard let resultSet = database.executeQuery("select sum(length(contentHTML)) as totalSize from articles;", withArgumentsIn: []) else {
+		// Includes cachedImages.imageData so the Manage Storage grand total
+		// matches fetchArticleStorageInfo's per-row sort key (storedSize +
+		// storedImagesSize) -- see nectar-toolbar-image-link-viewer.md.
+		guard let resultSet = database.executeQuery(
+			"""
+			select
+			  (select coalesce(sum(length(contentHTML)), 0) from articles) +
+			  (select coalesce(sum(length(imageData)), 0) from cachedImages)
+			  as totalSize;
+			""",
+			withArgumentsIn: []
+		) else {
 			return 0
 		}
 		defer {
@@ -722,6 +754,11 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			for articleID in articleIDs {
 				self.updateRowsWithDictionary(clearedColumns, whereKey: DatabaseKey.articleID, matches: articleID, database: database)
 			}
+			// Same transaction as the contentHTML clear above -- a clear-content
+			// action can't partially succeed (text cleared, images orphaned, or
+			// vice versa). See nectar-toolbar-image-link-viewer.md's "Deletion"
+			// decision.
+			self.cachedImagesTable.deleteAll(articleIDs: articleIDs, database)
 			self.removeArticleIDsFromCache(articleIDs)
 			DispatchQueue.main.async {
 				completion?()

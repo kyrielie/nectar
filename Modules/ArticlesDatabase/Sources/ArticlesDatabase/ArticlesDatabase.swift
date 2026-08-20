@@ -55,6 +55,7 @@ public struct ArticleStorageInfo: Sendable {
 	public let title: String?
 	public let bookKey: String?
 	public let storedContentHTMLSize: Int
+	public let storedImagesSize: Int
 }
 
 @MainActor public final class ArticlesDatabase {
@@ -605,6 +606,46 @@ public struct ArticleStorageInfo: Sendable {
 		return await withCheckedContinuation { continuation in
 			articlesTable.fetchTotalContentHTMLSizeAsync { size in
 				continuation.resume(returning: size)
+			}
+		}
+	}
+
+	// MARK: - Cached images (image-link viewer precache/fallback)
+
+	/// Cache-first lookup for the in-app image viewer -- see
+	/// nectar-toolbar-image-link-viewer.md, decision 4 ("Resolution order").
+	/// Returns decompressed, ready-to-display bytes; compression is an
+	/// internal storage detail this call hides from callers outside the
+	/// module, the same way contentHTML's compression is hidden behind
+	/// ArticlesTable's row accessors.
+	public func fetchCachedImage(articleID: String, imageURL: String) async -> Data? {
+		let cachedImage: CachedImage? = await withCheckedContinuation { continuation in
+			articlesTable.cachedImagesTable.fetchCachedImageAsync(articleID: articleID, imageURL: imageURL) { image in
+				continuation.resume(returning: image)
+			}
+		}
+		guard let stored = cachedImage?.imageData,
+			  let decompressed = ContentHTMLCompression.decompress(stored),
+			  let data = Data(base64Encoded: decompressed) else {
+			return nil
+		}
+		return data
+	}
+
+	/// Persists a successfully fetched/decoded image, compressed the same
+	/// way as contentHTML (LZFSE, base64-in-TEXT -- see
+	/// ContentHTMLCompression's header comment). `imageData` is the raw
+	/// image bytes; this method owns both the base64 encode and the
+	/// compression step, so callers outside this module never see the
+	/// storage representation.
+	public func saveCachedImage(articleID: String, imageURL: String, imageData: Data, dateCached: Date = Date()) async {
+		let base64 = imageData.base64EncodedString()
+		guard let compressed = ContentHTMLCompression.compress(base64) else {
+			return
+		}
+		await withCheckedContinuation { continuation in
+			articlesTable.cachedImagesTable.saveAsync(articleID: articleID, imageURL: imageURL, imageData: compressed, dateCached: dateCached) {
+				continuation.resume()
 			}
 		}
 	}
@@ -1173,6 +1214,8 @@ private extension ArticlesDatabase {
 
 	CREATE TABLE if not EXISTS annotations (annotationID TEXT NOT NULL PRIMARY KEY, articleID TEXT NOT NULL, bookKey TEXT, quoteExact TEXT NOT NULL, quotePrefix TEXT NOT NULL DEFAULT '', quoteSuffix TEXT NOT NULL DEFAULT '', rootSelector TEXT NOT NULL DEFAULT '.articleBody', startOffset INTEGER NOT NULL, endOffset INTEGER NOT NULL, color TEXT NOT NULL DEFAULT 'yellow', note TEXT, createdAt DATE NOT NULL, updatedAt DATE NOT NULL, orphanedAt DATE, lastReanchoredAt DATE);
 
+	CREATE TABLE if not EXISTS cachedImages (articleID TEXT NOT NULL, imageURL TEXT NOT NULL, imageData TEXT NOT NULL, dateCached DATE NOT NULL, PRIMARY KEY (articleID, imageURL));
+
 	CREATE INDEX if not EXISTS articles_feedID_datePublished_articleID on articles (feedID, datePublished, articleID);
 
 	CREATE INDEX if not EXISTS statuses_starred_index on statuses (starred);
@@ -1180,6 +1223,8 @@ private extension ArticlesDatabase {
 	CREATE INDEX if not EXISTS annotations_articleID_index on annotations(articleID);
 
 	CREATE INDEX if not EXISTS annotations_bookKey_index on annotations(bookKey);
+
+	CREATE INDEX if not EXISTS cachedImages_articleID_index on cachedImages (articleID);
 
 	CREATE VIRTUAL TABLE if not EXISTS search using fts4(title, body);
 

@@ -25,6 +25,7 @@ final class WebViewController: UIViewController {
 	private struct MessageName {
 		static let imageWasClicked = "imageWasClicked"
 		static let imageWasShown = "imageWasShown"
+		static let imagesShouldBePrecached = "imagesShouldBePrecached"
 		static let showFeedInspector = "showFeedInspector"
 		static let debugLog = "debugLog"
 		static let scrollRestoreComplete = "scrollRestoreComplete"
@@ -903,6 +904,8 @@ extension WebViewController: WKScriptMessageHandler {
 			clickedImageCompletion?()
 		case MessageName.imageWasClicked:
 			imageWasClicked(body: message.body as? String)
+		case MessageName.imagesShouldBePrecached:
+			precacheImages(body: message.body as? String)
 		case MessageName.showFeedInspector:
 			if let feed = article?.feed {
 				coordinator.showFeedInspector(for: feed)
@@ -1503,6 +1506,12 @@ private struct ImageClickMessage: Codable {
 	let height: Float
 	let imageTitle: String?
 	let imageURL: String
+	// Caption source for the <a> image-link case (link title/text content),
+	// distinct from imageTitle (which stays sourced from title/alt for the
+	// <img> case, unchanged). Shown under the bundled fallback illustration
+	// when resolution fails -- see nectar-toolbar-image-link-viewer.md,
+	// decision 4. Absent/nil for ordinary <img> taps.
+	let captionText: String?
 }
 
 /// The shape annotations.js's renderAnnotationsEncoded/addHighlightFromSelection
@@ -1655,6 +1664,7 @@ private extension WebViewController {
 				// Remove possible existing message handlers
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.imageWasClicked)
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.imageWasShown)
+				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.imagesShouldBePrecached)
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.showFeedInspector)
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.debugLog)
 				webView.configuration.userContentController.removeScriptMessageHandler(forName: MessageName.scrollRestoreComplete)
@@ -1664,6 +1674,7 @@ private extension WebViewController {
 				// Add handlers
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.imageWasClicked)
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.imageWasShown)
+				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.imagesShouldBePrecached)
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.showFeedInspector)
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.debugLog)
 				webView.configuration.userContentController.add(WrapperScriptMessageHandler(self), name: MessageName.scrollRestoreComplete)
@@ -1872,13 +1883,55 @@ private extension WebViewController {
 
 		guard let imageURL = URL(string: clickMessage.imageURL) else { return }
 
-		Downloader.shared.download(imageURL) { [weak self] downloadResponse, error in
-			guard let self, let data = downloadResponse.data, error == nil, !data.isEmpty,
-				  let image = UIImage(data: data) else {
+		// Cache-first: a stale/dead remote link with a good local cache
+		// should still open successfully -- that's the actual point of the
+		// caching half of this feature, not just a latency optimization.
+		// See nectar-toolbar-image-link-viewer.md, decision 4.
+		guard let articleID = article?.articleID, let account = article?.account else {
+			// No article context to key the cache on -- fall straight through
+			// to a live fetch, same as before this feature existed.
+			downloadAndShowImage(imageURL: imageURL, clickMessage: clickMessage, webView: webView)
+			return
+		}
+
+		Task { [weak self] in
+			guard let self else { return }
+			if let cachedData = await account.fetchCachedImage(articleID: articleID, imageURL: clickMessage.imageURL),
+			   let image = UIImage(data: cachedData) {
+				self.showFullScreenImage(image: image, clickMessage: clickMessage, webView: webView)
 				return
+			}
+			self.downloadAndShowImage(imageURL: imageURL, clickMessage: clickMessage, webView: webView, articleID: articleID, account: account)
+		}
+	}
+
+	/// Live-fetch fallback for imageWasClicked, used both when there's no
+	/// cache hit and when there's no article context to check a cache
+	/// against at all. On success, also writes the result into the cache
+	/// (a tap is as good a precache signal as the eager on-render pass) --
+	/// on failure of either the fetch or the decode, shows the bundled
+	/// "sorry!" fallback state rather than silently doing nothing (see
+	/// nectar-toolbar-image-link-viewer.md, decision 4).
+	private func downloadAndShowImage(imageURL: URL, clickMessage: ImageClickMessage, webView: WKWebView, articleID: String? = nil, account: Account? = nil) {
+		Downloader.shared.download(imageURL) { [weak self] downloadResponse, error in
+			guard let self else { return }
+			guard let data = downloadResponse.data, error == nil, !data.isEmpty,
+				  let image = UIImage(data: data) else {
+				self.showImageFallback(clickMessage: clickMessage, webView: webView)
+				return
+			}
+			if let articleID, let account {
+				Task {
+					await account.saveCachedImage(articleID: articleID, imageURL: clickMessage.imageURL, imageData: data)
+				}
 			}
 			self.showFullScreenImage(image: image, clickMessage: clickMessage, webView: webView)
 		}
+	}
+
+	private func showImageFallback(clickMessage: ImageClickMessage, webView: WKWebView) {
+		let caption = clickMessage.imageTitle?.isEmpty == false ? clickMessage.imageTitle : (clickMessage.captionText?.isEmpty == false ? clickMessage.captionText : nil)
+		coordinator.showFullScreenImageFallback(caption: caption, transitioningDelegate: self)
 	}
 
 	private func showFullScreenImage(image: UIImage, clickMessage: ImageClickMessage, webView: WKWebView) {
@@ -1896,6 +1949,80 @@ private extension WebViewController {
 		transition.originImage = image
 
 		coordinator.showFullScreenImage(image: image, imageTitle: clickMessage.imageTitle, transitioningDelegate: self)
+	}
+
+	// MARK: - Precaching
+
+	/// Bounded concurrent precache of every image/image-link URL in the
+	/// rendered article, triggered from main_ios.js's postRenderProcessing.
+	/// Caps at 4-6 in flight rather than firing a flat loop, so this
+	/// doesn't trip Downloader's per-host 429 cooldown before it has
+	/// anything to react to (that mechanism is reactive only). See
+	/// nectar-toolbar-image-link-viewer.md, decision 3.
+	private static let maxConcurrentPrecacheDownloads = 5
+
+	func precacheImages(body: String?) {
+		guard let body,
+			  let data = body.data(using: .utf8),
+			  let urlStrings = try? JSONDecoder().decode([String].self, from: data),
+			  !urlStrings.isEmpty,
+			  let articleID = article?.articleID,
+			  let account = article?.account else {
+			return
+		}
+
+		Task {
+			await self.runPrecacheQueue(urlStrings: urlStrings, articleID: articleID, account: account)
+		}
+	}
+
+	private func runPrecacheQueue(urlStrings: [String], articleID: String, account: Account) async {
+		await withTaskGroup(of: Void.self) { group in
+			var remaining = urlStrings[...]
+			var activeCount = 0
+
+			func enqueueNext() {
+				guard let urlString = remaining.popFirst() else { return }
+				activeCount += 1
+				group.addTask {
+					await Self.precacheOne(urlString: urlString, articleID: articleID, account: account)
+				}
+			}
+
+			// Prime up to the concurrency cap, then refill one-in-one-out as
+			// each task finishes -- a bounded queue, not a flat
+			// fire-everything loop. See nectar-toolbar-image-link-viewer.md,
+			// decision 3.
+			for _ in 0..<Self.maxConcurrentPrecacheDownloads {
+				enqueueNext()
+			}
+			while activeCount > 0 {
+				_ = await group.next()
+				activeCount -= 1
+				enqueueNext()
+			}
+		}
+	}
+
+	@MainActor
+	private static func precacheOne(urlString: String, articleID: String, account: Account) async {
+		// Already cached: nothing to do. Checked here (not just relied on
+		// via saveCachedImage's INSERT OR REPLACE) to avoid a redundant
+		// network fetch for images already precached on an earlier open of
+		// the same article.
+		if await account.fetchCachedImage(articleID: articleID, imageURL: urlString) != nil {
+			return
+		}
+		guard let url = URL(string: urlString) else { return }
+		guard let downloadResponse = try? await Downloader.shared.download(url) else { return }
+		guard let data = downloadResponse.data, !data.isEmpty else { return }
+		if let httpResponse = downloadResponse.response as? HTTPURLResponse, !(200..<300).contains(httpResponse.statusCode) {
+			return
+		}
+		// Confirm the bytes actually decode as an image before spending a
+		// row on them -- same guard imageWasClicked's live-fetch path uses.
+		guard UIImage(data: data) != nil else { return }
+		await account.saveCachedImage(articleID: articleID, imageURL: urlString, imageData: data)
 	}
 
 	func stopMediaPlayback(_ webView: WKWebView) {

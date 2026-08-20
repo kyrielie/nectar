@@ -602,6 +602,9 @@
     "If an AO3 search-results feed reports a Cloudflare challenge, use this to prove to Cloudflare that Nectar is being used by a real person -- the same check AO3 shows in a regular browser sometimes. This isn't tied to your AO3 account and doesn't require being signed in; it usually needs re-doing periodically." : {
       "comment" : "AO3 Cloudflare challenge section footer"
     },
+    "Image unavailable" : {
+      "comment" : "Fallback caption when an image/image-link can't be resolved"
+    },
     "Import" : {
       "comment" : "Import AO3 links button"
     },
@@ -1281,6 +1284,9 @@
     },
     "This device cannot send emails." : {
       "comment" : "This device cannot send emails."
+    },
+    "This feed requires a signed-in AO3 account" : {
+      "comment" : "AO3 load more error"
     },
     "This theme cannot be used because of data corruption in the Info.plist. %@." : {
       "comment" : "Decoding key missing"

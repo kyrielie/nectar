@@ -19,19 +19,21 @@ struct ManageStorageRowData {
 	let title: String
 	let bookKey: String?
 	let storedContentHTMLSize: Int
+	let storedImagesSize: Int
 }
 
 @MainActor final class ManageStorageViewModel {
 
-	/// Largest N articles by stored `contentHTML` size, across every
-	/// account, sorted descending. `limit` is applied per-account before
-	/// merging, then again after merging, so a single huge account can't
-	/// starve the combined list of a smaller account's largest rows.
+	/// Largest N articles by stored `contentHTML` + cached-image size,
+	/// across every account, sorted descending. `limit` is applied
+	/// per-account before merging, then again after merging, so a single
+	/// huge account can't starve the combined list of a smaller account's
+	/// largest rows.
 	private(set) var rows = [ManageStorageRowData]()
 
-	/// Sum of every account's stored `contentHTML` size -- an honest number
-	/// since it's the compressed size actually on disk, not a decompressed
-	/// estimate.
+	/// Sum of every account's stored `contentHTML` size plus cached-image
+	/// size -- an honest number since it's the compressed size actually on
+	/// disk, not a decompressed estimate.
 	private(set) var totalStoredContentHTMLSize = 0
 
 	private let perAccountFetchLimit = 200
@@ -49,13 +51,17 @@ struct ManageStorageRowData {
 					articleID: item.articleID,
 					title: item.title?.isEmpty == false ? item.title! : NSLocalizedString("Untitled", comment: "Article title"),
 					bookKey: item.bookKey,
-					storedContentHTMLSize: item.storedContentHTMLSize
+					storedContentHTMLSize: item.storedContentHTMLSize,
+					storedImagesSize: item.storedImagesSize
 				))
 			}
 			total += await account.fetchTotalContentHTMLSize()
 		}
 
-		allRows.sort { $0.storedContentHTMLSize > $1.storedContentHTMLSize }
+		// Sort key includes image bytes -- an image-heavy, text-light
+		// chapter must surface as the large item it actually is. See
+		// nectar-toolbar-image-link-viewer.md, section 2b.
+		allRows.sort { $0.storedContentHTMLSize + $0.storedImagesSize > $1.storedContentHTMLSize + $1.storedImagesSize }
 		if allRows.count > displayLimit {
 			allRows.removeLast(allRows.count - displayLimit)
 		}
@@ -78,6 +84,6 @@ struct ManageStorageRowData {
 		await account.clearContent(articleIDs: [row.articleID])
 
 		rows.removeAll { $0.articleID == row.articleID && $0.accountID == row.accountID }
-		totalStoredContentHTMLSize -= row.storedContentHTMLSize
+		totalStoredContentHTMLSize -= (row.storedContentHTMLSize + row.storedImagesSize)
 	}
 }
