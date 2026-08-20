@@ -5,7 +5,7 @@
 <img width="100" height="100" alt="Nectar Icon" src="https://github.com/user-attachments/assets/8af38915-340c-4106-be1e-703983852ba9" />
 
 
-**An iOS feed reader for Archive of Our Own and [Ambrosia](https://github.com/kyrielie/ambrosia). Basically an unofficial AO3 reading application. **
+**An iOS feed reader for Archive of Our Own and [Ambrosia](https://github.com/kyrielie/ambrosia). An unofficial AO3 reading application. **
 
 [![Install via AltStore](https://img.shields.io/badge/AltStore-Install-4185A9?style=for-the-badge)](https://kyrielie.github.io/nectar/source.json)
 [![Latest release](https://img.shields.io/github/v/release/kyrielie/nectar?style=for-the-badge&label=release)](https://github.com/kyrielie/nectar/releases/latest)
@@ -17,14 +17,26 @@
 <a href="https://altdirect.app/?url=https://altdirect.app/?url=https://kyrielie.github.io/nectar/source.json"><img src="https://altdirect.app/assets/png/AltSource_Blue.png" target="_blank" width="200">
 </a>
 </h3>
-
 </div>
 
-Load any work search link and start reading! Nectar supports parsing fics from filtered work links. Use AO3 in your browser to filter works, copy the url and paste it as a feed in Nectar. Alternatively, load any list of AO3 links to import your current tabs. Nectar caches any work you've opened in it, saving all fics you've read and preventing you from losing your progress. It load each work's full text with the creator's own style enabled, so it feels like opening AO3 in a browser — but with saved reading position, offline-friendly caching, and a distraction-free reader. 
+> [!IMPORTANT]
+> Before continuing, please read the AO3 admin post [Why AO3 Doesn't Have an Official App](https://archiveofourown.org/admin_posts/35806) and be aware of [the history of unofficial apps that accessed AO3 on fanlore](https://fanlore.org/wiki/AO3_App_Wars). Please be aware that it is recommended to use AO3 in your browser. This app does not require you to log in using your account. Be aware that "**if you log in to AO3 on these apps, (like Nectar) the apps' developers may gain access to your username and password. You're trusting both that the developer is not malicious and that they have taken all proper precautions to keep your login information safe. If your login information is exposed to someone with malicious intent, they could log into your account to post Terms of Service-violating content, delete your works, change your account's credentials so you can't log in, or even delete your account.**" (from AO3 admin post).
 
-Nectar was originally designed to read Archive of Our Own's [RSS feeds](https://archiveofourown.org/faq/subscriptions-and-feeds?language_id=en#subscribetag) however AO3's RSS feeds are limited by design (restricted works aren't included).
+- [x] This app will always be free and open source. (If you don't trust me, you look at the code and build the application yourself.)
+- [x] This app does not distribute fics. 
+- [x] This app does it's best to respect AO3's TOS, servers, and policies.
+- [x] Nectar logs you in using the Safari browser. Your login details stay on your phone.
+- [x] Your reading history stays private on your phone.
 
- Nectar is also the companion app for [Ambrosia](https://github.com/kyrielie/ambrosia), a local fanfiction library that hosts a JSON Feed extension (`_ambrosia`) carrying fic-specific metadata — word count, chapter progress, fandom, rating, warnings, series, and book identity — for large personal collections that AO3's own feeds can't cover.
+## Background
+
+Nectar was originally designed to read Archive of Our Own's [RSS feeds](https://archiveofourown.org/faq/subscriptions-and-feeds?language_id=en#subscribetag) however AO3's RSS feeds are limited by design. The feed contains only the most recently updated works and provides only links to AO3 and restricted works aren't included. Any feed reader can read an RSS feed, Nectar just follows the link and provides a better reading experience.
+
+Knowing the controversy about AO3 client applications, I originally limited Nectar to being a companion app for [Ambrosia](https://github.com/kyrielie/ambrosia), a local fanfiction library that hosts a JSON Feed extension (`_ambrosia`) carrying fic-specific metadata — word count, chapter progress, fandom, rating, warnings, series, and book identity — for my large personal collections of epubs that I downloaded from AO3. 
+
+I have extended the functionality of Nectar to be able to update the metadata and text from AO3 for my local library. Now you can load any work search link and start reading. 
+
+Use AO3 in your browser to filter works, copy the url and paste it as a feed in Nectar. Alternatively, load any list of AO3 links to import your current tabs. Nectar caches any work you've opened in it, saving all fics you've read and preventing you from losing your progress. It load each work's full text with the creator's own style enabled, so it feels like opening AO3 in a browser — but with saved reading position, offline-friendly caching, and a distraction-free reader. 
 
 Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) and uses its code and license, but is not affiliated with or supported by the NetNewsWire project. It is not associated with Archive of Our Own; it makes requests to AO3's servers only when you open a work. Your reading history and progress stay on your device and are never shared.
 
@@ -54,6 +66,7 @@ Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWi
 - **Loved**, alongside the usual Read and Starred (Read Later) states, with its own smart feed and heart indicator.
 - **Timeline layout customization** — icon size, summary line count, and metadata/tag previews are adjustable from Settings, with a live preview.
 - **Reader theming** — Accent Color and Surface Palette let you retint the app's chrome independently of the article reader's own theme, with a matching set of bundled `.nnwtheme`s.
+- **Annotations and highlights** - save quotes, write notes. 
 
 ## Installation
 
