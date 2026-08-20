@@ -584,6 +584,7 @@ final class WebViewController: UIViewController {
 		setBottomScrollEdgeEffectHidden(false)
 		configureContextMenuInteraction()
 		updateNotchAndPageCounterVisibility()
+		updateScrollbarVisibility()
 		// setNavigationBarHidden/setToolbarHidden reset interactivePopGestureRecognizer's
 		// (and interactiveContentPopGestureRecognizer's) isEnabled back to true as a
 		// side effect, which silently overrides articleBackSwipeEnabled = false. Re-apply
@@ -610,6 +611,7 @@ final class WebViewController: UIViewController {
 			setBottomScrollEdgeEffectHidden(true)
 			configureContextMenuInteraction()
 			updateNotchAndPageCounterVisibility()
+			updateScrollbarVisibility()
 			coordinator.applyArticleBackSwipeGating()
 		}
 	}
@@ -1620,10 +1622,13 @@ private extension WebViewController {
 				webView.scrollView.scrollsToTop = false
 
 				// Same pooling concern as scrollsToTop above: reasserted on every
-				// dequeue rather than once at creation, and read fresh (not cached)
-				// so a Settings change takes effect on the next article open without
-				// needing a relaunch.
-				webView.scrollView.showsVerticalScrollIndicator = AppDefaults.shared.showArticleScrollbar
+				// dequeue rather than once at creation. updateScrollbarVisibility()
+				// (below) reads AppDefaults.shared.articleScrollbarVisibility fresh
+				// (not cached) each time it's called, so a Settings change takes
+				// effect on the next article open, and .whenNotFullScreen also
+				// re-evaluates live as showBars()/hideBars() are called, without
+				// needing a relaunch or a fresh load.
+				self.updateScrollbarVisibility()
 
 				// Belt-and-suspenders alongside the page.html viewport meta zoom
 				// restriction (viewport-meta zoom blocking is sometimes inconsistent
@@ -1773,10 +1778,54 @@ private extension WebViewController {
 		webView.underPageBackgroundColor = colors.background
 		webView.scrollView.backgroundColor = colors.background
 
+		// BUG FIX: indicatorStyle previously went unset, so it stayed on
+		// UIScrollView's own default, which tracks the *system* trait
+		// (traitCollection.userInterfaceStyle) -- not the *theme's*
+		// resolved background above. A dark-background theme read in
+		// Light Mode (or a light-background theme read in Dark Mode, e.g.
+		// via a per-theme override) got a same-tone indicator that was
+		// effectively invisible against its own track. Derive the
+		// indicator color from the actual resolved background luminance
+		// instead, so it always contrasts with what's on screen
+		// regardless of the system trait.
+		webView.scrollView.indicatorStyle = Self.isPerceptuallyDark(colors.background) ? .white : .black
+
+		updateScrollbarVisibility()
+
 		// Keep the notch cover / page counter in sync with the same resolved color and
 		// text color on every render, not just on the next bars-toggle -- otherwise they
 		// keep showing whatever was last set, stale, through an article/theme change.
 		updateNotchAndPageCounterVisibility(resolvedBackground: colors.background, resolvedText: colors.text)
+	}
+
+	/// Same 0.299/0.587/0.114 relative-luminance weighting
+	/// BadgeColorTable.textColor(against:) already uses elsewhere in
+	/// this app, reused here rather than a third slightly-different
+	/// formula.
+	private static func isPerceptuallyDark(_ color: UIColor) -> Bool {
+		var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+		color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+		let luminance = (0.299 * red) + (0.587 * green) + (0.114 * blue)
+		return luminance <= 0.6
+	}
+
+	/// Applies AppDefaults.shared.articleScrollbarVisibility to the live
+	/// webview's scroll indicator. Called from
+	/// applyResolvedBackgroundColors() (covers a fresh load/dequeue) and
+	/// from showBars()/hideBars() (covers .whenNotFullScreen
+	/// re-evaluating live as fullscreen is entered/exited, without a
+	/// reload) so all three settings-screen options (Off/Only Outside
+	/// Full Screen/Always) take effect promptly.
+	func updateScrollbarVisibility() {
+		guard let webView else { return }
+		switch AppDefaults.shared.articleScrollbarVisibility {
+		case .off:
+			webView.scrollView.showsVerticalScrollIndicator = false
+		case .always:
+			webView.scrollView.showsVerticalScrollIndicator = true
+		case .whenNotFullScreen:
+			webView.scrollView.showsVerticalScrollIndicator = !AppDefaults.shared.articleFullscreenEnabled
+		}
 	}
 
 	/// Precedence: override background (if set) -> theme's own background ->

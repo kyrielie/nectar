@@ -122,6 +122,9 @@
     "All Unread" : {
       "comment" : "All Unread pseudo-feed title"
     },
+    "Always" : {
+      "comment" : "Article scrollbar: always"
+    },
     "AO3" : {
       "comment" : "AO3 in-app browser fallback title"
     },
@@ -157,6 +160,9 @@
     },
     "Are you sure you want to remove this account? This cannot be undone." : {
       "comment" : "Remove Account"
+    },
+    "Article Scrollbar" : {
+      "comment" : "Article scrollbar picker title"
     },
     "Article Search" : {
       "comment" : "Article Search"
@@ -898,7 +904,7 @@
       "comment" : "Ocean accent color"
     },
     "Off" : {
-      "comment" : "Highlight creation method: off\nPage counter off\nToolbars: no buttons shown"
+      "comment" : "Article scrollbar: off\nHighlight creation method: off\nPage counter off\nToolbars: no buttons shown"
     },
     "OK" : {
       "comment" : "OK\nOK button"
@@ -914,6 +920,9 @@
     },
     "Only applies when the Read Articles filter is on" : {
       "comment" : "Clear read articles inapplicable reason"
+    },
+    "Only Outside Full Screen" : {
+      "comment" : "Article scrollbar: only outside full screen"
     },
     "Open" : {
       "comment" : "Open"
