@@ -44,6 +44,19 @@ borders, overflow handling) stay byte-identical across themes and can be
 batch-audited. A minority are **hand-written**, used only when a source
 theme's structure can't be expressed as a recolor of the shared template.
 
+Horizontal overflow (an oversized fic image forcing the whole article page
+to scroll sideways) is guarded at two layers: every theme is expected to
+carry the generator's `img, figure, video, div, object { max-width: 100% }`
+rule (or an equivalent) so oversized content actually fits its column, and
+`core.css` additionally sets `html, body { overflow-x: hidden }` as a
+structural backstop that applies regardless of what any individual theme
+does. The six themes that predate the generator (Aldine, Deco Line,
+Kelmscott, Kennerley, Marigold Press, Rosarivo) originally shipped without
+the media-sizing rule; it's since been added directly to each one.
+`Tests/NetNewsWire-iOSTests/ArticleThemeOverflowSafetyTests.swift` guards
+both layers so a future hand-written theme that forgets the rule fails the
+build instead of shipping a silent regression.
+
 ## `ArticleTheme`
 
 `Shared/ArticleStyles/ArticleTheme.swift` is the runtime value type

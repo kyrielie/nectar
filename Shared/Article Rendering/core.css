@@ -6,6 +6,23 @@ html {
 	scrollbar-gutter: stable;
 }
 
+/* Hard backstop against horizontal scrolling. core.css is prepended to every
+   theme (see docs/theme-system.md), so this is the one place a fix here
+   covers all of them, including future hand-written themes that don't route
+   through generate_ported_themes.py's shared img/figure/etc. sizing rule.
+   Per-theme rules (e.g. the generator's `img, figure, video, div, object {
+   max-width: 100% }`) are still the right way to make oversized content
+   *fit* the viewport; this rule only guarantees that if something still
+   overflows anyway -- a theme missing that sizing rule, a fixed-width inline
+   style stripStyles() in main.js didn't touch, an unusually wide <pre>/<code>
+   block outside a table -- it clips instead of becoming horizontally
+   scrollable. Deliberately not applied to individual overflow containers
+   like .nnw-overflow's table wrapper, which still needs its own
+   `overflow-x: auto` to remain usable. */
+html, body {
+	overflow-x: hidden;
+}
+
 /* This is the activity indicator (currently iOS only) that is used while image zooming */
 
 .activityIndicatorWrap {

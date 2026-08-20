@@ -38,7 +38,7 @@
       }
     },
     "%d Shown" : {
-      "comment" : "Article bottom toolbar: number of buttons shown\nArticle top toolbar: number of buttons shown"
+      "comment" : "Toolbars: number of buttons shown"
     },
     "%i Unread" : {
       "comment" : "14 Unread"
@@ -109,6 +109,9 @@
     },
     "All Articles" : {
       "comment" : "All Articles"
+    },
+    "All functions are already placed in this bar." : {
+      "comment" : "Toolbar: overflow-picks empty state"
     },
     "All Highlights" : {
       "comment" : "Annotations list navigation title: everything\nAnnotations settings: link to unscoped list"
@@ -200,8 +203,8 @@
     "Blue" : {
       "comment" : "Highlight color"
     },
-    "Bottom Toolbar" : {
-      "comment" : "Article Bottom Toolbar screen title\nBottom Toolbar"
+    "Bottom" : {
+      "comment" : "Toolbars screen: bottom bar tab"
     },
     "Browser Verification" : {
       "comment" : "AO3 Cloudflare challenge status row label"
@@ -216,7 +219,7 @@
       "comment" : "Highlight palette section footer"
     },
     "Check for Updates" : {
-      "comment" : "AO3 preface refetch cadence picker label\nArticle top toolbar toggle: check for updates\nCommand"
+      "comment" : "AO3 preface refetch cadence picker label\nCommand\nToolbar function: check for updates"
     },
     "Check for Updates (Enable AO3 Updates in Settings)" : {
       "comment" : "Command, disabled: Ambrosia article with the AO3 network toggle off"
@@ -255,7 +258,7 @@
       "comment" : "Collapse"
     },
     "Collapse into Overflow Menu" : {
-      "comment" : "Article top toolbar: overflow display-mode switch"
+      "comment" : "Toolbar: overflow display-mode switch"
     },
     "Collapsed" : {
       "comment" : "Annotations list: collapsed section header accessibility value\nCollapsed"
@@ -501,7 +504,7 @@
       "comment" : "Filter Read Feeds"
     },
     "Find in Article" : {
-      "comment" : "Article top toolbar toggle: find\nFind in Article"
+      "comment" : "Find in Article\nToolbar function: find"
     },
     "Finding feed" : {
       "comment" : "Finding feed"
@@ -579,7 +582,7 @@
       "comment" : "Highlight palette section header"
     },
     "Highlights" : {
-      "comment" : "Article top toolbar toggle: annotations"
+      "comment" : "Toolbar function: annotations"
     },
     "Highlights & Notes" : {
       "comment" : "Annotations settings navigation title"
@@ -698,10 +701,10 @@
       "comment" : "Local"
     },
     "Lock Gestures" : {
-      "comment" : "Article top toolbar toggle: lock gestures\nLock Gestures\nOverflow menu: lock gestures"
+      "comment" : "Lock Gestures\nOverflow menu: lock gestures\nToolbar function: lock gestures"
     },
     "Loved" : {
-      "comment" : "Article bottom toolbar toggle: loved\nLoved"
+      "comment" : "Loved\nToolbar function: loved"
     },
     "Manage Storage" : {
       "comment" : "Manage Storage"
@@ -834,7 +837,7 @@
       "comment" : "Next Article\nOverflow menu: next article"
     },
     "Next Unread" : {
-      "comment" : "Article bottom toolbar toggle: next unread\nNext Unread"
+      "comment" : "Next Unread\nToolbar function: next unread"
     },
     "Next Unread Article" : {
       "comment" : "Next Unread Article"
@@ -895,7 +898,7 @@
       "comment" : "Ocean accent color"
     },
     "Off" : {
-      "comment" : "Article bottom toolbar: no buttons shown\nArticle top toolbar: no buttons shown\nHighlight creation method: off\nPage counter off"
+      "comment" : "Highlight creation method: off\nPage counter off\nToolbars: no buttons shown"
     },
     "OK" : {
       "comment" : "OK\nOK button"
@@ -929,6 +932,9 @@
     },
     "Order" : {
       "comment" : "Sort direction picker title"
+    },
+    "Overflow Menu" : {
+      "comment" : "Toolbars screen: overflow section header"
     },
     "Override Hyphenation" : {
       "comment" : "Override Hyphenation toggle"
@@ -988,7 +994,7 @@
       "comment" : "Inline series navigation link"
     },
     "Previous & Next Article" : {
-      "comment" : "Article top toolbar toggle: previous and next article"
+      "comment" : "Toolbar function: previous and next article"
     },
     "Previous Article" : {
       "comment" : "Overflow menu: previous article\nPrevious Article"
@@ -997,7 +1003,7 @@
       "comment" : "Highlight color"
     },
     "Read Later" : {
-      "comment" : "Article bottom toolbar toggle: read later\nCommand\nRead Later"
+      "comment" : "Command\nRead Later\nToolbar function: read later"
     },
     "Reading Font" : {
       "comment" : "Reading Font picker label"
@@ -1052,6 +1058,9 @@
     },
     "Rename “%@”" : {
       "comment" : "Rename feed"
+    },
+    "Reset" : {
+      "comment" : "Toolbars screen: reset active bar to defaults"
     },
     "Reset to Theme Default" : {
       "comment" : "Reset to Theme Default button"
@@ -1141,13 +1150,13 @@
       "comment" : "Sepia accent color\nSepia highlight palette\nSepia surface palette"
     },
     "Settings" : {
-      "comment" : "Article top toolbar toggle: settings\nSurface palette preview: settings background swatch caption"
+      "comment" : "Surface palette preview: settings background swatch caption\nToolbar function: settings"
     },
     "Settings Cell" : {
       "comment" : "Surface palette preview: settings cell swatch caption"
     },
     "Share" : {
-      "comment" : "Article bottom toolbar toggle: share\nShare button"
+      "comment" : "Share\nShare button\nToolbar function: share/action"
     },
     "Share AO3 Series Link" : {
       "comment" : "Command"
@@ -1216,7 +1225,7 @@
       "comment" : "Dinosaurs swipe hint."
     },
     "Table of Contents" : {
-      "comment" : "Article top toolbar toggle: table of contents\nTable of Contents"
+      "comment" : "Table of Contents\nToolbar function: table of contents"
     },
     "Tag Display" : {
       "comment" : "Tag Display"
@@ -1247,7 +1256,7 @@
       "comment" : "Theme installed"
     },
     "Theme" : {
-      "comment" : "Article top toolbar toggle: theme\nTheme navigation title\nTheme picker label"
+      "comment" : "Theme navigation title\nTheme picker label\nToolbar function: theme"
     },
     "Theme installed" : {
       "comment" : "Theme installed"
@@ -1289,7 +1298,7 @@
       "comment" : "Toggle Loved Status"
     },
     "Toggle Read" : {
-      "comment" : "Article bottom toolbar toggle: read"
+      "comment" : "Toolbar function: toggle read"
     },
     "Toggle Read Articles Filter" : {
       "comment" : "Toggle Read Articles Filter"
@@ -1306,11 +1315,11 @@
     "Toggle Sidebar" : {
       "comment" : "Toggle Sidebar"
     },
-    "Top" : {
-      "comment" : "Top margin label"
+    "Toolbars" : {
+      "comment" : "Toolbars screen title"
     },
-    "Top Toolbar" : {
-      "comment" : "Article Top Toolbar screen title\nTop Toolbar"
+    "Top" : {
+      "comment" : "Toolbars screen: top bar tab\nTop margin label"
     },
     "Total Storage Used" : {
       "comment" : "Manage Storage total row"
@@ -1383,6 +1392,9 @@
     },
     "When you love a work in Nectar, it also leaves a kudos on that work on AO3. You're not signed in, so it's left as a guest kudos -- sign in above to leave it as yourself instead." : {
       "comment" : "AO3 kudos-on-like footer, signed out"
+    },
+    "Which Functions Appear" : {
+      "comment" : "Toolbars screen: functions section header"
     },
     "WIP" : {
       "comment" : "Completion status"

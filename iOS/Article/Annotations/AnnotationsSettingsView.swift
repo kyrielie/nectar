@@ -12,8 +12,8 @@
 //  in-context, whole-book path; this is the browse-everything path), the
 //  default highlight color picker, and the CSV/SQLite export entry
 //  points. The top-toolbar button's own on/off toggle lives solely in
-//  ArticleToolbarCustomizerViewController now -- see that type's header
-//  comment for why it's the single home for all top-toolbar button
+//  ToolbarsCustomizerViewController now -- see that type's header
+//  comment for why it's the single home for all toolbar-function
 //  toggles.
 //
 //  Export and cross-article navigation both need UIKit-side machinery

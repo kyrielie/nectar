@@ -23,7 +23,12 @@ understand CSS-4 system color keywords (`Canvas`, `CanvasText`, etc. — these
 fall through to "not found" like anything else unparseable) or selector
 specificity beyond exact-string matching. `@supports (...)` blocks are
 excluded from consideration entirely before scanning starts
-(`stripBraceBlocks`), on the basis that they carry platform-specific
+(`stripBraceBlocks`). `colors(for theme:)` is a thin wrapper over
+`colors(css:)`, which takes a raw CSS string directly -- same reasoning as
+`stripBraceBlocks` being `internal` rather than `private`, so tests can
+exercise real shipped themes' `stylesheet.css` without needing
+`ArticleTheme.init(url:isAppTheme:)`'s `Bundle.main` core.css resource. It
+excludes `@supports` blocks on the basis that they carry platform-specific
 overrides this scanner isn't equipped to reason about correctly — as of a
 later fix, this also covers the `@supports not (...)` form, which the
 original regex missed (`stylesheet.css`'s own macOS-only rules block uses
@@ -76,6 +81,31 @@ color `.systemBackground` via storyboard, which tracks trait changes for
 free; Nectar's per-theme colors can't be expressed that way, since custom
 themes need their own light/dark colors, so this pipeline needs its own
 live-invalidation hook that the dynamic-color approach got automatically.
+
+**Cold-launch state-restoration fix:** a related but distinct problem from the
+live-toggle question below -- `WebViewController.viewDidLoad`'s own initial
+`initialColors` read and the first `applyResolvedBackgroundColors()` call (from
+`renderPage()`) both resolve against whatever `traitCollection.userInterfaceStyle`
+reads as at the moment they run. During state restoration,
+`SceneCoordinator.restoreSelectedSidebarItemAndArticle` pushes the restored
+article before the first frame is ever drawn, and that whole path runs from
+`SceneDelegate.scene(_:willConnectTo:options:)` -- before the window is
+key/visible -- so that initial read can land against a not-yet-settled trait
+environment while WKWebView's own CSS engine (driven independently by the real
+system `prefers-color-scheme`) resolves correctly. Nothing previously corrected
+this afterward, since `registerForTraitChanges` only fires on a *change* event,
+not on "the initial read was wrong." Most visible on themes with no
+`body`/`.articleBody` `color`/`background-color` declared at all (e.g.
+Broadsheet), since `ArticleThemeColorExtractor`'s fallback for those is a
+genuine light/dark opposite (`.black`-on-`.white` vs `.white`-on-`.black`) --
+themes that declare an explicit, appearance-invariant background/color (no
+dark media block; e.g. Black & White) resolve to the same color either way and
+aren't affected. Fixed by adding `WebViewController.viewDidAppear(_:)`, which
+re-runs `applyResolvedBackgroundColors()` once the view is guaranteed to
+actually be on screen in a real, key window -- the first lifecycle point whose
+timing doesn't depend on `SceneCoordinator`'s own restore-path scheduling. See
+`ArticleThemeColorExtractorTests.BackgroundInversionExposure` for the
+Broadsheet/Black & White divergence this depends on.
 
 **Open investigation, not yet resolved as of this doc:** `WebViewController`
 previously carried temporary debug logging (`Self.logger.debug(...)` calls

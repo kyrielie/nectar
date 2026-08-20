@@ -705,17 +705,40 @@ enum PageCounterDisplayMode: String, CaseIterable, Sendable {
 	case pageCount
 }
 
-/// Which buttons appear in the article reader's top toolbar, alongside
-/// the theme button -- see ArticleViewController.rightBarButtonItems()
-/// and ArticleToolbarCustomizerViewController. Each case is an
-/// independent on/off switch (AppDefaults.articleToolbarShowTheme/
-/// ShowTableOfContents/ShowFind/ShowPrevNext/ShowLock), freely
-/// combinable, rather than a single mutually-exclusive picker -- see
-/// AppDefaults.migrateArticleToolbarTogglesIfNeeded() for the one-time
-/// migration off the older showTableOfContentsAndFind/
-/// showPrevNextArticleButtons pair. lock has no legacy switch to migrate
-/// from (like theme), so it just keeps its registered default below.
-enum ArticleToolbarToggle: CaseIterable, Sendable {
+/// Which of the article reader's two toolbars a ToolbarFunction placement
+/// or query refers to. Replaces the formerly-implicit split between
+/// ArticleToolbarToggle (top only) and BottomToolbarToggle (bottom only)
+/// -- see ToolbarFunction's own doc comment for why unification requires
+/// this explicit parameter rather than two disjoint enums.
+enum ToolbarBar: Sendable {
+	case top
+	case bottom
+}
+
+/// A function assignable to the article reader's top toolbar, bottom
+/// toolbar, or both at once -- see AppDefaults.isToolbarFunctionEnabled(_:on:)
+/// and setToolbarFunctionEnabled(_:on:_:). Unifies the formerly-separate
+/// ArticleToolbarToggle (theme...checkForUpdates, top only) and
+/// BottomToolbarToggle (read...action, bottom only) into one type so a
+/// function's identity no longer implies which bar it can appear on.
+///
+/// Each (function, bar) pair is an independent on/off switch, and unlike
+/// the pre-unification model, the *same* function can be on for both
+/// .top and .bottom simultaneously (duplicates across bars are allowed;
+/// duplicates within the *same* bar are not -- there is exactly one Bool
+/// per (function, bar), not a count). See
+/// AppDefaults.migrateUnifiedToolbarsIfNeeded() for the one-time
+/// migration off the pre-unification per-bar toggles.
+///
+/// String-backed (unlike CaseIterable alone would require) so a
+/// person's chosen per-bar display order (AppDefaults.toolbarFunctionOrder(for:))
+/// can be persisted as an array of stable identifiers rather than
+/// depending on this enum's declaration order, which must stay free to
+/// gain new cases without silently reordering anyone's existing choice.
+/// Do not rename an existing rawValue once shipped -- that would orphan
+/// it from any already-persisted order array the same way renaming a
+/// UserDefaults key would.
+enum ToolbarFunction: String, CaseIterable, Sendable {
 	case theme
 	case tableOfContents
 	case find
@@ -724,43 +747,71 @@ enum ArticleToolbarToggle: CaseIterable, Sendable {
 	case annotations
 	case settings
 	case checkForUpdates
+	case read
+	case star
+	case heart
+	case nextUnread
+	case action
 }
 
-/// Single source of truth for each toggle's display name and icon --
-/// previously duplicated between ArticleToolbarToggleCell (title only)
-/// and ArticleToolbarPreviewCell (icons only). Adding a third consumer
-/// (ArticleViewController.rebuildOverflowMenu()) is what justifies
-/// pulling both up here instead of copying either a third time.
-extension ArticleToolbarToggle {
+/// Single source of truth for each function's display name and icon --
+/// previously duplicated between ArticleToolbarToggleCell/BottomToolbarToggleCell
+/// (title) and ArticleToolbarPreviewCell (icons), and previously absent
+/// entirely for the five bottom-bar cases (read/star/heart/nextUnread/
+/// action had no centralized title/icon before unification -- each
+/// bottom-bar cell hardcoded its own). Consumers: ToolbarFunctionCell,
+/// ToolbarPreviewCell, ArticleViewController.rebuildOverflowMenu().
+extension ToolbarFunction {
 
 	var title: String {
 		switch self {
 		case .theme:
-			return NSLocalizedString("Theme", comment: "Article top toolbar toggle: theme")
+			return NSLocalizedString("Theme", comment: "Toolbar function: theme")
 		case .tableOfContents:
-			return NSLocalizedString("Table of Contents", comment: "Article top toolbar toggle: table of contents")
+			return NSLocalizedString("Table of Contents", comment: "Toolbar function: table of contents")
 		case .find:
-			return NSLocalizedString("Find in Article", comment: "Article top toolbar toggle: find")
+			return NSLocalizedString("Find in Article", comment: "Toolbar function: find")
 		case .prevNext:
-			return NSLocalizedString("Previous & Next Article", comment: "Article top toolbar toggle: previous and next article")
+			return NSLocalizedString("Previous & Next Article", comment: "Toolbar function: previous and next article")
 		case .lock:
-			return NSLocalizedString("Lock Gestures", comment: "Article top toolbar toggle: lock gestures")
+			return NSLocalizedString("Lock Gestures", comment: "Toolbar function: lock gestures")
 		case .annotations:
-			return NSLocalizedString("Highlights", comment: "Article top toolbar toggle: annotations")
+			return NSLocalizedString("Highlights", comment: "Toolbar function: annotations")
 		case .settings:
-			return NSLocalizedString("Settings", comment: "Article top toolbar toggle: settings")
+			return NSLocalizedString("Settings", comment: "Toolbar function: settings")
 		case .checkForUpdates:
-			return NSLocalizedString("Check for Updates", comment: "Article top toolbar toggle: check for updates")
+			return NSLocalizedString("Check for Updates", comment: "Toolbar function: check for updates")
+		case .read:
+			return NSLocalizedString("Toggle Read", comment: "Toolbar function: toggle read")
+		case .star:
+			return NSLocalizedString("Read Later", comment: "Toolbar function: read later")
+		case .heart:
+			return NSLocalizedString("Loved", comment: "Toolbar function: loved")
+		case .nextUnread:
+			return NSLocalizedString("Next Unread", comment: "Toolbar function: next unread")
+		case .action:
+			return NSLocalizedString("Share", comment: "Toolbar function: share/action")
 		}
 	}
 
-	/// Static icon for this toggle. .lock and .prevNext have runtime-only
-	/// meaning beyond this (lock's open/closed state, prevNext's
-	/// available/unavailable state) -- callers that need that dynamic
-	/// state (ArticleViewController.rebuildOverflowMenu()) build their own
-	/// UIAction for those two cases instead of using this property. Safe
-	/// for ArticleToolbarPreviewCell, which never shows dynamic state (see
-	/// its own doc comment on the lock preview always being unlocked).
+	/// Static icon for this function. .lock and .prevNext have
+	/// runtime-only meaning beyond this (lock's open/closed state,
+	/// prevNext's available/unavailable state) -- callers that need that
+	/// dynamic state (ArticleViewController.rebuildOverflowMenu()) build
+	/// their own UIAction for those two cases instead of using this
+	/// property. Safe for ToolbarPreviewCell, which never shows dynamic
+	/// state (see its own doc comment on the lock preview always being
+	/// unlocked).
+	///
+	/// read/star/heart/nextUnread/action icons and titles are carried
+	/// over verbatim from BottomToolbarPreviewCell.configure()'s
+	/// `candidates` array and BottomToolbarToggleCell.title(for:)
+	/// respectively (confirmed by reading both), not guessed --
+	/// Assets.Images.circleOpen/starOpen/heartOpen/nextUnread/action, and
+	/// "Read Later" for .star specifically (not "Toggle Starred" --
+	/// Assets.Images.starOpen's own historical-naming comment explains
+	/// the bookmark-vs-star mismatch between the asset name and the
+	/// display copy).
 	@MainActor
 	var icon: UIImage? {
 		switch self {
@@ -772,28 +823,13 @@ extension ArticleToolbarToggle {
 		case .annotations: return Assets.Images.annotations
 		case .settings: return Assets.Images.settings
 		case .checkForUpdates: return Assets.Images.checkForUpdates
+		case .read: return Assets.Images.circleOpen
+		case .star: return Assets.Images.starOpen
+		case .heart: return Assets.Images.heartOpen
+		case .nextUnread: return Assets.Images.nextUnread
+		case .action: return Assets.Images.action
 		}
 	}
-}
-
-/// One independent on/off switch per bottom-toolbar button
-/// (AppDefaults.bottomToolbarShowRead/ShowStar/ShowHeart/ShowNextUnread/
-/// ShowAction), same freely-combinable shape as ArticleToolbarToggle
-/// above but for ArticleViewController's bottom UIToolbar rather than its
-/// top navigation bar. Unlike ArticleToolbarToggle, every case here
-/// defaults to true (see registerDefaults()) -- these five buttons are
-/// the app's existing, always-on bottom bar; introducing this customizer
-/// must not silently empty the bar for people who never open the new
-/// settings screen. No 4-icon cap here (see
-/// BottomToolbarCustomizerViewController) -- the bottom bar's
-/// flexibleSpace-separated layout distributes evenly regardless of item
-/// count, unlike the top bar's fixed-width leading cluster.
-enum BottomToolbarToggle: CaseIterable, Sendable {
-	case read
-	case star
-	case heart
-	case nextUnread
-	case action
 }
 
 /// How a new highlight can be created from a text selection in an
@@ -887,12 +923,97 @@ final class AppDefaults: Sendable {
 		static let articleToolbarShowAnnotations = "articleToolbarShowAnnotations"
 		static let articleToolbarShowSettings = "articleToolbarShowSettings"
 		static let articleToolbarShowCheckForUpdates = "articleToolbarShowCheckForUpdates"
+		/// Legacy Bool keys, pre-unification. No longer backed by a live
+		/// property -- read directly via AppDefaults.store by
+		/// migrateUnifiedToolbarsIfNeeded() only, to carry a person's
+		/// prior top/bottom placement and overflow choice onto the
+		/// toolbarFunctionEnabled(_:on:) keys below. Do not reintroduce
+		/// properties for these keys.
 		static let articleToolbarUseOverflowMenu = "articleToolbarUseOverflowMenu"
 		static let bottomToolbarShowRead = "bottomToolbarShowRead"
 		static let bottomToolbarShowStar = "bottomToolbarShowStar"
 		static let bottomToolbarShowHeart = "bottomToolbarShowHeart"
 		static let bottomToolbarShowNextUnread = "bottomToolbarShowNextUnread"
 		static let bottomToolbarShowAction = "bottomToolbarShowAction"
+		/// Unified toolbar-customization keys. One Bool per (ToolbarFunction,
+		/// ToolbarBar, inline-or-overflow) triple -- see
+		/// isToolbarFunctionEnabled(_:on:)/setToolbarFunctionEnabled(_:on:_:)
+		/// and isToolbarFunctionInOverflow(_:on:)/setToolbarFunctionInOverflow(_:on:_:)
+		/// for the dispatch. Named toolbarFn{Function}{Bar}/
+		/// toolbarFn{Function}{Bar}Overflow rather than reusing the legacy
+		/// articleToolbarShow*/bottomToolbarShow* names, since those names
+		/// are retained above as migration-source-only keys and must keep
+		/// their old on-disk values untouched until migration reads them.
+		static let toolbarFnThemeTop = "toolbarFnThemeTop"
+		static let toolbarFnThemeTopOverflow = "toolbarFnThemeTopOverflow"
+		static let toolbarFnThemeBottom = "toolbarFnThemeBottom"
+		static let toolbarFnThemeBottomOverflow = "toolbarFnThemeBottomOverflow"
+		static let toolbarFnTableOfContentsTop = "toolbarFnTableOfContentsTop"
+		static let toolbarFnTableOfContentsTopOverflow = "toolbarFnTableOfContentsTopOverflow"
+		static let toolbarFnTableOfContentsBottom = "toolbarFnTableOfContentsBottom"
+		static let toolbarFnTableOfContentsBottomOverflow = "toolbarFnTableOfContentsBottomOverflow"
+		static let toolbarFnFindTop = "toolbarFnFindTop"
+		static let toolbarFnFindTopOverflow = "toolbarFnFindTopOverflow"
+		static let toolbarFnFindBottom = "toolbarFnFindBottom"
+		static let toolbarFnFindBottomOverflow = "toolbarFnFindBottomOverflow"
+		static let toolbarFnPrevNextTop = "toolbarFnPrevNextTop"
+		static let toolbarFnPrevNextTopOverflow = "toolbarFnPrevNextTopOverflow"
+		static let toolbarFnPrevNextBottom = "toolbarFnPrevNextBottom"
+		static let toolbarFnPrevNextBottomOverflow = "toolbarFnPrevNextBottomOverflow"
+		static let toolbarFnLockTop = "toolbarFnLockTop"
+		static let toolbarFnLockTopOverflow = "toolbarFnLockTopOverflow"
+		static let toolbarFnLockBottom = "toolbarFnLockBottom"
+		static let toolbarFnLockBottomOverflow = "toolbarFnLockBottomOverflow"
+		static let toolbarFnAnnotationsTop = "toolbarFnAnnotationsTop"
+		static let toolbarFnAnnotationsTopOverflow = "toolbarFnAnnotationsTopOverflow"
+		static let toolbarFnAnnotationsBottom = "toolbarFnAnnotationsBottom"
+		static let toolbarFnAnnotationsBottomOverflow = "toolbarFnAnnotationsBottomOverflow"
+		static let toolbarFnSettingsTop = "toolbarFnSettingsTop"
+		static let toolbarFnSettingsTopOverflow = "toolbarFnSettingsTopOverflow"
+		static let toolbarFnSettingsBottom = "toolbarFnSettingsBottom"
+		static let toolbarFnSettingsBottomOverflow = "toolbarFnSettingsBottomOverflow"
+		static let toolbarFnCheckForUpdatesTop = "toolbarFnCheckForUpdatesTop"
+		static let toolbarFnCheckForUpdatesTopOverflow = "toolbarFnCheckForUpdatesTopOverflow"
+		static let toolbarFnCheckForUpdatesBottom = "toolbarFnCheckForUpdatesBottom"
+		static let toolbarFnCheckForUpdatesBottomOverflow = "toolbarFnCheckForUpdatesBottomOverflow"
+		static let toolbarFnReadTop = "toolbarFnReadTop"
+		static let toolbarFnReadTopOverflow = "toolbarFnReadTopOverflow"
+		static let toolbarFnReadBottom = "toolbarFnReadBottom"
+		static let toolbarFnReadBottomOverflow = "toolbarFnReadBottomOverflow"
+		static let toolbarFnStarTop = "toolbarFnStarTop"
+		static let toolbarFnStarTopOverflow = "toolbarFnStarTopOverflow"
+		static let toolbarFnStarBottom = "toolbarFnStarBottom"
+		static let toolbarFnStarBottomOverflow = "toolbarFnStarBottomOverflow"
+		static let toolbarFnHeartTop = "toolbarFnHeartTop"
+		static let toolbarFnHeartTopOverflow = "toolbarFnHeartTopOverflow"
+		static let toolbarFnHeartBottom = "toolbarFnHeartBottom"
+		static let toolbarFnHeartBottomOverflow = "toolbarFnHeartBottomOverflow"
+		static let toolbarFnNextUnreadTop = "toolbarFnNextUnreadTop"
+		static let toolbarFnNextUnreadTopOverflow = "toolbarFnNextUnreadTopOverflow"
+		static let toolbarFnNextUnreadBottom = "toolbarFnNextUnreadBottom"
+		static let toolbarFnNextUnreadBottomOverflow = "toolbarFnNextUnreadBottomOverflow"
+		static let toolbarFnActionTop = "toolbarFnActionTop"
+		static let toolbarFnActionTopOverflow = "toolbarFnActionTopOverflow"
+		static let toolbarFnActionBottom = "toolbarFnActionBottom"
+		static let toolbarFnActionBottomOverflow = "toolbarFnActionBottomOverflow"
+		/// Whether each bar collapses its overflow-flagged functions into
+		/// a single trailing menu icon. Two independent switches (top and
+		/// bottom no longer share one Bool) -- replaces the pre-unification
+		/// articleToolbarUseOverflowMenu, which only existed for the top
+		/// bar.
+		static let toolbarTopUseOverflowMenu = "toolbarTopUseOverflowMenu"
+		static let toolbarBottomUseOverflowMenu = "toolbarBottomUseOverflowMenu"
+		/// Persisted per-bar display order -- an array of ToolbarFunction.rawValue
+		/// strings. See AppDefaults.toolbarFunctionOrder(for:)/
+		/// setToolbarFunctionOrder(_:for:). Registered in registerDefaults()
+		/// to the same order the three pre-persisted-order call sites
+		/// (ArticleViewController.displayOrder(for:), ToolbarPreviewCell.configure(bar:),
+		/// ToolbarsCustomizerViewController's functions table) used to
+		/// hardcode independently, so a fresh install's rendering is
+		/// unchanged from before this key existed.
+		static let toolbarTopFunctionOrder = "toolbarTopFunctionOrder"
+		static let toolbarBottomFunctionOrder = "toolbarBottomFunctionOrder"
+		static let hasMigratedUnifiedToolbars = "hasMigratedUnifiedToolbars"
 		static let defaultAnnotationColor = "defaultAnnotationColor"
 		static let annotationCreationMethod = "annotationCreationMethod"
 		static let hideNotchInFullScreen = "hideNotchInFullScreen"
@@ -933,17 +1054,19 @@ final class AppDefaults: Sendable {
 	/// wrongly replayed onto a fresh install.
 	///
 	/// This array requires manual maintenance -- there is no compiler
-	/// check tying it to `Key`'s contents (65 keys as of this writing;
-	/// 44 included below, 21 excluded). `AppDefaultsBackupTests` has a
-	/// named test per excluded key below; adding a new `Key` entry without
-	/// deciding whether it belongs here is a review-time responsibility,
-	/// not something either the compiler or a generic test can catch.
+	/// check tying it to `Key`'s contents (119 keys as of this writing;
+	/// 98 included below, 22 excluded, after adding the 54
+	/// unified-toolbar keys). `AppDefaultsBackupTests` has a named test
+	/// per excluded key below; adding a new `Key` entry without deciding
+	/// whether it belongs here is a review-time responsibility, not
+	/// something either the compiler or a generic test can catch.
 	///
 	/// Excluded, and why (not merely omitted -- see the corresponding
 	/// named test in AppDefaultsBackupTests for each):
 	/// - `firstRunDate`, `hasShownAO3Onboarding`,
 	///   `hasMigratedNavigationBarTintingDefault`,
 	///   `hasMigratedToolbarStyleDefault`, `hasMigratedArticleToolbarToggles`,
+	///   `hasMigratedUnifiedToolbars`,
 	///   `didMigrateLegacyStateRestorationInfo`: one-time migration/onboarding
 	///   gates. Replaying `true` onto a fresh install would skip onboarding
 	///   or a migration step that install actually needs to run.
@@ -1002,6 +1125,30 @@ final class AppDefaults: Sendable {
 		Key.bottomToolbarShowHeart,
 		Key.bottomToolbarShowNextUnread,
 		Key.bottomToolbarShowAction,
+		// Unified toolbar-customization keys (see ToolbarFunction). These
+		// are the keys the new Toolbars settings screen actually writes
+		// to going forward; the legacy articleToolbarShow*/
+		// bottomToolbarShow*/articleToolbarUseOverflowMenu keys above stay
+		// in this allowlist too rather than being removed, since
+		// migrateUnifiedToolbarsIfNeeded() is gated to run once per
+		// device and a restored backup's legacy values must still be
+		// present for that migration to read correctly on a fresh
+		// install that hasn't run it yet.
+		Key.toolbarFnThemeTop, Key.toolbarFnThemeTopOverflow, Key.toolbarFnThemeBottom, Key.toolbarFnThemeBottomOverflow,
+		Key.toolbarFnTableOfContentsTop, Key.toolbarFnTableOfContentsTopOverflow, Key.toolbarFnTableOfContentsBottom, Key.toolbarFnTableOfContentsBottomOverflow,
+		Key.toolbarFnFindTop, Key.toolbarFnFindTopOverflow, Key.toolbarFnFindBottom, Key.toolbarFnFindBottomOverflow,
+		Key.toolbarFnPrevNextTop, Key.toolbarFnPrevNextTopOverflow, Key.toolbarFnPrevNextBottom, Key.toolbarFnPrevNextBottomOverflow,
+		Key.toolbarFnLockTop, Key.toolbarFnLockTopOverflow, Key.toolbarFnLockBottom, Key.toolbarFnLockBottomOverflow,
+		Key.toolbarFnAnnotationsTop, Key.toolbarFnAnnotationsTopOverflow, Key.toolbarFnAnnotationsBottom, Key.toolbarFnAnnotationsBottomOverflow,
+		Key.toolbarFnSettingsTop, Key.toolbarFnSettingsTopOverflow, Key.toolbarFnSettingsBottom, Key.toolbarFnSettingsBottomOverflow,
+		Key.toolbarFnCheckForUpdatesTop, Key.toolbarFnCheckForUpdatesTopOverflow, Key.toolbarFnCheckForUpdatesBottom, Key.toolbarFnCheckForUpdatesBottomOverflow,
+		Key.toolbarFnReadTop, Key.toolbarFnReadTopOverflow, Key.toolbarFnReadBottom, Key.toolbarFnReadBottomOverflow,
+		Key.toolbarFnStarTop, Key.toolbarFnStarTopOverflow, Key.toolbarFnStarBottom, Key.toolbarFnStarBottomOverflow,
+		Key.toolbarFnHeartTop, Key.toolbarFnHeartTopOverflow, Key.toolbarFnHeartBottom, Key.toolbarFnHeartBottomOverflow,
+		Key.toolbarFnNextUnreadTop, Key.toolbarFnNextUnreadTopOverflow, Key.toolbarFnNextUnreadBottom, Key.toolbarFnNextUnreadBottomOverflow,
+		Key.toolbarFnActionTop, Key.toolbarFnActionTopOverflow, Key.toolbarFnActionBottom, Key.toolbarFnActionBottomOverflow,
+		Key.toolbarTopUseOverflowMenu,
+		Key.toolbarBottomUseOverflowMenu,
 		Key.defaultAnnotationColor,
 		Key.annotationCreationMethod,
 		Key.hideNotchInFullScreen,
@@ -1327,19 +1474,15 @@ final class AppDefaults: Sendable {
 	/// registerDefaults(), same as articleToolbarShowLock (unlike
 	/// articleToolbarShowAnnotations/articleToolbarShowSettings/
 	/// articleToolbarShowCheckForUpdates above, which rely on
-	/// AppDefaults.bool(for:)'s implicit-false fallback instead). When
-	/// on, ArticleViewController.rightBarButtonItems() collapses every
-	/// enabled ArticleToolbarToggle into a single overflow UIMenu (see
-	/// ArticleViewController.rebuildOverflowMenu()) instead of showing
-	/// one bar item per toggle.
-	var articleToolbarUseOverflowMenu: Bool {
-		get {
-			return AppDefaults.bool(for: Key.articleToolbarUseOverflowMenu)
-		}
-		set {
-			AppDefaults.setBool(for: Key.articleToolbarUseOverflowMenu, newValue)
-		}
-	}
+	/// AppDefaults.bool(for:)'s implicit-false fallback instead).
+	///
+	/// No live property here anymore -- replaced by
+	/// toolbarTopUseOverflowMenu/toolbarBottomUseOverflowMenu below (see
+	/// ToolbarFunction). Key.articleToolbarUseOverflowMenu is retained as
+	/// a migration-source-only key, same "do not reintroduce a property
+	/// for this key" convention as Key.useTintedNavigationBar above --
+	/// read directly via AppDefaults.bool(for:) by
+	/// migrateUnifiedToolbarsIfNeeded() only.
 
 	/// The color HighlightColorPopover's note-icon path (which creates a
 	/// highlight without the person picking a color) falls back to, and
@@ -1377,35 +1520,170 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	/// Single dispatch point over the six articleToolbarShowX properties,
-	/// keyed by ArticleToolbarToggle case -- used anywhere the toggles
-	/// need to be read or written generically (ArticleToolbarCustomizerViewController's
-	/// row loop, SettingsViewController's summary label) instead of via a
-	/// six-way switch at each call site.
-	func isArticleToolbarToggleEnabled(_ toggle: ArticleToolbarToggle) -> Bool {
-		switch toggle {
-		case .theme: return articleToolbarShowTheme
-		case .tableOfContents: return articleToolbarShowTableOfContents
-		case .find: return articleToolbarShowFind
-		case .prevNext: return articleToolbarShowPrevNext
-		case .lock: return articleToolbarShowLock
-		case .annotations: return articleToolbarShowAnnotations
-		case .settings: return articleToolbarShowSettings
-		case .checkForUpdates: return articleToolbarShowCheckForUpdates
+	/// Table-driven key lookup for the unified toolbar model: (inline key,
+	/// overflow key) per (ToolbarFunction, ToolbarBar). A hand-written
+	/// 13-function x 2-bar x 2-role switch would be 52 near-identical
+	/// cases; this keeps the mapping in one place and the read/write
+	/// dispatch functions below as thin wrappers. Force-unwrapped
+	/// dictionary lookups are safe here because ToolbarFunction/ToolbarBar
+	/// are both closed enums fully enumerated in toolbarFunctionKeys'
+	/// literal below -- AppDefaultsBackupTests / a unit test should assert
+	/// every ToolbarFunction x ToolbarBar pair resolves, so an
+	/// accidentally-omitted case fails a test rather than crashing at
+	/// runtime on first use.
+	private static let toolbarFunctionKeys: [ToolbarFunction: [ToolbarBar: (inline: String, overflow: String)]] = [
+		.theme: [.top: (Key.toolbarFnThemeTop, Key.toolbarFnThemeTopOverflow), .bottom: (Key.toolbarFnThemeBottom, Key.toolbarFnThemeBottomOverflow)],
+		.tableOfContents: [.top: (Key.toolbarFnTableOfContentsTop, Key.toolbarFnTableOfContentsTopOverflow), .bottom: (Key.toolbarFnTableOfContentsBottom, Key.toolbarFnTableOfContentsBottomOverflow)],
+		.find: [.top: (Key.toolbarFnFindTop, Key.toolbarFnFindTopOverflow), .bottom: (Key.toolbarFnFindBottom, Key.toolbarFnFindBottomOverflow)],
+		.prevNext: [.top: (Key.toolbarFnPrevNextTop, Key.toolbarFnPrevNextTopOverflow), .bottom: (Key.toolbarFnPrevNextBottom, Key.toolbarFnPrevNextBottomOverflow)],
+		.lock: [.top: (Key.toolbarFnLockTop, Key.toolbarFnLockTopOverflow), .bottom: (Key.toolbarFnLockBottom, Key.toolbarFnLockBottomOverflow)],
+		.annotations: [.top: (Key.toolbarFnAnnotationsTop, Key.toolbarFnAnnotationsTopOverflow), .bottom: (Key.toolbarFnAnnotationsBottom, Key.toolbarFnAnnotationsBottomOverflow)],
+		.settings: [.top: (Key.toolbarFnSettingsTop, Key.toolbarFnSettingsTopOverflow), .bottom: (Key.toolbarFnSettingsBottom, Key.toolbarFnSettingsBottomOverflow)],
+		.checkForUpdates: [.top: (Key.toolbarFnCheckForUpdatesTop, Key.toolbarFnCheckForUpdatesTopOverflow), .bottom: (Key.toolbarFnCheckForUpdatesBottom, Key.toolbarFnCheckForUpdatesBottomOverflow)],
+		.read: [.top: (Key.toolbarFnReadTop, Key.toolbarFnReadTopOverflow), .bottom: (Key.toolbarFnReadBottom, Key.toolbarFnReadBottomOverflow)],
+		.star: [.top: (Key.toolbarFnStarTop, Key.toolbarFnStarTopOverflow), .bottom: (Key.toolbarFnStarBottom, Key.toolbarFnStarBottomOverflow)],
+		.heart: [.top: (Key.toolbarFnHeartTop, Key.toolbarFnHeartTopOverflow), .bottom: (Key.toolbarFnHeartBottom, Key.toolbarFnHeartBottomOverflow)],
+		.nextUnread: [.top: (Key.toolbarFnNextUnreadTop, Key.toolbarFnNextUnreadTopOverflow), .bottom: (Key.toolbarFnNextUnreadBottom, Key.toolbarFnNextUnreadBottomOverflow)],
+		.action: [.top: (Key.toolbarFnActionTop, Key.toolbarFnActionTopOverflow), .bottom: (Key.toolbarFnActionBottom, Key.toolbarFnActionBottomOverflow)],
+	]
+
+	private func toolbarKeys(_ function: ToolbarFunction, _ bar: ToolbarBar) -> (inline: String, overflow: String) {
+		guard let keys = AppDefaults.toolbarFunctionKeys[function]?[bar] else {
+			fatalError("Missing toolbarFunctionKeys entry for \(function)/\(bar) -- every ToolbarFunction x ToolbarBar pair must be present in the table above.")
+		}
+		return keys
+	}
+
+	/// Whether `function` is placed inline (not in the overflow menu) on
+	/// `bar`. Used anywhere placement needs to be read generically --
+	/// ToolbarsCustomizerViewController's row loop, ArticleViewController's
+	/// bar-building, SettingsViewController's summary label -- instead of
+	/// a per-function switch at each call site.
+	func isToolbarFunctionEnabled(_ function: ToolbarFunction, on bar: ToolbarBar) -> Bool {
+		AppDefaults.bool(for: toolbarKeys(function, bar).inline)
+	}
+
+	/// Setting a function inline on a bar also clears that same function's
+	/// overflow flag on that same bar -- inline and overflow are mutually
+	/// exclusive *per bar* (the ToolbarsCustomizerViewController mockup's
+	/// rule: an overflow-menu table only offers functions not already
+	/// placed inline in that same bar). This enforces the invariant at
+	/// the model layer, not just in the UI that happens to filter the
+	/// overflow list -- a future direct writer of this property can't
+	/// leave both flags set for the same (function, bar).
+	func setToolbarFunctionEnabled(_ function: ToolbarFunction, on bar: ToolbarBar, _ enabled: Bool) {
+		let keys = toolbarKeys(function, bar)
+		AppDefaults.setBool(for: keys.inline, enabled)
+		if enabled {
+			AppDefaults.setBool(for: keys.overflow, false)
 		}
 	}
 
-	func setArticleToolbarToggleEnabled(_ toggle: ArticleToolbarToggle, _ enabled: Bool) {
-		switch toggle {
-		case .theme: articleToolbarShowTheme = enabled
-		case .tableOfContents: articleToolbarShowTableOfContents = enabled
-		case .find: articleToolbarShowFind = enabled
-		case .prevNext: articleToolbarShowPrevNext = enabled
-		case .lock: articleToolbarShowLock = enabled
-		case .annotations: articleToolbarShowAnnotations = enabled
-		case .settings: articleToolbarShowSettings = enabled
-		case .checkForUpdates: articleToolbarShowCheckForUpdates = enabled
+	/// Whether `function` is placed in `bar`'s overflow menu. Only
+	/// meaningful when that bar's own toolbarTopUseOverflowMenu/
+	/// toolbarBottomUseOverflowMenu is also true -- ToolbarsCustomizerViewController
+	/// hides the overflow-picks section entirely when the bar's overflow
+	/// switch is off, same as this property being false for everything
+	/// in that state.
+	func isToolbarFunctionInOverflow(_ function: ToolbarFunction, on bar: ToolbarBar) -> Bool {
+		AppDefaults.bool(for: toolbarKeys(function, bar).overflow)
+	}
+
+	/// Setting a function into a bar's overflow also clears that same
+	/// function's inline flag on that same bar -- same mutual-exclusion
+	/// invariant as setToolbarFunctionEnabled(_:on:_:) above, enforced
+	/// symmetrically from this direction too.
+	func setToolbarFunctionInOverflow(_ function: ToolbarFunction, on bar: ToolbarBar, _ inOverflow: Bool) {
+		let keys = toolbarKeys(function, bar)
+		AppDefaults.setBool(for: keys.overflow, inOverflow)
+		if inOverflow {
+			AppDefaults.setBool(for: keys.inline, false)
 		}
+	}
+
+	/// Slots `function` costs toward its bar's icon cap when placed
+	/// inline -- prevNext counts as 2 (it renders both prev and next as
+	/// separate bar items), everything else counts as 1. Does not apply
+	/// to overflow placement (see ToolbarsCustomizerViewController's cap
+	/// logic: the cap protects each bar's fixed-width leading/trailing
+	/// icon cluster, and a function inside the overflow menu doesn't
+	/// occupy a slot in that cluster).
+	static func toolbarFunctionSlotCost(_ function: ToolbarFunction) -> Int {
+		function == .prevNext ? 2 : 1
+	}
+
+	/// Shipped default display order per bar -- also what registerDefaults()
+	/// seeds the persisted order keys to, and what resetToolbarDefaults(for:)
+	/// restores by removing the persisted key entirely (so the default only
+	/// has to be correct in this one place). Matches the pre-order-persistence
+	/// hardcoded arrays that used to live independently in
+	/// ArticleViewController.displayOrder(for:) and ToolbarPreviewCell.configure(bar:).
+	static func defaultToolbarFunctionOrder(for bar: ToolbarBar) -> [ToolbarFunction] {
+		let native: [ToolbarFunction] = bar == .top
+			? [.theme, .tableOfContents, .find, .prevNext, .lock, .annotations, .settings, .checkForUpdates]
+			: [.read, .star, .heart, .nextUnread, .action]
+		let rest = ToolbarFunction.allCases.filter { !native.contains($0) }
+		return native + rest
+	}
+
+	/// The person's current display order for `bar` -- read by
+	/// ArticleViewController.displayOrder(for:) (the real reader),
+	/// ToolbarPreviewCell.configure(bar:) (the settings preview), and
+	/// ToolbarsCustomizerViewController's functions table (the reorderable
+	/// list itself), so all three stay on one source instead of the three
+	/// independent hardcoded arrays this replaced.
+	///
+	/// Decodes the persisted rawValue array back into ToolbarFunction,
+	/// silently dropping any string that no longer maps to a case (e.g.
+	/// a case removed in a future version) and appending, in
+	/// defaultToolbarFunctionOrder(for:) order, any ToolbarFunction
+	/// missing from the stored array (covers a case added after someone
+	/// already saved a custom order, and covers a first run before
+	/// registerDefaults() has populated the key in an unregistered
+	/// UserDefaults suite such as a unit test).
+	func toolbarFunctionOrder(for bar: ToolbarBar) -> [ToolbarFunction] {
+		let key = bar == .top ? Key.toolbarTopFunctionOrder : Key.toolbarBottomFunctionOrder
+		let stored = (AppDefaults.stringArray(for: key) ?? []).compactMap { ToolbarFunction(rawValue: $0) }
+		let missing = ToolbarFunction.allCases.filter { !stored.contains($0) }
+		return stored + AppDefaults.defaultToolbarFunctionOrder(for: bar).filter { missing.contains($0) }
+	}
+
+	/// Persists a new display order for `bar` -- written by
+	/// ToolbarsCustomizerViewController's collectionView(_:moveItemAt:to:)
+	/// after a drag-reorder. `order` should contain every ToolbarFunction
+	/// exactly once; toolbarFunctionOrder(for:) tolerates a short/stale
+	/// array on read, but callers should still pass a complete list.
+	func setToolbarFunctionOrder(_ order: [ToolbarFunction], for bar: ToolbarBar) {
+		let key = bar == .top ? Key.toolbarTopFunctionOrder : Key.toolbarBottomFunctionOrder
+		AppDefaults.setStringArray(for: key, order.map(\.rawValue))
+	}
+
+	/// Resets every ToolbarFunction's placement (inline/overflow, both
+	/// cleared to off), that bar's overflow-menu switch, and that bar's
+	/// display order back to the shipped defaults -- scoped to `bar`
+	/// only, matching ToolbarsCustomizerViewController's per-bar-tab
+	/// framing (its "Reset" button resets whichever bar is active, not
+	/// both at once).
+	///
+	/// Implemented as key removal, not as re-writing the literal default
+	/// values -- removing a UserDefaults key falls back to whatever
+	/// registerDefaults() already registered for it, so the default only
+	/// needs to be correct in registerDefaults() (for placement/overflow)
+	/// and defaultToolbarFunctionOrder(for:) (for order), not duplicated
+	/// a third time here. UserDefaults.removeObject(forKey:) posts
+	/// .didChangeNotification on .standard, so
+	/// ToolbarsCustomizerViewController's existing generic-notification
+	/// reload picks this up with no additional wiring.
+	func resetToolbarDefaults(for bar: ToolbarBar) {
+		for function in ToolbarFunction.allCases {
+			let keys = toolbarKeys(function, bar)
+			AppDefaults.store.removeObject(forKey: keys.inline)
+			AppDefaults.store.removeObject(forKey: keys.overflow)
+		}
+		let overflowKey = bar == .top ? Key.toolbarTopUseOverflowMenu : Key.toolbarBottomUseOverflowMenu
+		AppDefaults.store.removeObject(forKey: overflowKey)
+		let orderKey = bar == .top ? Key.toolbarTopFunctionOrder : Key.toolbarBottomFunctionOrder
+		AppDefaults.store.removeObject(forKey: orderKey)
 	}
 
 	/// Whether the "Toggle Read" button appears in the article reader's
@@ -1465,25 +1743,59 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	/// Single dispatch point over the five bottomToolbarShowX properties,
-	/// same shape as isArticleToolbarToggleEnabled(_:) above.
-	func isBottomToolbarToggleEnabled(_ toggle: BottomToolbarToggle) -> Bool {
-		switch toggle {
-		case .read: return bottomToolbarShowRead
-		case .star: return bottomToolbarShowStar
-		case .heart: return bottomToolbarShowHeart
-		case .nextUnread: return bottomToolbarShowNextUnread
-		case .action: return bottomToolbarShowAction
+	/// No live dispatch functions here anymore -- isBottomToolbarToggleEnabled(_:)/
+	/// setBottomToolbarToggleEnabled(_:_:) switched over BottomToolbarToggle,
+	/// which no longer exists post-unification. Replaced by
+	/// isToolbarFunctionEnabled(_:on:)/setToolbarFunctionEnabled(_:on:_:)
+	/// (see ToolbarFunction), parameterized by ToolbarBar instead of
+	/// being two separate top/bottom dispatch pairs. The individual
+	/// bottomToolbarShowRead/ShowStar/ShowHeart/ShowNextUnread/ShowAction
+	/// properties above are retained as migration-source-only reads for
+	/// migrateUnifiedToolbarsIfNeeded() -- do not reintroduce a switch
+	/// dispatch over a per-bar toggle enum for them.
+
+	/// Whether the top toolbar collapses its overflow-flagged functions
+	/// into a single trailing menu icon. Replaces the pre-unification
+	/// articleToolbarUseOverflowMenu (top-only, no bottom counterpart) --
+	/// see migrateUnifiedToolbarsIfNeeded() for the one-time carry-over.
+	var toolbarTopUseOverflowMenu: Bool {
+		get {
+			return AppDefaults.bool(for: Key.toolbarTopUseOverflowMenu)
+		}
+		set {
+			AppDefaults.setBool(for: Key.toolbarTopUseOverflowMenu, newValue)
 		}
 	}
 
-	func setBottomToolbarToggleEnabled(_ toggle: BottomToolbarToggle, _ enabled: Bool) {
-		switch toggle {
-		case .read: bottomToolbarShowRead = enabled
-		case .star: bottomToolbarShowStar = enabled
-		case .heart: bottomToolbarShowHeart = enabled
-		case .nextUnread: bottomToolbarShowNextUnread = enabled
-		case .action: bottomToolbarShowAction = enabled
+	/// Whether the bottom toolbar collapses its overflow-flagged
+	/// functions into a single trailing menu icon. New with unification
+	/// -- the bottom bar had no overflow concept at all before (see
+	/// ToolbarFunction's own doc comment on the pre-unification bottom
+	/// bar never having a cap or an overflow menu).
+	var toolbarBottomUseOverflowMenu: Bool {
+		get {
+			return AppDefaults.bool(for: Key.toolbarBottomUseOverflowMenu)
+		}
+		set {
+			AppDefaults.setBool(for: Key.toolbarBottomUseOverflowMenu, newValue)
+		}
+	}
+
+	/// Dispatch over toolbarTopUseOverflowMenu/toolbarBottomUseOverflowMenu
+	/// by ToolbarBar, for call sites that already have a bar value in
+	/// hand (ToolbarsCustomizerViewController's per-tab logic) rather
+	/// than a hardcoded .top or .bottom.
+	func isToolbarOverflowMenuEnabled(on bar: ToolbarBar) -> Bool {
+		switch bar {
+		case .top: return toolbarTopUseOverflowMenu
+		case .bottom: return toolbarBottomUseOverflowMenu
+		}
+	}
+
+	func setToolbarOverflowMenuEnabled(on bar: ToolbarBar, _ enabled: Bool) {
+		switch bar {
+		case .top: toolbarTopUseOverflowMenu = enabled
+		case .bottom: toolbarBottomUseOverflowMenu = enabled
 		}
 	}
 
@@ -1888,6 +2200,74 @@ final class AppDefaults: Sendable {
 		articleToolbarShowPrevNext = AppDefaults.bool(for: Key.showPrevNextArticleButtons)
 	}
 
+	/// One-time migration off the pre-unification split model (top-only
+	/// ArticleToolbarToggle backed by articleToolbarShow*, bottom-only
+	/// BottomToolbarToggle backed by bottomToolbarShow*, and a single
+	/// articleToolbarUseOverflowMenu Bool that only ever applied to the
+	/// top bar) onto the unified ToolbarFunction model, where every
+	/// function has an independent inline/overflow flag per bar.
+	///
+	/// Must run after migrateArticleToolbarTogglesIfNeeded() -- this
+	/// function reads the *properties* that one writes
+	/// (articleToolbarShowTableOfContents etc.), not the older raw
+	/// showTableOfContentsAndFind/showPrevNextArticleButtons keys
+	/// directly, so an upgrader coming from before *that* migration ran
+	/// still ends up with correct placement here. AppDelegate calls both,
+	/// in that order.
+	///
+	/// Placement, not just on/off: every legacy top toggle becomes that
+	/// function placed inline on .top; every legacy bottom toggle becomes
+	/// that function placed inline on .bottom. Nothing is placed on the
+	/// *other* bar (e.g. .theme does not appear on .bottom just because
+	/// duplicates-across-bars is now allowed) -- migration preserves
+	/// prior behavior exactly, it doesn't opt anyone into the new
+	/// cross-bar duplication feature.
+	///
+	/// Overflow: the legacy articleToolbarUseOverflowMenu Bool becomes
+	/// toolbarTopUseOverflowMenu. There is no legacy concept of *which*
+	/// functions were "in" the overflow menu (the old switch collapsed
+	/// everything-that-was-already-enabled into the menu, with no
+	/// separate per-function membership), so migration does not populate
+	/// any toolbarFn*Overflow keys -- an upgrader who had the top overflow
+	/// switch on keeps seeing the same functions, just now via the
+	/// isToolbarFunctionEnabled(_:on:.top) inline flags feeding the
+	/// overflow menu the same way they did pre-unification, until they
+	/// visit the new Toolbars screen and choose to move something into
+	/// overflow explicitly. toolbarBottomUseOverflowMenu has no legacy
+	/// counterpart at all (the bottom bar never had an overflow concept)
+	/// and stays at its registered-default false.
+	@MainActor func migrateUnifiedToolbarsIfNeeded() {
+		guard !AppDefaults.bool(for: Key.hasMigratedUnifiedToolbars) else { return }
+		AppDefaults.setBool(for: Key.hasMigratedUnifiedToolbars, true)
+
+		let legacyTopEnabled: [ToolbarFunction: Bool] = [
+			.theme: articleToolbarShowTheme,
+			.tableOfContents: articleToolbarShowTableOfContents,
+			.find: articleToolbarShowFind,
+			.prevNext: articleToolbarShowPrevNext,
+			.lock: articleToolbarShowLock,
+			.annotations: articleToolbarShowAnnotations,
+			.settings: articleToolbarShowSettings,
+			.checkForUpdates: articleToolbarShowCheckForUpdates,
+		]
+		for (function, wasEnabled) in legacyTopEnabled where wasEnabled {
+			setToolbarFunctionEnabled(function, on: .top, true)
+		}
+
+		let legacyBottomEnabled: [ToolbarFunction: Bool] = [
+			.read: bottomToolbarShowRead,
+			.star: bottomToolbarShowStar,
+			.heart: bottomToolbarShowHeart,
+			.nextUnread: bottomToolbarShowNextUnread,
+			.action: bottomToolbarShowAction,
+		]
+		for (function, wasEnabled) in legacyBottomEnabled where wasEnabled {
+			setToolbarFunctionEnabled(function, on: .bottom, true)
+		}
+
+		AppDefaults.setBool(for: Key.toolbarTopUseOverflowMenu, AppDefaults.bool(for: Key.articleToolbarUseOverflowMenu))
+	}
+
 	@MainActor static func registerDefaults() {
 		let defaults: [String: Any] = [Key.userInterfaceColorPalette: UserInterfaceColorPalette.automatic.rawValue,
 										Key.timelineGroupByFeed: false,
@@ -1916,6 +2296,34 @@ final class AppDefaults: Sendable {
 									Key.bottomToolbarShowHeart: true,
 									Key.bottomToolbarShowNextUnread: true,
 									Key.bottomToolbarShowAction: true,
+									// Fresh-install defaults for the unified model, mirroring the
+									// legacy per-bar defaults just above -- upgraders instead get
+									// these keys populated by migrateUnifiedToolbarsIfNeeded()
+									// reading the legacy keys, so these registered values only
+									// take effect for a install that never had the legacy keys set.
+									// Top bar: theme/tableOfContents/find on, prevNext/lock off
+									// (matches articleToolbarShow* above). Bottom bar: all five
+									// on (matches bottomToolbarShow* above, "existing always-on
+									// bottom bar" -- see ToolbarFunction's own doc comment).
+									// Every function defaults off on the bar it doesn't belong to
+									// pre-unification (e.g. .read on .top, .theme on .bottom) --
+									// AppDefaults.bool(for:)'s implicit-false fallback covers those,
+									// so only the "on" cases need an explicit entry here.
+									Key.toolbarFnThemeTop: true,
+									Key.toolbarFnTableOfContentsTop: true,
+									Key.toolbarFnFindTop: true,
+									Key.toolbarFnReadBottom: true,
+									Key.toolbarFnStarBottom: true,
+									Key.toolbarFnHeartBottom: true,
+									Key.toolbarFnNextUnreadBottom: true,
+									Key.toolbarFnActionBottom: true,
+									// Display order, one array per bar, registered from the
+									// single defaultToolbarFunctionOrder(for:) source rather
+									// than a fourth hand-copied literal -- see that function's
+									// own doc comment for what previously held this order
+									// (three independent hardcoded arrays).
+									Key.toolbarTopFunctionOrder: AppDefaults.defaultToolbarFunctionOrder(for: .top).map(\.rawValue),
+									Key.toolbarBottomFunctionOrder: AppDefaults.defaultToolbarFunctionOrder(for: .bottom).map(\.rawValue),
 									Key.hideNotchInFullScreen: true,
 									Key.pageCounterDisplayMode: PageCounterDisplayMode.percentage.rawValue,
 									Key.showLastUpdatedLabel: false,
@@ -1950,6 +2358,14 @@ extension AppDefaults {
 
 	static func setString(for key: String, _ value: String?) {
 		UserDefaults.standard.set(value, forKey: key)
+	}
+
+	static func stringArray(for key: String) -> [String]? {
+		return AppDefaults.store.array(forKey: key) as? [String]
+	}
+
+	static func setStringArray(for key: String, _ value: [String]?) {
+		AppDefaults.store.set(value, forKey: key)
 	}
 
 	static func bool(for key: String) -> Bool {
