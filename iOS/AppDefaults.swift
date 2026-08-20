@@ -1567,7 +1567,7 @@ final class AppDefaults: Sendable {
 		.star: [.top: (Key.toolbarFnStarTop, Key.toolbarFnStarTopOverflow), .bottom: (Key.toolbarFnStarBottom, Key.toolbarFnStarBottomOverflow)],
 		.heart: [.top: (Key.toolbarFnHeartTop, Key.toolbarFnHeartTopOverflow), .bottom: (Key.toolbarFnHeartBottom, Key.toolbarFnHeartBottomOverflow)],
 		.nextUnread: [.top: (Key.toolbarFnNextUnreadTop, Key.toolbarFnNextUnreadTopOverflow), .bottom: (Key.toolbarFnNextUnreadBottom, Key.toolbarFnNextUnreadBottomOverflow)],
-		.action: [.top: (Key.toolbarFnActionTop, Key.toolbarFnActionTopOverflow), .bottom: (Key.toolbarFnActionBottom, Key.toolbarFnActionBottomOverflow)],
+		.action: [.top: (Key.toolbarFnActionTop, Key.toolbarFnActionTopOverflow), .bottom: (Key.toolbarFnActionBottom, Key.toolbarFnActionBottomOverflow)]
 	]
 
 	private func toolbarKeys(_ function: ToolbarFunction, _ bar: ToolbarBar) -> (inline: String, overflow: String) {
@@ -2298,7 +2298,7 @@ final class AppDefaults: Sendable {
 			.lock: articleToolbarShowLock,
 			.annotations: articleToolbarShowAnnotations,
 			.settings: articleToolbarShowSettings,
-			.checkForUpdates: articleToolbarShowCheckForUpdates,
+			.checkForUpdates: articleToolbarShowCheckForUpdates
 		]
 		for (function, wasEnabled) in legacyTopEnabled where wasEnabled {
 			setToolbarFunctionEnabled(function, on: .top, true)
@@ -2309,7 +2309,7 @@ final class AppDefaults: Sendable {
 			.star: bottomToolbarShowStar,
 			.heart: bottomToolbarShowHeart,
 			.nextUnread: bottomToolbarShowNextUnread,
-			.action: bottomToolbarShowAction,
+			.action: bottomToolbarShowAction
 		]
 		for (function, wasEnabled) in legacyBottomEnabled where wasEnabled {
 			setToolbarFunctionEnabled(function, on: .bottom, true)
