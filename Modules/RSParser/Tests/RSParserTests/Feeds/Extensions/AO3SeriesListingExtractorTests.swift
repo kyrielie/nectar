@@ -25,6 +25,34 @@ import Testing
 		#expect(permalink == nil)
 	}
 
+	// MARK: - AO3SearchResultsExtractor against a series-listing page (nectar-toolbar-ao3-listing-feeds.md item 1)
+
+	/// `AO3SearchResultsExtractor.extract` selects `li.work-<id>` rows
+	/// anywhere in the document rather than scoping to a specific
+	/// container class, so the "What already exists" section of
+	/// `nectar-toolbar-ao3-listing-feeds.md` claims it should work
+	/// unmodified against a series-listing page's raw HTML too, without a
+	/// dedicated series extractor. This confirms that claim against the
+	/// real captured fixture rather than leaving it asserted-but-untested:
+	/// if this ever regresses, subscribing to a series URL as a feed
+	/// (`isAO3ListingFeed`'s `/series/<digits>` case) silently starts
+	/// returning zero items instead of failing loudly, so this is worth
+	/// pinning down explicitly.
+	@Test func searchResultsExtractorParsesAllTenRowsFromSeriesListingFixture() throws {
+		let html = htmlFixtureString("ao3-series-listing.html")
+		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: "https://archiveofourown.org/series/348731")
+		guard case .success(let items, _, _) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+		// Same row count AO3SeriesListingExtractorTests's own
+		// workPermalinksParsesAllTenRowsInDocumentOrder confirms for this
+		// fixture via its narrower extractor -- both should see the same
+		// 10 `li.work-<id>` rows, since they're reading the identical
+		// markup with the identical row selector.
+		#expect(items.count == 10)
+	}
+
 	// MARK: - workPermalinks (Phase 4a)
 
 	/// `ao3-series-listing.html` is a single-page capture -- confirmed via

@@ -27,8 +27,12 @@ construction site in both parsers:
   permalink, etc.) and, on success, builds the `ParsedItem` from that
   structured result instead of falling through to the generic
   body/summary promotion every other feed uses.
-- AO3 search-results/tag-listing pages get their own pagination and
-  refresh-skip handling — see `refresh-throttling.md`.
+- AO3 listing pages — search/tag results, an author's works, someone's
+  bookmarks, marked-for-later, subscriptions, a collection, or a series
+  (see `ao3-feeds.md`'s `AO3SearchResultsExtractor` section and
+  `nectar-toolbar-ao3-listing-feeds.md` for the full URL-shape table) —
+  get their own pagination and refresh-skip handling — see
+  `refresh-throttling.md`.
 
 None of this is present in `JSONFeedParser`'s article-construction path;
 it only applies to feeds fetched as RSS/Atom. `RSSItem.swift`/

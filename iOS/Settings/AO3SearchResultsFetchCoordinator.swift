@@ -35,6 +35,15 @@ import Account
 		case needsVerification(challengedURL: URL)
 		case cancelled          // person dismissed the WKWebView screen
 		case failed(String)
+		/// See `AO3SearchResultsFetchOutcome.notSignedIn`'s own doc
+		/// comment -- reachable here only if this coordinator is ever
+		/// pointed at an always-authenticated listing feed
+		/// (subscriptions, marked-for-later); today it's only used for
+		/// the Cloudflare-challenge retry path, which every listing type
+		/// can hit, so this case must still be handled even though the
+		/// headless `fetch(url:feedURL:)` this wraps doesn't do the
+		/// sign-in retry itself.
+		case notSignedIn
 	}
 
 	/// Tries the headless path only -- does not present anything. On a
@@ -53,6 +62,8 @@ import Account
 				return .rateLimited
 			case .cloudflareChallenge(let challengedURL):
 				return .needsVerification(challengedURL: challengedURL)
+			case .notSignedIn:
+				return .notSignedIn
 			}
 		} catch {
 			return .failed(error.localizedDescription)

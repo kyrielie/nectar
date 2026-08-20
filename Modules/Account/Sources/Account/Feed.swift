@@ -196,20 +196,26 @@ import Articles
 		}
 	}
 
-	/// Whether this feed's URL is an AO3 search-results / tag-listing
-	/// works page (Task 9 direct-reading). Wraps
-	/// `LocalAccountRefresher.isAO3SearchResultsFeed(_:)`, which stays
-	/// `internal` to `Account` -- exposed here the same way
-	/// `ao3SearchLastFetchedPage` above already crosses the module
-	/// boundary, so the routing predicate itself stays an implementation
-	/// detail of `Account` rather than becoming `public` on
-	/// `LocalAccountRefresher`. Used by iOS to decide whether to show the
-	/// "load more results" timeline footer for the current feed.
+	/// Whether this feed's URL is any AO3 listing page (search/tag
+	/// results, author works, bookmarks, marked-for-later, subscriptions,
+	/// a collection, or a series -- see
+	/// `LocalAccountRefresher.isAO3ListingFeed(_:)`'s own doc comment for
+	/// the full shape list). Wraps that function, which stays `internal`
+	/// to `Account` -- exposed here the same way `ao3SearchLastFetchedPage`
+	/// above already crosses the module boundary, so the routing
+	/// predicate itself stays an implementation detail of `Account`
+	/// rather than becoming `public` on `LocalAccountRefresher`. Kept
+	/// under its original name (predates the broadening to non-search
+	/// listing types) since it's a public API surface iOS already depends
+	/// on for the "load more results" footer, which applies identically
+	/// to every listing shape this now matches, not just search/tag
+	/// results -- renaming it is a bigger, purely-cosmetic churn with no
+	/// behavior change, so it's left alone here.
 	public var isAO3SearchResultsFeed: Bool {
 		guard let url = URL(string: url) else {
 			return false
 		}
-		return LocalAccountRefresher.isAO3SearchResultsFeed(url)
+		return LocalAccountRefresher.isAO3ListingFeed(url)
 	}
 
 	// MARK: - DisplayNameProvider

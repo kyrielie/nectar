@@ -1229,6 +1229,8 @@ extension MainTimelineModernViewController {
 				// never presents the WKWebView automatically.
 				self.presentAO3LoadMoreVerificationPrompt(challengedURL: challengedURL, feed: feed, account: account)
 				self.ao3LoadMoreState = .error(NSLocalizedString("Blocked by a Cloudflare challenge -- try again later", comment: "AO3 load more error"))
+			case .notSignedIn:
+				self.ao3LoadMoreState = .error(NSLocalizedString("This feed requires a signed-in AO3 account", comment: "AO3 load more error"))
 			}
 			self.ao3LoadMoreFooterView?.state = self.ao3LoadMoreState
 		}
@@ -1264,6 +1266,8 @@ extension MainTimelineModernViewController {
 					self.ao3LoadMoreState = .loadMore
 				case .failed(let message):
 					self.ao3LoadMoreState = .error(message)
+				case .notSignedIn:
+					self.ao3LoadMoreState = .error(NSLocalizedString("This feed requires a signed-in AO3 account", comment: "AO3 load more error"))
 				}
 				self.ao3LoadMoreFooterView?.state = self.ao3LoadMoreState
 			}
