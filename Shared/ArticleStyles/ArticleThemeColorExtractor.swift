@@ -92,7 +92,19 @@ enum ArticleThemeColorExtractor {
 	/// Falls back to black-on-white (light) / white-on-black (dark) per selector,
 	/// independently, when a given property isn't found -- never fails outright.
 	static func colors(for theme: ArticleTheme) -> ThemeColors {
-		let rawCSS = theme.css ?? ""
+		return colors(css: theme.css)
+	}
+
+	/// Same computation as `colors(for:)`, but takes a raw CSS string directly
+	/// rather than requiring a real `ArticleTheme` -- lets
+	/// `ArticleThemeColorExtractorTests` exercise the light/dark fallback
+	/// divergence against a shipped theme's actual `stylesheet.css` (read
+	/// straight off disk) without needing `ArticleTheme.init(url:isAppTheme:)`'s
+	/// `Bundle.main` core.css resource, which isn't available in the test
+	/// target. Internal rather than private for the same reason
+	/// `stripBraceBlocks` below already is.
+	static func colors(css rawCSSInput: String?) -> ThemeColors {
+		let rawCSS = rawCSSInput ?? ""
 		let css = stripComments(rawCSS)
 
 		// @supports blocks carry platform-specific overrides (and, in at least one

@@ -606,6 +606,30 @@ redoing the one-off version used to generate this file.
 
 ## Change log
 
+- **2026-08-19**: Unified the previously-separate top/bottom article
+  toolbar customization screens (`ArticleToolbarCustomizerViewController`
+  + `BottomToolbarCustomizerViewController`, and their four backing cell
+  types) into one `ToolbarsCustomizerViewController` driven by a
+  `ToolbarBar` (`.top`/`.bottom`) segmented control, per
+  `docs/settings-screen.md`'s "Toolbars screen" section. Net file churn:
+  7 deleted (`ArticleToolbarCustomizerViewController.swift`,
+  `BottomToolbarCustomizerViewController.swift`,
+  `ArticleToolbarToggleCell.swift`, `BottomToolbarToggleCell.swift`,
+  `ArticleToolbarOverflowToggleCell.swift`,
+  `ArticleToolbarPreviewCell.swift`, `BottomToolbarPreviewCell.swift`),
+  5 added (`ToolbarFunctionCell.swift`, `ToolbarOverflowToggleCell.swift`,
+  `ToolbarPreviewCell.swift`, `ToolbarsCustomizerViewController.swift`,
+  `Tests/NetNewsWire-iOSTests/UnifiedToolbarsMigrationTests.swift`), all
+  under `iOS/Settings/` unless noted. None of the deleted/added files
+  appear in either the `iOS/` "Nectar-original" or "Modified from
+  upstream" bucket lists above by name, and this pass did not rerun the
+  full Repomix diff against an upstream snapshot to re-bucket them --
+  the bucket lists and file counts above are otherwise unchanged from
+  the 2026-08-10 audit and should not be read as reflecting this
+  churn until the next full regeneration pass. This is itself a
+  Nectar-specific deviation with no upstream NetNewsWire counterpart
+  (upstream's article reader toolbars are fixed, not user-customizable),
+  consistent with the two screens it replaces.
 - **2026-08-18**: Added `UIDesignRequiresCompatibility` = true to
   `iOS/Resources/Info.plist` to opt the app out of iOS 26 Liquid Glass
   rendering while the UI is adapted. Annotated the existing

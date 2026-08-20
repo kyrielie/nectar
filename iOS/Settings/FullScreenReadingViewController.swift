@@ -16,16 +16,14 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 	}
 
 	private enum TopToolbarRow: Int {
-		case topToolbar = 0
-		case bottomToolbar = 1
+		case toolbars = 0
 	}
 
 	@IBOutlet var showFullscreenArticlesSwitch: UISwitch!
 	@IBOutlet var backSwipeEnabledSwitch: UISwitch!
 	@IBOutlet var pagingSwipeEnabledSwitch: UISwitch!
 	@IBOutlet var showArticleScrollbarSwitch: UISwitch!
-	@IBOutlet var articleTopToolbarModeDetailLabel: UILabel!
-	@IBOutlet var articleBottomToolbarModeDetailLabel: UILabel!
+	@IBOutlet var toolbarsModeDetailLabel: UILabel!
 	@IBOutlet var pageCounterDisplayModeDetailLabel: UILabel!
 	@IBOutlet var hideNotchInFullScreenSwitch: UISwitch!
 
@@ -42,8 +40,7 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		backSwipeEnabledSwitch.isOn = AppDefaults.shared.articleBackSwipeEnabled
 		pagingSwipeEnabledSwitch.isOn = AppDefaults.shared.articlePagingSwipeEnabled
 		showArticleScrollbarSwitch.isOn = AppDefaults.shared.showArticleScrollbar
-		updateArticleTopToolbarModeLabel()
-		updateArticleBottomToolbarModeLabel()
+		updateToolbarsModeLabel()
 		updatePageCounterDisplayModeLabel()
 		updateHideNotchAvailability()
 		applyAccentColorTinting()
@@ -57,12 +54,9 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		switch Section(rawValue: indexPath.section) {
 		case .topToolbar:
 			switch TopToolbarRow(rawValue: indexPath.row) {
-			case .topToolbar:
-				let articleToolbar = UIStoryboard.settings.instantiateController(ofType: ArticleToolbarCustomizerViewController.self)
-				self.navigationController?.pushViewController(articleToolbar, animated: true)
-			case .bottomToolbar:
-				let bottomToolbar = UIStoryboard.settings.instantiateController(ofType: BottomToolbarCustomizerViewController.self)
-				self.navigationController?.pushViewController(bottomToolbar, animated: true)
+			case .toolbars:
+				let toolbars = UIStoryboard.settings.instantiateController(ofType: ToolbarsCustomizerViewController.self)
+				self.navigationController?.pushViewController(toolbars, animated: true)
 			case nil:
 				break
 			}
@@ -78,23 +72,23 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		}
 	}
 
-	func updateArticleTopToolbarModeLabel() {
-		let enabledCount = ArticleToolbarToggle.allCases.filter(AppDefaults.shared.isArticleToolbarToggleEnabled).count
+	/// Combined summary across both bars -- counts every ToolbarFunction
+	/// enabled inline on either .top or .bottom (a function placed on
+	/// both counts once, matching "how many buttons show up somewhere"
+	/// rather than a raw sum across bars). Replaces the two
+	/// pre-unification per-bar labels (articleTopToolbarModeDetailLabel/
+	/// articleBottomToolbarModeDetailLabel) now that both bars are
+	/// configured from a single Toolbars row.
+	func updateToolbarsModeLabel() {
+		let defaults = AppDefaults.shared
+		let enabledCount = ToolbarFunction.allCases.filter {
+			defaults.isToolbarFunctionEnabled($0, on: .top) || defaults.isToolbarFunctionEnabled($0, on: .bottom)
+		}.count
 		if enabledCount == 0 {
-			articleTopToolbarModeDetailLabel.text = NSLocalizedString("Off", comment: "Article top toolbar: no buttons shown")
+			toolbarsModeDetailLabel.text = NSLocalizedString("Off", comment: "Toolbars: no buttons shown")
 		} else {
-			let format = NSLocalizedString("%d Shown", comment: "Article top toolbar: number of buttons shown")
-			articleTopToolbarModeDetailLabel.text = String(format: format, enabledCount)
-		}
-	}
-
-	func updateArticleBottomToolbarModeLabel() {
-		let enabledCount = BottomToolbarToggle.allCases.filter(AppDefaults.shared.isBottomToolbarToggleEnabled).count
-		if enabledCount == 0 {
-			articleBottomToolbarModeDetailLabel.text = NSLocalizedString("Off", comment: "Article bottom toolbar: no buttons shown")
-		} else {
-			let format = NSLocalizedString("%d Shown", comment: "Article bottom toolbar: number of buttons shown")
-			articleBottomToolbarModeDetailLabel.text = String(format: format, enabledCount)
+			let format = NSLocalizedString("%d Shown", comment: "Toolbars: number of buttons shown")
+			toolbarsModeDetailLabel.text = String(format: format, enabledCount)
 		}
 	}
 

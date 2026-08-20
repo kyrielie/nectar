@@ -26,9 +26,10 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// toolbarItems by bottomToolbarItems() same as the other four.
 	@IBOutlet private var nextUnreadBarButtonItem: UIBarButtonItem!
 	// Strong, unlike a plain @IBOutlet weak var: these five are now
-	// conditionally left out of toolbarItems by bottomToolbarItems() (see
-	// BottomToolbarToggle/AppDefaults.isBottomToolbarToggleEnabled(_:)), and
-	// nothing else retains them when they're not currently in that array.
+	// conditionally placed into either bar's items by toolbarItems(for:)
+	// (see ToolbarFunction/AppDefaults.isToolbarFunctionEnabled(_:on:)),
+	// and nothing else retains them when they're not currently in
+	// whichever bar's array is being returned.
 	// Weak outlets with no other owner get deallocated, which crashed
 	// updateUI()'s isEnabled assignments below when a toggle was off
 	// (Fatally unwrapped Optional value) -- same failure mode
@@ -72,11 +73,138 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// toggles isEnabled per-article each time `article` changes. See
 	// updateUI()'s checkForUpdatesBarButtonItem handling.
 	private lazy var checkForUpdatesBarButtonItem = UIBarButtonItem(image: Assets.Images.checkForUpdates, style: .plain, target: self, action: #selector(checkForUpdatesFromToolbar(_:)))
-	// Optional collapsed-toolbar mode (AppDefaults.articleToolbarUseOverflowMenu).
-	// Menu is rebuilt in place by rebuildOverflowMenu() rather than this item
-	// being recreated -- same shape as MainTimelineModernViewController's
-	// markAllAsReadButton/rebuildMarkAllAsReadMenu().
-	private lazy var overflowBarButtonItem = UIBarButtonItem(image: Assets.Images.command, menu: nil)
+	// Optional collapsed-toolbar mode, independently per bar
+	// (AppDefaults.toolbarTopUseOverflowMenu/toolbarBottomUseOverflowMenu).
+	// Menu is rebuilt in place by rebuildOverflowMenu(for:) rather than
+	// this item being recreated -- same shape as
+	// MainTimelineModernViewController's markAllAsReadButton/
+	// rebuildMarkAllAsReadMenu(). Two separate items (top and bottom can
+	// each independently be in overflow mode).
+	private lazy var topOverflowBarButtonItem = UIBarButtonItem(image: Assets.Images.command, menu: nil)
+	private lazy var bottomOverflowBarButtonItem = UIBarButtonItem(image: Assets.Images.command, menu: nil)
+
+	// MARK: Cross-bar duplicate support
+	//
+	// A UIBarButtonItem instance can only sit in one bar's item array at
+	// a time -- navigationItem.rightBarButtonItems and toolbarItems are
+	// built independently and neither knows about the other's contents,
+	// so if the same instance were handed to both, whichever bar builds
+	// last silently "wins" it and the other bar drops it. Since
+	// AppDefaults.isToolbarFunctionEnabled(_:on:) allows the same
+	// ToolbarFunction to be inline on .top and .bottom simultaneously
+	// (see ToolbarFunction's own doc comment), every one of the 13
+	// functions needs an independent instance per bar, not one shared
+	// instance -- not just the ones that happened to have a bottom-bar
+	// storyboard outlet already.
+	//
+	// The six @IBOutlet items above (prevArticleBarButtonItem,
+	// nextArticleBarButtonItem, readBarButtonItem, starBarButtonItem,
+	// actionBarButtonItem, nextUnreadBarButtonItem) carry storyboard-only
+	// state -- Main.storyboard's userDefinedRuntimeAttributes
+	// (accLabelText, accEnabled) and action-selector wiring -- that a
+	// freshly code-constructed sibling has to reproduce manually rather
+	// than inherit. Each is kept as the instance for the bar it was
+	// already storyboard-wired for (prev/next: top; read/star/action/
+	// nextUnread: bottom); the eight lazy-var items below them
+	// (heartBarButtonItem, themeBarButtonItem, etc.) were always
+	// code-constructed for top. Every one of these 13 gets a plain
+	// code-constructed sibling below for the *other* bar, sharing the
+	// same image/target/action and accLabelText starting value.
+	private lazy var prevArticleBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.prevArticle, style: .plain, target: self, action: #selector(prevArticle(_:)))
+	private lazy var nextArticleBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.nextArticle, style: .plain, target: self, action: #selector(nextArticle(_:)))
+	private lazy var readTopBarButtonItem: UIBarButtonItem = {
+		let item = UIBarButtonItem(image: Assets.Images.circleOpen, style: .plain, target: self, action: #selector(toggleRead(_:)))
+		item.accLabelText = NSLocalizedString("Mark Article Unread", comment: "Mark Article Unread")
+		return item
+	}()
+	private lazy var starTopBarButtonItem: UIBarButtonItem = {
+		let item = UIBarButtonItem(image: Assets.Images.starOpen, style: .plain, target: self, action: #selector(toggleStar(_:)))
+		item.accLabelText = NSLocalizedString("Read Later", comment: "Read Later")
+		return item
+	}()
+	private lazy var actionTopBarButtonItem: UIBarButtonItem = {
+		let item = UIBarButtonItem(image: UIImage(systemName: "square.and.arrow.up"), style: .plain, target: self, action: #selector(showActivityDialog(_:)))
+		item.accLabelText = NSLocalizedString("Share", comment: "Share")
+		return item
+	}()
+	private lazy var nextUnreadTopBarButtonItem: UIBarButtonItem = {
+		let item = UIBarButtonItem(image: Assets.Images.nextUnread, style: .plain, target: self, action: #selector(nextUnread(_:)))
+		item.accLabelText = NSLocalizedString("Next Unread", comment: "Next Unread")
+		return item
+	}()
+	// Bottom siblings for the eight functions that were previously a
+	// single top-only lazy var each.
+	private lazy var heartBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.heartOpen, style: .plain, target: self, action: #selector(toggleLoved(_:)))
+	private lazy var themeBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.theme, style: .plain, target: self, action: #selector(showThemePicker(_:)))
+	private lazy var findInArticleBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.findInArticle, style: .plain, target: self, action: #selector(beginFind(_:)))
+	private lazy var tableOfContentsBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.tableOfContents, style: .plain, target: self, action: #selector(showTableOfContents(_:)))
+	private lazy var lockBottomBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "lock.open"), style: .plain, target: self, action: #selector(toggleGesturesLocked(_:)))
+	private lazy var annotationsBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.annotations, style: .plain, target: self, action: #selector(showAnnotationsList(_:)))
+	private lazy var settingsBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.settings, style: .plain, target: self, action: #selector(showSettingsFromToolbar(_:)))
+	private lazy var checkForUpdatesBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.checkForUpdates, style: .plain, target: self, action: #selector(checkForUpdatesFromToolbar(_:)))
+
+	/// The live UIBarButtonItem instance(s) `function` contributes on
+	/// `bar` specifically -- see the "Cross-bar duplicate support"
+	/// section above for why this is no longer a single shared instance
+	/// per function. .prevNext returns two items on either bar (order
+	/// per-bar, matching items(for:on:)'s pre-existing convention);
+	/// every other function returns exactly one.
+	private func barButtonItemInstances(for function: ToolbarFunction, on bar: ToolbarBar) -> [UIBarButtonItem] {
+		switch (function, bar) {
+		case (.theme, .top): return [themeBarButtonItem]
+		case (.theme, .bottom): return [themeBottomBarButtonItem]
+		case (.tableOfContents, .top): return [tableOfContentsBarButtonItem]
+		case (.tableOfContents, .bottom): return [tableOfContentsBottomBarButtonItem]
+		case (.find, .top): return [findInArticleBarButtonItem]
+		case (.find, .bottom): return [findInArticleBottomBarButtonItem]
+		case (.prevNext, .top): return [nextArticleBarButtonItem, prevArticleBarButtonItem]
+		case (.prevNext, .bottom): return [prevArticleBottomBarButtonItem, nextArticleBottomBarButtonItem]
+		case (.lock, .top): return [lockBarButtonItem]
+		case (.lock, .bottom): return [lockBottomBarButtonItem]
+		case (.annotations, .top): return [annotationsBarButtonItem]
+		case (.annotations, .bottom): return [annotationsBottomBarButtonItem]
+		case (.settings, .top): return [settingsBarButtonItem]
+		case (.settings, .bottom): return [settingsBottomBarButtonItem]
+		case (.checkForUpdates, .top): return [checkForUpdatesBarButtonItem]
+		case (.checkForUpdates, .bottom): return [checkForUpdatesBottomBarButtonItem]
+		case (.read, .top): return [readTopBarButtonItem]
+		case (.read, .bottom): return [readBarButtonItem]
+		case (.star, .top): return [starTopBarButtonItem]
+		case (.star, .bottom): return [starBarButtonItem]
+		case (.heart, .top): return [heartBarButtonItem]
+		case (.heart, .bottom): return [heartBottomBarButtonItem]
+		case (.nextUnread, .top): return [nextUnreadTopBarButtonItem]
+		case (.nextUnread, .bottom): return [nextUnreadBarButtonItem]
+		case (.action, .top): return [actionTopBarButtonItem]
+		case (.action, .bottom): return [actionBarButtonItem]
+		}
+	}
+
+	/// Every live instance of `function` across both bars -- used
+	/// wherever a single mutation (image, accLabelText, isEnabled) must
+	/// stay in sync across whichever bar(s) currently show that
+	/// function, e.g. updateUI(), toggleLoved(_:), toggleGesturesLocked(_:).
+	/// Deduplicates the handful of functions whose top/bottom instance
+	/// is the *same* object (theme, find, tableOfContents, lock,
+	/// annotations, settings, checkForUpdates, heart -- these have no
+	/// separate top/bottom sibling since nothing in updateUI() mutates
+	/// them per-bar today) so a caller doesn't set a property on the
+	/// same instance twice.
+	private func allBarButtonItemInstances(for function: ToolbarFunction) -> [UIBarButtonItem] {
+		let items = barButtonItemInstances(for: function, on: .top) + barButtonItemInstances(for: function, on: .bottom)
+		var seen = Set<ObjectIdentifier>()
+		return items.filter { seen.insert(ObjectIdentifier($0)).inserted }
+	}
+
+	/// .prevNext's two instances-per-bar have independent isEnabled
+	/// state (coordinator.isPrevArticleAvailable/isNextArticleAvailable
+	/// are not the same value), unlike every other duplicated function
+	/// above -- so unlike allBarButtonItemInstances(for:), these two
+	/// pick out just the prev-labeled or just the next-labeled item on
+	/// each bar rather than sweeping the whole (function, isEnabled)
+	/// pair together.
+	private var allPrevArticleBarButtonItems: [UIBarButtonItem] { [prevArticleBarButtonItem, prevArticleBottomBarButtonItem] }
+	private var allNextArticleBarButtonItems: [UIBarButtonItem] { [nextArticleBarButtonItem, nextArticleBottomBarButtonItem] }
 
 	@IBOutlet private var searchBar: ArticleSearchBar!
 	@IBOutlet private var searchBarBottomConstraint: NSLayoutConstraint!
@@ -334,52 +462,65 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		}
 
 		guard let article = article else {
-			nextUnreadBarButtonItem.isEnabled = false
-			prevArticleBarButtonItem.isEnabled = false
-			nextArticleBarButtonItem.isEnabled = false
-			readBarButtonItem.isEnabled = false
-			starBarButtonItem.isEnabled = false
-			heartBarButtonItem.isEnabled = false
-			actionBarButtonItem.isEnabled = false
-			checkForUpdatesBarButtonItem.isEnabled = false
-			rebuildOverflowMenu()
+			allBarButtonItemInstances(for: .nextUnread).forEach { $0.isEnabled = false }
+			allPrevArticleBarButtonItems.forEach { $0.isEnabled = false }
+			allNextArticleBarButtonItems.forEach { $0.isEnabled = false }
+			allBarButtonItemInstances(for: .read).forEach { $0.isEnabled = false }
+			allBarButtonItemInstances(for: .star).forEach { $0.isEnabled = false }
+			allBarButtonItemInstances(for: .heart).forEach { $0.isEnabled = false }
+			allBarButtonItemInstances(for: .action).forEach { $0.isEnabled = false }
+			allBarButtonItemInstances(for: .checkForUpdates).forEach { $0.isEnabled = false }
+			rebuildOverflowMenu(for: .top)
+			rebuildOverflowMenu(for: .bottom)
 			return
 		}
 
-		nextUnreadBarButtonItem.isEnabled = coordinator.isNextUnreadAvailable
-		prevArticleBarButtonItem.isEnabled = coordinator.isPrevArticleAvailable
-		nextArticleBarButtonItem.isEnabled = coordinator.isNextArticleAvailable
-		readBarButtonItem.isEnabled = true
-		starBarButtonItem.isEnabled = true
-		heartBarButtonItem.isEnabled = true
+		allBarButtonItemInstances(for: .nextUnread).forEach { $0.isEnabled = coordinator.isNextUnreadAvailable }
+		allPrevArticleBarButtonItems.forEach { $0.isEnabled = coordinator.isPrevArticleAvailable }
+		allNextArticleBarButtonItems.forEach { $0.isEnabled = coordinator.isNextArticleAvailable }
+		allBarButtonItemInstances(for: .read).forEach { $0.isEnabled = true }
+		allBarButtonItemInstances(for: .star).forEach { $0.isEnabled = true }
+		allBarButtonItemInstances(for: .heart).forEach { $0.isEnabled = true }
 
 		let permalinkPresent = article.preferredLink != nil
-		actionBarButtonItem.isEnabled = permalinkPresent
+		allBarButtonItemInstances(for: .action).forEach { $0.isEnabled = permalinkPresent }
 
 		if article.status.read {
-			readBarButtonItem.image = Assets.Images.circleOpen
-			readBarButtonItem.isEnabled = article.isAvailableToMarkUnread
-			readBarButtonItem.accLabelText = NSLocalizedString("Mark Article Unread", comment: "Mark Article Unread")
+			allBarButtonItemInstances(for: .read).forEach {
+				$0.image = Assets.Images.circleOpen
+				$0.isEnabled = article.isAvailableToMarkUnread
+				$0.accLabelText = NSLocalizedString("Mark Article Unread", comment: "Mark Article Unread")
+			}
 		} else {
-			readBarButtonItem.image = Assets.Images.circleClosed
-			readBarButtonItem.isEnabled = true
-			readBarButtonItem.accLabelText = NSLocalizedString("Selected - Mark Article Unread", comment: "Selected - Mark Article Unread")
+			allBarButtonItemInstances(for: .read).forEach {
+				$0.image = Assets.Images.circleClosed
+				$0.isEnabled = true
+				$0.accLabelText = NSLocalizedString("Selected - Mark Article Unread", comment: "Selected - Mark Article Unread")
+			}
 		}
 
 		if article.status.starred {
-			starBarButtonItem.image = Assets.Images.starClosed
-			starBarButtonItem.accLabelText = NSLocalizedString("Selected - Read Later", comment: "Selected - Read Later")
+			allBarButtonItemInstances(for: .star).forEach {
+				$0.image = Assets.Images.starClosed
+				$0.accLabelText = NSLocalizedString("Selected - Read Later", comment: "Selected - Read Later")
+			}
 		} else {
-			starBarButtonItem.image = Assets.Images.starOpen
-			starBarButtonItem.accLabelText = NSLocalizedString("Read Later", comment: "Read Later")
+			allBarButtonItemInstances(for: .star).forEach {
+				$0.image = Assets.Images.starOpen
+				$0.accLabelText = NSLocalizedString("Read Later", comment: "Read Later")
+			}
 		}
 
 		if article.status.loved {
-			heartBarButtonItem.image = Assets.Images.heartClosed
-			heartBarButtonItem.accLabelText = NSLocalizedString("Selected - Loved", comment: "Selected - Loved")
+			allBarButtonItemInstances(for: .heart).forEach {
+				$0.image = Assets.Images.heartClosed
+				$0.accLabelText = NSLocalizedString("Selected - Loved", comment: "Selected - Loved")
+			}
 		} else {
-			heartBarButtonItem.image = Assets.Images.heartOpen
-			heartBarButtonItem.accLabelText = NSLocalizedString("Loved", comment: "Loved")
+			allBarButtonItemInstances(for: .heart).forEach {
+				$0.image = Assets.Images.heartOpen
+				$0.accLabelText = NSLocalizedString("Loved", comment: "Loved")
+			}
 		}
 
 		// Per-article eligibility for the top-toolbar Check for Updates
@@ -393,12 +534,13 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		// actionBarButtonItem's isEnabled-toggling shape just above, and
 		// keeps which icons occupy the top bar's slots stable article to
 		// article.
-		if AppDefaults.shared.isArticleToolbarToggleEnabled(.checkForUpdates) {
+		if AppDefaults.shared.isToolbarFunctionEnabled(.checkForUpdates, on: .top) || AppDefaults.shared.isToolbarFunctionEnabled(.checkForUpdates, on: .bottom) {
 			let eligible = AO3ChapterFetcher.shared.canCheckForUpdates(for: article)
-			checkForUpdatesBarButtonItem.isEnabled = eligible && AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article)
+			allBarButtonItemInstances(for: .checkForUpdates).forEach { $0.isEnabled = eligible && AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article) }
 		}
 
-		rebuildOverflowMenu()
+		rebuildOverflowMenu(for: .top)
+		rebuildOverflowMenu(for: .bottom)
 	}
 
 	// MARK: Notifications
@@ -423,150 +565,216 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		currentWebViewController?.fullReload()
 	}
 
+	/// Order each ToolbarFunction renders in within a bar, when enabled
+	/// on that bar -- mirrors the pre-unification fixed orderings exactly
+	/// Reads the person's persisted per-bar order (AppDefaults.toolbarFunctionOrder(for:))
+	/// rather than a hardcoded literal -- this is the one of three former
+	/// independent hardcoded-order copies (this one, ToolbarPreviewCell.configure(bar:),
+	/// and ToolbarsCustomizerViewController's functions table) that is the
+	/// live reader, so a drag-reorder in the settings screen takes effect
+	/// here immediately via the same UserDefaults.didChangeNotification
+	/// path userDefaultsDidChange() already uses to repaint the bars.
+	private func displayOrder(for bar: ToolbarBar) -> [ToolbarFunction] {
+		AppDefaults.shared.toolbarFunctionOrder(for: bar)
+	}
+
+	/// The live UIBarButtonItem(s) this function contributes when placed
+	/// inline on `bar` -- .prevNext contributes two items ([next, prev]
+	/// on top, matching rightBarButtonItems()'s pre-unification literal
+	/// order; [prev, next] on bottom, matching bottomToolbarItems()'s
+	/// left-to-right reading-order convention for that bar), every other
+	/// function contributes exactly one. Each (function, bar) pair now
+	/// has its own instance (see barButtonItemInstances(for:on:) and the
+	/// "Cross-bar duplicate support" section above the @lazy
+	/// declarations) so placing the same function on both bars at once
+	/// -- which AppDefaults.isToolbarFunctionEnabled(_:on:) already
+	/// allows -- renders correctly on both, rather than one bar silently
+	/// losing the item to whichever bar built last.
+	private func items(for function: ToolbarFunction, on bar: ToolbarBar) -> [UIBarButtonItem] {
+		barButtonItemInstances(for: function, on: bar)
+	}
+
 	private func flexibleSpaceBarButtonItem() -> UIBarButtonItem {
 		UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
 	}
 
-	// Order: read, star, heart, next unread, action -- each driven by its
-	// own independent AppDefaults toggle (BottomToolbarCustomizerViewController),
-	// so any combination (including none) is valid, matching
-	// rightBarButtonItems()'s shape just below. flexibleSpace is only
-	// inserted between two consecutive present items, not before the
-	// first or after the last, so the bar doesn't start/end with dead
-	// space when fewer than five are enabled.
-	private func bottomToolbarItems() -> [UIBarButtonItem] {
+	/// Builds `bar`'s inline item array: every ToolbarFunction enabled
+	/// inline on `bar` (isToolbarFunctionEnabled(_:on:bar), i.e. not in
+	/// that bar's overflow), in displayOrder(for:) order. .top renders
+	/// with no separators (matches rightBarButtonItems()'s
+	/// pre-unification shape); .bottom inserts flexibleSpace only
+	/// between two consecutive present items (matches
+	/// bottomToolbarItems()'s pre-unification shape) so any combination,
+	/// including none, still renders correctly on either bar.
+	private func toolbarItems(for bar: ToolbarBar) -> [UIBarButtonItem] {
 		let defaults = AppDefaults.shared
 		var items: [UIBarButtonItem] = []
-		let candidates: [(BottomToolbarToggle, UIBarButtonItem)] = [
-			(.read, readBarButtonItem), (.star, starBarButtonItem), (.heart, heartBarButtonItem),
-			(.nextUnread, nextUnreadBarButtonItem), (.action, actionBarButtonItem)
-		]
-		for (toggle, item) in candidates where defaults.isBottomToolbarToggleEnabled(toggle) {
-			if !items.isEmpty {
+		for function in displayOrder(for: bar) where defaults.isToolbarFunctionEnabled(function, on: bar) {
+			if bar == .bottom, !items.isEmpty {
 				items.append(flexibleSpaceBarButtonItem())
 			}
-			items.append(item)
+			items.append(contentsOf: self.items(for: function, on: bar))
 		}
 		return items
 	}
 
-	// Order: theme, table of contents, find, previous/next -- each driven
-	// by its own independent AppDefaults toggle
-	// (ArticleToolbarCustomizerViewController), so any combination of the
-	// four can be present at once.
+	/// Builds `bar`'s full displayed item set: its inline items
+	/// (toolbarItems(for:)) plus, when that bar's overflow switch is on
+	/// and at least one function is overflow-flagged there, a trailing
+	/// overflow icon -- separated by the same flexibleSpace convention
+	/// as the inline items themselves, so the bar never starts/ends with
+	/// dead space and the overflow icon reads as one more item in the
+	/// row rather than a mode switch. Additive on both bars: the
+	/// overflow icon sits alongside whatever's inline, it never replaces
+	/// it. (Previously the top bar collapsed entirely to a single
+	/// overflow icon when its switch was on, discarding its inline
+	/// items -- that all-or-nothing behavior diverged from the bottom
+	/// bar's already-additive one and from the settings screen's
+	/// mockup/cap model, which counts the overflow icon as one slot
+	/// alongside inline functions rather than a full-bar mode switch.)
+	private func toolbarItems(for bar: ToolbarBar, overflowItem: UIBarButtonItem) -> [UIBarButtonItem] {
+		let defaults = AppDefaults.shared
+		var items = toolbarItems(for: bar)
+
+		if defaults.isToolbarOverflowMenuEnabled(on: bar) {
+			rebuildOverflowMenu(for: bar)
+			if overflowItem.menu != nil {
+				if bar == .bottom, !items.isEmpty {
+					items.append(flexibleSpaceBarButtonItem())
+				}
+				items.append(overflowItem)
+			}
+		}
+
+		return items
+	}
+
+	private func bottomToolbarItems() -> [UIBarButtonItem] {
+		toolbarItems(for: .bottom, overflowItem: bottomOverflowBarButtonItem)
+	}
+
 	private func rightBarButtonItems() -> [UIBarButtonItem] {
 		let defaults = AppDefaults.shared
 
-		if defaults.articleToolbarUseOverflowMenu {
-			rebuildOverflowMenu()
-			return overflowBarButtonItem.menu == nil ? [] : [overflowBarButtonItem]
+		if defaults.isToolbarFunctionEnabled(.checkForUpdates, on: .top), let article {
+			let eligible = AO3ChapterFetcher.shared.canCheckForUpdates(for: article)
+			checkForUpdatesBarButtonItem.isEnabled = eligible && AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article)
+			// checkForUpdatesBottomBarButtonItem's own isEnabled is kept in
+			// sync by updateUI()'s allBarButtonItemInstances(for: .checkForUpdates)
+			// sweep, not duplicated here -- this call site only special-cases
+			// .top because .top is where checkForUpdates historically lived
+			// and where this eligibility re-check on every rightBarButtonItems()
+			// build was already happening pre-unification.
 		}
 
-		var items: [UIBarButtonItem] = []
-		if defaults.isArticleToolbarToggleEnabled(.theme) {
-			items.append(themeBarButtonItem)
-		}
-		if defaults.isArticleToolbarToggleEnabled(.tableOfContents) {
-			items.append(tableOfContentsBarButtonItem)
-		}
-		if defaults.isArticleToolbarToggleEnabled(.find) {
-			items.append(findInArticleBarButtonItem)
-		}
-		if defaults.isArticleToolbarToggleEnabled(.prevNext) {
-			items.append(contentsOf: [nextArticleBarButtonItem, prevArticleBarButtonItem])
-		}
-		if defaults.isArticleToolbarToggleEnabled(.lock) {
-			items.append(lockBarButtonItem)
-		}
-		if defaults.isArticleToolbarToggleEnabled(.annotations) {
-			items.append(annotationsBarButtonItem)
-		}
-		if defaults.isArticleToolbarToggleEnabled(.settings) {
-			items.append(settingsBarButtonItem)
-		}
-		if defaults.isArticleToolbarToggleEnabled(.checkForUpdates) {
-			items.append(checkForUpdatesBarButtonItem)
-		}
-		return items
+		return toolbarItems(for: .top, overflowItem: topOverflowBarButtonItem)
 	}
 
-	/// Rebuilds overflowBarButtonItem.menu from the currently-enabled
-	/// ArticleToolbarToggle set plus live per-article/session state --
-	/// mirrors rightBarButtonItems()'s own ordering (theme, table of
-	/// contents, find, prev/next, lock, annotations, settings, check for
-	/// updates) so the two modes present functions in the same order.
-	/// Called from rightBarButtonItems() itself, and separately from
-	/// updateUI() and toggleGesturesLocked(_:), wherever those currently
-	/// mutate a bar item's isEnabled/image in place -- a static UIMenu
-	/// doesn't observe those mutations the way an on-screen
-	/// UIBarButtonItem's own properties do. No-op (menu cleared, not
-	/// left stale) when overflow mode is off -- updateUI()/
-	/// toggleGesturesLocked(_:) call this unconditionally on every
-	/// state change regardless of which display mode is active, so
-	/// without this guard overflowBarButtonItem would carry a live,
-	/// populated (if unused) menu even in icon mode.
-	private func rebuildOverflowMenu() {
-		let defaults = AppDefaults.shared
-		guard defaults.articleToolbarUseOverflowMenu else {
-			overflowBarButtonItem.menu = nil
-			return
-		}
-
-		var actions: [UIAction] = []
-
-		if defaults.isArticleToolbarToggleEnabled(.theme) {
-			actions.append(UIAction(title: ArticleToolbarToggle.theme.title, image: ArticleToolbarToggle.theme.icon) { [weak self] _ in
+	/// UIAction builder for `function`'s overflow-menu representation --
+	/// same title/image/handler pairing rebuildOverflowMenu(for:) used to
+	/// build inline per-case before unification, now dispatched
+	/// generically. Functions with per-article or session-live state
+	/// (.checkForUpdates' eligibility, .prevNext's next/prev
+	/// availability, .lock's locked/unlocked title and glyph) keep their
+	/// dynamic-state handling here rather than in ToolbarFunction.icon/
+	/// title, matching ToolbarFunction's own doc comment on why those
+	/// three cases build their own UIAction instead of using the static
+	/// icon property.
+	private func overflowActions(for function: ToolbarFunction) -> [UIAction] {
+		switch function {
+		case .theme:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
 				self?.showThemePicker(self as Any)
-			})
-		}
-		if defaults.isArticleToolbarToggleEnabled(.tableOfContents) {
-			actions.append(UIAction(title: ArticleToolbarToggle.tableOfContents.title, image: ArticleToolbarToggle.tableOfContents.icon) { [weak self] _ in
+			}]
+		case .tableOfContents:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
 				self?.showTableOfContents(self as Any)
-			})
-		}
-		if defaults.isArticleToolbarToggleEnabled(.find) {
-			actions.append(UIAction(title: ArticleToolbarToggle.find.title, image: ArticleToolbarToggle.find.icon) { [weak self] _ in
+			}]
+		case .find:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
 				self?.beginFind()
-			})
-		}
-		if defaults.isArticleToolbarToggleEnabled(.prevNext) {
+			}]
+		case .prevNext:
 			let nextTitle = NSLocalizedString("Next Article", comment: "Overflow menu: next article")
 			let prevTitle = NSLocalizedString("Previous Article", comment: "Overflow menu: previous article")
-			actions.append(UIAction(title: nextTitle, image: Assets.Images.nextArticle, attributes: coordinator.isNextArticleAvailable ? [] : .disabled) { [weak self] _ in
-				self?.coordinator.selectNextArticle()
-			})
-			actions.append(UIAction(title: prevTitle, image: Assets.Images.prevArticle, attributes: coordinator.isPrevArticleAvailable ? [] : .disabled) { [weak self] _ in
-				self?.coordinator.selectPrevArticle()
-			})
-		}
-		if defaults.isArticleToolbarToggleEnabled(.lock) {
+			return [
+				UIAction(title: nextTitle, image: Assets.Images.nextArticle, attributes: coordinator.isNextArticleAvailable ? [] : .disabled) { [weak self] _ in
+					self?.coordinator.selectNextArticle()
+				},
+				UIAction(title: prevTitle, image: Assets.Images.prevArticle, attributes: coordinator.isPrevArticleAvailable ? [] : .disabled) { [weak self] _ in
+					self?.coordinator.selectPrevArticle()
+				}
+			]
+		case .lock:
 			let locked = coordinator.isArticleGesturesLocked
 			let title = locked
 				? NSLocalizedString("Unlock Gestures", comment: "Overflow menu: unlock gestures")
 				: NSLocalizedString("Lock Gestures", comment: "Overflow menu: lock gestures")
-			actions.append(UIAction(title: title, image: UIImage(systemName: locked ? "lock" : "lock.open")) { [weak self] _ in
+			return [UIAction(title: title, image: UIImage(systemName: locked ? "lock" : "lock.open")) { [weak self] _ in
 				self?.toggleGesturesLocked(self as Any)
-			})
-		}
-		if defaults.isArticleToolbarToggleEnabled(.annotations) {
-			actions.append(UIAction(title: ArticleToolbarToggle.annotations.title, image: ArticleToolbarToggle.annotations.icon) { [weak self] _ in
+			}]
+		case .annotations:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
 				self?.showAnnotationsList(self as Any)
-			})
-		}
-		if defaults.isArticleToolbarToggleEnabled(.settings) {
-			actions.append(UIAction(title: ArticleToolbarToggle.settings.title, image: ArticleToolbarToggle.settings.icon) { [weak self] _ in
+			}]
+		case .settings:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
 				self?.showSettingsFromToolbar(self as Any)
-			})
-		}
-		if defaults.isArticleToolbarToggleEnabled(.checkForUpdates), let article {
+			}]
+		case .checkForUpdates:
+			guard let article else { return [] }
 			let eligible = AO3ChapterFetcher.shared.canCheckForUpdates(for: article)
 				&& AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article)
-			actions.append(UIAction(title: ArticleToolbarToggle.checkForUpdates.title, image: ArticleToolbarToggle.checkForUpdates.icon, attributes: eligible ? [] : .disabled) { [weak self] _ in
+			return [UIAction(title: function.title, image: function.icon, attributes: eligible ? [] : .disabled) { [weak self] _ in
 				self?.checkForUpdatesFromToolbar(self as Any)
-			})
+			}]
+		case .read:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
+				self?.toggleRead(self as Any)
+			}]
+		case .star:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
+				self?.toggleStar(self as Any)
+			}]
+		case .heart:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
+				self?.toggleLoved(self as Any)
+			}]
+		case .nextUnread:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
+				self?.coordinator.selectNextUnread()
+			}]
+		case .action:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
+				self?.showActivityDialog(self as Any)
+			}]
+		}
+	}
+
+	/// Rebuilds `bar`'s overflow item's menu from that bar's currently
+	/// overflow-flagged ToolbarFunctions plus live per-article/session
+	/// state -- mirrors toolbarItems(for:)'s own displayOrder(for:) so
+	/// both modes present functions in the same order. Called from
+	/// rightBarButtonItems() for .top and bottomToolbarItems() for
+	/// .bottom (both of which run on every viewDidLoad/updateUI/
+	/// toggleGesturesLocked rebuild, since those are the only paths
+	/// that reassign navigationItem.rightBarButtonItems/toolbarItems).
+	/// No-op (menu cleared, not left stale) when that bar's overflow
+	/// mode is off.
+	private func rebuildOverflowMenu(for bar: ToolbarBar) {
+		let defaults = AppDefaults.shared
+		let overflowItem = bar == .top ? topOverflowBarButtonItem : bottomOverflowBarButtonItem
+		guard defaults.isToolbarOverflowMenuEnabled(on: bar) else {
+			overflowItem.menu = nil
+			return
 		}
 
-		overflowBarButtonItem.menu = actions.isEmpty ? nil : UIMenu(title: "", children: actions)
+		var actions: [UIAction] = []
+		for function in displayOrder(for: bar) where defaults.isToolbarFunctionInOverflow(function, on: bar) {
+			actions.append(contentsOf: overflowActions(for: function))
+		}
+
+		overflowItem.menu = actions.isEmpty ? nil : UIMenu(title: "", children: actions)
 	}
 
 	@objc nonisolated func userDefaultsDidChange(_ note: Notification) {
@@ -637,7 +845,16 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	private func applyBottomToolbarStyle() {
 		guard let toolbar = navigationController?.toolbar else { return }
 
-		let toolbarButtonItems: [UIBarButtonItem] = [readBarButtonItem, starBarButtonItem, heartBarButtonItem, nextUnreadBarButtonItem, actionBarButtonItem]
+		// Styles whatever bottomToolbarItems() actually returned, not a
+		// hardcoded native-bottom-function list -- the previous hardcoded
+		// array [readBarButtonItem, starBarButtonItem, heartBarButtonItem,
+		// nextUnreadBarButtonItem, actionBarButtonItem] silently missed any
+		// non-native function placed on .bottom (e.g. .theme inline on
+		// .bottom) and, after cross-bar duplicate support, would have
+		// tinted the wrong (.top) instance for any function placed on both
+		// bars. flexibleSpace items have no tintColor-relevant appearance,
+		// so leaving them in this list is harmless.
+		let toolbarButtonItems = bottomToolbarItems()
 
 		switch AppDefaults.shared.toolbarStyle {
 		case .system:
@@ -732,10 +949,12 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		// left untouched here, so MarkStatusCommand's diffing is unaffected.
 		if let article {
 			let newFlag = !article.status.starred
-			starBarButtonItem.image = newFlag ? Assets.Images.starClosed : Assets.Images.starOpen
-			starBarButtonItem.accLabelText = newFlag
-				? NSLocalizedString("Selected - Read Later", comment: "Selected - Read Later")
-				: NSLocalizedString("Read Later", comment: "Read Later")
+			allBarButtonItemInstances(for: .star).forEach {
+				$0.image = newFlag ? Assets.Images.starClosed : Assets.Images.starOpen
+				$0.accLabelText = newFlag
+					? NSLocalizedString("Selected - Read Later", comment: "Selected - Read Later")
+					: NSLocalizedString("Read Later", comment: "Read Later")
+			}
 		}
 		coordinator.toggleStarredForCurrentArticle()
 	}
@@ -743,10 +962,12 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	@objc func toggleLoved(_ sender: Any) {
 		if let article {
 			let newFlag = !article.status.loved
-			heartBarButtonItem.image = newFlag ? Assets.Images.heartClosed : Assets.Images.heartOpen
-			heartBarButtonItem.accLabelText = newFlag
-				? NSLocalizedString("Selected - Loved", comment: "Selected - Loved")
-				: NSLocalizedString("Loved", comment: "Loved")
+			allBarButtonItemInstances(for: .heart).forEach {
+				$0.image = newFlag ? Assets.Images.heartClosed : Assets.Images.heartOpen
+				$0.accLabelText = newFlag
+					? NSLocalizedString("Selected - Loved", comment: "Selected - Loved")
+					: NSLocalizedString("Loved", comment: "Loved")
+			}
 		}
 		coordinator.toggleLovedForCurrentArticle()
 	}
@@ -763,13 +984,16 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	@objc func toggleGesturesLocked(_ sender: Any) {
 		let newFlag = !coordinator.isArticleGesturesLocked
 		coordinator.isArticleGesturesLocked = newFlag
-		lockBarButtonItem.image = UIImage(systemName: newFlag ? "lock" : "lock.open")
-		lockBarButtonItem.accLabelText = newFlag
-			? NSLocalizedString("Selected - Lock Gestures", comment: "Selected - Lock Gestures")
-			: NSLocalizedString("Lock Gestures", comment: "Lock Gestures")
+		allBarButtonItemInstances(for: .lock).forEach {
+			$0.image = UIImage(systemName: newFlag ? "lock" : "lock.open")
+			$0.accLabelText = newFlag
+				? NSLocalizedString("Selected - Lock Gestures", comment: "Selected - Lock Gestures")
+				: NSLocalizedString("Lock Gestures", comment: "Lock Gestures")
+		}
 		coordinator.applyArticleBackSwipeGating()
 		pageViewController.scrollViewInsidePageControl?.isScrollEnabled = AppDefaults.shared.articlePagingSwipeEnabled && !newFlag
-		rebuildOverflowMenu()
+		rebuildOverflowMenu(for: .top)
+		rebuildOverflowMenu(for: .bottom)
 	}
 
 	@objc func showThemePicker(_ sender: Any) {
@@ -896,8 +1120,19 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		}
 	}
 
+	/// Anchors the share popover to whichever UIBarButtonItem was
+	/// actually tapped (`sender`), rather than always
+	/// `actionBarButtonItem` -- now that .action has an independent
+	/// instance per bar (actionBarButtonItem for .bottom,
+	/// actionTopBarButtonItem for .top; see the "Cross-bar duplicate
+	/// support" section above), the function could be showing on either
+	/// bar, or both, and only `sender` reliably identifies the one the
+	/// person actually touched. Falls back to actionBarButtonItem for
+	/// any non-bar-button caller (there are none today, but `sender` is
+	/// typed `Any` for the @IBAction signature Main.storyboard already
+	/// expects).
 	@IBAction func showActivityDialog(_ sender: Any) {
-		currentWebViewController?.showActivityDialog(popOverBarButtonItem: actionBarButtonItem)
+		currentWebViewController?.showActivityDialog(popOverBarButtonItem: sender as? UIBarButtonItem ?? actionBarButtonItem)
 	}
 
 	// MARK: Keyboard Shortcuts
