@@ -34,9 +34,9 @@
             "versions": [
                 {
                     "version": "0.1.5",
-                    "buildVersion": "7108.37",
+                    "buildVersion": "7108.38",
                     "date": "2026-08-20T07:23:11Z",
-                    "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.1.4...v0.1.5",
+                    "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.1.4...v0.1.5\r\n\r\n\r\n- fully customizable toolbars\r\n- fixed scrollbar\r\n- support for all links ao3downloader supports\r\n- fix for default themes background color on relaunch",
                     "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.1.5/Nectar-unsigned.ipa",
                     "size": 4786828,
                     "minOSVersion": "17.0",
