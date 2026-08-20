@@ -1,19 +1,19 @@
 {
     "name": "Nectar",
-    "subtitle": "Source for Nectar, an AO3 & Ambrosia reader",
-    "description": "Personal AltStore source publishing Nectar, a fork of NetNewsWire for reading Archive of Our Own and Ambrosia feeds. Beta software, updated automatically from GitHub Releases.",
+    "subtitle": "Source for Nectar, a fanfiction reading app.",
+    "description": "A fork of NetNewsWire for reading Archive of Our Own. Beta software, updated automatically from GitHub Releases.",
     "iconURL": "https://kyrielie.github.io/nectar/icon.png",
     "website": "https://github.com/kyrielie/nectar",
-    "tintColor": "#4185A9",
+    "tintColor": "#EFBF04",
     "apps": [
         {
             "name": "Nectar",
             "bundleIdentifier": "com.kyrielie.nectar",
             "developerName": "kyrielie",
-            "subtitle": "Fic-aware AO3 & Ambrosia reader",
-            "localizedDescription": "Nectar reads Archive of Our Own's RSS feeds and loads each work's full text with saved reading position, offline-friendly caching, and a distraction-free reader. It's also the companion app for Ambrosia, a local fanfiction library with fic-specific metadata -- word count, chapters, fandom, rating, warnings, series -- for large personal collections AO3's own feeds can't cover.",
+            "subtitle": "Unofficial AO3 Client",
+            "localizedDescription": "Nectar is designed for reading fanfiction from Archive of Our Own, parsing all metadata like word count, chapters, fandom, rating, warnings, and series. It loads each work's full text with saved reading position, offline-friendly caching, and a distraction-free full screen reader. Add your own custom themes, leave kudos from the app, and save iconic quotes.",
             "iconURL": "https://kyrielie.github.io/nectar/icon.png",
-            "tintColor": "#4185A9",
+            "tintColor": "#EFBF04",
             "category": "entertainment",
             "screenshots": [
                 "https://kyrielie.github.io/nectar/screenshots/1.png",
@@ -34,9 +34,9 @@
             "versions": [
                 {
                     "version": "0.1.4",
-                    "buildVersion": "7108.32",
+                    "buildVersion": "7108.33",
                     "date": "2026-08-19T05:14:40Z",
-                    "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.1.3...v0.1.4",
+                    "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.1.3...v0.1.4\r\n\r\n- reverted liquid glass for ios 26, will be deprecated for ios 27\r\n- fixed issue with annotations\r\n- added support for creating and restoring from a backup file",
                     "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.1.4/Nectar-unsigned.ipa",
                     "size": 4759762,
                     "minOSVersion": "17.0",
@@ -67,11 +67,11 @@
     ],
     "news": [
         {
-            "title": "Welcome to Nectar",
+            "title": "About Nectar",
             "identifier": "nectar-source-intro",
-            "caption": "A fic-aware AO3 & Ambrosia reader, sideloaded via AltStore.",
+            "caption": "Fanfiction reading app, sideloaded. Since July 2026! Still in development, leave feedback using github!",
             "date": "2026-08-15",
-            "tintColor": "#4185A9",
+            "tintColor": "#EFBF04",
             "notify": false,
             "url": "https://github.com/kyrielie/nectar",
             "appID": "com.kyrielie.nectar"
