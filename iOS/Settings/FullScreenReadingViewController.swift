@@ -19,10 +19,27 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		case toolbars = 0
 	}
 
+	/// Row order within .gestures, matching the storyboard scene's actual
+	/// cell order (showFullscreenArticlesSwitch, backSwipeEnabledSwitch,
+	/// pagingSwipeEnabledSwitch, then the Article Scrollbar row) -- only
+	/// articleScrollbarVisibility needs a case here, since the other
+	/// three rows are plain switches handled via valueChanged actions,
+	/// not didSelectRowAt.
+	private enum GesturesRow: Int {
+		case articleScrollbarVisibility = 3
+	}
+
 	@IBOutlet var showFullscreenArticlesSwitch: UISwitch!
 	@IBOutlet var backSwipeEnabledSwitch: UISwitch!
 	@IBOutlet var pagingSwipeEnabledSwitch: UISwitch!
-	@IBOutlet var showArticleScrollbarSwitch: UISwitch!
+	// Replaces the old showArticleScrollbarSwitch UISwitch: a detail-label
+	// push row to a 3-way picker (Off/Only Outside Full Screen/Always),
+	// same shape as pageCounterDisplayModeDetailLabel below -- see
+	// ArticleScrollbarVisibility. This is now the only entry point for
+	// the setting; the old duplicate row in the main Settings screen
+	// (SettingsViewController's ArticlesRow.showArticleScrollbar) has
+	// been removed.
+	@IBOutlet var articleScrollbarVisibilityDetailLabel: UILabel!
 	@IBOutlet var toolbarsModeDetailLabel: UILabel!
 	@IBOutlet var pageCounterDisplayModeDetailLabel: UILabel!
 	@IBOutlet var hideNotchInFullScreenSwitch: UISwitch!
@@ -39,7 +56,7 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		showFullscreenArticlesSwitch.isOn = AppDefaults.shared.articleFullscreenAvailable
 		backSwipeEnabledSwitch.isOn = AppDefaults.shared.articleBackSwipeEnabled
 		pagingSwipeEnabledSwitch.isOn = AppDefaults.shared.articlePagingSwipeEnabled
-		showArticleScrollbarSwitch.isOn = AppDefaults.shared.showArticleScrollbar
+		updateArticleScrollbarVisibilityLabel()
 		updateToolbarsModeLabel()
 		updatePageCounterDisplayModeLabel()
 		updateHideNotchAvailability()
@@ -52,6 +69,17 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 
 	override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 		switch Section(rawValue: indexPath.section) {
+		case .gestures:
+			switch GesturesRow(rawValue: indexPath.row) {
+			case .articleScrollbarVisibility:
+				if let sourceView = tableView.cellForRow(at: indexPath) {
+					let sourceRect = tableView.rectForRow(at: indexPath)
+					presentArticleScrollbarVisibilityPicker(sourceView: sourceView, sourceRect: sourceRect)
+				}
+				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
+			case nil:
+				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
+			}
 		case .topToolbar:
 			switch TopToolbarRow(rawValue: indexPath.row) {
 			case .toolbars:
@@ -137,6 +165,37 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		self.present(alert, animated: true)
 	}
 
+	func updateArticleScrollbarVisibilityLabel() {
+		articleScrollbarVisibilityDetailLabel.text = AppDefaults.shared.articleScrollbarVisibility.title
+	}
+
+	func presentArticleScrollbarVisibilityPicker(sourceView: UIView, sourceRect: CGRect) {
+		let title = NSLocalizedString("Article Scrollbar", comment: "Article scrollbar picker title")
+		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+
+		if let popoverController = alert.popoverPresentationController {
+			popoverController.sourceView = view
+			popoverController.sourceRect = sourceRect
+		}
+
+		for mode in ArticleScrollbarVisibility.allCases {
+			var actionTitle = mode.title
+			if mode == AppDefaults.shared.articleScrollbarVisibility {
+				actionTitle = "✓ " + actionTitle
+			}
+			let action = UIAlertAction(title: actionTitle, style: .default) { [weak self] _ in
+				AppDefaults.shared.articleScrollbarVisibility = mode
+				self?.updateArticleScrollbarVisibilityLabel()
+			}
+			alert.addAction(action)
+		}
+
+		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
+		alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
+
+		self.present(alert, animated: true)
+	}
+
 	/// WebViewController.updateNotchAndPageCounterVisibility() forces
 	/// notch-hiding whenever Page Counter != .off, independent of this
 	/// switch's own stored value. Reflects that here by disabling the
@@ -166,10 +225,6 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		AppDefaults.shared.articlePagingSwipeEnabled = pagingSwipeEnabledSwitch.isOn
 	}
 
-	@IBAction func switchShowArticleScrollbar(_ sender: Any) {
-		AppDefaults.shared.showArticleScrollbar = showArticleScrollbarSwitch.isOn
-	}
-
 	// updateHideNotchAvailability() already disables the switch whenever
 	// Page Counter forces it on, and a disabled UISwitch doesn't fire
 	// valueChanged, so no extra guard is needed here to avoid writing
@@ -195,7 +250,7 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 	private func applyAccentColorTinting() {
 		let liveTint = Assets.Colors.primaryAccent
 		for toggle in [showFullscreenArticlesSwitch, backSwipeEnabledSwitch, pagingSwipeEnabledSwitch,
-					   showArticleScrollbarSwitch, hideNotchInFullScreenSwitch] {
+					   hideNotchInFullScreenSwitch] {
 			toggle?.onTintColor = liveTint
 		}
 	}

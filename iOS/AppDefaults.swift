@@ -705,6 +705,28 @@ enum PageCounterDisplayMode: String, CaseIterable, Sendable {
 	case pageCount
 }
 
+/// When the article web view shows its native vertical scroll indicator.
+/// Replaces the old Bool-backed showArticleScrollbar -- see
+/// AppDefaults.migrateArticleScrollbarVisibilityIfNeeded() for the
+/// one-time upgrade path (old `true` -> .whenNotFullScreen, old `false`
+/// -> .off, so nobody's prior "hide it" choice silently reappears).
+enum ArticleScrollbarVisibility: String, CaseIterable, Sendable {
+	case off
+	case whenNotFullScreen
+	case always
+
+	var title: String {
+		switch self {
+		case .off:
+			return NSLocalizedString("Off", comment: "Article scrollbar: off")
+		case .whenNotFullScreen:
+			return NSLocalizedString("Only Outside Full Screen", comment: "Article scrollbar: only outside full screen")
+		case .always:
+			return NSLocalizedString("Always", comment: "Article scrollbar: always")
+		}
+	}
+}
+
 /// Which of the article reader's two toolbars a ToolbarFunction placement
 /// or query refers to. Replaces the formerly-implicit split between
 /// ArticleToolbarToggle (top only) and BottomToolbarToggle (bottom only)
@@ -889,6 +911,7 @@ final class AppDefaults: Sendable {
 		static let hasMigratedNavigationBarTintingDefault = "hasMigratedNavigationBarTintingDefault"
 		static let hasMigratedToolbarStyleDefault = "hasMigratedToolbarStyleDefault"
 		static let hasMigratedArticleToolbarToggles = "hasMigratedArticleToolbarToggles"
+		static let hasMigratedArticleScrollbarVisibility = "hasMigratedArticleScrollbarVisibility"
 		static let timelineGroupByFeed = "timelineGroupByFeed"
 		static let refreshClearsReadArticles = "refreshClearsReadArticles"
 		static let timelineNumberOfLines = "timelineNumberOfLines"
@@ -1066,7 +1089,7 @@ final class AppDefaults: Sendable {
 	/// - `firstRunDate`, `hasShownAO3Onboarding`,
 	///   `hasMigratedNavigationBarTintingDefault`,
 	///   `hasMigratedToolbarStyleDefault`, `hasMigratedArticleToolbarToggles`,
-	///   `hasMigratedUnifiedToolbars`,
+	///   `hasMigratedUnifiedToolbars`, `hasMigratedArticleScrollbarVisibility`,
 	///   `didMigrateLegacyStateRestorationInfo`: one-time migration/onboarding
 	///   gates. Replaying `true` onto a fresh install would skip onboarding
 	///   or a migration step that install actually needs to run.
@@ -1844,15 +1867,27 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	/// Whether the article web view shows its native vertical scroll
-	/// indicator. On by default (via registerDefaults), preserving the
-	/// system's normal scrollbar behavior.
-	var showArticleScrollbar: Bool {
+	/// When the article web view shows its native vertical scroll
+	/// indicator. .whenNotFullScreen by default (via registerDefaults),
+	/// preserving the system's normal scrollbar behavior outside of
+	/// fullscreen reading, where the app's own chrome is already hidden.
+	/// Read fresh (not cached) wherever it's consulted -- same
+	/// "reasserted on every dequeue" convention this file already uses
+	/// for pinchGestureRecognizer.isEnabled on the pooled
+	/// PreloadedWebView -- so a Settings change takes effect the next
+	/// time an article (re)loads, and
+	/// WebViewController.updateScrollbarVisibility() can also re-derive
+	/// visibility live as fullscreen is entered/exited without a reload.
+	var articleScrollbarVisibility: ArticleScrollbarVisibility {
 		get {
-			return AppDefaults.bool(for: Key.showArticleScrollbar)
+			guard let raw = AppDefaults.string(for: Key.showArticleScrollbar),
+				  let value = ArticleScrollbarVisibility(rawValue: raw) else {
+				return .whenNotFullScreen
+			}
+			return value
 		}
 		set {
-			AppDefaults.setBool(for: Key.showArticleScrollbar, newValue)
+			AppDefaults.setString(for: Key.showArticleScrollbar, newValue.rawValue)
 		}
 	}
 
@@ -2200,6 +2235,21 @@ final class AppDefaults: Sendable {
 		articleToolbarShowPrevNext = AppDefaults.bool(for: Key.showPrevNextArticleButtons)
 	}
 
+	/// One-time upgrade off the old Bool-backed showArticleScrollbar key
+	/// onto ArticleScrollbarVisibility's String rawValue, sharing the
+	/// same on-disk key name (Key.showArticleScrollbar) -- see
+	/// articleScrollbarVisibility's own doc comment. Gated on a value
+	/// actually being present as a Bool: a fresh install has nothing
+	/// under this key yet, so registerDefaults()'s own String default is
+	/// left alone rather than being immediately overwritten here.
+	@MainActor func migrateArticleScrollbarVisibilityIfNeeded() {
+		guard !AppDefaults.bool(for: Key.hasMigratedArticleScrollbarVisibility) else { return }
+		AppDefaults.setBool(for: Key.hasMigratedArticleScrollbarVisibility, true)
+		guard AppDefaults.store.object(forKey: Key.showArticleScrollbar) is Bool else { return }
+		let wasOn = AppDefaults.bool(for: Key.showArticleScrollbar)
+		articleScrollbarVisibility = wasOn ? .whenNotFullScreen : .off
+	}
+
 	/// One-time migration off the pre-unification split model (top-only
 	/// ArticleToolbarToggle backed by articleToolbarShow*, bottom-only
 	/// BottomToolbarToggle backed by bottomToolbarShow*, and a single
@@ -2327,7 +2377,7 @@ final class AppDefaults: Sendable {
 									Key.hideNotchInFullScreen: true,
 									Key.pageCounterDisplayMode: PageCounterDisplayMode.percentage.rawValue,
 									Key.showLastUpdatedLabel: false,
-									Key.showArticleScrollbar: true,
+									Key.showArticleScrollbar: ArticleScrollbarVisibility.whenNotFullScreen.rawValue,
 									Key.toolbarStyle: ToolbarStyle.system.rawValue,
 									Key.statsVisible: true,
 										// "Promenade" (Themes/Promenade.nnwtheme), not Self.defaultThemeName --

@@ -83,6 +83,7 @@ import Images
 		AppDefaults.shared.migrateToolbarStyleDefaultIfNeeded()
 		AppDefaults.shared.migrateArticleToolbarTogglesIfNeeded()
 		AppDefaults.shared.migrateUnifiedToolbarsIfNeeded()
+		AppDefaults.shared.migrateArticleScrollbarVisibilityIfNeeded()
 
 		let isFirstRun = AppDefaults.shared.isFirstRun
 		if isFirstRun {

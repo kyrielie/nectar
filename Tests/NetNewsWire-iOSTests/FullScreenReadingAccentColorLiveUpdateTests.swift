@@ -32,7 +32,7 @@ import UIKit
 
 		let liveTint = Assets.Colors.primaryAccent
 		for toggle in [controller.showFullscreenArticlesSwitch, controller.backSwipeEnabledSwitch,
-					   controller.pagingSwipeEnabledSwitch, controller.showArticleScrollbarSwitch] {
+					   controller.pagingSwipeEnabledSwitch] {
 			#expect(toggle?.onTintColor == liveTint)
 		}
 	}
