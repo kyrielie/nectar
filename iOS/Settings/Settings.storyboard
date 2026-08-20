@@ -997,7 +997,7 @@
                                             <rect key="frame" x="0.0" y="0.0" width="343.5" height="51"/>
                                             <autoresizingMask key="autoresizingMask"/>
                                             <subviews>
-                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Top Toolbar" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-tb3-Tlb">
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Toolbars" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-tb3-Tlb">
                                                     <rect key="frame" x="20" y="15.5" width="98" height="20.5"/>
                                                     <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
                                                     <nil key="textColor"/>
@@ -1021,39 +1021,6 @@
                                         <connections>
                                             <outlet property="detail" destination="Nct-tb4-Tlb" id="Nct-tbA-Tlb"/>
                                             <outlet property="label" destination="Nct-tb3-Tlb" id="Nct-tbB-Tlb"/>
-                                        </connections>
-                                    </tableViewCell>
-                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" accessoryType="disclosureIndicator" indentationWidth="10" id="Btm-tb1-Tlb" customClass="VibrantBasicTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
-                                        <rect key="frame" x="20" y="1291" width="374" height="51"/>
-                                        <autoresizingMask key="autoresizingMask"/>
-                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Btm-tb1-Tlb" id="Btm-tb2-Tlb">
-                                            <rect key="frame" x="0.0" y="0.0" width="343.5" height="51"/>
-                                            <autoresizingMask key="autoresizingMask"/>
-                                            <subviews>
-                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="Bottom Toolbar" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Btm-tb3-Tlb">
-                                                    <rect key="frame" x="20" y="15.5" width="98" height="20.5"/>
-                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
-                                                    <nil key="textColor"/>
-                                                    <nil key="highlightedColor"/>
-                                                </label>
-                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" ambiguous="YES" text="5 Shown" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Btm-tb4-Tlb">
-                                                    <rect key="frame" x="258" y="15.5" width="77.5" height="20.5"/>
-                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
-                                                    <nil key="textColor"/>
-                                                    <nil key="highlightedColor"/>
-                                                </label>
-                                            </subviews>
-                                            <constraints>
-                                                <constraint firstItem="Btm-tb4-Tlb" firstAttribute="trailing" secondItem="Btm-tb2-Tlb" secondAttribute="trailingMargin" id="Btm-tb5-Tlb"/>
-                                                <constraint firstItem="Btm-tb4-Tlb" firstAttribute="centerY" secondItem="Btm-tb2-Tlb" secondAttribute="centerY" id="Btm-tb6-Tlb"/>
-                                                <constraint firstItem="Btm-tb3-Tlb" firstAttribute="leading" secondItem="Btm-tb2-Tlb" secondAttribute="leadingMargin" id="Btm-tb7-Tlb"/>
-                                                <constraint firstItem="Btm-tb3-Tlb" firstAttribute="centerY" secondItem="Btm-tb2-Tlb" secondAttribute="centerY" id="Btm-tb8-Tlb"/>
-                                                <constraint firstItem="Btm-tb4-Tlb" firstAttribute="leading" secondItem="Btm-tb3-Tlb" secondAttribute="trailing" constant="8" symbolic="YES" id="Btm-tb9-Tlb"/>
-                                            </constraints>
-                                        </tableViewCellContentView>
-                                        <connections>
-                                            <outlet property="detail" destination="Btm-tb4-Tlb" id="Btm-tbA-Tlb"/>
-                                            <outlet property="label" destination="Btm-tb3-Tlb" id="Btm-tbB-Tlb"/>
                                         </connections>
                                     </tableViewCell>
                                 </cells>
@@ -1141,8 +1108,7 @@
                         <outlet property="backSwipeEnabledSwitch" destination="Nct-bk-Swt" id="FSR-o2-9x1"/>
                         <outlet property="pagingSwipeEnabledSwitch" destination="Nct-pg-Swt" id="FSR-o3-9x1"/>
                         <outlet property="showArticleScrollbarSwitch" destination="Scb-a4-Bar" id="FSR-o4-9x1"/>
-                        <outlet property="articleTopToolbarModeDetailLabel" destination="Nct-tb4-Tlb" id="FSR-o5-9x1"/>
-                        <outlet property="articleBottomToolbarModeDetailLabel" destination="Btm-tb4-Tlb" id="Btm-oC-Tlb"/>
+                        <outlet property="toolbarsModeDetailLabel" destination="Nct-tb4-Tlb" id="FSR-o5-9x1"/>
                         <outlet property="pageCounterDisplayModeDetailLabel" destination="Nct-h4-Pgc" id="FSR-o6-9x1"/>
                         <outlet property="hideNotchInFullScreenSwitch" destination="Nct-g4-Ntc" id="FSR-o7-9x1"/>
                     </connections>
@@ -1288,10 +1254,10 @@
             </objects>
             <point key="canvasLocation" x="3053.6231884057975" y="150.66964285714286"/>
         </scene>
-        <!--Article Toolbar Customizer View Controller-->
+        <!--Toolbars Customizer View Controller-->
         <scene sceneID="Atb-Cx-Vc1">
             <objects>
-                <collectionViewController storyboardIdentifier="ArticleToolbarCustomizerViewController" id="Atb-Cx-Vc2" customClass="ArticleToolbarCustomizerViewController" customModule="NetNewsWire" customModuleProvider="target" sceneMemberID="viewController">
+                <collectionViewController storyboardIdentifier="ToolbarsCustomizerViewController" id="Atb-Cx-Vc2" customClass="ToolbarsCustomizerViewController" customModule="NetNewsWire" customModuleProvider="target" sceneMemberID="viewController">
                     <collectionView key="view" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" dataMode="prototypes" id="Atb-Cx-Vc3">
                         <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -1311,30 +1277,6 @@
                 <placeholder placeholderIdentifier="IBFirstResponder" id="Atb-Cx-Vc7" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="3053.6231884057975" y="400"/>
-        </scene>
-        <!--Bottom Toolbar Customizer View Controller-->
-        <scene sceneID="Btm-Cx-Vc1">
-            <objects>
-                <collectionViewController storyboardIdentifier="BottomToolbarCustomizerViewController" id="Btm-Cx-Vc2" customClass="BottomToolbarCustomizerViewController" customModule="NetNewsWire" customModuleProvider="target" sceneMemberID="viewController">
-                    <collectionView key="view" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" dataMode="prototypes" id="Btm-Cx-Vc3">
-                        <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
-                        <collectionViewFlowLayout key="collectionViewLayout" automaticEstimatedItemSize="YES" minimumLineSpacing="20" minimumInteritemSpacing="10" sectionInsetReference="safeArea" id="Btm-Cx-Vc4">
-                            <size key="itemSize" width="414" height="128"/>
-                            <size key="headerReferenceSize" width="0.0" height="0.0"/>
-                            <size key="footerReferenceSize" width="0.0" height="0.0"/>
-                            <inset key="sectionInset" minX="0.0" minY="0.0" maxX="0.0" maxY="0.0"/>
-                        </collectionViewFlowLayout>
-                        <connections>
-                            <outlet property="dataSource" destination="Btm-Cx-Vc2" id="Btm-Cx-Vc5"/>
-                            <outlet property="delegate" destination="Btm-Cx-Vc2" id="Btm-Cx-Vc6"/>
-                        </connections>
-                    </collectionView>
-                </collectionViewController>
-                <placeholder placeholderIdentifier="IBFirstResponder" id="Btm-Cx-Vc7" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
-            </objects>
-            <point key="canvasLocation" x="3053.6231884057975" y="650"/>
         </scene>
         <!--Navigation Controller-->
         <scene sceneID="Ezn-Ny-zye">

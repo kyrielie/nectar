@@ -263,6 +263,41 @@ final class WebViewController: UIViewController {
 		}
 	}
 
+	// §1b. Self-heals the "background-inversion on cold launch" bug: viewDidLoad's
+	// own initialColors read (above) and applyResolvedBackgroundColors() (called
+	// from renderPage() once webView is dequeued) both resolve against
+	// traitCollection.userInterfaceStyle / webView.traitCollection.userInterfaceStyle
+	// at whatever moment they happen to run. During state restoration,
+	// SceneCoordinator.restoreSelectedSidebarItemAndArticle pushes the restored
+	// article before the first frame is ever drawn, and that whole path runs from
+	// SceneDelegate.scene(_:willConnectTo:options:) -- before the window is
+	// key/visible. If the trait environment hasn't settled by the time either read
+	// happens, the resolved color can disagree with what WKWebView's own CSS
+	// engine resolves independently (driven by the real system
+	// prefers-color-scheme), and nothing corrects it afterward:
+	// registerForTraitChanges only fires on a *change* event, not on "the initial
+	// read was wrong." This is most visible on themes with no body/.articleBody
+	// color or background-color of their own (e.g. Broadsheet) -- see
+	// docs/article-color-pipeline.md -- since ArticleThemeColorExtractor's
+	// light/dark fallback values are genuine opposites (black-on-white vs
+	// white-on-black) for those themes, rather than falling back to the same
+	// light-mode value in both appearances the way a theme like Black & White
+	// (which declares an explicit, appearance-invariant body background/color)
+	// does.
+	//
+	// viewDidAppear is the first point in the view controller lifecycle
+	// guaranteed to run only once this view is actually on screen in a real,
+	// key window -- unlike viewDidLoad, its timing doesn't depend on
+	// SceneCoordinator's own restore-path scheduling. Re-running the same
+	// resolution here costs nothing when the initial read was already correct
+	// (applyResolvedBackgroundColors() just reapplies the same colors), and
+	// self-heals the narrow cold-launch-restore race when it wasn't -- no new
+	// trait-change event required.
+	override func viewDidAppear(_ animated: Bool) {
+		super.viewDidAppear(animated)
+		applyResolvedBackgroundColors()
+	}
+
 	override func viewWillDisappear(_ animated: Bool) {
 		super.viewWillDisappear(animated)
 		// Flush the final scroll position/reading progress before the view (and its
