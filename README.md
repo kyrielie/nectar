@@ -22,7 +22,7 @@
 > [!IMPORTANT]
 > Before continuing, please read the AO3 admin post [Why AO3 Doesn't Have an Official App](https://archiveofourown.org/admin_posts/35806) and be aware of [the history of unofficial apps that accessed AO3 on fanlore](https://fanlore.org/wiki/AO3_App_Wars). Please be aware that it is recommended to use AO3 in your browser. This app does not require you to log in using your account. Be aware that "**if you log in to AO3 on these apps, (like Nectar) the apps' developers may gain access to your username and password. You're trusting both that the developer is not malicious and that they have taken all proper precautions to keep your login information safe. If your login information is exposed to someone with malicious intent, they could log into your account to post Terms of Service-violating content, delete your works, change your account's credentials so you can't log in, or even delete your account.**" (from AO3 admin post).
 
-- [x] This app will always be free and open source. (If you don't trust me, you look at the code and build the application yourself.)
+- [x] This app will always be free and open source. (If you don't trust me, you can look at the code and build the application yourself.)
 - [x] This app does not distribute fics. 
 - [x] This app does it's best to respect AO3's TOS, servers, and policies.
 - [x] Nectar logs you in using the Safari browser. Your login details stay on your phone.
