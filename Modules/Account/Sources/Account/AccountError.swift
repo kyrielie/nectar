@@ -28,6 +28,17 @@ public enum AccountError: LocalizedError {
 	/// into `feed` via `AO3SearchResultsImporter`, rather than leaving a
 	/// newly-added feed silently empty.
 	case ao3CloudflareChallenge(challengedURL: URL, feed: Feed)
+	/// Add-time fetch of a newly-created AO3 subscriptions or
+	/// marked-for-later feed came back requiring a signed-in AO3 session,
+	/// and either no session is stored or AO3 rejected the stored one --
+	/// see `AO3SearchResultsFetcher.fetchRequiringSignIn(url:feedURL:)`.
+	/// Like `.ao3CloudflareChallenge`, the feed itself was already
+	/// created and added -- this case exists so the add-feed UI can
+	/// distinguish "you need to sign in to AO3" (a clearly-surfaced,
+	/// actionable state -- see `ao3-authenticated-reading.md`) from a
+	/// silently-empty feed the person might otherwise mistake for a
+	/// genuinely-empty subscriptions list.
+	case ao3ListingRequiresSignIn(feed: Feed)
 
 	public var isCredentialsError: Bool {
 		if case .wrappedError(let error, _, _) = self {
@@ -79,6 +90,8 @@ public enum AccountError: LocalizedError {
 			}
 		case .ao3CloudflareChallenge:
 			return NSLocalizedString("Blocked by a Cloudflare challenge -- try again later", comment: "AO3 Cloudflare challenge")
+		case .ao3ListingRequiresSignIn:
+			return NSLocalizedString("This feed requires a signed-in AO3 account.", comment: "AO3 listing requires sign-in")
 		}
 	}
 

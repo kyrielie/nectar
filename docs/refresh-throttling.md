@@ -19,13 +19,27 @@ three independent reasons in order:
    variants — feeds pointed at the old Twitter API, which no longer
    provides feeds). Both are inherited NetNewsWire behavior, not
    Nectar-specific.
-2. **AO3 search-results feeds** (`feedShouldBeSkippedForAO3SearchResultsReasons`,
-   `isAO3SearchResultsFeed`) — a normal scheduled/background/pull-to-refresh
-   pass never re-fetches page 1 of an AO3 search/tag-listing feed once it's
+2. **AO3 listing feeds** (`feedShouldBeSkippedForAO3SearchResultsReasons`,
+   `isAO3ListingFeed` — renamed from `isAO3SearchResultsFeed` once it
+   broadened past search/tag results, see `ao3-feeds.md`'s
+   `AO3SearchResultsExtractor` section and
+   `nectar-toolbar-ao3-listing-feeds.md`) — a normal
+   scheduled/background/pull-to-refresh pass never re-fetches page 1 of
+   any AO3 listing feed (search/tag results, author works, bookmarks,
+   marked-for-later, subscriptions, a collection, or a series) once it's
    been added; only the one-off add-time fetch and explicit
    pagination/"load more" touch it after that. Matched on host (AO3's
-   domain allowlist) + path shape (`/tags/.../works`, or `/works` with a
-   `work_search[...]` query key) — deliberately not by file extension.
+   domain allowlist) + path shape (`/tags/.../works`, `/works` with a
+   `work_search[...]` query key, `/users/<name>/works`,
+   `/users/<name>/bookmarks`, `/users/<name>/readings?show=to-read`,
+   `/users/<name>/subscriptions`, `/collections/<name>/works`, or
+   `/series/<digits>`) — deliberately not by file extension. Two of
+   these shapes (subscriptions, marked-for-later) are always private to
+   the signed-in account and route through
+   `AO3SearchResultsFetcher.fetchRequiringSignIn(url:feedURL:)` rather
+   than the plain anonymous fetch — see
+   `LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(_:)` and
+   `ao3-authenticated-reading.md`.
 3. **Reddit** (`feedShouldBeSkippedForRedditReasons`) — Reddit allows one
    feed fetch per minute, so at most one Reddit feed refreshes per pass
    (the least-recently-checked one); this is also inherited NetNewsWire
@@ -41,8 +55,8 @@ to."
 
 **Open gap, not yet resolved:** that removal comment is incomplete. AO3
 tag/user RSS/Atom feeds (see `ao3-direct-feed-ingestion.md`) *are* a
-public, non-Ambrosia site, and `isAO3SearchResultsFeed`'s matching only
-covers AO3's HTML search/tag-listing *pages* — not AO3's native
+public, non-Ambrosia site, and `isAO3ListingFeed`'s matching only
+covers AO3's HTML listing *pages* — not AO3's native
 `.atom`/RSS feed URLs, which is the actual direct-subscription route. A
 regular AO3 tag/user Atom feed subscription has no proactive
 skip/minimum-interval protection today; it refreshes on every

@@ -36,6 +36,17 @@ public enum AO3SearchResultsFetchOutcome {
 	case registrationRequired
 	case rateLimited
 	case cloudflareChallenge(challengedURL: URL)
+	/// Distinct from `.registrationRequired`: this listing type
+	/// (subscriptions, marked-for-later) is always-yours and
+	/// always-private, so an anonymous fetch of it is expected to be
+	/// gated -- but there is no stored AO3 session to retry with
+	/// (`AO3SessionStore.isSignedIn == false`). Surfaced separately so a
+	/// caller can show "sign in to AO3 in Settings" rather than the
+	/// generic "this work requires registration" copy
+	/// `.registrationRequired` implies, which doesn't fit a feed the
+	/// person is trying to add for themselves. See
+	/// `fetchRequiringSignIn(url:feedURL:)`.
+	case notSignedIn
 }
 
 public enum AO3SearchResultsFetchError: Error {
@@ -156,6 +167,87 @@ public enum AO3SearchResultsFetcher {
 		}
 		let backoffSeconds = min(retryBackoffBaseSeconds * pow(2, Double(attempt - 1)), maxBackoffSeconds)
 		try? await Task.sleep(nanoseconds: UInt64(backoffSeconds * 1_000_000_000))
+	}
+}
+
+// MARK: - Always-authenticated listing types (subscriptions, marked-for-later)
+
+extension AO3SearchResultsFetcher {
+
+	/// Fetches an AO3 listing URL that's always private-to-the-signed-in-
+	/// account (subscriptions, marked-for-later -- see
+	/// `nectar-toolbar-ao3-listing-feeds.md`'s "Auth requirement per
+	/// listing type" table; every other listing shape stays on the plain
+	/// `fetch(url:feedURL:)` above, unauthenticated). Tries the ordinary
+	/// anonymous path first -- AO3 always challenges these with its
+	/// registration wall for a signed-out request, but attempting
+	/// anonymously first (rather than skipping straight to
+	/// authentication) keeps this consistent with
+	/// `AO3ChapterFetcher.retryAuthenticated(url:)`'s existing
+	/// anonymous-then-authenticated shape, and still correctly surfaces
+	/// `.rateLimited`/`.cloudflareChallenge`/network failures without a
+	/// second, redundant authenticated attempt for those cases.
+	///
+	/// On `.registrationRequired` from the anonymous attempt, retries via
+	/// `AO3AuthenticatedFetcher.fetch(_:)` (the same stored-session Cookie
+	/// primitive `AO3ChapterFetcher` already uses for a single work page)
+	/// against the identical listing-page extraction/pagination path.
+	/// Returns `.notSignedIn` rather than `.registrationRequired` when no
+	/// session is stored at all, so a caller can distinguish "you need to
+	/// sign in" from "AO3 rejected your session" -- callers should treat
+	/// `.notSignedIn` as instructing the person to sign in via Settings
+	/// (`ao3-authenticated-reading.md`), not as a transient fetch error to
+	/// retry.
+	///
+	/// Callers must check
+	/// `AO3ChapterFetcher.isAO3NetworkRequestAllowed(for:)`-equivalent
+	/// gating themselves before calling this, same as every other AO3
+	/// request path -- this function has no article to gate against, so
+	/// it can't check that itself.
+	public static func fetchRequiringSignIn(url: URL, feedURL: String) async throws -> AO3SearchResultsFetchOutcome {
+		let anonymousOutcome = try await fetch(url: url, feedURL: feedURL)
+
+		guard case .registrationRequired = anonymousOutcome else {
+			return anonymousOutcome
+		}
+
+		guard AO3SessionStore.isSignedIn else {
+			return .notSignedIn
+		}
+
+		guard let (data, response) = try await AO3AuthenticatedFetcher.fetch(url) else {
+			// No session after all -- AO3SessionStore.isSignedIn and
+			// AO3AuthenticatedFetcher.fetch both read the same stored
+			// cookie, so this is only reachable if it was cleared
+			// between the two checks (e.g. a concurrent sign-out).
+			return .notSignedIn
+		}
+
+		guard response.statusIsOK, !data.isEmpty, let html = String(data: data, encoding: .utf8) else {
+			throw AO3SearchResultsFetchError.exhaustedRetries
+		}
+
+		switch AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL) {
+		case .success(let items, let hasNextPage, let pageTitle):
+			return .success(items, hasNextPage: hasNextPage, pageTitle: pageTitle)
+		case .noResults(let pageTitle):
+			return .noResults(pageTitle: pageTitle)
+		case .registrationRequired:
+			// AO3 rejected the stored session itself (expired/revoked),
+			// not just "you weren't signed in" -- distinct from
+			// .notSignedIn above, but callers currently have no separate
+			// UI for "your AO3 session expired, sign in again" on this
+			// path, so this folds into the same not-signed-in messaging
+			// rather than inventing a fourth outcome case with no
+			// consumer yet. Unlike AO3ChapterFetcher.retryAuthenticated,
+			// this does NOT clear AO3SessionStore here -- that fetcher's
+			// own doc comment notes it's the one call site that owns
+			// that decision for a single work-page retry; a listing-page
+			// retry duplicating that clear could race a concurrent
+			// chapter-fetch retry against the same store. Left to
+			// AO3ChapterFetcher's existing call site.
+			return .notSignedIn
+		}
 	}
 }
 

@@ -345,21 +345,22 @@ private extension LocalAccountDelegate {
 			BatchUpdate.shared.end()
 		}
 
-		// AO3 search-results and tag-listing works pages (Task 9) always
-		// serve a feed.atom `<link rel="alternate">` in their HTML head,
-		// same as any other AO3 page. Running these through FeedFinder
-		// would discover that unrelated feed.atom instead of the
-		// search/tag URL the person actually pasted, silently resolving
-		// every such paste to whatever feed.atom the account is already
-		// subscribed to and getting rejected below as a duplicate. Skip
-		// autodiscovery entirely for these and use the pasted URL verbatim
-		// -- see LocalAccountRefresher.isAO3SearchResultsFeed(_:), which
-		// this reuses so create-time detection and refresh-time routing
-		// stay in sync.
-		let isAO3SearchOrTagURL = LocalAccountRefresher.isAO3SearchResultsFeed(url)
+		// Any AO3 listing page (search/tag results, author works,
+		// bookmarks, marked-for-later, subscriptions, a collection, or a
+		// series -- see isAO3ListingFeed's own doc comment) always serves
+		// a feed.atom `<link rel="alternate">` in their HTML head, same
+		// as any other AO3 page. Running these through FeedFinder would
+		// discover that unrelated feed.atom instead of the listing URL
+		// the person actually pasted, silently resolving every such paste
+		// to whatever feed.atom the account is already subscribed to and
+		// getting rejected below as a duplicate. Skip autodiscovery
+		// entirely for these and use the pasted URL verbatim -- see
+		// LocalAccountRefresher.isAO3ListingFeed(_:), which this reuses
+		// so create-time detection and refresh-time routing stay in sync.
+		let isAO3ListingURL = LocalAccountRefresher.isAO3ListingFeed(url)
 
 		let feedURLString: String
-		if isAO3SearchOrTagURL {
+		if isAO3ListingURL {
 			feedURLString = url.absoluteString
 		} else {
 			let feedSpecifiers = try await FeedFinder.find(url: url)
@@ -377,8 +378,8 @@ private extension LocalAccountDelegate {
 			throw AccountError.createErrorAlreadySubscribed
 		}
 
-		if isAO3SearchOrTagURL {
-			// The URL itself is an HTML search/tag-listing page, not a feed
+		if isAO3ListingURL {
+			// The URL itself is an HTML listing page, not a feed
 			// document -- InitialFeedDownloader's FeedParser can't parse it,
 			// so don't try. Create the feed immediately and fetch page 1
 			// directly (not via refresher.refreshFeeds) so a Cloudflare
@@ -398,8 +399,25 @@ private extension LocalAccountDelegate {
 			container.addFeedToTreeAtTopLevel(feed)
 			feed.lastCheckDate = Date()
 
+			// Subscriptions and marked-for-later are always-yours,
+			// always-private (see isAlwaysAuthenticatedAO3ListingFeed's
+			// own doc comment) -- route through the
+			// anonymous-then-authenticated retry path so a signed-in
+			// person actually gets their feed, and a signed-out person
+			// gets a clearly-surfaced "sign in" state instead of a
+			// silently-empty feed. Every other listing type keeps using
+			// the plain anonymous fetch, unchanged.
+			let requiresSignIn = LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(url)
+
 			do {
-				switch try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url) {
+				let outcome: AO3SearchResultsFetchOutcome
+				if requiresSignIn {
+					outcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: url, feedURL: feed.url)
+				} else {
+					outcome = try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url)
+				}
+
+				switch outcome {
 				case .success(let parsedItems, _, let pageTitle):
 					let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(parsedItems), deleteOlder: false)
 					account.sendNotificationAbout(articleChanges)
@@ -437,11 +455,19 @@ private extension LocalAccountDelegate {
 					// Neither carries a pageTitle: a registration wall
 					// never reaches AO3SearchResultsExtractor.extract at
 					// all (caught earlier by isRegistrationRequired), and
-					// a 429 has no body to parse a title from.
+					// a 429 has no body to parse a title from. Reachable
+					// here only for a non-always-authenticated listing
+					// type (requiresSignIn == false) -- the
+					// requiresSignIn branch above never returns
+					// .registrationRequired, it resolves that into
+					// .notSignedIn instead (see fetchRequiringSignIn's
+					// own doc comment).
 					break
 				case .cloudflareChallenge(let challengedURL):
 					AO3ChallengeSessionStore.lastChallengedURL = challengedURL
 					throw AccountError.ao3CloudflareChallenge(challengedURL: challengedURL, feed: feed)
+				case .notSignedIn:
+					throw AccountError.ao3ListingRequiresSignIn(feed: feed)
 				}
 			} catch let error as AccountError {
 				throw error
