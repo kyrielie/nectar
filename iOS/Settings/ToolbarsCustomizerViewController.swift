@@ -57,7 +57,8 @@ class ToolbarsCustomizerViewController: UICollectionViewController, SettingsPale
 
 	var paletteBackgroundView: UIView { collectionView }
 
-	private var previewSection: Int { 0 }
+	// internal, not private: read by +Drag.swift/+Drop.swift.
+	var previewSection: Int { 0 }
 	// internal, not private: read by +Drag.swift/+Drop.swift to restrict
 	// reordering to this section.
 	var functionsSection: Int { 1 }
