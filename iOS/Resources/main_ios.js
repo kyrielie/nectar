@@ -1,14 +1,8 @@
 var activeImageViewer = null;
 
 class ImageViewer {
-	constructor(img, isLink) {
+	constructor(img) {
 		this.img = img;
-		// isLink: constructed from an <a href> image-link match rather than
-		// an <img>. An <a> never fires nnwLoaded (that class add happens on
-		// <img>.onload only), so clicked() below skips the isLoaded()
-		// polling loop entirely for this case and goes straight to
-		// showViewer(). See nectar-toolbar-image-link-viewer.md, decision 1.
-		this.isLink = isLink === true;
 		this.loadingInterval = null;
 		this.activityIndicator = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+PHN2ZyB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2ZXJzaW9uPSIxLjAiIHdpZHRoPSI2NHB4IiBoZWlnaHQ9IjY0cHgiIHZpZXdCb3g9IjAgMCAxMjggMTI4IiB4bWw6c3BhY2U9InByZXNlcnZlIj48Zz48cGF0aCBkPSJNNTkuNiAwaDh2NDBoLThWMHoiIGZpbGw9IiMwMDAwMDAiLz48cGF0aCBkPSJNNTkuNiAwaDh2NDBoLThWMHoiIGZpbGw9IiNjY2NjY2MiIHRyYW5zZm9ybT0icm90YXRlKDMwIDY0IDY0KSIvPjxwYXRoIGQ9Ik01OS42IDBoOHY0MGgtOFYweiIgZmlsbD0iI2NjY2NjYyIgdHJhbnNmb3JtPSJyb3RhdGUoNjAgNjQgNjQpIi8+PHBhdGggZD0iTTU5LjYgMGg4djQwaC04VjB6IiBmaWxsPSIjY2NjY2NjIiB0cmFuc2Zvcm09InJvdGF0ZSg5MCA2NCA2NCkiLz48cGF0aCBkPSJNNTkuNiAwaDh2NDBoLThWMHoiIGZpbGw9IiNjY2NjY2MiIHRyYW5zZm9ybT0icm90YXRlKDEyMCA2NCA2NCkiLz48cGF0aCBkPSJNNTkuNiAwaDh2NDBoLThWMHoiIGZpbGw9IiNiMmIyYjIiIHRyYW5zZm9ybT0icm90YXRlKDE1MCA2NCA2NCkiLz48cGF0aCBkPSJNNTkuNiAwaDh2NDBoLThWMHoiIGZpbGw9IiM5OTk5OTkiIHRyYW5zZm9ybT0icm90YXRlKDE4MCA2NCA2NCkiLz48cGF0aCBkPSJNNTkuNiAwaDh2NDBoLThWMHoiIGZpbGw9IiM3ZjdmN2YiIHRyYW5zZm9ybT0icm90YXRlKDIxMCA2NCA2NCkiLz48cGF0aCBkPSJNNTkuNiAwaDh2NDBoLThWMHoiIGZpbGw9IiM2NjY2NjYiIHRyYW5zZm9ybT0icm90YXRlKDI0MCA2NCA2NCkiLz48cGF0aCBkPSJNNTkuNiAwaDh2NDBoLThWMHoiIGZpbGw9IiM0YzRjNGMiIHRyYW5zZm9ybT0icm90YXRlKDI3MCA2NCA2NCkiLz48cGF0aCBkPSJNNTkuNiAwaDh2NDBoLThWMHoiIGZpbGw9IiMzMzMzMzMiIHRyYW5zZm9ybT0icm90YXRlKDMwMCA2NCA2NCkiLz48cGF0aCBkPSJNNTkuNiAwaDh2NDBoLThWMHoiIGZpbGw9IiMxOTE5MTkiIHRyYW5zZm9ybT0icm90YXRlKDMzMCA2NCA2NCkiLz48YW5pbWF0ZVRyYW5zZm9ybSBhdHRyaWJ1dGVOYW1lPSJ0cmFuc2Zvcm0iIHR5cGU9InJvdGF0ZSIgdmFsdWVzPSIwIDY0IDY0OzMwIDY0IDY0OzYwIDY0IDY0OzkwIDY0IDY0OzEyMCA2NCA2NDsxNTAgNjQgNjQ7MTgwIDY0IDY0OzIxMCA2NCA2NDsyNDAgNjQgNjQ7MjcwIDY0IDY0OzMwMCA2NCA2NDszMzAgNjQgNjQiIGNhbGNNb2RlPSJkaXNjcmV0ZSIgZHVyPSIxMDgwbXMiIHJlcGVhdENvdW50PSJpbmRlZmluaXRlIj48L2FuaW1hdGVUcmFuc2Zvcm0+PC9nPjwvc3ZnPg==";
 	}
@@ -18,13 +12,6 @@ class ImageViewer {
 	}
 
 	clicked() {
-		if (this.isLink) {
-			// No loading indicator/isLoaded() polling for a link tap -- there's
-			// no <img> decode to wait on; showViewer() posts the URL and the
-			// native side handles cache lookup/fetch/loading state itself.
-			this.showViewer();
-			return;
-		}
 		this.showLoadingIndicator();
 		if (this.isLoaded()) {
 			this.showViewer();
@@ -45,32 +32,18 @@ class ImageViewer {
 
 	showViewer() {
 		this.hideLoadingIndicator();
-
+		
 		const rect = this.img.getBoundingClientRect();
-
+		
 		// Instead of trying to convert to canvas (which fails with CORS),
-		// send the original image src URL. For the <a> image-link case
-		// there's no `src`/`alt` -- imageURL comes from href, and the
-		// caption source is the link's own title/text content rather than
-		// an img title, kept as a separate field (captionText) from
-		// imageTitle so the <img> path's title/alt sourcing is unchanged.
-		// See nectar-toolbar-image-link-viewer.md, decision 1 and 4.
-		const message = this.isLink ? {
-			x: rect.x,
-			y: rect.y,
-			width: rect.width,
-			height: rect.height,
-			imageTitle: null,
-			imageURL: this.img.href,
-			captionText: this.img.title || this.img.textContent || null,
-		} : {
+		// send the original image src URL
+		const message = {
 			x: rect.x,
 			y: rect.y,
 			width: rect.width,
 			height: rect.height,
 			imageTitle: this.img.title,
 			imageURL: this.img.src,
-			captionText: null,
 		};
 
 		var jsonMessage = JSON.stringify(message);
@@ -129,41 +102,9 @@ class ImageViewer {
 					activeImageViewer = new ImageViewer(event.target);
 					activeImageViewer.clicked();
 				}
-			} else if (event.target.matches("a[href]") && isImageLinkURL(event.target.href)) {
-				// Bare <a href="....jpg">, common on AO3 for full-res off-site
-				// art. Intercepted and consumed here (not a real navigation),
-				// so this never reaches decidePolicyFor as a linkActivated
-				// case -- same as <img> taps today. See
-				// nectar-toolbar-image-link-viewer.md, decision 1.
-				if (activeImageViewer && activeImageViewer.img === event.target) {
-					cancelImageLoad();
-				} else {
-					cancelImageLoad();
-					activeImageViewer = new ImageViewer(event.target, true);
-					activeImageViewer.clicked();
-				}
 			}
 		}
 	}
-}
-
-// Extension sniff on the URL path only, case-insensitive, ignoring query
-// string/fragment -- no HEAD/content-type round trip. .svg is deliberately
-// excluded (UIImage(data:) doesn't decode it, and it's rare on AO3). See
-// nectar-toolbar-image-link-viewer.md, decision 1.
-const imageLinkExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".heic", ".heif"];
-
-function isImageLinkURL(href) {
-	if (!href) {
-		return false;
-	}
-	let path;
-	try {
-		path = new URL(href, window.location.href).pathname.toLowerCase();
-	} catch (e) {
-		return false;
-	}
-	return imageLinkExtensions.some(ext => path.endsWith(ext));
 }
 
 function cancelImageLoad() {
@@ -189,30 +130,6 @@ function showClickedImage() {
 
 function postRenderProcessing() {
 	ImageViewer.init();
-	requestImagePrecache();
-}
-
-// Collects every image-link URL in the rendered article (both <img> src and
-// matching <a href> targets) and hands them to the native side, which owns
-// the bounded (4-6 in-flight) precache queue and the cachedImages writes --
-// see nectar-toolbar-image-link-viewer.md, decision 3. This is a plain
-// collect-and-post, not a fetch: no network activity happens in JS here.
-function requestImagePrecache() {
-	const urls = new Set();
-	document.querySelectorAll("img[src]").forEach(el => {
-		if (el.src) {
-			urls.add(el.src);
-		}
-	});
-	document.querySelectorAll("a[href]").forEach(el => {
-		if (isImageLinkURL(el.href)) {
-			urls.add(el.href);
-		}
-	});
-	if (urls.size === 0) {
-		return;
-	}
-	window.webkit.messageHandlers.imagesShouldBePrecached.postMessage(JSON.stringify(Array.from(urls)));
 }
 
 function onResize() {

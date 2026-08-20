@@ -15,7 +15,6 @@ struct DatabaseTableName {
 	static let statuses = "statuses"
 	static let bookState = "bookState"
 	static let annotations = "annotations"
-	static let cachedImages = "cachedImages"
 }
 
 struct DatabaseKey {
@@ -136,8 +135,4 @@ struct DatabaseKey {
 	static let createdAt = "createdAt"
 	static let orphanedAt = "orphanedAt"
 	static let lastReanchoredAt = "lastReanchoredAt"
-
-	// Cached images (image-link viewer precache/fallback)
-	static let imageData = "imageData"
-	static let dateCached = "dateCached"
 }

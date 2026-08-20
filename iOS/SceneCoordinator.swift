@@ -1719,21 +1719,6 @@ struct SidebarItemNode: Hashable, Sendable {
 		rootSplitViewController.present(navController, animated: true)
 	}
 
-	/// Shown when imageWasClicked exhausts every source for a given
-	/// imageURL -- cache miss, then live fetch/decode also fails. See
-	/// nectar-toolbar-image-link-viewer.md, decision 4. `caption` is the
-	/// tapped element's title/alt (<img>) or link text (<a>); nil is a
-	/// normal case (the illustration alone is a complete, non-broken state),
-	/// not an error.
-	func showFullScreenImageFallback(caption: String?, transitioningDelegate: UIViewControllerTransitioningDelegate) {
-		let imageVC = UIStoryboard.main.instantiateController(ofType: ImageViewController.self)
-		imageVC.showFallbackState(caption: caption)
-		let navController = UINavigationController(rootViewController: imageVC)
-		navController.modalPresentationStyle = .currentContext
-		navController.transitioningDelegate = transitioningDelegate
-		rootSplitViewController.present(navController, animated: true)
-	}
-
 	func homePageURLForFeed(_ indexPath: IndexPath) -> URL? {
 		guard let node = nodeFor(indexPath),
 			let feed = node.representedObject as? Feed,

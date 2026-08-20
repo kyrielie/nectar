@@ -43,16 +43,6 @@ struct Assets {
 		static let faviconTemplate: RSImage = RSImage.symbolImage("book.closed.fill", pointSize: 120)!
 
 		static let share = RSImage(symbol: "square.and.arrow.up")!
-		// Bundled fallback shown when the in-app image viewer can't resolve a
-		// tapped image/image-link (cache miss + live fetch/decode failure) --
-		// see nectar-toolbar-image-link-viewer.md, decision 4 and its "Open
-		// questions" section. PLACEHOLDER: an SF Symbol stand-in, not the
-		// bespoke light/apologetic illustration the plan calls for as a real
-        // design task ("something to see" rather than a bare broken-link
-		// icon) -- swap for a real Assets.xcassets entry (with light/dark
-		// variants matching ArticleThemesManager's existing awareness
-		// elsewhere) before shipping this feature.
-		static let imageFallbackIllustration = RSImage(symbol: "photo.on.rectangle.angled")!
 		// Task 8 ("Content archival & destructive-update protection") --
 		// the explicit per-article "Check for updates" action.
 		static let checkForUpdates = RSImage(symbol: "arrow.triangle.2.circlepath")!

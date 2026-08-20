@@ -125,18 +125,5 @@ enum ArticleSQLiteExportTable {
 		guard database.executeUpdate(createAnnotationsSQL, withArgumentsIn: []) else {
 			throw ArticleSQLiteExportError.exportFailed("annotations export: \(database.lastErrorMessage() ?? "unknown error")")
 		}
-
-		// Same join-scoped shape as statuses/annotations above. Cached images
-		// ship with the export the same way contentHTML does -- a chapter's
-		// inline art is part of the work, not a preference (unlike bookState,
-		// which this export deliberately excludes -- see database.md).
-		let createCachedImagesSQL = """
-		CREATE TABLE \(attachedSchemaName).cachedImages AS
-		SELECT ci.* FROM cachedImages AS ci
-		INNER JOIN \(attachedSchemaName).articles AS a ON a.articleID = ci.articleID;
-		"""
-		guard database.executeUpdate(createCachedImagesSQL, withArgumentsIn: []) else {
-			throw ArticleSQLiteExportError.exportFailed("cachedImages export: \(database.lastErrorMessage() ?? "unknown error")")
-		}
 	}
 }

@@ -99,7 +99,6 @@ enum BackupSQLiteImportTable {
 				try Self.mergeStatuses(database: database)
 				try Self.mergeBookState(database: database)
 				try Self.mergeAnnotations(database: database)
-				try Self.mergeCachedImages(database: database)
 				database.commit()
 			} catch {
 				importError = error
@@ -379,29 +378,6 @@ enum BackupSQLiteImportTable {
 		"""
 		guard database.executeUpdate(mergeConflictsSQL, withArgumentsIn: []) else {
 			throw BackupSQLiteImportError.importFailed("annotations merge-conflicts: \(database.lastErrorMessage() ?? "unknown error")")
-		}
-	}
-
-	// MARK: - cachedImages
-
-	/// Plain INSERT OR IGNORE, keyed on (articleID, imageURL) -- unlike
-	/// annotations, a cached image never changes once fetched (no update
-	/// path exists anywhere in this codebase for an existing row), so there
-	/// is no divergent-value case to arbitrate and no later-updatedAt-wins
-	/// rule needed. See CachedImagesTable.swift's header comment and this
-	/// file's own header comment for why annotations needed the more
-	/// involved rule and this table doesn't.
-	private static func mergeCachedImages(database: FMDatabase) throws {
-		let insertNewSQL = """
-		INSERT OR IGNORE INTO cachedImages (
-		  articleID, imageURL, imageData, dateCached
-		)
-		SELECT
-		  b.articleID, b.imageURL, b.imageData, b.dateCached
-		FROM \(attachedSchemaName).cachedImages AS b;
-		"""
-		guard database.executeUpdate(insertNewSQL, withArgumentsIn: []) else {
-			throw BackupSQLiteImportError.importFailed("cachedImages merge: \(database.lastErrorMessage() ?? "unknown error")")
 		}
 	}
 }
