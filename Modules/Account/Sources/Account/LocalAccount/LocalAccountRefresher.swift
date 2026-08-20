@@ -199,13 +199,13 @@ import os
 		// AmbrosiaSQLiteTransferFetcher uses its own dedicated URLSession with a
 		// 300s timeout instead. Route those feeds to it directly here and only
 		// hand the rest to DownloadSession.
-		// AO3 search-results feeds (Task 9) are a third bucket alongside
-		// sqliteFeeds/downloadFeeds, matched on host + path
-		// (archiveofourown.org/works + a work_search[...] query), not
-		// extension -- see Self.isAO3SearchResultsFeed(_:). Like sqliteFeeds,
+		// AO3 listing feeds (search/tag results, author works, bookmarks,
+		// marked-for-later, subscriptions, collections, series) are a third
+		// bucket alongside sqliteFeeds/downloadFeeds, matched on host + path,
+		// not extension -- see Self.isAO3ListingFeed(_:). Like sqliteFeeds,
 		// these bypass DownloadSession entirely: they go through
 		// Downloader.shared, the same one-shot path AO3ChapterFetcher already
-		// uses, since a search-results page is a single GET, not something
+		// uses, since a listing page is a single GET, not something
 		// DownloadSession's conditional-GET/feed-parsing machinery is built
 		// for. This checkpoint fetches page 1 only -- "load more"
 		// pagination is a later checkpoint.
@@ -218,7 +218,7 @@ import os
 			}
 			if url.pathExtension.lowercased() == "sqlite" {
 				sqliteFeeds.insert(feed)
-			} else if Self.isAO3SearchResultsFeed(url) {
+			} else if Self.isAO3ListingFeed(url) {
 				ao3SearchResultFeeds.insert(feed)
 			} else {
 				downloadFeeds.insert(feed)
@@ -352,8 +352,26 @@ import os
 
 			feed.lastCheckDate = Date()
 
+			// Subscriptions and marked-for-later are always-yours,
+			// always-private (see isAlwaysAuthenticatedAO3ListingFeed's own
+			// doc comment) -- route through the anonymous-then-authenticated
+			// retry path here too, mirroring
+			// LocalAccountDelegate.createFeed's identical branch, since this
+			// function is reachable for those feed types on their add-time
+			// fetch (feedShouldBeSkippedForAO3SearchResultsReasons lets
+			// lastCheckDate == nil through). Every other listing type keeps
+			// using the plain anonymous fetch, unchanged.
+			let requiresSignIn = Self.isAlwaysAuthenticatedAO3ListingFeed(url)
+
 			do {
-				switch try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url) {
+				let outcome: AO3SearchResultsFetchOutcome
+				if requiresSignIn {
+					outcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: url, feedURL: feed.url)
+				} else {
+					outcome = try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url)
+				}
+
+				switch outcome {
 				case .success(let parsedItems, let hasNextPage, _):
 					// hasNextPage isn't consumed here -- a routine/add-time
 					// fetch always writes page 1 (below) regardless; only
@@ -396,6 +414,14 @@ import os
 					// AO3ChallengeSessionStore.lastChallengedURL's doc comment.
 					AO3ChallengeSessionStore.lastChallengedURL = challengedURL
 					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "Blocked by a Cloudflare challenge -- try again later"]), activityKind: activityKind)
+				case .notSignedIn:
+					// Reachable here on a background/scheduled refresh of an
+					// always-authenticated listing feed whose stored AO3
+					// session is missing or was rejected -- e.g. signed out
+					// in Settings after the feed was added. Distinct
+					// messaging from .registrationRequired above, matching
+					// AccountError.ao3ListingRequiresSignIn's copy.
+					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "This feed requires a signed-in AO3 account"]), activityKind: activityKind)
 				}
 			} catch {
 				Self.logger.error("LocalAccountRefresher: AO3 search-results fetch failed for \(url.absoluteString): \(error.localizedDescription)")
@@ -985,8 +1011,9 @@ extension LocalAccountRefresher {
 	/// That reasoning does NOT extend to every feed Nectar fetches, though:
 	/// Nectar also subscribes directly to AO3's own tag/user RSS/Atom feeds
 	/// (see AO3IgnoreList/AO3SummaryExtractor), which *is* a public site
-	/// this app should be polite to. AO3 search-results/tag-listing pages
-	/// get an explicit, narrower throttle below
+	/// this app should be polite to. AO3 listing pages (search/tag
+	/// results, author works, bookmarks, marked-for-later, subscriptions,
+	/// collections, series) get an explicit, narrower throttle below
 	/// (feedShouldBeSkippedForAO3SearchResultsReasons); ordinary AO3
 	/// tag/user Atom/RSS feed URLs are NOT covered by that check today and
 	/// have no proactive throttle here at all, relying only on
@@ -1010,23 +1037,25 @@ extension LocalAccountRefresher {
 		return (false, nil)
 	}
 
-	/// AO3 search-results feeds are a deliberate, permanent exception to
+	/// AO3 listing feeds (search/tag results, author works, bookmarks,
+	/// marked-for-later, subscriptions, collections, series -- see
+	/// `isAO3ListingFeed(_:)`) are a deliberate, permanent exception to
 	/// this file's stated "no minimum time between checks" design (see this
 	/// function's siblings below, and the `nectar-import://` scheme's
 	/// permanent exclusion in feedShouldBeSkippedForDisallowedHostReasons,
 	/// which this cross-references). A normal scheduled/background/
-	/// pull-to-refresh pass never re-fetches an AO3 search feed's page 1 --
+	/// pull-to-refresh pass never re-fetches an AO3 listing feed's page 1 --
 	/// only the one-off add-time fetch (lastCheckDate == nil) and the
 	/// explicit "load more" / future "check for new results" paths
 	/// (AO3SearchResultsPaginator) touch it after that.
 	private static func feedShouldBeSkippedForAO3SearchResultsReasons(_ feed: Feed) -> (Bool, String?) {
-		guard let url = url(for: feed), Self.isAO3SearchResultsFeed(url) else {
+		guard let url = url(for: feed), Self.isAO3ListingFeed(url) else {
 			return (false, nil)
 		}
 		guard feed.lastCheckDate != nil else {
 			return (false, nil) // first fetch (add-time) always goes through
 		}
-		return (true, "Skipped — AO3 search results only refresh when added, checked manually, or paginated")
+		return (true, "Skipped — AO3 listing pages only refresh when added, checked manually, or paginated")
 	}
 
 	/// Reddit rate-limits to one feed per minute, so we
@@ -1089,23 +1118,59 @@ extension LocalAccountRefresher {
 	/// `.sqlite`-vs-`.json` handling (decompression, import) happens where
 	/// callers act on the fetched feed URL for Ambrosia-identified accounts,
 	/// not inside DownloadSession.
-	/// AO3's own search-results form URL:
-	/// `https://archiveofourown.org/works?work_search[...]&...`, or a
-	/// tag-listing works page, `https://archiveofourown.org/tags/<tag>/works`
-	/// (no `work_search[` query -- AO3 paginates these the same way as a
-	/// search-results page, just pre-filtered by tag instead of by form
-	/// params). Matched on host (reusing
-	/// `AO3LinkListImporter.permittedHosts`, the same AO3-domain allowlist
-	/// Task 3's paste-import already trusts, rather than a fresh
-	/// single-host check) + path ("matched on host +
-	/// path... not extension"). For the `/works` form, also requires a
-	/// `work_search[` query key -- matched with `hasPrefix` rather than an
-	/// exact key, since AO3 search URLs carry many distinct bracketed keys
-	/// (`work_search[query]`, `work_search[sort_column]`, etc.), not one
-	/// fixed key name. The `/tags/.../works` form carries no such query key,
-	/// so path shape alone (`/tags/` prefix, `/works` suffix) is what
-	/// identifies it.
-	internal static func isAO3SearchResultsFeed(_ url: URL) -> Bool {
+	/// Any AO3 URL shape whose page AO3 renders with the same "listing"
+	/// markup (`.index.group` blurb rows + `ol.pagination` pager) that
+	/// `AO3SearchResultsExtractor`/`AO3ListingPagination` already parse
+	/// generically -- search/tag results, an author's works, someone's
+	/// bookmarks, marked-for-later/reading history, subscriptions, a
+	/// public collection's works, or a series. Originally named
+	/// `isAO3SearchResultsFeed` when it matched only the first two of
+	/// these; renamed once it grew to cover the rest (see
+	/// `nectar-toolbar-ao3-listing-feeds.md`'s broadening item) --
+	/// `Feed.isAO3SearchResultsFeed`'s public wrapper keeps its old name
+	/// for now since it's a public API surface iOS depends on for the
+	/// "load more results" footer, which applies identically to every
+	/// shape matched here, not just search/tag results.
+	///
+	/// Matched on host (reusing `AO3LinkListImporter.permittedHosts`, the
+	/// same AO3-domain allowlist Task 3's paste-import already trusts,
+	/// rather than a fresh single-host check) + path shape, deliberately
+	/// not by file extension. Exact shapes, verbatim from
+	/// `nectar-toolbar-ao3-listing-feeds.md`'s URL-shape table (sourced
+	/// from `ao3downloader`, since AO3 itself documents none of this):
+	///
+	/// - `/works?work_search[...]` -- requires a `work_search[`-prefixed
+	///   query key (matched with `hasPrefix`, not an exact key, since AO3
+	///   search URLs carry many distinct bracketed keys).
+	/// - `/tags/<tag>/works` -- no such query key; path shape alone
+	///   (`/tags/` prefix, `/works` suffix) identifies it.
+	/// - `/users/<name>/works` and the pseud-scoped
+	///   `/users/<name>/pseuds/<pseud>/works` -- an author's works page.
+	/// - `/users/<name>/bookmarks` -- someone's bookmarks (public or, if
+	///   private, gated behind login at fetch time -- see item 4 in the
+	///   planning doc, not this classifier).
+	/// - `/users/<name>/readings` with a `show=to-read` query -- marked
+	///   for later / reading history. This exact query string, not a
+	///   guess (`ao3downloader`'s `shared.py`,
+	///   `marked_for_later_link()`) -- `/users/<name>/readings` alone
+	///   (no query, or a different `show=` value) is a different AO3
+	///   page (reading history without the to-read filter) and is
+	///   deliberately not matched here.
+	/// - `/users/<name>/subscriptions` -- subscriptions (query string and
+	///   trailing slash ignored, same as `ao3downloader`'s own
+	///   `is_subscriptions`).
+	/// - `/collections/<name>/works` -- a public collection's works.
+	/// - `/series/<digits>` -- a series. Deliberately scoped to *this*
+	///   classifier's two call sites (create-feed, refresh-skip) only:
+	///   `AO3SeriesListingExtractor`/`AO3SeriesNavigator`'s existing
+	///   inline-series-navigation feature (jump-to-first-work, series
+	///   walking from a work's own page) never calls this function --
+	///   confirmed by grep, not assumed -- so widening the match here
+	///   cannot turn an existing series-navigation fetch into an
+	///   accidental "subscribe as a feed." See
+	///   `LocalAccountRefresherRoutingTests.swift` for the dedicated
+	///   non-collision coverage.
+	internal static func isAO3ListingFeed(_ url: URL) -> Bool {
 		guard let host = url.host()?.lowercased(), AO3LinkListImporter.permittedHosts.contains(host) else {
 			return false
 		}
@@ -1116,13 +1181,93 @@ extension LocalAccountRefresher {
 			return true
 		}
 
-		guard path == "/works" else {
+		if path == "/works" {
+			guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let queryItems = components.queryItems else {
+				return false
+			}
+			return queryItems.contains { $0.name.hasPrefix("work_search[") }
+		}
+
+		if path.hasPrefix("/users/") && path.hasSuffix("/works") {
+			// Covers both `/users/<name>/works` and the pseud-scoped
+			// `/users/<name>/pseuds/<pseud>/works` -- both end in
+			// `/works` with no further shape distinction needed.
+			return true
+		}
+
+		if path.hasPrefix("/users/") && path.hasSuffix("/bookmarks") {
+			return true
+		}
+
+		if path.hasPrefix("/users/") && path.hasSuffix("/readings") {
+			guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let queryItems = components.queryItems else {
+				return false
+			}
+			return queryItems.contains { $0.name == "show" && $0.value == "to-read" }
+		}
+
+		// Subscriptions: query string and trailing slash ignored, path
+		// shape alone (ends with "/subscriptions") identifies it --
+		// mirrors ao3downloader's own is_subscriptions.
+		if path.hasPrefix("/users/") {
+			let trimmedPath = path.hasSuffix("/") ? String(path.dropLast()) : path
+			if trimmedPath.hasSuffix("/subscriptions") {
+				return true
+			}
+		}
+
+		if path.hasPrefix("/collections/") && path.hasSuffix("/works") {
+			return true
+		}
+
+		if path.hasPrefix("/series/") {
+			let digits = path.dropFirst("/series/".count)
+			return !digits.isEmpty && digits.allSatisfy(\.isNumber)
+		}
+
+		return false
+	}
+
+	/// Deprecated name for `isAO3ListingFeed(_:)` -- kept only as a thin
+	/// forwarder during the broadening (see that function's doc comment)
+	/// so any not-yet-updated call site still compiles; new code should
+	/// call `isAO3ListingFeed(_:)` directly. Remove once nothing
+	/// references this name.
+	@available(*, deprecated, renamed: "isAO3ListingFeed")
+	internal static func isAO3SearchResultsFeed(_ url: URL) -> Bool {
+		isAO3ListingFeed(url)
+	}
+
+	/// Whether `url` is one of the two AO3 listing shapes that are
+	/// always-yours and always-private -- subscriptions and
+	/// marked-for-later/reading-history -- and therefore must go through
+	/// `AO3SearchResultsFetcher.fetchRequiringSignIn(url:feedURL:)`
+	/// rather than the plain anonymous `fetch(url:feedURL:)`. A static,
+	/// page-type-level property, not something detected from the fetch
+	/// response itself (see `nectar-toolbar-ao3-listing-feeds.md`'s "Auth
+	/// requirement per listing type" table) -- someone's bookmarks are
+	/// only *sometimes* gated (public-vs-private per user) and so are
+	/// deliberately not included here; that case is left to the ordinary
+	/// anonymous-fetch-then-registration-wall path like any other listing
+	/// type, same as today.
+	///
+	/// Callers must already have confirmed `isAO3ListingFeed(url)` is
+	/// true before calling this -- it doesn't re-check the host allowlist
+	/// itself, since every existing call site already gates on
+	/// `isAO3ListingFeed` first.
+	internal static func isAlwaysAuthenticatedAO3ListingFeed(_ url: URL) -> Bool {
+		let path = url.path
+		guard path.hasPrefix("/users/") else {
 			return false
 		}
-		guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let queryItems = components.queryItems else {
-			return false
+		if path.hasSuffix("/readings") {
+			guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let queryItems = components.queryItems else {
+				return false
+			}
+			return queryItems.contains { $0.name == "show" && $0.value == "to-read" }
 		}
-		return queryItems.contains { $0.name.hasPrefix("work_search[") }
+		let trimmedPath = path.hasSuffix("/") ? String(path.dropLast()) : path
+		return trimmedPath.hasSuffix("/subscriptions")
 	}
 
 	private static func url(for feed: Feed) -> URL? {

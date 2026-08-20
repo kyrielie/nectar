@@ -30,17 +30,34 @@ others' storage or transport:
    against AO3's real login page; Nectar never sees the password, only
    reads every `archiveofourown.org` cookie back out of the WKWebView's
    own non-persistent cookie store once login succeeds, and stores them as
-   a single Cookie-header string). Used exactly once per retry, by
-   `AO3AuthenticatedFetcher`, which manually attaches that Cookie header
-   to a one-off `URLSession` request — specifically
-   `AO3ChapterFetcher.retryAuthenticated(url:)`, fired only when an
-   anonymous chapter fetch comes back `.registrationRequired` (a
-   login-gated work). Deliberately bypasses `Downloader.shared`: the
-   anonymous fetch that produced `.registrationRequired` for that exact
-   URL is already cached in `Downloader`'s response cache, so routing the
-   authenticated retry through it would silently hand back the stale,
-   unauthenticated response. A `.registrationRequired` retry result clears
-   the stored session (it's treated as expired/revoked).
+   a single Cookie-header string). Used by `AO3AuthenticatedFetcher`,
+   which manually attaches that Cookie header to a one-off `URLSession`
+   request, at two call sites:
+   - `AO3ChapterFetcher.retryAuthenticated(url:)`, fired only when an
+     anonymous chapter fetch comes back `.registrationRequired` (a
+     login-gated work). A `.registrationRequired` retry result here
+     clears the stored session (it's treated as expired/revoked) — this
+     call site owns that decision.
+   - `AO3SearchResultsFetcher.fetchRequiringSignIn(url:feedURL:)` (see
+     `ao3-feeds.md`, `nectar-toolbar-ao3-listing-feeds.md`), fired for
+     the two AO3 listing types that are always private to the signed-in
+     account — subscriptions and marked-for-later
+     (`LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(_:)`).
+     Same anonymous-then-authenticated shape as the chapter-fetch call
+     site, but does **not** clear `AO3SessionStore` on a rejected
+     session, to avoid racing a concurrent chapter-fetch retry against
+     the same store — that remains solely `AO3ChapterFetcher`'s call
+     site's responsibility. Returns a distinct `.notSignedIn` outcome
+     (surfaced as `AccountError.ao3ListingRequiresSignIn`) when no
+     session is stored at all, so the add-feed/refresh UI can tell "you
+     need to sign in" apart from "AO3 rejected your session" or a
+     generic registration wall.
+
+   Both call sites deliberately bypass `Downloader.shared`: an anonymous
+   fetch that produced `.registrationRequired` for a given URL is already
+   cached in `Downloader`'s response cache, so routing the authenticated
+   retry through it would silently hand back the stale, unauthenticated
+   response.
 2. **`AO3AuthenticatedWebViewController`** (iOS app target) — a small
    dedicated WKWebView-based in-app browser, scoped only to AO3 links
    *tapped* in-app (`WebViewController.openURLInAppBrowser(_:)` routes to

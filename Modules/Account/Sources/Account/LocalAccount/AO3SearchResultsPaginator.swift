@@ -28,6 +28,13 @@ import RSParser
 		case registrationRequired
 		case rateLimited
 		case cloudflareChallenge(challengedURL: URL)
+		/// Distinct from `.registrationRequired` -- see
+		/// `AO3SearchResultsFetchOutcome.notSignedIn`'s own doc comment.
+		/// Reachable here only for an always-authenticated listing feed
+		/// (subscriptions, marked-for-later) whose stored AO3 session is
+		/// missing or was rejected between page 1's add-time fetch (which
+		/// went through `fetchRequiringSignIn`) and this later page.
+		case notSignedIn
 	}
 
 	/// Fetches page `(feed.ao3SearchLastFetchedPage ?? 1) + 1` for `feed`
@@ -54,7 +61,20 @@ import RSParser
 
 		let fetchOutcome: AO3SearchResultsFetchOutcome
 		do {
-			fetchOutcome = try await AO3SearchResultsFetcher.fetch(url: pageURL, feedURL: feed.url)
+			// Subscriptions and marked-for-later are always-yours,
+			// always-private -- page 1 of these feeds was fetched via
+			// fetchRequiringSignIn (LocalAccountDelegate.createFeed /
+			// LocalAccountRefresher.fetchAndImportAO3SearchResults), and
+			// later pages need the same authenticated retry, or a signed-
+			// out person would see every page past 1 silently fail
+			// registration instead of getting the same "sign in" state
+			// page 1 already surfaces. Every other listing type keeps
+			// using the plain anonymous fetch, unchanged.
+			if LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(pageURL) {
+				fetchOutcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: pageURL, feedURL: feed.url)
+			} else {
+				fetchOutcome = try await AO3SearchResultsFetcher.fetch(url: pageURL, feedURL: feed.url)
+			}
 		} catch {
 			return .noResults
 		}
@@ -88,6 +108,8 @@ import RSParser
 		case .cloudflareChallenge(let challengedURL):
 			AO3ChallengeSessionStore.lastChallengedURL = challengedURL
 			return .cloudflareChallenge(challengedURL: challengedURL)
+		case .notSignedIn:
+			return .notSignedIn
 		}
 	}
 

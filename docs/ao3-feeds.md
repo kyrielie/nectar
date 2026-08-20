@@ -69,15 +69,39 @@ metadata Ambrosia's `_ambrosia` JSON extension provides (same downstream
 `ParsedItem` fields, different wire format) — used for native AO3 tag/user
 RSS-Atom subscriptions rather than an Ambrosia-hosted library.
 
-## `AO3SearchResultsExtractor` — search-results listing pages
+## `AO3SearchResultsExtractor` — AO3 listing pages
 
-Extracts one `ParsedItem` per work row from a fetched
-`GET .../works?work_search[...]&view_adult=true` page.
+Despite its name (predates this section's broadening — see
+`nectar-toolbar-ao3-listing-feeds.md`), this extracts one `ParsedItem`
+per work row from *any* AO3 listing page, not just search-results
+pages: a `GET .../works?work_search[...]&view_adult=true` page, a
+`/tags/<tag>/works` tag-listing page, an author's `/users/<name>/works`
+(or pseud-scoped `/users/<name>/pseuds/<pseud>/works`) page, someone's
+`/users/<name>/bookmarks`, `/users/<name>/subscriptions`,
+`/users/<name>/readings?show=to-read` (marked for later), a
+`/collections/<name>/works` collection, or a `/series/<digits>` series
+listing (confirmed by `AO3SeriesListingExtractorTests`'s
+`searchResultsExtractorParsesAllTenRowsFromSeriesListingFixture` to
+work unmodified against the same fixture `AO3SeriesListingExtractor`
+uses — see that extractor's own section below). All of these share the
+same `.index.group` blurb-row markup and `ol.pagination` pager; the
+extractor selects `li.work-<id>` rows anywhere in the document rather
+than scoping to a page-type-specific container, so no page-type
+branching was needed to support the rest of AO3's listing types beyond
+the original two — only routing (`LocalAccountRefresher.isAO3ListingFeed(_:)`,
+see `refresh-throttling.md`) needed broadening.
+
+For subscriptions specifically: the extractor currently recognizes work
+rows only, not the series blurbs a subscriptions page can also contain
+— subscribed-series handling is deliberately deferred (Option B in
+`nectar-toolbar-ao3-listing-feeds.md` item 2), not silently dropped.
+Series blurbs on a subscriptions page are simply not matched by
+`isWorkRow(_:)` and so don't appear in the result today.
 
 ```swift
 enum AO3SearchResultsOutcome {
-    case success([ParsedItem], hasNextPage: Bool)
-    case noResults
+    case success([ParsedItem], hasNextPage: Bool, pageTitle: String?)
+    case noResults(pageTitle: String?)
     case registrationRequired
 }
 
@@ -89,7 +113,20 @@ Flow: checks the registration wall first; finds every `<li>` matching
 `AO3IgnoreList.shouldExclude(_:)`; if filtering empties an otherwise
 non-empty result, that's reported as `.noResults` too (an ignored-to-empty
 page has no meaningful "next page" signal). `hasNextPage` comes from
-`AO3ListingPagination.hasNextPage(_:)`.
+`AO3ListingPagination.hasNextPage(_:)`. `pageTitle` is the page's own
+`<title>`, suffix-stripped and trimmed, carried on both `.success` and
+`.noResults` so a create-time caller can name the feed after the page
+rather than leaving it "Untitled" — see `LocalAccountDelegate.createFeed`'s
+AO3 branch.
+
+Two listing types — subscriptions and marked-for-later — are always
+private to the signed-in account, so a plain anonymous fetch of them is
+expected to always hit the registration wall. `AO3SearchResultsFetcher`'s
+`fetchRequiringSignIn(url:feedURL:)` (see that file) wraps `fetch(url:feedURL:)`
+with an anonymous-then-authenticated retry for exactly these two types,
+gated by `LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(_:)`
+— see `ao3-authenticated-reading.md` for the authenticated-fetch
+mechanism itself.
 
 The header comment is candid about provenance: the row/title/stats
 selectors were validated by reading (not transcribing — the source is
