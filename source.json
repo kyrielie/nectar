@@ -34,13 +34,12 @@
             "versions": [
                 {
                     "version": "7.1.1",
-                    "buildVersion": "7108.35",
-                    "date": "2026-08-16T06:55:47Z",
-                    "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.1.1...v0.1.2\r\n\r\n- honestly i forgot what i added here, maybe the next one was the annotation color system and i actually added the annotations highlight system in this release?",
-                    "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.1.2/Nectar-unsigned.ipa",
-                    "size": 4548207,
-                    "minOSVersion": "17.0",
-                    "marketingVersion": "0.1.2"
+                    "buildVersion": "7108.36",
+                    "date": "2026-08-15T08:37:08Z",
+                    "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.1.0...v0.1.1\r\n\r\n- pretty sure this was just a bug fix for some visual bugs from the last release",
+                    "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.1.1/Nectar-unsigned.ipa",
+                    "size": 4541548,
+                    "minOSVersion": "17.0"
                 },
                 {
                     "version": "0.1.4",
