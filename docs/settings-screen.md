@@ -384,7 +384,16 @@ code (never called), and reordering silently did not work as a result.
 `+Drop.swift`'s `performDropWith` now writes the reordered array through
 `AppDefaults.setToolbarFunctionOrder(_:for:)` directly and drives the
 visual move via `performBatchUpdates`, rather than relying on
-`moveItemAt` to do either.
+`moveItemAt` to do either. It also refreshes the Preview cell directly
+(`ToolbarPreviewCell.configure(bar:)` on whatever cell is currently
+visible at Preview's index path) rather than counting on the generic
+`UserDefaults.didChangeNotification` reload to do it: that notification
+fires while `hasActiveDrop` is still true (the drop's own animation
+hasn't finished), which `userDefaultsDidChange()` deliberately ignores
+to avoid stomping the drop, and `performDropWith`'s own
+`performBatchUpdates` only touches the two reindexed Functions rows —
+so without this explicit refresh the Preview section silently held the
+pre-drop order until some unrelated reload happened to touch it later.
 
 ### Reset
 

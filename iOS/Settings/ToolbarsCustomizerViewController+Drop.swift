@@ -32,12 +32,9 @@ extension ToolbarsCustomizerViewController: UICollectionViewDropDelegate {
 			return
 		}
 
-		// Write the new order first so the section's post-drop
-		// reloadData() (triggered by this same write's
-		// UserDefaults.didChangeNotification, see
-		// ToolbarsCustomizerViewController.userDefaultsDidChange())
-		// reflects it -- the performBatchUpdates call below only needs to
-		// animate the visual move, not carry the source of truth.
+		// Write the new order first: the preview refresh below and any
+		// later, unrelated reload both need AppDefaults to already hold
+		// the new order at the time they run.
 		var order = functionOrder
 		let function = order.remove(at: sourceIndexPath.item)
 		order.insert(function, at: destinationIndexPath.item)
@@ -48,5 +45,19 @@ extension ToolbarsCustomizerViewController: UICollectionViewDropDelegate {
 			collectionView.insertItems(at: [destinationIndexPath])
 		}
 		coordinator.drop(item.dragItem, toItemAt: destinationIndexPath)
+
+		// setToolbarFunctionOrder(_:for:) above posts
+		// UserDefaults.didChangeNotification while the drop is still
+		// animating (hasActiveDrop is still true), which
+		// userDefaultsDidChange() deliberately ignores to avoid stomping
+		// this same drop's animation -- so that notification's reload
+		// never reaches the Preview section, and nothing else touches it
+		// (the performBatchUpdates above only reindexes the two Functions
+		// rows). Refresh the already-visible preview cell directly rather
+		// than count on a reload that's guaranteed to be skipped.
+		let previewIndexPath = IndexPath(item: 0, section: previewSection)
+		if let previewCell = collectionView.cellForItem(at: previewIndexPath) as? ToolbarPreviewCell {
+			previewCell.configure(bar: activeBar)
+		}
 	}
 }
