@@ -82,7 +82,6 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case showFeedNameInReaderView = 3
 		case fullScreenReading = 4
 		case annotations = 5
-		case showArticleScrollbar = 6
 	}
 
 	private enum HelpRow: Int {
@@ -109,11 +108,6 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 	@IBOutlet var showLastUpdatedLabelSwitch: UISwitch!
 	@IBOutlet var showFeedNameInReaderViewSwitch: UISwitch!
 	@IBOutlet var disableArticleLinksSwitch: UISwitch!
-	// Duplicate entry point for AppDefaults.Key.showArticleScrollbar,
-	// alongside FullScreenReadingViewController's own switch -- both
-	// read/write the same key, so they can't drift out of sync with each
-	// other. See docs/settings-screen.md.
-	@IBOutlet var showArticleScrollbarSwitch: UISwitch!
 	@IBOutlet var colorPaletteDetailLabel: UILabel!
 	@IBOutlet var accentColorDetailLabel: UILabel!
 	@IBOutlet var openLinksInNetNewsWire: UISwitch!
@@ -178,7 +172,6 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 
 		showFeedNameInReaderViewSwitch.isOn = AppDefaults.shared.showFeedNameInReaderView
 		disableArticleLinksSwitch.isOn = AppDefaults.shared.disableArticleLinks
-		showArticleScrollbarSwitch.isOn = AppDefaults.shared.showArticleScrollbar
 
 		colorPaletteDetailLabel.text = String(describing: AppDefaults.userInterfaceColorPalette)
 		applyAccentColorTinting()
@@ -542,10 +535,6 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		AppDefaults.shared.disableArticleLinks = disableArticleLinksSwitch.isOn
 	}
 
-	@IBAction func switchShowArticleScrollbar(_ sender: Any) {
-		AppDefaults.shared.showArticleScrollbar = showArticleScrollbarSwitch.isOn
-	}
-
 	@IBAction func switchBrowserPreference(_ sender: Any) {
 		if openLinksInNetNewsWire.isOn {
 			AppDefaults.shared.useSystemBrowser = false
@@ -598,8 +587,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		let liveTint = Assets.Colors.primaryAccent
 		for toggle in [groupByFeedSwitch, refreshClearsReadArticlesSwitch,
 					   showLastUpdatedLabelSwitch, showFeedNameInReaderViewSwitch,
-					   disableArticleLinksSwitch, openLinksInNetNewsWire,
-					   showArticleScrollbarSwitch] {
+					   disableArticleLinksSwitch, openLinksInNetNewsWire] {
 			toggle?.onTintColor = liveTint
 		}
 	}
