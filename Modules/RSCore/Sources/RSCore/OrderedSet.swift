@@ -13,7 +13,15 @@ import Foundation
 /// be inserted again, and insertion is a no-op that leaves the existing
 /// element at its existing position) while additionally supporting
 /// positional insertion and stable iteration order.
-public struct OrderedSet<Element: Hashable>: Sendable where Element: Sendable {
+///
+/// Deliberately not `Sendable`, even conditionally on `Element: Sendable`:
+/// its only current use is `OrderedSet<Feed>`, and `Feed`'s `Hashable`
+/// conformance is `@MainActor`-isolated (`Feed` itself is a `@MainActor`
+/// class), which the compiler cannot fit into a `Sendable` conformance's
+/// requirements regardless of `Element`'s own `Sendable` status. `Container`
+/// and everything that touches `topLevelFeeds` is `@MainActor`-isolated
+/// already, so this costs nothing in practice.
+public struct OrderedSet<Element: Hashable> {
 	private var array: [Element] = []
 	private var set: Set<Element> = []
 
