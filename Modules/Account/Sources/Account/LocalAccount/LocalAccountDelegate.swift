@@ -404,20 +404,35 @@ private extension LocalAccountDelegate {
 			container.addFeedToTreeAtTopLevel(feed)
 			feed.lastCheckDate = Date()
 
+			// A no-op for a genuinely new feedID; collapses stale duplicate
+			// rows left behind if this URL was previously subscribed and
+			// deleted -- see ArticlesDatabase.deduplicateArticlesAsync(feedID:).
+			// Deliberately not gated on the fetch below succeeding: the
+			// duplicates predate this fetch entirely and a Cloudflare
+			// challenge/rate-limit on page 1 shouldn't leave them in place.
+			await account.database.deduplicateArticlesAsync(feedID: feed.feedID)
+
 			// Subscriptions and marked-for-later are always-yours,
 			// always-private (see isAlwaysAuthenticatedAO3ListingFeed's
-			// own doc comment) -- route through the
-			// anonymous-then-authenticated retry path so a signed-in
-			// person actually gets their feed, and a signed-out person
-			// gets a clearly-surfaced "sign in" state instead of a
-			// silently-empty feed. Every other listing type keeps using
-			// the plain anonymous fetch, unchanged.
-			let requiresSignIn = LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(url)
+			// own doc comment) -- route through the authenticated-then-
+			// anonymous fetch so a signed-in person actually gets their
+			// feed, and a signed-out person gets a clearly-surfaced "sign
+			// in" state instead of a silently-empty feed. Widened beyond
+			// isAlwaysAuthenticatedAO3ListingFeed alone: any general
+			// search/tag page also routes through fetchRequiringSignIn
+			// once a session exists, so a signed-in person's add-time
+			// fetch for a general listing gets the authenticated-first
+			// attempt too. A subscriptions/marked-for-later page still
+			// always routes through it (session or not) to get the
+			// correct .notSignedIn surfaced when signed out. Every other
+			// listing type, when signed out, keeps using the plain
+			// anonymous fetch, unchanged.
+			let requiresSignIn = LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(url) || AO3SessionStore.isSignedIn
 
 			do {
 				let outcome: AO3SearchResultsFetchOutcome
 				if requiresSignIn {
-					outcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: url, feedURL: feed.url)
+					outcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: url, feedURL: feed.url, isAlwaysAuthenticatedListing: LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(url))
 				} else {
 					outcome = try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url)
 				}
@@ -464,13 +479,17 @@ private extension LocalAccountDelegate {
 					// Neither carries a pageTitle: a registration wall
 					// never reaches AO3SearchResultsExtractor.extract at
 					// all (caught earlier by isRegistrationRequired), and
-					// a 429 has no body to parse a title from. Reachable
-					// here only for a non-always-authenticated listing
-					// type (requiresSignIn == false) -- the
-					// requiresSignIn branch above never returns
-					// .registrationRequired, it resolves that into
-					// .notSignedIn instead (see fetchRequiringSignIn's
-					// own doc comment).
+					// a 429 has no body to parse a title from.
+					// .registrationRequired is reachable here for a
+					// non-always-authenticated listing type regardless of
+					// sign-in state: requiresSignIn == false takes the
+					// plain anonymous path; requiresSignIn == true (a
+					// signed-in general listing, or an always-
+					// authenticated listing type) only turns a rejected/
+					// missing session into .notSignedIn for the
+					// always-authenticated types specifically -- see
+					// fetchRequiringSignIn's own doc comment on
+					// isAlwaysAuthenticatedListing.
 					break
 				case .cloudflareChallenge(let challengedURL):
 					AO3ChallengeSessionStore.lastChallengedURL = challengedURL
@@ -511,6 +530,10 @@ private extension LocalAccountDelegate {
 
 		feed.editedName = editedName
 		container.addFeedToTreeAtTopLevel(feed)
+
+		// See the matching call/comment in the AO3-listing branch above --
+		// same no-op-for-a-new-feedID reasoning applies here.
+		await account.database.deduplicateArticlesAsync(feedID: feed.feedID)
 
 		Task {
 			await account.updateAsync(feed: feed, parsedFeed: parsedFeed)

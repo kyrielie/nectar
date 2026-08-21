@@ -33,8 +33,8 @@ public enum AO3SessionStore {
 	/// The Cookie header value to send with an authenticated AO3 request
 	/// (see `AO3AuthenticatedFetcher`), or `nil` if no session is stored --
 	/// either the person has never signed in, or `clearSession()` was
-	/// called after a failed authenticated retry (see
-	/// `AO3ChapterFetcher.retryAuthenticated(url:)`).
+	/// called after a rejected authenticated attempt (see
+	/// `AO3ChapterFetcher.attemptAuthenticated(url:)`).
 	public static var cookieHeaderValue: String? {
 		guard let data = readKeychainData() else {
 			return nil
@@ -44,7 +44,7 @@ public enum AO3SessionStore {
 
 	/// Whether a session is currently stored. Doesn't verify the session is
 	/// still valid with AO3 -- that's only discoverable by actually making
-	/// a request; see `AO3ChapterFetcher.retryAuthenticated(url:)`, which
+	/// a request; see `AO3ChapterFetcher.attemptAuthenticated(url:)`, which
 	/// clears the session itself if AO3 rejects it.
 	public static var isSignedIn: Bool {
 		cookieHeaderValue != nil
@@ -74,8 +74,8 @@ public enum AO3SessionStore {
 
 	/// Clears the stored session. Called both from an explicit "Sign Out"
 	/// action (`AO3AccountSettingsView`) and from
-	/// `AO3ChapterFetcher.retryAuthenticated(url:)` when an authenticated
-	/// retry itself comes back `.registrationRequired` -- the stored
+	/// `AO3ChapterFetcher.attemptAuthenticated(url:)` when an authenticated
+	/// attempt itself comes back `.registrationRequired` -- the stored
 	/// session is no longer valid (expired, or was revoked).
 	public static func clearSession() {
 		deleteKeychainItem()

@@ -6,18 +6,20 @@
 //
 //  A single plain fetch with the stored AO3 session's Cookie header
 //  manually attached -- not a second cookie-jar URLSession.
-//  Used exactly once, by AO3ChapterFetcher.retryAuthenticated(url:), on
-//  AO3ChapterExtractionOutcome.registrationRequired only.
+//  Used by every AO3 HTML page-fetch call site that has a stored session:
+//  AO3ChapterFetcher.attemptAuthenticated(url:) (work/chapter pages, now
+//  tried first when signed in, falling back to Downloader on an
+//  authentication-shaped failure), AO3SearchResultsFetcher.fetchRequiringSignIn
+//  (search/tag/listing pages), and AO3SeriesNavigator.fetchListingPage
+//  (series listing pages).
 //
 //  Deliberately doesn't reuse Downloader.shared: Downloader's response
-//  cache is keyed on URL alone, and the anonymous fetch that produced
-//  .registrationRequired for this exact URL will already have cached that
-//  gate-page response by the time a retry is attempted -- routing the
-//  authenticated retry through Downloader would silently hand back that
-//  stale, unauthenticated response instead of ever sending the Cookie
-//  header. This uses its own ephemeral, cache-free session instead, mirroring
-//  Downloader's own cookie-disabling configuration (see Downloader.swift) so
-//  the only cookie ever sent is the one attached by hand here.
+//  cache is keyed on URL alone, and mixing authenticated and anonymous
+//  responses for the same URL through one cache would risk silently
+//  handing back the wrong one on a later request. This uses its own
+//  ephemeral, cache-free session instead, mirroring Downloader's own
+//  cookie-disabling configuration (see Downloader.swift) so the only
+//  cookie ever sent is the one attached by hand here.
 //
 
 import Foundation
