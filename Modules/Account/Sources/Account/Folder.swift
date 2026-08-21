@@ -26,7 +26,7 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 		SidebarItemIdentifier.folder(accountID, nameForDisplay)
 	}
 
-	public var topLevelFeeds: Set<Feed> = Set<Feed>()
+	public var topLevelFeeds: OrderedSet<Feed> = OrderedSet<Feed>()
 	public var folders: Set<Folder>? // subfolders are not supported, so this is always nil
 
 	public var name: String? {
@@ -105,7 +105,7 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 
 	public func flattenedFeeds() -> Set<Feed> {
 		// Since sub-folders are not supported, it’s always the top-level feeds.
-		return topLevelFeeds
+		return Set(topLevelFeeds)
 	}
 
 	public func objectIsChild(_ object: AnyObject) -> Bool {
@@ -116,8 +116,12 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 		return topLevelFeeds.contains(feed)
 	}
 
-	public func addFeedToTreeAtTopLevel(_ feed: Feed) {
-		topLevelFeeds.insert(feed)
+	public func addFeedToTreeAtTopLevel(_ feed: Feed, at index: Int?) {
+		if let index {
+			topLevelFeeds.insert(feed, at: index)
+		} else {
+			topLevelFeeds.insert(feed)
+		}
 		postChildrenDidChangeNotification()
 	}
 
@@ -143,7 +147,7 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 	}
 
 	/// Replace the entire top-level feed set in one shot, posting a single change notification.
-	public func replaceTopLevelFeeds(_ feeds: Set<Feed>) {
+	public func replaceTopLevelFeeds(_ feeds: OrderedSet<Feed>) {
 		topLevelFeeds = feeds
 		postChildrenDidChangeNotification()
 	}
@@ -198,7 +202,7 @@ extension Folder: OPMLRepresentable {
 
 		var hasAtLeastOneChild = false
 
-		for feed in topLevelFeeds.sorted() {
+		for feed in topLevelFeeds {
 			s += feed.OPMLString(indentLevel: indentLevel + 1, allowCustomAttributes: allowCustomAttributes)
 			hasAtLeastOneChild = true
 		}

@@ -44,7 +44,7 @@ import Articles
 	func renameFeed(with feed: Feed, to name: String) async throws
 	func addFeed(feed: Feed, container: Container) async throws
 	func removeFeed(feed: Feed, container: Container) async throws
-	func moveFeed(feed: Feed, sourceContainer: Container, destinationContainer: Container) async throws
+	func moveFeed(feed: Feed, sourceContainer: Container, destinationContainer: Container, targetIndex: Int?) async throws
 
 	func restoreFeed(feed: Feed, container: Container) async throws
 	func restoreFolder(folder: Folder) async throws

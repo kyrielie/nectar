@@ -63,8 +63,20 @@ extension MainFeedCollectionViewController: UICollectionViewDropDelegate {
 
 		guard let destination = destinationContainer, let feed = dragNode.representedObject as? Feed else { return }
 
+		// Position within the destination container's feed order, computed from
+		// the Node tree's own sibling index rather than the flat collection-view
+		// row (which isn't a reliable proxy once folder rows can be interleaved).
+		// Only meaningful when dropping onto a specific feed row — an ordinary
+		// reorder gesture. Left nil for the folder-drop case (isFolderDrop),
+		// where position within the folder isn't implied by the gesture and the
+		// existing append-to-end behavior is correct.
+		let targetIndex: Int? = {
+			guard !isFolderDrop, let destNode, destNode.representedObject is Feed else { return nil }
+			return destNode.parent?.indexOfChild(destNode)
+		}()
+
 		if source.account == destination.account {
-			moveFeedInAccount(feed: feed, sourceContainer: source, destinationContainer: destination)
+			moveFeedInAccount(feed: feed, sourceContainer: source, destinationContainer: destination, targetIndex: targetIndex)
 		} else {
 			moveFeedBetweenAccounts(feed: feed, sourceContainer: source, destinationContainer: destination)
 		}
@@ -109,11 +121,12 @@ extension MainFeedCollectionViewController: UICollectionViewDropDelegate {
 	func collectionView(_ collectionView: UICollectionView, dropSessionDidEnd session: UIDropSession) {
 	}
 
-	func moveFeedInAccount(feed: Feed, sourceContainer: Container, destinationContainer: Container) {
-		guard sourceContainer !== destinationContainer else { return }
-
+	func moveFeedInAccount(feed: Feed, sourceContainer: Container, destinationContainer: Container, targetIndex: Int?) {
+		// No early return on sourceContainer === destinationContainer — a
+		// same-container drop with a targetIndex is exactly the reorder
+		// gesture this feature exists for.
 		BatchUpdate.shared.start()
-		sourceContainer.account?.moveFeed(feed, from: sourceContainer, to: destinationContainer) { result in
+		sourceContainer.account?.moveFeed(feed, from: sourceContainer, to: destinationContainer, targetIndex: targetIndex) { result in
 			BatchUpdate.shared.end()
 			switch result {
 			case .success:
