@@ -6,7 +6,10 @@ networking/rate-limit layer that fetch goes through. See `ao3-feeds.md`
 for the underlying HTML extractors, and `ao3-direct-feed-ingestion.md`
 for the separate RSS/Atom subscription path (this doc's fetch/render
 logic applies to both Ambrosia-sourced and direct-feed AO3 articles once
-opened in the reader).
+opened in the reader). See `ao3-integration.md` for the authenticated-
+first/anonymous-fallback shape of the underlying `AO3ChapterFetcher`
+fetch itself — when a session is stored, the fetch this doc describes
+tries the authenticated path before any anonymous request, not after.
 
 Two independent paths feed the same `AO3PrefaceRenderer` markup
 (`<dl class='tags'>` of flat `<dt>`/`<dd>` pairs): `ArticleRenderer.

@@ -1158,6 +1158,22 @@ public struct ArticleStorageInfo: Sendable {
 		articlesTable.deleteArticlesNotInSubscribedToFeedIDs(subscribedToFeedIDs)
 		articlesTable.deleteOldStatuses()
 	}
+
+	/// Collapses duplicate article rows within `feedID` that share the same
+	/// `bookKey` -- see `ArticlesTable.deduplicateArticles(feedID:completion:)`
+	/// for the full rationale and per-group keep/delete rule. Called from
+	/// `LocalAccountDelegate.createFeed` once a feed's `feedID` is known, so
+	/// that re-adding a previously deleted feed doesn't leave old duplicate
+	/// rows visible under the new subscription. A no-op for a `feedID` with
+	/// no pre-existing rows, i.e. any genuinely new feed.
+	public func deduplicateArticlesAsync(feedID: String) async {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		await withCheckedContinuation { continuation in
+			articlesTable.deduplicateArticles(feedID: feedID) {
+				continuation.resume()
+			}
+		}
+	}
 }
 
 // MARK: - Private

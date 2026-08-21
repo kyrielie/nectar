@@ -1531,6 +1531,110 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			self.statusesTable.removeStatuses(articleIDs, database)
 		}
 	}
+
+	/// Collapses duplicate article rows within one feed that share the same
+	/// `bookKey` -- left behind by a past bug in `uniqueID` derivation (e.g.
+	/// a permalink-formatting change) that produced two different
+	/// `articleID`s (`md5("\(feedID) \(uniqueID)")`, see `Article.swift`)
+	/// for what is really the same work under the same feed. `bookKey` is
+	/// used as the identity here rather than `articleID`/`uniqueID`
+	/// precisely because it's derived from the work's own AO3 id
+	/// (`ParsedItem.bookKey`) and so survives exactly the kind of
+	/// permalink-formatting churn that causes this duplication -- see
+	/// `docs/book-identity.md`.
+	///
+	/// Only called at feed-creation time (`LocalAccountDelegate.createFeed`),
+	/// not on a background sweep: a brand-new `feedID` has no matching rows
+	/// and this is a no-op, so it only ever does real work for a URL that
+	/// was previously subscribed and left stale rows behind -- i.e. the
+	/// delete-and-readd case -- without needing to explicitly detect that
+	/// case. Deliberately does not touch `removeFeed` or
+	/// `cleanupDatabaseAtStartup` -- see `docs/database.md`.
+	///
+	/// Within each `bookKey` group with more than one row:
+	/// - if any row carries its own state (read/starred/loved/reading
+	///   progress) or has an annotation, every *other*, stateless row in
+	///   that group is deleted, and every stateful row is kept untouched;
+	/// - otherwise (no row in the group has any state), all but the most
+	///   recently arrived row are deleted.
+	/// A row is never deleted while carrying state of its own. This is
+	/// deliberately more conservative than `deleteArticlesNotInSubscribedToFeedIDs`
+	/// above, which only ever considers fully untouched rows in the first
+	/// place -- here a duplicate can legitimately carry state (the read/
+	/// starred/loved/scrollPosition propagation in `BookStateTable` doesn't
+	/// stop the old bug from having also left behind a *second*, stateful
+	/// row prior to that propagation existing), so the state check has to
+	/// happen per-candidate rather than as an upfront query filter.
+	func deduplicateArticles(feedID: String, completion: @escaping @Sendable () -> Void) {
+		queue.runInDatabase { database in
+			let sql = """
+			select articleID, bookKey, dateArrived, read, starred, loved, readingProgress
+			from articles natural join statuses
+			where feedID = ? and bookKey is not null
+			order by dateArrived desc;
+			"""
+			guard let resultSet = database.executeQuery(sql, withArgumentsIn: [feedID]) else {
+				DispatchQueue.main.async { completion() }
+				return
+			}
+
+			var rowsByBookKey = [String: [(articleID: String, hasState: Bool)]]()
+			var allArticleIDs = [String]()
+			while resultSet.next() {
+				guard let articleID = resultSet.swiftString(forColumn: DatabaseKey.articleID),
+				      let bookKey = resultSet.swiftString(forColumn: DatabaseKey.bookKey) else {
+					continue
+				}
+				let hasStatusState = resultSet.bool(forColumn: DatabaseKey.read)
+					|| resultSet.bool(forColumn: DatabaseKey.starred)
+					|| resultSet.bool(forColumn: DatabaseKey.loved)
+					|| (!resultSet.columnIsNull(DatabaseKey.readingProgress) && resultSet.double(forColumn: DatabaseKey.readingProgress) > 0)
+				rowsByBookKey[bookKey, default: []].append((articleID, hasStatusState))
+				allArticleIDs.append(articleID)
+			}
+			if allArticleIDs.isEmpty {
+				DispatchQueue.main.async { completion() }
+				return
+			}
+
+			// A duplicate with an annotation is never eligible for deletion
+			// even if statuses show no state -- a highlight/note is its own
+			// kind of user-generated state, just not one statuses tracks.
+			let articleIDsWithAnnotations = self.articleIDsWithAnnotations(allArticleIDs, database)
+
+			var articleIDsToDelete = Set<String>()
+			for rows in rowsByBookKey.values where rows.count > 1 {
+				let rowsWithState = rows.filter { $0.hasState || articleIDsWithAnnotations.contains($0.articleID) }
+				if !rowsWithState.isEmpty {
+					let statefulArticleIDs = Set(rowsWithState.map { $0.articleID })
+					articleIDsToDelete.formUnion(rows.map { $0.articleID }.filter { !statefulArticleIDs.contains($0) })
+				} else {
+					// No row in the group carries any state -- rows arrived
+					// via the `order by dateArrived desc` query above, so
+					// the first row per group here is the most recent.
+					articleIDsToDelete.formUnion(rows.dropFirst().map { $0.articleID })
+				}
+			}
+
+			if !articleIDsToDelete.isEmpty {
+				self.removeArticles(articleIDsToDelete, database)
+				self.statusesTable.removeStatuses(articleIDsToDelete, database)
+			}
+			DispatchQueue.main.async { completion() }
+		}
+	}
+
+	private func articleIDsWithAnnotations(_ articleIDs: [String], _ database: FMDatabase) -> Set<String> {
+		guard !articleIDs.isEmpty else {
+			return []
+		}
+		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(articleIDs.count))!
+		let sql = "select distinct articleID from annotations where articleID in \(placeholders);"
+		guard let resultSet = database.executeQuery(sql, withArgumentsIn: articleIDs) else {
+			return []
+		}
+		return resultSet.mapToSet { $0.swiftString(forColumn: DatabaseKey.articleID) }
+	}
 }
 
 // MARK: - Private

@@ -55,6 +55,21 @@ function — it must not be duplicated, since a caller that independently
 recomputes "highest + 1" would silently mis-attribute a retried fetch to
 the wrong page once gaps exist.
 
+## Authenticated-first fetching for signed-in users
+
+`AO3SearchResultsFetcher.fetchRequiringSignIn(url:feedURL:)` — the fetch
+path this doc's `fetchSpecificPage`/`fetchPage` route through whenever a
+session is stored, not just for the always-private listing types — is
+now authenticated-first: it tries the stored session before any
+anonymous request, falling back to the plain anonymous `fetch(url:feedURL:)`
+only on an authentication-shaped failure. See `ao3-integration.md` and
+`ao3-authenticated-reading.md` for the full shape. Practically, this
+means an arbitrary-page fetch (this doc) for a signed-in person now goes
+through the authenticated path by default for every AO3 listing page, not
+just subscriptions/marked-for-later — the three call sites that gate on
+`LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(_:)` widen that
+check to `isAlwaysAuthenticatedAO3ListingFeed(_:) || AO3SessionStore.isSignedIn`.
+
 ## Validation against a known total
 
 `AO3SearchResultsPaginator.validate(page:against:)` checks a typed page
