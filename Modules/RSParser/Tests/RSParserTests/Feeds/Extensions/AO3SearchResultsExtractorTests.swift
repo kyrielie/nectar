@@ -15,7 +15,7 @@ import Testing
 
 	@Test func noResultsOnPageWithNoWorkRows() {
 		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: "<html><body><p>No results found.</p></body></html>", feedURL: feedURL)
-		guard case .noResults(let pageTitle, _) = outcome else {
+		guard case .noResults(let pageTitle) = outcome else {
 			Issue.record("Expected .noResults, got \(outcome)")
 			return
 		}
@@ -31,50 +31,11 @@ import Testing
 		// shouldn't be left "Untitled" either).
 		let html = "<html><head><title>Some Rare Fandom - Works | Archive of Our Own</title></head><body><p>No results found. Try again with fewer options.</p></body></html>"
 		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
-		guard case .noResults(let pageTitle, _) = outcome else {
+		guard case .noResults(let pageTitle) = outcome else {
 			Issue.record("Expected .noResults, got \(outcome)")
 			return
 		}
 		#expect(pageTitle == "Some Rare Fandom")
-	}
-
-	@Test func totalPagesReadFromPaginationWidgetOnSuccess() throws {
-		// ao3-search-results.html itself has no pagination widget (see
-		// extractsBothRowsInDocumentOrder's own comment) -- this wraps the
-		// same two work rows with a minimal ol.pagination widget appended,
-		// matching the shape AO3ListingPagination.totalPages(_:) reads
-		// (already confirmed against real markup for series listings).
-		let workRowsHTML = htmlFixtureString("ao3-search-results.html")
-		let html = workRowsHTML + "<ol class=\"pagination\"><li><a href=\"?page=1\">1</a></li><li><a href=\"?page=2\">2</a></li><li class=\"next\"><a href=\"?page=2\">Next</a></li></ol>"
-		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
-		guard case .success(_, _, _, let totalPages) = outcome else {
-			Issue.record("Expected .success, got \(outcome)")
-			return
-		}
-		#expect(totalPages == 2)
-	}
-
-	@Test func totalPagesNilWhenNoPaginationWidget() throws {
-		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: htmlFixtureString("ao3-search-results.html"), feedURL: feedURL)
-		guard case .success(_, _, _, let totalPages) = outcome else {
-			Issue.record("Expected .success, got \(outcome)")
-			return
-		}
-		#expect(totalPages == nil)
-	}
-
-	@Test func totalPagesCarriedOnNoResultsToo() {
-		// A zero-result response for an otherwise-nonempty search can
-		// still render a pagination widget with the true total -- see
-		// AO3SearchResultsOutcome.noResults's own doc comment on why this
-		// lets a caller self-correct a stale cached total.
-		let html = "<html><head><title>Some Rare Fandom - Works | Archive of Our Own</title></head><body><p>No results found.</p><ol class=\"pagination\"><li><a href=\"?page=1\">1</a></li><li><a href=\"?page=9\">9</a></li></ol></body></html>"
-		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
-		guard case .noResults(_, let totalPages) = outcome else {
-			Issue.record("Expected .noResults, got \(outcome)")
-			return
-		}
-		#expect(totalPages == 9)
 	}
 
 	@Test func registrationRequiredDetected() {
@@ -89,7 +50,7 @@ import Testing
 	@Test func extractsBothRowsInDocumentOrder() throws {
 		let html = htmlFixtureString("ao3-search-results.html")
 		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
-		guard case .success(let items, _, let pageTitle, _) = outcome else {
+		guard case .success(let items, _, let pageTitle) = outcome else {
 			Issue.record("Expected .success, got \(outcome)")
 			return
 		}
@@ -220,7 +181,7 @@ import Testing
 	private func extractedItem(workID: String) throws -> ParsedItem {
 		let html = htmlFixtureString("ao3-search-results.html")
 		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
-		guard case .success(let items, _, _, _) = outcome else {
+		guard case .success(let items, _, _) = outcome else {
 			Issue.record("Expected .success, got \(outcome)")
 			throw TestError.unexpectedOutcome
 		}

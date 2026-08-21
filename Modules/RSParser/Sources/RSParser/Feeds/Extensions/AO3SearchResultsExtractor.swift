@@ -84,20 +84,12 @@ public enum AO3SearchResultsOutcome: Sendable {
 	/// `LocalAccountDelegate.createFeed`'s AO3 branch). `nil` only if the
 	/// page's `<title>` element itself is missing or empty, which
 	/// shouldn't happen on a real AO3 page but isn't asserted against.
-	/// `totalPages` is read from AO3's own pagination widget via
-	/// `AO3ListingPagination.totalPages(_:)` -- `nil` if that widget isn't
-	/// present (e.g. a search with only one page of results).
-	case success([ParsedItem], hasNextPage: Bool, pageTitle: String?, totalPages: Int?)
+	case success([ParsedItem], hasNextPage: Bool, pageTitle: String?)
 	/// The page parsed as a real AO3 search-results page but listed no
 	/// work rows -- a legitimate zero-result search, not a parse failure.
 	/// AO3 still serves a real, titled `<title>` on a zero-result page, so
 	/// `pageTitle` is carried here too, same reasoning as `.success`.
-	/// `totalPages` is carried for the same reason: a zero-result response
-	/// for an otherwise-nonempty search can still render a pagination
-	/// widget with the true (possibly since-shrunk) total, letting a
-	/// caller self-correct a stale cached total instead of leaving it
-	/// wrong indefinitely.
-	case noResults(pageTitle: String?, totalPages: Int?)
+	case noResults(pageTitle: String?)
 	/// AO3's "restricted to registered users" login wall -- same detection
 	/// as `AO3ChapterHTMLExtractor`'s `.registrationRequired`.
 	case registrationRequired
@@ -120,11 +112,10 @@ public enum AO3SearchResultsExtractor {
 		}
 
 		let pageTitle = extractPageTitle(fromRoot: root)
-		let totalPages = AO3ListingPagination.totalPages(root)
 
 		let workLis = descendants(of: root, where: { isWorkRow($0) })
 		guard !workLis.isEmpty else {
-			return .noResults(pageTitle: pageTitle, totalPages: totalPages)
+			return .noResults(pageTitle: pageTitle)
 		}
 
 		let items = workLis.compactMap { parsedItem(fromWorkLI: $0, feedURL: feedURL) }
@@ -134,9 +125,9 @@ public enum AO3SearchResultsExtractor {
 			// worth reporting -- stays .noResults, same as a genuine
 			// zero-result search, rather than carrying a hasNextPage value
 			// nothing would use.
-			return .noResults(pageTitle: pageTitle, totalPages: totalPages)
+			return .noResults(pageTitle: pageTitle)
 		}
-		return .success(items, hasNextPage: hasNextPage(root), pageTitle: pageTitle, totalPages: totalPages)
+		return .success(items, hasNextPage: hasNextPage(root), pageTitle: pageTitle)
 	}
 
 	/// Parses `<title>Fandom Name - Works | Archive of Our Own</title>`,

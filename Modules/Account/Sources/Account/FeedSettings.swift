@@ -150,36 +150,18 @@ import Articles
 		}
 	}
 
-	/// Every AO3 search-results page successfully fetched so far for this
-	/// feed. `nil`/empty until the first successful fetch; a normal refresh
-	/// always (re)fetches page 1, so this exists purely for "load more"
-	/// (infill -- the smallest page not yet in this set) and the inspector's
-	/// arbitrary-page fetch to know what's already been fetched -- not to
-	/// gate the initial fetch. Deleting and re-adding the same search-feed
-	/// URL starts back at page 1 by design: this is a property of the feed
-	/// subscription, not of any story's identity. Replaces the old
-	/// single-integer `ao3SearchLastFetchedPage` (see
-	/// `docs/ao3-arbitrary-page-fetch.md`) -- that column is left in the
-	/// database, unused, for existing rows to backfill from.
-	var ao3SearchFetchedPages: Set<Int>? {
+	/// The highest AO3 search-results page fetched so far for this feed
+	/// (Task 9). `nil` until the first successful fetch; a normal refresh
+	/// always (re)fetches page 1, so this exists purely for "load more" to
+	/// know which page to request next -- not to gate the initial fetch.
+	/// Deleting and re-adding the same search-feed URL starts back at page 1
+	/// by design: this is a
+	/// property of the feed subscription, not of any story's identity.
+	var ao3SearchLastFetchedPage: Int? {
 		didSet {
-			if ao3SearchFetchedPages != oldValue {
-				database.setSetOfInt(ao3SearchFetchedPages, for: feedURL, column: .ao3SearchFetchedPages)
-				postSettingDidChange(.ao3SearchFetchedPages)
-			}
-		}
-	}
-
-	/// Total page count AO3's own pagination widget reports, refreshed
-	/// from whichever page most recently returned one. `nil` until a page
-	/// is fetched that renders a pagination widget (nearly always true from
-	/// add time onward -- see `AO3SearchResultsPaginator`/
-	/// `LocalAccountDelegate.createFeed`'s AO3 branch).
-	var ao3SearchTotalPages: Int? {
-		didSet {
-			if ao3SearchTotalPages != oldValue {
-				database.setInt(ao3SearchTotalPages, for: feedURL, column: .ao3SearchTotalPages)
-				postSettingDidChange(.ao3SearchTotalPages)
+			if ao3SearchLastFetchedPage != oldValue {
+				database.setInt(ao3SearchLastFetchedPage, for: feedURL, column: .ao3SearchLastFetchedPage)
+				postSettingDidChange(.ao3SearchLastFetchedPage)
 			}
 		}
 	}
@@ -203,8 +185,7 @@ import Articles
 		self.folderRelationship = row.folderRelationship
 		self.lastCheckDate = row.lastCheckDate
 		self.lastResponseCode = row.lastResponseCode
-		self.ao3SearchFetchedPages = row.ao3SearchFetchedPages
-		self.ao3SearchTotalPages = row.ao3SearchTotalPages
+		self.ao3SearchLastFetchedPage = row.ao3SearchLastFetchedPage
 	}
 
 	/// Create for a new feed not yet in the database.

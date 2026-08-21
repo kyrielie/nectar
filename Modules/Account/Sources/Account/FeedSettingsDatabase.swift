@@ -46,8 +46,6 @@ final class FeedSettingsDatabase: Sendable {
 		case lastCheckDate
 		case lastResponseCode
 		case ao3SearchLastFetchedPage
-		case ao3SearchFetchedPages
-		case ao3SearchTotalPages
 	}
 
 	struct Row {
@@ -67,8 +65,6 @@ final class FeedSettingsDatabase: Sendable {
 		let lastCheckDate: Date?
 		let lastResponseCode: Int?
 		let ao3SearchLastFetchedPage: Int?
-		let ao3SearchFetchedPages: Set<Int>?
-		let ao3SearchTotalPages: Int?
 	}
 
 	let databasePath: String
@@ -88,13 +84,6 @@ final class FeedSettingsDatabase: Sendable {
 			}
 			if !database.columnExists("ao3SearchLastFetchedPage", inTableWithName: "feedSettings") {
 				database.executeStatements("ALTER TABLE feedSettings ADD COLUMN ao3SearchLastFetchedPage INTEGER;")
-			}
-			if !database.columnExists("ao3SearchFetchedPages", inTableWithName: "feedSettings") {
-				database.executeStatements("ALTER TABLE feedSettings ADD COLUMN ao3SearchFetchedPages TEXT;")
-				Self.backfillFetchedPagesFromLegacyColumn(database)
-			}
-			if !database.columnExists("ao3SearchTotalPages", inTableWithName: "feedSettings") {
-				database.executeStatements("ALTER TABLE feedSettings ADD COLUMN ao3SearchTotalPages INTEGER;")
 			}
 		}
 		vacuumIfNeeded()
@@ -216,26 +205,6 @@ final class FeedSettingsDatabase: Sendable {
 		}
 	}
 
-	// MARK: - Set<Int>
-
-	/// `Set<Int>` is trivially `Codable`, so this is a plain
-	/// `JSONEncoder`/`JSONDecoder` round-trip -- unlike `authors`, which
-	/// needs `Author`'s own custom `.json()`/`.authorsWithJSON(_:)`
-	/// machinery because `Author` itself requires custom encoding.
-	func setSetOfInt(_ value: Set<Int>?, for feedURL: String, column: Column) {
-		let name = column.rawValue
-		serialDispatchQueue.async {
-			if let value {
-				guard let data = try? JSONEncoder().encode(value), let jsonString = String(data: data, encoding: .utf8) else {
-					return
-				}
-				self.database.executeUpdate("UPDATE feedSettings SET \(name) = ? WHERE feedURL = ?;", withArgumentsIn: [jsonString, feedURL])
-			} else {
-				self.database.executeUpdate("UPDATE feedSettings SET \(name) = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
-			}
-		}
-	}
-
 	// MARK: - Date
 
 	func setDate(_ value: Date?, for feedURL: String, column: Column) {
@@ -338,14 +307,14 @@ final class FeedSettingsDatabase: Sendable {
 				  newArticleNotificationsEnabled, authors, conditionalGetInfoLastModified,
 				  conditionalGetInfoEtag, conditionalGetInfoDate, cacheControlInfoDateCreated,
 				  cacheControlInfoMaxAge, externalID, folderRelationship, lastCheckDate,
-				  lastResponseCode, ao3SearchLastFetchedPage, ao3SearchFetchedPages, ao3SearchTotalPages
+				  lastResponseCode, ao3SearchLastFetchedPage
 				)
 				SELECT
 				  b.feedURL, b.feedID, b.homePageURL, b.iconURL, b.faviconURL, b.editedName, b.contentHash,
 				  b.newArticleNotificationsEnabled, b.authors, b.conditionalGetInfoLastModified,
 				  b.conditionalGetInfoEtag, b.conditionalGetInfoDate, b.cacheControlInfoDateCreated,
 				  b.cacheControlInfoMaxAge, b.externalID, b.folderRelationship, b.lastCheckDate,
-				  b.lastResponseCode, b.ao3SearchLastFetchedPage, b.ao3SearchFetchedPages, b.ao3SearchTotalPages
+				  b.lastResponseCode, b.ao3SearchLastFetchedPage
 				FROM \(attachedSchemaName).feedSettings AS b;
 				"""
 				if self.database.executeUpdate(sql, withArgumentsIn: []) {
@@ -397,42 +366,8 @@ final class FeedSettingsDatabase: Sendable {
 private extension FeedSettingsDatabase {
 
 	static let tableCreationStatements = """
-	CREATE TABLE IF NOT EXISTS feedSettings (feedURL TEXT PRIMARY KEY, feedID TEXT NOT NULL DEFAULT '', homePageURL TEXT, iconURL TEXT, faviconURL TEXT, editedName TEXT, contentHash TEXT, newArticleNotificationsEnabled INTEGER NOT NULL DEFAULT 0, authors TEXT, conditionalGetInfoLastModified TEXT, conditionalGetInfoEtag TEXT, conditionalGetInfoDate REAL, cacheControlInfoDateCreated REAL, cacheControlInfoMaxAge REAL, externalID TEXT, folderRelationship TEXT, lastCheckDate REAL, lastResponseCode INTEGER, ao3SearchLastFetchedPage INTEGER, ao3SearchFetchedPages TEXT, ao3SearchTotalPages INTEGER);
+	CREATE TABLE IF NOT EXISTS feedSettings (feedURL TEXT PRIMARY KEY, feedID TEXT NOT NULL DEFAULT '', homePageURL TEXT, iconURL TEXT, faviconURL TEXT, editedName TEXT, contentHash TEXT, newArticleNotificationsEnabled INTEGER NOT NULL DEFAULT 0, authors TEXT, conditionalGetInfoLastModified TEXT, conditionalGetInfoEtag TEXT, conditionalGetInfoDate REAL, cacheControlInfoDateCreated REAL, cacheControlInfoMaxAge REAL, externalID TEXT, folderRelationship TEXT, lastCheckDate REAL, lastResponseCode INTEGER, ao3SearchLastFetchedPage INTEGER);
 	"""
-
-	/// Every page fetched before `ao3SearchFetchedPages` existed was
-	/// fetched sequentially with no gaps (the old "load more" was always
-	/// `highest + 1`), so this backfill is exact, not a guess: for each row
-	/// where the legacy `ao3SearchLastFetchedPage` is non-null and
-	/// `ao3SearchFetchedPages` is still null, write
-	/// `ao3SearchFetchedPages = Set(1...oldValue)`. Runs once, immediately
-	/// after the column is added, on `serialDispatchQueue` (called only
-	/// from inside the `init` block already confined to that queue).
-	static func backfillFetchedPagesFromLegacyColumn(_ database: FMDatabase) {
-		guard let resultSet = database.executeQuery("SELECT feedURL, ao3SearchLastFetchedPage FROM feedSettings WHERE ao3SearchLastFetchedPage IS NOT NULL;", withArgumentsIn: []) else {
-			return
-		}
-		var updates = [(feedURL: String, jsonString: String)]()
-		while resultSet.next() {
-			guard let feedURL = resultSet.swiftString(forColumn: "feedURL") else {
-				continue
-			}
-			let oldValue = Int(resultSet.int(forColumn: "ao3SearchLastFetchedPage"))
-			guard oldValue >= 1 else {
-				continue
-			}
-			let fetchedPages = Set(1...oldValue)
-			guard let data = try? JSONEncoder().encode(fetchedPages), let jsonString = String(data: data, encoding: .utf8) else {
-				continue
-			}
-			updates.append((feedURL, jsonString))
-		}
-		resultSet.close()
-
-		for update in updates {
-			database.executeUpdate("UPDATE feedSettings SET ao3SearchFetchedPages = ? WHERE feedURL = ?;", withArgumentsIn: [update.jsonString, update.feedURL])
-		}
-	}
 
 	func row(from resultSet: FMResultSet) -> Row {
 		let lastModified = resultSet.swiftString(forColumn: Column.conditionalGetInfoLastModified.rawValue)
@@ -475,16 +410,6 @@ private extension FeedSettingsDatabase {
 			ao3SearchLastFetchedPage = Int(resultSet.int(forColumn: Column.ao3SearchLastFetchedPage.rawValue))
 		}
 
-		var ao3SearchFetchedPages: Set<Int>?
-		if let jsonString = resultSet.swiftString(forColumn: Column.ao3SearchFetchedPages.rawValue), let data = jsonString.data(using: .utf8) {
-			ao3SearchFetchedPages = try? JSONDecoder().decode(Set<Int>.self, from: data)
-		}
-
-		var ao3SearchTotalPages: Int?
-		if !resultSet.columnIsNull(Column.ao3SearchTotalPages.rawValue) {
-			ao3SearchTotalPages = Int(resultSet.int(forColumn: Column.ao3SearchTotalPages.rawValue))
-		}
-
 		return Row(
 			feedID: resultSet.swiftString(forColumn: Column.feedID.rawValue) ?? "",
 			homePageURL: resultSet.swiftString(forColumn: Column.homePageURL.rawValue),
@@ -501,9 +426,7 @@ private extension FeedSettingsDatabase {
 			folderRelationship: folderRelationship,
 			lastCheckDate: lastCheckDate,
 			lastResponseCode: lastResponseCode,
-			ao3SearchLastFetchedPage: ao3SearchLastFetchedPage,
-			ao3SearchFetchedPages: ao3SearchFetchedPages,
-			ao3SearchTotalPages: ao3SearchTotalPages
+			ao3SearchLastFetchedPage: ao3SearchLastFetchedPage
 		)
 	}
 }

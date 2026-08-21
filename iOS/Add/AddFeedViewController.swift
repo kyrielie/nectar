@@ -157,7 +157,7 @@ final class AddFeedViewController: UITableViewController {
 			guard let self else { return }
 			Task { @MainActor in
 				let coordinator = AO3SearchResultsFetchCoordinator()
-				_ = await coordinator.presentSolverAndRetry(challengedURL: challengedURL, feedURL: feed.url, feed: feed, account: account, advancePageTo: 1, updatesFeedName: true, presentingViewController: self)
+				_ = await coordinator.presentSolverAndRetry(challengedURL: challengedURL, feedURL: feed.url, feed: feed, account: account, advancePageTo: 1, presentingViewController: self)
 				self.dismiss(animated: true)
 				NotificationCenter.default.post(name: .UserDidAddFeed, object: self, userInfo: [UserInfoKey.feed: feed])
 			}

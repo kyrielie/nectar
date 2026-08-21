@@ -418,11 +418,10 @@ private extension LocalAccountDelegate {
 				}
 
 				switch outcome {
-				case .success(let parsedItems, _, let pageTitle, let totalPages):
+				case .success(let parsedItems, _, let pageTitle):
 					let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(parsedItems), deleteOlder: false)
 					account.sendNotificationAbout(articleChanges)
-					feed.ao3SearchFetchedPages = [1]
-					feed.ao3SearchTotalPages = totalPages
+					feed.ao3SearchLastFetchedPage = 1
 					// feed.name (not editedName, set above from the user's
 					// typed Name field) -- nameForDisplay's own
 					// editedName -> name -> "Untitled" precedence means a
@@ -437,7 +436,7 @@ private extension LocalAccountDelegate {
 					if let pageTitle {
 						feed.name = pageTitle
 					}
-				case .noResults(let pageTitle, let totalPages):
+				case .noResults(let pageTitle):
 					// Not thrown -- the feed is still validly added, same
 					// as today's behavior via refresher.refreshFeeds;
 					// zero results is visible via a subsequent manual
@@ -447,9 +446,6 @@ private extension LocalAccountDelegate {
 					// "Untitled" if a title's available.
 					if let pageTitle {
 						feed.name = pageTitle
-					}
-					if let totalPages {
-						feed.ao3SearchTotalPages = totalPages
 					}
 				case .registrationRequired, .rateLimited:
 					// Not thrown -- the feed is still validly added, same

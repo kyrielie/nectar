@@ -52,9 +52,9 @@ import Account
 	func fetch(url: URL, feedURL: String) async -> Outcome {
 		do {
 			switch try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feedURL) {
-			case .success(let parsedItems, let hasNextPage, let pageTitle, _):
+			case .success(let parsedItems, let hasNextPage, let pageTitle):
 				return .imported(newWorkCount: parsedItems.count, hasNextPage: hasNextPage, pageTitle: pageTitle)
-			case .noResults(let pageTitle, _):
+			case .noResults(let pageTitle):
 				return .noResults(pageTitle: pageTitle)
 			case .registrationRequired:
 				return .registrationRequired
@@ -81,19 +81,7 @@ import Account
 	/// Only called after the caller's own opt-in prompt
 	/// (`.needsVerification` above) -- this method itself always presents
 	/// immediately.
-	///
-	/// `updatesFeedName` controls whether a successful import is allowed to
-	/// (re)name the feed off the harvested page's `<title>` -- automatic
-	/// naming happens once, at add time, only; a person's own rename
-	/// always wins after that. `AddFeedViewController` (create-time
-	/// challenge) passes `true`; every later retry -- `advancePageTo == 1`
-	/// or not -- passes `false`. This is a separate, explicit parameter
-	/// rather than inferred from `advancePageTo == 1`, since the
-	/// inspector's arbitrary-fetch action can deliberately refetch page 1
-	/// itself (a real, expected case under the "additive" rule), so
-	/// `advancePageTo == 1` no longer reliably means "this is the initial
-	/// add-time fetch."
-	func presentSolverAndRetry(challengedURL: URL, feedURL: String, feed: Feed, account: Account, advancePageTo: Int?, updatesFeedName: Bool, presentingViewController: UIViewController) async -> Outcome {
+	func presentSolverAndRetry(challengedURL: URL, feedURL: String, feed: Feed, account: Account, advancePageTo: Int?, presentingViewController: UIViewController) async -> Outcome {
 		let delegate = SolverDelegate()
 
 		let solverViewController = AO3ChallengeSolverViewController(challengeURL: challengedURL) { html in
@@ -123,17 +111,20 @@ import Account
 			// feed.name only, never editedName -- editedName is
 			// exclusively written by an explicit user rename
 			// (Account.renameFeed/LocalAccountDelegate.renameFeed), so
-			// this can never clobber a hand-typed name. Gated on
-			// updatesFeedName (see this method's own doc comment) --
-			// only the create-time challenge retry renames; a later
-			// "load more" or inspector arbitrary-fetch retry must not,
-			// since the feed is already named.
-			if updatesFeedName, let pageTitle {
+			// this can never clobber a hand-typed name, whether this
+			// retry is filling in the create-time Cloudflare-challenge
+			// gap (AddFeedViewController, advancePageTo: 1) or a later
+			// "load more" page (MainTimelineModernViewController,
+			// advancePageTo: page N) -- the latter just redundantly
+			// re-sets feed.name to the same fandom/tag title page 1
+			// already gave it, since every page of one search/tag
+			// listing shares the same <title>.
+			if let pageTitle {
 				feed.name = pageTitle
 			}
 			return .imported(newWorkCount: newWorkCount, hasNextPage: hasNextPage, pageTitle: pageTitle)
 		case .noResults(let pageTitle):
-			if updatesFeedName, let pageTitle {
+			if let pageTitle {
 				feed.name = pageTitle
 			}
 			return .noResults(pageTitle: pageTitle)
