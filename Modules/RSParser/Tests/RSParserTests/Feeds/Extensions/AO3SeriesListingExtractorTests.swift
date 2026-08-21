@@ -41,7 +41,7 @@ import Testing
 	@Test func searchResultsExtractorParsesAllTenRowsFromSeriesListingFixture() throws {
 		let html = htmlFixtureString("ao3-series-listing.html")
 		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: "https://archiveofourown.org/series/348731")
-		guard case .success(let items, _, _) = outcome else {
+		guard case .success(let items, _, _, _) = outcome else {
 			Issue.record("Expected .success, got \(outcome)")
 			return
 		}

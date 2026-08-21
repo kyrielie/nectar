@@ -184,15 +184,27 @@ import Articles
 		}
 	}
 
-	/// The highest AO3 search-results page fetched so far (Task 9) --
-	/// `nil` until the first fetch. See `FeedSettings.ao3SearchLastFetchedPage`
-	/// for why a normal refresh doesn't consult this (only "load more" does).
-	public var ao3SearchLastFetchedPage: Int? {
+	/// Every AO3 search-results page fetched so far -- `nil`/empty until
+	/// the first fetch. See `FeedSettings.ao3SearchFetchedPages` for why a
+	/// normal refresh doesn't consult this (only "load more" and the
+	/// inspector's arbitrary-page fetch do).
+	public var ao3SearchFetchedPages: Set<Int>? {
 		get {
-			settings.ao3SearchLastFetchedPage
+			settings.ao3SearchFetchedPages
 		}
 		set {
-			settings.ao3SearchLastFetchedPage = newValue
+			settings.ao3SearchFetchedPages = newValue
+		}
+	}
+
+	/// Total page count AO3's own pagination widget reports, refreshed
+	/// from whichever page most recently returned one. `nil` until known.
+	public var ao3SearchTotalPages: Int? {
+		get {
+			settings.ao3SearchTotalPages
+		}
+		set {
+			settings.ao3SearchTotalPages = newValue
 		}
 	}
 
@@ -201,7 +213,7 @@ import Articles
 	/// a collection, or a series -- see
 	/// `LocalAccountRefresher.isAO3ListingFeed(_:)`'s own doc comment for
 	/// the full shape list). Wraps that function, which stays `internal`
-	/// to `Account` -- exposed here the same way `ao3SearchLastFetchedPage`
+	/// to `Account` -- exposed here the same way `ao3SearchFetchedPages`
 	/// above already crosses the module boundary, so the routing
 	/// predicate itself stays an implementation detail of `Account`
 	/// rather than becoming `public` on `LocalAccountRefresher`. Kept

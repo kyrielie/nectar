@@ -372,7 +372,7 @@ import os
 				}
 
 				switch outcome {
-				case .success(let parsedItems, let hasNextPage, _):
+				case .success(let parsedItems, let hasNextPage, _, let totalPages):
 					// hasNextPage isn't consumed here -- a routine/add-time
 					// fetch always writes page 1 (below) regardless; only
 					// AO3SearchResultsPaginator's "load more" UI needs the
@@ -385,11 +385,15 @@ import os
 					_ = hasNextPage
 					let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(parsedItems), deleteOlder: false)
 					account.sendNotificationAbout(articleChanges)
-					feed.ao3SearchLastFetchedPage = 1
+					feed.ao3SearchFetchedPages = [1]
+					feed.ao3SearchTotalPages = totalPages
 					if let activityOwner {
 						ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "\(parsedItems.count) work\(parsedItems.count == 1 ? "" : "s") found")
 					}
-				case .noResults:
+				case .noResults(_, let totalPages):
+					if let totalPages {
+						feed.ao3SearchTotalPages = totalPages
+					}
 					if let activityOwner {
 						ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "No results")
 					}

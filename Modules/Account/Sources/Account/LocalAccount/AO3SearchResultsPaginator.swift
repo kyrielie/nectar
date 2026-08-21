@@ -37,21 +37,100 @@ import RSParser
 		case notSignedIn
 	}
 
-	/// Fetches page `(feed.ao3SearchLastFetchedPage ?? 1) + 1` for `feed`
-	/// and imports it, bumping `feed.ao3SearchLastFetchedPage` on success.
+	// MARK: - Infill / arbitrary-page fetch
+
+	/// The person typed a page number that's out of range against a known
+	/// `feed.ao3SearchTotalPages`, or asked to fetch a page that's already
+	/// in `feed.ao3SearchFetchedPages` (allowed -- refetching is additive,
+	/// never harmful -- but surfaced separately so a caller can choose
+	/// whether to warn "already fetched" before spending a network
+	/// request on it).
+	public enum PageValidationOutcome: Sendable, Equatable {
+		case valid
+		case outOfRange(totalPages: Int)
+	}
+
+	/// Smallest positive integer not already in `fetchedPages`. Public so
+	/// both `loadNextPage` and any UI-layer caller that needs to know
+	/// which page a given "load more" attempt is targeting (e.g. to retry
+	/// the same page after a Cloudflare challenge) use one implementation.
+	/// For a feed with no gaps this is identical to "highest + 1" -- the
+	/// difference only matters once the arbitrary-fetch action (Part 3)
+	/// has jumped ahead and left a gap behind.
+	public static func nextPageToFetch(fetchedPages: Set<Int>) -> Int {
+		var candidate = 1
+		while fetchedPages.contains(candidate) {
+			candidate += 1
+		}
+		return candidate
+	}
+
+	/// Fetches the infill page (see `nextPageToFetch(fetchedPages:)`) for
+	/// `feed` and imports it, inserting the fetched page number into
+	/// `feed.ao3SearchFetchedPages` on success.
 	public static func loadNextPage(for feed: Feed, account: Account) async -> PageOutcome {
-		let nextPage = (feed.ao3SearchLastFetchedPage ?? 1) + 1
+		let nextPage = nextPageToFetch(fetchedPages: feed.ao3SearchFetchedPages ?? [])
 		return await fetchPage(nextPage, for: feed, account: account, advancePageTo: nextPage)
 	}
 
-	/// Re-fetches page 1 without touching `ao3SearchLastFetchedPage` --
-	/// see `FeedSettings.ao3SearchLastFetchedPage`'s own doc comment for
+	/// Re-fetches page 1 without touching `ao3SearchFetchedPages` --
+	/// see `FeedSettings.ao3SearchFetchedPages`'s own doc comment for
 	/// why a page-1 re-check is deliberately not treated as pagination
 	/// progress. Plumbing only for now -- not wired to a user-facing
 	/// action this pass; kept for a future "check for new results"
 	/// affordance and reused internally by add-time fetch consolidation.
 	public static func refreshFirstPage(for feed: Feed, account: Account) async -> PageOutcome {
 		await fetchPage(1, for: feed, account: account, advancePageTo: nil)
+	}
+
+	/// Validates `page` against `feed.ao3SearchTotalPages` without making
+	/// a network request:
+	/// - total known, page in range -> `.valid`
+	/// - total known, page out of range -> `.outOfRange(totalPages:)`
+	/// - total unknown -> `.valid` (caller should fetch page 1 first to
+	///   populate the total, then re-validate -- see `fetchSpecificPage`,
+	///   which does this automatically).
+	public static func validate(page: Int, against feed: Feed) -> PageValidationOutcome {
+		guard let totalPages = feed.ao3SearchTotalPages else {
+			return .valid
+		}
+		guard page <= totalPages else {
+			return .outOfRange(totalPages: totalPages)
+		}
+		return .valid
+	}
+
+	/// Entry point for the inspector's "fetch page N" action (Part 3's
+	/// validation flow):
+	/// 1. If `feed.ao3SearchTotalPages` is known and `page` is within it,
+	///    fetch `page` directly.
+	/// 2. If `feed.ao3SearchTotalPages` is known and `page` exceeds it,
+	///    don't fetch -- return `.noResults` (the caller already has
+	///    `validate(page:against:)` to check this ahead of time and avoid
+	///    even calling this function; this outcome-based fallback is a
+	///    guard for a total that changed between the caller's check and
+	///    this call, not the primary way callers are expected to avoid an
+	///    out-of-range fetch).
+	/// 3. If `feed.ao3SearchTotalPages` isn't known yet, fetch page 1
+	///    first (which both populates `ao3SearchTotalPages` and is itself
+	///    a legitimate, additive refetch per the existing "additive only"
+	///    rule), then re-validate `page` against the now-known total.
+	public static func fetchSpecificPage(_ page: Int, for feed: Feed, account: Account) async -> PageOutcome {
+		if feed.ao3SearchTotalPages == nil {
+			let page1Outcome = await fetchPage(1, for: feed, account: account, advancePageTo: 1)
+			guard case .loaded = page1Outcome else {
+				return page1Outcome
+			}
+			guard page != 1 else {
+				return page1Outcome
+			}
+		}
+
+		if case .outOfRange = validate(page: page, against: feed) {
+			return .noResults
+		}
+
+		return await fetchPage(page, for: feed, account: account, advancePageTo: page)
 	}
 
 	private static func fetchPage(_ page: Int, for feed: Feed, account: Account, advancePageTo: Int?) async -> PageOutcome {
@@ -80,7 +159,7 @@ import RSParser
 		}
 
 		switch fetchOutcome {
-		case .success(let parsedItems, let hasNextPage, _):
+		case .success(let parsedItems, let hasNextPage, _, let totalPages):
 			// pageTitle deliberately unused here: renaming an already-
 			// named feed off a later page's <title> (identical fandom/tag
 			// text on every page of the same search/tag listing, so
@@ -91,15 +170,20 @@ import RSParser
 			let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(parsedItems), deleteOlder: false)
 			account.sendNotificationAbout(articleChanges)
 			if let advancePageTo {
-				feed.ao3SearchLastFetchedPage = advancePageTo
+				feed.ao3SearchFetchedPages = (feed.ao3SearchFetchedPages ?? []).union([advancePageTo])
+			}
+			if let totalPages {
+				feed.ao3SearchTotalPages = totalPages
 			}
 			return .loaded(newWorkCount: parsedItems.count, hasNextPage: hasNextPage)
-		case .noResults:
+		case .noResults(_, let totalPages):
 			// pageTitle deliberately unused here, same reasoning as
-			// .success above -- matched without a binding since Swift
-			// still permits an unlabeled `case .noResults:` pattern
-			// against a single-payload case, ignoring the associated
-			// value.
+			// .success above. A returned totalPages still self-corrects a
+			// stale cached value even on a .noResults outcome -- see
+			// AO3SearchResultsOutcome's own doc comment.
+			if let totalPages {
+				feed.ao3SearchTotalPages = totalPages
+			}
 			return .noResults
 		case .registrationRequired:
 			return .registrationRequired

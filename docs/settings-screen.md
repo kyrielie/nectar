@@ -1,5 +1,11 @@
 # Settings screen structure
 
+This covers `SettingsViewController`/`Settings.storyboard` specifically —
+the app-wide Settings screen. The per-feed **feed inspector**
+(`FeedInspectorViewController`/`Inspector.storyboard`, `iOS/Inspector/`)
+is a separate screen entirely; its AO3-search-specific "AO3 Pages" row is
+covered in `ao3-arbitrary-page-fetch.md`, not here.
+
 `SettingsViewController` (`iOS/Settings/`) is a `UITableViewController`
 driven by `Settings.storyboard`'s static cells, sectioned by the nested
 `SettingsViewController.Section: Int` (8 sections, in table order):

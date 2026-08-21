@@ -31,8 +31,14 @@ import RSWeb
 ///   independently of status code, since it needs its own detection
 ///   separate from AO3's own 429 handling.
 public enum AO3SearchResultsFetchOutcome {
-	case success([ParsedItem], hasNextPage: Bool, pageTitle: String?)
-	case noResults(pageTitle: String?)
+	/// `totalPages` mirrors `AO3SearchResultsOutcome.success`'s own field
+	/// (RSParser, layer 1) -- carried across this fetch wrapper purely so
+	/// callers that only see `AO3SearchResultsFetchOutcome` (never the
+	/// raw `AO3SearchResultsOutcome`) still get the value.
+	case success([ParsedItem], hasNextPage: Bool, pageTitle: String?, totalPages: Int?)
+	/// `totalPages` mirrors `AO3SearchResultsOutcome.noResults`'s own
+	/// field, same reasoning as `.success` above.
+	case noResults(pageTitle: String?, totalPages: Int?)
 	case registrationRequired
 	case rateLimited
 	case cloudflareChallenge(challengedURL: URL)
@@ -142,10 +148,10 @@ public enum AO3SearchResultsFetcher {
 				}
 
 				switch AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL) {
-				case .success(let items, let hasNextPage, let pageTitle):
-					return .success(items, hasNextPage: hasNextPage, pageTitle: pageTitle)
-				case .noResults(let pageTitle):
-					return .noResults(pageTitle: pageTitle)
+				case .success(let items, let hasNextPage, let pageTitle, let totalPages):
+					return .success(items, hasNextPage: hasNextPage, pageTitle: pageTitle, totalPages: totalPages)
+				case .noResults(let pageTitle, let totalPages):
+					return .noResults(pageTitle: pageTitle, totalPages: totalPages)
 				case .registrationRequired:
 					return .registrationRequired
 				}
@@ -228,10 +234,10 @@ extension AO3SearchResultsFetcher {
 		}
 
 		switch AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL) {
-		case .success(let items, let hasNextPage, let pageTitle):
-			return .success(items, hasNextPage: hasNextPage, pageTitle: pageTitle)
-		case .noResults(let pageTitle):
-			return .noResults(pageTitle: pageTitle)
+		case .success(let items, let hasNextPage, let pageTitle, let totalPages):
+			return .success(items, hasNextPage: hasNextPage, pageTitle: pageTitle, totalPages: totalPages)
+		case .noResults(let pageTitle, let totalPages):
+			return .noResults(pageTitle: pageTitle, totalPages: totalPages)
 		case .registrationRequired:
 			// AO3 rejected the stored session itself (expired/revoked),
 			// not just "you weren't signed in" -- distinct from
