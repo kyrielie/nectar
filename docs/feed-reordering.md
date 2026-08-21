@@ -15,11 +15,15 @@ position — while adding `insert(_:at:)`, the positional-insert operation
 a bare `Set` had no way to express. Unit tests:
 `Modules/RSCore/Tests/RSCoreTests/OrderedSetTests.swift`.
 
-`OrderedSet` is declared `Sendable where Element: Sendable`. `Feed` is
-not `Sendable` (it's a `@MainActor`-isolated class), so `OrderedSet<Feed>`
-itself does not conform to `Sendable` — this is an unproblematic
-conditional-conformance outcome, not a compile error, and matches how
-`Feed` was never `Sendable` when held in a plain `Set<Feed>` either.
+`OrderedSet` is deliberately not `Sendable`, not even conditionally on
+`Element: Sendable`. `Feed` is `@MainActor`-isolated and its `Hashable`
+conformance is therefore main-actor-isolated too; the compiler cannot fit
+an isolated `Hashable` witness into a `Sendable` conformance's
+requirements, so `OrderedSet<Element: Hashable>: Sendable where Element:
+Sendable` fails to build the moment `Element` is actually `Feed` — this
+was caught by CI, not by re-reading the type in isolation. `Container`
+and every call site that touches `topLevelFeeds` are already
+`@MainActor`-isolated, so dropping `Sendable` costs nothing in practice.
 
 ## `Container.topLevelFeeds` type change
 
