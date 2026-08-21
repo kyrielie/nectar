@@ -1250,8 +1250,8 @@ extension MainTimelineModernViewController {
 			self.ao3LoadMoreFooterView?.state = .loading
 			Task { @MainActor in
 				let coordinator = AO3SearchResultsFetchCoordinator()
-				let nextPage = (feed.ao3SearchLastFetchedPage ?? 1) + 1
-				let outcome = await coordinator.presentSolverAndRetry(challengedURL: challengedURL, feedURL: feed.url, feed: feed, account: account, advancePageTo: nextPage, presentingViewController: self)
+				let nextPage = AO3SearchResultsPaginator.nextPageToFetch(fetchedPages: feed.ao3SearchFetchedPages ?? [])
+				let outcome = await coordinator.presentSolverAndRetry(challengedURL: challengedURL, feedURL: feed.url, feed: feed, account: account, advancePageTo: nextPage, updatesFeedName: false, presentingViewController: self)
 				self.isAO3LoadMoreInFlight = false
 				switch outcome {
 				case .imported(_, let hasNextPage, _):

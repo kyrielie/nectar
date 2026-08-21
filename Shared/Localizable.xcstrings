@@ -10,6 +10,9 @@
     "“%@” uses a single color palette in both light and dark mode." : {
       "comment" : "Theme appearance footer, single-palette theme"
     },
+    "(%d pages total)" : {
+      "comment" : "AO3 arbitrary-page-fetch: total page count qualifier"
+    },
     "(last downloaded %@)" : {
       "comment" : "Activity log — when HTML metadata for a URL was last downloaded — %@ is a date"
     },
@@ -134,8 +137,17 @@
     "AO3 needs you to verify you're not a bot before more results can load. Verify now?" : {
       "comment" : "AO3 Cloudflare challenge prompt message"
     },
+    "AO3 needs you to verify you're not a bot before this page can load. Verify now?" : {
+      "comment" : "AO3 Cloudflare challenge prompt message"
+    },
+    "AO3 Pages" : {
+      "comment" : "AO3 arbitrary-page-fetch inspector section header"
+    },
     "AO3 rate limit hit -- backing off before retrying" : {
       "comment" : "AO3 load more error"
+    },
+    "AO3 reports %d pages for this search." : {
+      "comment" : "AO3 arbitrary-page-fetch: page out of range"
     },
     "AO3 sign-in isn't included in backups — you'll need to sign in again after restoring." : {
       "comment" : "AO3 sign-in-again notice"
@@ -491,11 +503,23 @@
     "Feeds" : {
       "comment" : "Feeds"
     },
+    "Fetch" : {
+      "comment" : "AO3 arbitrary-page-fetch: fetch button"
+    },
     "Fetch AO3 Updates for Library Works" : {
       "comment" : "Ambrosia AO3 updates toggle label"
     },
     "Fetch New Works Immediately" : {
       "comment" : "AO3 prefetch-on-arrival toggle label"
+    },
+    "Fetched pages are additive -- refetching a page adds any new works, never removes any." : {
+      "comment" : "AO3 arbitrary-page-fetch: additive note"
+    },
+    "Fetched: %@" : {
+      "comment" : "AO3 arbitrary-page-fetch: fetched-pages list"
+    },
+    "Fetched: none yet" : {
+      "comment" : "AO3 arbitrary-page-fetch: no pages fetched"
     },
     "Fetching" : {
       "comment" : "Fetching"
@@ -954,6 +978,9 @@
     "Overwrite" : {
       "comment" : "Overwrite"
     },
+    "Page" : {
+      "comment" : "AO3 arbitrary-page-fetch: page number field placeholder"
+    },
     "Page Count" : {
       "comment" : "Page counter page count"
     },
@@ -1281,6 +1308,12 @@
     },
     "This device cannot send emails." : {
       "comment" : "This device cannot send emails."
+    },
+    "This feed requires a signed-in AO3 account" : {
+      "comment" : "AO3 load more error"
+    },
+    "This feed's account is unavailable" : {
+      "comment" : "AO3 arbitrary-page-fetch: missing account"
     },
     "This theme cannot be used because of data corruption in the Info.plist. %@." : {
       "comment" : "Decoding key missing"
