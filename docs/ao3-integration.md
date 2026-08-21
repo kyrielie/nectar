@@ -230,7 +230,12 @@ one), `.invalidWork` (422, `no_commentable`), `.rateLimited` (429), or
 
 A person can subscribe to an AO3 search-results query as a feed. This has
 its own fetch/retry/pagination stack, layered on top of
-`AO3SearchResultsExtractor` (`ao3-feeds.md`):
+`AO3SearchResultsExtractor` (`ao3-feeds.md`). Beyond "Load more results"
+below, a person can also fetch an arbitrary page directly from the feed
+inspector — see `ao3-arbitrary-page-fetch.md` for that feature's own data
+model (`FeedSettings.ao3SearchFetchedPages`/`.ao3SearchTotalPages`),
+validation flow, and UI; the summary below describes the pre-existing
+fetch/retry/pagination stack it's built on top of.
 
 - **`AO3SearchResultsFetcher`** — fetches through the shared `Downloader`
   (inheriting its per-host 429/Retry-After cooldown for free, deliberately
@@ -245,8 +250,8 @@ its own fetch/retry/pagination stack, layered on top of
     can arrive as a 200, 403, or overlapping a 429).
 - **`AO3SearchResultsImporter`** — factors out the shared "parse fetched
   HTML and import it" sequence (`AO3SearchResultsExtractor.extract` →
-  `account.updateAsync` → `account.sendNotificationAbout` → advance
-  `feed.ao3SearchLastFetchedPage`) so it's usable both by the ordinary
+  `account.updateAsync` → `account.sendNotificationAbout` → insert into
+  `feed.ao3SearchFetchedPages`) so it's usable both by the ordinary
   headless fetch path and by a WKWebView HTML-harvest fallback (iOS target,
   outside this module) used when a headless fetch comes back
   Cloudflare-challenged. `deleteOlder` is always `false` for any single
@@ -254,20 +259,22 @@ its own fetch/retry/pagination stack, layered on top of
   feed, so treating it as authoritative for pruning would delete every
   work that only appears on a different page.
 - **`AO3SearchResultsPaginator`** — the explicit "Load more results" user
-  action. A standalone `@MainActor` enum, deliberately **not** routed
-  through `LocalAccountRefresher.refreshFeeds`'s shared batch-refresh
-  session state (`isRefreshing`, `outstandingParseTasks`,
+  action, plus the arbitrary-page-fetch entry point
+  (`ao3-arbitrary-page-fetch.md`). A standalone `@MainActor` enum,
+  deliberately **not** routed through `LocalAccountRefresher.refreshFeeds`'s
+  shared batch-refresh session state (`isRefreshing`, `outstandingParseTasks`,
   pending-feed coalescing) — that machinery exists to coordinate many feeds
   finishing together for one overall progress UI, and piggybacking a
   single-feed, user-triggered "load more" tap on it risks silent
   interaction with an in-flight full refresh. `loadNextPage(for:account:)`
-  fetches `(feed.ao3SearchLastFetchedPage ?? 1) + 1` and advances the
-  counter on success; `refreshFirstPage(for:account:)` re-fetches page 1
-  without advancing it (plumbing for a future "check for new results"
-  affordance, not yet wired to a user action). Page URLs are built by
-  replacing/appending a `page` query item on the feed's stored (page-1)
-  URL — page 1 itself is passed through unmodified, since AO3's own
-  listing pagination omits `page=1` on its links (confirmed against a
+  fetches the smallest page not yet in `feed.ao3SearchFetchedPages`
+  (infill, not just "highest + 1" — see `ao3-arbitrary-page-fetch.md`)
+  and inserts it into that set on success; `refreshFirstPage(for:account:)`
+  re-fetches page 1 without touching it (plumbing for a future "check for
+  new results" affordance, not yet wired to a user action). Page URLs are
+  built by replacing/appending a `page` query item on the feed's stored
+  (page-1) URL — page 1 itself is passed through unmodified, since AO3's
+  own listing pagination omits `page=1` on its links (confirmed against a
   captured pagination widget).
 
 ## Series navigation

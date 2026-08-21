@@ -15,6 +15,7 @@ task**, not this whole index cover-to-cover.
 - **Feed parsing / JSON Feed / `_ambrosia` extension** → `module-layout.md`, `ambrosia-feed.md`
 - **Annotations (highlights + notes), anchor resolution, the annotations toolbar/settings UI** → `annotations.md`
 - **AO3 RSS/Atom subscription (the feed itself)** → `ao3-direct-feed-ingestion.md`, `ao3-feeds.md`
+- **AO3 search-results pagination, "Load more", or fetching a specific page number** → `ao3-arbitrary-page-fetch.md`, `ao3-integration.md`
 - **AO3 HTML extraction internals** (summary/work-page/series parsing) → `ao3-feeds.md`
 - **AO3 login/session, kudos-on-like, the in-app AO3 browser** → `ao3-authenticated-reading.md`
 - **AO3 networking/session layer generally** → `ao3-integration.md`
@@ -81,6 +82,7 @@ it's trusted by default. Specifically:
 | `bookKey` computation (Swift or the SQL `CASE` mirror), `BookStateTable` | `book-identity.md` |
 | `AmbrosiaSQLiteImportTable`, `AmbrosiaSQLiteTransferFetcher`, the `.sqlite` route | `sqlite-transfer.md` |
 | `AO3IgnoreList`, `AO3SummaryExtractor` call sites in `RSSItem`/`AtomParser`, AO3 RSS/Atom subscription wiring | `ao3-direct-feed-ingestion.md` |
+| `FeedSettings.ao3SearchFetchedPages`/`.ao3SearchTotalPages`, `AO3SearchResultsPaginator.nextPageToFetch`/`.validate`/`.fetchSpecificPage`, `AO3SearchResultsImporter.importFetchedPage`, `AO3SearchResultsFetchCoordinator.presentSolverAndRetry`'s `updatesFeedName` parameter, `FeedInspectorViewController`'s AO3 Pages section | `ao3-arbitrary-page-fetch.md` |
 | The AO3 HTML extractors themselves (`Modules/RSParser/.../Feeds/Extensions/`) | `ao3-feeds.md` |
 | `Feed.repoint(to:)`, `collectionKeyIndex`, `rewriteAmbrosiaJSONFeedURLs` | `feed-repointing.md` |
 | `LocalAccountRefresher.feedShouldBeSkipped`, `BGTaskScheduler`/`backgroundRefreshDeadline`, `LastOpenedFeedDelegate` | `refresh-throttling.md` |
