@@ -34,11 +34,11 @@
             "versions": [
                 {
                     "version": "0.1.6",
-                    "buildVersion": "7108.40",
+                    "buildVersion": "7108.41",
                     "date": "2026-08-21T05:39:51Z",
                     "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.1.5...v0.1.6\r\n\r\n- added feed reordering\r\n- added fetching any page from feed info\r\n- fixed fetching when logged in",
                     "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.1.6/Nectar-unsigned.ipa",
-                    "size": 4803797,
+                    "size": 4803782,
                     "minOSVersion": "17.0",
                     "marketingVersion": "0.1.6"
                 },
