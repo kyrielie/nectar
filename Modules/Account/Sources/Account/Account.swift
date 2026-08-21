@@ -140,7 +140,7 @@ public enum FetchType {
 		}
 	}
 
-	public var topLevelFeeds = Set<Feed>()
+	public var topLevelFeeds = OrderedSet<Feed>()
 	public var folders: Set<Folder>? = Set<Folder>()
 
 	public var externalID: String? {
@@ -681,10 +681,10 @@ public enum FetchType {
 		}
 	}
 
-	public func moveFeed(_ feed: Feed, from: Container, to: Container, completion: @escaping (Result<Void, Error>) -> Void) {
+	public func moveFeed(_ feed: Feed, from: Container, to: Container, targetIndex: Int?, completion: @escaping (Result<Void, Error>) -> Void) {
 		Task { @MainActor in
 			do {
-				try await delegate.moveFeed(feed: feed, sourceContainer: from, destinationContainer: to)
+				try await delegate.moveFeed(feed: feed, sourceContainer: from, destinationContainer: to, targetIndex: targetIndex)
 				completion(.success(()))
 			} catch {
 				completion(.failure(error))
@@ -1281,8 +1281,12 @@ public enum FetchType {
 		postChildrenDidChangeNotification()
 	}
 
-	public func addFeedToTreeAtTopLevel(_ feed: Feed) {
-		topLevelFeeds.insert(feed)
+	public func addFeedToTreeAtTopLevel(_ feed: Feed, at index: Int?) {
+		if let index {
+			topLevelFeeds.insert(feed, at: index)
+		} else {
+			topLevelFeeds.insert(feed)
+		}
 		structureDidChange()
 		postChildrenDidChangeNotification()
 	}
@@ -1759,7 +1763,7 @@ extension Account: OPMLRepresentable {
 
 	public func OPMLString(indentLevel: Int, allowCustomAttributes: Bool) -> String {
 		var s = ""
-		for feed in topLevelFeeds.sorted() {
+		for feed in topLevelFeeds {
 			s += feed.OPMLString(indentLevel: indentLevel + 1, allowCustomAttributes: allowCustomAttributes)
 		}
 		for folder in folders!.sorted() {
