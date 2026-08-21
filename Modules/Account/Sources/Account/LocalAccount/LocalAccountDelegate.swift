@@ -263,9 +263,14 @@ public extension Notification.Name {
 		container.removeFeedFromTreeAtTopLevel(feed)
 	}
 
-	@MainActor func moveFeed(feed: Feed, sourceContainer: Container, destinationContainer: Container) async throws {
+	@MainActor func moveFeed(feed: Feed, sourceContainer: Container, destinationContainer: Container, targetIndex: Int?) async throws {
+		if sourceContainer === destinationContainer {
+			sourceContainer.removeFeedFromTreeAtTopLevel(feed)
+			sourceContainer.addFeedToTreeAtTopLevel(feed, at: targetIndex)
+			return
+		}
 		sourceContainer.removeFeedFromTreeAtTopLevel(feed)
-		destinationContainer.addFeedToTreeAtTopLevel(feed)
+		destinationContainer.addFeedToTreeAtTopLevel(feed, at: targetIndex)
 	}
 
 	@MainActor func addFeed(feed: Feed, container: Container) async throws {

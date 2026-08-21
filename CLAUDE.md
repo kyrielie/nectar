@@ -23,6 +23,7 @@ task**, not this whole index cover-to-cover.
 - **Article scroll position / reading progress** → `reading-progress.md`
 - **"Same book" identity across feeds/re-imports** (`bookKey`) → `book-identity.md`
 - **Large (`.sqlite`) library import** → `sqlite-transfer.md`
+- **Feed drag-reorder within a container (sidebar manual ordering)** → `feed-reordering.md`
 - **A feed's address changing / OPML repoint** → `feed-repointing.md`
 - **Refresh not firing, firing too often, or background refresh** → `refresh-throttling.md`
 - **Article background/notch color, or webview appearance live-update** → `article-color-pipeline.md`
@@ -81,6 +82,7 @@ it's trusted by default. Specifically:
 | `RSParser`/`JSONFeedParser`, the `_ambrosia` extension fields, `ParsedItem` | `module-layout.md`, `ambrosia-feed.md` |
 | `bookKey` computation (Swift or the SQL `CASE` mirror), `BookStateTable` | `book-identity.md` |
 | `AmbrosiaSQLiteImportTable`, `AmbrosiaSQLiteTransferFetcher`, the `.sqlite` route | `sqlite-transfer.md` |
+| `OrderedSet<Feed>`, `Container.topLevelFeeds`, `addFeedToTreeAtTopLevel(_:at:)`, `AccountDelegate.moveFeed`'s `targetIndex` parameter | `feed-reordering.md` |
 | `AO3IgnoreList`, `AO3SummaryExtractor` call sites in `RSSItem`/`AtomParser`, AO3 RSS/Atom subscription wiring | `ao3-direct-feed-ingestion.md` |
 | `FeedSettings.ao3SearchFetchedPages`/`.ao3SearchTotalPages`, `AO3SearchResultsPaginator.nextPageToFetch`/`.validate`/`.fetchSpecificPage`, `AO3SearchResultsImporter.importFetchedPage`, `AO3SearchResultsFetchCoordinator.presentSolverAndRetry`'s `updatesFeedName` parameter, `FeedInspectorViewController`'s AO3 Pages section | `ao3-arbitrary-page-fetch.md` |
 | The AO3 HTML extractors themselves (`Modules/RSParser/.../Feeds/Extensions/`) | `ao3-feeds.md` |

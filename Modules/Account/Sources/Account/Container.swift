@@ -16,7 +16,7 @@ extension Notification.Name {
 
 @MainActor public protocol Container: AnyObject, ContainerIdentifiable {
 	var account: Account? { get }
-	var topLevelFeeds: Set<Feed> { get set }
+	var topLevelFeeds: OrderedSet<Feed> { get set }
 	var folders: Set<Folder>? { get set }
 	var externalID: String? { get set }
 
@@ -27,7 +27,7 @@ extension Notification.Name {
 	@MainActor func childFolder(with: String) -> Folder?
 
     func removeFeedFromTreeAtTopLevel(_ feed: Feed)
-	func addFeedToTreeAtTopLevel(_ feed: Feed)
+	func addFeedToTreeAtTopLevel(_ feed: Feed, at index: Int?)
 
 	// Recursive — checks subfolders
 	func flattenedFeeds() -> Set<Feed>
@@ -44,6 +44,10 @@ extension Notification.Name {
 }
 
 @MainActor public extension Container {
+
+	func addFeedToTreeAtTopLevel(_ feed: Feed) {
+		addFeedToTreeAtTopLevel(feed, at: nil)
+	}
 
 	func hasAtLeastOneFeed() -> Bool {
 		return topLevelFeeds.count > 0
