@@ -144,13 +144,17 @@ import RSParser
 			// always-private -- page 1 of these feeds was fetched via
 			// fetchRequiringSignIn (LocalAccountDelegate.createFeed /
 			// LocalAccountRefresher.fetchAndImportAO3SearchResults), and
-			// later pages need the same authenticated retry, or a signed-
-			// out person would see every page past 1 silently fail
-			// registration instead of getting the same "sign in" state
-			// page 1 already surfaces. Every other listing type keeps
-			// using the plain anonymous fetch, unchanged.
-			if LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(pageURL) {
-				fetchOutcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: pageURL, feedURL: feed.url)
+			// later pages need the same authenticated-then-anonymous
+			// fetch, or a signed-out person would see every page past 1
+			// silently fail registration instead of getting the same
+			// "sign in" state page 1 already surfaces. Widened beyond
+			// isAlwaysAuthenticatedAO3ListingFeed alone: any general
+			// search/tag page also routes through fetchRequiringSignIn
+			// once a session exists, matching the two add-time call
+			// sites above. Every other listing type, when signed out,
+			// keeps using the plain anonymous fetch, unchanged.
+			if LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(pageURL) || AO3SessionStore.isSignedIn {
+				fetchOutcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: pageURL, feedURL: feed.url, isAlwaysAuthenticatedListing: LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(pageURL))
 			} else {
 				fetchOutcome = try await AO3SearchResultsFetcher.fetch(url: pageURL, feedURL: feed.url)
 			}

@@ -354,19 +354,27 @@ import os
 
 			// Subscriptions and marked-for-later are always-yours,
 			// always-private (see isAlwaysAuthenticatedAO3ListingFeed's own
-			// doc comment) -- route through the anonymous-then-authenticated
-			// retry path here too, mirroring
+			// doc comment) -- route through the authenticated-then-anonymous
+			// fetch here too, mirroring
 			// LocalAccountDelegate.createFeed's identical branch, since this
 			// function is reachable for those feed types on their add-time
 			// fetch (feedShouldBeSkippedForAO3SearchResultsReasons lets
-			// lastCheckDate == nil through). Every other listing type keeps
-			// using the plain anonymous fetch, unchanged.
-			let requiresSignIn = Self.isAlwaysAuthenticatedAO3ListingFeed(url)
+			// lastCheckDate == nil through). Widened beyond
+			// isAlwaysAuthenticatedAO3ListingFeed alone: any general
+			// search/tag page also routes through fetchRequiringSignIn once
+			// a session exists, so a signed-in person gets the
+			// authenticated-first attempt there too, not just on the
+			// always-private listing types. A subscriptions/marked-for-later
+			// page still always routes through it (session or not) to get
+			// the correct .notSignedIn surfaced when signed out. Every
+			// other listing type, when signed out, keeps using the plain
+			// anonymous fetch, unchanged.
+			let requiresSignIn = Self.isAlwaysAuthenticatedAO3ListingFeed(url) || AO3SessionStore.isSignedIn
 
 			do {
 				let outcome: AO3SearchResultsFetchOutcome
 				if requiresSignIn {
-					outcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: url, feedURL: feed.url)
+					outcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: url, feedURL: feed.url, isAlwaysAuthenticatedListing: Self.isAlwaysAuthenticatedAO3ListingFeed(url), activityContext: activityOwner.map { ($0, activityKind) })
 				} else {
 					outcome = try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url)
 				}

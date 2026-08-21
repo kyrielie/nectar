@@ -530,7 +530,15 @@ private extension AO3SeriesNavigator {
 
 	/// `GET https://archiveofourown.org/series/<id>` for page 1 (bare, no
 	/// query string -- AO3's own page-1-is-bare-URL convention), or
-	/// `.../series/<id>?page=<n>` for `n >= 2`.
+	/// `.../series/<id>?page=<n>` for `n >= 2`. Authenticated-first when a
+	/// session is stored, mirroring `AO3ChapterFetcher.download`'s shape
+	/// -- a real gap otherwise for a restricted work in a series, since
+	/// this function previously had no authenticated path at all. Falls
+	/// back to the existing anonymous `Downloader.shared` path only on an
+	/// authentication-shaped failure (a non-OK/empty authenticated
+	/// response, or a thrown network error) -- callers only ever see the
+	/// resulting HTML (or nil), so which path succeeded is logged here,
+	/// not surfaced through the return type.
 	static func fetchListingPage(ao3SeriesID: String, page: Int) async -> String? {
 		var urlString = "https://archiveofourown.org/series/\(ao3SeriesID)"
 		if page > 1 {
@@ -539,6 +547,27 @@ private extension AO3SeriesNavigator {
 		guard let url = URL(string: urlString) else {
 			return nil
 		}
+
+		if AO3SessionStore.isSignedIn {
+			do {
+				if let (data, response) = try await AO3AuthenticatedFetcher.fetch(url) {
+					if response.statusIsOK, !data.isEmpty, let html = String(data: data, encoding: .utf8) {
+						return html
+					}
+					ao3SeriesNavigatorLogger.info("AO3SeriesNavigator: fetchListingPage authenticated attempt got bad response for \(url.absoluteString, privacy: .public) -- retrying anonymously")
+				}
+				// A nil result means the session was cleared between the
+				// isSignedIn check and the fetch (concurrent sign-out) --
+				// fall through to the anonymous path below either way.
+			} catch {
+				// Network-level failure on the authenticated attempt --
+				// not a login problem, so the stored session is left
+				// alone; fall back to the anonymous path rather than
+				// returning nil outright.
+				ao3SeriesNavigatorLogger.info("AO3SeriesNavigator: fetchListingPage authenticated attempt threw (\(error.localizedDescription, privacy: .public)) for \(url.absoluteString, privacy: .public) -- retrying anonymously")
+			}
+		}
+
 		guard let downloadResponse = try? await Downloader.shared.download(url) else {
 			return nil
 		}

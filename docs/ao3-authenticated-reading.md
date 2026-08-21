@@ -32,32 +32,41 @@ others' storage or transport:
    own non-persistent cookie store once login succeeds, and stores them as
    a single Cookie-header string). Used by `AO3AuthenticatedFetcher`,
    which manually attaches that Cookie header to a one-off `URLSession`
-   request, at two call sites:
-   - `AO3ChapterFetcher.retryAuthenticated(url:)`, fired only when an
-     anonymous chapter fetch comes back `.registrationRequired` (a
-     login-gated work). A `.registrationRequired` retry result here
-     clears the stored session (it's treated as expired/revoked) — this
-     call site owns that decision.
-   - `AO3SearchResultsFetcher.fetchRequiringSignIn(url:feedURL:)` (see
-     `ao3-feeds.md`, `nectar-toolbar-ao3-listing-feeds.md`), fired for
-     the two AO3 listing types that are always private to the signed-in
-     account — subscriptions and marked-for-later
+   request, at every AO3 HTML page-fetch call site — authenticated-first
+   when a session is stored, falling back to the anonymous
+   `Downloader.shared` path only on an authentication-shaped failure:
+   - `AO3ChapterFetcher.attemptAuthenticated(url:)` (work/chapter pages),
+     tried first whenever `AO3SessionStore.isSignedIn`. A rejected
+     session (`.registrationRequired` from the authenticated attempt)
+     clears the stored session — this call site owns that decision.
+   - `AO3SearchResultsFetcher.fetchRequiringSignIn(url:feedURL:isAlwaysAuthenticatedListing:activityContext:)`
+     (see `ao3-feeds.md`, `nectar-toolbar-ao3-listing-feeds.md`), fired for
+     any AO3 listing page when a session is stored, and always fired
+     (session or not) for the two listing types that are always private
+     to the signed-in account — subscriptions and marked-for-later
      (`LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(_:)`).
-     Same anonymous-then-authenticated shape as the chapter-fetch call
-     site, but does **not** clear `AO3SessionStore` on a rejected
-     session, to avoid racing a concurrent chapter-fetch retry against
-     the same store — that remains solely `AO3ChapterFetcher`'s call
-     site's responsibility. Returns a distinct `.notSignedIn` outcome
-     (surfaced as `AccountError.ao3ListingRequiresSignIn`) when no
-     session is stored at all, so the add-feed/refresh UI can tell "you
-     need to sign in" apart from "AO3 rejected your session" or a
-     generic registration wall.
+     Same authenticated-first shape as the chapter-fetch call site, but
+     does **not** clear `AO3SessionStore` on a rejected session, to avoid
+     racing a concurrent chapter-fetch attempt against the same store —
+     that remains solely `AO3ChapterFetcher`'s call site's responsibility.
+     Returns a distinct `.notSignedIn` outcome (surfaced as
+     `AccountError.ao3ListingRequiresSignIn`) only for the always-private
+     listing types (`isAlwaysAuthenticatedListing == true`) when no
+     session is stored, or a stored session is rejected — a general
+     search/tag page routed here only because a session happens to exist
+     returns a plain `.registrationRequired` instead, since a content-
+     level registration wall on a general page isn't the same thing as
+     "you need to sign in to see *your* subscriptions."
+   - `AO3SeriesNavigator.fetchListingPage` (series listing pages) —
+     previously anonymous-only with no authenticated path at all; now
+     also authenticated-first when signed in, closing a real gap for a
+     restricted work reached via inline series navigation.
 
-   Both call sites deliberately bypass `Downloader.shared`: an anonymous
-   fetch that produced `.registrationRequired` for a given URL is already
-   cached in `Downloader`'s response cache, so routing the authenticated
-   retry through it would silently hand back the stale, unauthenticated
-   response.
+   All three call sites deliberately bypass `Downloader.shared`:
+   `Downloader`'s response cache is keyed on URL alone, so mixing
+   authenticated and anonymous responses for the same URL through one
+   cache would risk silently handing back the wrong one on a later
+   request.
 2. **`AO3AuthenticatedWebViewController`** (iOS app target) — a small
    dedicated WKWebView-based in-app browser, scoped only to AO3 links
    *tapped* in-app (`WebViewController.openURLInAppBrowser(_:)` routes to

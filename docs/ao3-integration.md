@@ -96,27 +96,54 @@ triggers, philosophy" above. Concretely, that's:
    the person hasn't subscribed to the way a tag/user feed is, and keep
    the existing "no proactive content fetch" behavior. Off by default.
 
-The primary fetch is always anonymous — `Downloader` already forces
-`httpShouldSetCookies = false`/`.never` app-wide, so no per-request change
-was needed to keep it that way.
+The primary fetch is authenticated-first when a session is stored — see
+"Authenticated retry" below, which now describes an authenticated-first
+attempt with an anonymous fallback, not the reverse.
 
-### Authenticated retry
+### Authenticated-first fetch, anonymous fallback
 
-If the anonymous fetch returns `AO3ChapterExtractionOutcome.registrationRequired`
-and a session is stored (`AO3SessionStore.isSignedIn`), `retryAuthenticated(url:)`
-retries once through `AO3AuthenticatedFetcher` — a request with the stored
-session's Cookie header attached by hand. This deliberately bypasses
-`Downloader.shared` entirely: `Downloader`'s response cache is keyed on URL
-alone, and the anonymous fetch that just produced `.registrationRequired`
-for this exact URL would already be cached — routing the retry back through
-`Downloader` would silently hand back that same stale, unauthenticated
-response instead of ever sending the Cookie header. `AO3AuthenticatedFetcher`
-uses its own ephemeral, cache-free `URLSession` (mirroring `Downloader`'s
-own cookie-disabling configuration, so the *only* cookie ever sent is the
-one attached by hand) and is not a stored singleton, since it's used at
-most once per retry. If the authenticated retry *also* comes back
-`.registrationRequired`, the stored session is treated as no longer valid
-and `AO3SessionStore.clearSession()` is called.
+When `AO3SessionStore.isSignedIn`, `attemptAuthenticated(url:)` is now
+tried **first**, before any anonymous request — a request with the
+stored session's Cookie header attached by hand, via
+`AO3AuthenticatedFetcher`. This deliberately bypasses `Downloader.shared`
+entirely: `Downloader`'s response cache is keyed on URL alone, and mixing
+authenticated and anonymous responses for the same URL through one cache
+would risk silently handing back the wrong one on a later request.
+`AO3AuthenticatedFetcher` uses its own ephemeral, cache-free `URLSession`
+(mirroring `Downloader`'s own cookie-disabling configuration, so the
+*only* cookie ever sent is the one attached by hand) and is not a stored
+singleton, since it's used at most once per attempt.
+
+The anonymous `Downloader.shared` path (unchanged from before this
+inversion, including its own per-host 429/Retry-After cooldown) is used
+as a **fallback**, reached only on an authentication-shaped failure of
+the authenticated attempt: the session is rejected/expired
+(`.registrationRequired`, or a `.notFound` treated the same way — see
+`AO3ChapterExtractionOutcome.notFound`'s own doc comment for why that
+shape gets the same treatment), or the authenticated request itself
+throws (network error) or times out. A rejected session is treated as no
+longer valid and `AO3SessionStore.clearSession()` is called. When no
+session is stored at all, behavior is unchanged: straight to the
+anonymous path, no authenticated attempt is ever made. Every fallback is
+logged to the Activity Log via `updateProgress` (a progress note, not a
+failure — the overall operation isn't failing, it's degrading to
+anonymous) as well as `os.Logger`.
+
+This same authenticated-first/anonymous-fallback shape now also applies
+to `AO3SearchResultsFetcher.fetchRequiringSignIn(url:feedURL:)` (search/
+tag/listing pages — see `ao3-arbitrary-page-fetch.md` and
+`ao3-authenticated-reading.md`) and `AO3SeriesNavigator.fetchListingPage`
+(series listing pages, which previously had no authenticated path at
+all). RSS/Atom feed ingestion and `AO3KudosFetcher` are unaffected —
+native feed parsing never scrapes HTML, and kudos POSTs are already
+inherently auth-aware.
+
+**Worth noting:** routing every page fetch through the authenticated,
+cache-free `AO3AuthenticatedFetcher` by default (for a signed-in person)
+means signed-in readers lose `Downloader`'s conditional-GET/response
+caching and shared per-host 429 cooldown tracking on the common case, not
+just the previously-gated case — more full requests to AO3 per signed-in
+session than before this change.
 
 ### Content-regression guard
 
