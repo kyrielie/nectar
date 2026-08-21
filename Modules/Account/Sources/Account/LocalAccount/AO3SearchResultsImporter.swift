@@ -10,7 +10,7 @@
 //  headless fetch comes back Cloudflare-challenged. Both end up with an
 //  HTML string and need the same
 //  AO3SearchResultsExtractor.extract -> account.updateAsync ->
-//  account.sendNotificationAbout -> feed.ao3SearchLastFetchedPage sequence;
+//  account.sendNotificationAbout -> feed.ao3SearchFetchedPages sequence;
 //  this type is that sequence, with no notion of how the HTML was obtained.
 //
 
@@ -28,8 +28,8 @@ import RSParser
 	/// Parses `html` as an AO3 search-results page and imports whatever
 	/// works it lists into `feed`/`account`.
 	///
-	/// `advancePageTo`, when non-nil, is written to
-	/// `feed.ao3SearchLastFetchedPage` on a successful import -- callers
+	/// `advancePageTo`, when non-nil, is inserted into
+	/// `feed.ao3SearchFetchedPages` on a successful import -- callers
 	/// doing a plain page-1 fetch (routine add-time fetch, or an explicit
 	/// page-1 re-check) pass `1`; `AO3SearchResultsPaginator.loadNextPage`
 	/// passes the page it just fetched. `deleteOlder: false` always --
@@ -38,14 +38,20 @@ import RSParser
 	/// every work that only shows up on a different page.
 	public static func importFetchedPage(html: String, feedURL: String, feed: Feed, account: Account, advancePageTo: Int?) async -> ImportOutcome {
 		switch AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL) {
-		case .success(let items, let hasNextPage, let pageTitle):
+		case .success(let items, let hasNextPage, let pageTitle, let totalPages):
 			let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(items), deleteOlder: false)
 			account.sendNotificationAbout(articleChanges)
 			if let advancePageTo {
-				feed.ao3SearchLastFetchedPage = advancePageTo
+				feed.ao3SearchFetchedPages = (feed.ao3SearchFetchedPages ?? []).union([advancePageTo])
+			}
+			if let totalPages {
+				feed.ao3SearchTotalPages = totalPages
 			}
 			return .imported(newWorkCount: items.count, hasNextPage: hasNextPage, pageTitle: pageTitle)
-		case .noResults(let pageTitle):
+		case .noResults(let pageTitle, let totalPages):
+			if let totalPages {
+				feed.ao3SearchTotalPages = totalPages
+			}
 			return .noResults(pageTitle: pageTitle)
 		case .registrationRequired:
 			return .registrationRequired
