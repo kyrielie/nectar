@@ -300,7 +300,6 @@
                                     <constraints>
                                         <constraint firstItem="qoe-rn-pwE" firstAttribute="top" secondItem="zOD-eb-9hW" secondAttribute="top" constant="15" id="9Jm-Re-nbY"/>
                                         <constraint firstItem="qoe-rn-pwE" firstAttribute="leading" secondItem="AAi-mv-o14" secondAttribute="trailing" constant="8" symbolic="YES" id="9Wl-bG-a7f"/>
-                                        <constraint firstItem="AAi-mv-o14" firstAttribute="leading" secondItem="zOD-eb-9hW" secondAttribute="leading" constant="16" id="9l7-Qb-ElX"/>
                                         <constraint firstItem="zOD-eb-9hW" firstAttribute="trailing" secondItem="noV-fz-88z" secondAttribute="trailing" constant="3" id="VMX-rc-Ke5"/>
                                         <constraint firstItem="LVW-Zu-z90" firstAttribute="leading" secondItem="qoe-rn-pwE" secondAttribute="trailing" constant="8" id="VwH-HK-EUl"/>
                                         <constraint firstItem="noV-fz-88z" firstAttribute="centerY" secondItem="qoe-rn-pwE" secondAttribute="centerY" constant="-0.5" id="Zgc-BX-2k3"/>

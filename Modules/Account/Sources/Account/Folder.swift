@@ -19,15 +19,37 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 	}
 
 	public var containerID: ContainerIdentifier? {
-		ContainerIdentifier.folder(accountID, nameForDisplay)
+		ContainerIdentifier.folder(accountID, pathNames)
 	}
 
 	public var sidebarItemID: SidebarItemIdentifier? {
-		SidebarItemIdentifier.folder(accountID, nameForDisplay)
+		SidebarItemIdentifier.folder(accountID, pathNames)
+	}
+
+	/// This folder's container -- another `Folder` if nested, or the
+	/// `Account` if this is a top-level folder. Set explicitly at every
+	/// insertion call site (`Account`/`Folder`'s `addFolderToTree`,
+	/// `ensureChildFolder`) rather than kept in sync automatically,
+	/// since `OrderedSet` mutation happens through methods rather than
+	/// a property `didSet` that could hook a single insertion point.
+	public weak var parent: Container?
+
+	/// Ancestor folder names from top level down to and including this
+	/// folder. Does not include the account itself -- callers needing
+	/// the account pair it with `accountID` separately (see
+	/// `ContainerIdentifier.folder`/`SidebarItemIdentifier.folder`).
+	public var pathNames: [String] {
+		var names = [nameForDisplay]
+		var current: Container? = parent
+		while let folder = current as? Folder {
+			names.insert(folder.nameForDisplay, at: 0)
+			current = folder.parent
+		}
+		return names
 	}
 
 	public var topLevelFeeds: OrderedSet<Feed> = OrderedSet<Feed>()
-	public var folders: Set<Folder>? // subfolders are not supported, so this is always nil
+	public var folders: OrderedSet<Folder>? = OrderedSet<Folder>()
 
 	public var name: String? {
 		didSet {
@@ -103,17 +125,19 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 
 	// MARK: Container
 
-	public func flattenedFeeds() -> Set<Feed> {
-		// Since sub-folders are not supported, it’s always the top-level feeds.
-		return Set(topLevelFeeds)
-	}
+	// flattenedFeeds() is not overridden here -- the Container protocol
+	// extension's default (topLevelFeeds plus every subfolder's own
+	// flattenedFeeds(), recursively) is exactly correct now that
+	// folders can nest.
 
 	public func objectIsChild(_ object: AnyObject) -> Bool {
-		// Folders contain Feed objects only, at least for now.
-		guard let feed = object as? Feed else {
-			return false
+		if let feed = object as? Feed {
+			return topLevelFeeds.contains(feed)
 		}
-		return topLevelFeeds.contains(feed)
+		if let folder = object as? Folder {
+			return folders?.contains(folder) ?? false
+		}
+		return false
 	}
 
 	public func addFeedToTreeAtTopLevel(_ feed: Feed, at index: Int?) {
@@ -123,6 +147,69 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 			topLevelFeeds.insert(feed)
 		}
 		postChildrenDidChangeNotification()
+	}
+
+	public func addFolderToTree(_ folder: Folder, at index: Int?) {
+		if let index {
+			folders!.insert(folder, at: index)
+		} else {
+			folders!.insert(folder)
+		}
+		folder.parent = self
+		postChildrenDidChangeNotification()
+		account?.structureDidChange()
+	}
+
+	public func removeFolderFromTree(_ folder: Folder) {
+		folders?.remove(folder)
+		postChildrenDidChangeNotification()
+		account?.structureDidChange()
+	}
+
+	/// The deepest number of levels below this folder that its own
+	/// subfolders extend -- 0 if this folder has no subfolders. Used by
+	/// the depth-3 nesting cap when deciding whether moving this folder
+	/// into some destination would push its deepest descendant past the
+	/// cap.
+	public var maxDescendantDepth: Int {
+		guard let folders, !folders.isEmpty else {
+			return 0
+		}
+		return 1 + folders.map { $0.maxDescendantDepth }.max()!
+	}
+
+	/// True if `other` is `self`, or is nested (at any depth) inside
+	/// `self`. Used to guard against dropping a folder into itself or
+	/// into one of its own descendants.
+	public func isAncestor(of other: Folder) -> Bool {
+		if other === self {
+			return true
+		}
+		var current: Container? = other.parent
+		while let folder = current as? Folder {
+			if folder === self {
+				return true
+			}
+			current = folder.parent
+		}
+		return false
+	}
+
+	/// Every container (this folder, plus any subfolder at any depth)
+	/// that directly holds `feed` at its own top level. Mirrors
+	/// `Account.existingContainers(withFeed:)`, which recurses into this
+	/// method one level down.
+	public func existingContainers(withFeed feed: Feed) -> [Container] {
+		var containers = [Container]()
+		if topLevelFeeds.contains(feed) {
+			containers.append(self)
+		}
+		if let folders {
+			for folder in folders {
+				containers.append(contentsOf: folder.existingContainers(withFeed: feed))
+			}
+		}
+		return containers
 	}
 
 	public func addFeeds(_ feeds: Set<Feed>) {
@@ -207,6 +294,13 @@ extension Folder: OPMLRepresentable {
 			hasAtLeastOneChild = true
 		}
 
+		if let folders {
+			for folder in folders {
+				s += folder.OPMLString(indentLevel: indentLevel + 1, allowCustomAttributes: allowCustomAttributes)
+				hasAtLeastOneChild = true
+			}
+		}
+
 		if !hasAtLeastOneChild {
 			s = "<outline text=\"\(escapedTitle)\" title=\"\(escapedTitle)\"\(attrExternalID)/>\n"
 			s = s.prepending(tabCount: indentLevel)
@@ -219,14 +313,4 @@ extension Folder: OPMLRepresentable {
 	}
 }
 
-// MARK: Set
 
-@MainActor extension Set where Element == Folder {
-
-	func sorted() -> [Folder] {
-		return sorted(by: { (folder1, folder2) -> Bool in
-			return folder1.nameForDisplay.localizedStandardCompare(folder2.nameForDisplay) == .orderedAscending
-		})
-	}
-
-}

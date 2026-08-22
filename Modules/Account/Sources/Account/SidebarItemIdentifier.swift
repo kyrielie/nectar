@@ -15,7 +15,7 @@ import Foundation
 public enum SidebarItemIdentifier: CustomStringConvertible, Hashable, Equatable, Sendable {
 	case smartFeed(String) // String is a unique identifier
 	case feed(String, String) // accountID, feedID
-	case folder(String, String) // accountID, folderName
+	case folder(String, [String]) // accountID, path (ancestor names, immediate folder last)
 
 	private struct TypeName {
 		static let smartFeed = "smartFeed"
@@ -30,8 +30,18 @@ public enum SidebarItemIdentifier: CustomStringConvertible, Hashable, Equatable,
 		static let accountID = "accountID"
 		static let feedID = "feedID"
 		static let oldFeedIDKey = "webFeedID"
-		static let folderName = "folderName"
+		/// Replaces the old `folderName` key. Renamed (rather than
+		/// reused) so old-format entries -- which have no `folderPath`
+		/// key -- fail `init?(userInfo:)` cleanly instead of being
+		/// misread as a single-segment path.
+		static let folderPath = "folderPath"
 	}
+
+	/// `userInfo` is `[String: String]`, so a folder's path array is
+	/// encoded as a single string joined by this separator rather than
+	/// stored as a nested array. See `ContainerIdentifier`'s matching
+	/// `pathSeparator` for the same reasoning.
+	private static let pathSeparator = "\u{1}"
 
 	private var typeName: String {
 		switch self {
@@ -50,8 +60,8 @@ public enum SidebarItemIdentifier: CustomStringConvertible, Hashable, Equatable,
 			return "(typeName): \(id)"
 		case .feed(let accountID, let feedID):
 			return "(typeName): \(accountID)_\(feedID)"
-		case .folder(let accountID, let folderName):
-			return "(typeName): \(accountID)_\(folderName)"
+		case .folder(let accountID, let path):
+			return "(typeName): \(accountID)_\(path.joined(separator: "/"))"
 		}
 	}
 
@@ -64,9 +74,9 @@ public enum SidebarItemIdentifier: CustomStringConvertible, Hashable, Equatable,
 		case .feed(let accountID, let feedID):
 			d[Key.accountID] = accountID
 			d[Key.feedID] = feedID
-		case .folder(let accountID, let folderName):
+		case .folder(let accountID, let path):
 			d[Key.accountID] = accountID
-			d[Key.folderName] = folderName
+			d[Key.folderPath] = path.joined(separator: SidebarItemIdentifier.pathSeparator)
 		}
 
 		return d
@@ -89,10 +99,14 @@ public enum SidebarItemIdentifier: CustomStringConvertible, Hashable, Equatable,
 			}
 			self = .feed(accountID, feedID)
 		case TypeName.folder:
-			guard let accountID = userInfo[Key.accountID], let folderName = userInfo[Key.folderName] else {
+			guard let accountID = userInfo[Key.accountID], let folderPath = userInfo[Key.folderPath] else {
 				return nil
 			}
-			self = .folder(accountID, folderName)
+			let path = folderPath.components(separatedBy: SidebarItemIdentifier.pathSeparator)
+			guard !path.isEmpty else {
+				return nil
+			}
+			self = .folder(accountID, path)
 		default:
 			assertionFailure("Expected valid SidebarItemIdentifier.userInfo but got \(userInfo)")
 			return nil

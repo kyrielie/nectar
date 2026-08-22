@@ -45,6 +45,7 @@ import Articles
 	func addFeed(feed: Feed, container: Container) async throws
 	func removeFeed(feed: Feed, container: Container) async throws
 	func moveFeed(feed: Feed, sourceContainer: Container, destinationContainer: Container, targetIndex: Int?) async throws
+	func moveFolder(folder: Folder, sourceContainer: Container, destinationContainer: Container, targetIndex: Int?) async throws
 
 	func restoreFeed(feed: Feed, container: Container) async throws
 	func restoreFolder(folder: Folder) async throws

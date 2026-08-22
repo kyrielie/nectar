@@ -141,7 +141,7 @@ public enum FetchType {
 	}
 
 	public var topLevelFeeds = OrderedSet<Feed>()
-	public var folders: Set<Folder>? = Set<Folder>()
+	public var folders: OrderedSet<Folder>? = OrderedSet<Folder>()
 
 	public var externalID: String? {
 		get {
@@ -453,20 +453,48 @@ public enum FetchType {
 	}
 
 	func addOPMLItems(_ items: [OPMLItem]) {
+		addOPMLItems(items, into: self, depth: 1)
+	}
+
+	/// Recurses into arbitrarily-nested OPML folders, up to `maxDepth`
+	/// levels. At the depth cap, a would-be-too-deep folder's contents
+	/// are flattened into its would-be-parent instead of being dropped
+	/// or creating an illegal depth-4+ folder -- see `flattenIntoContainer`.
+	private func addOPMLItems(_ items: [OPMLItem], into container: Container, depth: Int) {
+		let maxDepth = 3
 		for item in items {
 			if let feedSpecifier = item.feedSpecifier {
-				addFeedToTreeAtTopLevel(newFeed(with: feedSpecifier))
+				container.addFeedToTreeAtTopLevel(newFeed(with: feedSpecifier))
+				continue
+			}
+			guard let title = item.titleFromAttributes else {
+				continue
+			}
+			guard let folder = container.ensureChildFolder(named: title) else {
+				continue
+			}
+			folder.externalID = item.attributes?["nnw_externalID"]
+			guard let itemChildren = item.children else {
+				continue
+			}
+			if depth >= maxDepth {
+				flattenIntoContainer(itemChildren, container: folder)
 			} else {
-				if let title = item.titleFromAttributes, let folder = ensureFolder(with: title) {
-					folder.externalID = item.attributes?["nnw_externalID"]
-					if let itemChildren = item.children {
-						for itemChild in itemChildren {
-							if let feedSpecifier = itemChild.feedSpecifier {
-								folder.addFeedToTreeAtTopLevel(newFeed(with: feedSpecifier))
-							}
-						}
-					}
-				}
+				addOPMLItems(itemChildren, into: folder, depth: depth + 1)
+			}
+		}
+	}
+
+	/// Used once the depth cap (`maxDepth` in `addOPMLItems(_:into:depth:)`)
+	/// is reached: recurses through any further folder-shaped items
+	/// without creating them, so their feeds still land in `container`
+	/// instead of being silently lost.
+	private func flattenIntoContainer(_ items: [OPMLItem], container: Container) {
+		for item in items {
+			if let feedSpecifier = item.feedSpecifier {
+				container.addFeedToTreeAtTopLevel(newFeed(with: feedSpecifier))
+			} else if let itemChildren = item.children {
+				flattenIntoContainer(itemChildren, container: container)
 			}
 		}
 	}
@@ -486,6 +514,8 @@ public enum FetchType {
 		return existingFolder(withExternalID: externalID)
 	}
 
+	/// Every container (this account, plus any folder or subfolder at
+	/// any depth) that directly holds `feed` at its own top level.
 	public func existingContainers(withFeed feed: Feed) -> [Container] {
 		var containers = [Container]()
 		if topLevelFeeds.contains(feed) {
@@ -493,9 +523,7 @@ public enum FetchType {
 		}
 		if let folders {
 			for folder in folders {
-				if folder.topLevelFeeds.contains(feed) {
-					containers.append(folder)
-				}
+				containers.append(contentsOf: folder.existingContainers(withFeed: feed))
 			}
 		}
 		return containers
@@ -503,32 +531,33 @@ public enum FetchType {
 
 	@discardableResult
 	func ensureFolder(with name: String) -> Folder? {
-		// TODO: support subfolders, maybe, some day
-
-		if name.isEmpty {
-			return nil
-		}
-
-		if let folder = existingFolder(with: name) {
-			return folder
-		}
-
-		let folder = Folder(account: self, name: name)
-		folders!.insert(folder)
-		structureDidChange()
-
-		postChildrenDidChangeNotification()
-		return folder
+		return ensureChildFolder(named: name)
 	}
 
+	/// Walks/creates a chain of folders nested up to `folderNames.count`
+	/// levels deep, starting at this account's top level. Nesting depth
+	/// is capped at 3: a path longer than 3 names is truncated to its
+	/// first 3 segments, and the returned depth-3 folder is where a
+	/// caller (e.g. OPML import) should attach anything that would
+	/// otherwise have gone deeper -- this truncation is what makes
+	/// "flatten into the depth-3 folder" the natural behavior for an
+	/// over-deep path, with no separate flattening logic needed here.
 	public func ensureFolder(withFolderNames folderNames: [String]) -> Folder? {
-		// TODO: support subfolders, maybe, some day.
-		// Since we don’t, just take the last name and make sure there’s a Folder.
-
-		guard let folderName = folderNames.last else {
+		guard !folderNames.isEmpty else {
 			return nil
 		}
-		return ensureFolder(with: folderName)
+
+		let maxDepth = 3
+		let effectiveNames = folderNames.count > maxDepth ? Array(folderNames.prefix(maxDepth)) : folderNames
+
+		var container: Container = self
+		for name in effectiveNames {
+			guard let next = container.ensureChildFolder(named: name) else {
+				return nil
+			}
+			container = next
+		}
+		return container as? Folder
 	}
 
 	public func existingFolder(withDisplayName displayName: String) -> Folder? {
@@ -692,6 +721,17 @@ public enum FetchType {
 		}
 	}
 
+	public func moveFolder(_ folder: Folder, from: Container, to: Container, targetIndex: Int?, completion: @escaping (Result<Void, Error>) -> Void) {
+		Task { @MainActor in
+			do {
+				try await delegate.moveFolder(folder: folder, sourceContainer: from, destinationContainer: to, targetIndex: targetIndex)
+				completion(.success(()))
+			} catch {
+				completion(.failure(error))
+			}
+		}
+	}
+
 	public func renameFeed(_ feed: Feed, name: String) async throws {
 		try await delegate.renameFeed(with: feed, to: name)
 	}
@@ -738,10 +778,24 @@ public enum FetchType {
 		}
 	}
 
-	func addFolderToTree(_ folder: Folder) {
-		folders!.insert(folder)
+	public func addFolderToTree(_ folder: Folder, at index: Int?) {
+		if let index {
+			folders!.insert(folder, at: index)
+		} else {
+			folders!.insert(folder)
+		}
+		folder.parent = self
 		postChildrenDidChangeNotification()
 		structureDidChange()
+	}
+
+	/// Reorder a folder that already lives directly under this account
+	/// to a new index within this account's own folder order. Not for
+	/// moving a folder between different containers -- see
+	/// `moveFolder(_:from:to:targetIndex:completion:)` for that.
+	func reorderFolder(_ folder: Folder, toIndex index: Int) {
+		folders!.remove(folder)
+		addFolderToTree(folder, at: index)
 	}
 
 	public func updateUnreadCounts(feeds: Set<Feed>) {
@@ -1298,7 +1352,7 @@ public enum FetchType {
 	}
 
 	/// Remove the folder from this account. Does not call delegate.
-	func removeFolderFromTree(_ folder: Folder) {
+	public func removeFolderFromTree(_ folder: Folder) {
 		folders?.remove(folder)
 		structureDidChange()
 		postChildrenDidChangeNotification()
@@ -1766,7 +1820,7 @@ extension Account: OPMLRepresentable {
 		for feed in topLevelFeeds {
 			s += feed.OPMLString(indentLevel: indentLevel + 1, allowCustomAttributes: allowCustomAttributes)
 		}
-		for folder in folders!.sorted() {
+		for folder in folders! {
 			s += folder.OPMLString(indentLevel: indentLevel + 1, allowCustomAttributes: allowCustomAttributes)
 		}
 		return s
