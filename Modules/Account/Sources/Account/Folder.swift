@@ -312,5 +312,3 @@ extension Folder: OPMLRepresentable {
 		return s
 	}
 }
-
-
