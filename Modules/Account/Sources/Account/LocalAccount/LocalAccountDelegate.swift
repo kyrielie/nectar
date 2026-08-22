@@ -273,6 +273,27 @@ public extension Notification.Name {
 		destinationContainer.addFeedToTreeAtTopLevel(feed, at: targetIndex)
 	}
 
+	@MainActor func moveFolder(folder: Folder, sourceContainer: Container, destinationContainer: Container, targetIndex: Int?) async throws {
+		// Depth cap: reject a move that would push the folder's deepest
+		// descendant past 3 levels. destinationContainer's own depth
+		// (0 for an account, pathNames.count for a folder) plus 1 (the
+		// folder being dropped in) plus however many levels the dragged
+		// folder's own subfolders extend must not exceed 3.
+		let destinationDepth = (destinationContainer as? Folder)?.pathNames.count ?? 0
+		let resultingDepth = destinationDepth + 1 + folder.maxDescendantDepth
+		guard resultingDepth <= 3 else {
+			throw AccountError.invalidParameter
+		}
+
+		if sourceContainer === destinationContainer {
+			sourceContainer.removeFolderFromTree(folder)
+			sourceContainer.addFolderToTree(folder, at: targetIndex)
+			return
+		}
+		sourceContainer.removeFolderFromTree(folder)
+		destinationContainer.addFolderToTree(folder, at: targetIndex)
+	}
+
 	@MainActor func addFeed(feed: Feed, container: Container) async throws {
 		container.addFeedToTreeAtTopLevel(feed)
 	}
@@ -296,11 +317,19 @@ public extension Notification.Name {
 	}
 
 	@MainActor func removeFolder(with folder: Folder) async throws {
-		account?.removeFolderFromTree(folder)
+		// Use the folder's actual parent (another Folder if nested, the
+		// Account if top-level) rather than always the account directly
+		// -- with nesting, a folder's parent isn't necessarily the
+		// account, and removing from the wrong container would silently
+		// disconnect it from its real position in the tree.
+		(folder.parent ?? account)?.removeFolderFromTree(folder)
 	}
 
 	@MainActor func restoreFolder(folder: Folder) async throws {
-		account?.addFolderToTree(folder)
+		// Mirrors removeFolder(with:) above: restore to the folder's own
+		// recorded parent so undo puts a nested folder back where it
+		// actually was, not at the account's top level.
+		(folder.parent ?? account)?.addFolderToTree(folder)
 	}
 
 	@MainActor func markArticles(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async throws {

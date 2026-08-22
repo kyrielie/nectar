@@ -381,7 +381,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 			configuration.topSeparatorVisibility = indexPath.row == 0 ? .hidden : .visible
 
 			if let cell = self.collectionView.cellForItem(at: indexPath) as? MainFeedCollectionViewCell {
-				if cell.indentationLevel == 1 {
+				if cell.indentationLevel > 0 {
 					configuration.topSeparatorInsets = NSDirectionalEdgeInsets(top: 0, leading: indentedCellLeadingOffSet, bottom: 0, trailing: 0)
 				} else {
 					configuration.topSeparatorInsets = NSDirectionalEdgeInsets(top: 0, leading: standardCellLeadingOffSet, bottom: 0, trailing: 0)
@@ -884,10 +884,11 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 	/// Configure feed cell.
 	func configure(_ cell: MainFeedCollectionViewCell, sidebarItemNode: SidebarItemNode) {
 		let node = sidebarItemNode.node
-		var indentationLevel = 0
-		if node.parent?.representedObject is Folder {
-			indentationLevel = 1
-		}
+		// A feed's indentation matches its parent folder's own nesting
+		// depth (Folder.pathNames.count -- 1 for a top-level folder, 2
+		// for a folder nested one level deep, etc). A feed directly
+		// under the account (no parent folder) is indentation 0.
+		let indentationLevel = (node.parent?.representedObject as? Folder)?.pathNames.count ?? 0
 
 		if let sidebarItem = node.representedObject as? SidebarItem {
 			cell.feedTitle.text = sidebarItem.nameForDisplay
@@ -904,6 +905,10 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		if let folder = node.representedObject as? Folder {
 			cell.folderTitle.text = folder.nameForDisplay
 			cell.unreadCount = folder.unreadCount
+			// A folder's own indentation is one less than its pathNames
+			// depth (pathNames includes the folder itself): 0 for a
+			// top-level folder, 1 for a folder nested one level deep.
+			cell.indentationLevel = folder.pathNames.count - 1
 			configureIcon(cell, sidebarItem: folder)
 		}
 

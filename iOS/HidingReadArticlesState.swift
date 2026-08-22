@@ -12,7 +12,7 @@ import Account
 @MainActor final class HidingReadArticlesState {
 	private var smartFeedsHidingReadArticles = Set<String>()
 	private var feedsHidingReadArticles = [String: Set<String>]() // accountID: Set<feed.feedID>
-	private var foldersShowingReadArticles = [String: Set<String>]() // accountID: Set<folder.nameForDisplay>
+	private var foldersShowingReadArticles = [String: Set<[String]>]() // accountID: Set<folder.pathNames>
 
 	func copy(from stateRestorationInfo: StateRestorationInfo) {
 		smartFeedsHidingReadArticles = stateRestorationInfo.smartFeedsHidingReadArticles
@@ -53,11 +53,11 @@ import Account
 			}
 			return isHidingReadArticles
 
-		case .folder(let accountID, let folderName):
+		case .folder(let accountID, let path):
 			// Folders hide read articles by default, so we check if not showing read articles.
 			var isHidingReadArticles = true
-			if let folderNames = foldersShowingReadArticles[accountID] {
-				isHidingReadArticles = !folderNames.contains(folderName)
+			if let paths = foldersShowingReadArticles[accountID] {
+				isHidingReadArticles = !paths.contains(path)
 			}
 			return isHidingReadArticles
 		}
@@ -99,16 +99,16 @@ private extension HidingReadArticlesState {
 			}
 			saveFeedsHidingReadArticles()
 
-		case .folder(let accountID, let folderName):
+		case .folder(let accountID, let path):
 			// Folders hide read articles by default, so we store the folder
 			// only if it's showing read articles. It's the opposite of
 			// feedsHidingReadArticles.
 			if hiding {
-				foldersShowingReadArticles[accountID]?.remove(folderName)
+				foldersShowingReadArticles[accountID]?.remove(path)
 			} else {
-				var folderNames = foldersShowingReadArticles[accountID] ?? Set<String>()
-				folderNames.insert(folderName)
-				foldersShowingReadArticles[accountID] = folderNames
+				var paths = foldersShowingReadArticles[accountID] ?? Set<[String]>()
+				paths.insert(path)
+				foldersShowingReadArticles[accountID] = paths
 			}
 			saveFoldersShowingReadArticles()
 		}
@@ -123,7 +123,7 @@ private extension HidingReadArticlesState {
 				d[accountID] = nil
 				continue
 			}
-			d[accountID] = d[accountID]?.filter { account.existingFolder(withDisplayName: $0) != nil }
+			d[accountID] = d[accountID]?.filter { account.existingFolder(withPath: $0) != nil }
 		}
 
 		AppDefaults.shared.foldersShowingReadArticles = d

@@ -15,7 +15,19 @@ import Foundation
 public enum ContainerIdentifier: Hashable, Equatable, Sendable {
 	case smartFeedController
 	case account(String) // accountID
-	case folder(String, String) // accountID, folderName
+	case folder(String, [String]) // accountID, path (ancestor names, immediate folder last)
+
+	/// `userInfo` (and the `Encodable`/`Decodable` conformances below)
+	/// ultimately round-trip through storage that only holds `String`
+	/// values (`UserDefaults`, via `[String: String]`/`[[String: String]]`
+	/// casts elsewhere in the app) -- so a folder's path array is encoded
+	/// as a single string, joined with `pathSeparator`, rather than
+	/// stored as a nested array. The key is `folderPath` (not the old
+	/// `folderName`) specifically so old-format entries -- which have no
+	/// `folderPath` key at all -- fail to parse via the `!path.isEmpty`
+	/// guard below instead of being misread, with no separate migration
+	/// step required.
+	private static let pathSeparator = "\u{1}"
 
 	public var userInfo: [AnyHashable: AnyHashable] {
 		switch self {
@@ -28,11 +40,11 @@ public enum ContainerIdentifier: Hashable, Equatable, Sendable {
 				"type": "account",
 				"accountID": accountID
 			]
-		case .folder(let accountID, let folderName):
+		case .folder(let accountID, let path):
 			return [
 				"type": "folder",
 				"accountID": accountID,
-				"folderName": folderName
+				"folderPath": path.joined(separator: ContainerIdentifier.pathSeparator)
 			]
 		}
 	}
@@ -47,8 +59,11 @@ public enum ContainerIdentifier: Hashable, Equatable, Sendable {
 			guard let accountID = userInfo["accountID"] as? String else { return nil }
 			self = ContainerIdentifier.account(accountID)
 		case "folder":
-			guard let accountID = userInfo["accountID"] as? String, let folderName = userInfo["folderName"] as? String else { return nil }
-			self = ContainerIdentifier.folder(accountID, folderName)
+			guard let accountID = userInfo["accountID"] as? String,
+				  let folderPath = userInfo["folderPath"] as? String else { return nil }
+			let path = folderPath.components(separatedBy: ContainerIdentifier.pathSeparator)
+			guard !path.isEmpty else { return nil }
+			self = ContainerIdentifier.folder(accountID, path)
 		default:
 			return nil
 		}
@@ -60,7 +75,7 @@ extension ContainerIdentifier: Encodable {
 	enum CodingKeys: CodingKey {
 		case type
 		case accountID
-		case folderName
+		case folderPath
 	}
 
 	public func encode(to encoder: Encoder) throws {
@@ -71,10 +86,10 @@ extension ContainerIdentifier: Encodable {
 		case .account(let accountID):
 			try container.encode("account", forKey: .type)
 			try container.encode(accountID, forKey: .accountID)
-		case .folder(let accountID, let folderName):
+		case .folder(let accountID, let path):
 			try container.encode("folder", forKey: .type)
 			try container.encode(accountID, forKey: .accountID)
-			try container.encode(folderName, forKey: .folderName)
+			try container.encode(path, forKey: .folderPath)
 		}
 	}
 }
@@ -93,8 +108,8 @@ extension ContainerIdentifier: Decodable {
 			self = .account(accountID)
 		default:
 			let accountID =  try container.decode(String.self, forKey: .accountID)
-			let folderName =  try container.decode(String.self, forKey: .folderName)
-			self = .folder(accountID, folderName)
+			let path =  try container.decode([String].self, forKey: .folderPath)
+			self = .folder(accountID, path)
 		}
 	}
 }

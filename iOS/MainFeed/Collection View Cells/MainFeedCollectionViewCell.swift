@@ -42,18 +42,16 @@ final class MainFeedCollectionViewCell: UICollectionViewCell {
 		}
 	}
 
-	/// If the feed is contained in a folder, the indentation level is 1
-	/// and the cell's favicon leading constrain is increased. Otherwise,
-	/// it has the standard leading constraint.
+	/// A feed's indentation level is its folder nesting depth: 0 for a
+	/// top-level feed, 1 for a feed directly in a folder, 2 for a feed
+	/// in a folder nested one level deep, and so on up to the app's
+	/// depth-3 folder-nesting cap. Each level adds 16pt to the favicon's
+	/// leading inset.
 	///
 	/// On the storyboard, no leading constraint is set.
 	var indentationLevel: Int = 0 {
 		didSet {
-			if indentationLevel == 1 {
-				faviconLeadingConstraint?.constant = 32
-			} else {
-				faviconLeadingConstraint?.constant = 16
-			}
+			faviconLeadingConstraint?.constant = CGFloat(16 + 16 * max(indentationLevel, 0))
 		}
 	}
 

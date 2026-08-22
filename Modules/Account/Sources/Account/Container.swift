@@ -17,7 +17,7 @@ extension Notification.Name {
 @MainActor public protocol Container: AnyObject, ContainerIdentifiable {
 	var account: Account? { get }
 	var topLevelFeeds: OrderedSet<Feed> { get set }
-	var folders: Set<Folder>? { get set }
+	var folders: OrderedSet<Folder>? { get set }
 	var externalID: String? { get set }
 
 	func hasAtLeastOneFeed() -> Bool
@@ -39,6 +39,10 @@ extension Notification.Name {
 	func existingFeed(withExternalID externalID: String) -> Feed?
 	@MainActor func existingFolder(with name: String) -> Folder?
 	func existingFolder(withID: Int) -> Folder?
+	func existingFolder(withPath path: [String]) -> Folder?
+
+	func addFolderToTree(_ folder: Folder, at index: Int?)
+	func removeFolderFromTree(_ folder: Folder)
 
 	func postChildrenDidChangeNotification()
 }
@@ -159,6 +163,49 @@ extension Notification.Name {
 			}
 		}
 		return nil
+	}
+
+	/// Path-based folder lookup: `path` is an ordered list of folder
+	/// names, ancestor-first, ending with the folder being sought.
+	/// Unlike `existingFolder(with:)`, this resolves a specific folder
+	/// even when multiple folders share a name via different parents.
+	func existingFolder(withPath path: [String]) -> Folder? {
+		guard let first = path.first else {
+			return nil
+		}
+		guard let folder = folders?.first(where: { $0.nameForDisplay == first }) else {
+			return nil
+		}
+		let rest = Array(path.dropFirst())
+		if rest.isEmpty {
+			return folder
+		}
+		return folder.existingFolder(withPath: rest)
+	}
+
+	func addFolderToTree(_ folder: Folder) {
+		addFolderToTree(folder, at: nil)
+	}
+
+	/// Find or create a direct child folder named `name`. Used by both
+	/// `ensureFolder(withFolderNames:)` (Account) and OPML import
+	/// (`Account.addOPMLItems`) to build/extend a folder chain one
+	/// level at a time, on whichever `Container` (`Account` or
+	/// `Folder`) the chain has reached so far.
+	@discardableResult
+	func ensureChildFolder(named name: String) -> Folder? {
+		if name.isEmpty {
+			return nil
+		}
+		if let existing = folders?.first(where: { $0.nameForDisplay == name }) {
+			return existing
+		}
+		guard let account = self.account else {
+			return nil
+		}
+		let folder = Folder(account: account, name: name)
+		addFolderToTree(folder)
+		return folder
 	}
 
 	func postChildrenDidChangeNotification() {
