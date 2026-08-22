@@ -186,10 +186,20 @@ not just whichever bar happened to build its items last.
   drift from the real reader's order the way the two separate copies
   risked before persisted ordering existed. When that bar's overflow
   switch (`AppDefaults.isToolbarOverflowMenuEnabled(on:)`) is on and at
-  least one function is overflow-flagged there, `configure(bar:)`
-  appends a single target-less command-glyph (⌘) item *after* the
-  per-function icon list — mirroring `ArticleViewController`'s own
-  additive overflow rendering.
+  least one function is overflow-flagged there, `configure(bar:)` adds a
+  single target-less command-glyph (⌘) item alongside the per-function
+  icon list — mirroring `ArticleViewController`'s own additive overflow
+  rendering. On `.bottom` it's appended *after* the icon list, same as
+  `ArticleViewController.toolbarItems(for:overflowItem:)`. On `.top` it's
+  *inserted at the front* of the array instead, because
+  `UINavigationItem.rightBarButtonItems` renders index 0 closest to the
+  trailing screen edge and each later element further left — the
+  opposite of `UIToolbar.toolbarItems`, which lays its array out
+  left-to-right as written. Appending on both bars, as this used to do,
+  therefore put the overflow button screen-rightmost on `.bottom` but
+  screen-leftmost of the button cluster on `.top`; inserting at index 0
+  on `.top` only is what makes it screen-rightmost on both, matching
+  `ArticleViewController`'s identical per-bar branch.
 - **Functions (1)**: exactly one `ToolbarFunctionCell` per
   `ToolbarFunction.allCases` (13 rows), in this bar's persisted display
   order (`AppDefaults.toolbarFunctionOrder(for:)`), configured via

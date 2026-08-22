@@ -118,8 +118,8 @@ import Testing
 		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.addFeedAccountID))
 	}
 
-	@Test func addFeedFolderNameIsExcluded() {
-		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.addFeedFolderName))
+	@Test func addFeedFolderPathIsExcluded() {
+		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.addFeedFolderPath))
 	}
 
 	@Test func addFolderAccountIDIsExcluded() {
@@ -160,7 +160,7 @@ import Testing
 			AppDefaults.Key.splitViewPreferredDisplayMode,
 			AppDefaults.Key.articleFullscreenAvailable,
 			AppDefaults.Key.addFeedAccountID,
-			AppDefaults.Key.addFeedFolderName,
+			AppDefaults.Key.addFeedFolderPath,
 			AppDefaults.Key.addFolderAccountID
 		]
 

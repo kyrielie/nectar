@@ -198,13 +198,19 @@ extension AO3SearchResultsFetcher {
 	/// Falls back to the plain anonymous `fetch(url:feedURL:)` above --
 	/// with its own retry/backoff/Cloudflare handling, unchanged -- only
 	/// on an authentication-shaped failure: the authenticated attempt
-	/// comes back `.registrationRequired` (session rejected/expired) or
-	/// throws (network error). A `.rateLimited`/Cloudflare-challenge
-	/// result from the authenticated attempt is not a login problem and
-	/// wouldn't be fixed by falling back anonymously, so those cases
-	/// return directly instead. If no session is stored at all
-	/// (`AO3SessionStore.isSignedIn == false`), behavior is unchanged:
-	/// straight to the anonymous path, no authenticated attempt at all.
+	/// comes back `.registrationRequired` (session rejected/expired), a
+	/// non-OK/empty response (folds in a 429 from this attempt -- unlike
+	/// the anonymous path, `AO3AuthenticatedFetcher` has no cooldown
+	/// tracking of its own, so a rate limit here is treated as a
+	/// transient hiccup worth falling back on, same as
+	/// `AO3ChapterFetcher.attemptAuthenticated`'s identical fold), or
+	/// throws (network error). A Cloudflare challenge detected on the
+	/// authenticated attempt's HTML *is* returned directly as
+	/// `.cloudflareChallenge` rather than falling back -- signing in
+	/// again anonymously wouldn't clear a Cloudflare wall. If no session
+	/// is stored at all (`AO3SessionStore.isSignedIn == false`), behavior
+	/// is unchanged: straight to the anonymous path, no authenticated
+	/// attempt at all.
 	///
 	/// Preserves the existing `.notSignedIn` translation, but scoped by
 	/// `isAlwaysAuthenticatedListing` (the caller already knows this from
@@ -252,6 +258,16 @@ extension AO3SearchResultsFetcher {
 						await logFallback("HTTP \(response.statusCode)")
 						return try await fetch(url: url, feedURL: feedURL)
 					}
+					// A signed-in user's *first* attempt goes through this
+					// authenticated branch, so it needs its own Cloudflare
+					// check -- same as the anonymous fetch(url:feedURL:)
+					// below already does -- or a challenge page here gets
+					// handed straight to AO3SearchResultsExtractor.extract,
+					// which has no Cloudflare case of its own and would
+					// silently misclassify it (most likely as .noResults).
+					if isCloudflareChallenge(html) {
+						return .cloudflareChallenge(challengedURL: url)
+					}
 					switch AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL) {
 					case .success(let items, let hasNextPage, let pageTitle, let totalPages):
 						return .success(items, hasNextPage: hasNextPage, pageTitle: pageTitle, totalPages: totalPages)
@@ -259,21 +275,26 @@ extension AO3SearchResultsFetcher {
 						return .noResults(pageTitle: pageTitle, totalPages: totalPages)
 					case .registrationRequired:
 						// The stored session itself is what's rejected --
-						// distinct from never having signed in at all. Not
-						// cleared here -- see the doc comment above;
-						// AO3ChapterFetcher's own call site owns that
-						// decision for the single-work-page case, and a
-						// listing-page fallback duplicating it here could
-						// race a concurrent chapter-fetch retry against the
-						// same store. Falls back to the anonymous path,
-						// which for an always-authenticated listing type
-						// will itself come back .registrationRequired --
-						// folded into .notSignedIn just below (matches the
-						// previous anonymous-then-authenticated shape's
-						// identical fold), since there is no separate UI
-						// for "your AO3 session expired, sign in again" on
-						// this path. For a general listing page, the plain
-						// .registrationRequired is returned as-is instead.
+						// distinct from never having signed in at all.
+						// Cleared here: AO3SessionStore.clearSession() is
+						// just a Keychain SecItemDelete, which is harmless
+						// to call redundantly or concurrently (there's no
+						// actual race with a concurrent chapter-fetch
+						// retry against the same store), so there's no
+						// reason to leave a known-expired session in place
+						// and pay the doomed authenticated attempt on
+						// every listing fetch until the person happens to
+						// open a chapter. Falls back to the anonymous
+						// path, which for an always-authenticated listing
+						// type will itself come back .registrationRequired
+						// -- folded into .notSignedIn just below (matches
+						// the previous anonymous-then-authenticated
+						// shape's identical fold), since there is no
+						// separate UI for "your AO3 session expired, sign
+						// in again" on this path. For a general listing
+						// page, the plain .registrationRequired is
+						// returned as-is instead.
+						AO3SessionStore.clearSession()
 						await logFallback("session rejected")
 						let anonymousOutcome = try await fetch(url: url, feedURL: feedURL)
 						guard isAlwaysAuthenticatedListing, case .registrationRequired = anonymousOutcome else {
