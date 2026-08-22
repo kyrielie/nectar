@@ -31,14 +31,20 @@ and every call site that touches `topLevelFeeds` are already
 `Account.topLevelFeeds`/`Folder.topLevelFeeds`) changed from `Set<Feed>`
 to `OrderedSet<Feed>`. Because `OrderedSet` implements
 `insert`/`contains`/`formUnion`/`subtract`/`Sequence`/`Collection`, most
-call sites were unaffected. Two call sites needed real changes beyond the
-type swap:
+call sites were unaffected. One call site needed a real change beyond
+the type swap:
 
-- `Folder.flattenedFeeds()` returned `topLevelFeeds` directly as its
-  `Set<Feed>` result; now wraps it as `Set(topLevelFeeds)`.
 - `Folder.replaceTopLevelFeeds(_:)`'s parameter type changed to
   `OrderedSet<Feed>`. It has no callers anywhere in the tree today, so
   this was a signature-only change.
+
+`Container.folders` (and both conformers' backing storage) later also
+changed from `Set<Folder>?` to `OrderedSet<Folder>?`, as part of nested
+folders — see `docs/nested-folders.md`, which also covers why
+`Folder.flattenedFeeds()`'s override was removed entirely rather than
+updated in place: the `Container` protocol extension's default (which
+now recurses into subfolders) became the correct implementation once
+folders can nest.
 
 ## OPML order fix
 
@@ -49,8 +55,9 @@ a reorder would appear to work in-session and then silently revert to
 alphabetical on next launch, since OPML is the persistence layer and
 load order comes from OPML document order. Both now do a plain
 `for feed in topLevelFeeds` instead, writing the container's own order.
-`folders!.sorted()` in `Account.OPMLString` is unchanged — folder order
-is out of scope (see below).
+`Account.OPMLString`'s `folders!.sorted()` was fixed the same way as
+part of folder reordering (see "Folder order" below) — it's no longer
+alphabetical either.
 
 ## The reorder operation
 
@@ -60,10 +67,10 @@ is out of scope (see below).
 one combined feeds+folders array and alphabetize the whole thing via
 `sortedAlphabeticallyWithFoldersAtEnd()` (folders forced last regardless
 of name, feeds alphabetized among themselves). It now splits the built
-node list into a feed-representing subsequence, left in the container's
-own (manually-ordered) order, and a folder-representing subsequence,
-still sorted alphabetically via `sortedAlphabetically()`, then
-concatenates feeds + sorted folders. This preserves the invariant that
+node list into a feed-representing subsequence and a folder-representing
+subsequence, **both** left in the container's own (manually-ordered)
+order — folders are no longer alphabetized, see "Folder order" below —
+then concatenates feeds + folders. This preserves the invariant that
 every feed node precedes every folder node within one container's own
 `childNodes` — depended on by the drop-handler's index math below.
 `TreeController.rebuildChildNodes` trusts the delegate's order completely
@@ -112,13 +119,19 @@ return that silently no-op'd same-container drags (the actual reorder
 gesture). That guard is removed; a same-container drop with a
 `targetIndex` is now treated as an ordinary reorder.
 
-## Folder order is out of scope
+## Folder order
 
-Folders themselves (`Account.folders`, `Set<Folder>`) are not reorderable
-by this feature — `Folder.sorted()` (alphabetical) is unchanged and still
-used in both `Account.OPMLString`'s `folders!.sorted()` and
-`SidebarTreeControllerDelegate`'s folder-subsequence sort described
-above. This was a deliberate v1 scope decision, not an oversight.
+Folders are now reorderable the same way feeds are — see
+`docs/nested-folders.md` for the full mechanism (`Account`/
+`Folder.addFolderToTree(_:at:)`, `Account.reorderFolder(_:toIndex:)`,
+`AccountDelegate.moveFolder`, and the drop handler's folder-drag branch).
+This was originally a deliberate v1 scope decision to ship feed
+reordering alone; folder reordering (and nesting) followed as a
+subsequent piece of work, at which point `Container.folders` also
+switched from `Set<Folder>` to `OrderedSet<Folder>` (see above) and both
+`Account.OPMLString`'s `folders!.sorted()` and
+`SidebarTreeControllerDelegate`'s folder-subsequence sort (described
+above) stopped alphabetizing.
 
 ## Upgrade path for existing users
 

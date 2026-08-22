@@ -21,6 +21,20 @@ class MainFeedCollectionViewFolderCell: UICollectionViewCell {
 
 	var delegate: MainFeedCollectionViewFolderCellDelegate?
 
+	private var faviconLeadingConstraint: NSLayoutConstraint?
+
+	/// A folder's indentation level is its own nesting depth: 0 for a
+	/// top-level folder, 1 for a folder nested inside another folder,
+	/// and so on up to the app's depth-3 folder-nesting cap. Mirrors
+	/// MainFeedCollectionViewCell's own indentationLevel/formula.
+	///
+	/// On the storyboard, no leading constraint is set.
+	var indentationLevel: Int = 0 {
+		didSet {
+			faviconLeadingConstraint?.constant = CGFloat(16 + 16 * max(indentationLevel, 0))
+		}
+	}
+
 	private var _unreadCount: Int = 0
 	var unreadCount: Int {
 		get {
@@ -61,6 +75,8 @@ class MainFeedCollectionViewFolderCell: UICollectionViewCell {
 			faviconView.isAccessibilityElement = false
 			disclosureButton.isAccessibilityElement = false
 			disclosureButton.addInteraction(UIPointerInteraction())
+			faviconLeadingConstraint = faviconView.leadingAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.leadingAnchor)
+			faviconLeadingConstraint?.isActive = true
 		}
 	}
 

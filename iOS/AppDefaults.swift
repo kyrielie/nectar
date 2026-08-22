@@ -894,6 +894,13 @@ final class AppDefaults: Sendable {
 	static let defaultThemeName = "Default"
 	fileprivate static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AppDefaults")
 
+	/// Separator used when persisting a folder path (`[String]`) as a
+	/// single string in `UserDefaults`-backed storage that only holds
+	/// flat string/array-of-string values -- see `foldersShowingReadArticles`
+	/// and `expandedContainers`. Matches `ContainerIdentifier`'s and
+	/// `SidebarItemIdentifier`'s own path-separator encoding.
+	fileprivate static let folderPathSeparator = "\u{1}"
+
 	private init() {}
 
 	nonisolated(unsafe) static let store: UserDefaults = .standard
@@ -1047,7 +1054,7 @@ final class AppDefaults: Sendable {
 		static let articleThemeOverrides = "articleThemeOverrides"
 		static let lastRefresh = "lastRefresh"
 		static let addFeedAccountID = "addFeedAccountID"
-		static let addFeedFolderName = "addFeedFolderName"
+		static let addFeedFolderPath = "addFeedFolderPath"
 		static let addFolderAccountID = "addFolderAccountID"
 		static let useSystemBrowser = "useSystemBrowser"
 		static let currentThemeName = "currentThemeName"
@@ -1110,7 +1117,7 @@ final class AppDefaults: Sendable {
 	///   fullscreen even possible on this device), not a person-set
 	///   preference -- `articleFullscreenEnabled`, the actual toggle, is
 	///   included below.
-	/// - `addFeedAccountID`, `addFeedFolderName`, `addFolderAccountID`:
+	/// - `addFeedAccountID`, `addFeedFolderPath`, `addFolderAccountID`:
 	///   ephemeral last-used-account/folder state for the "Add Feed"
 	///   sheet, not something a person thinks of as a setting to back up.
 	static let backupEligibleKeys: [String] = [
@@ -1221,12 +1228,12 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	var addFeedFolderName: String? {
+	var addFeedFolderPath: [String]? {
 		get {
-			return AppDefaults.string(for: Key.addFeedFolderName)
+			return UserDefaults.standard.array(forKey: Key.addFeedFolderPath) as? [String]
 		}
 		set {
-			AppDefaults.setString(for: Key.addFeedFolderName, newValue)
+			UserDefaults.standard.set(newValue, forKey: Key.addFeedFolderPath)
 		}
 	}
 
@@ -2131,15 +2138,15 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	var foldersShowingReadArticles: [String: Set<String>] { // Account id: Set<folder.nameForDisplay>
+	var foldersShowingReadArticles: [String: Set<[String]>] { // Account id: Set<folder.pathNames>
 		get {
 			guard let d = UserDefaults.standard.dictionary(forKey: Key.foldersShowingReadArticles) as? [String: [String]] else {
-				return [String: Set<String>]()
+				return [String: Set<[String]>]()
 			}
-			return d.mapValues { Set($0) }
+			return d.mapValues { Set($0.map { $0.components(separatedBy: AppDefaults.folderPathSeparator) }) }
 		}
 		set {
-			let d = newValue.mapValues { Array($0) }
+			let d = newValue.mapValues { $0.map { $0.joined(separator: AppDefaults.folderPathSeparator) } }
 			UserDefaults.standard.set(d, forKey: Key.foldersShowingReadArticles)
 		}
 	}
@@ -2465,7 +2472,7 @@ struct StateRestorationInfo {
 	let selectedSidebarItem: SidebarItemIdentifier?
 	let smartFeedsHidingReadArticles: Set<String>
 	let feedsHidingReadArticles: [String: Set<String>]
-	let foldersShowingReadArticles: [String: Set<String>]
+	let foldersShowingReadArticles: [String: Set<[String]>]
 	let selectedArticle: ArticleSpecifier?
 
 	init(hideReadFeeds: Bool,
@@ -2473,7 +2480,7 @@ struct StateRestorationInfo {
 	     selectedSidebarItem: SidebarItemIdentifier?,
 	     smartFeedsHidingReadArticles: Set<String>,
 	     feedsHidingReadArticles: [String: Set<String>],
-	     foldersShowingReadArticles: [String: Set<String>],
+	     foldersShowingReadArticles: [String: Set<[String]>],
 	     selectedArticle: ArticleSpecifier?) {
 		self.hideReadFeeds = hideReadFeeds
 		self.expandedContainers = expandedContainers

@@ -95,12 +95,13 @@ private extension SidebarTreeControllerDelegate {
 			}
 		}
 
-		// Feeds keep the container's own (manually-ordered) order; folders are
-		// still sorted alphabetically among themselves and always come after
-		// all feed nodes. This split preserves the feeds-before-folders
-		// invariant that the sidebar drop-handling code depends on.
+		// Both feeds and folders now keep the container's own
+		// (manually-ordered) order — folders no longer sort
+		// alphabetically among themselves. Feeds still come before all
+		// folder nodes, preserving the feeds-before-folders invariant
+		// that the sidebar drop-handling code depends on.
 		let feedNodes = updatedChildNodes.filter { $0.representedObject is Feed }
-		let folderNodes = updatedChildNodes.filter { $0.representedObject is Folder }.sortedAlphabetically()
+		let folderNodes = updatedChildNodes.filter { $0.representedObject is Folder }
 		return feedNodes + folderNodes
 	}
 

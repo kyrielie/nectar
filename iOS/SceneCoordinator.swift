@@ -2623,7 +2623,7 @@ private extension SceneCoordinator {
 				}
 			})
 
-		case .folder(let accountID, let folderName):
+		case .folder(let accountID, let path):
 			guard let accountNode = self.findAccountNode(accountID: accountID),
 				let account = accountNode.representedObject as? Account else {
 				return
@@ -2634,7 +2634,7 @@ private extension SceneCoordinator {
 			rebuildBackingStores(initialLoad: true, completion: {
 				self.treeControllerDelegate.resetFilterExceptions()
 
-				if let folderNode = self.findFolderNode(folderName: folderName, beginningAt: accountNode), let indexPath = self.indexPathFor(folderNode) {
+				if let folderNode = self.findFolderNode(path: path, beginningAt: accountNode), let indexPath = self.indexPathFor(folderNode) {
 					self.selectSidebarItem(indexPath: indexPath) {
 						self.mainFeedCollectionViewController.focus()
 					}
@@ -2726,8 +2726,8 @@ private extension SceneCoordinator {
 		return nil
 	}
 
-	func findFolderNode(folderName: String, beginningAt startingNode: Node) -> Node? {
-		if let node = startingNode.descendantNode(where: { ($0.representedObject as? Folder)?.nameForDisplay == folderName }) {
+	func findFolderNode(path: [String], beginningAt startingNode: Node) -> Node? {
+		if let node = startingNode.descendantNode(where: { ($0.representedObject as? Folder)?.pathNames == path }) {
 			return node
 		}
 		return nil

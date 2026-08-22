@@ -228,8 +228,8 @@ import ActivityLog
 		switch containerID {
 		case .account(let accountID):
 			return existingAccount(accountID: accountID)
-		case .folder(let accountID, let folderName):
-			return existingAccount(accountID: accountID)?.existingFolder(with: folderName)
+		case .folder(let accountID, let path):
+			return existingAccount(accountID: accountID)?.existingFolder(withPath: path)
 		default:
 			break
 		}
@@ -238,9 +238,9 @@ import ActivityLog
 
 	public func existingFeed(with sidebarItemID: SidebarItemIdentifier) -> SidebarItem? {
 		switch sidebarItemID {
-		case .folder(let accountID, let folderName):
+		case .folder(let accountID, let path):
 			if let account = existingAccount(accountID: accountID) {
-				return account.existingFolder(with: folderName)
+				return account.existingFolder(withPath: path)
 			}
 		case .feed(let accountID, let feedID):
 			if let account = existingAccount(accountID: accountID) {
