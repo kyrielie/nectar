@@ -1567,9 +1567,19 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	/// happen per-candidate rather than as an upfront query filter.
 	func deduplicateArticles(feedID: String, completion: @escaping @Sendable () -> Void) {
 		queue.runInDatabase { database in
+			// left join, not natural join: every article is expected to
+			// have a matching statuses row (see createStatusesIfNeeded),
+			// but this query is specifically a duplicate-*suppression*
+			// scan -- an inner join would silently drop any article
+			// lacking one from consideration entirely, which is exactly
+			// where a silent exclusion could let a real duplicate
+			// survive without anyone noticing. read/starred/loved/
+			// readingProgress read as nil/0 defaults below for a row
+			// with no statuses match, same as a freshly-inserted
+			// article with no explicit state would.
 			let sql = """
 			select articleID, bookKey, dateArrived, read, starred, loved, readingProgress
-			from articles natural join statuses
+			from articles left join statuses using (articleID)
 			where feedID = ? and bookKey is not null
 			order by dateArrived desc;
 			"""

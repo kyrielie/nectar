@@ -30,6 +30,11 @@ final class ToolbarPreviewCell: UICollectionViewListCell {
 
 	static let reuseIdentifier = "ToolbarPreviewCell"
 
+	// Shared by updateConfiguration's background and commonInit's content
+	// clip below, so the two can't drift apart the way a bare literal in
+	// each place risked.
+	private static let cornerRadius: CGFloat = 20
+
 	private let navigationBar: UINavigationBar = {
 		let bar = UINavigationBar()
 		bar.translatesAutoresizingMaskIntoConstraints = false
@@ -54,6 +59,13 @@ final class ToolbarPreviewCell: UICollectionViewListCell {
 	}
 
 	private func commonInit() {
+		// navigationBar/toolbar run edge-to-edge with contentView (no
+		// inset, unlike every other row in this screen), so without this
+		// clip their square corners poke past the rounded background
+		// updateConfiguration applies -- clipping contentView itself to
+		// the same radius masks them to match instead.
+		contentView.layer.cornerRadius = Self.cornerRadius
+		contentView.clipsToBounds = true
 		contentView.addSubview(navigationBar)
 		contentView.addSubview(toolbar)
 		NSLayoutConstraint.activate([
@@ -118,10 +130,16 @@ final class ToolbarPreviewCell: UICollectionViewListCell {
 		if defaults.isToolbarOverflowMenuEnabled(on: bar) {
 			let anyOverflow = displayOrder.contains { defaults.isToolbarFunctionInOverflow($0, on: bar) }
 			if anyOverflow {
-				if bar == .bottom, !items.isEmpty {
-					items.append(UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil))
+				let overflowIcon = UIBarButtonItem(image: Assets.Images.command, style: .plain, target: nil, action: nil)
+				switch bar {
+				case .top:
+					items.insert(overflowIcon, at: 0)
+				case .bottom:
+					if !items.isEmpty {
+						items.append(UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil))
+					}
+					items.append(overflowIcon)
 				}
-				items.append(UIBarButtonItem(image: Assets.Images.command, style: .plain, target: nil, action: nil))
 			}
 		}
 
@@ -147,7 +165,7 @@ final class ToolbarPreviewCell: UICollectionViewListCell {
 			backgroundConfig = UIBackgroundConfiguration.listGroupedCell().updated(for: state)
 		}
 		backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
-		backgroundConfig.cornerRadius = 20
+		backgroundConfig.cornerRadius = Self.cornerRadius
 		self.backgroundConfiguration = backgroundConfig
 	}
 }

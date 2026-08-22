@@ -34,6 +34,11 @@ extension MainFeedCollectionViewController: UICollectionViewDropDelegate {
 		}()
 
 		// Based on the drop we have to determine a node to start looking for a parent container.
+		// For a non-folder drop onto row > 0, destNode is the predecessor of the drop
+		// gap, not the gap itself -- isPredecessor records that distinction so the
+		// targetIndex computation below can turn "predecessor's index" into "the slot
+		// right after it" rather than reusing the predecessor's own index.
+		var isPredecessor = false
 		let destNode: Node? = {
 
 			if isFolderDrop {
@@ -42,6 +47,7 @@ extension MainFeedCollectionViewController: UICollectionViewDropDelegate {
 				if destIndexPath.row == 0 {
 					return dataSource.itemIdentifier(for: IndexPath(row: 0, section: destIndexPath.section))?.node
 				} else if destIndexPath.row > 0 {
+					isPredecessor = true
 					return dataSource.itemIdentifier(for: IndexPath(row: destIndexPath.row - 1, section: destIndexPath.section))?.node
 				} else {
 					return nil
@@ -72,8 +78,20 @@ extension MainFeedCollectionViewController: UICollectionViewDropDelegate {
 			// where position within the folder isn't implied by the gesture and the
 			// existing append-to-end behavior is correct.
 			let targetIndex: Int? = {
-				guard !isFolderDrop, let destNode, destNode.representedObject is Feed else { return nil }
-				return destNode.parent?.indexOfChild(destNode)
+				guard !isFolderDrop, let destNode, destNode.representedObject is Feed,
+					  let parent = destNode.parent, let destNodeIndex = parent.indexOfChild(destNode) else { return nil }
+				// destNode is the item just before the previewed gap (isPredecessor),
+				// so the gap itself is one slot after it -- except when row == 0,
+				// where destNode IS the gap (nothing precedes it).
+				let rawTargetIndex = isPredecessor ? destNodeIndex + 1 : destNodeIndex
+				// Removing the dragged feed from earlier in this same container
+				// shifts everything after it down by one before the insert runs,
+				// so the raw index must be pulled back by one to still land in
+				// the previewed gap.
+				if parent.representedObject as? Container === source, let sourceIndex = parent.indexOfChild(dragNode), sourceIndex < rawTargetIndex {
+					return rawTargetIndex - 1
+				}
+				return rawTargetIndex
 			}()
 
 			if source.account == destination.account {
@@ -100,8 +118,17 @@ extension MainFeedCollectionViewController: UICollectionViewDropDelegate {
 			}
 
 			let targetIndex: Int? = {
-				guard !isFolderDrop, let destNode, destNode.representedObject is Folder else { return nil }
-				return destNode.parent?.indexOfChild(destNode)
+				guard !isFolderDrop, let destNode, destNode.representedObject is Folder,
+					  let parent = destNode.parent, let destNodeIndex = parent.indexOfChild(destNode) else { return nil }
+				// See the equivalent comment in the Feed branch above: destNode is
+				// the predecessor of the previewed gap, so the gap is one slot
+				// after it, then pulled back by one if the dragged folder is being
+				// removed from earlier in this same container.
+				let rawTargetIndex = isPredecessor ? destNodeIndex + 1 : destNodeIndex
+				if parent.representedObject as? Container === source, let sourceIndex = parent.indexOfChild(dragNode), sourceIndex < rawTargetIndex {
+					return rawTargetIndex - 1
+				}
+				return rawTargetIndex
 			}()
 
 			moveFolderInAccount(folder: draggedFolder, sourceContainer: source, destinationContainer: destination, targetIndex: targetIndex)

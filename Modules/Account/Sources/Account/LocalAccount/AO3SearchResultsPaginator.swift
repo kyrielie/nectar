@@ -153,8 +153,20 @@ import RSParser
 			// once a session exists, matching the two add-time call
 			// sites above. Every other listing type, when signed out,
 			// keeps using the plain anonymous fetch, unchanged.
-			if LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(pageURL) || AO3SessionStore.isSignedIn {
-				fetchOutcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: pageURL, feedURL: feed.url, isAlwaysAuthenticatedListing: LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(pageURL))
+			//
+			// activityContext is deliberately left nil (unlike
+			// LocalAccountRefresher's call site): this file's own header
+			// comment explains fetchPage deliberately doesn't participate
+			// in any running ActivityLog entry the way a batch refresh
+			// does, so there's no in-flight activity for
+			// ActivityLog.updateProgress(owner:kind:) to find and update
+			// -- passing one through would silently no-op rather than do
+			// anything, the same reason LocalAccountDelegate.createFeed
+			// also passes nil. `account` is still needed below, for the
+			// actual article write on success.
+			let isAlwaysAuthenticatedListing = LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(pageURL)
+			if isAlwaysAuthenticatedListing || AO3SessionStore.isSignedIn {
+				fetchOutcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: pageURL, feedURL: feed.url, isAlwaysAuthenticatedListing: isAlwaysAuthenticatedListing)
 			} else {
 				fetchOutcome = try await AO3SearchResultsFetcher.fetch(url: pageURL, feedURL: feed.url)
 			}

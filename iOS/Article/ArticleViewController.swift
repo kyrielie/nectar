@@ -639,10 +639,19 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		if defaults.isToolbarOverflowMenuEnabled(on: bar) {
 			rebuildOverflowMenu(for: bar)
 			if overflowItem.menu != nil {
-				if bar == .bottom, !items.isEmpty {
-					items.append(flexibleSpaceBarButtonItem())
+				switch bar {
+				case .top:
+					// rightBarButtonItems renders index 0 closest to the
+					// trailing screen edge -- inserting at the front, not
+					// appending, is what puts the overflow button at the
+					// true rightmost position on this bar.
+					items.insert(overflowItem, at: 0)
+				case .bottom:
+					if !items.isEmpty {
+						items.append(flexibleSpaceBarButtonItem())
+					}
+					items.append(overflowItem)
 				}
-				items.append(overflowItem)
 			}
 		}
 

@@ -536,9 +536,19 @@ private extension AO3SeriesNavigator {
 	/// this function previously had no authenticated path at all. Falls
 	/// back to the existing anonymous `Downloader.shared` path only on an
 	/// authentication-shaped failure (a non-OK/empty authenticated
-	/// response, or a thrown network error) -- callers only ever see the
-	/// resulting HTML (or nil), so which path succeeded is logged here,
-	/// not surfaced through the return type.
+	/// response, a detected Cloudflare challenge, or a thrown network
+	/// error) -- callers only ever see the resulting HTML (or nil), so
+	/// which path succeeded is logged here, not surfaced through the
+	/// return type. Both the authenticated and anonymous branches check
+	/// for a Cloudflare interstitial (`AO3CloudflareChallenge`, same
+	/// marker list `AO3SearchResultsFetcher` uses) before handing HTML
+	/// back to a caller -- this function has no result type to represent
+	/// "challenged" separately (unlike `AO3SearchResultsFetchOutcome`),
+	/// so a detected challenge is treated as a failed attempt: the
+	/// authenticated branch falls back to anonymous, and the anonymous
+	/// branch returns nil rather than returning interstitial HTML as if
+	/// it were real series-listing content for
+	/// `AO3SeriesListingExtractor` to misparse.
 	static func fetchListingPage(ao3SeriesID: String, page: Int) async -> String? {
 		var urlString = "https://archiveofourown.org/series/\(ao3SeriesID)"
 		if page > 1 {
@@ -552,9 +562,14 @@ private extension AO3SeriesNavigator {
 			do {
 				if let (data, response) = try await AO3AuthenticatedFetcher.fetch(url) {
 					if response.statusIsOK, !data.isEmpty, let html = String(data: data, encoding: .utf8) {
-						return html
+						if AO3CloudflareChallenge.isChallengePage(html) {
+							ao3SeriesNavigatorLogger.info("AO3SeriesNavigator: fetchListingPage authenticated attempt hit a Cloudflare challenge for \(url.absoluteString, privacy: .public) -- retrying anonymously")
+						} else {
+							return html
+						}
+					} else {
+						ao3SeriesNavigatorLogger.info("AO3SeriesNavigator: fetchListingPage authenticated attempt got bad response for \(url.absoluteString, privacy: .public) -- retrying anonymously")
 					}
-					ao3SeriesNavigatorLogger.info("AO3SeriesNavigator: fetchListingPage authenticated attempt got bad response for \(url.absoluteString, privacy: .public) -- retrying anonymously")
 				}
 				// A nil result means the session was cleared between the
 				// isSignedIn check and the fetch (concurrent sign-out) --
@@ -572,10 +587,15 @@ private extension AO3SeriesNavigator {
 			return nil
 		}
 		guard let data = downloadResponse.data, !data.isEmpty,
-		      let response = downloadResponse.response, response.statusIsOK else {
+		      let response = downloadResponse.response, response.statusIsOK,
+		      let html = String(data: data, encoding: .utf8) else {
 			return nil
 		}
-		return String(data: data, encoding: .utf8)
+		guard !AO3CloudflareChallenge.isChallengePage(html) else {
+			ao3SeriesNavigatorLogger.info("AO3SeriesNavigator: fetchListingPage anonymous attempt hit a Cloudflare challenge for \(url.absoluteString, privacy: .public)")
+			return nil
+		}
+		return html
 	}
 
 	/// Bug 3b (cross-feed reuse): builds a `ParsedItem` for
