@@ -456,12 +456,13 @@ private extension LocalAccountDelegate {
 			// correct .notSignedIn surfaced when signed out. Every other
 			// listing type, when signed out, keeps using the plain
 			// anonymous fetch, unchanged.
-			let requiresSignIn = LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(url) || AO3SessionStore.isSignedIn
+			let isAlwaysAuthenticatedListing = LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(url)
+			let requiresSignIn = isAlwaysAuthenticatedListing || AO3SessionStore.isSignedIn
 
 			do {
 				let outcome: AO3SearchResultsFetchOutcome
 				if requiresSignIn {
-					outcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: url, feedURL: feed.url, isAlwaysAuthenticatedListing: LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(url))
+					outcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: url, feedURL: feed.url, isAlwaysAuthenticatedListing: isAlwaysAuthenticatedListing)
 				} else {
 					outcome = try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url)
 				}

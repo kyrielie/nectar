@@ -386,11 +386,19 @@ nonisolated extension AO3ChapterFetcher {
 					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Signed out of AO3 -- sign in again in Settings to read this work")
 					return
 				case .notFoundOnRetry:
-					if let account = AccountManager.shared.existingAccount(accountID: accountID) {
-						await account.setAO3ConfirmedMissingAsync(forArticleID: articleID)
-					}
-					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "No chapter content found (gated or removed work)")
-					return
+					// Per the shared authenticated-first/anonymous-fallback
+					// policy (docs/ao3-integration.md, "Authenticated-first
+					// fetch, anonymous fallback"), a .notFound from the
+					// authenticated attempt is treated the same as
+					// .registrationRequired: an unsampled restricted-page
+					// shape can't be told apart from a real 404 here, so
+					// this alone isn't a strong enough signal to confirm
+					// the work missing. Fall back to the anonymous path
+					// below -- only if *that* also comes back .notFound
+					// (dual confirmation) does ao3ConfirmedMissingAt get
+					// set, in the anonymous-path .notFound case further
+					// down.
+					activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 authenticated fetch found nothing -- retrying anonymously before confirming missing")
 				case .otherFailure(let retryMessage):
 					// Network-level failure or an unexpected extraction
 					// shape on the authenticated attempt -- not a login
@@ -402,8 +410,10 @@ nonisolated extension AO3ChapterFetcher {
 				case .notSignedIn:
 					// Unreachable here (isSignedIn was just checked), but
 					// treated the same as .otherFailure would be for
-					// exhaustiveness: fall through to the anonymous path.
-					break
+					// exhaustiveness: fall through to the anonymous path,
+					// logged the same way for symmetry with the other
+					// fallback branches rather than a silent break.
+					activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 authenticated fetch reported no session unexpectedly -- retrying anonymously")
 				}
 			}
 
@@ -580,14 +590,18 @@ nonisolated extension AO3ChapterFetcher {
 		/// `.registrationRequired` -- the session is expired or otherwise
 		/// invalid. Caller clears it.
 		case signedOut
-		/// The authenticated attempt itself came back `.notFound` -- the
-		/// strongest signal available that this is a confirmed deletion
-		/// rather than a transient failure, since a signed-in request with
-		/// full access still can't find the work. Kept distinct from
-		/// `.otherFailure` (network error, unexpected adult-content-gate
-		/// shape) specifically so the caller can set `ao3ConfirmedMissingAt`
-		/// only for this case, without pattern-matching on
-		/// `.otherFailure`'s message string.
+		/// The authenticated attempt itself came back `.notFound`. Per the
+		/// shared authenticated-first/anonymous-fallback policy
+		/// (docs/ao3-integration.md), this is treated the same as
+		/// `.registrationRequired`/network failure: not strong enough on
+		/// its own to confirm deletion, since an unsampled restricted-page
+		/// shape can't be told apart from a real 404 here. The caller
+		/// falls back to the anonymous path on this outcome, same as
+		/// `.otherFailure`; only if the anonymous attempt *also* comes
+		/// back `.notFound` (dual confirmation) does `ao3ConfirmedMissingAt`
+		/// get set. Kept distinct from `.otherFailure` only so the caller's
+		/// progress-log message can be specific, not because it triggers
+		/// different fallback behavior.
 		case notFoundOnRetry
 		/// The attempt reached AO3 but hit a different outcome
 		/// (`.adultContentGate`) or a network-level failure -- not a login
