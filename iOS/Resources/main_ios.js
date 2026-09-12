@@ -531,13 +531,15 @@ scrollToHeading = withEncodedArg(options => {
 	}
 });
 
-// In-article back/top/bottom navigation (nectar-fixes-plan-4.md, Option A).
-// scrollToWindowY is the counterpart WebViewController.scrollBack() calls to
-// restore a position pushed onto its scrollJumpHistory stack before a
-// scrollToHeading/scrollToAnnotation jump -- a plain absolute window.scrollTo,
-// since (unlike scrollToHeading/scrollToRect above) there's no element to
-// scroll into view, just a raw Y value round-tripped from a prior
-// window.scrollY read.
+// In-article scroll-back navigation. scrollToWindowY is the counterpart
+// WebViewController.scrollBack() calls to restore a position pushed onto
+// its scrollJumpHistory stack before a scrollToHeading/scrollToAnnotation
+// jump -- a plain absolute window.scrollTo, since (unlike scrollToHeading/
+// scrollToRect above) there's no element to scroll into view, just a raw Y
+// value round-tripped from a prior window.scrollY read. See
+// docs/reading-progress.md's "In-article jump history (scrollBack)"
+// section for the full scope decision (only explicit programmatic jumps
+// are tracked, not manual scrolling).
 scrollToWindowY = withEncodedArg(options => {
 	window.scrollTo({ top: options.y, behavior: 'instant' });
 });
