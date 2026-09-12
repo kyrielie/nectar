@@ -111,11 +111,22 @@ repainting.
 pushed from `.articles`'s Full Screen Reading row, grouping every setting
 that only does anything once you're actually in fullscreen reading mode:
 three bare (no header) sections — Gestures (enable full screen articles,
-back-swipe, paging-swipe, show article scrollbar), Top Toolbar (pushes
+back-swipe, paging-swipe, long-press context menu, show article
+scrollbar), Top Toolbar (pushes
 `ToolbarsCustomizerViewController`, below — the row is still keyed by a
 `TopToolbarRow` enum with a single `.toolbars` case, a naming leftover
 from when this section held two rows for two separate screens), and a
 third section holding Page Counter and Hide Notch in Full Screen.
+
+The Gestures section's Long-Press Context Menu switch
+(`AppDefaults.articleFullscreenContextMenuEnabled`, default on) controls
+whether `WebViewController.configureContextMenuInteraction()` attaches
+Nectar's own `UIContextMenuInteraction` (prev/next article, read/star/
+loved, next-unread, check-for-updates, share) while fullscreen, or leaves
+it detached so WKWebView's native long-press-to-select-text gesture is
+reachable instead -- the two are mutually exclusive on a long-press, so
+this is framed as a single on/off tradeoff rather than two separate
+settings.
 
 Hide Notch and Page Counter interact: `WebViewController` forces
 notch-hiding whenever Page Counter is anything other than Off, independent

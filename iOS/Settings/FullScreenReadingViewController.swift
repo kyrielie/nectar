@@ -21,17 +21,18 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 
 	/// Row order within .gestures, matching the storyboard scene's actual
 	/// cell order (showFullscreenArticlesSwitch, backSwipeEnabledSwitch,
-	/// pagingSwipeEnabledSwitch, then the Article Scrollbar row) -- only
-	/// articleScrollbarVisibility needs a case here, since the other
-	/// three rows are plain switches handled via valueChanged actions,
-	/// not didSelectRowAt.
+	/// pagingSwipeEnabledSwitch, contextMenuEnabledSwitch, then the Article
+	/// Scrollbar row) -- only articleScrollbarVisibility needs a case here,
+	/// since the other four rows are plain switches handled via
+	/// valueChanged actions, not didSelectRowAt.
 	private enum GesturesRow: Int {
-		case articleScrollbarVisibility = 3
+		case articleScrollbarVisibility = 4
 	}
 
 	@IBOutlet var showFullscreenArticlesSwitch: UISwitch!
 	@IBOutlet var backSwipeEnabledSwitch: UISwitch!
 	@IBOutlet var pagingSwipeEnabledSwitch: UISwitch!
+	@IBOutlet var contextMenuEnabledSwitch: UISwitch!
 	// Replaces the old showArticleScrollbarSwitch UISwitch: a detail-label
 	// push row to a 3-way picker (Off/Only Outside Full Screen/Always),
 	// same shape as pageCounterDisplayModeDetailLabel below -- see
@@ -56,6 +57,7 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		showFullscreenArticlesSwitch.isOn = AppDefaults.shared.articleFullscreenAvailable
 		backSwipeEnabledSwitch.isOn = AppDefaults.shared.articleBackSwipeEnabled
 		pagingSwipeEnabledSwitch.isOn = AppDefaults.shared.articlePagingSwipeEnabled
+		contextMenuEnabledSwitch.isOn = AppDefaults.shared.articleFullscreenContextMenuEnabled
 		updateArticleScrollbarVisibilityLabel()
 		updateToolbarsModeLabel()
 		updatePageCounterDisplayModeLabel()
@@ -225,6 +227,10 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		AppDefaults.shared.articlePagingSwipeEnabled = pagingSwipeEnabledSwitch.isOn
 	}
 
+	@IBAction func switchFullscreenContextMenuEnabled(_ sender: Any) {
+		AppDefaults.shared.articleFullscreenContextMenuEnabled = contextMenuEnabledSwitch.isOn
+	}
+
 	// updateHideNotchAvailability() already disables the switch whenever
 	// Page Counter forces it on, and a disabled UISwitch doesn't fire
 	// valueChanged, so no extra guard is needed here to avoid writing
@@ -250,7 +256,7 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 	private func applyAccentColorTinting() {
 		let liveTint = Assets.Colors.primaryAccent
 		for toggle in [showFullscreenArticlesSwitch, backSwipeEnabledSwitch, pagingSwipeEnabledSwitch,
-					   hideNotchInFullScreenSwitch] {
+					   contextMenuEnabledSwitch, hideNotchInFullScreenSwitch] {
 			toggle?.onTintColor = liveTint
 		}
 	}
