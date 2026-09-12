@@ -513,14 +513,31 @@ function tocNodes() {
 }
 
 getTableOfContents = withEncodedArg(options => {
-	const entries = tocNodes().map((h, tocIndex) => ({
+	const nodes = tocNodes();
+	const entries = nodes.map((h, tocIndex) => ({
 		tocIndex,
 		id: h.id,
 		text: h.textContent.trim(),
 		tagName: h.tagName.toLowerCase(),
 		isTocHeading: h.classList.contains('toc-heading')
 	}));
-	return toBase64(JSON.stringify(entries));
+	// currentTocIndex: the last heading whose top has already scrolled past
+	// the viewport's top edge -- i.e. the heading governing whatever's
+	// currently on screen. getBoundingClientRect() (viewport-relative) is
+	// used rather than offsetTop (offsetParent-relative), since offsetTop
+	// isn't reliably document-absolute for a heading nested inside any
+	// positioned ancestor. -1 (no highlight) if scrolled above the very
+	// first heading, e.g. still reading a preface/front matter. Computed
+	// fresh here rather than reusing a previously-reported windowScrollY,
+	// since this is a one-shot call and the freshest value is free.
+	let currentTocIndex = -1;
+	const scrollY = window.scrollY;
+	nodes.forEach((h, tocIndex) => {
+		if (h.getBoundingClientRect().top + scrollY <= scrollY) {
+			currentTocIndex = tocIndex;
+		}
+	});
+	return toBase64(JSON.stringify({ entries, currentTocIndex }));
 });
 
 scrollToHeading = withEncodedArg(options => {
