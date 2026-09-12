@@ -180,6 +180,14 @@ final class WebViewController: UIViewController {
 	// real position.
 	private var isAwaitingInitialScrollFetch = false
 
+	/// Session-only (not persisted -- doesn't need to survive relaunch) stack
+	/// of pre-jump windowScrollY values, pushed immediately before each
+	/// programmatic "scroll to X" call (scrollToHeading, scrollToAnnotation).
+	/// See scrollBack() below. Option A scope per nectar-fixes-plan-4.md: only
+	/// these explicit JS-bridge jumps push here -- large manual scroll deltas
+	/// are not detected as jumps (see docs/reading-progress.md).
+	private var scrollJumpHistory: [Double] = []
+
 	var windowScrollY = 0 {
 		didSet {
 			// Per-article persistence (Phase 2). The single-global AppDefaults
@@ -1099,6 +1107,7 @@ extension WebViewController {
 	/// scrollToHeading; no-op if the annotation's mark isn't in the
 	/// rendered DOM (e.g. orphaned).
 	func scrollToAnnotation(annotationID: String) {
+		scrollJumpHistory.append(Double(windowScrollY))
 		let escaped = annotationID.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
 		webView?.evaluateJavaScript("Annotations.scrollToAnnotation(\"\(escaped)\")") { _, error in
 			if let error {
@@ -2488,9 +2497,37 @@ extension WebViewController {
 	}
 
 	func scrollToHeading(tocIndex: Int) {
+		scrollJumpHistory.append(Double(windowScrollY))
 		guard let json = try? JSONEncoder().encode(["tocIndex": tocIndex]) else { return }
 		let encoded = json.base64EncodedString()
 		webView?.evaluateJavaScript("scrollToHeading(\"\(encoded)\")")
+	}
+
+	/// Pops the most recent pre-jump position pushed by scrollToHeading/
+	/// scrollToAnnotation and scrolls back to it. No-op if nothing's been
+	/// pushed (e.g. no jump has happened yet this session) -- callers
+	/// wiring this to a toolbar/overflow item should hide or disable it
+	/// based on scrollJumpHistory.isEmpty, matching how ArticleViewController
+	/// already handles other session-live-state functions like .prevNext
+	/// (see its overflowActions(for:) doc comment).
+	func scrollBack() {
+		guard let previousY = scrollJumpHistory.popLast() else { return }
+		let payload = ["y": previousY]
+		guard let json = try? JSONEncoder().encode(payload) else { return }
+		let encoded = json.base64EncodedString()
+		webView?.evaluateJavaScript("scrollToWindowY(\"\(encoded)\")")
+	}
+
+	var isScrollBackAvailable: Bool {
+		!scrollJumpHistory.isEmpty
+	}
+
+	func scrollToTop() {
+		webView?.evaluateJavaScript("window.scrollTo({ top: 0, behavior: 'instant' });")
+	}
+
+	func scrollToBottom() {
+		webView?.evaluateJavaScript("window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });")
 	}
 
 }
