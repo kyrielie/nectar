@@ -1086,13 +1086,13 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 
 	@objc func showTableOfContents(_ sender: Any) {
 		guard let webViewController = currentWebViewController else { return }
-		webViewController.fetchTableOfContents { [weak self] entries in
+		webViewController.fetchTableOfContents { [weak self] entries, currentTocIndex in
 			guard let self else { return }
 			guard !entries.isEmpty else {
 				Self.logger.error("showTableOfContents: fetchTableOfContents returned no entries; see WebViewController's log for the underlying cause")
 				return
 			}
-			let tocViewController = TableOfContentsViewController(entries: entries) { [weak self] tocIndex in
+			let tocViewController = TableOfContentsViewController(entries: entries, currentTocIndex: currentTocIndex) { [weak self] tocIndex in
 				self?.currentWebViewController?.scrollToHeading(tocIndex: tocIndex)
 			}
 			let navController = UINavigationController(rootViewController: tocViewController)

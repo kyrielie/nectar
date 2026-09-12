@@ -2467,6 +2467,11 @@ struct TableOfContentsEntry: Codable, Hashable {
 	let isTocHeading: Bool
 }
 
+private struct TableOfContentsResponse: Codable {
+	let entries: [TableOfContentsEntry]
+	let currentTocIndex: Int
+}
+
 extension WebViewController {
 
 	/// Entries are addressed by `tocIndex` (position among all h1/h2.heading/
@@ -2475,24 +2480,31 @@ extension WebViewController {
 	/// books, so `id` alone can't distinguish "chapter 3 of book 1" from
 	/// "chapter 3 of book 2." See main_ios.js's tocNodes()/getTableOfContents/
 	/// scrollToHeading.
-	func fetchTableOfContents(completionHandler: @escaping ([TableOfContentsEntry]) -> Void) {
+	///
+	/// `currentTocIndex` is the entry nearest the current scroll position
+	/// (the last heading scrolled past the viewport's top edge), computed
+	/// fresh in the same JS call rather than derived from `windowScrollY` —
+	/// see `getTableOfContents`'s own comment in main_ios.js. `nil` means
+	/// scrolled above the first heading (e.g. still in a preface), so
+	/// nothing should be highlighted.
+	func fetchTableOfContents(completionHandler: @escaping ([TableOfContentsEntry], _ currentTocIndex: Int?) -> Void) {
 		webView?.evaluateJavaScript("getTableOfContents(\"e30=\")") { result, error in   // "e30=" == base64("{}")
 			if let error {
 				Self.logger.error("fetchTableOfContents: getTableOfContents() JS call failed: \(error.localizedDescription, privacy: .public)")
-				completionHandler([])
+				completionHandler([], nil)
 				return
 			}
 			guard let b64 = result as? String, let data = Data(base64Encoded: b64) else {
 				Self.logger.error("fetchTableOfContents: getTableOfContents() returned an unexpected result type or invalid base64")
-				completionHandler([])
+				completionHandler([], nil)
 				return
 			}
-			guard let entries = try? JSONDecoder().decode([TableOfContentsEntry].self, from: data) else {
-				Self.logger.error("fetchTableOfContents: failed to decode TableOfContentsEntry array from getTableOfContents() result")
-				completionHandler([])
+			guard let response = try? JSONDecoder().decode(TableOfContentsResponse.self, from: data) else {
+				Self.logger.error("fetchTableOfContents: failed to decode TableOfContentsResponse from getTableOfContents() result")
+				completionHandler([], nil)
 				return
 			}
-			completionHandler(entries)
+			completionHandler(response.entries, response.currentTocIndex == -1 ? nil : response.currentTocIndex)
 		}
 	}
 

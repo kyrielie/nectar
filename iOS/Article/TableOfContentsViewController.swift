@@ -32,11 +32,19 @@ final class TableOfContentsViewController: UICollectionViewController {
 	}
 
 	private let entries: [TableOfContentsEntry]
+	/// The entry nearest the reader's current scroll position in the
+	/// article, per WebViewController.fetchTableOfContents's
+	/// currentTocIndex -- nil if scrolled above the first heading (e.g.
+	/// still reading a preface). Drives both the current-row highlight
+	/// (configureCell(_:item:) below) and, for an anthology, which book
+	/// group opens expanded on presentation.
+	private let currentTocIndex: Int?
 	private let onSelectChapter: (Int) -> Void
 	private var dataSource: UICollectionViewDiffableDataSource<Int, Item>!
 
-	init(entries: [TableOfContentsEntry], onSelectChapter: @escaping (Int) -> Void) {
+	init(entries: [TableOfContentsEntry], currentTocIndex: Int?, onSelectChapter: @escaping (Int) -> Void) {
 		self.entries = entries
+		self.currentTocIndex = currentTocIndex
 		self.onSelectChapter = onSelectChapter
 
 		var config = UICollectionLayoutListConfiguration(appearance: .plain)
@@ -48,6 +56,8 @@ final class TableOfContentsViewController: UICollectionViewController {
 	required init?(coder: NSCoder) {
 		fatalError("init(coder:) has not been implemented")
 	}
+
+	private var hasScrolledToCurrentEntry = false
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -64,6 +74,22 @@ final class TableOfContentsViewController: UICollectionViewController {
 
 		configureDataSource()
 		applySnapshot()
+	}
+
+	override func viewDidAppear(_ animated: Bool) {
+		super.viewDidAppear(animated)
+
+		// Reveal the current-entry row without animation on first
+		// presentation only -- scrollToItem needs a completed layout pass
+		// (viewDidLoad is too early), and this should happen once, not
+		// every time the screen reappears (e.g. after the chevron-driven
+		// expand/collapse this screen already supports).
+		guard !hasScrolledToCurrentEntry, let currentTocIndex else { return }
+		hasScrolledToCurrentEntry = true
+		guard let entry = entries.first(where: { $0.tocIndex == currentTocIndex }) else { return }
+		let item: Item = entry.tagName == "h1" ? .book(entry) : .chapter(entry)
+		guard let indexPath = dataSource.indexPath(for: item) else { return }
+		collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
 	}
 
 	@objc private func dismissTableOfContents() {
@@ -122,12 +148,27 @@ final class TableOfContentsViewController: UICollectionViewController {
 		Set(chaptersByBook.filter { $0.chapters.isEmpty }.map { $0.book.tocIndex })
 	}
 
+	/// The book entry whose group contains currentTocIndex -- i.e. the last
+	/// book entry at or before currentTocIndex in document order. nil if
+	/// currentTocIndex is nil or precedes every book entry (shouldn't
+	/// happen in practice, since a book's own h1 is always its first
+	/// heading, but handled rather than force-unwrapped).
+	private var bookContainingCurrentEntry: TableOfContentsEntry? {
+		guard let currentTocIndex else { return nil }
+		return bookEntries.last { $0.tocIndex <= currentTocIndex }
+	}
+
 	// MARK: Data source
 
 	private func configureDataSource() {
+		let currentTocIndex = self.currentTocIndex
 		let chapterCellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { cell, _, item in
 			var content = cell.defaultContentConfiguration()
 			content.text = item.entry.text
+			if item.entry.tocIndex == currentTocIndex {
+				content.textProperties.font = UIFont.preferredFont(forTextStyle: .body).bold()
+				content.textProperties.color = Assets.Colors.primaryAccent
+			}
 			cell.contentConfiguration = content
 			cell.accessories = []
 		}
@@ -137,6 +178,9 @@ final class TableOfContentsViewController: UICollectionViewController {
 			var content = cell.defaultContentConfiguration()
 			content.text = item.entry.text
 			content.textProperties.font = .preferredFont(forTextStyle: .headline)
+			if item.entry.tocIndex == currentTocIndex {
+				content.textProperties.color = Assets.Colors.primaryAccent
+			}
 			cell.contentConfiguration = content
 			cell.accessories = emptyBookIndices.contains(item.entry.tocIndex) ? [] : [.outlineDisclosure()]
 		}
@@ -185,9 +229,13 @@ final class TableOfContentsViewController: UICollectionViewController {
 			sectionSnapshot.append(chapterItems, to: bookItem)
 		}
 
-		// Land on the TOC already showing where you are; collapsed elsewhere.
-		if let firstBookItem = bookItems.first {
-			sectionSnapshot.expand([firstBookItem])
+		// Land on the TOC already showing where you are: expand the book
+		// group containing the current entry (falls back to the first book
+		// when currentTocIndex is nil, e.g. still in a preface, or matches
+		// no book for some other reason) -- collapsed elsewhere.
+		let bookItemToExpand = bookContainingCurrentEntry.map(Item.book) ?? bookItems.first
+		if let bookItemToExpand {
+			sectionSnapshot.expand([bookItemToExpand])
 		}
 
 		dataSource.apply(sectionSnapshot, to: 0, animatingDifferences: false)
