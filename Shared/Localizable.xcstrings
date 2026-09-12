@@ -1131,6 +1131,15 @@
     "Save" : {
       "comment" : "Save button"
     },
+    "Scroll Back" : {
+      "comment" : "Toolbar function: scroll back to previous jump position"
+    },
+    "Scroll to Bottom" : {
+      "comment" : "Toolbar function: scroll to bottom of article"
+    },
+    "Scroll to Top" : {
+      "comment" : "Toolbar function: scroll to top of article"
+    },
     "Search" : {
       "comment" : "Search"
     },
