@@ -75,17 +75,21 @@ above -- it does not persist, is not read/written through `Account`, and
 has no `bookKey` sharing. It is a plain `[Double]` stack of pre-jump
 `windowScrollY` values.
 
-- **Scope (Option A per `nectar-fixes-plan-4.md` §4):** only explicit
-  programmatic "jump to X" calls push onto this stack --
-  `scrollToHeading(tocIndex:)` (Table of Contents) and
-  `scrollToAnnotation(annotationID:)` (tapping an annotation reference), each
-  pushing `windowScrollY` immediately before issuing their own
-  `evaluateJavaScript` call. Large manual scroll deltas (e.g. a fast fling,
-  or scrolling back up by hand to reread something) are **not** detected as
-  jumps and do not push anything -- this is a deliberate scope limit, not a
-  gap to be silently filled in later without its own tuning pass (see the
-  plan doc's own "Option B" discussion of the false-positive risk a
-  manual-scroll heuristic would carry).
+- **Scope (deliberately narrow):** only explicit programmatic "jump to X"
+  calls push onto this stack -- `scrollToHeading(tocIndex:)` (Table of
+  Contents) and `scrollToAnnotation(annotationID:)` (tapping an annotation
+  reference), each pushing `windowScrollY` immediately before issuing their
+  own `evaluateJavaScript` call. Large manual scroll deltas (e.g. a fast
+  fling, or scrolling back up by hand to reread something) are **not**
+  detected as jumps and do not push anything. This was a deliberate choice,
+  not an oversight: detecting manual scrolls as jumps would need a
+  heuristic (e.g. flagging a delta between consecutive coalesced samples
+  that exceeds some multiple of `innerHeight`) with real false-positive
+  risk -- a fast fling scroll isn't "jumping back to check something," it's
+  just fast reading -- and that heuristic would need its own tuning pass
+  against real reading sessions before shipping. If manual-scroll jump
+  detection gets built later, it's a genuinely separate mechanism layered
+  on top of this stack, not an extension of it.
 - **`scrollBack()`** pops the most recent entry and calls the JS-side
   `scrollToWindowY` (added in `main_ios.js` alongside `scrollToHeading`,
   using the same `withEncodedArg` convention) to jump back to it. No-op if
