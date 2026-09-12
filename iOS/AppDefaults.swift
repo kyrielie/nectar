@@ -774,6 +774,9 @@ enum ToolbarFunction: String, CaseIterable, Sendable {
 	case heart
 	case nextUnread
 	case action
+	case scrollBack
+	case scrollToTop
+	case scrollToBottom
 }
 
 /// Single source of truth for each function's display name and icon --
@@ -813,6 +816,12 @@ extension ToolbarFunction {
 			return NSLocalizedString("Next Unread", comment: "Toolbar function: next unread")
 		case .action:
 			return NSLocalizedString("Share", comment: "Toolbar function: share/action")
+		case .scrollBack:
+			return NSLocalizedString("Scroll Back", comment: "Toolbar function: scroll back to previous jump position")
+		case .scrollToTop:
+			return NSLocalizedString("Scroll to Top", comment: "Toolbar function: scroll to top of article")
+		case .scrollToBottom:
+			return NSLocalizedString("Scroll to Bottom", comment: "Toolbar function: scroll to bottom of article")
 		}
 	}
 
@@ -850,6 +859,9 @@ extension ToolbarFunction {
 		case .heart: return Assets.Images.heartOpen
 		case .nextUnread: return Assets.Images.nextUnread
 		case .action: return Assets.Images.action
+		case .scrollBack: return Assets.Images.scrollBack
+		case .scrollToTop: return Assets.Images.scrollToTop
+		case .scrollToBottom: return Assets.Images.scrollToBottom
 		}
 	}
 }
