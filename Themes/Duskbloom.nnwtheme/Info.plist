@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Name</key>
+	<string>Duskbloom</string>
+	<key>ThemeIdentifier</key>
+	<string>com.nectar.themes.duskbloom</string>
+	<key>CreatorHomePage</key>
+	<string>https://github.com/ZerafinaCSS/neos</string>
+	<key>CreatorName</key>
+	<string>Dark palette ported from the "Charcoal Rose" variant of ZerafinaCSS's "neos" AO3 workskin family (MIT licensed); light palette inspired by intothisshadow's "Moonlit Wisteria" AO3 site skin (values reimplemented independently, no license grant relied on). Merged into one auto light/dark theme with a shared shape language and unified typography.</string>
+	<key>Version</key>
+	<integer>1</integer>
+</dict>
+</plist>
