@@ -235,6 +235,15 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 		navigationItem.title = nil // Don’t let "Timeline" accidentally show
 		navigationItem.largeTitleDisplayMode = .never
 		navigationItem.titleView = navigationBarTitleLabel
+		// Chevron-only back button on the article screen this timeline pushes
+		// to. UIKit derives the pushed screen's default back-button label from
+		// this screen's navigationItem.title, which we intentionally leave nil
+		// above -- but without this, iOS still falls back to a wider default
+		// label. A wide label can exceed
+		// ArticleViewController.configureNavigationBarTapGestureIfNeeded(on:)'s
+		// fixed 80pt back-button exclusion estimate, causing taps meant for the
+		// label to be misattributed to the fullscreen-toggle gesture instead.
+		navigationItem.backButtonDisplayMode = .minimal
 		if #available(iOS 26, *) {
 			navigationItem.subtitleView = navigationBarSubtitleTitleLabel
 		}
