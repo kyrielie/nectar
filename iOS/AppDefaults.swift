@@ -1039,6 +1039,18 @@ final class AppDefaults: Sendable {
 		static let toolbarFnActionTopOverflow = "toolbarFnActionTopOverflow"
 		static let toolbarFnActionBottom = "toolbarFnActionBottom"
 		static let toolbarFnActionBottomOverflow = "toolbarFnActionBottomOverflow"
+		static let toolbarFnScrollBackTop = "toolbarFnScrollBackTop"
+		static let toolbarFnScrollBackTopOverflow = "toolbarFnScrollBackTopOverflow"
+		static let toolbarFnScrollBackBottom = "toolbarFnScrollBackBottom"
+		static let toolbarFnScrollBackBottomOverflow = "toolbarFnScrollBackBottomOverflow"
+		static let toolbarFnScrollToTopTop = "toolbarFnScrollToTopTop"
+		static let toolbarFnScrollToTopTopOverflow = "toolbarFnScrollToTopTopOverflow"
+		static let toolbarFnScrollToTopBottom = "toolbarFnScrollToTopBottom"
+		static let toolbarFnScrollToTopBottomOverflow = "toolbarFnScrollToTopBottomOverflow"
+		static let toolbarFnScrollToBottomTop = "toolbarFnScrollToBottomTop"
+		static let toolbarFnScrollToBottomTopOverflow = "toolbarFnScrollToBottomTopOverflow"
+		static let toolbarFnScrollToBottomBottom = "toolbarFnScrollToBottomBottom"
+		static let toolbarFnScrollToBottomBottomOverflow = "toolbarFnScrollToBottomBottomOverflow"
 		/// Whether each bar collapses its overflow-flagged functions into
 		/// a single trailing menu icon. Two independent switches (top and
 		/// bottom no longer share one Bool) -- replaces the pre-unification
@@ -1191,6 +1203,9 @@ final class AppDefaults: Sendable {
 		Key.toolbarFnHeartTop, Key.toolbarFnHeartTopOverflow, Key.toolbarFnHeartBottom, Key.toolbarFnHeartBottomOverflow,
 		Key.toolbarFnNextUnreadTop, Key.toolbarFnNextUnreadTopOverflow, Key.toolbarFnNextUnreadBottom, Key.toolbarFnNextUnreadBottomOverflow,
 		Key.toolbarFnActionTop, Key.toolbarFnActionTopOverflow, Key.toolbarFnActionBottom, Key.toolbarFnActionBottomOverflow,
+		Key.toolbarFnScrollBackTop, Key.toolbarFnScrollBackTopOverflow, Key.toolbarFnScrollBackBottom, Key.toolbarFnScrollBackBottomOverflow,
+		Key.toolbarFnScrollToTopTop, Key.toolbarFnScrollToTopTopOverflow, Key.toolbarFnScrollToTopBottom, Key.toolbarFnScrollToTopBottomOverflow,
+		Key.toolbarFnScrollToBottomTop, Key.toolbarFnScrollToBottomTopOverflow, Key.toolbarFnScrollToBottomBottom, Key.toolbarFnScrollToBottomBottomOverflow,
 		Key.toolbarTopUseOverflowMenu,
 		Key.toolbarBottomUseOverflowMenu,
 		Key.defaultAnnotationColor,
@@ -1582,7 +1597,7 @@ final class AppDefaults: Sendable {
 
 	/// Table-driven key lookup for the unified toolbar model: (inline key,
 	/// overflow key) per (ToolbarFunction, ToolbarBar). A hand-written
-	/// 13-function x 2-bar x 2-role switch would be 52 near-identical
+	/// 16-function x 2-bar x 2-role switch would be 64 near-identical
 	/// cases; this keeps the mapping in one place and the read/write
 	/// dispatch functions below as thin wrappers. Force-unwrapped
 	/// dictionary lookups are safe here because ToolbarFunction/ToolbarBar
@@ -1604,7 +1619,10 @@ final class AppDefaults: Sendable {
 		.star: [.top: (Key.toolbarFnStarTop, Key.toolbarFnStarTopOverflow), .bottom: (Key.toolbarFnStarBottom, Key.toolbarFnStarBottomOverflow)],
 		.heart: [.top: (Key.toolbarFnHeartTop, Key.toolbarFnHeartTopOverflow), .bottom: (Key.toolbarFnHeartBottom, Key.toolbarFnHeartBottomOverflow)],
 		.nextUnread: [.top: (Key.toolbarFnNextUnreadTop, Key.toolbarFnNextUnreadTopOverflow), .bottom: (Key.toolbarFnNextUnreadBottom, Key.toolbarFnNextUnreadBottomOverflow)],
-		.action: [.top: (Key.toolbarFnActionTop, Key.toolbarFnActionTopOverflow), .bottom: (Key.toolbarFnActionBottom, Key.toolbarFnActionBottomOverflow)]
+		.action: [.top: (Key.toolbarFnActionTop, Key.toolbarFnActionTopOverflow), .bottom: (Key.toolbarFnActionBottom, Key.toolbarFnActionBottomOverflow)],
+		.scrollBack: [.top: (Key.toolbarFnScrollBackTop, Key.toolbarFnScrollBackTopOverflow), .bottom: (Key.toolbarFnScrollBackBottom, Key.toolbarFnScrollBackBottomOverflow)],
+		.scrollToTop: [.top: (Key.toolbarFnScrollToTopTop, Key.toolbarFnScrollToTopTopOverflow), .bottom: (Key.toolbarFnScrollToTopBottom, Key.toolbarFnScrollToTopBottomOverflow)],
+		.scrollToBottom: [.top: (Key.toolbarFnScrollToBottomTop, Key.toolbarFnScrollToBottomTopOverflow), .bottom: (Key.toolbarFnScrollToBottomBottom, Key.toolbarFnScrollToBottomBottomOverflow)]
 	]
 
 	private func toolbarKeys(_ function: ToolbarFunction, _ bar: ToolbarBar) -> (inline: String, overflow: String) {
