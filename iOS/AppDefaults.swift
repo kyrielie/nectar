@@ -941,6 +941,7 @@ final class AppDefaults: Sendable {
 		static let articleFullscreenAvailable = "articleFullscreenAvailable"
 		static let articleFullscreenEnabled = "articleFullscreenEnabled"
 		static let articleBackSwipeEnabled = "articleBackSwipeEnabled"
+		static let articleFullscreenContextMenuEnabled = "articleFullscreenContextMenuEnabled"
 		static let articlePagingSwipeEnabled = "articlePagingSwipeEnabled"
 		static let showFeedNameInReaderView = "showFeedNameInReaderView"
 		static let showPrevNextArticleButtons = "showPrevNextArticleButtons"
@@ -1137,6 +1138,7 @@ final class AppDefaults: Sendable {
 		Key.timelineSortField,
 		Key.articleFullscreenEnabled,
 		Key.articleBackSwipeEnabled,
+		Key.articleFullscreenContextMenuEnabled,
 		Key.articlePagingSwipeEnabled,
 		Key.showFeedNameInReaderView,
 		Key.showPrevNextArticleButtons,
@@ -1332,6 +1334,22 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			AppDefaults.setBool(for: Key.articleBackSwipeEnabled, newValue)
+		}
+	}
+
+	/// Controls whether long-pressing the article webview while fullscreen
+	/// shows Nectar's custom context menu (prev/next article, read/star/loved,
+	/// next-unread, check-for-updates, share) or falls through to WKWebView's
+	/// native long-press-to-select-text gesture. The two are mutually
+	/// exclusive -- see WebViewController.configureContextMenuInteraction().
+	/// Default: true (custom menu), matching pre-existing behavior for
+	/// everyone until they opt out.
+	var articleFullscreenContextMenuEnabled: Bool {
+		get {
+			return AppDefaults.bool(for: Key.articleFullscreenContextMenuEnabled)
+		}
+		set {
+			AppDefaults.setBool(for: Key.articleFullscreenContextMenuEnabled, newValue)
 		}
 	}
 
@@ -2339,6 +2357,7 @@ final class AppDefaults: Sendable {
 										Key.articleFullscreenAvailable: false,
 										Key.articleFullscreenEnabled: true,
 										Key.articleBackSwipeEnabled: false,
+										Key.articleFullscreenContextMenuEnabled: true,
 									Key.articlePagingSwipeEnabled: true,
 										Key.showFeedNameInReaderView: false,
 									Key.showPrevNextArticleButtons: false,
