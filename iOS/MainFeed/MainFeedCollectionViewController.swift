@@ -77,7 +77,13 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 	private var isAnimating: Bool = false
 	private var isToolbarConfigured: Bool = false
 
-	var dataSource: UICollectionViewDiffableDataSource<String, SidebarItemNode>!
+	// Serialized snapshot updates -- see enqueueSidebarUpdate below.
+	private var isApplyingSnapshot = false
+	private var queuedSidebarUpdates = [QueuedSidebarUpdate]()
+
+	// Write via applySnapshot/reconfigureItems. Read via currentSidebarSnapshot
+	// and the lookup methods below -- in an apply completion if you need post-update state.
+	private var dataSource: UICollectionViewDiffableDataSource<String, SidebarItemNode>!
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -448,14 +454,14 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 
 			headerView.delegate = self
 
-			let sectionID = self.dataSource.snapshot().sectionIdentifiers[indexPath.section]
+			let sectionID = self.currentSidebarSnapshot.sectionIdentifiers[indexPath.section]
 
 			// Smart feeds section
 			if sectionID.isEmpty {
 				headerView.sectionHeaderType = .smartFeeds
 				headerView.headerTitle.text = SmartFeedsController.shared.nameForDisplay
 				headerView.unreadCount = 0
-				headerView.disclosureExpanded = self.coordinator.isExpanded(SmartFeedsController.shared)
+				headerView.setDisclosure(isExpanded: self.coordinator.isExpanded(SmartFeedsController.shared), animated: false)
 				return headerView
 			}
 
@@ -467,7 +473,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 			headerView.sectionHeaderType = .account(sectionID)
 			headerView.headerTitle.text = account.nameForDisplay
 			headerView.unreadCount = account.unreadCount
-			headerView.disclosureExpanded = self.coordinator.isExpanded(account)
+			headerView.setDisclosure(isExpanded: self.coordinator.isExpanded(account), animated: false)
 			headerView.addInteraction(UIContextMenuInteraction(delegate: self))
 
 			return headerView
@@ -478,9 +484,114 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		let feeds = snapshot.itemIdentifiers.compactMap { $0.node.representedObject as? Feed }
 		IconImageCache.shared.prefetchImagesForFeeds(feeds)
 
-		dataSource.apply(snapshot, animatingDifferences: animatingDifferences) {
-			completion?()
+		enqueueSidebarUpdate(.full(snapshot, animated: animatingDifferences), completion: completion)
+	}
+
+	func reconfigureItems(_ items: [SidebarItemNode], completion: (() -> Void)? = nil) {
+		enqueueSidebarUpdate(.reconfigure(items), completion: completion)
+	}
+
+	// MARK: - Data Source Queries
+
+	var currentSidebarSnapshot: NSDiffableDataSourceSnapshot<String, SidebarItemNode> {
+		dataSource.snapshot()
+	}
+
+	func sidebarItemNode(for indexPath: IndexPath) -> SidebarItemNode? {
+		dataSource.itemIdentifier(for: indexPath)
+	}
+
+	func indexPath(for sidebarItemNode: SidebarItemNode) -> IndexPath? {
+		dataSource.indexPath(for: sidebarItemNode)
+	}
+
+	// MARK: - Serialized Snapshot Updates
+
+	// Overlapping animated dataSource.apply calls strand cells -- a row mid-delete-animation
+	// never gets recycled while the next update slides another row into its slot, leaving
+	// two cells overlapping. Updates are queued and applied one at a time. The apply
+	// completion is the animation-end signal, so serializing on it is sufficient.
+
+	private func enqueueSidebarUpdate(_ update: SidebarUpdate, completion: (() -> Void)?) {
+		var completions = [() -> Void]()
+		if let completion {
+			completions.append(completion)
 		}
+
+		// A newer full snapshot supersedes a queued one. The superseded update's
+		// completions still run -- after a snapshot at least as new as the one they requested.
+		if update.isFull, let index = queuedSidebarUpdates.firstIndex(where: { $0.update.isFull }) {
+			completions = queuedSidebarUpdates[index].completions + completions
+			queuedSidebarUpdates.remove(at: index)
+		}
+
+		queuedSidebarUpdates.append(QueuedSidebarUpdate(update: update, completions: completions))
+		applyNextSidebarUpdateIfPossible()
+	}
+
+	private func applyNextSidebarUpdateIfPossible() {
+		guard !isApplyingSnapshot, !queuedSidebarUpdates.isEmpty else {
+			return
+		}
+
+		let queuedUpdate = queuedSidebarUpdates.removeFirst()
+
+		var snapshot: NSDiffableDataSourceSnapshot<String, SidebarItemNode>
+		var animated = false
+
+		switch queuedUpdate.update {
+		case .full(let fullSnapshot, let fullAnimated):
+			snapshot = fullSnapshot
+			animated = fullAnimated
+		case .reconfigure(let items):
+			snapshot = dataSource.snapshot()
+			let survivingItems = survivingItems(items, in: snapshot)
+			guard !survivingItems.isEmpty else {
+				finishSkippedSidebarUpdate(queuedUpdate)
+				return
+			}
+			snapshot.reconfigureItems(survivingItems)
+		case .reload(let items):
+			snapshot = dataSource.snapshot()
+			let survivingItems = survivingItems(items, in: snapshot)
+			guard !survivingItems.isEmpty else {
+				finishSkippedSidebarUpdate(queuedUpdate)
+				return
+			}
+			snapshot.reloadItems(survivingItems)
+		}
+
+		// Animating a batch update while detached from a window strands cells too.
+		let animatingDifferences = animated && viewIfLoaded?.window != nil
+
+		isApplyingSnapshot = true
+		dataSource.apply(snapshot, animatingDifferences: animatingDifferences) { [weak self] in
+			guard let self else {
+				return
+			}
+			// Completions run before the queue pumps again, so an update enqueued
+			// synchronously by a completion applies after this one -- in order.
+			for completion in queuedUpdate.completions {
+				completion()
+			}
+			self.isApplyingSnapshot = false
+			self.applyNextSidebarUpdateIfPossible()
+		}
+	}
+
+	// Reconfigures and reloads resolve their items at execution time, against the
+	// currently applied snapshot. Items removed by an earlier queued update are
+	// skipped -- reloading an absent identifier throws.
+	private func survivingItems(_ items: [SidebarItemNode], in snapshot: NSDiffableDataSourceSnapshot<String, SidebarItemNode>) -> [SidebarItemNode] {
+		let currentItems = Set(snapshot.itemIdentifiers)
+		return items.filter { currentItems.contains($0) }
+	}
+
+	private func finishSkippedSidebarUpdate(_ queuedUpdate: QueuedSidebarUpdate) {
+		for completion in queuedUpdate.completions {
+			completion()
+		}
+		applyNextSidebarUpdateIfPossible()
 	}
 
 	@IBAction func settings(_ sender: UIBarButtonItem) {
@@ -552,7 +663,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		if let indexPath = coordinator.currentFeedIndexPath, let node = coordinator.nodeFor(indexPath) {
 			coordinator.collapse(node)
 			if let folder = collectionView.cellForItem(at: indexPath) as? MainFeedCollectionViewFolderCell {
-				folder.disclosureExpanded = false
+				folder.setDisclosure(isExpanded: false, animated: true)
 			}
 		}
 	}
@@ -571,7 +682,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		if let indexPath = coordinator.currentFeedIndexPath, let node = coordinator.nodeFor(indexPath) {
 			coordinator.expand(node)
 			if let folder = collectionView.cellForItem(at: indexPath) as? MainFeedCollectionViewFolderCell {
-				folder.disclosureExpanded = true
+				folder.setDisclosure(isExpanded: true, animated: true)
 			}
 		}
 	}
@@ -945,11 +1056,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 			return
 		}
 
-		var snapshot = dataSource.snapshot()
-		snapshot.reloadItems(items)
-		dataSource.apply(snapshot, animatingDifferences: false) {
-			completion?()
-		}
+		enqueueSidebarUpdate(.reload(items), completion: completion)
 	}
 
 	func setFilterButtonToActive() {
@@ -1002,19 +1109,15 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 			return
 		}
 
-		for cell in collectionView.visibleCells {
-			guard let indexPath = collectionView.indexPath(for: cell),
-				  let sidebarItemNode = dataSource.itemIdentifier(for: indexPath),
-				  sidebarItemNode.node.representedObject === unreadCountProvider as AnyObject else {
-				continue
-			}
-			if let feedCell = cell as? MainFeedCollectionViewCell {
-				feedCell.unreadCount = unreadCountProvider.unreadCount
-			}
-			if let folderCell = cell as? MainFeedCollectionViewFolderCell {
-				folderCell.unreadCount = unreadCountProvider.unreadCount
-			}
+		// Reconfigure through the serialized funnel -- mutating visible cells directly
+		// can change their size in the middle of an animated snapshot apply.
+		let nodesToReconfigure = currentSidebarSnapshot.itemIdentifiers.filter {
+			$0.node.representedObject === unreadCountProvider as AnyObject
 		}
+		guard !nodesToReconfigure.isEmpty else {
+			return
+		}
+		reconfigureItems(nodesToReconfigure)
 	}
 
 	@objc func feedSettingDidChange(_ note: Notification) {
@@ -1163,10 +1266,10 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		}
 
 		if coordinator.isExpanded(containerID) {
-			headerView.disclosureExpanded = false
+			headerView.setDisclosure(isExpanded: false, animated: true)
 			coordinator.collapse(containerID)
 		} else {
-			headerView.disclosureExpanded = true
+			headerView.setDisclosure(isExpanded: true, animated: true)
 			coordinator.expand(containerID)
 		}
 	}
@@ -1751,4 +1854,24 @@ extension MainFeedCollectionViewController {
 		pushUndoableCommand(deleteCommand)
 		deleteCommand.perform()
 	}
+}
+
+// MARK: - SidebarUpdate
+
+private enum SidebarUpdate {
+	case full(NSDiffableDataSourceSnapshot<String, SidebarItemNode>, animated: Bool)
+	case reconfigure([SidebarItemNode])
+	case reload([SidebarItemNode])
+
+	var isFull: Bool {
+		if case .full = self {
+			return true
+		}
+		return false
+	}
+}
+
+private struct QueuedSidebarUpdate {
+	let update: SidebarUpdate
+	let completions: [() -> Void]
 }

@@ -221,6 +221,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	weak var coordinator: SceneCoordinator!
 
 	private let poppableDelegate = PoppableGestureRecognizerDelegate()
+	private weak var originalPopGestureRecognizerDelegate: UIGestureRecognizerDelegate?
+	private weak var originalContentPopGestureRecognizerDelegate: UIGestureRecognizerDelegate?
 	// nonisolated: userDefaultsDidChange(_:) below is itself `nonisolated`
 	// (it can arrive off the main thread via UserDefaults.didChangeNotification)
 	// and logs through this before hopping to @MainActor -- Logger is Sendable,
@@ -420,7 +422,14 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			// upstream NetNewsWire resolves it, and it's what makes canGoBack
 			// able to fall back to the default viewControllers.count > 1
 			// check instead of needing an override.
-			parentNavController.interactivePopGestureRecognizer?.delegate = poppableDelegate
+			// Scoped to the article screen -- restored in viewDidDisappear, matching
+			// upstream's fix for a stuck delegate blocking timeline row taps.
+			if let gestureRecognizer = parentNavController.interactivePopGestureRecognizer {
+				if gestureRecognizer.delegate !== poppableDelegate {
+					originalPopGestureRecognizerDelegate = gestureRecognizer.delegate
+				}
+				gestureRecognizer.delegate = poppableDelegate
+			}
 			// iOS 26 splits the pop gesture in two: interactivePopGestureRecognizer stays
 			// edge-only, while the new interactiveContentPopGestureRecognizer recognizes
 			// swipe-to-pop anywhere in the content area. poppableDelegate needs to be
@@ -430,12 +439,22 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			// interactiveContentPopGestureRecognizer's delegate as only being for
 			// setting up failure requirements, not vetoing recognition.
 			if #available(iOS 26, *) {
-				parentNavController.interactiveContentPopGestureRecognizer?.delegate = poppableDelegate
+				if let contentGestureRecognizer = parentNavController.interactiveContentPopGestureRecognizer {
+					if contentGestureRecognizer.delegate !== poppableDelegate {
+						originalContentPopGestureRecognizerDelegate = contentGestureRecognizer.delegate
+					}
+					contentGestureRecognizer.delegate = poppableDelegate
+				}
 			}
 			coordinator.applyArticleBackSwipeGating()
 			configureContentPopFailureRequirementIfNeeded(on: parentNavController)
 			configureNavigationBarTapGestureIfNeeded(on: parentNavController)
 		}
+	}
+
+	override func viewDidDisappear(_ animated: Bool) {
+		super.viewDidDisappear(animated)
+		restoreOriginalPopGestureRecognizerDelegates()
 	}
 
 	override func viewWillDisappear(_ animated: Bool) {
@@ -1409,6 +1428,24 @@ private extension ArticleViewController {
 		tapGesture.delegate = self
 		parentNavController.navigationBar.addGestureRecognizer(tapGesture)
 		hasConfiguredNavigationBarTapGesture = true
+	}
+
+	/// Restores whatever delegate(s) were installed on the shared navigation
+	/// controller's pop gesture recognizer(s) before this screen took them over
+	/// in viewDidAppear. Without this, poppableDelegate stays installed after the
+	/// article is popped and can end up vetoing gesture recognition elsewhere --
+	/// e.g. blocking timeline row taps -- matching upstream's fix.
+	func restoreOriginalPopGestureRecognizerDelegates() {
+		if let gestureRecognizer = poppableDelegate.navigationController?.interactivePopGestureRecognizer,
+			gestureRecognizer.delegate === poppableDelegate {
+			gestureRecognizer.delegate = originalPopGestureRecognizerDelegate
+		}
+		if #available(iOS 26, *) {
+			if let contentGestureRecognizer = poppableDelegate.navigationController?.interactiveContentPopGestureRecognizer,
+				contentGestureRecognizer.delegate === poppableDelegate {
+				contentGestureRecognizer.delegate = originalContentPopGestureRecognizerDelegate
+			}
+		}
 	}
 
 }
