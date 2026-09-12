@@ -1440,6 +1440,12 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
+	// MARK: - Repairing
+
+	func repairStatuses(_ database: FMDatabase) {
+		statusesTable.repairStatuses(database)
+	}
+
 	// MARK: - Cleanup
 
 	/// Delete articles that we won’t show in the UI any longer

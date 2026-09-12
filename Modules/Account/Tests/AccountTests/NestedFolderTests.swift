@@ -203,7 +203,7 @@ import RSParser
 		let child = opmlFolderItem(title: "Child", children: [feed])
 		let parent = opmlFolderItem(title: "Parent", children: [child])
 
-		account.loadOPMLItems([parent])
+		account.loadOPMLItems([parent], isManualImport: true)
 
 		let parentFolder = account.existingFolder(withPath: ["Parent"])
 		XCTAssertNotNil(parentFolder)
@@ -222,7 +222,7 @@ import RSParser
 		let level2 = opmlFolderItem(title: "Level2", children: [level3])
 		let level1 = opmlFolderItem(title: "Level1", children: [level2])
 
-		account.loadOPMLItems([level1])
+		account.loadOPMLItems([level1], isManualImport: true)
 
 		let level3Folder = account.existingFolder(withPath: ["Level1", "Level2", "Level3"])
 		XCTAssertNotNil(level3Folder)
@@ -239,7 +239,7 @@ import RSParser
 		let level2 = opmlFolderItem(title: "Level2", children: [level3])
 		let level1 = opmlFolderItem(title: "Level1", children: [level2])
 
-		account.loadOPMLItems([level1])
+		account.loadOPMLItems([level1], isManualImport: true)
 
 		let level3Folder = account.existingFolder(withPath: ["Level1", "Level2", "Level3"])
 		XCTAssertNotNil(level3Folder)
@@ -252,7 +252,7 @@ import RSParser
 		let feed = opmlFeedItem(title: "Feed", url: "https://example.com/roundtrip.xml")
 		let child = opmlFolderItem(title: "Child", children: [feed])
 		let parent = opmlFolderItem(title: "Parent", children: [child])
-		account.loadOPMLItems([parent])
+		account.loadOPMLItems([parent], isManualImport: true)
 
 		let opmlString = account.OPMLString(indentLevel: 0, allowCustomAttributes: false)
 

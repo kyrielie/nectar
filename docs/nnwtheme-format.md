@@ -82,6 +82,45 @@ not a base64-embedded `@font-face`. `Hyperlegible.nnwtheme` is the reference pat
 - Only reference font families genuinely published on Google Fonts -- confirm on
   fonts.google.com before writing the `@import`, don't guess a family name.
 
+#### AO3 preface styling
+
+The AO3 work preface (`#ao3SyntheticPreface` / `#ao3Preface` in
+`Shared/Article Rendering/core.css`, ~line 165) is styled from `core.css`,
+not `stylesheet.css` -- see the comment block above that rule for why (it
+loads ahead of every theme, bundled or custom, so a theme with no `dl`/`dt`/
+`dd` rules of its own still gets a usable grid layout instead of the
+browser's default `<dl>` box model). A theme customizes it entirely through
+CSS custom properties; there is no other override path.
+
+```css
+:root {
+	--ao3-preface-border-color: rgba(0, 0, 0, 0.15);
+	--ao3-preface-background-color: transparent;
+	--ao3-preface-text-color: inherit;
+	--ao3-preface-label-color: inherit;
+	--ao3-preface-font-size: 0.9em;
+}
+```
+
+- `--ao3-preface-border-color` and `--ao3-preface-background-color` already
+  work today. `--ao3-preface-text-color`, `--ao3-preface-label-color`, and
+  `--ao3-preface-font-size` require a small `core.css` change (each hardcoded
+  value replaced with `var(--ao3-preface-<x>, <existing hardcoded value>)`)
+  before they take effect -- confirm that change has actually landed before
+  relying on them in a theme.
+- `--ao3-preface-label-color` falls back to `--ao3-preface-text-color` when
+  unset, which itself falls back to the theme's normal body text color.
+- These must be declared as custom properties in the theme's own
+  `stylesheet.css`, in the same `:root` block the theme already uses for any
+  other custom property (see the font variables above). Declaring them
+  anywhere else, or as plain (non-custom-property) rules targeting
+  `#ao3Preface` directly, won't reach `core.css`'s rules -- `core.css` loads
+  first, so a theme's own `#ao3Preface` selector can only win a specificity
+  fight it shouldn't need to pick.
+- Every existing theme's preface renders byte-identical unless it opts in;
+  these are additive fallback variables, not a breaking change to the rule
+  block.
+
 #### Drop caps / versal treatments
 
 A theme that wants a real drop cap (a large decorative first letter, optionally
