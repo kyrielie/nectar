@@ -51,15 +51,53 @@ mechanism referenced throughout the reading-progress section below.
    overwrite the just-restored position. It's cleared either by the
    `scrollRestoreComplete` JS confirmation message or, if that message
    never arrives, a 5s failsafe timer (`scrollRestoreFailsafeWorkItem`).
-4. `SceneCoordinator.restoreWindowState` / Handoff resume instead read the
-   single global `AppDefaults.shared.articleWindowScrollY`. `windowScrollY`'s
-   `didSet` still writes that global on every scroll update, alongside the
-   per-book/per-article write in (2) — deliberately left in place (see the
-   comment in `WebViewController`) because relaunch/Handoff restore still
-   depends on it. This remains a known source of restore inaccuracy across
-   relaunch/Handoff specifically (every open article's scroll updates
-   overwrite the one global slot), distinct from the same-session
-   reopen race that has since been fixed via `isAwaitingInitialScrollFetch`
-   and `isRestoringScrollPosition` (step 3 above).
+4. Relaunch and Handoff restoration now go through the same per-book/
+   per-article path as (2)/(3)
+   (`SceneCoordinator.restoreSelectedSidebarItemAndArticle`/`selectArticle`),
+   not a separate global. An earlier version threaded a single
+   `AppDefaults.shared.articleWindowScrollY` value (shared across every
+   open article) through this path instead; that property and the
+   `didSet` write that fed it have both been removed (see the comments on
+   `WebViewController.windowScrollY`'s `didSet` and
+   `SceneCoordinator.restoreSelectedSidebarItemAndArticle`) now that
+   relaunch/Handoff restore no longer needs it. If you find a stray
+   reference to `articleWindowScrollY` elsewhere, it's describing this
+   removed mechanism historically, not a live property -- update or
+   remove it rather than assuming it still exists.
 5. `readingProgress` is `bookKey`-shared the same way scroll
    position/read/starred/loved are — see `book-identity.md`.
+
+## In-article jump history (scrollBack)
+
+`WebViewController.scrollJumpHistory` (`iOS/Article/WebViewController.swift`)
+is a separate, session-only mechanism from the scroll-position tracking
+above -- it does not persist, is not read/written through `Account`, and
+has no `bookKey` sharing. It is a plain `[Double]` stack of pre-jump
+`windowScrollY` values.
+
+- **Scope (Option A per `nectar-fixes-plan-4.md` §4):** only explicit
+  programmatic "jump to X" calls push onto this stack --
+  `scrollToHeading(tocIndex:)` (Table of Contents) and
+  `scrollToAnnotation(annotationID:)` (tapping an annotation reference), each
+  pushing `windowScrollY` immediately before issuing their own
+  `evaluateJavaScript` call. Large manual scroll deltas (e.g. a fast fling,
+  or scrolling back up by hand to reread something) are **not** detected as
+  jumps and do not push anything -- this is a deliberate scope limit, not a
+  gap to be silently filled in later without its own tuning pass (see the
+  plan doc's own "Option B" discussion of the false-positive risk a
+  manual-scroll heuristic would carry).
+- **`scrollBack()`** pops the most recent entry and calls the JS-side
+  `scrollToWindowY` (added in `main_ios.js` alongside `scrollToHeading`,
+  using the same `withEncodedArg` convention) to jump back to it. No-op if
+  the stack is empty.
+- **`isScrollBackAvailable`** exposes `!scrollJumpHistory.isEmpty` for UI
+  binding. `ArticleViewController` uses it to enable/disable the
+  `.scrollBack` `ToolbarFunction`'s bar button and overflow-menu action,
+  following the same per-article/session-live-state pattern already used
+  for `.checkForUpdates`'s eligibility and `.prevNext`'s next/prev
+  availability (see `ArticleViewController.overflowActions(for:)`'s own doc
+  comment).
+- **`scrollToTop()`/`scrollToBottom()`** are unrelated to the jump stack --
+  they don't push or pop anything, since "go to the top/bottom" isn't a
+  position a person would want to jump back from the way a Table-of-Contents
+  or annotation jump is.

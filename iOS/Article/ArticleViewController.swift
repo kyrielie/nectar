@@ -73,6 +73,14 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// toggles isEnabled per-article each time `article` changes. See
 	// updateUI()'s checkForUpdatesBarButtonItem handling.
 	private lazy var checkForUpdatesBarButtonItem = UIBarButtonItem(image: Assets.Images.checkForUpdates, style: .plain, target: self, action: #selector(checkForUpdatesFromToolbar(_:)))
+	// In-article back/top/bottom navigation (nectar-fixes-plan-4.md §4,
+	// Option A). scrollBackBarButtonItem's isEnabled tracks
+	// WebViewController.isScrollBackAvailable -- see updateUI() -- the same
+	// dynamic-state pattern checkForUpdatesBarButtonItem already uses for
+	// per-article eligibility, not a static icon/title.
+	private lazy var scrollBackBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollBack, style: .plain, target: self, action: #selector(scrollBack(_:)))
+	private lazy var scrollToTopBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollToTop, style: .plain, target: self, action: #selector(scrollToTop(_:)))
+	private lazy var scrollToBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollToBottom, style: .plain, target: self, action: #selector(scrollToBottom(_:)))
 	// Optional collapsed-toolbar mode, independently per bar
 	// (AppDefaults.toolbarTopUseOverflowMenu/toolbarBottomUseOverflowMenu).
 	// Menu is rebuilt in place by rebuildOverflowMenu(for:) rather than
@@ -142,6 +150,9 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	private lazy var annotationsBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.annotations, style: .plain, target: self, action: #selector(showAnnotationsList(_:)))
 	private lazy var settingsBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.settings, style: .plain, target: self, action: #selector(showSettingsFromToolbar(_:)))
 	private lazy var checkForUpdatesBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.checkForUpdates, style: .plain, target: self, action: #selector(checkForUpdatesFromToolbar(_:)))
+	private lazy var scrollBackBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollBack, style: .plain, target: self, action: #selector(scrollBack(_:)))
+	private lazy var scrollToTopBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollToTop, style: .plain, target: self, action: #selector(scrollToTop(_:)))
+	private lazy var scrollToBottomBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollToBottom, style: .plain, target: self, action: #selector(scrollToBottom(_:)))
 
 	/// The live UIBarButtonItem instance(s) `function` contributes on
 	/// `bar` specifically -- see the "Cross-bar duplicate support"
@@ -177,6 +188,12 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		case (.nextUnread, .bottom): return [nextUnreadBarButtonItem]
 		case (.action, .top): return [actionTopBarButtonItem]
 		case (.action, .bottom): return [actionBarButtonItem]
+		case (.scrollBack, .top): return [scrollBackBarButtonItem]
+		case (.scrollBack, .bottom): return [scrollBackBottomBarButtonItem]
+		case (.scrollToTop, .top): return [scrollToTopBarButtonItem]
+		case (.scrollToTop, .bottom): return [scrollToTopBottomBarButtonItem]
+		case (.scrollToBottom, .top): return [scrollToBottomBarButtonItem]
+		case (.scrollToBottom, .bottom): return [scrollToBottomBottomBarButtonItem]
 		}
 	}
 
@@ -558,6 +575,15 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			allBarButtonItemInstances(for: .checkForUpdates).forEach { $0.isEnabled = eligible && AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article) }
 		}
 
+		// .scrollBack's availability is session-live state (WebViewController.
+		// scrollJumpHistory), not per-article metadata -- same
+		// always-reserved-slot approach as .checkForUpdates just above, so the
+		// icon doesn't jump around the bar as jumps are pushed/popped.
+		if AppDefaults.shared.isToolbarFunctionEnabled(.scrollBack, on: .top) || AppDefaults.shared.isToolbarFunctionEnabled(.scrollBack, on: .bottom) {
+			let available = currentWebViewController?.isScrollBackAvailable ?? false
+			allBarButtonItemInstances(for: .scrollBack).forEach { $0.isEnabled = available }
+		}
+
 		rebuildOverflowMenu(for: .top)
 		rebuildOverflowMenu(for: .bottom)
 	}
@@ -775,6 +801,19 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		case .action:
 			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
 				self?.showActivityDialog(self as Any)
+			}]
+		case .scrollBack:
+			let available = currentWebViewController?.isScrollBackAvailable ?? false
+			return [UIAction(title: function.title, image: function.icon, attributes: available ? [] : .disabled) { [weak self] _ in
+				self?.scrollBack(self as Any)
+			}]
+		case .scrollToTop:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
+				self?.scrollToTop(self as Any)
+			}]
+		case .scrollToBottom:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
+				self?.scrollToBottom(self as Any)
 			}]
 		}
 	}
@@ -998,6 +1037,22 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			}
 		}
 		coordinator.toggleLovedForCurrentArticle()
+	}
+
+	// In-article back/top/bottom navigation (nectar-fixes-plan-4.md §4,
+	// Option A). All three delegate straight to currentWebViewController --
+	// see WebViewController.scrollBack()/scrollToTop()/scrollToBottom().
+	@IBAction func scrollBack(_ sender: Any) {
+		currentWebViewController?.scrollBack()
+		updateUI()
+	}
+
+	@IBAction func scrollToTop(_ sender: Any) {
+		currentWebViewController?.scrollToTop()
+	}
+
+	@IBAction func scrollToBottom(_ sender: Any) {
+		currentWebViewController?.scrollToBottom()
 	}
 
 	/// Flips the transient, session-only SceneCoordinator.isArticleGesturesLocked
