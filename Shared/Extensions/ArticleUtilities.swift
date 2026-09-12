@@ -7,12 +7,15 @@
 //
 
 import Foundation
+import os
 import RSCore
 import Articles
 import Account
 import Images
 
 // These handle multiple accounts.
+
+private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "unknown", category: "ArticleUtilities")
 
 @MainActor func markArticles(_ articles: Set<Article>, statusKey: ArticleStatus.Key, flag: Bool, completion: (() -> Void)? = nil) {
 	markArticleIDs(articleIDsByAccountID(articles), statusKey: statusKey, flag: flag, completion: completion)
@@ -22,9 +25,14 @@ import Images
 	Task { @MainActor in
 		for (accountID, articleIDs) in articleIDsByAccountID {
 			guard let account = AccountManager.shared.existingAccount(accountID: accountID) else {
+				logger.error("markArticleIDs: no account for accountID \(accountID, privacy: .public); dropping \(articleIDs.count) status write(s) for statusKey \(statusKey.rawValue, privacy: .public)")
 				continue
 			}
-			try? await account.markArticles(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+			do {
+				try await account.markArticles(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+			} catch {
+				logger.error("markArticleIDs: account.markArticles threw for accountID \(accountID, privacy: .public), \(articleIDs.count) article(s), statusKey \(statusKey.rawValue, privacy: .public): \(error.localizedDescription, privacy: .public)")
+			}
 		}
 		completion?()
 	}
