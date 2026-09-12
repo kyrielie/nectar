@@ -59,11 +59,15 @@ class MainFeedCollectionViewFolderCell: UICollectionViewCell {
 		}
 	}
 
-	var disclosureExpanded = true {
-		didSet {
-			updateExpandedState(animate: true)
-			updateUnreadCountVisibility()
-		}
+	// Mutate via setDisclosure(isExpanded:animated:) -- configure-time calls
+	// (e.g. cell dequeue during a diffable snapshot apply) need to skip
+	// animation, which a plain didSet can't distinguish from a user tap.
+	private(set) var disclosureExpanded = true
+
+	func setDisclosure(isExpanded: Bool, animated: Bool) {
+		disclosureExpanded = isExpanded
+		updateExpandedState(animate: animated)
+		updateUnreadCountVisibility(animated: animated)
 	}
 
 	override func awakeFromNib() {
@@ -93,15 +97,14 @@ class MainFeedCollectionViewFolderCell: UICollectionViewCell {
 		}
 	}
 
-	func updateUnreadCountVisibility() {
-		if !disclosureExpanded && unreadCount > 0 {
+	func updateUnreadCountVisibility(animated: Bool = true) {
+		let alpha: CGFloat = (!disclosureExpanded && unreadCount > 0) ? 1 : 0
+		if animated {
 			UIView.animate {
-				self.unreadCountLabel.alpha = 1
+				self.unreadCountLabel.alpha = alpha
 			}
 		} else {
-			UIView.animate {
-				self.unreadCountLabel.alpha = 0
-			}
+			unreadCountLabel.alpha = alpha
 		}
 	}
 
@@ -109,10 +112,6 @@ class MainFeedCollectionViewFolderCell: UICollectionViewCell {
 	func toggleDisclosure() {
 		setDisclosure(isExpanded: !disclosureExpanded, animated: true)
 		delegate?.mainFeedCollectionFolderViewCellDisclosureDidToggle(self, expanding: disclosureExpanded)
-	}
-
-	func setDisclosure(isExpanded: Bool, animated: Bool) {
-		disclosureExpanded = isExpanded
 	}
 
 	override var accessibilityLabel: String? {

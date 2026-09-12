@@ -457,6 +457,7 @@ import os
 	}
 
 	@MainActor public func resume() {
+		downloadSession.recreateURLSession()
 		isSuspended = false
 	}
 
@@ -540,7 +541,12 @@ import os
 		guard let feed = urlToFeedDictionary[url.absoluteString] else {
 			return
 		}
-		feed.lastCheckDate = Date()
+
+		// Skip updating lastCheckDate on connectivity or cancellation errors, so the
+		// feed isn't skipped for timing reasons on the next refresh.
+		if error == nil || !(Self.isConnectionLevelError(error!) || Self.isCancellationError(error!)) {
+			feed.lastCheckDate = Date()
+		}
 
 		let activityKind = ActivityKind.refreshFeedContent(feedURL: feed.url)
 

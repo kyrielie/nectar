@@ -452,19 +452,19 @@ public enum FetchType {
 		settings.deleteSettings()
 	}
 
-	func addOPMLItems(_ items: [OPMLItem]) {
-		addOPMLItems(items, into: self, depth: 1)
+	func addOPMLItems(_ items: [OPMLItem], isManualImport: Bool) {
+		addOPMLItems(items, into: self, depth: 1, isManualImport: isManualImport)
 	}
 
 	/// Recurses into arbitrarily-nested OPML folders, up to `maxDepth`
 	/// levels. At the depth cap, a would-be-too-deep folder's contents
 	/// are flattened into its would-be-parent instead of being dropped
 	/// or creating an illegal depth-4+ folder -- see `flattenIntoContainer`.
-	private func addOPMLItems(_ items: [OPMLItem], into container: Container, depth: Int) {
+	private func addOPMLItems(_ items: [OPMLItem], into container: Container, depth: Int, isManualImport: Bool) {
 		let maxDepth = 3
 		for item in items {
 			if let feedSpecifier = item.feedSpecifier {
-				container.addFeedToTreeAtTopLevel(newFeed(with: feedSpecifier))
+				container.addFeedToTreeAtTopLevel(newFeed(with: feedSpecifier, isManualImport: isManualImport))
 				continue
 			}
 			guard let title = item.titleFromAttributes else {
@@ -478,29 +478,30 @@ public enum FetchType {
 				continue
 			}
 			if depth >= maxDepth {
-				flattenIntoContainer(itemChildren, container: folder)
+				flattenIntoContainer(itemChildren, container: folder, isManualImport: isManualImport)
 			} else {
-				addOPMLItems(itemChildren, into: folder, depth: depth + 1)
+				addOPMLItems(itemChildren, into: folder, depth: depth + 1, isManualImport: isManualImport)
 			}
 		}
 	}
 
-	/// Used once the depth cap (`maxDepth` in `addOPMLItems(_:into:depth:)`)
+	/// Used once the depth cap (`maxDepth` in `addOPMLItems(_:into:depth:isManualImport:)`)
 	/// is reached: recurses through any further folder-shaped items
 	/// without creating them, so their feeds still land in `container`
 	/// instead of being silently lost.
-	private func flattenIntoContainer(_ items: [OPMLItem], container: Container) {
+	private func flattenIntoContainer(_ items: [OPMLItem], container: Container, isManualImport: Bool) {
 		for item in items {
 			if let feedSpecifier = item.feedSpecifier {
-				container.addFeedToTreeAtTopLevel(newFeed(with: feedSpecifier))
+				container.addFeedToTreeAtTopLevel(newFeed(with: feedSpecifier, isManualImport: isManualImport))
 			} else if let itemChildren = item.children {
-				flattenIntoContainer(itemChildren, container: container)
+				flattenIntoContainer(itemChildren, container: container, isManualImport: isManualImport)
 			}
 		}
 	}
 
-	func loadOPMLItems(_ items: [OPMLItem]) {
-		addOPMLItems(OPMLNormalizer.normalize(items))
+	/// Pass `isManualImport: true` for a file the user chose to import, `false` when restoring our own file.
+	func loadOPMLItems(_ items: [OPMLItem], isManualImport: Bool) {
+		addOPMLItems(OPMLNormalizer.normalize(items), isManualImport: isManualImport)
 	}
 
 	public func markArticles(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async throws {
@@ -568,13 +569,18 @@ public enum FetchType {
 		return folders?.first(where: { $0.externalID == externalID })
 	}
 
-	func newFeed(with opmlFeedSpecifier: OPMLFeedSpecifier) -> Feed {
+	func newFeed(with opmlFeedSpecifier: OPMLFeedSpecifier, isManualImport: Bool) -> Feed {
 		let feedURL = opmlFeedSpecifier.feedURL
 		let settings = feedSettings(feedURL: feedURL, feedID: feedURL)
 		let feed = Feed(account: self, url: opmlFeedSpecifier.feedURL, settings: settings)
 		if let feedTitle = opmlFeedSpecifier.title {
 			if feed.name == nil {
 				feed.name = feedTitle
+			}
+			// A title in a file the user imported is a title the user chose, so it goes in
+			// editedName too and survives refreshes. A title in our own file is just the name.
+			if isManualImport && feed.editedName == nil {
+				feed.editedName = feedTitle
 			}
 		}
 		return feed
@@ -1360,6 +1366,12 @@ public enum FetchType {
 
 	// MARK: - Vacuum
 
+	/// Update article status rows that disagree with their in-memory statuses,
+	/// which is super-rare but possible.
+	func repairStatuses() {
+		database.repairStatuses()
+	}
+
 	public func vacuumDatabases() async {
 		await logActivity(kind: .vacuumDatabase, detail: AppConfig.relativeDataPath(database.databasePath)) {
 			await database.vacuum()
@@ -1619,6 +1631,13 @@ private extension Account {
 				feedUnreadCount += 1
 			}
 		}
+
+		// The stored count is database-derived. Disagreement means some
+		// status rows are stale (a lost write) -- repair them.
+		if feedUnreadCount != feed.unreadCount {
+			repairStatuses()
+		}
+
 		feed.unreadCount = feedUnreadCount
 	}
 }

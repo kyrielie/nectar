@@ -106,7 +106,7 @@ public extension Notification.Name {
 			let preexistingFeedsByCollectionKey = Self.collectionKeyIndex(for: account.flattenedFeeds())
 
 			BatchUpdate.shared.perform {
-				account.loadOPMLItems(children)
+				account.loadOPMLItems(children, isManualImport: true)
 			}
 
 			await reconcileRepairedFeeds(incomingItems: children, preexistingFeedsByCollectionKey: preexistingFeedsByCollectionKey)

@@ -96,7 +96,7 @@ it's trusted by default. Specifically:
 | `ArticleThemeColorExtractor`, `ArticleResolvedColors`, `WebViewController.applyResolvedBackgroundColors`/`registerForTraitChanges` | `article-color-pipeline.md` |
 | `SurfacePalette`, `AccentColor`, `SurfacePaletteNavigationBarAware`, `ToolbarStyle`/`toolbarStyle`, `BadgeColorPalette`, `BadgeColorTable` | `app-chrome-palette.md` |
 | `.nnwtheme` bundles, `ArticleTheme`, `ArticleThemesManager`, `core.css`/`stylesheet.css` structure | `theme-system.md` |
-| `.nnwtheme` bundle-file layout, per-theme fonts, theme families, `template.html` conventions | `nnwtheme-format.md` |
+| `.nnwtheme` bundle-file layout, per-theme fonts, theme families, `template.html` conventions, AO3 preface styling variables | `nnwtheme-format.md` |
 | `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |
 | Any row/case in `SettingsViewController`'s `*Row` enums, `Settings.storyboard`, or `AppDefaults` | `settings-screen.md` |
 | `HTMLMetadata`/favicon extraction | `metadata-extraction.md` |

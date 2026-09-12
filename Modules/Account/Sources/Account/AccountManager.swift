@@ -31,6 +31,9 @@ import ActivityLog
 	private let defaultAccountFolderName = "OnMyMac"
 	private let defaultAccountIdentifier = "OnMyMac"
 
+	private var lastStatusRepairDate: Date?
+	private static let statusRepairInterval: TimeInterval = 1 * 60 * 60
+
 	public var isSuspended = false
 
 	/// Set by the platform layer (e.g. `iOS/AppDelegate`, from
@@ -73,6 +76,17 @@ import ActivityLog
 	public var activeAccounts: [Account] {
 		assert(Thread.isMainThread)
 		return Array(accountsDictionary.values.filter { $0.isActive })
+	}
+
+	/// Repair article statuses in all active accounts, at most once per interval.
+	public func repairStatusesIfNeeded() {
+		if let lastStatusRepairDate, Date().timeIntervalSince(lastStatusRepairDate) < Self.statusRepairInterval {
+			return
+		}
+		lastStatusRepairDate = Date()
+		for account in activeAccounts {
+			account.repairStatuses()
+		}
 	}
 
 	public var sortedActiveAccounts: [Account] {

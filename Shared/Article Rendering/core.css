@@ -56,7 +56,8 @@ html, body {
 
 iframe[src*="feedads"],
 iframe[src*="doubleclick"],
-iframe[src*="plusone.google"] {
+iframe[src*="plusone.google"],
+iframe[src*="slashdot-it.pl"] {
 	display: none !important;
 }
 
@@ -180,14 +181,19 @@ a.footnote {
    rules of its own, so this must live somewhere every theme actually
    loads or a non-default theme falls back to the browser's default <dl>
    box model -- dt and dd each block-level, dd on its own line below dt,
-   instead of the same-line grid layout below. */
+   instead of the same-line grid layout below.
+
+   Theme-overridable custom properties are documented in
+   docs/nnwtheme-format.md's "AO3 preface styling" section -- update that
+   doc, not just this comment, if the set of variables below changes. */
 #ao3SyntheticPreface,
 #ao3Preface {
 	margin: 0 0 1.5em 0;
 	padding-bottom: 1em;
 	border-bottom: 1px solid var(--ao3-preface-border-color, rgba(0, 0, 0, 0.15));
 	background-color: var(--ao3-preface-background-color, transparent);
-	font-size: 0.9em;
+	font-size: var(--ao3-preface-font-size, 0.9em);
+	color: var(--ao3-preface-text-color, inherit);
 }
 .articleBody p {
 	margin-top: 0;
@@ -206,6 +212,7 @@ a.footnote {
 #ao3Preface dt {
 	font-weight: 600;
 	white-space: nowrap;
+	color: var(--ao3-preface-label-color, var(--ao3-preface-text-color, inherit));
 }
 #ao3SyntheticPreface dd,
 #ao3Preface dd {

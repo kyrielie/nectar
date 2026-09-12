@@ -398,6 +398,16 @@ public struct ArticleStorageInfo: Sendable {
 		await queue.vacuum()
 	}
 
+	// MARK: - Repairing
+
+	/// Repair status rows that disagree with their in-memory statuses,
+	/// which can happen when a database write was lost.
+	public func repairStatuses() {
+		queue.runInDatabase { database in
+			self.articlesTable.repairStatuses(database)
+		}
+	}
+
 	// MARK: - Fetching Articles
 
 	/// Phase 2 (Nectar SQLite transfer): imports a decompressed, version-checked
