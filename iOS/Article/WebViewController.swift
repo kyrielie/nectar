@@ -2061,6 +2061,10 @@ private extension WebViewController {
 	}
 
 	func configureContextMenuInteraction() {
+		guard AppDefaults.shared.articleFullscreenContextMenuEnabled else {
+			webView?.removeInteraction(contextMenuInteraction)
+			return
+		}
 		if isFullScreenAvailable {
 			if navigationController?.isNavigationBarHidden ?? false {
 				webView?.addInteraction(contextMenuInteraction)
