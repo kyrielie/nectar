@@ -620,45 +620,109 @@ public enum FetchType {
 		return feed
 	}
 
+	/// Where a pasted AO3 link-list import should land -- backs the "Add to"
+	/// picker in `AO3LinkListImportView` (see its own header comment and
+	/// `docs/ao3-feeds.md`'s "Import destinations" section).
+	public enum AO3LinkImportDestination: Equatable {
+		/// The long-standing default: the single shared, top-level
+		/// "Imported Links" feed, reused across every import regardless
+		/// of when it happened. Unchanged behavior from before this
+		/// destination picker existed.
+		case sharedTopLevel
+
+		/// Create (or reuse, if a folder with this exact name already
+		/// exists at the account's top level) a folder, then import into
+		/// a feed inside it. `name` is the mockup's editable, date-
+		/// prefilled folder name.
+		case newFolder(name: String)
+
+		/// An already-existing folder (or, in principle, an account's
+		/// own top level) picked via `FolderPickerView`.
+		case existingContainer(Container)
+
+		public static func == (lhs: AO3LinkImportDestination, rhs: AO3LinkImportDestination) -> Bool {
+			switch (lhs, rhs) {
+			case (.sharedTopLevel, .sharedTopLevel):
+				return true
+			case (.newFolder(let lhsName), .newFolder(let rhsName)):
+				return lhsName == rhsName
+			case (.existingContainer(let lhsContainer), .existingContainer(let rhsContainer)):
+				return lhsContainer === rhsContainer
+			default:
+				return false
+			}
+		}
+	}
+
 	/// The `nectar-import:` scheme used for the one-time pasted-AO3-link-list
-	/// import feed's synthetic URL -- see `importPastedAO3Links(_:)` below and
-	/// `LocalAccountRefresher.feedShouldBeSkippedForDisallowedHostReasons`,
+	/// import feed's synthetic URL -- see `importPastedAO3Links(_:destination:)`
+	/// below and `LocalAccountRefresher.feedShouldBeSkippedForDisallowedHostReasons`,
 	/// which permanently excludes this scheme from every refresh pass. Unlike
 	/// every other feed in this codebase, this feed has no real server to
 	/// fetch from -- its articles are written directly via `updateAsync`,
 	/// never through `LocalAccountRefresher`/`DownloadSession`.
 	static let importedLinksFeedURL = "nectar-import://pasted-ao3-links"
 
+	/// The `.sharedTopLevel` destination keeps the original constant URL
+	/// unchanged, so existing installs' already-imported articles/statuses
+	/// stay attached to the same feed identity they always had. A folder
+	/// destination gets its own URL keyed by the folder's `pathNames`, so
+	/// re-importing into the *same* folder reuses that folder's own feed
+	/// rather than creating a duplicate each time -- this is the "same
+	/// name reused... appends to the same feed" behavior the destination
+	/// picker's design review flagged as an open question when the folder
+	/// option was still just a mockup; resolved here in favor of reuse.
+	private static func importedLinksFeedURL(inContainer container: Container) -> String {
+		guard let folder = container as? Folder else {
+			return importedLinksFeedURL
+		}
+		return "\(importedLinksFeedURL)/\(folder.pathNames.joined(separator: "/"))"
+	}
+
 	/// Scans `pastedText` for AO3 work links (known-host allowlist, work id
 	/// via the existing `AO3SummaryExtractor.ao3WorkID(fromPermalink:)`,
 	/// deduped within the paste) and adds each as a bare-link article under a
-	/// single reused "Imported Links" feed -- created on first use, top-level.
-	/// No live AO3 fetch: articles are titled from their work id only, until
-	/// the person opens one and the existing AO3ChapterFetcher path takes
-	/// over. Returns the number of new links added (0 if none were
-	/// recognized or all were already imported previously -- `updateAsync`'s
-	/// `deleteOlder: false` plus this feed's stable feedID means a repeat
-	/// paste of the same link is a no-op at the database level, not just
-	/// within a single paste).
+	/// feed at `destination` (`.sharedTopLevel` by default, preserving this
+	/// method's original behavior for any existing caller) -- created on
+	/// first use at that destination, reused on every later import into the
+	/// same one. No live AO3 fetch: articles are titled from their work id
+	/// only, until the person opens one and the existing AO3ChapterFetcher
+	/// path takes over. Returns the number of new links added (0 if none
+	/// were recognized or all were already imported previously --
+	/// `updateAsync`'s `deleteOlder: false` plus this feed's stable feedID
+	/// means a repeat paste of the same link is a no-op at the database
+	/// level, not just within a single paste).
 	@discardableResult
-	public func importPastedAO3Links(_ pastedText: String) async -> Int {
+	public func importPastedAO3Links(_ pastedText: String, destination: AO3LinkImportDestination = .sharedTopLevel) async -> Int {
 		let links = AO3LinkListImporter.importedLinks(fromPastedText: pastedText)
 		guard !links.isEmpty else {
 			return 0
 		}
 
+		let container: Container
+		switch destination {
+		case .sharedTopLevel:
+			container = self
+		case .newFolder(let name):
+			container = ensureFolder(with: name) ?? self
+		case .existingContainer(let existingContainer):
+			container = existingContainer
+		}
+
+		let feedURL = Self.importedLinksFeedURL(inContainer: container)
+
 		let feed: Feed
-		if let existing = existingFeed(withURL: Self.importedLinksFeedURL) {
+		if let existing = container.existingFeed(withURL: feedURL) {
 			feed = existing
 		} else {
-			feed = createFeed(with: NSLocalizedString("Imported Links", comment: "Pasted AO3 link-list import feed name"), url: Self.importedLinksFeedURL, feedID: Self.importedLinksFeedURL, homePageURL: nil)
-			addFeedToTreeAtTopLevel(feed)
+			feed = createFeed(with: NSLocalizedString("Imported Links", comment: "Pasted AO3 link-list import feed name"), url: feedURL, feedID: feedURL, homePageURL: nil)
+			container.addFeedToTreeAtTopLevel(feed)
 		}
 
 		let parsedItems = Set(links.map { link in
 			ParsedItem(syncServiceID: nil,
 			           uniqueID: link.ao3WorkID,
-			           feedURL: Self.importedLinksFeedURL,
+			           feedURL: feedURL,
 			           url: link.permalink,
 			           externalURL: nil,
 			           title: String(format: NSLocalizedString("AO3 Work %@", comment: "Imported-link placeholder title, before the work is opened and its real title fetched"), link.ao3WorkID),
@@ -1166,6 +1230,12 @@ public enum FetchType {
 
 	public func reanchorAnnotation(annotationID: String, startOffset: Int, endOffset: Int, quoteExact: String, quotePrefix: String, quoteSuffix: String, chapterTitle: String?) async {
 		await database.reanchorAnnotation(annotationID: annotationID, startOffset: startOffset, endOffset: endOffset, quoteExact: quoteExact, quotePrefix: quotePrefix, quoteSuffix: quoteSuffix, chapterTitle: chapterTitle)
+	}
+
+	/// Sets hasHighlight/originalText/replacementText directly -- see
+	/// docs/annotations.md's "Storage shape".
+	public func setAnnotationEditFields(annotationID: String, hasHighlight: Bool, originalText: String?, replacementText: String?) async {
+		await database.setAnnotationEditFields(annotationID: annotationID, hasHighlight: hasHighlight, originalText: originalText, replacementText: replacementText)
 	}
 
 	public func fetchAnnotations(forArticleID articleID: String) async -> [Annotation] {

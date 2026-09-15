@@ -58,6 +58,11 @@ struct DatabaseKey {
 	static let kudosCount = "kudosCount"
 	static let bookmarkCount = "bookmarkCount"
 	static let hitCount = "hitCount"
+	// Date this article was bookmarked -- AO3 bookmarks-page rows only,
+	// via AO3SearchResultsExtractor.dateBookmarked(fromLI:). Not part of
+	// the four stats above (those come from a live chapter fetch; this
+	// comes from the search/bookmarks-listing extractor).
+	static let dateBookmarked = "dateBookmarked"
 	// Task 10 ("Prev/next/first navigation") -- previous/next work in
 	// series, read off the same live work-page fetch as the four stats
 	// above.
@@ -135,4 +140,7 @@ struct DatabaseKey {
 	static let createdAt = "createdAt"
 	static let orphanedAt = "orphanedAt"
 	static let lastReanchoredAt = "lastReanchoredAt"
+	static let hasHighlight = "hasHighlight"
+	static let originalText = "originalText"
+	static let replacementText = "replacementText"
 }

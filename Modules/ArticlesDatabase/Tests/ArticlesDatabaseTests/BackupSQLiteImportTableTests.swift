@@ -262,4 +262,89 @@ struct BackupSQLiteImportTableTests {
 		#expect(fetched.first?.note == "edited locally, more recently")
 		#expect(fetched.first?.color == .green)
 	}
+
+	// The three columns added for text replacement (hasHighlight/
+	// originalText/replacementText) are exactly the "narrow, easy-to-miss
+	// omission" the plan's "Backup/export" section calls out: mergeAnnotations
+	// is not a plain column-agnostic union, so a new column has to be added
+	// explicitly in three places (INSERT OR IGNORE's column list, its SELECT,
+	// and the UPDATE...SET block) or a merge-imported edit row silently loses
+	// those values while the row itself still merges "successfully." These
+	// two tests catch a regression in either the new-row or conflicting-row
+	// path.
+
+	@Test("a new-only edit row's hasHighlight/originalText/replacementText survive the merge")
+	func annotationsNewOnlyEditRowRetainsTextReplacementColumns() async throws {
+		let localDB = TestFixtures.makeDatabase()
+		let backupDB = TestFixtures.makeDatabase()
+
+		_ = await backupDB.updateAsync(parsedItems: [TestFixtures.makeParsedItem(uniqueID: "u1", feedURL: "https://example.com/feed-a")], feedID: "feed-a", deleteOlder: false)
+		let articleID = Article.calculatedArticleID(feedID: "feed-a", uniqueID: "u1")
+
+		let now = Date(timeIntervalSince1970: 1_700_000_000)
+		await backupDB.saveAnnotation(Annotation(
+			annotationID: "edit-only-annotation",
+			articleID: articleID,
+			bookKey: nil,
+			quoteExact: "teh",
+			quotePrefix: "",
+			quoteSuffix: "",
+			startOffset: 0,
+			endOffset: 3,
+			color: .yellow,
+			note: nil,
+			hasHighlight: false,
+			originalText: "teh",
+			replacementText: "the",
+			createdAt: now,
+			updatedAt: now
+		))
+
+		try mergeBackup(of: backupDB, into: localDB)
+
+		let fetched = await localDB.fetchAnnotations(articleID: articleID)
+		#expect(fetched.count == 1)
+		#expect(fetched.first?.hasHighlight == false)
+		#expect(fetched.first?.originalText == "teh")
+		#expect(fetched.first?.replacementText == "the")
+	}
+
+	@Test("a conflicting annotationID's winning side keeps its hasHighlight/originalText/replacementText, not the loser's")
+	func annotationsConflictWinnerRetainsTextReplacementColumns() async throws {
+		let localDB = TestFixtures.makeDatabase()
+		let backupDB = TestFixtures.makeDatabase()
+
+		_ = await localDB.updateAsync(parsedItems: [TestFixtures.makeParsedItem(uniqueID: "u1", feedURL: "https://example.com/feed-a")], feedID: "feed-a", deleteOlder: false)
+		_ = await backupDB.updateAsync(parsedItems: [TestFixtures.makeParsedItem(uniqueID: "u1", feedURL: "https://example.com/feed-a")], feedID: "feed-a", deleteOlder: false)
+		let articleID = Article.calculatedArticleID(feedID: "feed-a", uniqueID: "u1")
+
+		let earlier = Date(timeIntervalSince1970: 1_700_000_000)
+		let later = Date(timeIntervalSince1970: 1_700_100_000)
+
+		// Local: a plain highlight, no edit -- older.
+		await localDB.saveAnnotation(Annotation(
+			annotationID: "shared-annotation", articleID: articleID, bookKey: nil,
+			quoteExact: "urself", quotePrefix: "", quoteSuffix: "",
+			startOffset: 0, endOffset: 6, color: .yellow, note: nil,
+			hasHighlight: true, originalText: nil, replacementText: nil,
+			createdAt: earlier, updatedAt: earlier
+		))
+		// Backup: the same row later became a rule-driven edit (hasHighlight
+		// false, originalText/replacementText set) -- newer.
+		await backupDB.saveAnnotation(Annotation(
+			annotationID: "shared-annotation", articleID: articleID, bookKey: nil,
+			quoteExact: "urself", quotePrefix: "", quoteSuffix: "",
+			startOffset: 0, endOffset: 6, color: .yellow, note: nil,
+			hasHighlight: false, originalText: "urself", replacementText: "yourself",
+			createdAt: earlier, updatedAt: later
+		))
+
+		try mergeBackup(of: backupDB, into: localDB)
+
+		let fetched = await localDB.fetchAnnotations(articleID: articleID)
+		#expect(fetched.count == 1)
+		#expect(fetched.first?.hasHighlight == false)
+		#expect(fetched.first?.originalText == "urself")
+		#expect(fetched.first?.replacementText == "yourself")
+	}
 }

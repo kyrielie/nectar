@@ -3,13 +3,18 @@
 //  NetNewsWire-iOS
 //
 //  Reachable two ways: from the reader's annotations toolbar button
-//  (ArticleViewController.showAnnotationsList(_:), always the whole open
-//  book, grouped by chapter) and from Settings (unscoped, "everything
-//  I've ever highlighted"). One implementation either way -- the only
-//  difference between the two entry points is which Account fetch method
-//  loadRows() below calls, matching fetchAnnotations(forBookKey:)/
-//  fetchAllAnnotations() 1:1. There used to be a third, per-chapter scope
-//  reachable from a toolbar menu with two choices; that menu is gone (see
+//  (ArticleViewController.showAnnotationsList(_:), whole open book,
+//  grouped by chapter) and from Settings (unscoped, "everything I've
+//  ever highlighted"). Per the text-replacement feature's "Consolidated
+//  viewer" section, this is now one screen with a This Book/All tab
+//  switcher (see selectedScope/showsTabSwitcher below), not two
+//  separately-launched views that happen to render similar content --
+//  either tab is reachable from either entry point once the screen is
+//  open; only which tab it *opens* on differs, seeded from the `scope`
+//  the caller passed in. The Settings entry point has no book in
+//  context, so it only ever offers the All tab (showsTabSwitcher is
+//  false there). There used to be a third, per-chapter scope reachable
+//  from a toolbar menu with two choices; that menu is gone (see
 //  ArticleViewController.showAnnotationsList's doc comment) since a
 //  single grouped-by-chapter view covers the same need without asking
 //  which scope to open first.
@@ -47,13 +52,21 @@ import Account
 
 struct AnnotationsListView: View {
 
-	enum Scope {
+	enum Scope: Hashable {
 		case book(bookKey: String)
 		case everything
 	}
 
 	let account: Account
-	let scope: Scope
+	/// The book this screen was opened for, when opened from the
+	/// in-context toolbar button -- kept independently of `selectedScope`
+	/// (below) so "This Book" stays available as a tab even after the
+	/// person switches to "All", per the plan's "Consolidated viewer":
+	/// "either tab reachable from either entry point once the screen is
+	/// open." nil when opened from Settings with no single book in
+	/// context, in which case only the "All" tab is offered (see
+	/// `showsTabSwitcher`) -- there is no book to scope "This Book" to.
+	let bookKey: String?
 
 	/// The screen's navigation title, supplied by the caller rather than
 	/// derived here. For the .book case this is the currently-open
@@ -61,7 +74,10 @@ struct AnnotationsListView: View {
 	/// ArticleViewController.showAnnotationsList) rather than a fixed
 	/// placeholder string; nil (or empty) falls back to a generic title
 	/// below, the same fallback shape TableOfContentsViewController uses
-	/// for its own bookTitle parameter.
+	/// for its own bookTitle parameter. Only shown for the .book tab --
+	/// the .everything tab always uses its own generic title, even if a
+	/// bookKey/title pair was supplied, since "All" showing one book's
+	/// title would be misleading.
 	let title: String?
 
 	/// Called when the person taps a row: navigate to (and, once there,
@@ -85,13 +101,56 @@ struct AnnotationsListView: View {
 
 	@Environment(\.dismiss) private var dismiss
 
+	/// scope's initial value seeds `selectedScope` (below) -- the tab the
+	/// screen opens on, per the plan: "opened from the in-context toolbar
+	/// button defaults to This book; opened from Settings defaults to
+	/// All." ArticleViewController.showAnnotationsList passes
+	/// `.book(bookKey:)`; the Settings entry point (TextReplacementSettingsView/
+	/// AnnotationsSettingsView) passes `.everything`. resolvedBookKey/
+	/// showsTabSwitcher's own derivations are pulled into static
+	/// functions below purely so AnnotationsListViewScopeTests can
+	/// exercise them without constructing a whole view (which would
+	/// otherwise require a real Account -- see that test file's own
+	/// header comment for why that's not available in this test target).
 	init(account: Account, scope: Scope, title: String? = nil, onClose: (() -> Void)? = nil, onNavigateToAnnotation: @escaping (Annotation) -> Void) {
 		self.account = account
-		self.scope = scope
 		self.title = title
 		self.onClose = onClose
 		self.onNavigateToAnnotation = onNavigateToAnnotation
+		self.bookKey = Self.resolvedBookKey(for: scope)
+		_selectedScope = State(initialValue: scope)
 	}
+
+	/// The book this screen was opened for, derived from the scope the
+	/// caller passed to init -- nil for `.everything`. A static function
+	/// (not inlined into init) so AnnotationsListViewScopeTests can
+	/// assert on this mapping directly. Named distinctly from the
+	/// `bookKey` stored property (rather than overloading that name) so
+	/// call sites are unambiguous at a glance.
+	static func resolvedBookKey(for scope: Scope) -> String? {
+		switch scope {
+		case .book(let bookKey):
+			return bookKey
+		case .everything:
+			return nil
+		}
+	}
+
+	/// The tab currently on screen -- distinct from `bookKey` (the fixed
+	/// identity of the book this screen was opened for, if any) so
+	/// switching to "All" and back to "This Book" doesn't lose which book
+	/// "This Book" refers to.
+	@State private var selectedScope: Scope
+	/// The tab switcher only makes sense when both tabs have somewhere to
+	/// point -- if this screen was opened from Settings with no book in
+	/// context (bookKey == nil), there is no "This Book" to switch to, so
+	/// the switcher is hidden entirely and the screen behaves exactly as
+	/// the old unscoped Settings list did. A static function over the
+	/// resolved bookKey (not a property reading `self.bookKey`) so
+	/// AnnotationsListViewScopeTests can assert on this decision without
+	/// constructing a view instance.
+	static func showsTabSwitcher(bookKey: String?) -> Bool { bookKey != nil }
+	private var showsTabSwitcher: Bool { Self.showsTabSwitcher(bookKey: bookKey) }
 
 	@State private var groups: [AnnotationGroup] = []
 	@State private var isLoading = true
@@ -156,11 +215,11 @@ struct AnnotationsListView: View {
 	}
 
 	private var navigationTitleText: String {
-		if let title, !title.isEmpty {
-			return title
-		}
-		switch scope {
+		switch selectedScope {
 		case .book:
+			if let title, !title.isEmpty {
+				return title
+			}
 			return NSLocalizedString("This Book", comment: "Annotations list navigation title: whole book, title unavailable")
 		case .everything:
 			return NSLocalizedString("All Highlights", comment: "Annotations list navigation title: everything")
@@ -168,14 +227,36 @@ struct AnnotationsListView: View {
 	}
 
 	var body: some View {
-		Group {
-			if isLoading {
-				ProgressView()
-					.frame(maxWidth: .infinity, maxHeight: .infinity)
-			} else if groups.isEmpty {
-				emptyState
-			} else {
-				list
+		VStack(spacing: 0) {
+			if showsTabSwitcher {
+				// "This Book" / "All", per the plan's "Consolidated
+				// viewer" -- the same screen the two previously-separate
+				// entry points now share, rather than two views that
+				// happened to render similar content. Hidden entirely
+				// when there's no book in context to make "This Book"
+				// meaningful (see showsTabSwitcher).
+				Picker(selection: $selectedScope) {
+					Text("This Book", comment: "Annotations list tab: current book only")
+						.tag(Scope.book(bookKey: bookKey ?? ""))
+					Text("All", comment: "Annotations list tab: every book")
+						.tag(Scope.everything)
+				} label: {
+					Text("Scope", comment: "Annotations list: tab picker accessibility label")
+				}
+				.pickerStyle(.segmented)
+				.padding(.horizontal)
+				.padding(.vertical, 8)
+			}
+
+			Group {
+				if isLoading {
+					ProgressView()
+						.frame(maxWidth: .infinity, maxHeight: .infinity)
+				} else if groups.isEmpty {
+					emptyState
+				} else {
+					list
+				}
 			}
 		}
 		.navigationTitle(Text(navigationTitleText))
@@ -211,6 +292,11 @@ struct AnnotationsListView: View {
 		}
 		.task {
 			await loadRows()
+		}
+		.onChange(of: selectedScope) {
+			Task {
+				await loadRows()
+			}
 		}
 	}
 
@@ -336,7 +422,7 @@ struct AnnotationsListView: View {
 		isLoading = true
 
 		let annotations: [Annotation]
-		switch scope {
+		switch selectedScope {
 		case .book(let bookKey):
 			annotations = await account.fetchAnnotations(forBookKey: bookKey)
 		case .everything:
@@ -495,22 +581,40 @@ private struct AnnotationRow: View {
 		HighlightPalette(rawValue: highlightPaletteRawValue) ?? .default
 	}
 
+	/// Field-driven rendering, per the text-replacement feature's
+	/// "Consolidated viewer" section: originalText/replacementText
+	/// presence picks the row *style* (edit's compact one-liner vs. a
+	/// highlight's full sentence context); hasHighlight overlays the
+	/// color dot on whichever style that produced, so a row that's both
+	/// a highlight and an edit still visibly carries its color; note
+	/// presence adds the same note-preview line either way. No `kind`
+	/// switch -- these three checks are independent, matching Annotation's
+	/// own three-plain-fields storage shape (docs/annotations.md,
+	/// "Storage shape").
 	var body: some View {
 		HStack(alignment: .top, spacing: 12) {
-			Circle()
-				.fill(annotation.color.swiftUIColor(palette: highlightPalette, isDark: colorScheme == .dark))
-				.frame(width: 12, height: 12)
-				.padding(.top, 4)
+			if annotation.hasHighlight {
+				Circle()
+					.fill(annotation.color.swiftUIColor(palette: highlightPalette, isDark: colorScheme == .dark))
+					.frame(width: 12, height: 12)
+					.padding(.top, 4)
+			}
 
 			VStack(alignment: .leading, spacing: 4) {
-				// No lineLimit here -- chapterTitle is now the section
-				// header (AnnotationsListView.list), not a per-row caption,
-				// so there's nothing else competing for space in this row;
-				// truncating the one thing being shown just hides context
-				// the row exists to provide.
-				Text(sentenceContext)
-					.font(.callout)
-					.foregroundStyle(.primary)
+				switch annotation.rowStyle {
+				case .edit(let originalText, let replacementText):
+					editSummary(originalText: originalText, replacementText: replacementText)
+				case .highlight:
+					// No lineLimit here -- chapterTitle is now the section
+					// header (AnnotationsListView.list), not a per-row
+					// caption, so there's nothing else competing for
+					// space in this row; truncating the one thing being
+					// shown just hides context the row exists to
+					// provide.
+					Text(sentenceContext)
+						.font(.callout)
+						.foregroundStyle(.primary)
+				}
 
 				if let note = annotation.note, !note.isEmpty {
 					// No lineLimit -- same reasoning as sentenceContext
@@ -547,100 +651,48 @@ private struct AnnotationRow: View {
 		.opacity(annotation.orphanedAt != nil ? 0.5 : 1.0)
 	}
 
-	/// The full sentence surrounding the highlight, built from the stored
-	/// quotePrefix/quoteExact/quoteSuffix selector (see docs/annotations.md)
-	/// rather than just the raw quote -- gives the row real reading context
-	/// instead of a mid-sentence fragment. Each of the three pieces is
-	/// whitespace-normalized independently before concatenation (see
-	/// normalizedForDisplay), then the quote's location within `combined`
-	/// is found by direct search rather than by offsetting `prefix.count`
-	/// Characters in: quotePrefix/quoteExact/quoteSuffix are three
-	/// independently-sliced UTF-16 substrings on the JS side, and if a
-	/// slice boundary lands mid-grapheme-cluster, decoding and
-	/// re-concatenating them in Swift can merge or split a Character
-	/// differently than the JS side counted it -- so a Character count
-	/// carried over from one string doesn't reliably locate a position in
-	/// the concatenation of a different pair of strings. Searching for the
-	/// literal quote text sidesteps that: `combined` is built to contain
-	/// `quote` by construction, so the search always succeeds. Search
-	/// starts as close as possible to the expected position (still using
-	/// prefix's length only as a starting *hint*, not as a trusted index)
-	/// so that a quote which happens to recur inside quotePrefix doesn't
-	/// win over the real occurrence.
+	/// The compact one-line style for an edit row (originalText/
+	/// replacementText both set): struck-through original text, then the
+	/// inserted replacement. Deliberately not the full sentence-context
+	/// style a highlight's own row shows -- per the plan's "Consolidated
+	/// viewer" section, this is a scanning list, not a detail view; full
+	/// context for an edit is available by tapping into it (opens
+	/// AnnotationEditorView, same as tapping an existing highlight does
+	/// today).
+	private func editSummary(originalText: String, replacementText: String) -> some View {
+		(
+			Text(SentenceContext.normalizedForDisplay(originalText))
+				.strikethrough()
+				.foregroundStyle(.secondary)
+			+ Text(" \u{2192} ")
+				.foregroundStyle(.tertiary)
+			+ Text(SentenceContext.normalizedForDisplay(replacementText))
+				.foregroundStyle(.primary)
+		)
+		.font(.callout)
+	}
+
+	/// Wraps SentenceContext.sentence(quotePrefix:quoteExact:quoteSuffix:)
+	/// (Modules/Articles -- see that type's own header comment for why the
+	/// pure text/range math lives there, not here) in an AttributedString
+	/// with this row's own palette/color-scheme-aware backgroundColor
+	/// applied to the quote's range. Only used for the highlight-style row
+	/// (see AnnotationRow.body's field-driven branch) -- an edit-only row
+	/// uses the compact struck-through-original -> inserted-replacement
+	/// style instead, which has no sentence context of its own.
 	private var sentenceContext: AttributedString {
-		let prefix = normalizedForDisplay(annotation.quotePrefix)
-		let quote = normalizedForDisplay(annotation.quoteExact)
-		let suffix = normalizedForDisplay(annotation.quoteSuffix)
-		let combined = prefix + quote + suffix
-
-		guard !combined.isEmpty, !quote.isEmpty else {
-			return AttributedString(quote)
-		}
-
-		// A grapheme-boundary mismatch (see doc comment above) can only be
-		// off by a character or two, never by prefix's whole length -- 8
-		// characters of slack is generous cover for that while still
-		// skipping past an earlier, unrelated recurrence of `quote` inside
-		// a long quotePrefix.
-		let searchHintOffset = max(0, prefix.count - 8)
-		let searchStart = combined.index(combined.startIndex, offsetBy: searchHintOffset, limitedBy: combined.endIndex) ?? combined.startIndex
-		let quoteRange = combined.range(of: quote, range: searchStart..<combined.endIndex) ?? combined.range(of: quote)
-		guard let quoteRange else {
-			return AttributedString(combined)
-		}
-		let quoteStart = quoteRange.lowerBound
-		let quoteEnd = quoteRange.upperBound
-
-		let tokenizer = NLTokenizer(unit: .sentence)
-		tokenizer.string = combined
-		var sentenceRange = combined.startIndex..<combined.endIndex
-		tokenizer.enumerateTokens(in: combined.startIndex..<combined.endIndex) { range, _ in
-			if range.contains(quoteStart) || range.lowerBound == quoteStart {
-				sentenceRange = range
-				return false
-			}
-			return true
-		}
-
-		let sentenceString = String(combined[sentenceRange])
-		var attributed = AttributedString(sentenceString)
-
-		let clippedStart = max(quoteStart, sentenceRange.lowerBound)
-		let clippedEnd = min(quoteEnd, sentenceRange.upperBound)
-		guard clippedStart < clippedEnd else {
-			return attributed
-		}
-
-		// Re-base clippedStart/clippedEnd from `combined`-relative indices
-		// onto `sentenceString`-relative indices (AttributedString.Index
-		// lookup requires indices from the exact string the AttributedString
-		// was initialized from, not from `combined`).
-		let startDistance = combined.distance(from: sentenceRange.lowerBound, to: clippedStart)
-		let endDistance = combined.distance(from: sentenceRange.lowerBound, to: clippedEnd)
+		let result = SentenceContext.sentence(quotePrefix: annotation.quotePrefix, quoteExact: annotation.quoteExact, quoteSuffix: annotation.quoteSuffix)
+		var attributed = AttributedString(result.text)
 		guard
-			let localStart = sentenceString.index(sentenceString.startIndex, offsetBy: startDistance, limitedBy: sentenceString.endIndex),
-			let localEnd = sentenceString.index(sentenceString.startIndex, offsetBy: endDistance, limitedBy: sentenceString.endIndex),
-			let attrStart = AttributedString.Index(localStart, within: attributed),
-			let attrEnd = AttributedString.Index(localEnd, within: attributed)
+			let quoteRange = result.quoteRange,
+			let attrStart = AttributedString.Index(quoteRange.lowerBound, within: attributed),
+			let attrEnd = AttributedString.Index(quoteRange.upperBound, within: attributed)
 		else {
 			return attributed
 		}
-
 		attributed[attrStart..<attrEnd].backgroundColor = annotation.color.swiftUIColor(palette: highlightPalette, isDark: colorScheme == .dark).opacity(0.3)
 		return attributed
 	}
-}
-
-/// Collapses runs of whitespace (including the newlines/indentation
-/// annotations.js's buildTextIndex deliberately leaves untouched, since
-/// its offsets have to stay byte-exact against the source HTML for anchor
-/// resolution -- see docs/annotations.md's "Anchor resolution") down to a
-/// single space, for display only. Doesn't trim the ends, so
-/// quotePrefix/quoteExact/quoteSuffix still concatenate cleanly.
-/// Top-level (not a method on AnnotationRow) so both AnnotationRow's
-/// sentenceContext and copyText below can share it.
-private func normalizedForDisplay(_ string: String) -> String {
-	string.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
 }
 
 /// Builds the string for the "Copy Highlight" context menu action:
@@ -665,7 +717,7 @@ private func normalizedForDisplay(_ string: String) -> String {
 /// `@testable import Nectar` (see CopyHighlightTextTests) rather than
 /// folded into a private, untestable corner of the view.
 func copyText(annotation: Annotation, articleAuthors: String?, link: String?) -> String {
-	var lines = ["\"\(normalizedForDisplay(annotation.quoteExact))\""]
+	var lines = ["\"\(SentenceContext.normalizedForDisplay(annotation.quoteExact))\""]
 
 	var attribution = ["-" + (articleAuthors ?? NSLocalizedString("Unknown", comment: "Annotation copy: unknown author fallback"))]
 	if let chapterTitle = annotation.chapterTitle, !chapterTitle.isEmpty {

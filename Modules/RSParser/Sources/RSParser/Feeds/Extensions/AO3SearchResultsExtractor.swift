@@ -252,6 +252,7 @@ private extension AO3SearchResultsExtractor {
 
 		let language = stringValue(fromDD: li, classToken: "language")
 		let dateModified = datetime(fromLI: li)
+		let dateBookmarked = dateBookmarked(fromLI: li)
 
 		let wordCount = intValue(fromDD: li, classToken: "words")
 		let (chapterCurrent, chapterTotal) = chapterCounts(fromLI: li)
@@ -297,6 +298,7 @@ private extension AO3SearchResultsExtractor {
 			kudosCount: kudosCount,
 			bookmarkCount: bookmarkCount,
 			hitCount: hitCount,
+			dateBookmarked: dateBookmarked,
 			ao3WorkID: workID
 		)
 	}
@@ -429,6 +431,24 @@ private extension AO3SearchResultsExtractor {
 	/// here.
 	static func datetime(fromLI li: HTMLLiteElement) -> Date? {
 		guard let p = firstDescendant(of: li, where: { $0.tag == "p" && classTokens(of: $0).contains("datetime") }) else {
+			return nil
+		}
+		let text = flattenedText(p).trimmingCharacters(in: .whitespacesAndNewlines)
+		guard !text.isEmpty else {
+			return nil
+		}
+		return datetimeFormatter.date(from: text)
+	}
+
+	/// `div.user p.datetime` -- the date *this bookmark* was made, distinct
+	/// from dateModified's `div.header p.datetime` (the work's own
+	/// last-updated date). Only present on /users/<n>/bookmarks rows --
+	/// search-results and /works rows have no `div.user` block at all, so
+	/// this returns nil for every other listing shape without needing
+	/// separate feed-type gating at parse time.
+	static func dateBookmarked(fromLI li: HTMLLiteElement) -> Date? {
+		guard let userDiv = firstDescendant(of: li, where: { $0.tag == "div" && classTokens(of: $0).contains("user") }),
+		      let p = firstDescendant(of: userDiv, where: { $0.tag == "p" && classTokens(of: $0).contains("datetime") }) else {
 			return nil
 		}
 		let text = flattenedText(p).trimmingCharacters(in: .whitespacesAndNewlines)

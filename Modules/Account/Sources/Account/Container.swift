@@ -211,4 +211,21 @@ extension Notification.Name {
 	func postChildrenDidChangeNotification() {
 		NotificationCenter.default.post(name: .ChildrenDidChange, object: self)
 	}
+
+	/// Immediate child folders only, case-insensitive name order --
+	/// does not recurse. Mirrors `Account.sortedFolders`'s own logic
+	/// exactly; hoisted here (same precedent as `AO3HTMLHelpers`
+	/// consolidating duplicated selector logic -- no layering reason for
+	/// `Account` and `Folder` to keep separate copies) so a caller
+	/// walking nested folders one level at a time (e.g. a folder-picker
+	/// recursive walk) can call the same method on either an `Account`
+	/// or a `Folder` container. `Account`'s own `sortedFolders`
+	/// declaration is untouched and continues to shadow this default for
+	/// that type, so this is purely additive for `Folder`.
+	var sortedFolders: [Folder]? {
+		guard let folders else {
+			return nil
+		}
+		return Array(folders).sorted(by: { $0.nameForDisplay.caseInsensitiveCompare($1.nameForDisplay) == .orderedAscending })
+	}
 }

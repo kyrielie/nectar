@@ -96,7 +96,7 @@ public struct ArticleStorageInfo: Sendable {
 	/// schema change; a fresh install starts at user_version 0 and runs
 	/// every step up to currentSchemaVersion in one pass, same as an
 	/// existing install catching up.
-	nonisolated private static let currentSchemaVersion: UInt32 = 3
+	nonisolated private static let currentSchemaVersion: UInt32 = 5
 
 	public init(databaseFilePath: String, accountID: String, retentionStyle: RetentionStyle) {
 		Self.logger.debug("Articles Database init \(accountID, privacy: .public)")
@@ -372,6 +372,40 @@ public struct ArticleStorageInfo: Sendable {
 			if !self.articlesTable.annotationsTable.containsColumn("chapterTitle", in: database) {
 				Self.logger.debug("ArticlesDatabase: adding chapterTitle column \(accountID, privacy: .public)")
 				database.executeStatements("ALTER TABLE annotations add column chapterTitle TEXT;")
+			}
+
+			// Schema version 4: dateBookmarked (docs/ao3-feeds.md,
+			// docs/database.md) -- the date an AO3 bookmarks-page row was
+			// bookmarked, distinct from the work's own dateModified. Own
+			// single-column block since it's DATE, not INTEGER like the
+			// four AO3 stats columns above -- same containsColumn-guarded
+			// ALTER TABLE pattern as lastPrefaceFetchDate/
+			// wordCountRegressionFlaggedAt.
+			if !self.articlesTable.containsColumn(DatabaseKey.dateBookmarked, in: database) {
+				Self.logger.debug("ArticlesDatabase: adding dateBookmarked column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.dateBookmarked) DATE;")
+			}
+
+			// Schema version 5: hasHighlight/originalText/replacementText on
+			// annotations (docs/annotations.md, "Storage shape") -- the local
+			// diff/override layer text replacement is built on top of. Same
+			// containsColumn-guarded ALTER TABLE pattern as chapterTitle above.
+			// hasHighlight defaults every existing row to true at the SQL
+			// level -- correct, since every row that predates this migration
+			// is a highlight -- so no backfill pass is needed.
+			// originalText/replacementText are nullable and paired: non-nil
+			// exactly when this row also carries a text replacement.
+			if !self.articlesTable.annotationsTable.containsColumn(DatabaseKey.hasHighlight, in: database) {
+				Self.logger.debug("ArticlesDatabase: adding hasHighlight column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE annotations add column \(DatabaseKey.hasHighlight) BOOL NOT NULL DEFAULT 1;")
+			}
+			if !self.articlesTable.annotationsTable.containsColumn(DatabaseKey.originalText, in: database) {
+				Self.logger.debug("ArticlesDatabase: adding originalText column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE annotations add column \(DatabaseKey.originalText) TEXT;")
+			}
+			if !self.articlesTable.annotationsTable.containsColumn(DatabaseKey.replacementText, in: database) {
+				Self.logger.debug("ArticlesDatabase: adding replacementText column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE annotations add column \(DatabaseKey.replacementText) TEXT;")
 			}
 
 			database.executeStatements("CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);")
@@ -713,6 +747,24 @@ public struct ArticleStorageInfo: Sendable {
 				quotePrefix: quotePrefix,
 				quoteSuffix: quoteSuffix,
 				chapterTitle: chapterTitle
+			) {
+				continuation.resume()
+			}
+		}
+	}
+
+	/// Sets hasHighlight/originalText/replacementText directly -- see
+	/// docs/annotations.md's "Storage shape". Does not touch offsets/quote/
+	/// chapterTitle; a caller that also needs those changed (an edit that
+	/// shifts other rows' offsets) calls reanchorAnnotation separately.
+	public func setAnnotationEditFields(annotationID: String, hasHighlight: Bool, originalText: String?, replacementText: String?) async {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		await withCheckedContinuation { continuation in
+			articlesTable.setAnnotationEditFieldsAsync(
+				annotationID: annotationID,
+				hasHighlight: hasHighlight,
+				originalText: originalText,
+				replacementText: replacementText
 			) {
 				continuation.resume()
 			}

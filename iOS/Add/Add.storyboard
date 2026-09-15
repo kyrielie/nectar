@@ -178,6 +178,7 @@
                                 <inset key="separatorInset" minX="45" minY="0.0" maxX="0.0" maxY="0.0"/>
                                 <connections>
                                     <outlet property="icon" destination="CIM-Ah-2kX" id="th3-LO-z9R"/>
+                                    <outlet property="iconLeadingConstraint" destination="5tt-v2-b7C" id="nct-ac-lead"/>
                                     <outlet property="label" destination="ZQp-94-vJz" id="Jm5-oU-BZR"/>
                                 </connections>
                             </tableViewCell>
@@ -213,6 +214,7 @@
                                 <inset key="separatorInset" minX="80" minY="0.0" maxX="0.0" maxY="0.0"/>
                                 <connections>
                                     <outlet property="icon" destination="yKC-at-6Jx" id="xOi-y6-6BX"/>
+                                    <outlet property="iconLeadingConstraint" destination="vGI-al-tZg" id="nct-fc-lead"/>
                                     <outlet property="label" destination="3Tp-A7-7rS" id="zjf-mw-Tch"/>
                                 </connections>
                             </tableViewCell>
