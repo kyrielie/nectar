@@ -21,6 +21,12 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   object is present at all, regardless of which fields inside it are
   populated) and a computed `bookKey`, used for identifying "the same book"
   across feeds/re-subscriptions/re-imports — see `book-identity.md`.
+  `ParsedItem` separately carries a cluster of AO3-native fields that are
+  **not** part of `_ambrosia` at all — `commentCount`/`kudosCount`/
+  `bookmarkCount`/`hitCount`/`dateBookmarked` — populated from a live AO3
+  fetch or listing-page scrape rather than the feed itself; see
+  `ambrosia-feed.md` for the distinction and `ao3-feeds.md` for where each
+  one is read.
   `ParsedItem` also carries a `markdown` field: when present, RSParser
   renders it to HTML via `Tidemark.markdownToHTML` and uses that as
   `contentHTML` (falling back to any provided `contentHTML` if the

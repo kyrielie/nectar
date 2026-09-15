@@ -126,6 +126,20 @@ final class WebViewController: UIViewController {
 
 	weak var coordinator: SceneCoordinator!
 
+	/// Fired once per successful auto-apply pass (see
+	/// applyTextReplacementRulesIfNeeded below) with the number of rows
+	/// written, so the owning ArticleViewController can surface the
+	/// plan's one-time summary banner. Set by
+	/// ArticleViewController.createWebViewController -- a plain closure,
+	/// not a delegate protocol, matching how every other WebViewController
+	/// -> ArticleViewController callback in this feature (onSave/onDelete
+	/// on AnnotationEditorView, onNavigateToAnnotation on AnnotationsListView)
+	/// is already shaped in this codebase. nil is a legitimate value (e.g.
+	/// a preview/test context with no banner host), in which case this
+	/// pass simply has no visible summary, same as before this hook
+	/// existed.
+	var onTextReplacementReplacementsApplied: ((Int) -> Void)?
+
 	private(set) var article: Article? {
 		didSet {
 			// A different work has its own separate prev/next/first state --
@@ -183,7 +197,7 @@ final class WebViewController: UIViewController {
 	/// Session-only (not persisted -- doesn't need to survive relaunch) stack
 	/// of pre-jump windowScrollY values, pushed immediately before each
 	/// programmatic "scroll to X" call (scrollToHeading, scrollToAnnotation).
-	/// See scrollBack() below. Option A scope per nectar-fixes-plan-4.md: only
+	/// See scrollBack() below. Option A scope per docs/reading-progress.md: only
 	/// these explicit JS-bridge jumps push here -- large manual scroll deltas
 	/// are not detected as jumps (see docs/reading-progress.md).
 	private var scrollJumpHistory: [Double] = []
@@ -589,6 +603,7 @@ final class WebViewController: UIViewController {
 		navigationController?.setNavigationBarHidden(false, animated: animated)
 		navigationController?.setToolbarHidden(false, animated: animated)
 		additionalSafeAreaInsets.bottom = 0
+		additionalSafeAreaInsets.top = 0
 		setBottomScrollEdgeEffectHidden(false)
 		configureContextMenuInteraction()
 		updateNotchAndPageCounterVisibility()
@@ -616,6 +631,12 @@ final class WebViewController: UIViewController {
 			// returns, shifting the visible scroll position relative to where it
 			// settles once the deferred update finally runs.
 			updateBottomSafeAreaForFullScreen()
+			// Same reasoning, top side: without this, webView.safeAreaInsets.top
+			// (read synchronously in textWasSelected(body:)) can be stale while in
+			// fullscreen, shifting HighlightColorPopover's sourceRect away from the
+			// actual selection -- see presentHighlightColorPopover's defensive
+			// clamp below for the second half of this fix.
+			updateTopSafeAreaForFullScreen()
 			setBottomScrollEdgeEffectHidden(true)
 			configureContextMenuInteraction()
 			updateNotchAndPageCounterVisibility()
@@ -777,7 +798,10 @@ extension WebViewController: WKNavigationDelegate {
 		}
 		initAnnotations()
 		applyHighlightPaletteColors()
-		loadAndRenderAnnotations()
+		Task {
+			await self.applyTextReplacementRulesIfNeeded()
+			self.loadAndRenderAnnotations()
+		}
 		resumeAwaitingPageLoads()
 	}
 
@@ -1034,6 +1058,147 @@ extension WebViewController {
 		applyHighlightPaletteColors()
 	}
 
+	/// First-run rule-driven text replacement (categories 1 and 3 -- see
+	/// docs/annotations.md's "Storage shape" and the feature's own
+	/// implementation plan, "Confirmation policy"): applies the typo
+	/// table, the reader-insert table, and any custom rules against this
+	/// article's canonical text the first time it's opened, writing one
+	/// edit row per match through the same pipeline saveTextEdit uses.
+	/// Always `hasHighlight = false` for these rows, per "Categorizing
+	/// the edit types."
+	///
+	/// "First time" is detected by absence, not a separate marker: if
+	/// this article already has any edit row with `hasHighlight == false`
+	/// and a non-nil `originalText`, rule-driven replacement has already
+	/// run for it (either on a prior open, or because a person reverted
+	/// one and it's still present as a reviewable row in Edit History --
+	/// either way, re-running the table now would either duplicate a
+	/// match already represented or silently resurrect a deliberately
+	/// reverted one, so this only ever runs when that set is empty).
+	/// Called before loadAndRenderAnnotations() on every page load so a
+	/// freshly written match is rendered on the same load, not the next.
+	@MainActor
+	func applyTextReplacementRulesIfNeeded() async {
+		guard AppDefaults.shared.textReplacementApplyAutomatically else { return }
+		guard let article, let account = article.account else { return }
+		let articleID = article.articleID
+
+		let existing = await account.fetchAnnotations(forArticleID: articleID)
+		let alreadyRan = existing.contains { !$0.hasHighlight && $0.originalText != nil }
+		guard !alreadyRan else { return }
+
+		var table = TextReplacementRuleTable()
+		if AppDefaults.shared.textReplacementTypoFixesEnabled {
+			table.rules.append(contentsOf: AppDefaults.shared.textReplacementTypoTable.rules)
+		}
+		// Per-work override (step 7) takes precedence over the global
+		// reader-insert table for this article's own bookKey -- see
+		// TextReplacementPerWorkOverride.mergedReaderInsertTable's doc
+		// comment for why prepending its rules is sufficient to make that
+		// happen, relying on TextReplacementRuleEngine's existing
+		// "earlier rule wins" overlap rule rather than a second precedence
+		// mechanism. A nil bookKey (unresolvable, same rare case
+		// book-identity.md describes) falls through to the global table
+		// unchanged, same as every other bookKey-scoped feature in this
+		// codebase.
+		let mergedReaderInsertTable = AppDefaults.shared.textReplacementPerWorkOverride.mergedReaderInsertTable(
+			forBookKey: article.bookKey,
+			global: AppDefaults.shared.textReplacementReaderInsertTable
+		)
+		table.rules.append(contentsOf: mergedReaderInsertTable.rules)
+		table.rules.append(contentsOf: AppDefaults.shared.textReplacementCustomTable.rules)
+		let quoteConversionEnabled = AppDefaults.shared.textReplacementQuoteConversionEnabled
+		guard !table.rules.isEmpty || quoteConversionEnabled else { return }
+
+		guard let textResult = try? await self.webView?.evaluateJavaScript("Annotations.getArticleText(\".articleBody\")"),
+			  let text = textResult as? String, !text.isEmpty else {
+			return
+		}
+
+		// Categories 1/3 (rule-table) and category 2 (quote conversion,
+		// see TextReplacementQuoteConversion) are found independently --
+		// per the plan, quote conversion is a deliberately separate
+		// transform from the shared rule engine, not conflated with it.
+		// Where the two disagree on the same span (rare, but possible if
+		// a custom rule happens to touch a `'`-delimited phrase), the
+		// rule-table match wins and the overlapping quote-conversion
+		// candidate is dropped -- a rule-table entry is a correction a
+		// person explicitly configured, while quote conversion is a
+		// blanket style pass, so the more specific/intentional match
+		// takes priority, same reasoning TextReplacementRuleEngine
+		// itself uses for cross-rule overlaps.
+		var matches = TextReplacementRuleEngine.findMatches(applying: table, to: text)
+		if quoteConversionEnabled {
+			let ruleRanges = matches.map { NSRange(location: $0.startOffset, length: $0.endOffset - $0.startOffset) }
+			let quoteMatches = TextReplacementQuoteConversion.findMatches(in: text).filter { quoteMatch in
+				let quoteRange = NSRange(location: quoteMatch.startOffset, length: quoteMatch.endOffset - quoteMatch.startOffset)
+				return !ruleRanges.contains { NSIntersectionRange($0, quoteRange).length > 0 }
+			}
+			matches.append(contentsOf: quoteMatches)
+		}
+		guard !matches.isEmpty else { return }
+
+		// Prefix/suffix captured the same way selectorForRange does on
+		// the JS side (CONTEXT_CHARS = 200) -- populated here in Swift,
+		// against the same `text` the offsets were found in, rather than
+		// leaving them empty: an empty quotePrefix/quoteSuffix would
+		// starve resolveAnnotation's disambiguation (scoreCandidate) if
+		// this quote ever needs multi-match resolution on a later render.
+		let nsText = text as NSString
+		let contextChars = 200
+
+		// Apply in descending offset order, same reasoning as manual
+		// edits and TextReplacementOffsetShift.descendingApplicationOrder:
+		// processing right-to-left means an earlier match's offset is
+		// never invalidated by a later match's own length delta.
+		let descending = matches.sorted { $0.startOffset > $1.startOffset }
+		var appliedCount = 0
+		for match in descending {
+			let prefixStart = max(0, match.startOffset - contextChars)
+			let quotePrefix = nsText.substring(with: NSRange(location: prefixStart, length: match.startOffset - prefixStart))
+			let suffixEnd = min(nsText.length, match.endOffset + contextChars)
+			let quoteSuffix = nsText.substring(with: NSRange(location: match.endOffset, length: suffixEnd - match.endOffset))
+
+			let annotationID = UUID().uuidString
+			let now = Date()
+			let annotation = Annotation(
+				annotationID: annotationID,
+				articleID: articleID,
+				bookKey: nil,
+				quoteExact: match.originalText,
+				quotePrefix: quotePrefix,
+				quoteSuffix: quoteSuffix,
+				startOffset: match.startOffset,
+				endOffset: match.endOffset,
+				color: .yellow,
+				note: nil,
+				hasHighlight: false,
+				originalText: match.originalText,
+				replacementText: match.replacementText,
+				createdAt: now,
+				updatedAt: now
+			)
+			await account.saveAnnotation(annotation)
+			appliedCount += 1
+		}
+
+		if appliedCount > 0 {
+			Self.logger.debug("applyTextReplacementRulesIfNeeded: applied \(appliedCount, privacy: .public) rule-driven replacements for articleID=\(articleID, privacy: .public)")
+			// One-time, non-blocking summary -- "N replacements made --
+			// review in Edit History," per the plan's "Confirmation
+			// policy." The debug log above is kept (cheap, and useful for
+			// diagnosing a report of unexpected replacements even when the
+			// banner itself was dismissed/missed), but is no longer the
+			// only trace: onTextReplacementReplacementsApplied surfaces
+			// TextReplacementSummaryBannerView via ArticleViewController
+			// (see that closure's own doc comment). A nil closure (no
+			// host to present into) just means no visible banner, same as
+			// before this hook existed -- this pass has already fully
+			// completed and persisted regardless.
+			onTextReplacementReplacementsApplied?(appliedCount)
+		}
+	}
+
 	/// Fetches this article's saved annotations and hands them to
 	/// annotations.js's renderAnnotationsEncoded, which resolves each one
 	/// against the freshly rendered DOM and draws its highlight. Any
@@ -1223,7 +1388,17 @@ extension WebViewController {
 		hostingController.preferredContentSize = CGSize(width: 144, height: 56)
 		if let presentationController = hostingController.popoverPresentationController {
 			presentationController.sourceView = view
-			presentationController.sourceRect = sourceRect
+			// Defensive clamp, independent of updateTopSafeAreaForFullScreen()
+			// above: if sourceRect ever ends up outside view.bounds anyway (a
+			// short selection's small bounding rect is the case that actually
+			// triggered this fix, but any future drift in this class would
+			// reproduce the same silent-non-presentation symptom),
+			// UIPopoverPresentationController has nothing valid to anchor to
+			// and simply never presents, with no error. Clamping degrades to
+			// "anchors at the nearest valid edge" instead.
+			presentationController.sourceRect = sourceRect.intersection(view.bounds).isEmpty
+				? sourceRect.clamped(toBounds: view.bounds)
+				: sourceRect
 			presentationController.permittedArrowDirections = [.up, .down]
 			presentationController.delegate = self
 		}
@@ -1330,8 +1505,11 @@ extension WebViewController {
 
 		let editorView = AnnotationEditorView(
 			annotation: annotation,
-			onSave: { [weak self] note, color in
+			onSave: { [weak self] note, color, editedText, keepHighlight in
 				self?.saveNoteEdit(annotation: annotation, note: note, color: color, account: account)
+				if let editedText {
+					self?.saveTextEdit(annotation: annotation, replacementText: editedText, keepHighlight: keepHighlight, account: account)
+				}
 			},
 			onDelete: { [weak self] in
 				self?.deleteAnnotation(annotation, account: account)
@@ -1366,6 +1544,137 @@ extension WebViewController {
 				await account.updateAnnotationNote(annotationID: annotation.annotationID, note: note)
 			}
 		}
+	}
+
+	/// Handles the "Edit text" field/"Keep highlight" checkbox from
+	/// AnnotationEditorView (docs/annotations.md, "Manual edit UI").
+	/// Called only when the field actually changed from the row's current
+	/// text -- AnnotationEditorView itself decides that and passes nil
+	/// otherwise, so by the time this runs there is definitely an edit to
+	/// apply.
+	///
+	/// Pipeline (see docs/annotations.md's "Applying edits"): fetch every
+	/// other annotation in this article, ask annotations.js to check the
+	/// edit's span for overlap against them and compute the shifted
+	/// anchors for every row after it -- entirely against the live,
+	/// already-rendered DOM, non-mutating (computeTextEditPlan) -- then
+	/// persist: this row's own edit fields via
+	/// account.setAnnotationEditFields, and every shifted row's new
+	/// anchor via account.reanchorAnnotation, in descending-offset order
+	/// so an earlier row's write is never computed relative to a
+	/// not-yet-applied later shift (TextReplacementOffsetShift's ordering
+	/// requirement, mirrored here even though the actual shift math ran
+	/// in JS -- the write order still matters for the same reason). Once
+	/// every row is persisted, loadAndRenderAnnotations() is called again
+	/// to re-render: the actual DOM mutation (applyTextEdit) happens
+	/// there, not here -- this function only computes and persists.
+	///
+	/// An overlap is surfaced as a blocking alert, per "Applying edits":
+	/// "can't edit text that's part of an existing highlight or another
+	/// edit -- remove or resize it first." Nothing is written in that case.
+	private func saveTextEdit(annotation: Annotation, replacementText: String, keepHighlight: Bool, account: Account) {
+		guard let article else { return }
+		let articleID = article.articleID
+		let originalText = annotation.replacementText ?? annotation.quoteExact
+		let replacementLength = replacementText.count
+
+		// Validity rule (docs/annotations.md, "Storage shape"): a row
+		// needs hasHighlight == true OR originalText != nil. If the
+		// person unchecks "keep highlight" while also reverting the text
+		// edit back to nothing meaningful, that's not reachable here --
+		// replacementText != originalEditableText is already guaranteed
+		// by AnnotationEditorView before this is called -- but a
+		// same-text edit is impossible to reach this function, so no
+		// extra guard is needed for that case specifically.
+
+		Task {
+			let allAnnotations = await account.fetchAnnotations(forArticleID: articleID)
+			let others = allAnnotations.filter { $0.annotationID != annotation.annotationID }
+
+			let otherPayload = others.map { [
+				"annotationID": $0.annotationID,
+				"startOffset": $0.startOffset,
+				"endOffset": $0.endOffset
+			] as [String: Any] }
+
+			let args: [String: Any] = [
+				"annotationToEditID": annotation.annotationID,
+				"startOffset": annotation.startOffset,
+				"endOffset": annotation.endOffset,
+				"replacementLength": replacementLength,
+				"otherAnnotations": otherPayload,
+				"rootSelector": annotation.rootSelector
+			]
+			guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else {
+				Self.logger.error("saveTextEdit: failed to serialize computeTextEditPlan args")
+				return
+			}
+			let encodedArgs = argsJSON.base64EncodedString()
+
+			let plan: TextEditPlan
+			do {
+				let result = try await self.webView?.evaluateJavaScript("Annotations.computeTextEditPlanEncoded(\"\(encodedArgs)\")")
+				guard let b64 = result as? String, let data = Data(base64Encoded: b64) else {
+					Self.logger.error("saveTextEdit: computeTextEditPlanEncoded() returned an unexpected result type or invalid base64")
+					return
+				}
+				guard let decoded = try? JSONDecoder().decode(TextEditPlan.self, from: data) else {
+					Self.logger.error("saveTextEdit: failed to decode TextEditPlan from computeTextEditPlanEncoded() result")
+					return
+				}
+				plan = decoded
+			} catch {
+				Self.logger.error("saveTextEdit: computeTextEditPlanEncoded() JS call failed: \(error.localizedDescription, privacy: .public)")
+				return
+			}
+
+			if plan.status == "overlap" {
+				self.presentTextEditOverlapAlert()
+				return
+			}
+
+			// Write this row's own edit fields first -- its offsets
+			// don't change (an edit's own span is the highlight's own
+			// span it was created against, per "Applying edits"), only
+			// hasHighlight/originalText/replacementText.
+			await account.setAnnotationEditFields(
+				annotationID: annotation.annotationID,
+				hasHighlight: keepHighlight,
+				originalText: originalText,
+				replacementText: replacementText
+			)
+
+			// Persist every shifted row, descending by (new) offset --
+			// same ordering requirement as applying edits generally, see
+			// TextReplacementOffsetShift.descendingApplicationOrder.
+			let shiftedDescending = plan.shifted.sorted { $0.startOffset > $1.startOffset }
+			for shifted in shiftedDescending {
+				await account.reanchorAnnotation(
+					annotationID: shifted.annotationID,
+					startOffset: shifted.startOffset,
+					endOffset: shifted.endOffset,
+					quoteExact: shifted.quoteExact,
+					quotePrefix: shifted.quotePrefix,
+					quoteSuffix: shifted.quoteSuffix,
+					chapterTitle: shifted.chapterTitle
+				)
+			}
+
+			self.loadAndRenderAnnotations()
+		}
+	}
+
+	/// Blocking alert for the overlap case described in
+	/// docs/annotations.md's "Applying edits" -- shown instead of
+	/// silently applying or silently orphaning the conflicting row.
+	private func presentTextEditOverlapAlert() {
+		let alert = UIAlertController(
+			title: NSLocalizedString("Can’t Edit This Text", comment: "Text-edit overlap alert title"),
+			message: NSLocalizedString("This text is part of an existing highlight or edit. Remove or resize it first.", comment: "Text-edit overlap alert message"),
+			preferredStyle: .alert
+		)
+		alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "OK button"), style: .default))
+		present(alert, animated: true)
 	}
 
 	private func deleteAnnotation(_ annotation: Annotation, account: Account) {
@@ -1546,6 +1855,39 @@ private struct ReanchorReport: Codable {
 	}
 	let moved: [Moved]
 	let orphanedIDs: [String]
+}
+
+/// The shape annotations.js's computeTextEditPlanEncoded returns --
+/// either an overlap conflict or the set of other rows an edit's
+/// length-delta shifts, each with its re-sliced quote/prefix/suffix/
+/// chapterTitle already computed against the simulated post-edit text.
+/// See docs/annotations.md's "Applying edits" and saveTextEdit(_:) above.
+private struct TextEditPlan: Codable {
+	struct Shifted: Codable {
+		let annotationID: String
+		let startOffset: Int
+		let endOffset: Int
+		let quoteExact: String
+		let quotePrefix: String
+		let quoteSuffix: String
+		let chapterTitle: String?
+	}
+	let status: String
+	let delta: Int?
+	let shifted: [Shifted]
+	let conflictingAnnotationID: String?
+
+	private enum CodingKeys: String, CodingKey {
+		case status, delta, shifted, conflictingAnnotationID
+	}
+
+	init(from decoder: Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		status = try container.decode(String.self, forKey: .status)
+		delta = try container.decodeIfPresent(Int.self, forKey: .delta)
+		shifted = try container.decodeIfPresent([Shifted].self, forKey: .shifted) ?? []
+		conflictingAnnotationID = try container.decodeIfPresent(String.self, forKey: .conflictingAnnotationID)
+	}
 }
 
 // MARK: Private
@@ -2051,6 +2393,20 @@ private extension WebViewController {
 	func updateBottomSafeAreaForFullScreen() {
 		let rawBottom = view.safeAreaInsets.bottom - additionalSafeAreaInsets.bottom
 		additionalSafeAreaInsets.bottom = -rawBottom
+	}
+
+	/// Top-side equivalent of updateBottomSafeAreaForFullScreen(), called
+	/// from hideBars() for the same reason: relying solely on the reactive
+	/// viewSafeAreaInsetsDidChange path left webView.safeAreaInsets.top
+	/// stale for a beat after entering fullscreen reading mode, which
+	/// textWasSelected(body:) reads synchronously to position
+	/// HighlightColorPopover's sourceRect. showBars() resets
+	/// additionalSafeAreaInsets.top = 0 synchronously the same way it
+	/// already did for .bottom, so the two insets stay symmetric across
+	/// both transitions.
+	func updateTopSafeAreaForFullScreen() {
+		let rawTop = view.safeAreaInsets.top - additionalSafeAreaInsets.top
+		additionalSafeAreaInsets.top = -rawTop
 	}
 
 	/// Hide or show the toolbar scroll edge effect at the bottom of the web view.

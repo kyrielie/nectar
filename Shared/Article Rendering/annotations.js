@@ -40,6 +40,14 @@
 // draws the highlight immediately. The Swift-side message handlers that
 // receive textWasSelected/annotationWasTapped, and the popover/note-editor
 // UI itself, live in WebViewController and the SwiftUI views next to it.
+//
+// This file also applies the text-replacement/local-edit layer (see
+// docs/annotations.md, "Storage shape"): an annotation row with
+// originalText/replacementText set is resolved the same way any other
+// annotation's span is, then applyTextEdit swaps that span's DOM content
+// for replacementText instead of (or in addition to, if hasHighlight is
+// also true) wrapping it in <mark>. resolveDOMRange is the shared
+// offset-to-DOM-node mapper both wrapRange and applyTextEdit use.
 
 (function (global) {
 	"use strict";
@@ -272,8 +280,24 @@
 	// the same data-annotation-id, rather than collapsing to textContent --
 	// same "don't discard inline markup" requirement applyVersalCaps'
 	// header comment already states.
-	function wrapRange(entries, startOffset, endOffset, annotationID, colorName) {
-		var wrapped = [];
+	// Maps a resolved [startOffset, endOffset) pair in the combined-text
+	// coordinate space back to a real DOM Range, using the same `entries`
+	// table buildTextIndex produced, splitting text nodes at both
+	// boundaries (Text.splitText, applyVersalCaps' technique) so the range's
+	// start/end containers land exactly on a text-node boundary. Extracted
+	// out of wrapRange (which used to inline this same node-walking/
+	// splitting logic) so applyTextEdit below can share it rather than
+	// duplicating the boundary math -- one offset-to-DOM mapper serving
+	// both highlighting and text-editing.
+	//
+	// Trims the trailing boundary first (higher offset) so the earlier
+	// splitText call for the leading boundary doesn't invalidate an
+	// already-computed trailing offset within the same entry.
+	function resolveDOMRange(entries, startOffset, endOffset) {
+		var startContainer = null;
+		var startLocalOffset = 0;
+		var endContainer = null;
+		var endLocalOffset = 0;
 
 		for (var i = 0; i < entries.length; i++) {
 			var entry = entries[i];
@@ -287,8 +311,9 @@
 			// Trim the trailing portion first (higher offset), so the earlier
 			// splitText call below doesn't invalidate this one's offset.
 			var localEnd = Math.min(endOffset, entry.end) - nodeStart;
+			var tailNode = null;
 			if (localEnd < node.textContent.length) {
-				node.splitText(localEnd);
+				tailNode = node.splitText(localEnd);
 			}
 
 			// Trim the leading portion, if this entry starts before the range.
@@ -298,19 +323,126 @@
 				middleNode = node.splitText(localStart);
 			}
 
-			var mark = document.createElement("mark");
-			mark.className = HIGHLIGHT_CLASS;
-			mark.setAttribute("data-annotation-id", annotationID);
-			if (colorName) {
-				mark.setAttribute("data-annotation-color", colorName);
+			if (startContainer === null) {
+				startContainer = middleNode;
+				startLocalOffset = 0;
 			}
+			// endOffset is exclusive -- the last entry actually touched by
+			// the range ends at middleNode's own length (its full trimmed
+			// content, since any trailing remainder was already split off
+			// into tailNode above).
+			endContainer = middleNode;
+			endLocalOffset = middleNode.textContent.length;
+		}
 
-			middleNode.parentNode.insertBefore(mark, middleNode);
-			mark.appendChild(middleNode);
-			wrapped.push(mark);
+		if (startContainer === null || endContainer === null) {
+			return null;
+		}
+
+		var range = document.createRange();
+		range.setStart(startContainer, startLocalOffset);
+		range.setEnd(endContainer, endLocalOffset);
+		return range;
+	}
+
+	// Wraps every text node fully contained within [startOffset, endOffset)
+	// in a <mark>, via resolveDOMRange for the boundary-splitting work. A
+	// range spanning multiple text nodes (crosses an inline element or
+	// paragraph boundary) wraps each contained text node individually with
+	// the same data-annotation-id, rather than collapsing to textContent --
+	// same "don't discard inline markup" requirement applyVersalCaps'
+	// header comment already states.
+	function wrapRange(entries, startOffset, endOffset, annotationID, colorName) {
+		var range = resolveDOMRange(entries, startOffset, endOffset);
+		if (!range) return [];
+		return wrapDOMRange(range, annotationID, colorName);
+	}
+
+	// Wraps every text node fully contained within an already-resolved
+	// Range -- the shared tail end of wrapRange (called with fresh offsets)
+	// and applyTextEdit's own composed-rendering case (called with the
+	// exact Range applyTextEdit already produced, not re-resolved against
+	// post-edit offsets -- see applyTextEdit's own comment).
+	//
+	// range.commonAncestorContainer is itself a Text node (not an
+	// element) whenever the whole range sits inside a single text node --
+	// the common case for a short highlight/edit that doesn't cross an
+	// inline element or paragraph boundary. A TreeWalker only ever visits
+	// descendants of its root, never the root itself, so rooting the
+	// walker directly at commonAncestorContainer in that case would visit
+	// nothing (a Text node has no children) and silently wrap zero nodes.
+	// Handled as its own fast path below, checked before the general
+	// multi-node TreeWalker case.
+	function wrapDOMRange(range, annotationID, colorName) {
+		// nodeType 3 is TEXT_NODE (DOM Node.TEXT_NODE) -- used as a raw
+		// numeric constant rather than referencing the global Node object,
+		// since this file's other environment-provided globals (NodeFilter,
+		// CSS) are passed in explicitly by the caller rather than assumed
+		// ambient, and Node itself has never been one of them.
+		if (range.commonAncestorContainer.nodeType === 3) {
+			return wrapSingleTextNode(range.commonAncestorContainer, annotationID, colorName);
+		}
+
+		var wrapped = [];
+		var walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT, null);
+		var node;
+		var nodes = [];
+		while ((node = walker.nextNode())) {
+			if (range.intersectsNode(node)) {
+				nodes.push(node);
+			}
+		}
+
+		for (var i = 0; i < nodes.length; i++) {
+			wrapped.push(wrapTextNode(nodes[i], annotationID, colorName));
 		}
 
 		return wrapped;
+	}
+
+	// Wraps a single Text node (already isolated to exactly the desired
+	// span by resolveDOMRange's splitText calls) in a <mark>. Shared by
+	// both of wrapDOMRange's paths -- the single-text-node fast path
+	// above, and the general multi-node loop -- so there's exactly one
+	// implementation of "build and insert the <mark> element," not two.
+	function wrapTextNode(textNode, annotationID, colorName) {
+		var mark = document.createElement("mark");
+		mark.className = HIGHLIGHT_CLASS;
+		mark.setAttribute("data-annotation-id", annotationID);
+		if (colorName) {
+			mark.setAttribute("data-annotation-color", colorName);
+		}
+		textNode.parentNode.insertBefore(mark, textNode);
+		mark.appendChild(textNode);
+		return mark;
+	}
+
+	function wrapSingleTextNode(textNode, annotationID, colorName) {
+		return [wrapTextNode(textNode, annotationID, colorName)];
+	}
+
+	// Applies a text replacement over [startOffset, endOffset): resolves
+	// the exact DOM range via resolveDOMRange (the same shared boundary
+	// math wrapRange uses), deletes its contents, and inserts a new Text
+	// node with replacementText in its place. Returns the resulting Range
+	// (now collapsed around the freshly-inserted text) so a caller that
+	// also needs this same span highlighted (a row with hasHighlight ==
+	// true and originalText set -- see "Applying edits" in
+	// docs/annotations.md) can wrap it immediately via wrapDOMRange
+	// without re-resolving offsets against the post-edit DOM a second
+	// time, which would be wrong: the DOM has already changed shape by the
+	// time this returns.
+	function applyTextEdit(entries, startOffset, endOffset, replacementText) {
+		var range = resolveDOMRange(entries, startOffset, endOffset);
+		if (!range) return null;
+
+		range.deleteContents();
+		var textNode = document.createTextNode(replacementText);
+		range.insertNode(textNode);
+
+		var resultRange = document.createRange();
+		resultRange.selectNode(textNode);
+		return resultRange;
 	}
 
 	// Removes any existing <mark> wraps for annotationID, unwrapping their
@@ -351,6 +483,24 @@
 	// count bounded on chapters with many highlights -- the actual postMessage
 	// call is Swift-bridge wiring (later step); this function just computes
 	// and returns the report so that call site can send it.
+	//
+	// A row with originalText set (see docs/annotations.md's "Storage
+	// shape") is a text replacement, not just a highlight: its span is
+	// resolved against the *original* (pre-edit) text the same way any
+	// other annotation's span is (the offset-shift pipeline that writes
+	// edit rows keeps every row's stored offsets in the same
+	// original-stored-text coordinate space -- see "Applying edits"), then
+	// applyTextEdit swaps that span's DOM content for replacementText
+	// before this annotation (or the next one in document order) is
+	// resolved -- so edits are applied in descending offset order within
+	// this same forEach pass: the annotations array is expected sorted
+	// descending by startOffset by the caller (WebViewController), for the
+	// exact reason described in "Applying edits" -- processing
+	// right-to-left means an earlier edit's stored offset is never
+	// invalidated by a later edit shifting the text underneath it. If
+	// hasHighlight is also true, the same returned Range is wrapped in
+	// <mark> immediately after the edit, not re-resolved against the
+	// post-edit DOM a second time.
 	function renderAnnotations(annotations, options) {
 		options = options || {};
 		var rootSelector = options.rootSelector || DEFAULT_ROOT_SELECTOR;
@@ -378,7 +528,14 @@
 			var startOffset = resolution.status === "reanchored" ? resolution.startOffset : annotation.startOffset;
 			var endOffset = resolution.status === "reanchored" ? resolution.endOffset : annotation.endOffset;
 
-			wrapRange(index.entries, startOffset, endOffset, annotation.annotationID, annotation.color);
+			if (annotation.originalText != null && annotation.replacementText != null) {
+				var editRange = applyTextEdit(index.entries, startOffset, endOffset, annotation.replacementText);
+				if (editRange && annotation.hasHighlight) {
+					wrapDOMRange(editRange, annotation.annotationID, annotation.color);
+				}
+			} else {
+				wrapRange(index.entries, startOffset, endOffset, annotation.annotationID, annotation.color);
+			}
 
 			if (resolution.status === "reanchored") {
 				var resolvedText = index.text.slice(startOffset, endOffset);
@@ -698,6 +855,135 @@
 		return toBase64(JSON.stringify(report));
 	}
 
+	// Computes what applying one text edit (originalText -> replacementText
+	// over [annotationToEdit.startOffset, annotationToEdit.endOffset)) would
+	// do, without mutating the DOM -- the "plan" step
+	// AnnotationEditorView's Save button (and, later, the rule-table
+	// engine's first-run pass) needs before it can persist anything, since
+	// the actual DOM mutation happens afterward via the normal
+	// renderAnnotations pass once the edit row itself has round-tripped
+	// through the database. See docs/annotations.md, "Applying edits".
+	//
+	// args: {
+	//   annotationToEditID, startOffset, endOffset, replacementLength,
+	//   otherAnnotations: [{annotationID, startOffset, endOffset}],
+	//   rootSelector
+	// }
+	// (startOffset/endOffset/otherAnnotations are all in the current,
+	// already-resolved coordinate space -- the caller resolves the row
+	// being edited and every other row against the live DOM via the normal
+	// renderAnnotationsEncoded pass first, the same "resolve before
+	// touching anything" ordering annotationWasTapped's fetch-then-edit
+	// flow already follows.)
+	//
+	// Returns either:
+	//   { status: "overlap", conflictingAnnotationID }
+	//   { status: "ok", delta, shifted: [{annotationID, startOffset,
+	//     endOffset, quoteExact, quotePrefix, quoteSuffix, chapterTitle}] }
+	function computeTextEditPlan(args) {
+		var rootSelector = args.rootSelector || DEFAULT_ROOT_SELECTOR;
+		var root = document.querySelector(rootSelector);
+		if (!root) {
+			return { status: "ok", delta: 0, shifted: [] };
+		}
+
+		var others = args.otherAnnotations || [];
+		for (var i = 0; i < others.length; i++) {
+			var other = others[i];
+			if (args.startOffset < other.endOffset && other.startOffset < args.endOffset) {
+				return { status: "overlap", conflictingAnnotationID: other.annotationID };
+			}
+		}
+
+		var originalLength = args.endOffset - args.startOffset;
+		var delta = args.replacementLength - originalLength;
+
+		var index = buildTextIndex(root);
+		// Heading offsets computed against the *current* (pre-edit) DOM,
+		// then shifted by delta for any heading after the edit -- headings
+		// themselves aren't moved by a text edit's DOM mutation (the edit
+		// only ever touches non-heading article body text; an edit's own
+		// span is checked for overlap against every other annotation
+		// above, and a heading element itself was never a valid edit
+		// target since edits only ever originate from an existing
+		// highlight's own span), so their titles are unchanged -- only the
+		// offset each heading sits at within the combined text needs the
+		// same +delta shift every other row gets.
+		var headingIndex = buildHeadingIndex(root, index.entries);
+
+		function chapterTitleAtNewOffset(newOffset) {
+			var best = null;
+			for (var h = 0; h < headingIndex.length; h++) {
+				var headingOffset = headingIndex[h].offset >= args.endOffset
+					? headingIndex[h].offset + delta
+					: headingIndex[h].offset;
+				if (headingOffset <= newOffset) {
+					best = headingIndex[h].title;
+				} else {
+					break;
+				}
+			}
+			return best;
+		}
+
+		// Simulate the post-edit text without touching the DOM: splice the
+		// replacement's length in place of the edited span in the current
+		// text. Only the length matters for re-slicing every other row's
+		// quote/prefix/suffix (their own text is untouched by this edit),
+		// so a same-length placeholder run stands in for the real
+		// replacement text -- avoids needing args.replacementText here at
+		// all, keeping this entry point's argument shape (and therefore
+		// what a person could probe about their own text) minimal.
+		var placeholder = new Array(args.replacementLength + 1).join("\u0000");
+		var newText = index.text.slice(0, args.startOffset) + placeholder + index.text.slice(args.endOffset);
+
+		var shifted = [];
+		if (delta !== 0) {
+			for (var j = 0; j < others.length; j++) {
+				var candidate = others[j];
+				if (candidate.startOffset < args.endOffset) continue;
+				var newStart = candidate.startOffset + delta;
+				var newEnd = candidate.endOffset + delta;
+				shifted.push({
+					annotationID: candidate.annotationID,
+					startOffset: newStart,
+					endOffset: newEnd,
+					quoteExact: newText.slice(newStart, newEnd),
+					quotePrefix: newText.slice(Math.max(0, newStart - CONTEXT_CHARS), newStart),
+					quoteSuffix: newText.slice(newEnd, newEnd + CONTEXT_CHARS),
+					chapterTitle: chapterTitleAtNewOffset(newStart)
+				});
+			}
+		}
+
+		return { status: "ok", delta: delta, shifted: shifted };
+	}
+
+	function computeTextEditPlanEncoded(encodedArgs) {
+		var args;
+		try {
+			args = JSON.parse(fromBase64(encodedArgs));
+		} catch (e) {
+			return toBase64(JSON.stringify({ status: "ok", delta: 0, shifted: [] }));
+		}
+		return toBase64(JSON.stringify(computeTextEditPlan(args)));
+	}
+
+	// Returns rootSelector's full canonicalized inner text -- the same
+	// text buildTextIndex produces for every other offset-based
+	// operation in this file, exposed read-only so Swift-side code (the
+	// rule-driven text-replacement engine, TextReplacementRuleEngine in
+	// the Articles module -- see docs/annotations.md's "Storage shape")
+	// can run its matching pass against exactly the coordinate space its
+	// resulting offsets need to land in, without duplicating any
+	// DOM-walking logic on the Swift side. Non-mutating, like
+	// computeTextEditPlan.
+	function getArticleText(rootSelector) {
+		var root = document.querySelector(rootSelector || DEFAULT_ROOT_SELECTOR);
+		if (!root) return "";
+		return buildTextIndex(root).text;
+	}
+
 	var Annotations = {
 		// Exposed for the Swift-callable entry points.
 		renderAnnotations: renderAnnotations,
@@ -708,6 +994,8 @@
 		addHighlightFromSelection: addHighlightFromSelection,
 		initAnnotations: initAnnotations,
 		scrollToAnnotation: scrollToAnnotation,
+		computeTextEditPlanEncoded: computeTextEditPlanEncoded,
+		getArticleText: getArticleText,
 
 		// Exposed for headless unit testing (annotations.test.js) of the
 		// pure algorithm pieces without needing to drive the whole
@@ -719,10 +1007,14 @@
 			scoreCandidate: scoreCandidate,
 			similarity: similarity,
 			wrapRange: wrapRange,
+			wrapDOMRange: wrapDOMRange,
+			resolveDOMRange: resolveDOMRange,
+			applyTextEdit: applyTextEdit,
 			unwrapAnnotation: unwrapAnnotation,
 			selectorForRange: selectorForRange,
 			buildHeadingIndex: buildHeadingIndex,
 			nearestChapterTitle: nearestChapterTitle,
+			computeTextEditPlan: computeTextEditPlan,
 			HIGHLIGHT_CLASS: HIGHLIGHT_CLASS,
 			SIMILARITY_FLOOR: SIMILARITY_FLOOR,
 			CONTEXT_CHARS: CONTEXT_CHARS

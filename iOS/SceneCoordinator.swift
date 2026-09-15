@@ -1943,8 +1943,13 @@ extension SceneCoordinator: UINavigationControllerDelegate {
 private extension SceneCoordinator {
 
 	func markArticlesWithUndo(_ articles: [Article], statusKey: ArticleStatus.Key, flag: Bool, completion: (() -> Void)? = nil) {
-		guard let undoManager = undoManager,
-			  let markReadCommand = MarkStatusCommand(initialArticles: articles, statusKey: statusKey, flag: flag, undoManager: undoManager, completion: completion) else {
+		guard let undoManager else {
+			Self.logger.error("markArticlesWithUndo: undoManager is nil (rootSplitViewController not in responder chain?); dropping \(articles.count) status write(s) for statusKey \(statusKey.rawValue, privacy: .public)")
+			completion?()
+			return
+		}
+		guard let markReadCommand = MarkStatusCommand(initialArticles: articles, statusKey: statusKey, flag: flag, undoManager: undoManager, completion: completion) else {
+			Self.logger.debug("markArticlesWithUndo: no-op, \(articles.count) article(s) already at statusKey \(statusKey.rawValue, privacy: .public) == \(flag)")
 			completion?()
 			return
 		}

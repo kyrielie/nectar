@@ -15,7 +15,8 @@ import Articles
 @MainActor struct AnnotationCSVExporter {
 
 	private static let columnHeaders = [
-		"book", "chapter", "quote", "note", "color", "created", "link"
+		"book", "chapter", "quote", "note", "color", "created", "link",
+		"hasHighlight", "originalText", "replacementText"
 	]
 
 	static func CSVString(with rows: [(Annotation, Article?)]) -> String {
@@ -36,7 +37,10 @@ import Articles
 			annotation.note ?? "",
 			annotation.color.rawValue,
 			dateFormatter.string(from: annotation.createdAt),
-			(article?.preferredURL ?? article?.url)?.absoluteString ?? ""
+			(article?.preferredURL ?? article?.url)?.absoluteString ?? "",
+			annotation.hasHighlight ? "true" : "false",
+			annotation.originalText ?? "",
+			annotation.replacementText ?? ""
 		]
 	}
 

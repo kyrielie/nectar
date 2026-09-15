@@ -37,12 +37,21 @@ pushes `AO3AccountSettingsView` directly (see below).
   feed, "refresh clears read articles," Timeline Layout (pushes
   `TimelineCustomizerCollectionViewController`, below), show-last-updated
   label.
-- **`.articles`** (`ArticlesRow`, 5 cases): theme picker, "open links in
-  Nectar," disable article links, feed-name-in-reader, and **Full Screen
+- **`.articles`** (`ArticlesRow`, 7 cases): theme picker, "open links in
+  Nectar," disable article links, feed-name-in-reader, **Full Screen
   Reading** — a disclosure row pushing `FullScreenReadingViewController`
-  (below). The first four affect the normal, non-fullscreen reading view;
-  everything that only matters once you're actually in fullscreen reading
-  mode now lives on the pushed screen instead of mixed into this list.
+  (below) — **Annotations**, a disclosure row pushing
+  `AnnotationsSettingsView` (see `annotations.md`), and **Text
+  Replacement**, a disclosure row pushing `TextReplacementSettingsView`
+  (also `annotations.md`: master auto-apply toggle, reader-insert names
+  — with a per-work override `NavigationLink` into
+  `TextReplacementPerWorkOverrideView` when a "current work" is
+  resolvable behind Settings — style corrections, custom rules, edit
+  history count/link into the combined "This Book"/"All" viewer). The
+  first four rows affect the normal, non-fullscreen reading view;
+  everything that only matters once you're actually in fullscreen
+  reading mode lives on the pushed Full Screen Reading screen instead of
+  mixed into this list.
 - **`.appearance`** (`AppearanceRow`): color palette (pushes
   `ColorPaletteTableViewController`, which also owns the
   `useTintedNavigationBar` switch — see `app-chrome-palette.md`), accent

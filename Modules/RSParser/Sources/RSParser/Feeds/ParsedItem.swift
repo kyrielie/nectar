@@ -73,6 +73,12 @@ public struct ParsedItem: Hashable, Sendable {
 	public let kudosCount: Int?
 	public let bookmarkCount: Int?
 	public let hitCount: Int?
+	// Date this article was bookmarked, distinct from dateModified (the
+	// work's own last-updated date). Only ever populated from an AO3
+	// bookmarks-page row (`div.user p.datetime`, see
+	// AO3SearchResultsExtractor.dateBookmarked(fromLI:)) -- nil for every
+	// other listing shape (search results, series, a plain /works row).
+	public let dateBookmarked: Date?
 	// Prev/next-work navigation used to live here as a single article-wide
 	// pair (Task 10, superseded by inline per-series navigation -- see
 	// ParsedSeriesEntry.previousWorkURL/nextWorkURL). A work in more than
@@ -167,6 +173,7 @@ public struct ParsedItem: Hashable, Sendable {
 	            kudosCount: Int? = nil,
 	            bookmarkCount: Int? = nil,
 	            hitCount: Int? = nil,
+	            dateBookmarked: Date? = nil,
 	            lastPrefaceFetchDate: Date? = nil,
 	            ao3WorkID: String? = nil,
 	            isAnthology: Bool? = nil,
@@ -205,6 +212,7 @@ public struct ParsedItem: Hashable, Sendable {
 		self.kudosCount = kudosCount
 		self.bookmarkCount = bookmarkCount
 		self.hitCount = hitCount
+		self.dateBookmarked = dateBookmarked
 		self.lastPrefaceFetchDate = lastPrefaceFetchDate
 		self.ao3WorkID = ao3WorkID
 		self.isAnthology = isAnthology

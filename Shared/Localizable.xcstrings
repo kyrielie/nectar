@@ -4,6 +4,9 @@
     "" : {
 
     },
+    " → " : {
+
+    },
     "“%@” has separate light and dark mode colors and follows your system appearance setting." : {
       "comment" : "Theme appearance footer, light+dark theme"
     },
@@ -40,11 +43,17 @@
         }
       }
     },
+    "%d replacement(s) made -- review in Edit History" : {
+      "comment" : "Text replacement summary banner"
+    },
     "%d Shown" : {
       "comment" : "Toolbars: number of buttons shown"
     },
     "%i Unread" : {
       "comment" : "14 Unread"
+    },
+    "%lld" : {
+      "comment" : "Text replacement settings: edit history count"
     },
     "%lld months" : {
       "comment" : "Dinosaur staleness threshold in months"
@@ -98,6 +107,12 @@
     "Add Folder" : {
       "comment" : "Add Folder"
     },
+    "Add Rule" : {
+      "comment" : "Text replacement settings: add rule button label"
+    },
+    "Add to" : {
+      "comment" : "Import destination section header"
+    },
     "Add to Loved" : {
       "comment" : "Command"
     },
@@ -109,6 +124,9 @@
     },
     "Affects only feeds that support the SQLite transfer protocol. Most feeds are unaffected." : {
       "comment" : "Feed transfer format picker explanation"
+    },
+    "All" : {
+      "comment" : "Annotations list tab: every book"
     },
     "All Articles" : {
       "comment" : "All Articles"
@@ -157,6 +175,9 @@
     },
     "AO3's tag and user RSS feeds only cover canonical tags -- a feed for a synonym or an uncommonly-spelled tag will come back empty even if the tag itself has works. Feeds can't combine multiple tags the way AO3's own filtered search results can." : {
       "comment" : "AO3 RSS limitations: canonical tags and combining"
+    },
+    "Apply Automatically on Open" : {
+      "comment" : "Text replacement settings: master toggle label"
     },
     "Are you sure you want to delete the “%@” feed?" : {
       "comment" : "Feed delete text"
@@ -221,11 +242,23 @@
     "Blue" : {
       "comment" : "Highlight color"
     },
+    "Bookmarks" : {
+      "comment" : "Sort field"
+    },
     "Bottom" : {
       "comment" : "Toolbars screen: bottom bar tab"
     },
+    "British-to-American Quotes" : {
+      "comment" : "Text replacement settings: quote conversion toggle label"
+    },
+    "British-to-American Quotes converts dialogue marks, not every apostrophe -- contractions and possessives are left alone." : {
+      "comment" : "Text replacement settings: quote conversion clarifying footer"
+    },
     "Browser Verification" : {
       "comment" : "AO3 Cloudflare challenge status row label"
+    },
+    "Can’t Edit This Text" : {
+      "comment" : "Text-edit overlap alert title"
     },
     "Can't reach %@ right now" : {
       "comment" : "Can't reach library right now"
@@ -283,6 +316,12 @@
     },
     "Colors" : {
       "comment" : "Colors section header"
+    },
+    "Comments" : {
+      "comment" : "Sort field"
+    },
+    "Common Typo Fixes" : {
+      "comment" : "Text replacement settings: typo fixes toggle label"
     },
     "Compact" : {
       "comment" : "Compact tag display mode"
@@ -353,6 +392,9 @@
     "Custom Reading Font" : {
       "comment" : "Custom Reading Font toggle"
     },
+    "Custom Rules" : {
+      "comment" : "Text replacement settings: custom rules section header"
+    },
     "Custom Text Color" : {
       "comment" : "Custom Text Color toggle"
     },
@@ -366,6 +408,9 @@
       "comment" : "Account Stats explainer"
     },
     "Date" : {
+      "comment" : "Sort field"
+    },
+    "Date Bookmarked" : {
       "comment" : "Sort field"
     },
     "Deactivate" : {
@@ -436,6 +481,15 @@
     },
     "Each color has a separate light and dark mode value." : {
       "comment" : "Colors section footer explaining light/dark pairing"
+    },
+    "Edit History" : {
+      "comment" : "Text replacement settings: edit history row label\nText replacement settings: edit history section header"
+    },
+    "Edit text" : {
+      "comment" : "Annotation editor: edit-text field placeholder"
+    },
+    "Edit Text" : {
+      "comment" : "Annotation editor: edit-text section header"
     },
     "Enable Notifications" : {
       "comment" : "Notifications"
@@ -524,6 +578,9 @@
     "Fetching" : {
       "comment" : "Fetching"
     },
+    "Fewest First" : {
+      "comment" : "Ascending sort direction — count"
+    },
     "Fewest Words First" : {
       "comment" : "Ascending sort direction — word count"
     },
@@ -532,6 +589,9 @@
     },
     "Filter Read Feeds" : {
       "comment" : "Filter Read Feeds"
+    },
+    "Find" : {
+      "comment" : "Text replacement rule: input field placeholder"
     },
     "Find in Article" : {
       "comment" : "Find in Article\nToolbar function: find"
@@ -547,6 +607,12 @@
     },
     "Flourescent" : {
       "comment" : "Flourescent highlight palette"
+    },
+    "Folder" : {
+      "comment" : "Choose-folder import destination row label\nChoose-folder import destination row label, no account chosen yet"
+    },
+    "Folder name" : {
+      "comment" : "New dated folder name field placeholder"
     },
     "Folders" : {
       "comment" : "Folders"
@@ -617,6 +683,9 @@
     "Highlights & Notes" : {
       "comment" : "Annotations settings navigation title"
     },
+    "Hits" : {
+      "comment" : "Sort field"
+    },
     "How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes." : {
       "comment" : "AO3 preface refetch cadence footer"
     },
@@ -643,6 +712,9 @@
     },
     "Import Theme" : {
       "comment" : "Import Theme"
+    },
+    "Imported Links" : {
+      "comment" : "Shared top-level import destination name"
     },
     "Install Theme" : {
       "comment" : "Install Theme"
@@ -675,6 +747,12 @@
     },
     "Keep Archived Version" : {
       "comment" : "Command"
+    },
+    "Keep highlight on the corrected text" : {
+      "comment" : "Annotation editor: keep-highlight-after-edit checkbox"
+    },
+    "Kudos" : {
+      "comment" : "Sort field"
     },
     "Last Article" : {
       "comment" : "Last Article Date"
@@ -820,6 +898,9 @@
     "More" : {
       "comment" : "More"
     },
+    "Most First" : {
+      "comment" : "Descending sort direction — count"
+    },
     "Most Words First" : {
       "comment" : "Descending sort direction — word count"
     },
@@ -963,11 +1044,23 @@
     "Open Settings" : {
       "comment" : "Open Settings button"
     },
+    "Opens Edit History." : {
+      "comment" : "Text replacement summary banner: accessibility hint"
+    },
     "Order" : {
       "comment" : "Sort direction picker title"
     },
+    "Original text is never changed -- every replacement below is reviewable and reversible in Edit History." : {
+      "comment" : "Text replacement settings: non-destructive guarantee footer"
+    },
     "Overflow Menu" : {
       "comment" : "Toolbars screen: overflow section header"
+    },
+    "Override for %@" : {
+      "comment" : "Text replacement settings: per-work override row label"
+    },
+    "Override for This Work" : {
+      "comment" : "Per-work override navigation title"
     },
     "Override Hyphenation" : {
       "comment" : "Override Hyphenation toggle"
@@ -1041,6 +1134,9 @@
     "Read Later" : {
       "comment" : "Command\nRead Later\nToolbar function: read later"
     },
+    "Reader-Insert Names" : {
+      "comment" : "Text replacement settings: reader-insert section header"
+    },
     "Reading Font" : {
       "comment" : "Reading Font picker label"
     },
@@ -1095,6 +1191,12 @@
     "Rename “%@”" : {
       "comment" : "Rename feed"
     },
+    "Replace With" : {
+      "comment" : "Text replacement rule: output field placeholder"
+    },
+    "Replaces placeholder tokens like (Y/N) with a name you choose. Leave Replace With empty to leave a placeholder untouched." : {
+      "comment" : "Text replacement settings: reader-insert section footer"
+    },
     "Reset" : {
       "comment" : "Toolbars screen: reset active bar to defaults"
     },
@@ -1130,6 +1232,9 @@
     },
     "Save" : {
       "comment" : "Save button"
+    },
+    "Scope" : {
+      "comment" : "Annotations list: tab picker accessibility label"
     },
     "Scroll Back" : {
       "comment" : "Toolbar function: scroll back to previous jump position"
@@ -1260,6 +1365,9 @@
     "Statuses" : {
       "comment" : "Statuses"
     },
+    "Style Corrections" : {
+      "comment" : "Text replacement settings: style corrections section header"
+    },
     "Sunset" : {
       "comment" : "Sunset accent color"
     },
@@ -1280,6 +1388,9 @@
     },
     "Text Color (Dark Mode)" : {
       "comment" : "Text Color (dark) picker label"
+    },
+    "Text Replacement" : {
+      "comment" : "Text replacement settings navigation title"
     },
     "Thanks to Sheila and my family; thanks to my friends in Seattle and around the globe; thanks to the ever-patient and ever-awesome NetNewsWire beta testers.\n\nThanks to [Gus Mueller](https://shapeof.com/) for [FMDB](https://github.com/ccgus/fmdb) by [Flying Meat Software](http://flyingmeat.com/). Thanks to [GitHub](https://github.com) and [Discourse](https://discourse.com) for making open source collaboration easy and fun. Thanks to [Ben Ubois](https://benubois.com/) at [Feedbin](https://feedbin.com) for all the extra help with syncing and article rendering — and [for hosting the server for the Reader view](https://feedbin.com/blog/2019/03/11/the-future-of-full-content/)." : {
       "comment" : "A list of credits for the app.",
@@ -1309,11 +1420,14 @@
     "These are limits of AO3's existing RSS mechanism itself, not of Nectar." : {
       "comment" : "AO3 RSS limitations section footer"
     },
+    "These rules apply only to %@ and take precedence over your Reader-Insert Names table above for any token they cover. Tokens not listed here still use the table above." : {
+      "comment" : "Per-work override: scope-clarifying footer"
+    },
     "This backup also includes Settings. You can restore your feeds and reading history only, or also replace this device's Settings with the backup's." : {
       "comment" : "Settings restore note"
     },
     "This Book" : {
-      "comment" : "Annotations list navigation title: whole book, title unavailable"
+      "comment" : "Annotations list navigation title: whole book, title unavailable\nAnnotations list tab: current book only"
     },
     "This device cannot send emails." : {
       "comment" : "This device cannot send emails."
@@ -1323,6 +1437,9 @@
     },
     "This feed's account is unavailable" : {
       "comment" : "AO3 arbitrary-page-fetch: missing account"
+    },
+    "This text is part of an existing highlight or edit. Remove or resize it first." : {
+      "comment" : "Text-edit overlap alert message"
     },
     "This theme cannot be used because of data corruption in the Info.plist. %@." : {
       "comment" : "Decoding key missing"
@@ -1461,6 +1578,9 @@
     },
     "You must have at least one active account." : {
       "comment" : "Missing active account"
+    },
+    "Your own find-and-replace pairs, for anything the typo table above doesn't cover." : {
+      "comment" : "Text replacement settings: custom rules section footer"
     },
     "Z to A" : {
       "comment" : "Descending sort direction — alphabetic"

@@ -19,6 +19,11 @@ import Articles
 		case wordCount = 1
 		case title = 2
 		case author = 3
+		case hitCount = 4
+		case kudosCount = 5
+		case commentCount = 6
+		case bookmarkCount = 7
+		case dateBookmarked = 8
 
 		var displayName: String {
 			switch self {
@@ -30,6 +35,16 @@ import Articles
 				NSLocalizedString("Title", comment: "Sort field")
 			case .author:
 				NSLocalizedString("Author", comment: "Sort field")
+			case .hitCount:
+				NSLocalizedString("Hits", comment: "Sort field")
+			case .kudosCount:
+				NSLocalizedString("Kudos", comment: "Sort field")
+			case .commentCount:
+				NSLocalizedString("Comments", comment: "Sort field")
+			case .bookmarkCount:
+				NSLocalizedString("Bookmarks", comment: "Sort field")
+			case .dateBookmarked:
+				NSLocalizedString("Date Bookmarked", comment: "Sort field")
 			}
 		}
 
@@ -44,6 +59,10 @@ import Articles
 				NSLocalizedString("Fewest Words First", comment: "Ascending sort direction — word count")
 			case .title, .author:
 				NSLocalizedString("A to Z", comment: "Ascending sort direction — alphabetic")
+			case .hitCount, .kudosCount, .commentCount, .bookmarkCount:
+				NSLocalizedString("Fewest First", comment: "Ascending sort direction — count")
+			case .dateBookmarked:
+				NSLocalizedString("Oldest First", comment: "Ascending sort direction — date")
 			}
 		}
 
@@ -56,6 +75,10 @@ import Articles
 				NSLocalizedString("Most Words First", comment: "Descending sort direction — word count")
 			case .title, .author:
 				NSLocalizedString("Z to A", comment: "Descending sort direction — alphabetic")
+			case .hitCount, .kudosCount, .commentCount, .bookmarkCount:
+				NSLocalizedString("Most First", comment: "Descending sort direction — count")
+			case .dateBookmarked:
+				NSLocalizedString("Newest First", comment: "Descending sort direction — date")
 			}
 		}
 	}
@@ -82,6 +105,16 @@ import Articles
 			sortedByTitle(articles: articles, sortDirection: sortDirection)
 		case .author:
 			sortedByAuthor(articles: articles, sortDirection: sortDirection)
+		case .hitCount:
+			sortedByCount(articles: articles, sortDirection: sortDirection, countFor: \.hitCount)
+		case .kudosCount:
+			sortedByCount(articles: articles, sortDirection: sortDirection, countFor: \.kudosCount)
+		case .commentCount:
+			sortedByCount(articles: articles, sortDirection: sortDirection, countFor: \.commentCount)
+		case .bookmarkCount:
+			sortedByCount(articles: articles, sortDirection: sortDirection, countFor: \.bookmarkCount)
+		case .dateBookmarked:
+			sortedByDateBookmarked(articles: articles, sortDirection: sortDirection)
 		}
 	}
 }
@@ -137,6 +170,56 @@ private extension ArticleSorter {
 					count1 > count2
 				} else {
 					count1 < count2
+				}
+			}
+		}
+	}
+
+	// Missing counts sort to the end regardless of direction, same rationale
+	// as sortedByWordCount above — non-AO3 articles have no hit/kudos/
+	// comment/bookmark counts at all and shouldn't front-load an ascending
+	// sort just because `nil` reads as "less than" every count.
+	static func sortedByCount(articles: [Article], sortDirection: ComparisonResult, countFor: (Article) -> Int?) -> [Article] {
+		articles.sorted { article1, article2 in
+			switch (countFor(article1), countFor(article2)) {
+			case (nil, nil):
+				article1.articleID < article2.articleID
+			case (nil, _):
+				false
+			case (_, nil):
+				true
+			case let (count1?, count2?):
+				if count1 == count2 {
+					article1.articleID < article2.articleID
+				} else if sortDirection == .orderedDescending {
+					count1 > count2
+				} else {
+					count1 < count2
+				}
+			}
+		}
+	}
+
+	// Missing dateBookmarked (every non-bookmarks-sourced article, per the
+	// extractor's own div.user-gating) sorts to the end regardless of
+	// direction — same rationale/shape as sortedByCount above, just on
+	// Date instead of Int.
+	static func sortedByDateBookmarked(articles: [Article], sortDirection: ComparisonResult) -> [Article] {
+		articles.sorted { article1, article2 in
+			switch (article1.dateBookmarked, article2.dateBookmarked) {
+			case (nil, nil):
+				article1.articleID < article2.articleID
+			case (nil, _):
+				false
+			case (_, nil):
+				true
+			case let (date1?, date2?):
+				if date1 == date2 {
+					article1.articleID < article2.articleID
+				} else if sortDirection == .orderedDescending {
+					date1 > date2
+				} else {
+					date1 < date2
 				}
 			}
 		}

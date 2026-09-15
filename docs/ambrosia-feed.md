@@ -70,6 +70,17 @@ hand — that preference only controls whether a *new* live AO3 network
 request is allowed to happen at all, not whether already-downloaded metadata
 gets displayed.
 
+`ParsedItem.dateBookmarked`/`Article.dateBookmarked` is in the same
+category as the four stats fields above — AO3-native metadata, **not**
+part of the `_ambrosia` extension object. It has only one source, though:
+`AO3SearchResultsExtractor.dateBookmarked(fromLI:)`, reading a
+`/users/<name>/bookmarks` row's `div.user p.datetime` (see `ao3-feeds.md`
+for the selector itself and its distinction from `dateModified`'s
+`div.header p.datetime`). It's `nil` for every article not sourced from a
+bookmarks listing, and — like the four stats fields — always takes the
+newest known non-nil value on a later re-extraction rather than being
+regression-flagged.
+
 ### `bookKey` derivation
 
 `ParsedItem.bookKey` (also mirrored, deliberately kept in exact precedence

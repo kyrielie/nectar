@@ -229,3 +229,45 @@ feed several levels deep would have been invisible to this method. It
 now recurses through `Folder.existingContainers(withFeed:)` (a new
 matching method, not part of the `Container` protocol since every real
 caller invokes it only on `Account`) at every level.
+
+## Add Feed's folder picker was never updated for nesting
+
+`AddFeedFolderViewController` (`iOS/Add/`) predates nesting entirely and
+was missed when the rest of the app was updated: its row list was
+`[account] + account.sortedFolders`, one level deep, so a folder nested
+inside another folder was selectable everywhere else (drag-and-drop, the
+sidebar, `existingFolder(withPath:)`) but not reachable from this picker
+when adding a feed fresh. Fixed by walking `Container.sortedFolders`
+recursively (capped at depth 3, matching this doc's own cap) and
+indenting each row's icon by `20 + 30 * depth` — the same two leading
+constants (`20`, `50`) the cell's storyboard prototypes already used for
+account/folder rows before nesting existed, now generalized instead of
+fixed. `Container.sortedFolders` (this account-only helper, previously
+duplicated implicitly by never existing on `Folder` at all) is now a
+`Container` protocol extension so the same recursive walk works
+identically starting from either an `Account` or a `Folder`.
+
+A SwiftUI bridge, `FolderPickerView` (`iOS/Import/FolderPickerView.swift`),
+wraps this same `AddFeedFolderViewController` via
+`UIViewControllerRepresentable` rather than reimplementing the walk in
+SwiftUI. `AO3LinkListImportView`'s "Folder" destination row (see
+`ao3-feeds.md`'s "Pasted-AO3-link-list import destinations" section) is
+its first caller, using the same nesting-aware implementation Add Feed
+uses instead of a second copy that could drift; `accountFilter` on
+`AddFeedFolderViewController` is what lets that caller scope the picker
+to just its own already-chosen account rather than every account in the
+app.
+
+**`accountFilter`'s row list initially omitted the account's own row
+entirely**, on the reasoning that the caller had already chosen an
+account elsewhere and only needed "pick one of *this* account's
+folders." That reasoning missed that the account row *is* the account's
+top-level/root container — a real, selectable destination in its own
+right (Add Feed's unfiltered picker shows it fine), not a second
+"account" to filter alongside genuinely other accounts. An account with
+no real `Folder` children yet (only ever used at its own root) produced
+an empty picker for any `accountFilter` caller, even though Add Feed's
+own picker showed that same root as a row. Fixed by having the
+`accountFilter` branch add a row for the account itself at depth 0 (as
+the every-account branch already did per account), and only excluding
+*other* accounts.

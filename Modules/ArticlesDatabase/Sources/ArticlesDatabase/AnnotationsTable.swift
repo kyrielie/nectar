@@ -13,11 +13,12 @@
 //
 
 // CREATE TABLE if not EXISTS annotations (annotationID TEXT NOT NULL PRIMARY KEY, articleID TEXT NOT NULL, bookKey TEXT, quoteExact TEXT NOT NULL, quotePrefix TEXT NOT NULL DEFAULT '', quoteSuffix TEXT NOT NULL DEFAULT '', rootSelector TEXT NOT NULL DEFAULT '.articleBody', startOffset INTEGER NOT NULL, endOffset INTEGER NOT NULL, color TEXT NOT NULL DEFAULT 'yellow', note TEXT, createdAt DATE NOT NULL, updatedAt DATE NOT NULL, orphanedAt DATE, lastReanchoredAt DATE);
-// chapterTitle TEXT was added later via an ALTER TABLE migration (see
-// ArticlesDatabase.swift's schema-version-3 block), not baked into this
-// CREATE TABLE statement -- the CREATE TABLE above still reflects only
-// what a schema-version-2 fresh install created; chapterTitle is nullable
-// and always added the same containsColumn-guarded way afterward.
+// chapterTitle TEXT (schema version 3) and hasHighlight BOOL NOT NULL
+// DEFAULT 1 / originalText TEXT / replacementText TEXT (schema version 5,
+// docs/annotations.md's "Storage shape") were added later via
+// containsColumn-guarded ALTER TABLE migrations (see ArticlesDatabase.swift),
+// not baked into this CREATE TABLE statement -- the CREATE TABLE above
+// still reflects only what a schema-version-2 fresh install created.
 
 import Foundation
 import RSDatabase
@@ -70,9 +71,10 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 				\(DatabaseKey.quoteExact), \(DatabaseKey.quotePrefix), \(DatabaseKey.quoteSuffix),
 				\(DatabaseKey.rootSelector), \(DatabaseKey.startOffset), \(DatabaseKey.endOffset),
 				\(DatabaseKey.color), \(DatabaseKey.note), \(DatabaseKey.chapterTitle),
+				\(DatabaseKey.hasHighlight), \(DatabaseKey.originalText), \(DatabaseKey.replacementText),
 				\(DatabaseKey.createdAt), \(DatabaseKey.updatedAt),
 				\(DatabaseKey.orphanedAt), \(DatabaseKey.lastReanchoredAt)
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(\(DatabaseKey.annotationID)) DO UPDATE SET
 				\(DatabaseKey.articleID) = excluded.\(DatabaseKey.articleID),
 				\(DatabaseKey.bookKey) = excluded.\(DatabaseKey.bookKey),
@@ -85,6 +87,9 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 				\(DatabaseKey.color) = excluded.\(DatabaseKey.color),
 				\(DatabaseKey.note) = excluded.\(DatabaseKey.note),
 				\(DatabaseKey.chapterTitle) = excluded.\(DatabaseKey.chapterTitle),
+				\(DatabaseKey.hasHighlight) = excluded.\(DatabaseKey.hasHighlight),
+				\(DatabaseKey.originalText) = excluded.\(DatabaseKey.originalText),
+				\(DatabaseKey.replacementText) = excluded.\(DatabaseKey.replacementText),
 				\(DatabaseKey.updatedAt) = excluded.\(DatabaseKey.updatedAt),
 				\(DatabaseKey.orphanedAt) = excluded.\(DatabaseKey.orphanedAt),
 				\(DatabaseKey.lastReanchoredAt) = excluded.\(DatabaseKey.lastReanchoredAt)
@@ -94,6 +99,7 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 				annotation.quoteExact, annotation.quotePrefix, annotation.quoteSuffix,
 				annotation.rootSelector, annotation.startOffset, annotation.endOffset,
 				annotation.color.rawValue, annotation.note as Any, annotation.chapterTitle as Any,
+				annotation.hasHighlight, annotation.originalText as Any, annotation.replacementText as Any,
 				annotation.createdAt, annotation.updatedAt,
 				annotation.orphanedAt as Any, annotation.lastReanchoredAt as Any
 			]
@@ -170,6 +176,36 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 		)
 	}
 
+	/// Sets hasHighlight/originalText/replacementText directly, independent
+	/// of updateColor/updateNote -- the write path AnnotationEditorView's
+	/// "Edit text" field and TextReplacementEngine (rule-driven categories)
+	/// both go through after computing a row's edit fields. Does not touch
+	/// offsets/quote/chapterTitle -- callers that also need those changed
+	/// (an edit that shifts other rows' offsets, see
+	/// TextReplacementApplier.applyEdit) call reanchor separately for that
+	/// part, same "one write call per concern" shape reanchor itself
+	/// already follows relative to updateNote/updateColor.
+	func setEditFields(
+		annotationID: String,
+		hasHighlight: Bool,
+		originalText: String?,
+		replacementText: String?,
+		at date: Date,
+		_ database: FMDatabase
+	) {
+		database.executeUpdate(
+			"""
+			UPDATE \(name) SET
+				\(DatabaseKey.hasHighlight) = ?,
+				\(DatabaseKey.originalText) = ?,
+				\(DatabaseKey.replacementText) = ?,
+				\(DatabaseKey.updatedAt) = ?
+			WHERE \(DatabaseKey.annotationID) = ?
+			""",
+			withArgumentsIn: [hasHighlight, originalText as Any, replacementText as Any, date, annotationID]
+		)
+	}
+
 	// MARK: - Private
 
 	private func annotationWithRow(_ resultSet: FMResultSet) -> Annotation? {
@@ -184,6 +220,13 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 		}
 		let colorRawValue = resultSet.swiftString(forColumn: DatabaseKey.color) ?? Annotation.Color.yellow.rawValue
 		let color = Annotation.Color(rawValue: colorRawValue) ?? .yellow
+		// hasHighlight defaults to true when the column is somehow missing
+		// (shouldn't happen post-migration, but matches the SQL-level
+		// DEFAULT 1 rather than silently producing a highlight-and-edit-less
+		// row) -- resultSet.bool(forColumn:) already returns false for a
+		// SQL NULL, which a fresh column with NOT NULL DEFAULT 1 never
+		// produces, so this only guards a genuinely absent column.
+		let hasHighlight = resultSet.columnIsNull(DatabaseKey.hasHighlight) ? true : resultSet.bool(forColumn: DatabaseKey.hasHighlight)
 
 		return Annotation(
 			annotationID: annotationID,
@@ -198,6 +241,9 @@ final class AnnotationsTable: DatabaseTable, Sendable {
 			color: color,
 			note: resultSet.swiftString(forColumn: DatabaseKey.note),
 			chapterTitle: resultSet.swiftString(forColumn: DatabaseKey.chapterTitle),
+			hasHighlight: hasHighlight,
+			originalText: resultSet.swiftString(forColumn: DatabaseKey.originalText),
+			replacementText: resultSet.swiftString(forColumn: DatabaseKey.replacementText),
 			createdAt: createdAt,
 			updatedAt: updatedAt,
 			orphanedAt: resultSet.columnIsNull(DatabaseKey.orphanedAt) ? nil : resultSet.date(forColumn: DatabaseKey.orphanedAt),

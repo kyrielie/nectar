@@ -16,6 +16,16 @@
 //  Account or the webview directly, so it stays testable/previewable on
 //  its own.
 //
+//  This is also the only surface for manual one-off text edits (see
+//  docs/annotations.md, "Manual edit UI") -- there is no selection-time
+//  "Correct this" entry point. Below the color swatches and above the
+//  destructive delete action, an "Edit text" field (pre-filled with the
+//  exact quote) and a "Keep highlight on the corrected text" checkbox let
+//  a person correct a highlighted span in place. Unchanged from the
+//  original quote -> no edit row. Changed -> onSave reports the new text
+//  and the checkbox state alongside the existing note/color, and
+//  WebViewController runs it through the offset-shift pipeline.
+//
 
 import SwiftUI
 import Articles
@@ -25,10 +35,18 @@ struct AnnotationEditorView: View {
 	let annotation: Annotation
 
 	/// Called when the person taps Save, with the (possibly unchanged)
-	/// note text and color. Note is passed as `nil` when the field is
-	/// empty -- an empty note is "highlight only," per Annotation.note's
-	/// nullable-means-no-note contract, not an empty string stored as a note.
-	var onSave: (_ note: String?, _ color: Annotation.Color) -> Void
+	/// note text, color, and edit-text state. Note is passed as `nil` when
+	/// the field is empty -- an empty note is "highlight only," per
+	/// Annotation.note's nullable-means-no-note contract, not an empty
+	/// string stored as a note.
+	///
+	/// `editedText` is `nil` when the edit-text field is unchanged from
+	/// the original quote (no edit row should be created/modified) and
+	/// the new value otherwise. `keepHighlight` is the checkbox's current
+	/// state, meaningful only when `editedText != nil` -- see
+	/// docs/annotations.md's "Manual edit UI" for the full save-behavior
+	/// contract this maps onto.
+	var onSave: (_ note: String?, _ color: Annotation.Color, _ editedText: String?, _ keepHighlight: Bool) -> Void
 
 	/// Called after the person confirms deletion (the confirmation dialog
 	/// itself lives in this view; by the time this fires, it's already
@@ -40,6 +58,16 @@ struct AnnotationEditorView: View {
 	@AppStorage(AppDefaults.Key.highlightPalette) private var highlightPaletteRawValue = HighlightPalette.default.rawValue
 	@State private var noteText: String
 	@State private var selectedColor: Annotation.Color
+	/// Pre-filled with the exact quote -- see docs/annotations.md's
+	/// "Manual edit UI": shows the bare quote only, not the surrounding
+	/// sentence (sentenceContext is reserved for the consolidated
+	/// viewer's row rendering, not this field). If this row already
+	/// carries an edit (originalText/replacementText set), the field
+	/// shows the *current* replacement text, not the original -- editing
+	/// an already-edited row further corrects the already-corrected text,
+	/// it doesn't reopen the original typo.
+	@State private var editText: String
+	@State private var keepHighlight: Bool
 
 	private var highlightPalette: HighlightPalette {
 		HighlightPalette(rawValue: highlightPaletteRawValue) ?? .default
@@ -55,12 +83,28 @@ struct AnnotationEditorView: View {
 		annotation.note == nil && annotation.updatedAt == annotation.createdAt
 	}
 
-	init(annotation: Annotation, onSave: @escaping (String?, Annotation.Color) -> Void, onDelete: @escaping () -> Void) {
+	init(
+		annotation: Annotation,
+		onSave: @escaping (String?, Annotation.Color, String?, Bool) -> Void,
+		onDelete: @escaping () -> Void
+	) {
 		self.annotation = annotation
 		self.onSave = onSave
 		self.onDelete = onDelete
 		_noteText = State(initialValue: annotation.note ?? "")
 		_selectedColor = State(initialValue: annotation.color)
+		// The field's starting value is the row's current text: the
+		// replacement if this row already has one, otherwise the exact
+		// quote -- see editText's own doc comment above.
+		_editText = State(initialValue: annotation.replacementText ?? annotation.quoteExact)
+		_keepHighlight = State(initialValue: annotation.hasHighlight)
+	}
+
+	/// The value editText is compared against to decide whether a Save
+	/// counts as "the field changed" -- the row's current text, same
+	/// logic as editText's initial value above.
+	private var originalEditableText: String {
+		annotation.replacementText ?? annotation.quoteExact
 	}
 
 	var body: some View {
@@ -90,6 +134,15 @@ struct AnnotationEditorView: View {
 				}
 
 				Section {
+					editTextField
+					Toggle(isOn: $keepHighlight) {
+						Text("Keep highlight on the corrected text", comment: "Annotation editor: keep-highlight-after-edit checkbox")
+					}
+				} header: {
+					Text("Edit Text", comment: "Annotation editor: edit-text section header")
+				}
+
+				Section {
 					Button(role: .destructive) {
 						isDeleteConfirmationPresented = true
 					} label: {
@@ -110,7 +163,11 @@ struct AnnotationEditorView: View {
 				ToolbarItem(placement: .confirmationAction) {
 					Button {
 						let trimmedNote = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
-						onSave(trimmedNote.isEmpty ? nil : trimmedNote, selectedColor)
+						// Unchanged from the row's current text -> no edit
+						// row created/modified, per "Manual edit UI"'s save
+						// behavior contract.
+						let editedText = editText == originalEditableText ? nil : editText
+						onSave(trimmedNote.isEmpty ? nil : trimmedNote, selectedColor, editedText, keepHighlight)
 						dismiss()
 					} label: {
 						Text("Save", comment: "Save button")
@@ -167,6 +224,14 @@ struct AnnotationEditorView: View {
 		}
 	}
 
+	private var editTextField: some View {
+		TextField(
+			NSLocalizedString("Edit text", comment: "Annotation editor: edit-text field placeholder"),
+			text: $editText,
+			axis: .vertical
+		)
+	}
+
 	private var colorSwatches: some View {
 		HStack(spacing: 16) {
 			ForEach(Annotation.Color.allCases, id: \.self) { color in
@@ -210,7 +275,7 @@ struct AnnotationEditorView: View {
 			createdAt: Date(),
 			updatedAt: Date()
 		),
-		onSave: { _, _ in },
+		onSave: { _, _, _, _ in },
 		onDelete: {}
 	)
 }
@@ -231,7 +296,7 @@ struct AnnotationEditorView: View {
 			createdAt: Date().addingTimeInterval(-86400),
 			updatedAt: Date().addingTimeInterval(-3600)
 		),
-		onSave: { _, _ in },
+		onSave: { _, _, _, _ in },
 		onDelete: {}
 	)
 }

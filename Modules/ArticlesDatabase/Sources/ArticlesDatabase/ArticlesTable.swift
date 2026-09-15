@@ -1281,6 +1281,9 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				color: annotation.color,
 				note: annotation.note,
 				chapterTitle: annotation.chapterTitle,
+				hasHighlight: annotation.hasHighlight,
+				originalText: annotation.originalText,
+				replacementText: annotation.replacementText,
 				createdAt: annotation.createdAt,
 				updatedAt: annotation.updatedAt,
 				orphanedAt: annotation.orphanedAt,
@@ -1348,6 +1351,28 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				quotePrefix: quotePrefix,
 				quoteSuffix: quoteSuffix,
 				chapterTitle: chapterTitle,
+				at: Date(),
+				database
+			)
+			DispatchQueue.main.async {
+				completion?()
+			}
+		}
+	}
+
+	func setAnnotationEditFieldsAsync(
+		annotationID: String,
+		hasHighlight: Bool,
+		originalText: String?,
+		replacementText: String?,
+		_ completion: DatabaseCompletionBlock?
+	) {
+		queue.runInDatabase { database in
+			self.annotationsTable.setEditFields(
+				annotationID: annotationID,
+				hasHighlight: hasHighlight,
+				originalText: originalText,
+				replacementText: replacementText,
 				at: Date(),
 				database
 			)

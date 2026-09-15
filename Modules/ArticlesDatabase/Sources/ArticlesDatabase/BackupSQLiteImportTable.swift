@@ -324,21 +324,30 @@ enum BackupSQLiteImportTable {
 	/// path on AnnotationsTable (save/updateNote/updateColor/markOrphaned/
 	/// reanchor) stamps updatedAt, so it's a reliable arbiter here the same
 	/// way it is for bookState. New-only annotationIDs are inserted as-is.
-	/// Column list includes `chapterTitle`, added via an ALTER TABLE
-	/// migration after the base CREATE TABLE (see AnnotationsTable.swift's
+	/// Column list includes `chapterTitle` and `hasHighlight`/`originalText`/
+	/// `replacementText`, all added via containsColumn-guarded ALTER TABLE
+	/// migrations after the base CREATE TABLE (see AnnotationsTable.swift's
 	/// header comment) -- both the local DB and a backup produced by this
-	/// app version have it, since exportFullSnapshot runs against the live,
-	/// already-migrated schema.
+	/// app version have them, since exportFullSnapshot runs against the
+	/// live, already-migrated schema. Every new column added to annotations
+	/// must be added here explicitly (INSERT OR IGNORE column list, the
+	/// paired SELECT list, and the UPDATE ... SET block below) -- this
+	/// function is a full-row insert/replace, not a bare `SELECT an.*`, so
+	/// a column present in the schema but missing from these three lists
+	/// silently drops for merge-imported rows even though the row itself
+	/// still merges successfully. See docs/annotations.md's "Backup/export".
 	private static func mergeAnnotations(database: FMDatabase) throws {
 		let insertNewSQL = """
 		INSERT OR IGNORE INTO annotations (
 		  annotationID, articleID, bookKey, quoteExact, quotePrefix, quoteSuffix,
 		  rootSelector, startOffset, endOffset, color, note, chapterTitle,
+		  hasHighlight, originalText, replacementText,
 		  createdAt, updatedAt, orphanedAt, lastReanchoredAt
 		)
 		SELECT
 		  b.annotationID, b.articleID, b.bookKey, b.quoteExact, b.quotePrefix, b.quoteSuffix,
 		  b.rootSelector, b.startOffset, b.endOffset, b.color, b.note, b.chapterTitle,
+		  b.hasHighlight, b.originalText, b.replacementText,
 		  b.createdAt, b.updatedAt, b.orphanedAt, b.lastReanchoredAt
 		FROM \(attachedSchemaName).annotations AS b;
 		"""
@@ -368,6 +377,9 @@ enum BackupSQLiteImportTable {
 		  color = (SELECT b.color FROM \(attachedSchemaName).annotations AS b WHERE b.annotationID = annotations.annotationID),
 		  note = (SELECT b.note FROM \(attachedSchemaName).annotations AS b WHERE b.annotationID = annotations.annotationID),
 		  chapterTitle = (SELECT b.chapterTitle FROM \(attachedSchemaName).annotations AS b WHERE b.annotationID = annotations.annotationID),
+		  hasHighlight = (SELECT b.hasHighlight FROM \(attachedSchemaName).annotations AS b WHERE b.annotationID = annotations.annotationID),
+		  originalText = (SELECT b.originalText FROM \(attachedSchemaName).annotations AS b WHERE b.annotationID = annotations.annotationID),
+		  replacementText = (SELECT b.replacementText FROM \(attachedSchemaName).annotations AS b WHERE b.annotationID = annotations.annotationID),
 		  updatedAt = (SELECT b.updatedAt FROM \(attachedSchemaName).annotations AS b WHERE b.annotationID = annotations.annotationID),
 		  orphanedAt = (SELECT b.orphanedAt FROM \(attachedSchemaName).annotations AS b WHERE b.annotationID = annotations.annotationID),
 		  lastReanchoredAt = (SELECT b.lastReanchoredAt FROM \(attachedSchemaName).annotations AS b WHERE b.annotationID = annotations.annotationID)

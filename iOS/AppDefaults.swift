@@ -1077,6 +1077,21 @@ final class AppDefaults: Sendable {
 		static let showArticleScrollbar = "showArticleScrollbar"
 		static let showLastUpdatedLabel = "showLastUpdatedLabel"
 		static let articleThemeOverrides = "articleThemeOverrides"
+		/// Text Replacement feature (docs/annotations.md's "Storage shape";
+		/// see the feature's own implementation plan, "Confirmation policy"
+		/// and "Settings screen"). One master toggle plus three
+		/// Codable-in-UserDefaults tables, same pattern as
+		/// articleThemeOverrides above.
+		static let textReplacementApplyAutomatically = "textReplacementApplyAutomatically"
+		static let textReplacementTypoFixesEnabled = "textReplacementTypoFixesEnabled"
+		static let textReplacementQuoteConversionEnabled = "textReplacementQuoteConversionEnabled"
+		static let textReplacementTypoTable = "textReplacementTypoTable"
+		static let textReplacementReaderInsertTable = "textReplacementReaderInsertTable"
+		static let textReplacementCustomTable = "textReplacementCustomTable"
+		/// Step 7's per-work override (TextReplacementPerWorkOverride),
+		/// scoped to category 3 (reader-insert names) only -- see that
+		/// type's own header comment.
+		static let textReplacementPerWorkOverride = "textReplacementPerWorkOverride"
 		static let lastRefresh = "lastRefresh"
 		static let addFeedAccountID = "addFeedAccountID"
 		static let addFeedFolderPath = "addFeedFolderPath"
@@ -1990,6 +2005,125 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	/// The master "apply automatically on open" toggle for the rule-driven
+	/// text-replacement categories (typo fixes, reader-insert names, and
+	/// quote conversion) -- see the plan's "Confirmation policy": default
+	/// **on**, registered in registerDefaults() below (categories 1/3's
+	/// own toggles are the per-category switch underneath this one;
+	/// quote conversion's own toggle below is separately default off).
+	var textReplacementApplyAutomatically: Bool {
+		get {
+			return AppDefaults.bool(for: Key.textReplacementApplyAutomatically)
+		}
+		set {
+			AppDefaults.setBool(for: Key.textReplacementApplyAutomatically, newValue)
+		}
+	}
+
+	/// Category 1 (common typo fixes). Default **on**, registered in
+	/// registerDefaults() below -- see the plan's "Settings screen"
+	/// section.
+	var textReplacementTypoFixesEnabled: Bool {
+		get {
+			return AppDefaults.bool(for: Key.textReplacementTypoFixesEnabled)
+		}
+		set {
+			AppDefaults.setBool(for: Key.textReplacementTypoFixesEnabled, newValue)
+		}
+	}
+
+	/// Category 2 (British->American quote conversion). Default **off**
+	/// -- a style preference, not a correction, per the plan.
+	var textReplacementQuoteConversionEnabled: Bool {
+		get {
+			return AppDefaults.bool(for: Key.textReplacementQuoteConversionEnabled)
+		}
+		set {
+			AppDefaults.setBool(for: Key.textReplacementQuoteConversionEnabled, newValue)
+		}
+	}
+
+	/// Category 1's person-editable rule table, seeded from
+	/// TextReplacementRuleTable.defaultTypoTable on first read.
+	var textReplacementTypoTable: TextReplacementRuleTable {
+		get {
+			guard let json = AppDefaults.string(for: Key.textReplacementTypoTable),
+				  let data = json.data(using: .utf8),
+				  let decoded = try? JSONDecoder().decode(TextReplacementRuleTable.self, from: data) else {
+				return .defaultTypoTable
+			}
+			return decoded
+		}
+		set {
+			if let data = try? JSONEncoder().encode(newValue), let json = String(data: data, encoding: .utf8) {
+				AppDefaults.setString(for: Key.textReplacementTypoTable, json)
+			}
+		}
+	}
+
+	/// Category 3's person-editable rule table (reader-insert names),
+	/// seeded from TextReplacementRuleTable.defaultReaderInsertTable on
+	/// first read. The per-work override (TextReplacementPerWorkOverride)
+	/// is a separate, additional table layered on top at apply time, not
+	/// stored here.
+	var textReplacementReaderInsertTable: TextReplacementRuleTable {
+		get {
+			guard let json = AppDefaults.string(for: Key.textReplacementReaderInsertTable),
+				  let data = json.data(using: .utf8),
+				  let decoded = try? JSONDecoder().decode(TextReplacementRuleTable.self, from: data) else {
+				return .defaultReaderInsertTable
+			}
+			return decoded
+		}
+		set {
+			if let data = try? JSONEncoder().encode(newValue), let json = String(data: data, encoding: .utf8) {
+				AppDefaults.setString(for: Key.textReplacementReaderInsertTable, json)
+			}
+		}
+	}
+
+	/// "Custom rules" (plan's "Settings screen"): arbitrary person-added
+	/// pairs not covered by the shipped typo table. Empty by default --
+	/// unlike the typo/reader-insert tables, there is no shipped seed.
+	var textReplacementCustomTable: TextReplacementRuleTable {
+		get {
+			guard let json = AppDefaults.string(for: Key.textReplacementCustomTable),
+				  let data = json.data(using: .utf8),
+				  let decoded = try? JSONDecoder().decode(TextReplacementRuleTable.self, from: data) else {
+				return TextReplacementRuleTable()
+			}
+			return decoded
+		}
+		set {
+			if let data = try? JSONEncoder().encode(newValue), let json = String(data: data, encoding: .utf8) {
+				AppDefaults.setString(for: Key.textReplacementCustomTable, json)
+			}
+		}
+	}
+
+	/// Step 7's per-work override, scoped to category 3 (reader-insert
+	/// names) only -- see TextReplacementPerWorkOverride's own header
+	/// comment for why this doesn't apply to categories 1/2 too. Empty by
+	/// default, same reasoning as textReplacementCustomTable above: there's
+	/// no shipped seed for a per-work table, since it exists specifically
+	/// for a person to fill in once they notice the global table would
+	/// clobber something in a particular work.
+	var textReplacementPerWorkOverride: TextReplacementPerWorkOverride {
+		get {
+			guard let json = AppDefaults.string(for: Key.textReplacementPerWorkOverride),
+				  let data = json.data(using: .utf8),
+				  let decoded = try? JSONDecoder().decode(TextReplacementPerWorkOverride.self, from: data) else {
+				return TextReplacementPerWorkOverride()
+			}
+			return decoded
+		}
+		set {
+			if let data = try? JSONEncoder().encode(newValue), let json = String(data: data, encoding: .utf8) {
+				AppDefaults.setString(for: Key.textReplacementPerWorkOverride, json)
+			}
+		}
+	}
+
 	var splitViewPreferredDisplayMode: Int {
 		get {
 			return AppDefaults.int(for: Key.splitViewPreferredDisplayMode)
@@ -2436,6 +2570,12 @@ final class AppDefaults: Sendable {
 									Key.showArticleScrollbar: ArticleScrollbarVisibility.whenNotFullScreen.rawValue,
 									Key.toolbarStyle: ToolbarStyle.system.rawValue,
 									Key.statsVisible: true,
+								// Text Replacement feature defaults -- see the Key block's own
+								// comment above. Quote conversion (textReplacementQuoteConversionEnabled)
+								// is intentionally absent here: AppDefaults.bool(for:)'s implicit-false
+								// fallback already gives it the plan's required default off.
+								Key.textReplacementApplyAutomatically: true,
+								Key.textReplacementTypoFixesEnabled: true,
 										// "Promenade" (Themes/Promenade.nnwtheme), not Self.defaultThemeName --
 										// that constant is a sentinel meaning "use the app's built-in fallback
 										// ArticleTheme.defaultTheme" (see ArticleThemesManager), a distinct

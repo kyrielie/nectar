@@ -1,0 +1,57 @@
+<!--
+  Synthetic fixture, NOT a raw capture of a real AO3 page -- built to match
+  the /users/<n>/bookmarks row shape AO3SearchResultsExtractor.dateBookmarked
+  (fromLI:) targets: a div.header block (the work's own heading/stats,
+  including its p.datetime "last updated" date) followed by a sibling
+  div.user block (the bookmarker's own note/tags and a *second* p.datetime
+  for when the bookmark itself was made). The two p.datetime elements
+  carry deliberately different dates so a test can confirm
+  dateBookmarked(fromLI:) reads div.user's and datetime(fromLI:) (dateModified)
+  reads div.header's, not the other way around. See ao3-search-results.html's
+  own header comment for why this is synthetic rather than captured.
+-->
+<html>
+<body>
+<ol class="bookmark index group">
+
+<li id="bookmark_55555555" class="bookmark blurb group work-33333333" role="article">
+  <div class="header module">
+    <h4 class="heading">
+      <a href="/works/33333333">A Bookmarked Work</a>
+      by
+      <a rel="author" href="/users/bookmarkedauthor/pseuds/bookmarkedauthor">bookmarkedauthor</a>
+    </h4>
+    <h5 class="fandoms heading">
+      <a class="tag" href="/tags/Some%20Fandom/works">Some Fandom</a>
+    </h5>
+    <p class="datetime">10 Feb 2026</p>
+    <span class="rating rating-general-audiences">General Audiences</span>
+    <span class="warning warnings-none">No Archive Warnings Apply</span>
+    <span class="category multi">Gen</span>
+    <span class="iswip">Complete Work</span>
+    <ul class="tags commas">
+      <li class="freeforms"><a class="tag" href="/tags/Fluff/works">Fluff</a></li>
+    </ul>
+    <blockquote class="summary userstuff">
+      <p>Summary of the bookmarked work.</p>
+    </blockquote>
+    <dl class="stats">
+      <dt class="language">Language:</dt><dd class="language">English</dd>
+      <dt class="words">Words:</dt><dd class="words">5,000</dd>
+      <dt class="chapters">Chapters:</dt><dd class="chapters"><a href="/works/33333333/chapters/1">1</a>/1</dd>
+      <dt class="kudos">Kudos:</dt><dd class="kudos"><a href="/works/33333333?view_full_work=true#kudos">20</a></dd>
+      <dt class="hits">Hits:</dt><dd class="hits">400</dd>
+    </dl>
+  </div>
+  <div class="user module">
+    <h5>
+      <a href="/users/bookmarker/pseuds/bookmarker">bookmarker</a> bookmarked
+      <a href="/works/33333333">A Bookmarked Work</a>
+    </h5>
+    <p class="datetime">15 Feb 2026</p>
+  </div>
+</li>
+
+</ol>
+</body>
+</html>
