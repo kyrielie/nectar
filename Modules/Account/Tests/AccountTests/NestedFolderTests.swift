@@ -161,6 +161,31 @@ import RSParser
 		XCTAssertFalse(child.isAncestor(of: parent))
 	}
 
+	// MARK: - sortedFolders on a Folder container (not just Account)
+
+	func testFolderSortedFoldersReturnsChildrenCaseInsensitiveByName() {
+		let parent = account.ensureFolder(with: "Parent")!
+		_ = parent.ensureChildFolder(named: "zebra")
+		_ = parent.ensureChildFolder(named: "Apple")
+		_ = parent.ensureChildFolder(named: "banana")
+
+		// Container.sortedFolders is hoisted from Account's own
+		// (pre-existing) implementation so Folder gets an identical
+		// one-level sort helper for free -- this is what
+		// AddFeedFolderViewController's recursive walk now calls at
+		// every depth, not just the top.
+		XCTAssertEqual(parent.sortedFolders?.map(\.nameForDisplay), ["Apple", "banana", "zebra"])
+	}
+
+	func testFolderSortedFoldersEmptyWhenNoChildren() {
+		let leaf = account.ensureFolder(with: "Leaf")!
+		// Folder.folders defaults to a non-nil empty OrderedSet, so
+		// sortedFolders comes back [] here, not nil -- the recursive
+		// picker walk relies on this to just stop appending rows rather
+		// than needing to special-case a nil-vs-empty distinction.
+		XCTAssertEqual(leaf.sortedFolders, [])
+	}
+
 	// MARK: - Delete/restore preserves nesting
 
 	func testRemoveThenRestoreNestedFolderReturnsItToItsParent() async throws {

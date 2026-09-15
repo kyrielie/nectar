@@ -97,8 +97,8 @@ struct Assets {
 		static let tableOfContents = RSImage(symbol: "list.bullet")!
 		static let annotationAddNote = RSImage(symbol: "note.text.badge.plus")!
 		static let annotations = RSImage(symbol: "highlighter")!
-		// In-article back/top/bottom navigation (nectar-fixes-plan-4.md §4,
-		// Option A). Symbol-backed like the rest of this section.
+		// In-article back/top/bottom navigation (docs/reading-progress.md,
+		// "In-article jump history"). Symbol-backed like the rest of this section.
 		static let scrollBack = RSImage(symbol: "arrow.uturn.backward")!
 		static let scrollToTop = RSImage(symbol: "arrow.up.to.line")!
 		static let scrollToBottom = RSImage(symbol: "arrow.down.to.line")!

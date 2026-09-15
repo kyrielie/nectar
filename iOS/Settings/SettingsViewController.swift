@@ -82,6 +82,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case showFeedNameInReaderView = 3
 		case fullScreenReading = 4
 		case annotations = 5
+		case textReplacement = 6
 	}
 
 	private enum HelpRow: Int {
@@ -304,6 +305,14 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 					onNavigateToAnnotation: { [weak self] annotation, account in
 						self?.navigateToAnnotationFromSettings(annotation, account: account)
 					}
+				))
+				self.navigationController?.pushViewController(hostingController, animated: true)
+			case .textReplacement:
+				let hostingController = Self.makeSurfacePaletteAwareHostingController(rootView: TextReplacementSettingsView(
+					onNavigateToAnnotation: { [weak self] annotation, account in
+						self?.navigateToAnnotationFromSettings(annotation, account: account)
+					},
+					currentWork: currentWorkForTextReplacementOverride
 				))
 				self.navigationController?.pushViewController(hostingController, animated: true)
 			default:
@@ -881,6 +890,21 @@ private extension SettingsViewController {
 	/// selectArticleDirectly on the coordinator alone still selects and
 	/// pushes the article; navigateToAnnotation's same-article fast path
 	/// then finds articleID already matching and just scrolls.
+	/// The work currently open behind Settings, if any -- resolved the
+	/// same way navigateToAnnotationFromSettings resolves the current
+	/// article for a different purpose, via
+	/// RootSplitViewController.coordinator.currentArticleViewController.
+	/// nil when Settings was opened with no article on screen (e.g.
+	/// compact-width, still on the timeline); TextReplacementSettingsView
+	/// hides its per-work override row in that case.
+	private var currentWorkForTextReplacementOverride: (bookKey: String, title: String)? {
+		guard let rootSplit = presentingParentController as? RootSplitViewController,
+			  let article = rootSplit.coordinator.currentArticleViewController?.article else {
+			return nil
+		}
+		return (bookKey: article.bookKey, title: article.title ?? "")
+	}
+
 	func navigateToAnnotationFromSettings(_ annotation: Annotation, account: Account) {
 		guard let rootSplit = presentingParentController as? RootSplitViewController else { return }
 		let coordinator = rootSplit.coordinator

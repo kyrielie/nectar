@@ -140,6 +140,20 @@ the disabled-`next`-on-last-page pagination case) — a documented, explicit
 uncertainty rather than a guess presented as fact, consistent with the
 project's rule against asserting unverified markup.
 
+Two different `p.datetime` elements can appear on the same row, and the
+extractor deliberately reads them with two different selectors rather
+than one shared helper: `datetime(fromLI:)` takes the first `p.datetime`
+anywhere in the `<li>`, which on every listing type except bookmarks is
+the work's own `div.header p.datetime` — its last-updated date, mapped to
+`ParsedItem.dateModified` (AO3 doesn't expose original publish date on a
+listing row at all). A `/users/<name>/bookmarks` row additionally carries
+a sibling `div.user p.datetime` — when *that bookmark* was made, not when
+the work last changed — so `dateBookmarked(fromLI:)` scopes its search to
+inside `div.user` specifically, landing on `ParsedItem.dateBookmarked`.
+On every other listing type there's no `div.user` block at all, so
+`dateBookmarked(fromLI:)` returns `nil` structurally, with no separate
+feed-type gating needed at parse time.
+
 `AO3SearchResultsOutcome` deliberately has no rate-limit case of its own:
 AO3's search-results rate limiting is a genuine HTTP 429, already
 intercepted by `Downloader`'s per-host cooldown before any HTML reaches this
@@ -275,3 +289,59 @@ Lives in `RSParser` rather than `Account` specifically so every AO3
 ingestion path (native tag/user RSS-Atom, the search extractor, and a
 pasted-link-list import) can reach it without `RSParser` having to depend on
 `Account`.
+
+## Pasted-AO3-link-list import destinations
+
+`Account.importPastedAO3Links(_:destination:)` (`AO3LinkListImportView`'s
+"Import" action) writes into one of three places, chosen via
+`Account.AO3LinkImportDestination`:
+
+- **`.sharedTopLevel`** (the default, and the only option before this
+  destination picker existed) — the single top-level feed at the fixed
+  URL `Account.importedLinksFeedURL`
+  (`nectar-import://pasted-ao3-links`), reused across every import
+  regardless of when it happened. Every pre-existing install's already-
+  imported articles stay attached to this exact feed identity.
+- **`.newFolder(name:)`** — creates (or reuses, by exact name match at
+  the account's top level) a folder, then imports into a feed inside it.
+  `AO3LinkListImportView`'s "New dated folder" row prefills `name` with
+  today's date (`MM-dd-yy`) but it's freely editable.
+- **`.existingContainer(_:)`** — an already-existing folder, or the
+  account's own top level (both reachable, not merely "in principle" —
+  see `nested-folders.md`'s note on `accountFilter` previously dropping
+  that top-level row), picked via `FolderPickerView` (see
+  `nested-folders.md`'s note on that shared component), scoped by
+  `AddFeedFolderViewController.accountFilter` to just the account already
+  selected in `AO3LinkListImportView`'s own account picker.
+
+`AO3LinkListImportView`'s "Add to" section presents these three
+destinations as a single-line-per-row list (no per-row descriptive
+subtitles), matching Add Feed's own folder row style rather than a
+description-and-chevron disclosure row. The "Imported Links" and "New
+dated folder" rows are mutually exclusive — selecting one fades the
+other's text to secondary and moves the checkmark — while the "Folder"
+row (labelled "Folder" with the currently-chosen folder, or the
+account's own root name, as its detail text) always stays in normal text
+color rather than fading, since picking a folder isn't mutually
+exclusive with the other two in the same visual sense: it's always a
+live, ready destination. Selecting "New dated folder" is still driven by
+focusing its text field (`AO3LinkListImportView`'s
+`isNewFolderNameFocused`), so a `destinationMode` `onChange` handler
+resigns that focus whenever a different row becomes the active
+destination — without it, switching away from the date row left its
+text field focused (cursor still blinking) even though the row no longer
+showed as selected, since `@FocusState` doesn't resign itself just
+because a sibling row's own `Button` action ran.
+
+A folder destination's feed URL is `Account.importedLinksFeedURL` plus
+`/` plus the folder's `pathNames` joined by `/` — deliberately *not* the
+same fixed URL the shared destination uses, so a folder import can never
+collide with the shared feed or with another folder's own feed. This is
+also how re-importing into the *same* folder name/path reuses that
+folder's one feed rather than creating a duplicate each time: the URL is
+derived from the folder's identity, not generated fresh per import.
+`LocalAccountRefresher.feedShouldBeSkippedForDisallowedHostReasons`
+(`refresh-throttling.md`) matches on the `nectar-import` URL *scheme*,
+not the exact `importedLinksFeedURL` string, so every folder-scoped
+import feed is still correctly permanently refresh-skipped the same way
+the shared one always was.

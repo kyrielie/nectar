@@ -73,8 +73,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// toggles isEnabled per-article each time `article` changes. See
 	// updateUI()'s checkForUpdatesBarButtonItem handling.
 	private lazy var checkForUpdatesBarButtonItem = UIBarButtonItem(image: Assets.Images.checkForUpdates, style: .plain, target: self, action: #selector(checkForUpdatesFromToolbar(_:)))
-	// In-article back/top/bottom navigation (nectar-fixes-plan-4.md §4,
-	// Option A). scrollBackBarButtonItem's isEnabled tracks
+	// In-article back/top/bottom navigation (docs/reading-progress.md,
+	// "In-article jump history"). scrollBackBarButtonItem's isEnabled tracks
 	// WebViewController.isScrollBackAvailable -- see updateUI() -- the same
 	// dynamic-state pattern checkForUpdatesBarButtonItem already uses for
 	// per-article eligibility, not a static icon/title.
@@ -1039,8 +1039,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		coordinator.toggleLovedForCurrentArticle()
 	}
 
-	// In-article back/top/bottom navigation (nectar-fixes-plan-4.md §4,
-	// Option A). All three delegate straight to currentWebViewController --
+	// In-article back/top/bottom navigation (docs/reading-progress.md,
+	// "In-article jump history"). All three delegate straight to currentWebViewController --
 	// see WebViewController.scrollBack()/scrollToTop()/scrollToBottom().
 	@IBAction func scrollBack(_ sender: Any) {
 		currentWebViewController?.scrollBack()
@@ -1110,6 +1110,31 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	/// one of the groups in the same list. `article` is re-read here at
 	/// call time, not captured earlier, so this stays correct even if the
 	/// person paged to a different article before tapping the button.
+	/// One presenter per ArticleViewController instance (this app pages
+	/// between articles by mutating one ArticleViewController's `article`
+	/// in place -- see navigateToAnnotation's own doc comment -- rather
+	/// than creating a new one per article), so paging to a second
+	/// article with its own fresh auto-apply matches replaces any
+	/// still-showing banner from the previous one instead of stacking a
+	/// second banner on top of it.
+	private let textReplacementSummaryBannerPresenter = TextReplacementSummaryBannerPresenter()
+
+	/// Presents the plan's one-time "N replacements made -- review in
+	/// Edit History" summary (see WebViewController.
+	/// onTextReplacementReplacementsApplied's own doc comment for why this
+	/// lives here rather than in WebViewController itself: this view
+	/// controller owns the view worth overlaying a banner onto, and is
+	/// also the one that knows how to open Edit History). Tapping the
+	/// banner opens the same whole-book annotations list the toolbar
+	/// button does (showAnnotationsList above) -- not a separate
+	/// destination -- since a rule-driven edit row is just another row in
+	/// that same list (docs/annotations.md's "Consolidated viewer").
+	private func presentTextReplacementSummaryBanner(replacementCount: Int) {
+		textReplacementSummaryBannerPresenter.show(replacementCount: replacementCount, in: view) { [weak self] in
+			self?.showAnnotationsList(self as Any)
+		}
+	}
+
 	@objc private func showAnnotationsList(_ sender: Any) {
 		guard let article, let account = article.account else { return }
 
@@ -1450,6 +1475,9 @@ private extension ArticleViewController {
 	func createWebViewController(_ article: Article?, updateView: Bool = true) -> WebViewController {
 		let controller = WebViewController()
 		controller.coordinator = coordinator
+		controller.onTextReplacementReplacementsApplied = { [weak self] count in
+			self?.presentTextReplacementSummaryBanner(replacementCount: count)
+		}
 		controller.setArticle(article, updateView: updateView)
 		return controller
 	}

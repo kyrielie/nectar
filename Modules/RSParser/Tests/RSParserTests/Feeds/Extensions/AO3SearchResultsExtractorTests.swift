@@ -215,6 +215,47 @@ import Testing
 		#expect(item.language == "English")
 	}
 
+	// MARK: - dateBookmarked (div.user p.datetime)
+
+	@Test func dateBookmarkedReadsUserDivNotHeaderDiv() throws {
+		// ao3-bookmarks.html's row carries two different p.datetime values --
+		// div.header's (10 Feb 2026, the work's own last-updated date) and
+		// div.user's (15 Feb 2026, when this bookmark was made). Confirms
+		// dateBookmarked(fromLI:) reads div.user's specifically, not just
+		// whichever p.datetime happens to come first in document order.
+		let html = htmlFixtureString("ao3-bookmarks.html")
+		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
+		guard case .success(let items, _, _, _) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+		let item = try #require(items.first { $0.ao3WorkID == "33333333" })
+
+		var expectedBookmarked = DateComponents()
+		expectedBookmarked.year = 2026
+		expectedBookmarked.month = 2
+		expectedBookmarked.day = 15
+		var utcCalendar = Calendar(identifier: .gregorian)
+		utcCalendar.timeZone = try #require(TimeZone(identifier: "UTC"))
+		#expect(item.dateBookmarked == utcCalendar.date(from: expectedBookmarked))
+
+		// dateModified stays div.header's date, unaffected by div.user's
+		// presence -- the two selectors must not cross-contaminate.
+		var expectedModified = DateComponents()
+		expectedModified.year = 2026
+		expectedModified.month = 2
+		expectedModified.day = 10
+		#expect(item.dateModified == utcCalendar.date(from: expectedModified))
+	}
+
+	@Test func dateBookmarkedNilOnPlainSearchResultsRow() throws {
+		// ao3-search-results.html rows have no div.user block at all --
+		// dateBookmarked(fromLI:) should return nil rather than falling
+		// back to some other p.datetime on the row.
+		let item = try extractedItem(workID: "11111111")
+		#expect(item.dateBookmarked == nil)
+	}
+
 	// MARK: - Helpers
 
 	private func extractedItem(workID: String) throws -> ParsedItem {

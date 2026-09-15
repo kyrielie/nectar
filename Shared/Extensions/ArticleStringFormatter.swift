@@ -18,7 +18,7 @@ import RSParser
 	private var feedNameCache = [String: String]()
 	private var titleCache = [TitleCacheKey: String]()
 	private var attributedTitleCache = [String: NSAttributedString]()
-	private var summaryCache = [ArticleCacheKey: String]()
+	private var summaryCache = [SummaryCacheKey: String]()
 
 	private let dateFormatter: DateFormatter = {
 		let formatter = DateFormatter()
@@ -132,7 +132,7 @@ import RSParser
 			return ""
 		}
 
-		let key = ArticleCacheKey(articleID: article.articleID, accountID: article.accountID)
+		let key = SummaryCacheKey(source: source)
 		if let cachedBody = summaryCache[key] {
 			return cachedBody
 		}
@@ -282,11 +282,15 @@ import RSParser
 
 private extension ArticleStringFormatter {
 
-	// Article-identity key for the summary cache. Hashable struct
-	// avoids per-lookup String allocation.
-	struct ArticleCacheKey: Hashable {
-		let articleID: String
-		let accountID: String
+	// Content-keyed key for the summary cache -- mirrors TitleCacheKey's
+	// approach so a changed article.summary/body (e.g. a placeholder import
+	// later getting real fetched metadata) is automatically a new key
+	// instead of returning stale cached text under an identity-based key.
+	// Two articles with byte-identical summary text share a cache entry,
+	// which is correct since truncatedSummary's output depends only on
+	// `source`.
+	struct SummaryCacheKey: Hashable {
+		let source: String
 	}
 
 	// (raw title, forHTML) key. Hit path skips `sanitizedTitle`.

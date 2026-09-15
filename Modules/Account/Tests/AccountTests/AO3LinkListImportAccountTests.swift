@@ -89,4 +89,77 @@ import XCTest
 	// LocalAccountRefresher.swift directly instead: the scheme check is the
 	// first branch in feedShouldBeSkippedForDisallowedHostReasons, returning
 	// (true, ...) before any host-based logic runs.
+
+	// MARK: - destination: .newFolder
+
+	func testNewFolderDestinationCreatesFolderAndFeedInsideIt() async {
+		let newCount = await account.importPastedAO3Links("https://archiveofourown.org/works/111", destination: .newFolder(name: "09-13-26"))
+		XCTAssertEqual(newCount, 1)
+
+		let folder = account.existingFolder(withDisplayName: "09-13-26")
+		XCTAssertNotNil(folder, "Destination folder should be created if it doesn't already exist")
+
+		// The shared top-level feed must be untouched by a folder import.
+		XCTAssertNil(account.existingFeed(withURL: Account.importedLinksFeedURL))
+
+		let feed = folder?.topLevelFeeds.first
+		XCTAssertNotNil(feed)
+		let articles = await account.fetchArticlesAsync(.feed(feed!))
+		XCTAssertEqual(articles.map(\.uniqueID), ["111"])
+	}
+
+	func testNewFolderDestinationReusesExistingFolderOfTheSameName() async {
+		_ = await account.importPastedAO3Links("https://archiveofourown.org/works/111", destination: .newFolder(name: "09-13-26"))
+		_ = await account.importPastedAO3Links("https://archiveofourown.org/works/222", destination: .newFolder(name: "09-13-26"))
+
+		// One folder, not two, and both links land in its one feed --
+		// this is the "same name reused... appends to the same feed"
+		// behavior the destination picker's own design review flagged
+		// as an open question.
+		XCTAssertEqual(account.folders?.count, 1)
+		let folder = account.existingFolder(withDisplayName: "09-13-26")!
+		XCTAssertEqual(folder.topLevelFeeds.count, 1)
+
+		let articles = await account.fetchArticlesAsync(.feed(folder.topLevelFeeds.first!))
+		XCTAssertEqual(Set(articles.map(\.uniqueID)), ["111", "222"])
+	}
+
+	func testDifferentNewFolderNamesGetSeparateFeeds() async {
+		_ = await account.importPastedAO3Links("https://archiveofourown.org/works/111", destination: .newFolder(name: "09-13-26"))
+		_ = await account.importPastedAO3Links("https://archiveofourown.org/works/222", destination: .newFolder(name: "09-14-26"))
+
+		XCTAssertEqual(account.folders?.count, 2)
+		let firstFeed = account.existingFolder(withDisplayName: "09-13-26")?.topLevelFeeds.first
+		let secondFeed = account.existingFolder(withDisplayName: "09-14-26")?.topLevelFeeds.first
+		XCTAssertNotNil(firstFeed)
+		XCTAssertNotNil(secondFeed)
+		XCTAssertNotEqual(firstFeed?.feedID, secondFeed?.feedID)
+	}
+
+	// MARK: - destination: .existingContainer
+
+	func testExistingContainerDestinationImportsIntoThatFolder() async {
+		let folder = account.ensureFolder(with: "Fandom")!
+
+		let newCount = await account.importPastedAO3Links("https://archiveofourown.org/works/111", destination: .existingContainer(folder))
+		XCTAssertEqual(newCount, 1)
+
+		let feed = folder.topLevelFeeds.first
+		XCTAssertNotNil(feed)
+		XCTAssertNil(account.existingFeed(withURL: Account.importedLinksFeedURL), "Shared top-level feed should be untouched")
+
+		let articles = await account.fetchArticlesAsync(.feed(feed!))
+		XCTAssertEqual(articles.map(\.uniqueID), ["111"])
+	}
+
+	func testExistingContainerDestinationIntoNestedFolderReusesItsFeedOnReimport() async {
+		let nested = account.ensureFolder(withFolderNames: ["Parent", "Child"])!
+
+		_ = await account.importPastedAO3Links("https://archiveofourown.org/works/111", destination: .existingContainer(nested))
+		_ = await account.importPastedAO3Links("https://archiveofourown.org/works/222", destination: .existingContainer(nested))
+
+		XCTAssertEqual(nested.topLevelFeeds.count, 1, "Re-importing into the same nested folder must reuse its feed, not duplicate it")
+		let articles = await account.fetchArticlesAsync(.feed(nested.topLevelFeeds.first!))
+		XCTAssertEqual(Set(articles.map(\.uniqueID)), ["111", "222"])
+	}
 }
