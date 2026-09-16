@@ -1396,9 +1396,9 @@ extension WebViewController {
 			// UIPopoverPresentationController has nothing valid to anchor to
 			// and simply never presents, with no error. Clamping degrades to
 			// "anchors at the nearest valid edge" instead.
-			presentationController.sourceRect = sourceRect.intersection(view.bounds).isEmpty
-				? sourceRect.clamped(toBounds: view.bounds)
-				: sourceRect
+			presentationController.sourceRect = sourceRect.intersects(view.bounds)
+				? sourceRect
+				: sourceRect.clamped(toBounds: view.bounds)
 			presentationController.permittedArrowDirections = [.up, .down]
 			presentationController.delegate = self
 		}
@@ -1509,6 +1509,26 @@ extension WebViewController {
 				self?.saveNoteEdit(annotation: annotation, note: note, color: color, account: account)
 				if let editedText {
 					self?.saveTextEdit(annotation: annotation, replacementText: editedText, keepHighlight: keepHighlight, account: account)
+				} else if keepHighlight != annotation.hasHighlight, annotation.originalText != nil {
+					// Text unchanged, but the "keep highlight" toggle
+					// still moved on a row that already has an edit --
+					// this has no offset shift or overlap to compute (the
+					// row's anchor hasn't moved), so it bypasses
+					// saveTextEdit's full edit-plan pipeline and persists
+					// hasHighlight directly.
+					//
+					// The `annotation.originalText != nil` guard matters:
+					// unchecking this on a row with no edit at all (never
+					// edited, text field left untouched) would produce
+					// hasHighlight == false with originalText == nil,
+					// which violates the Validity rule in
+					// docs/annotations.md's "Storage shape" -- that case
+					// is documented as "delete the row instead," which is
+					// separate, unrequested behavior this fix doesn't
+					// add. It's left a no-op here rather than either
+					// silently deleting the highlight or writing an
+					// invalid row.
+					self?.saveHasHighlightChange(annotation: annotation, hasHighlight: keepHighlight, account: account)
 				}
 			},
 			onDelete: { [weak self] in
@@ -1660,6 +1680,30 @@ extension WebViewController {
 				)
 			}
 
+			self.loadAndRenderAnnotations()
+		}
+	}
+
+	/// Persists a `hasHighlight`-only change (the "Keep highlight on the
+	/// corrected text" checkbox flipped with the edit text field left
+	/// alone). Deliberately bypasses saveTextEdit's computeTextEditPlan
+	/// pipeline entirely -- this row's own anchor doesn't move (nothing
+	/// shifted its start/end offsets), so there's no overlap to check and
+	/// no other row's anchor to reanchor. originalText/replacementText
+	/// are carried through unchanged; only hasHighlight differs.
+	/// loadAndRenderAnnotations() re-renders afterward the same way
+	/// saveTextEdit does -- renderAnnotations (annotations.js) already
+	/// re-evaluates hasHighlight per row on every render (see
+	/// docs/annotations.md, "Storage shape"), so this alone wraps/unwraps
+	/// the <mark> correctly with no new JS needed.
+	private func saveHasHighlightChange(annotation: Annotation, hasHighlight: Bool, account: Account) {
+		Task {
+			await account.setAnnotationEditFields(
+				annotationID: annotation.annotationID,
+				hasHighlight: hasHighlight,
+				originalText: annotation.originalText,
+				replacementText: annotation.replacementText
+			)
 			self.loadAndRenderAnnotations()
 		}
 	}

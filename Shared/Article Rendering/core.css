@@ -336,23 +336,49 @@ mark.nnw-highlight {
 	background-color: var(--nnw-highlight-yellow, #FFCC00);
 	color: inherit;
 	border-radius: 0.15em;
-	padding: 0.1em 0.05em;
-	/* Without this, a <mark> that wraps across multiple lines paints one
-	   single background box sized to its full bounding rect (start of
-	   first line to end of last line) rather than one box per visual
-	   line -- so on a tight line-height that box's top/bottom edges land
-	   inside the line above/below instead of only behind its own line,
-	   clipping that neighboring line's ascenders/descenders (tall
-	   letters like "l"/"h", or descenders like "g"/"y") under the
-	   highlight color. `clone` makes each visual line get its own
-	   independently-padded box instead, so the vertical padding above
-	   only ever pushes into this <mark>'s own leading/trailing, never
-	   into a neighboring line's text. -webkit- prefix required: this
-	   ships inside WKWebView (see docs/annotations.md), which only
-	   supports the prefixed property; unprefixed `box-decoration-break`
-	   is included too for forward-compatibility but currently has no
-	   effect in this environment.
+	/* Without box-decoration-break: clone (below), a <mark> that wraps
+	   across multiple lines paints one single background box sized to
+	   its full bounding rect (start of first line to end of last line)
+	   rather than one box per visual line, so on a tight line-height
+	   that box's top/bottom edges land inside the line above/below
+	   instead of only behind its own line, clipping that neighboring
+	   line's ascenders/descenders (tall letters like "l"/"h", or
+	   descenders like "g"/"y") under the highlight color. `clone` fixes
+	   that part on its own -- but clone only stops one mark's *own*
+	   fragments sharing a box; it does nothing about this rule's own
+	   vertical padding, which paints outward from the glyphs without
+	   reserving any extra room. On a tight line-height there may be
+	   little or no unused space above/below the glyphs at all, so a
+	   fixed padding can still bleed into the neighboring line no matter
+	   how it's combined with clone.
+
+	   The fix: size the padding to the room that's actually there
+	   instead of a fixed value. A line box's height is
+	   `line-height` * font-size, split roughly evenly above and below
+	   the glyphs (the "half-leading"), so the most padding this rule
+	   can ever safely add without growing past that half-leading is
+	   `(line-height - 1) / 2` em. --nnw-line-height is set by
+	   annotations.js's updateLineHeightProperty(), which reads the
+	   *actual* computed line-height/font-size ratio of the current
+	   article (whether that came from a bundled theme's own
+	   stylesheet.css or an ArticleThemeOverrides line-height slider
+	   value) and writes it as a custom property -- the same "JS/Swift
+	   sets a custom property, this file consumes it" layering the
+	   --nnw-highlight-* colors above already use. `min(0.1em, ...)`
+	   caps it at this rule's original 0.1em cushion once there's at
+	   least that much headroom (line-height 1.2 and up), so nothing
+	   changes at any line-height this rule already looked right at;
+	   `max(0em, ...)` floors it at zero rather than going negative if
+	   --nnw-line-height is ever unset (falls back to 1.4) or below 1.
+	   This can never clip, because the padding is bounded by the room
+	   that's actually available rather than asserted regardless of it.
+	   -webkit- prefix required: this ships inside WKWebView (see
+	   docs/annotations.md), which only supports the prefixed property;
+	   unprefixed `box-decoration-break` is included too for
+	   forward-compatibility but currently has no effect in this
+	   environment.
 	   Test coverage: multi-line-highlight-clipping.test.js */
+	padding: min(0.1em, max(0em, (var(--nnw-line-height, 1.4) - 1) * 0.5em)) 0.05em;
 	-webkit-box-decoration-break: clone;
 	box-decoration-break: clone;
 	line-height: inherit;
