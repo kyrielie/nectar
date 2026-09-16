@@ -288,8 +288,10 @@ final class WebViewController: UIViewController {
 	// §1b. Self-heals the "background-inversion on cold launch" bug: viewDidLoad's
 	// own initialColors read (above) and applyResolvedBackgroundColors() (called
 	// from renderPage() once webView is dequeued) both resolve against
-	// traitCollection.userInterfaceStyle / webView.traitCollection.userInterfaceStyle
-	// at whatever moment they happen to run. During state restoration,
+	// traitCollection.userInterfaceStyle (self's own, not webView's -- see the
+	// BUG FIX note on applyResolvedBackgroundColors() for why webView's own
+	// trait collection isn't a safe read here) at whatever moment they happen
+	// to run. During state restoration,
 	// SceneCoordinator.restoreSelectedSidebarItemAndArticle pushes the restored
 	// article before the first frame is ever drawn, and that whole path runs from
 	// SceneDelegate.scene(_:willConnectTo:options:) -- before the window is
@@ -2188,7 +2190,24 @@ private extension WebViewController {
 	private func applyResolvedBackgroundColors() {
 		guard let webView else { return }
 
-		let isDark = webView.traitCollection.userInterfaceStyle == .dark
+		// BUG FIX: was webView.traitCollection.userInterfaceStyle -- webView
+		// is a pooled PreloadedWebView (see coordinator.webViewProvider.
+		// dequeueWebView / removeFromSuperview() call sites above), reused
+		// and reattached across articles/pages outside plain UIKit view
+		// lifecycle, so its own traitCollection can lag one trait-change
+		// cycle behind this view controller's. registerForTraitChanges's
+		// handler in viewDidLoad already confirms self.traitCollection.
+		// userInterfaceStyle is fresh (it's exactly what that handler's own
+		// guard just compared) before calling this function, so read isDark
+		// from self here instead of re-deriving it from a different object
+		// that may not have caught up yet. The stale read otherwise applies
+		// exactly one appearance-toggle behind: e.g. toggling dark -> light
+		// resolves against webView's still-dark trait collection (shows the
+		// dark override color), and toggling back light -> dark then
+		// resolves against webView's now-stale-light collection (shows the
+		// light override color) -- always one step behind, never correct
+		// until a third toggle happens to land the read back in sync.
+		let isDark = Self.isDarkForColorResolution(selfTraitCollection: traitCollection, webViewTraitCollection: webView.traitCollection)
 		let colors = Self.resolvedArticleColors(isDark: isDark)
 		webView.backgroundColor = colors.background
 		webView.underPageBackgroundColor = colors.background
@@ -2853,6 +2872,26 @@ internal struct FindInArticleState: Codable {
 }
 
 extension WebViewController {
+
+	/// Isolates the "which trait collection is authoritative" decision behind the
+	/// BUG FIX note on applyResolvedBackgroundColors() above, as a small, dependency-free
+	/// function tests can call directly with two independently-constructed
+	/// UITraitCollections -- no live view hierarchy or window needed to reproduce the
+	/// self-vs-webView divergence that bug depended on. Deliberately ignores
+	/// webViewTraitCollection entirely; it's still a parameter so a test (or a future
+	/// reader of a call site) can see explicitly which value was considered and
+	/// rejected, rather than that context only existing in a comment. Lives in this
+	/// (internal-default) extension rather than the private extension above --
+	/// applyResolvedBackgroundColors() calls it -- because a `private extension`'s
+	/// members can't be individually marked more accessible than the extension
+	/// itself. See docs/article-color-pipeline.md.
+	/// `nonisolated` because it touches no actor-isolated state (just the two
+	/// passed-in UITraitCollections) -- without this it inherits WebViewController's
+	/// (a UIViewController subclass) implicit @MainActor isolation, which blocks
+	/// calling it from a plain synchronous test context.
+	nonisolated static func isDarkForColorResolution(selfTraitCollection: UITraitCollection, webViewTraitCollection: UITraitCollection) -> Bool {
+		return selfTraitCollection.userInterfaceStyle == .dark
+	}
 
 	func searchText(_ searchText: String, completionHandler: @escaping (FindInArticleState) -> Void) {
 		guard let json = try? JSONEncoder().encode(FindInArticleOptions(text: searchText)) else {
