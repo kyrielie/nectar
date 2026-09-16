@@ -10,7 +10,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { loadAnnotations } = require("./setup");
 
-test("edit-only row (hasHighlight false) replaces text with no <mark> drawn", () => {
+test("edit-only row (hasHighlight false) replaces text with no <mark>, but still wraps a tappable span", () => {
 	const { Annotations, document } = loadAnnotations(
 		'<div class="articleBody"><p>She sat by the wall.</p></div>'
 	);
@@ -31,6 +31,13 @@ test("edit-only row (hasHighlight false) replaces text with no <mark> drawn", ()
 	const paragraph = document.querySelector("p");
 	assert.equal(paragraph.textContent, "She sat by the door.");
 	assert.equal(document.querySelector("mark"), null, "an edit-only row should not draw a <mark>");
+
+	// It's not a bare Text node, though -- there must still be a real
+	// node to tap back into (see wrapEditOnlyTextNode).
+	const span = document.querySelector(`span.${Annotations._internal.EDIT_ONLY_CLASS}[data-annotation-id="edit-1"]`);
+	assert.ok(span, "expected the corrected text to be wrapped in an edit-only span");
+	assert.equal(span.textContent, "door");
+	assert.equal(span.getAttribute("data-annotation-color"), null, "an edit-only span carries no color attribute");
 });
 
 test("edit + highlight row wraps the freshly-edited text in <mark>", () => {

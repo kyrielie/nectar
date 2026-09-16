@@ -30,6 +30,18 @@
 // -- persisted highlights need permanence across reflow and a real,
 // taggable DOM node, so that technique isn't reused here.
 //
+// An edit-only row (hasHighlight == false, an edit applied -- see
+// "Storage shape" below) gets the same tappable-node treatment, just
+// without the highlight color: <span class="nnw-edit-only"
+// data-annotation-id="..."> instead of <mark class="nnw-highlight">.
+// Without this, correcting a highlight's text and then turning "keep
+// highlight" off leaves the corrected text as a bare Text node -- nothing
+// for handleAnnotationTap/scrollToAnnotation below to find, so the person
+// has no way to tap back into that row from the article itself once the
+// highlight is gone (only via the annotations list). See
+// annotationWrapperSelector, which every lookup by annotationID below
+// goes through so it matches either wrapper kind.
+//
 // Scope of this file: the anchor-resolution and DOM-wrapping algorithm,
 // the render/add/remove/update entry points Swift calls via
 // evaluateJavaScript, and selection capture -- listening for
@@ -53,6 +65,10 @@
 	"use strict";
 
 	var HIGHLIGHT_CLASS = "nnw-highlight";
+	// The tappable-but-unhighlighted wrapper an edit-only row (hasHighlight
+	// == false, an edit applied) renders as -- see the header comment above
+	// and wrapEditOnlyTextNode/annotationWrapperSelector below.
+	var EDIT_ONLY_CLASS = "nnw-edit-only";
 	var DEFAULT_ROOT_SELECTOR = ".articleBody";
 
 	// Below this prefix/suffix similarity score (0-1), a multiple-quote-match
@@ -358,11 +374,11 @@
 		return wrapDOMRange(range, annotationID, colorName);
 	}
 
-	// Wraps every text node fully contained within an already-resolved
-	// Range -- the shared tail end of wrapRange (called with fresh offsets)
-	// and applyTextEdit's own composed-rendering case (called with the
-	// exact Range applyTextEdit already produced, not re-resolved against
-	// post-edit offsets -- see applyTextEdit's own comment).
+	// Collects every Text node fully contained within an already-resolved
+	// Range -- the shared node-finding step both wrapDOMRange (highlight)
+	// and wrapEditOnlyDOMRange (edit-only) build their wrapping loop on top
+	// of, so there's exactly one implementation of "which text nodes does
+	// this range touch," not two.
 	//
 	// range.commonAncestorContainer is itself a Text node (not an
 	// element) whenever the whole range sits inside a single text node --
@@ -370,41 +386,58 @@
 	// inline element or paragraph boundary. A TreeWalker only ever visits
 	// descendants of its root, never the root itself, so rooting the
 	// walker directly at commonAncestorContainer in that case would visit
-	// nothing (a Text node has no children) and silently wrap zero nodes.
+	// nothing (a Text node has no children) and silently find zero nodes.
 	// Handled as its own fast path below, checked before the general
 	// multi-node TreeWalker case.
-	function wrapDOMRange(range, annotationID, colorName) {
+	function collectRangeTextNodes(range) {
 		// nodeType 3 is TEXT_NODE (DOM Node.TEXT_NODE) -- used as a raw
 		// numeric constant rather than referencing the global Node object,
 		// since this file's other environment-provided globals (NodeFilter,
 		// CSS) are passed in explicitly by the caller rather than assumed
 		// ambient, and Node itself has never been one of them.
 		if (range.commonAncestorContainer.nodeType === 3) {
-			return wrapSingleTextNode(range.commonAncestorContainer, annotationID, colorName);
+			return [range.commonAncestorContainer];
 		}
 
-		var wrapped = [];
+		var nodes = [];
 		var walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT, null);
 		var node;
-		var nodes = [];
 		while ((node = walker.nextNode())) {
 			if (range.intersectsNode(node)) {
 				nodes.push(node);
 			}
 		}
+		return nodes;
+	}
 
-		for (var i = 0; i < nodes.length; i++) {
-			wrapped.push(wrapTextNode(nodes[i], annotationID, colorName));
-		}
+	// Wraps every text node fully contained within an already-resolved
+	// Range in a <mark> -- the shared tail end of wrapRange (called with
+	// fresh offsets) and applyTextEdit's own composed-rendering case
+	// (called with the exact Range applyTextEdit already produced, not
+	// re-resolved against post-edit offsets -- see applyTextEdit's own
+	// comment).
+	function wrapDOMRange(range, annotationID, colorName) {
+		return collectRangeTextNodes(range).map(function (node) {
+			return wrapTextNode(node, annotationID, colorName);
+		});
+	}
 
-		return wrapped;
+	// The edit-only counterpart to wrapDOMRange, for a row with
+	// hasHighlight == false: same node-finding, but wraps in the plain,
+	// unhighlighted <span class="nnw-edit-only"> instead of <mark
+	// class="nnw-highlight"> -- see the header comment's "An edit-only
+	// row" paragraph for why this still needs a real wrapper at all.
+	function wrapEditOnlyDOMRange(range, annotationID) {
+		return collectRangeTextNodes(range).map(function (node) {
+			return wrapEditOnlyTextNode(node, annotationID);
+		});
 	}
 
 	// Wraps a single Text node (already isolated to exactly the desired
 	// span by resolveDOMRange's splitText calls) in a <mark>. Shared by
-	// both of wrapDOMRange's paths -- the single-text-node fast path
-	// above, and the general multi-node loop -- so there's exactly one
-	// implementation of "build and insert the <mark> element," not two.
+	// both of wrapDOMRange's callers via collectRangeTextNodes above, so
+	// there's exactly one implementation of "build and insert the <mark>
+	// element," not two.
 	function wrapTextNode(textNode, annotationID, colorName) {
 		var mark = document.createElement("mark");
 		mark.className = HIGHLIGHT_CLASS;
@@ -417,8 +450,30 @@
 		return mark;
 	}
 
-	function wrapSingleTextNode(textNode, annotationID, colorName) {
-		return [wrapTextNode(textNode, annotationID, colorName)];
+	// wrapTextNode's edit-only counterpart: a <span class="nnw-edit-only">
+	// with no color attribute at all -- an edit-only row has no highlight
+	// color to carry, and core.css's nnw-edit-only rule deliberately
+	// doesn't paint one, so there's nothing for a color attribute to
+	// drive here.
+	function wrapEditOnlyTextNode(textNode, annotationID) {
+		var span = document.createElement("span");
+		span.className = EDIT_ONLY_CLASS;
+		span.setAttribute("data-annotation-id", annotationID);
+		textNode.parentNode.insertBefore(span, textNode);
+		span.appendChild(textNode);
+		return span;
+	}
+
+	// Selector matching whichever wrapper kind annotationID actually
+	// rendered as -- a highlighted mark.nnw-highlight, or an edit-only
+	// span.nnw-edit-only (see wrapEditOnlyTextNode above). Every lookup by
+	// annotationID below (unwrapping before a re-render, the tap handler,
+	// scrollToAnnotation) has to match both, since which one exists for a
+	// given row depends on its current hasHighlight and isn't something
+	// any of those call sites already know going in.
+	function annotationWrapperSelector(annotationID) {
+		var idSelector = '[data-annotation-id="' + cssEscape(annotationID) + '"]';
+		return "mark." + HIGHLIGHT_CLASS + idSelector + ", span." + EDIT_ONLY_CLASS + idSelector;
 	}
 
 	// ---- Line-height headroom for the highlight-clipping fix -----------
@@ -480,13 +535,15 @@
 		return resultRange;
 	}
 
-	// Removes any existing <mark> wraps for annotationID, unwrapping their
-	// text content back into the surrounding DOM (used by
-	// removeAnnotationHighlight and before re-rendering during
-	// re-anchoring, so a moved highlight doesn't leave a stale duplicate
-	// mark behind at its old position).
+	// Removes any existing wraps for annotationID -- <mark class=
+	// "nnw-highlight"> or <span class="nnw-edit-only"> alike, via
+	// annotationWrapperSelector -- unwrapping their text content back into
+	// the surrounding DOM (used by removeAnnotationHighlight and before
+	// re-rendering during re-anchoring, so a moved highlight, or a moved
+	// edit-only row, doesn't leave a stale duplicate wrapper behind at its
+	// old position).
 	function unwrapAnnotation(root, annotationID) {
-		var marks = root.querySelectorAll('mark.' + HIGHLIGHT_CLASS + '[data-annotation-id="' + cssEscape(annotationID) + '"]');
+		var marks = root.querySelectorAll(annotationWrapperSelector(annotationID));
 		marks.forEach(function (mark) {
 			var parent = mark.parentNode;
 			if (!parent) return;
@@ -532,10 +589,13 @@
 	// descending by startOffset by the caller (WebViewController), for the
 	// exact reason described in "Applying edits" -- processing
 	// right-to-left means an earlier edit's stored offset is never
-	// invalidated by a later edit shifting the text underneath it. If
-	// hasHighlight is also true, the same returned Range is wrapped in
-	// <mark> immediately after the edit, not re-resolved against the
-	// post-edit DOM a second time.
+	// invalidated by a later edit shifting the text underneath it. The
+	// same returned Range is then wrapped immediately after the edit, not
+	// re-resolved against the post-edit DOM a second time -- in <mark> if
+	// hasHighlight is also true, or in the plain, unhighlighted
+	// <span class="nnw-edit-only"> otherwise (see wrapEditOnlyDOMRange),
+	// so an edit whose highlight has been turned off still has a real
+	// node to tap back into.
 	function renderAnnotations(annotations, options) {
 		options = options || {};
 		var rootSelector = options.rootSelector || DEFAULT_ROOT_SELECTOR;
@@ -566,8 +626,16 @@
 
 			if (annotation.originalText != null && annotation.replacementText != null) {
 				var editRange = applyTextEdit(index.entries, startOffset, endOffset, annotation.replacementText);
-				if (editRange && annotation.hasHighlight) {
-					wrapDOMRange(editRange, annotation.annotationID, annotation.color);
+				if (editRange) {
+					if (annotation.hasHighlight) {
+						wrapDOMRange(editRange, annotation.annotationID, annotation.color);
+					} else {
+						// No highlight color to draw, but still needs a
+						// real, tappable node -- see wrapEditOnlyDOMRange
+						// and the header comment's "An edit-only row"
+						// paragraph.
+						wrapEditOnlyDOMRange(editRange, annotation.annotationID);
+					}
 				}
 			} else {
 				wrapRange(index.entries, startOffset, endOffset, annotation.annotationID, annotation.color);
@@ -641,27 +709,32 @@
 		});
 	}
 
-	// Scrolls the first <mark> for annotationID into view and adds a
+	// Scrolls the first wrapper for annotationID into view and adds a
 	// brief flash class (nnw-highlight-flash, styled in core.css) so the
 	// destination is obvious even against a highlight color the person
 	// might not immediately spot on a long page -- same "land in a
 	// specific spot, not just the general area" goal scrollToHeading
 	// serves for table-of-contents navigation, but keyed on an annotation
 	// ID against a real DOM node rather than a heading index. A range
-	// spanning multiple text nodes produces multiple <mark> elements (see
-	// wrapRange); scrolling to the first is sufficient since they're
-	// always visually contiguous.
+	// spanning multiple text nodes produces multiple wrapper elements (see
+	// wrapRange/wrapEditOnlyDOMRange); scrolling to the first is
+	// sufficient since they're always visually contiguous. Matches either
+	// wrapper kind via annotationWrapperSelector, so navigating here from
+	// the annotations list still lands correctly on an edit-only row
+	// (hasHighlight == false) -- core.css's nnw-edit-only rule includes
+	// the same flash animation so this is still visible even with no
+	// highlight color to land against.
 	function scrollToAnnotation(annotationID, options) {
 		options = options || {};
 		var rootSelector = options.rootSelector || DEFAULT_ROOT_SELECTOR;
 		var root = document.querySelector(rootSelector) || document;
-		var mark = root.querySelector('mark.' + HIGHLIGHT_CLASS + '[data-annotation-id="' + cssEscape(annotationID) + '"]');
-		if (!mark) return false;
+		var target = root.querySelector(annotationWrapperSelector(annotationID));
+		if (!target) return false;
 
-		mark.scrollIntoView({ block: "center" });
-		mark.classList.add("nnw-highlight-flash");
+		target.scrollIntoView({ block: "center" });
+		target.classList.add("nnw-highlight-flash");
 		setTimeout(function () {
-			mark.classList.remove("nnw-highlight-flash");
+			target.classList.remove("nnw-highlight-flash");
 		}, 1500);
 		return true;
 	}
@@ -842,10 +915,16 @@
 	}
 
 	function handleAnnotationTap(event) {
-		var mark = event.target && event.target.closest ? event.target.closest("mark." + HIGHLIGHT_CLASS) : null;
-		if (!mark) return;
+		// Matches either wrapper kind: a highlighted mark.nnw-highlight,
+		// or an edit-only span.nnw-edit-only (see wrapEditOnlyTextNode) --
+		// a corrected span whose highlight has been turned off must stay
+		// tappable, not just the highlighted case.
+		var target = event.target && event.target.closest
+			? event.target.closest("mark." + HIGHLIGHT_CLASS + ", span." + EDIT_ONLY_CLASS)
+			: null;
+		if (!target) return;
 
-		var annotationID = mark.getAttribute("data-annotation-id");
+		var annotationID = target.getAttribute("data-annotation-id");
 		if (!annotationID) return;
 
 		event.preventDefault();
@@ -1045,6 +1124,7 @@
 			similarity: similarity,
 			wrapRange: wrapRange,
 			wrapDOMRange: wrapDOMRange,
+			wrapEditOnlyDOMRange: wrapEditOnlyDOMRange,
 			resolveDOMRange: resolveDOMRange,
 			updateLineHeightProperty: updateLineHeightProperty,
 			applyTextEdit: applyTextEdit,
@@ -1053,7 +1133,9 @@
 			buildHeadingIndex: buildHeadingIndex,
 			nearestChapterTitle: nearestChapterTitle,
 			computeTextEditPlan: computeTextEditPlan,
+			annotationWrapperSelector: annotationWrapperSelector,
 			HIGHLIGHT_CLASS: HIGHLIGHT_CLASS,
+			EDIT_ONLY_CLASS: EDIT_ONLY_CLASS,
 			SIMILARITY_FLOOR: SIMILARITY_FLOOR,
 			CONTEXT_CHARS: CONTEXT_CHARS
 		}
