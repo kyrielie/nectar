@@ -250,6 +250,31 @@ test("scrollToAnnotation returns false for an annotation with no rendered mark",
 	assert.equal(found, false);
 });
 
+test("scrollToAnnotation scrolls to and flashes an edit-only row (hasHighlight false), not just a highlighted one", async () => {
+	const { Annotations, document } = loadAnnotations(
+		'<div class="articleBody"><p>She sat by the wall.</p></div>'
+	);
+	Annotations.renderAnnotations([{
+		annotationID: "edit-1",
+		startOffset: 15,
+		endOffset: 19, // "wall"
+		quoteExact: "wall",
+		hasHighlight: false,
+		originalText: "wall",
+		replacementText: "door"
+	}]);
+
+	const found = Annotations.scrollToAnnotation("edit-1");
+
+	assert.equal(found, true);
+	const span = document.querySelector('span[data-annotation-id="edit-1"]');
+	assert.ok(span, "expected the edit-only row to render as a tappable span");
+	assert.ok(span.classList.contains("nnw-highlight-flash"), "expected the flash class to be added immediately");
+
+	await new Promise((resolve) => setTimeout(resolve, 1600));
+	assert.ok(!span.classList.contains("nnw-highlight-flash"), "expected the flash class to be removed after the timeout");
+});
+
 test("initAnnotations wires a tap on an existing mark to post annotationWasTapped", () => {
 	const { Annotations, document, window } = loadAnnotations(
 		'<div class="articleBody"><p>Once upon a time there was a fox.</p></div>'
@@ -270,6 +295,41 @@ test("initAnnotations wires a tap on an existing mark to post annotationWasTappe
 
 	assert.equal(posted.length, 1);
 	assert.equal(posted[0].annotationID, "a1");
+});
+
+test("initAnnotations wires a tap on an edit-only span (highlight turned off) to post annotationWasTapped", () => {
+	// This is the fix under test: correcting a highlight's text and then
+	// turning "keep highlight" off must not leave the corrected text
+	// untappable in the article view -- see annotations.js's
+	// wrapEditOnlyTextNode and handleAnnotationTap.
+	const { Annotations, document, window } = loadAnnotations(
+		'<div class="articleBody"><p>She sat by the wall.</p></div>'
+	);
+	Annotations.renderAnnotations([{
+		annotationID: "edit-1",
+		startOffset: 15,
+		endOffset: 19, // "wall"
+		quoteExact: "wall",
+		hasHighlight: false,
+		originalText: "wall",
+		replacementText: "door"
+	}]);
+
+	const posted = [];
+	window.webkit = {
+		messageHandlers: {
+			annotationWasTapped: { postMessage: (payload) => posted.push(payload) }
+		}
+	};
+
+	Annotations.initAnnotations();
+
+	const span = document.querySelector('span[data-annotation-id="edit-1"]');
+	assert.ok(span, "expected the edit-only row to render as a tappable span");
+	span.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+
+	assert.equal(posted.length, 1);
+	assert.equal(posted[0].annotationID, "edit-1");
 });
 
 test("initAnnotations does not post annotationWasTapped for a click outside any mark", () => {

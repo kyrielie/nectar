@@ -50,6 +50,7 @@ final class WebViewController: UIViewController {
 	// target that's pulled off-screen while fullscreen, not a persistent
 	// mask over the notch itself.
 	private var notchCoverView: UIView!
+	private var notchCoverViewHeightConstraint: NSLayoutConstraint!
 	private var pageCounterLabel: UILabel!
 
 	// The only authoritative reference to "the" current webview. Previously this was
@@ -279,7 +280,6 @@ final class WebViewController: UIViewController {
 		if !isAwaitingInitialScrollFetch {
 			loadWebView(reason: "viewDidLoad")
 		}
-		super.viewSafeAreaInsetsDidChange()
 		if isFullScreenAvailable && AppDefaults.shared.logicalArticleFullscreenEnabled {
 			updateBottomSafeAreaForFullScreen()
 		}
@@ -318,6 +318,27 @@ final class WebViewController: UIViewController {
 	override func viewDidAppear(_ animated: Bool) {
 		super.viewDidAppear(animated)
 		applyResolvedBackgroundColors()
+	}
+
+	// Bug fix: notchCoverView's height used to be derived from
+	// view.safeAreaLayoutGuide.topAnchor, which hideBars()'s
+	// updateTopSafeAreaForFullScreen() deliberately zeroes out (via
+	// additionalSafeAreaInsets.top) so the webview's own content can flow
+	// edge-to-edge under the physical notch during fullscreen reading. Since
+	// notchCoverView's height constraint was pinned to that same guide, it
+	// permanently collapsed to 0pt the instant fullscreen engaged -- not just
+	// for the duration of the hide-bars animation, but for good, since the
+	// guide itself stayed zeroed afterward. Subtracting additionalSafeAreaInsets.top
+	// back out of view.safeAreaInsets.top recovers the raw, physical device
+	// inset regardless of that adjustment -- same "raw inset" formula
+	// updateTopSafeAreaForFullScreen()/updateBottomSafeAreaForFullScreen()
+	// already use for the same reason. UIKit calls this on the view's first
+	// real safe-area establishment as well as later changes, so no separate
+	// call is needed from viewDidLoad.
+	override func viewSafeAreaInsetsDidChange() {
+		super.viewSafeAreaInsetsDidChange()
+		let rawTop = view.safeAreaInsets.top - additionalSafeAreaInsets.top
+		notchCoverViewHeightConstraint?.constant = rawTop
 	}
 
 	override func viewWillDisappear(_ animated: Bool) {
@@ -2354,9 +2375,20 @@ private extension WebViewController {
 		notchCoverView.translatesAutoresizingMaskIntoConstraints = false
 		view.addSubview(notchCoverView)
 
+		// Deliberately NOT view.safeAreaLayoutGuide.topAnchor: hideBars() ->
+		// updateTopSafeAreaForFullScreen() sets additionalSafeAreaInsets.top to
+		// exactly cancel view.safeAreaInsets.top (so webview content flows edge-
+		// to-edge under the physical notch during fullscreen reading). Pinning
+		// this view's bottom to that same safe-area guide meant its height
+		// collapsed to 0pt the instant fullscreen engaged -- permanently, not
+		// just for the duration of the hide-bars animation, since the guide
+		// itself had been zeroed. A fixed-height constraint, kept in sync with
+		// the raw (physical) inset via viewSafeAreaInsetsDidChange below, is
+		// immune to that self-inflicted zeroing.
+		notchCoverViewHeightConstraint = notchCoverView.heightAnchor.constraint(equalToConstant: view.safeAreaInsets.top)
 		NSLayoutConstraint.activate([
 			notchCoverView.topAnchor.constraint(equalTo: view.topAnchor),
-			notchCoverView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+			notchCoverViewHeightConstraint,
 			notchCoverView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
 			notchCoverView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
 		])

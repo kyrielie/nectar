@@ -440,3 +440,22 @@ mark.nnw-highlight[data-annotation-color="purple"] {
 mark.nnw-highlight.nnw-highlight-flash {
 	animation: nnw-highlight-flash 1.5s ease-out;
 }
+
+/* An edit-only row (hasHighlight == false, an edit applied -- see
+   docs/annotations.md, "Storage shape"): the corrected text has no
+   highlight color to show, but annotations.js's wrapEditOnlyTextNode
+   still wraps it in this span so tapping it (handleAnnotationTap) or
+   navigating to it from the annotations list (scrollToAnnotation) keeps
+   working once the highlight is turned off. Deliberately no
+   background-color or other visual highlight treatment here -- picking
+   one up (whether a native <mark>'s default yellow or a color of this
+   rule's own) would make turning "keep highlight" off visually
+   indistinguishable from leaving it on, which defeats the point of the
+   toggle. cursor: pointer is the only visual cue that this span is
+   tappable. */
+span.nnw-edit-only {
+	cursor: pointer;
+}
+span.nnw-edit-only.nnw-highlight-flash {
+	animation: nnw-highlight-flash 1.5s ease-out;
+}

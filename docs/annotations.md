@@ -68,6 +68,26 @@ the *same returned Range* in `<mark>` via `wrapDOMRange` — not
 re-resolved against the post-edit DOM a second time, since the range
 `applyTextEdit` already located points exactly at the new text.
 
+An edit-only row (`hasHighlight == false`, `originalText` set) gets the
+same treatment but wraps in a plain, unhighlighted
+`<span class="nnw-edit-only" data-annotation-id="...">` instead of
+`<mark class="nnw-highlight">` — `wrapEditOnlyDOMRange`, sharing the same
+node-collection step (`collectRangeTextNodes`) `wrapDOMRange` uses.
+Without this wrapper the corrected text would render as a bare `Text`
+node once its highlight is turned off: nothing for `handleAnnotationTap`
+or `scrollToAnnotation` to find, so the row would be untappable from the
+article itself (only reachable via the annotations list). Every
+lookup-by-`annotationID` in this file — `unwrapAnnotation` (before a
+re-render), the click handler, `scrollToAnnotation` — goes through
+`annotationWrapperSelector(annotationID)`, a combined
+`mark.nnw-highlight[...], span.nnw-edit-only[...]` selector, so it finds
+whichever wrapper kind a given row currently has without needing to know
+its `hasHighlight` in advance. `core.css`'s `span.nnw-edit-only` rule sets
+`cursor: pointer` and includes the same `nnw-highlight-flash` animation
+as `mark.nnw-highlight`, but deliberately no background-color or other
+highlight-like styling — a visual highlight there would make turning
+"keep highlight" off indistinguishable from leaving it on.
+
 Saving an edit from `AnnotationEditorView` (see "Manual edit UI" below)
 first calls `Annotations.computeTextEditPlanEncoded` — a non-mutating,
 JS-side pre-flight over the live, already-rendered DOM that either
@@ -521,7 +541,8 @@ Pulled into `RSCore` (rather than left as a private method on
     the default color only — no popover shown.
   - `.off` does nothing on selection; existing highlights stay fully
     viewable/editable via the annotations list and by tapping an
-    existing `<mark>`.
+    existing `<mark>` (or, for an edit-only row, its `<span
+    class="nnw-edit-only">` — see "Storage shape" above).
   Either creation path calls `WebViewController.saveHighlightFromSelection`,
   which calls `Annotations.addHighlightFromSelection` to resolve the
   still-live selection into a selector, draws the `<mark>` immediately,
@@ -531,8 +552,10 @@ Pulled into `RSCore` (rather than left as a private method on
   mark.
 - **Note editor**: `AnnotationEditorView` (SwiftUI, half-sheet via
   `UIHostingController`, `.medium()`/`.large()` detents), reachable by
-  tapping any `<mark>` — freshly created or pre-existing —
-  (`annotationWasTapped`). Shows the read-only quote, a note field, the
+  tapping any `<mark>` — freshly created or pre-existing — or, for an
+  edit-only row with its highlight turned off, its `<span
+  class="nnw-edit-only">` (`annotationWasTapped`; `handleAnnotationTap`
+  matches either wrapper). Shows the read-only quote, a note field, the
   five color swatches, the "Edit Text" section (see "Manual edit UI"
   below), and a destructive delete (with confirmation). Delete calls
   `Annotations.removeAnnotationHighlight` (unwraps the `<mark>`,
@@ -846,13 +869,20 @@ in scope here — that's a change to a server not in this repository.
   bare `Y/N` does).
 - `Tests/JS/annotations/text-replacement-edit-application.test.js`:
   `renderAnnotations`' handling of edit rows — an edit-only row
-  (`hasHighlight = false`) replaces text with no `<mark>` drawn; a row
-  that's both a highlight and an edit wraps the freshly-edited text in
-  `<mark>` without re-resolving against the post-edit DOM; a lengthening
-  edit followed by an unrelated later highlight in the same render pass
-  still resolves the later row correctly (the regression test for the
-  `wrapDOMRange` single-text-node fix below); `applyTextEdit`'s own
-  Range-return and null-on-unresolvable-span behavior via `_internal`.
+  (`hasHighlight = false`) replaces text with no `<mark>` drawn, but is
+  still wrapped in a tappable `<span class="nnw-edit-only">` carrying no
+  color attribute; a row that's both a highlight and an edit wraps the
+  freshly-edited text in `<mark>` without re-resolving against the
+  post-edit DOM; a lengthening edit followed by an unrelated later
+  highlight in the same render pass still resolves the later row
+  correctly (the regression test for the `wrapDOMRange` single-text-node
+  fix below); `applyTextEdit`'s own Range-return and
+  null-on-unresolvable-span behavior via `_internal`.
+- `Tests/JS/annotations/selection-capture.test.js` also covers the
+  edit-only wrapper's tap/scroll parity with a highlighted `<mark>`:
+  `initAnnotations` posts `annotationWasTapped` for a click on a
+  `span.nnw-edit-only`, and `scrollToAnnotation` finds, scrolls to, and
+  flashes one the same way it does for a `<mark>`.
 - `Tests/JS/annotations/text-replacement-edit-plan.test.js`:
   `computeTextEditPlan`/`getArticleText` — same-length no-op, overlap
   detection short-circuiting before any shift is computed, lengthening
