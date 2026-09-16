@@ -34,9 +34,9 @@
             "versions": [
                 {
                     "version": "0.1.7",
-                    "buildVersion": "7108.44",
+                    "buildVersion": "7108.46",
                     "date": "2026-09-12T07:03:21Z",
-                    "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.1.6...v0.1.7",
+                    "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.1.6...v0.1.7\r\n\r\n- Highlight current chapter in TOC\r\n- Additional nav buttons for toolbar, back is nonfunctional need to fix\r\n- Settings toggle to turn off context menu in fullscreen, use text select instead.\r\n- Always use account to fetch to get all works",
                     "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.1.7/Nectar-unsigned.ipa",
                     "size": 4852286,
                     "minOSVersion": "17.0",
