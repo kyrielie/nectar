@@ -626,24 +626,50 @@ Pulled into `RSCore` (rather than left as a private method on
     Each dark value keeps its light-mode hue but is deepened and
     re-saturated until it clears the threshold — see
     `HighlightPaletteHexSetTests.everyDarkHexSetColorMeetsWCAGAAContrastForWhiteText`.
-- **Multi-line highlight clipping** (bug fix): a `<mark>` that wraps
-  across a line break used to paint one single `background-color` box
-  sized to its whole bounding rect (from the start of its first line to
-  the end of its last), rather than one box per visual line. On a tight
-  `line-height`, that box's top/bottom edges landed inside the
-  neighboring line above/below instead of staying within its own line,
-  clipping that neighbor's ascenders/descenders (tall letters, or
-  descenders like "g"/"y") under the highlight color. Fixed in
-  `core.css`'s `mark.nnw-highlight` rule with
+- **Multi-line highlight clipping** (bug fix, two parts): a `<mark>`
+  that wraps across a line break used to paint one single
+  `background-color` box sized to its whole bounding rect (from the
+  start of its first line to the end of its last), rather than one box
+  per visual line, so that box's top/bottom edges landed inside the
+  neighboring line above/below instead of staying within its own line.
+  Fixed in `core.css`'s `mark.nnw-highlight` rule with
   `-webkit-box-decoration-break: clone` (WKWebView only supports the
   prefixed form; unprefixed `box-decoration-break` is included too for
-  forward-compatibility but has no effect here) plus non-zero vertical
-  `padding`, so each visual line gets its own independently-boxed and
-  padded background instead of one shared bounding box. Regression
-  coverage: `Tests/JS/annotations/multi-line-highlight-clipping.test.js`
-  (a text-level assertion against `core.css`, not a rendered-layout
-  test — jsdom has no layout engine to measure real clipping either
-  way).
+  forward-compatibility but has no effect here), so each visual line
+  gets its own independently-boxed background instead of one shared
+  bounding box.
+  `clone` alone does not stop the rule's own vertical `padding` from
+  bleeding into a neighboring line's ascenders/descenders (tall letters
+  like "l"/"h", or descenders like "g"/"y") on its own: vertical padding
+  on a non-replaced inline element paints without reserving extra
+  line-height, so a fixed padding could still clip on a theme with a
+  tight body `line-height` (several theme bundles go as low as
+  1.15-1.2), `clone` or not. Rather than fix that with a fixed,
+  mark-local `line-height` (which would override the person's own
+  line-height setting on just the highlighted lines), `mark.nnw-highlight`
+  instead sizes its padding to the headroom the *current* line-height
+  actually leaves: `padding: min(0.1em, max(0em, (var(--nnw-line-height,
+  1.4) - 1) * 0.5em)) 0.05em`. `--nnw-line-height` is written by
+  `annotations.js`'s `updateLineHeightProperty()` (called from
+  `renderAnnotations`/`addAnnotationHighlight` before any wrapping),
+  which reads the article root's actual computed `line-height`/`font-size`
+  ratio — whether it came from a bundled theme's own `stylesheet.css` or
+  an `ArticleThemeOverrides` line-height override — and hands it to
+  `core.css` as a custom property, the same layering
+  `WebViewController.applyHighlightPaletteColors()` already uses for
+  highlight colors. The padding this produces can never exceed the
+  room that's actually there (bounded by the line box's own
+  half-leading, `(line-height - 1) / 2` em), so it can't clip at any
+  line-height, including the app's own floor of 1.0, and it never
+  changes anything at line-heights the rule already looked correct at
+  (1.2 and up, where the `min(0.1em, ...)` cap keeps the original
+  cushion). Regression coverage:
+  `Tests/JS/annotations/multi-line-highlight-clipping.test.js` (text-level
+  assertions against `core.css`'s padding/line-height declarations, plus
+  unit tests of `updateLineHeightProperty` against jsdom — not a
+  rendered-layout test; jsdom has no layout engine to measure real
+  clipping either way, so this doesn't replace a manual/device check of
+  the actual rendered result across a few tight-line-height themes).
 - **Toolbar button**: `ArticleToolbarToggle` (`iOS/AppDefaults.swift`)
   has an `.annotations` case, backed by
   `AppDefaults.shared.articleToolbarShowAnnotations` (default `false`,

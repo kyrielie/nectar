@@ -421,6 +421,41 @@
 		return [wrapTextNode(textNode, annotationID, colorName)];
 	}
 
+	// ---- Line-height headroom for the highlight-clipping fix -----------
+	//
+	// core.css's mark.nnw-highlight rule needs to know how much vertical
+	// breathing room the surrounding paragraph's line-height actually
+	// leaves, so its own padding can stay within that room instead of
+	// bleeding into the line above/below (see docs/annotations.md,
+	// "Multi-line highlight clipping"). CSS has no way to read an
+	// ancestor's computed line-height as a font-size-relative ratio on
+	// its own, so this is computed here and handed to core.css as a
+	// custom property -- the same "JS/Swift sets a custom property, CSS
+	// consumes it" layering WebViewController.applyHighlightPaletteColors()
+	// already uses for --nnw-highlight-*.
+	//
+	// Read from `root` (the same element the caller already resolved
+	// annotations against), not `document.body` or a hardcoded selector
+	// -- a caller-supplied rootSelector always names the element whose
+	// line-height this highlight actually renders under.
+	//
+	// Every bundled theme's stylesheet.css sets line-height explicitly
+	// (see ArticleThemeOverrides.swift's own comment on why it can't be
+	// left unset), so getComputedStyle's lineHeight/fontSize are always
+	// numeric in practice -- but "normal" or an unparsed value would
+	// resolve to NaN, in which case the property is deliberately left
+	// unset rather than writing a bad value into the cascade, so
+	// core.css's own var() fallback (1.4) applies instead.
+	function updateLineHeightProperty(root) {
+		var style = global.getComputedStyle(root);
+		var lineHeightPx = parseFloat(style.lineHeight);
+		var fontSizePx = parseFloat(style.fontSize);
+		if (!isFinite(lineHeightPx) || !isFinite(fontSizePx) || fontSizePx <= 0) {
+			return;
+		}
+		document.documentElement.style.setProperty("--nnw-line-height", String(lineHeightPx / fontSizePx));
+	}
+
 	// Applies a text replacement over [startOffset, endOffset): resolves
 	// the exact DOM range via resolveDOMRange (the same shared boundary
 	// math wrapRange uses), deletes its contents, and inserts a new Text
@@ -510,6 +545,7 @@
 		if (!root || !annotations || !annotations.length) {
 			return report;
 		}
+		updateLineHeightProperty(root);
 
 		annotations.forEach(function (annotation) {
 			unwrapAnnotation(root, annotation.annotationID);
@@ -566,6 +602,7 @@
 		var root = document.querySelector(rootSelector);
 		if (!root) return [];
 
+		updateLineHeightProperty(root);
 		var index = buildTextIndex(root);
 		return wrapRange(index.entries, annotation.startOffset, annotation.endOffset, annotation.annotationID, annotation.color);
 	}
@@ -1009,6 +1046,7 @@
 			wrapRange: wrapRange,
 			wrapDOMRange: wrapDOMRange,
 			resolveDOMRange: resolveDOMRange,
+			updateLineHeightProperty: updateLineHeightProperty,
 			applyTextEdit: applyTextEdit,
 			unwrapAnnotation: unwrapAnnotation,
 			selectorForRange: selectorForRange,
