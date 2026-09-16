@@ -24,7 +24,19 @@
 //  a person correct a highlighted span in place. Unchanged from the
 //  original quote -> no edit row. Changed -> onSave reports the new text
 //  and the checkbox state alongside the existing note/color, and
-//  WebViewController runs it through the offset-shift pipeline.
+//  WebViewController runs it through the offset-shift pipeline. The
+//  checkbox is independently persisted even when the text field is left
+//  unchanged (toggling it alone on an already-edited row), via a
+//  separate, cheaper WebViewController path that skips the offset-shift
+//  pipeline entirely since nothing moved.
+//
+//  The checkbox's own default also reacts live while typing: for a row
+//  with no edit yet, it flips to off the moment the field starts
+//  diverging from the original quote (see isFirstTimeEdit), rather than
+//  always starting from the row's pre-edit hasHighlight (always true for
+//  a plain highlight). A row that already carries an edit keeps
+//  defaulting from its current hasHighlight regardless of further edits,
+//  the same way color already does.
 //
 
 import SwiftUI
@@ -43,9 +55,12 @@ struct AnnotationEditorView: View {
 	/// `editedText` is `nil` when the edit-text field is unchanged from
 	/// the original quote (no edit row should be created/modified) and
 	/// the new value otherwise. `keepHighlight` is the checkbox's current
-	/// state, meaningful only when `editedText != nil` -- see
-	/// docs/annotations.md's "Manual edit UI" for the full save-behavior
-	/// contract this maps onto.
+	/// state and must be persisted whenever it differs from
+	/// `annotation.hasHighlight`, independently of whether `editedText`
+	/// is nil -- toggling it on an already-edited row without touching
+	/// the text is a valid, common save. See docs/annotations.md's
+	/// "Manual edit UI" for the full save-behavior contract this maps
+	/// onto.
 	var onSave: (_ note: String?, _ color: Annotation.Color, _ editedText: String?, _ keepHighlight: Bool) -> Void
 
 	/// Called after the person confirms deletion (the confirmation dialog
@@ -100,6 +115,18 @@ struct AnnotationEditorView: View {
 		_keepHighlight = State(initialValue: annotation.hasHighlight)
 	}
 
+	/// True for a row that has never carried a text edit before this
+	/// sheet was opened -- as opposed to a row that already has one and
+	/// is merely being edited further. Only in this first-time case does
+	/// starting to type a correction flip `keepHighlight`'s default; a
+	/// row that already has an edit keeps honoring whatever `hasHighlight`
+	/// was last explicitly set to, per "Manual edit UI"'s existing
+	/// "re-checking it on a later visit restores the original color"
+	/// precedent for the analogous color case.
+	private var isFirstTimeEdit: Bool {
+		annotation.originalText == nil
+	}
+
 	/// The value editText is compared against to decide whether a Save
 	/// counts as "the field changed" -- the row's current text, same
 	/// logic as editText's initial value above.
@@ -140,6 +167,17 @@ struct AnnotationEditorView: View {
 					}
 				} header: {
 					Text("Edit Text", comment: "Annotation editor: edit-text section header")
+				}
+				.onChange(of: editText) { _, newValue in
+					// Only a first-time edit's default reacts live -- see
+					// isFirstTimeEdit's doc comment. The moment the field
+					// starts diverging from the original quote, default
+					// to off; reverting it back to the original falls
+					// back to the row's actual current hasHighlight
+					// (always true here, since a never-edited row is
+					// always a plain highlight).
+					guard isFirstTimeEdit else { return }
+					keepHighlight = (newValue == originalEditableText) ? annotation.hasHighlight : false
 				}
 
 				Section {

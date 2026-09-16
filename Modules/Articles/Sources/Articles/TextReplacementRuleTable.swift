@@ -73,7 +73,7 @@ public struct TextReplacementRuleTable: Codable, Sendable, Hashable {
 		TextReplacementRule(input: "definately", output: "definitely"),
 		TextReplacementRule(input: "recieve", output: "receive"),
 		TextReplacementRule(input: "seperate", output: "separate"),
-		TextReplacementRule(input: "occured", output: "occurred"),
+		TextReplacementRule(input: "occured", output: "occurred")
 	])
 
 	/// The shipped default reader-insert/placeholder table (category 3),
@@ -87,7 +87,7 @@ public struct TextReplacementRuleTable: Codable, Sendable, Hashable {
 	/// convention.
 	public static let defaultReaderInsertTable = TextReplacementRuleTable(rules: [
 		TextReplacementRule(input: "(Y/N), Y/N, (F/N), F/N, (G/N), G/N", output: ""),
-		TextReplacementRule(input: "(Y/L/N), Y/L/N, (L/N), L/N", output: ""),
+		TextReplacementRule(input: "(Y/L/N), Y/L/N, (L/N), L/N", output: "")
 	])
 }
 

@@ -66,7 +66,7 @@ import Testing
 			editEndOffset: 10,
 			delta: 5,
 			otherAnnotations: [before, after, touching],
-			sliceQuote: { start, end in (quoteExact: "q", quotePrefix: "p", quoteSuffix: "s", chapterTitle: nil) }
+			sliceQuote: { _, _ in (quoteExact: "q", quotePrefix: "p", quoteSuffix: "s", chapterTitle: nil) }
 		)
 
 		let shiftedIDs = Set(shifted.map(\.annotationID))
@@ -80,7 +80,7 @@ import Testing
 			editEndOffset: 10,
 			delta: 5,
 			otherAnnotations: [row],
-			sliceQuote: { start, end in (quoteExact: "q", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
+			sliceQuote: { _, _ in (quoteExact: "q", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
 		)
 		#expect(shifted.count == 1)
 		#expect(shifted[0].startOffset == 25)
@@ -93,7 +93,7 @@ import Testing
 			editEndOffset: 10,
 			delta: -3,
 			otherAnnotations: [row],
-			sliceQuote: { start, end in (quoteExact: "q", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
+			sliceQuote: { _, _ in (quoteExact: "q", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
 		)
 		#expect(shifted.count == 1)
 		#expect(shifted[0].startOffset == 17)
@@ -107,7 +107,7 @@ import Testing
 			editEndOffset: 10,
 			delta: 0,
 			otherAnnotations: [row],
-			sliceQuote: { start, end in
+			sliceQuote: { _, _ in
 				sliceQuoteCalled = true
 				return (quoteExact: "q", quotePrefix: "", quoteSuffix: "", chapterTitle: nil)
 			}
@@ -158,7 +158,7 @@ import Testing
 			revertedEditOriginalEndOffset: 10,
 			delta: 5,
 			otherAnnotations: [row],
-			sliceQuote: { start, end in (quoteExact: "q", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
+			sliceQuote: { _, _ in (quoteExact: "q", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
 		)
 		#expect(shifted.count == 1)
 		// Reverting a +5 edit should subtract 5 back off.
@@ -221,7 +221,7 @@ import Testing
 					createdAt: Date(),
 					updatedAt: Date()
 				)],
-				sliceQuote: { start, end in (quoteExact: "q", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
+				sliceQuote: { _, _ in (quoteExact: "q", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
 			)
 			if let result = shifted.first {
 				currentRowStart = result.startOffset
@@ -248,7 +248,7 @@ import Testing
 			editEndOffset: 12,
 			delta: 3,
 			otherAnnotations: [original],
-			sliceQuote: { start, end in (quoteExact: "shifted", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
+			sliceQuote: { _, _ in (quoteExact: "shifted", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
 		)
 		#expect(applied.count == 1)
 		#expect(applied[0].startOffset == 53)
@@ -259,7 +259,7 @@ import Testing
 			revertedEditOriginalEndOffset: 12,
 			delta: 3,
 			otherAnnotations: [shiftedRow],
-			sliceQuote: { start, end in (quoteExact: original.quoteExact, quotePrefix: original.quotePrefix, quoteSuffix: original.quoteSuffix, chapterTitle: original.chapterTitle) }
+			sliceQuote: { _, _ in (quoteExact: original.quoteExact, quotePrefix: original.quotePrefix, quoteSuffix: original.quoteSuffix, chapterTitle: original.chapterTitle) }
 		)
 		#expect(reverted.count == 1)
 		#expect(reverted[0].startOffset == original.startOffset)
@@ -278,7 +278,7 @@ import Testing
 			editEndOffset: 40,
 			delta: -4,
 			otherAnnotations: [original],
-			sliceQuote: { start, end in (quoteExact: "shifted", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
+			sliceQuote: { _, _ in (quoteExact: "shifted", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
 		)
 		#expect(applied.count == 1)
 		#expect(applied[0].startOffset == 96)
@@ -289,7 +289,7 @@ import Testing
 			revertedEditOriginalEndOffset: 40,
 			delta: -4,
 			otherAnnotations: [shiftedRow],
-			sliceQuote: { start, end in (quoteExact: original.quoteExact, quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
+			sliceQuote: { _, _ in (quoteExact: original.quoteExact, quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
 		)
 		#expect(reverted.count == 1)
 		#expect(reverted[0].startOffset == original.startOffset)
