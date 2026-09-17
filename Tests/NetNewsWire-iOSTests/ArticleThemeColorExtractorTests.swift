@@ -66,6 +66,55 @@ import Foundation
 		}
 	}
 
+	/// Coverage for the "notch cover stays the dark color in light mode" bug (see
+	/// docs/article-color-pipeline.md): `ArticleTheme.css` is always `core.css +
+	/// "\n" + <theme's own stylesheet.css>` (see `ArticleTheme.init()`), and
+	/// `core.css` carries its own `@media (prefers-color-scheme: dark) { ... }`
+	/// block (the `mark.nnw-highlight` dark rules) ahead of any theme's own dark
+	/// block in that concatenation. `colors(for:)`'s single-theme-stylesheet
+	/// tests above never reproduce this, because they read `stylesheet.css`
+	/// directly off disk rather than composing it with core.css the way
+	/// production actually does -- these tests build the real composed string
+	/// instead, so a regression back to "only the first dark block is found"
+	/// fails here even though it passes every test above.
+	@Suite struct ComposedThemeDarkBlockCollision {
+
+		@Test func duskbloomLightAndDarkBackgroundsDisagree() throws {
+			let css = try Self.composedCSS(themeName: "Duskbloom")
+			let colors = ArticleThemeColorExtractor.colors(css: css)
+
+			// Duskbloom (Themes/Duskbloom.nnwtheme/stylesheet.css): light mode is
+			// Moonlit Wisteria (#F5EDE8 background), dark mode is Charcoal Rose
+			// (#1D1D1D background), declared via a :root custom-property
+			// redefinition inside the theme's own dark media block -- exactly the
+			// shape that collides with core.css's own dark block if only the
+			// first dark block in the composed string is found.
+			#expect(colors.backgroundColor == UIColor(cssHex: "#F5EDE8"))
+			#expect(colors.backgroundColorDark == UIColor(cssHex: "#1D1D1D"))
+			#expect(colors.backgroundColor != colors.backgroundColorDark)
+		}
+
+		/// core.css's `mark.nnw-highlight` dark rules must still work correctly
+		/// on their own -- this fix must not, e.g., accidentally start ignoring
+		/// core.css's dark block instead of merging it with the theme's.
+		@Test func composedCSSStillContainsCoreCSSDarkHighlightRule() throws {
+			let css = try Self.composedCSS(themeName: "Duskbloom")
+			#expect(css.contains("--nnw-highlight-yellow-dark"))
+		}
+
+		private static func composedCSS(themeName: String) throws -> String {
+			let coreCSS = try String(contentsOf: ArticleThemeColorExtractorTests.repoCoreCSSFile(), encoding: .utf8)
+			let stylesheetURL = ArticleThemeColorExtractorTests.repoThemesDirectory()
+				.appendingPathComponent("\(themeName).nnwtheme")
+				.appendingPathComponent("stylesheet.css")
+			let stylesheetCSS = try String(contentsOf: stylesheetURL, encoding: .utf8)
+			// Mirrors ArticleTheme.init(url:isAppTheme:): core.css + "\n" + the
+			// theme's own stylesheet (no @import lines in Duskbloom's, so skipping
+			// CSSImportExtractor here doesn't change what's under test).
+			return coreCSS + "\n" + stylesheetCSS
+		}
+	}
+
 	@Test func stripsPlainSupportsBlock() {
 		let css = """
 		body { background-color: blue; }
@@ -140,5 +189,21 @@ import Foundation
 			}
 		}
 		fatalError("Could not locate repo Themes/ directory by walking up from \(#filePath)")
+	}
+
+	/// Same walk-up-to-repo-root approach as `repoThemesDirectory()`, for
+	/// `core.css` -- needed by `ComposedThemeDarkBlockCollision` to build CSS the
+	/// same way `ArticleTheme.init()` actually does (core.css prepended), not
+	/// just a theme's own stylesheet.css in isolation.
+	fileprivate static func repoCoreCSSFile() -> URL {
+		var url = URL(fileURLWithPath: #filePath)
+		while url.pathComponents.count > 1 {
+			url.deleteLastPathComponent()
+			let candidate = url.appendingPathComponent("Shared").appendingPathComponent("Article Rendering").appendingPathComponent("core.css")
+			if FileManager.default.fileExists(atPath: candidate.path) {
+				return candidate
+			}
+		}
+		fatalError("Could not locate repo Shared/Article Rendering/core.css by walking up from \(#filePath)")
 	}
 }

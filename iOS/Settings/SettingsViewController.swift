@@ -318,9 +318,9 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 				))
 				self.navigationController?.pushViewController(hostingController, animated: true)
 			case .screenTime:
-				self.navigationController?.pushViewController(Self.makeSurfacePaletteAwareHostingController(rootView: NavigationStack { ScreenTimeSettingsView() }), animated: true)
+				self.navigationController?.pushViewController(Self.makeSurfacePaletteAwareHostingController(rootView: ScreenTimeSettingsView()), animated: true)
 			case .readingStats:
-				self.navigationController?.pushViewController(Self.makeSurfacePaletteAwareHostingController(rootView: NavigationStack { ReadingStatsView() }), animated: true)
+				self.navigationController?.pushViewController(Self.makeSurfacePaletteAwareHostingController(rootView: ReadingStatsView()), animated: true)
 			default:
 				break
 			}

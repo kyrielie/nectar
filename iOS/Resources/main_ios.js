@@ -209,7 +209,7 @@ FinderResult = class {
 	}
 
 	scrollTo() {
-		scrollToRect(this.bounds(), this.node);
+		scrollToRect(this.bounds());
 	}
 
 	toJSON() {
@@ -338,17 +338,7 @@ Finder = class {
 	}
 }
 
-function scrollParent(node) {
-	let elt = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
-
-	while (elt) {
-		if (elt.scrollHeight > elt.clientHeight)
-			return elt;
-		elt = elt.parentElement;
-	}
-}
- 
-function scrollToRect({top, height}, node, pad=20, padBottom=60) {
+function scrollToRect({top, height}, pad=20, padBottom=60) {
 	const scrollToTop = top - pad;
 
 	let scrollBy = scrollToTop;
@@ -364,7 +354,30 @@ function scrollToRect({top, height}, node, pad=20, padBottom=60) {
 		scrollBy = Math.min(scrollToBottom, scrollBy);
 	} 
 
-	scrollParent(node).scrollBy({ top: scrollBy });
+	// window.scrollBy, not scrollParent(node).scrollBy: top/height above are
+	// already viewport-relative (getBoundingClientRect()), which is exactly
+	// what window.scrollBy's delta wants -- no need to locate a scrollable
+	// ancestor element first. This app's article pages scroll at the
+	// WKWebView's own UIScrollView / document level (core.css sets
+	// overflow-x: hidden on html/body but never opts either into a
+	// clipped, internally-scrollable overflow-y box -- see
+	// WebViewController's webView.scrollView usage), so scrollParent's walk
+	// up parentElement looking for scrollHeight > clientHeight frequently
+	// finds no match and returns undefined, which made the previous
+	// `scrollParent(node).scrollBy(...)` throw here -- silently, since this
+	// runs inside an evaluateJavaScript call with no completion handler
+	// (WebViewController.selectNextSearchResult/selectPreviousSearchResult).
+	// The first jump from updateFind often masked this: if that first match
+	// happened to already be on-screen, the early return above fired before
+	// ever reaching this line, so the bug only showed up once find-next/
+	// find-previous had to scroll to an off-screen match -- matching "using
+	// arrows doesn't jump to the found string" exactly. scrollToHeading
+	// (this file) sidesteps the same class of problem by calling
+	// el.scrollIntoView() directly rather than hand-rolling ancestor
+	// scrolling; window.scrollBy is this function's equivalent for a Range
+	// (which, unlike a heading element, scrollIntoView can't be called on
+	// directly) without reintroducing the scrollParent lookup.
+	window.scrollBy({ top: scrollBy });
 }
 
 function withEncodedArg(fn) {

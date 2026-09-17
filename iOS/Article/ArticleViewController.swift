@@ -839,7 +839,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 				self?.scrollToBottom(self as Any)
 			}]
 		case .screenTimeRemaining:
-			return [UIAction(title: function.title, image: function.icon) { _ in }]
+			return [UIAction(title: function.title, image: function.icon, handler: { (_: UIAction) in })]
 		case .readingStats:
 			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
 				self?.showReadingStatsFromToolbar(self as Any)

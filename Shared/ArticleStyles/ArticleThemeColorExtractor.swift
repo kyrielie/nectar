@@ -113,16 +113,15 @@ enum ArticleThemeColorExtractor {
 		// picking up something that doesn't reflect the common-case rendering.
 		let cssWithoutSupports = stripBraceBlocks(css)
 
-		let darkBlock = extractBraceBlock(in: cssWithoutSupports, openerPattern: #"@media\s*\(\s*prefers-color-scheme:\s*dark\s*\)\s*\{"#)
-		let lightScanCSS: String
-		if let darkBlock {
-			lightScanCSS = cssWithoutSupports.replacingCharacters(in: darkBlock.fullRange, with: "")
-		} else {
-			lightScanCSS = cssWithoutSupports
-		}
+		let (lightScanCSS, darkBlockContents) = extractBraceBlocks(in: cssWithoutSupports, openerPattern: #"@media\s*\(\s*prefers-color-scheme:\s*dark\s*\)\s*\{"#)
+		let hasDarkBlock = !darkBlockContents.isEmpty
+		// Concatenated in source order -- core.css's own dark block first, then the
+		// theme's -- so "later declaration wins" inside cssCustomProperties/
+		// exactSelectorValue still matches the real cascade across the two.
+		let darkBlockContent = darkBlockContents.joined(separator: "\n")
 
 		let lightVars = cssCustomProperties(in: lightScanCSS)
-		let darkVars = darkBlock.map { cssCustomProperties(in: $0.content) } ?? [:]
+		let darkVars = hasDarkBlock ? cssCustomProperties(in: darkBlockContent) : [:]
 
 		func compute(property: String, selectors: [String]) -> (light: UIColor?, dark: UIColor?) {
 			// The declaration that always applies (outside any dark media query) --
@@ -132,7 +131,7 @@ enum ArticleThemeColorExtractor {
 			// redefining the *variable* it references, not by re-declaring the
 			// property itself).
 			let unconditionalRaw = exactSelectorValue(property: property, selectors: selectors, in: lightScanCSS)
-			let darkOverrideRaw = darkBlock.flatMap { exactSelectorValue(property: property, selectors: selectors, in: $0.content) }
+			let darkOverrideRaw = hasDarkBlock ? exactSelectorValue(property: property, selectors: selectors, in: darkBlockContent) : nil
 
 			let light = resolvedColor(unconditionalRaw, localVars: lightVars, fallbackVars: [:])
 			let darkRaw = darkOverrideRaw ?? unconditionalRaw
@@ -168,7 +167,7 @@ enum ArticleThemeColorExtractor {
 			backgroundColorDark: backgroundColorDark,
 			linkColor: linkColor,
 			linkColorDark: linkColorDark,
-			hasDarkModeVariant: darkBlock != nil
+			hasDarkModeVariant: hasDarkBlock
 		)
 	}
 
@@ -197,58 +196,69 @@ enum ArticleThemeColorExtractor {
 	/// `core.css` resource from `Bundle.main`, which isn't available in the
 	/// test target) just to reach this string transform.
 	static func stripBraceBlocks(_ css: String) -> String {
+		extractBraceBlocks(in: css, openerPattern: #"@supports\s+(?:not\s+)?\([^)]*\)\s*\{"#).stripped
+	}
+
+	/// Finds every top-level block matching `openerPattern` (a regex ending in
+	/// `\{`), in source order, and returns both their inner contents and `css`
+	/// with all of them removed.
+	///
+	/// BUG FIX: this used to be a single-match finder (`extractBraceBlock`,
+	/// singular) that returned only the *first* match via `css.range(of:)`.
+	/// That was fine for `@supports` stripping (a plain removal, indifferent to
+	/// how many matches exist), but broke dark-mode color resolution below:
+	/// `ArticleTheme.css` is always `core.css + theme's own stylesheet.css` (see
+	/// `ArticleTheme.init()`), and `core.css` carries its own
+	/// `@media (prefers-color-scheme: dark) { ... }` block (the
+	/// `mark.nnw-highlight` dark rules) *ahead of* any theme's own dark block in
+	/// the concatenated string. The single-match finder always grabbed core.css's
+	/// block and left the theme's real dark block sitting unremoved inside what
+	/// was supposed to be the light-only scan -- `cssCustomProperties` doesn't
+	/// understand media-query scoping, so the theme's dark `--background-color`
+	/// (etc.) declaration, still physically present in that "light" text and
+	/// appearing after the real light declaration, silently won as the "light"
+	/// value too. See docs/article-color-pipeline.md and
+	/// ArticleThemeColorExtractorTests.ComposedThemeDarkBlockCollision for the
+	/// reproduction this fixes. Same brace-depth-tracking approach as before,
+	/// generalized to keep searching (and collecting) past each match instead of
+	/// stopping at the first, and shared with `stripBraceBlocks` above so there's
+	/// one matcher instead of two independently-written ones.
+	static func extractBraceBlocks(in css: String, openerPattern: String) -> (stripped: String, blocks: [String]) {
 		var result = ""
+		var blocks = [String]()
 		var searchStart = css.startIndex
 
 		while searchStart < css.endIndex,
-			  let openerRange = css.range(of: #"@supports\s+(?:not\s+)?\([^)]*\)\s*\{"#, options: .regularExpression, range: searchStart..<css.endIndex) {
+			  let openerRange = css.range(of: openerPattern, options: .regularExpression, range: searchStart..<css.endIndex) {
 			result += css[searchStart..<openerRange.lowerBound]
 
 			guard let openBraceIndex = css[openerRange].lastIndex(of: "{") else { break }
 			var depth = 1
 			var index = css.index(after: openBraceIndex)
+			let contentStart = index
+			var closeIndex: String.Index?
 
-			while index < css.endIndex, depth > 0 {
-				if css[index] == "{" { depth += 1 } else if css[index] == "}" { depth -= 1 }
+			while index < css.endIndex {
+				if css[index] == "{" {
+					depth += 1
+				} else if css[index] == "}" {
+					depth -= 1
+					if depth == 0 {
+						closeIndex = index
+						break
+					}
+				}
 				index = css.index(after: index)
 			}
 
-			searchStart = index
+			guard let closeIndex else { break }
+
+			blocks.append(String(css[contentStart..<closeIndex]))
+			searchStart = css.index(after: closeIndex)
 		}
 
 		result += css[searchStart..<css.endIndex]
-		return result
-	}
-
-	private struct BraceBlock {
-		let content: String
-		let fullRange: Range<String.Index>
-	}
-
-	/// Finds the first block matching `openerPattern` (a regex ending in `\{`) and
-	/// returns both its inner content and the full range (opener through closing
-	/// brace) so the caller can excise it from the source string if needed.
-	private static func extractBraceBlock(in css: String, openerPattern: String) -> BraceBlock? {
-		guard let openerRange = css.range(of: openerPattern, options: .regularExpression) else { return nil }
-		guard let openBraceIndex = css[openerRange].lastIndex(of: "{") else { return nil }
-
-		var depth = 1
-		var index = css.index(after: openBraceIndex)
-		let contentStart = index
-
-		while index < css.endIndex {
-			if css[index] == "{" {
-				depth += 1
-			} else if css[index] == "}" {
-				depth -= 1
-				if depth == 0 {
-					return BraceBlock(content: String(css[contentStart..<index]), fullRange: openerRange.lowerBound..<css.index(after: index))
-				}
-			}
-			index = css.index(after: index)
-		}
-
-		return nil
+		return (result, blocks)
 	}
 
 	// MARK: - Custom properties (CSS variables)

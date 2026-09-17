@@ -197,4 +197,41 @@ import Testing
 		#expect(matches[0].originalText == "'hello there'")
 		#expect(matches[0].replacementText == "\"hello there\"")
 	}
+
+	// MARK: - Bounded closing search (Part 7)
+
+	/// The named scenario Part 7 exists to fix: a genuinely missing
+	/// closing `'` in one paragraph must not pair with an unrelated `'`
+	/// far away in a later paragraph, silently converting everything in
+	/// between. With the paragraph-boundary cap, the unclosed opening in
+	/// the first paragraph is left untouched; the second paragraph's own
+	/// well-formed pair still converts normally.
+	@Test func doesNotPairAnUnclosedOpeningWithAFarAwayClosingQuoteAcrossAParagraphBreak() {
+		let text = "She began, 'but never finished the thought.\n\nLater, 'this is fine,' he said."
+		let matches = TextReplacementQuoteConversion.findMatches(in: text)
+
+		#expect(matches.count == 1)
+		#expect(matches[0].originalText == "'this is fine,'")
+	}
+
+	/// Same shape as the elision-check sanity test above: adding a bound
+	/// must not break the common, well-formed, same-paragraph case.
+	@Test func stillConvertsGenuineDialogueWithinTheSameParagraph() {
+		let text = "'Come here,' she said. 'I need to tell you something.'"
+		let matches = TextReplacementQuoteConversion.findMatches(in: text)
+
+		#expect(matches.count == 2)
+	}
+
+	/// A closing quote that exists but sits beyond maxClosingSearchDistance
+	/// (with no paragraph break in between) is still out of reach --
+	/// the character-count cap applies even within a single very long
+	/// paragraph, not only across paragraph breaks.
+	@Test func doesNotPairAnOpeningWithAClosingQuoteBeyondTheMaxSearchDistance() {
+		let filler = String(repeating: "word ", count: 200) // 1000 code units of filler, well past the 500-unit cap
+		let text = "'Unclosed at the start, \(filler)and closed too late,' she said."
+		let matches = TextReplacementQuoteConversion.findMatches(in: text)
+
+		#expect(matches.isEmpty)
+	}
 }

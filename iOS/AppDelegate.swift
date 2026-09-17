@@ -80,6 +80,9 @@ import Images
 			await WebViewConfiguration.compileContentBlockingRules()
 		}
 		AppDefaults.registerDefaults()
+		// Must run before any AppDefaults.shared access below -- see this
+		// migration's own doc comment for why.
+		AppDefaults.migrateTextReplacementApplyAutomaticallyDefaultIfNeeded()
 		AppDefaults.shared.migrateToolbarStyleDefaultIfNeeded()
 		AppDefaults.shared.migrateArticleToolbarTogglesIfNeeded()
 		AppDefaults.shared.migrateUnifiedToolbarsIfNeeded()
