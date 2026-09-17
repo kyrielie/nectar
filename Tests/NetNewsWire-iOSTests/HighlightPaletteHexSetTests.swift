@@ -150,6 +150,11 @@ import Articles
 
 	@MainActor
 	@Test func highlightPaletteDefaultsToDefaultAndPostsNotificationOnChange() async {
+		// AppDefaults.store is the real, shared UserDefaults.standard, which
+		// persists across test runs (and even CI invocations on the same
+		// simulator) -- don't assume it's still at its registered default
+		// just because nothing *in this test* has touched it yet.
+		AppDefaults.shared.highlightPalette = .default
 		defer { AppDefaults.shared.highlightPalette = .default }
 
 		#expect(AppDefaults.shared.highlightPalette == .default)
