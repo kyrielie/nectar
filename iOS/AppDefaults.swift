@@ -946,7 +946,7 @@ final class AppDefaults: Sendable {
 		/// Gates migrateTextReplacementApplyAutomaticallyDefaultIfNeeded()
 		/// -- see that function's own doc comment (Part 8: registered
 		/// default flip from true to false).
-		static let hasMigratedTextReplacementApplyAutomaticallyDefault = "hasMigratedTextReplacementApplyAutomaticallyDefault"
+		static let hasMigratedTextReplacementApplyAutoDefault = "hasMigratedTextReplacementApplyAutoDefault"
 		static let timelineGroupByFeed = "timelineGroupByFeed"
 		static let refreshClearsReadArticles = "refreshClearsReadArticles"
 		static let timelineNumberOfLines = "timelineNumberOfLines"
@@ -2525,8 +2525,8 @@ final class AppDefaults: Sendable {
 	/// Still gated by its own hasMigrated flag, same as every other
 	/// migration here, so this only ever runs once per install.
 	static func migrateTextReplacementApplyAutomaticallyDefaultIfNeeded() {
-		guard !AppDefaults.bool(for: Key.hasMigratedTextReplacementApplyAutomaticallyDefault) else { return }
-		AppDefaults.setBool(for: Key.hasMigratedTextReplacementApplyAutomaticallyDefault, true)
+		guard !AppDefaults.bool(for: Key.hasMigratedTextReplacementApplyAutoDefault) else { return }
+		AppDefaults.setBool(for: Key.hasMigratedTextReplacementApplyAutoDefault, true)
 		guard AppDefaults.store.object(forKey: Key.firstRunDate) is Date else { return }
 		AppDefaults.setBool(for: Key.textReplacementApplyAutomatically, true)
 	}

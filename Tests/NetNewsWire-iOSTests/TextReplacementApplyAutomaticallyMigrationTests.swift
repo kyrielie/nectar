@@ -33,7 +33,7 @@ import Foundation
 	/// previous test (or a previous app launch on this machine) left on
 	/// disk.
 	private func resetState() {
-		AppDefaults.store.removeObject(forKey: AppDefaults.Key.hasMigratedTextReplacementApplyAutomaticallyDefault)
+		AppDefaults.store.removeObject(forKey: AppDefaults.Key.hasMigratedTextReplacementApplyAutoDefault)
 		AppDefaults.store.removeObject(forKey: AppDefaults.Key.firstRunDate)
 		AppDefaults.store.removeObject(forKey: AppDefaults.Key.textReplacementApplyAutomatically)
 	}
@@ -57,7 +57,20 @@ import Foundation
 
 		AppDefaults.migrateTextReplacementApplyAutomaticallyDefaultIfNeeded()
 
-		#expect(AppDefaults.store.object(forKey: AppDefaults.Key.textReplacementApplyAutomatically) == nil)
+		// Can't assert object(forKey:) == nil here -- this is an
+		// app-hosted test target, so AppDelegate has already run
+		// registerDefaults() for real before this test executes, and
+		// that registration-domain default (textReplacementApplyAutomatically:
+		// false, see registerDefaults()'s own comment on this key) shows
+		// straight through once resetState()'s removeObject(forKey:) clears
+		// any explicit value. object(forKey:) only reads nil on a truly
+		// absent key when nothing has registered a default for it -- not
+		// the case here (same gotcha as
+		// ArticleToolbarTogglesMigrationTests.absentLegacyKeysDefaultTogglesToRegisteredDefaults()).
+		// Asserting the registered default's value is what actually
+		// proves the migration left the key alone instead of writing its
+		// own explicit true.
+		#expect(AppDefaults.store.object(forKey: AppDefaults.Key.textReplacementApplyAutomatically) as? Bool == false)
 	}
 
 	@Test("migration only runs once -- a later explicit false from Settings is not clobbered on a second call")
@@ -88,6 +101,6 @@ import Foundation
 
 		AppDefaults.migrateTextReplacementApplyAutomaticallyDefaultIfNeeded()
 
-		#expect(AppDefaults.bool(for: AppDefaults.Key.hasMigratedTextReplacementApplyAutomaticallyDefault) == true)
+		#expect(AppDefaults.bool(for: AppDefaults.Key.hasMigratedTextReplacementApplyAutoDefault) == true)
 	}
 }
