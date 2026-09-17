@@ -777,6 +777,8 @@ enum ToolbarFunction: String, CaseIterable, Sendable {
 	case scrollBack
 	case scrollToTop
 	case scrollToBottom
+	case screenTimeRemaining
+	case readingStats
 }
 
 /// Single source of truth for each function's display name and icon --
@@ -822,6 +824,10 @@ extension ToolbarFunction {
 			return NSLocalizedString("Scroll to Top", comment: "Toolbar function: scroll to top of article")
 		case .scrollToBottom:
 			return NSLocalizedString("Scroll to Bottom", comment: "Toolbar function: scroll to bottom of article")
+		case .screenTimeRemaining:
+			return NSLocalizedString("Screen Time Remaining", comment: "Toolbar function: screen time remaining")
+		case .readingStats:
+			return NSLocalizedString("Reading Stats", comment: "Toolbar function: reading stats")
 		}
 	}
 
@@ -862,6 +868,8 @@ extension ToolbarFunction {
 		case .scrollBack: return Assets.Images.scrollBack
 		case .scrollToTop: return Assets.Images.scrollToTop
 		case .scrollToBottom: return Assets.Images.scrollToBottom
+		case .screenTimeRemaining: return UIImage(systemName: "timer")
+		case .readingStats: return UIImage(systemName: "chart.bar")
 		}
 	}
 }
@@ -899,6 +907,10 @@ extension Notification.Name {
 	public static let highlightPaletteDidChange = Notification.Name("HighlightPaletteDidChangeNotification")
 	public static let statsVisibilityDidChange = Notification.Name("StatsVisibilityDidChangeNotification")
 	public static let articleThemeOverridesDidChange = Notification.Name("ArticleThemeOverridesDidChangeNotification")
+	public static let screenTimeUsageDidChange = Notification.Name("ScreenTimeUsageDidChangeNotification")
+	public static let screenTimeLimitReached = Notification.Name("ScreenTimeLimitReachedNotification")
+	public static let screenTimeEnforcementDidClear = Notification.Name("ScreenTimeEnforcementDidClearNotification")
+	public static let readingStatsDidChange = Notification.Name("ReadingStatsDidChangeNotification")
 }
 
 final class AppDefaults: Sendable {
@@ -1051,6 +1063,14 @@ final class AppDefaults: Sendable {
 		static let toolbarFnScrollToBottomTopOverflow = "toolbarFnScrollToBottomTopOverflow"
 		static let toolbarFnScrollToBottomBottom = "toolbarFnScrollToBottomBottom"
 		static let toolbarFnScrollToBottomBottomOverflow = "toolbarFnScrollToBottomBottomOverflow"
+		static let toolbarFnScreenTimeRemainingTop = "toolbarFnScreenTimeRemainingTop"
+		static let toolbarFnScreenTimeRemainingTopOverflow = "toolbarFnScreenTimeRemainingTopOverflow"
+		static let toolbarFnScreenTimeRemainingBottom = "toolbarFnScreenTimeRemainingBottom"
+		static let toolbarFnScreenTimeRemainingBottomOverflow = "toolbarFnScreenTimeRemainingBottomOverflow"
+		static let toolbarFnReadingStatsTop = "toolbarFnReadingStatsTop"
+		static let toolbarFnReadingStatsTopOverflow = "toolbarFnReadingStatsTopOverflow"
+		static let toolbarFnReadingStatsBottom = "toolbarFnReadingStatsBottom"
+		static let toolbarFnReadingStatsBottomOverflow = "toolbarFnReadingStatsBottomOverflow"
 		/// Whether each bar collapses its overflow-flagged functions into
 		/// a single trailing menu icon. Two independent switches (top and
 		/// bottom no longer share one Bool) -- replaces the pre-unification
@@ -1077,6 +1097,18 @@ final class AppDefaults: Sendable {
 		static let showArticleScrollbar = "showArticleScrollbar"
 		static let showLastUpdatedLabel = "showLastUpdatedLabel"
 		static let articleThemeOverrides = "articleThemeOverrides"
+		static let screenTimeEnabled = "screenTimeEnabled"
+		static let screenTimeDailyLimitMinutesByWeekday = "screenTimeDailyLimitMinutesByWeekday"
+		static let screenTimeBedtimeEnabled = "screenTimeBedtimeEnabled"
+		static let screenTimeBedtimeStartMinutesFromMidnight = "screenTimeBedtimeStartMinutesFromMidnight"
+		static let screenTimeBedtimeEndMinutesFromMidnight = "screenTimeBedtimeEndMinutesFromMidnight"
+		static let screenTimeMinutesUsedTodaySeconds = "screenTimeMinutesUsedTodaySeconds"
+		static let screenTimeUsageDate = "screenTimeUsageDate"
+		static let screenTimeDailyUsageHistory = "screenTimeDailyUsageHistory"
+		static let readingStatsTrackingEnabled = "readingStatsTrackingEnabled"
+		static let readingStatsDailyHistory = "readingStatsDailyHistory"
+		static let readingStatsProgressByBookKey = "readingStatsProgressByBookKey"
+		static let readingStatsAllTimeWords = "readingStatsAllTimeWords"
 		/// Text Replacement feature (docs/annotations.md's "Storage shape";
 		/// see the feature's own implementation plan, "Confirmation policy"
 		/// and "Settings screen"). One master toggle plus three
@@ -1221,6 +1253,8 @@ final class AppDefaults: Sendable {
 		Key.toolbarFnScrollBackTop, Key.toolbarFnScrollBackTopOverflow, Key.toolbarFnScrollBackBottom, Key.toolbarFnScrollBackBottomOverflow,
 		Key.toolbarFnScrollToTopTop, Key.toolbarFnScrollToTopTopOverflow, Key.toolbarFnScrollToTopBottom, Key.toolbarFnScrollToTopBottomOverflow,
 		Key.toolbarFnScrollToBottomTop, Key.toolbarFnScrollToBottomTopOverflow, Key.toolbarFnScrollToBottomBottom, Key.toolbarFnScrollToBottomBottomOverflow,
+		Key.toolbarFnScreenTimeRemainingTop, Key.toolbarFnScreenTimeRemainingTopOverflow, Key.toolbarFnScreenTimeRemainingBottom, Key.toolbarFnScreenTimeRemainingBottomOverflow,
+		Key.toolbarFnReadingStatsTop, Key.toolbarFnReadingStatsTopOverflow, Key.toolbarFnReadingStatsBottom, Key.toolbarFnReadingStatsBottomOverflow,
 		Key.toolbarTopUseOverflowMenu,
 		Key.toolbarBottomUseOverflowMenu,
 		Key.defaultAnnotationColor,
@@ -1231,6 +1265,12 @@ final class AppDefaults: Sendable {
 		Key.showArticleScrollbar,
 		Key.showLastUpdatedLabel,
 		Key.articleThemeOverrides,
+		Key.screenTimeEnabled, Key.screenTimeDailyLimitMinutesByWeekday,
+		Key.screenTimeBedtimeEnabled, Key.screenTimeBedtimeStartMinutesFromMidnight,
+		Key.screenTimeBedtimeEndMinutesFromMidnight, Key.screenTimeMinutesUsedTodaySeconds,
+		Key.screenTimeUsageDate, Key.screenTimeDailyUsageHistory,
+		Key.readingStatsTrackingEnabled, Key.readingStatsDailyHistory,
+		Key.readingStatsProgressByBookKey, Key.readingStatsAllTimeWords,
 		Key.useSystemBrowser,
 		Key.currentThemeName
 	]
@@ -1637,7 +1677,9 @@ final class AppDefaults: Sendable {
 		.action: [.top: (Key.toolbarFnActionTop, Key.toolbarFnActionTopOverflow), .bottom: (Key.toolbarFnActionBottom, Key.toolbarFnActionBottomOverflow)],
 		.scrollBack: [.top: (Key.toolbarFnScrollBackTop, Key.toolbarFnScrollBackTopOverflow), .bottom: (Key.toolbarFnScrollBackBottom, Key.toolbarFnScrollBackBottomOverflow)],
 		.scrollToTop: [.top: (Key.toolbarFnScrollToTopTop, Key.toolbarFnScrollToTopTopOverflow), .bottom: (Key.toolbarFnScrollToTopBottom, Key.toolbarFnScrollToTopBottomOverflow)],
-		.scrollToBottom: [.top: (Key.toolbarFnScrollToBottomTop, Key.toolbarFnScrollToBottomTopOverflow), .bottom: (Key.toolbarFnScrollToBottomBottom, Key.toolbarFnScrollToBottomBottomOverflow)]
+		.scrollToBottom: [.top: (Key.toolbarFnScrollToBottomTop, Key.toolbarFnScrollToBottomTopOverflow), .bottom: (Key.toolbarFnScrollToBottomBottom, Key.toolbarFnScrollToBottomBottomOverflow)],
+		.screenTimeRemaining: [.top: (Key.toolbarFnScreenTimeRemainingTop, Key.toolbarFnScreenTimeRemainingTopOverflow), .bottom: (Key.toolbarFnScreenTimeRemainingBottom, Key.toolbarFnScreenTimeRemainingBottomOverflow)],
+		.readingStats: [.top: (Key.toolbarFnReadingStatsTop, Key.toolbarFnReadingStatsTopOverflow), .bottom: (Key.toolbarFnReadingStatsBottom, Key.toolbarFnReadingStatsBottomOverflow)]
 	]
 
 	private func toolbarKeys(_ function: ToolbarFunction, _ bar: ToolbarBar) -> (inline: String, overflow: String) {
@@ -2569,7 +2611,11 @@ final class AppDefaults: Sendable {
 									Key.showLastUpdatedLabel: false,
 									Key.showArticleScrollbar: ArticleScrollbarVisibility.whenNotFullScreen.rawValue,
 									Key.toolbarStyle: ToolbarStyle.system.rawValue,
-									Key.statsVisible: true,
+																	 Key.statsVisible: true,
+																	 Key.screenTimeEnabled: false,
+																	 Key.screenTimeBedtimeEnabled: false,
+																	 Key.screenTimeDailyLimitMinutesByWeekday: "{\"1\":120,\"2\":120,\"3\":120,\"4\":120,\"5\":120,\"6\":120,\"7\":120}",
+																	 Key.readingStatsTrackingEnabled: true,
 								// Text Replacement feature defaults -- see the Key block's own
 								// comment above. Quote conversion (textReplacementQuoteConversionEnabled)
 								// is intentionally absent here: AppDefaults.bool(for:)'s implicit-false
@@ -2588,6 +2634,86 @@ final class AppDefaults: Sendable {
 }
 
 extension AppDefaults {
+
+	private static func decode<T: Decodable>(_ type: T.Type, key: String, default value: T) -> T {
+		guard let string = string(for: key), let data = string.data(using: .utf8), let decoded = try? JSONDecoder().decode(type, from: data) else { return value }
+		return decoded
+	}
+
+	private static func encode<T: Encodable>(_ value: T, key: String) {
+		guard let data = try? JSONEncoder().encode(value), let string = String(data: data, encoding: .utf8) else { return }
+		setString(for: key, string)
+	}
+
+	var screenTimeEnabled: Bool {
+		get { AppDefaults.bool(for: Key.screenTimeEnabled) }
+		set { AppDefaults.setBool(for: Key.screenTimeEnabled, newValue) }
+	}
+
+	var screenTimeDailyLimitMinutesByWeekday: [Int: Int] {
+		get { AppDefaults.decode([Int: Int].self, key: Key.screenTimeDailyLimitMinutesByWeekday, default: [:]) }
+		set { AppDefaults.encode(newValue, key: Key.screenTimeDailyLimitMinutesByWeekday) }
+	}
+
+	func screenTimeDailyLimitMinutes(for weekday: Int) -> Int {
+		screenTimeDailyLimitMinutesByWeekday[weekday] ?? 120
+	}
+
+	func setScreenTimeDailyLimitMinutes(_ minutes: Int, for weekday: Int) {
+		var limits = screenTimeDailyLimitMinutesByWeekday
+		limits[weekday] = max(1, minutes)
+		screenTimeDailyLimitMinutesByWeekday = limits
+	}
+
+	var screenTimeBedtimeEnabled: Bool {
+		get { AppDefaults.bool(for: Key.screenTimeBedtimeEnabled) }
+		set { AppDefaults.setBool(for: Key.screenTimeBedtimeEnabled, newValue) }
+	}
+
+	var screenTimeBedtimeStartMinutesFromMidnight: Int {
+		get { AppDefaults.int(for: Key.screenTimeBedtimeStartMinutesFromMidnight) }
+		set { AppDefaults.setInt(for: Key.screenTimeBedtimeStartMinutesFromMidnight, newValue) }
+	}
+
+	var screenTimeBedtimeEndMinutesFromMidnight: Int {
+		get { AppDefaults.int(for: Key.screenTimeBedtimeEndMinutesFromMidnight) }
+		set { AppDefaults.setInt(for: Key.screenTimeBedtimeEndMinutesFromMidnight, newValue) }
+	}
+
+	var screenTimeMinutesUsedTodaySeconds: Int {
+		get { AppDefaults.int(for: Key.screenTimeMinutesUsedTodaySeconds) }
+		set { AppDefaults.setInt(for: Key.screenTimeMinutesUsedTodaySeconds, newValue) }
+	}
+
+	var screenTimeUsageDate: Date? {
+		get { AppDefaults.date(for: Key.screenTimeUsageDate) }
+		set { AppDefaults.setDate(for: Key.screenTimeUsageDate, newValue) }
+	}
+
+	var screenTimeDailyUsageHistory: [String: Int] {
+		get { AppDefaults.decode([String: Int].self, key: Key.screenTimeDailyUsageHistory, default: [:]) }
+		set { AppDefaults.encode(Dictionary(uniqueKeysWithValues: newValue.sorted { $0.key < $1.key }.suffix(14)), key: Key.screenTimeDailyUsageHistory) }
+	}
+
+	var readingStatsTrackingEnabled: Bool {
+		get { AppDefaults.bool(for: Key.readingStatsTrackingEnabled) }
+		set { AppDefaults.setBool(for: Key.readingStatsTrackingEnabled, newValue) }
+	}
+
+	var readingStatsDailyHistory: [String: ReadingStatsDailyEntry] {
+		get { AppDefaults.decode([String: ReadingStatsDailyEntry].self, key: Key.readingStatsDailyHistory, default: [:]) }
+		set { AppDefaults.encode(Dictionary(uniqueKeysWithValues: newValue.sorted { $0.key < $1.key }.suffix(35)), key: Key.readingStatsDailyHistory) }
+	}
+
+	var readingStatsProgressByBookKey: [String: Double] {
+		get { AppDefaults.decode([String: Double].self, key: Key.readingStatsProgressByBookKey, default: [:]) }
+		set { AppDefaults.encode(newValue, key: Key.readingStatsProgressByBookKey) }
+	}
+
+	var readingStatsAllTimeWords: Int {
+		get { AppDefaults.int(for: Key.readingStatsAllTimeWords) }
+		set { AppDefaults.setInt(for: Key.readingStatsAllTimeWords, newValue) }
+	}
 
 	static var firstRunDate: Date? {
 		get {

@@ -105,3 +105,5 @@ has no `bookKey` sharing. It is a plain `[Double]` stack of pre-jump
   they don't push or pop anything, since "go to the top/bottom" isn't a
   position a person would want to jump back from the way a Table-of-Contents
   or annotation jump is.
+
+The 99%-of-document-height completion point also feeds `ReadingStatsTracker` for reading-activity accounting; changes to this threshold affect both read-state behavior and stats.

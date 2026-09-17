@@ -81,6 +81,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	private lazy var scrollBackBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollBack, style: .plain, target: self, action: #selector(scrollBack(_:)))
 	private lazy var scrollToTopBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollToTop, style: .plain, target: self, action: #selector(scrollToTop(_:)))
 	private lazy var scrollToBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollToBottom, style: .plain, target: self, action: #selector(scrollToBottom(_:)))
+	private lazy var screenTimeRemainingBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "timer"), style: .plain, target: nil, action: nil)
+	private lazy var readingStatsBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "chart.bar"), style: .plain, target: self, action: #selector(showReadingStatsFromToolbar(_:)))
 	// Optional collapsed-toolbar mode, independently per bar
 	// (AppDefaults.toolbarTopUseOverflowMenu/toolbarBottomUseOverflowMenu).
 	// Menu is rebuilt in place by rebuildOverflowMenu(for:) rather than
@@ -153,6 +155,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	private lazy var scrollBackBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollBack, style: .plain, target: self, action: #selector(scrollBack(_:)))
 	private lazy var scrollToTopBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollToTop, style: .plain, target: self, action: #selector(scrollToTop(_:)))
 	private lazy var scrollToBottomBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollToBottom, style: .plain, target: self, action: #selector(scrollToBottom(_:)))
+	private lazy var screenTimeRemainingBottomBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "timer"), style: .plain, target: nil, action: nil)
+	private lazy var readingStatsBottomBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "chart.bar"), style: .plain, target: self, action: #selector(showReadingStatsFromToolbar(_:)))
 
 	/// The live UIBarButtonItem instance(s) `function` contributes on
 	/// `bar` specifically -- see the "Cross-bar duplicate support"
@@ -194,6 +198,10 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		case (.scrollToTop, .bottom): return [scrollToTopBottomBarButtonItem]
 		case (.scrollToBottom, .top): return [scrollToBottomBarButtonItem]
 		case (.scrollToBottom, .bottom): return [scrollToBottomBottomBarButtonItem]
+		case (.screenTimeRemaining, .top): return [screenTimeRemainingBarButtonItem]
+		case (.screenTimeRemaining, .bottom): return [screenTimeRemainingBottomBarButtonItem]
+		case (.readingStats, .top): return [readingStatsBarButtonItem]
+		case (.readingStats, .bottom): return [readingStatsBottomBarButtonItem]
 		}
 	}
 
@@ -316,6 +324,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		// MainFeedCollectionViewController/MainTimelineModernViewController.
 		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange(_:)), name: .accentColorDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeUsageDidChange(_:)), name: .screenTimeUsageDidChange, object: nil)
 
 		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,
 		// IPHONEOS_DEPLOYMENT_TARGET = 17.0), so use registerForTraitChanges
@@ -496,6 +505,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		guard isViewLoaded else {
 			return
 		}
+		updateScreenTimeItems()
 
 		guard let article = article else {
 			allBarButtonItemInstances(for: .nextUnread).forEach { $0.isEnabled = false }
@@ -586,6 +596,19 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 
 		rebuildOverflowMenu(for: .top)
 		rebuildOverflowMenu(for: .bottom)
+	}
+
+	@objc private func screenTimeUsageDidChange(_ note: Notification) { updateScreenTimeItems() }
+
+	private func updateScreenTimeItems() {
+		let calendar = Calendar.current
+		let weekday = calendar.component(.weekday, from: Date())
+		let limit = AppDefaults.shared.screenTimeDailyLimitMinutes(for: weekday) * 60
+		let remaining = max(0, (limit - AppDefaults.shared.screenTimeMinutesUsedTodaySeconds) / 60)
+		allBarButtonItemInstances(for: .screenTimeRemaining).forEach {
+			$0.title = "(remaining)m"
+			$0.accessibilityLabel = "Screen Time remaining: \(remaining) minutes"
+		}
 	}
 
 	// MARK: Notifications
@@ -814,6 +837,12 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		case .scrollToBottom:
 			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
 				self?.scrollToBottom(self as Any)
+			}]
+		case .screenTimeRemaining:
+			return [UIAction(title: function.title, image: function.icon)]
+		case .readingStats:
+			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
+				self?.showReadingStatsFromToolbar(self as Any)
 			}]
 		}
 	}
@@ -1082,6 +1111,10 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	@objc func showThemePicker(_ sender: Any) {
 		let hostingController = UIHostingController(rootView: ArticleThemeListView())
 		navigationController?.pushViewController(hostingController, animated: true)
+	}
+
+	@objc private func showReadingStatsFromToolbar(_ sender: Any) {
+		coordinator.showReadingStats()
 	}
 
 	@objc func showTableOfContents(_ sender: Any) {

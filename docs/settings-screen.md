@@ -37,12 +37,15 @@ pushes `AO3AccountSettingsView` directly (see below).
   feed, "refresh clears read articles," Timeline Layout (pushes
   `TimelineCustomizerCollectionViewController`, below), show-last-updated
   label.
-- **`.articles`** (`ArticlesRow`, 7 cases): theme picker, "open links in
+- **`.articles`** (`ArticlesRow`, 9 cases): theme picker, "open links in
   Nectar," disable article links, feed-name-in-reader, **Full Screen
   Reading** — a disclosure row pushing `FullScreenReadingViewController`
   (below) — **Annotations**, a disclosure row pushing
   `AnnotationsSettingsView` (see `annotations.md`), and **Text
-  Replacement**, a disclosure row pushing `TextReplacementSettingsView`
+  Replacement**, a disclosure row pushing `TextReplacementSettingsView`,
+  **Screen Time**, a disclosure row pushing `ScreenTimeSettingsView`, and
+  **Reading Stats**, a disclosure row pushing `ReadingStatsView`. Screen
+  Time enforcement is independent of Reading Stats tracking.
   (also `annotations.md`: master auto-apply toggle, reader-insert names
   — with a per-work override `NavigationLink` into
   `TextReplacementPerWorkOverrideView` when a "current work" is
@@ -221,7 +224,7 @@ not just whichever bar happened to build its items last.
   on `.top` only is what makes it screen-rightmost on both, matching
   `ArticleViewController`'s identical per-bar branch.
 - **Functions (1)**: exactly one `ToolbarFunctionCell` per
-  `ToolbarFunction.allCases` (13 rows), in this bar's persisted display
+  `ToolbarFunction.allCases` (17 rows), in this bar's persisted display
   order (`AppDefaults.toolbarFunctionOrder(for:)`), configured via
   `configure(function:bar:isOn:isEnabled:)` — no master-switch row in
   this section (that moved to Overflow, item 0, below). Rows support

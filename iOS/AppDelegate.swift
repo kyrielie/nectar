@@ -84,6 +84,8 @@ import Images
 		AppDefaults.shared.migrateArticleToolbarTogglesIfNeeded()
 		AppDefaults.shared.migrateUnifiedToolbarsIfNeeded()
 		AppDefaults.shared.migrateArticleScrollbarVisibilityIfNeeded()
+		ScreenTimeTracker.shared.start()
+		ReadingStatsTracker.shared.start()
 
 		let isFirstRun = AppDefaults.shared.isFirstRun
 		if isFirstRun {

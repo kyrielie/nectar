@@ -14,6 +14,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 	var window: UIWindow?
 	var coordinator: SceneCoordinator!
+	private var screenTimeOverlay: ScreenTimeEnforcementOverlay?
 
 	// UIWindowScene delegate
 
@@ -46,6 +47,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		coordinator = SceneCoordinator(rootSplitViewController: rootViewController)
 		rootViewController.coordinator = coordinator
 		rootViewController.delegate = coordinator
+		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeLimitReached(_:)), name: .screenTimeLimitReached, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeEnforcementDidClear(_:)), name: .screenTimeEnforcementDidClear, object: nil)
 
 		coordinator.restoreWindowState(activity: session.stateRestorationActivity)
 
@@ -74,6 +77,16 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		if let userActivity = connectionOptions.userActivities.first {
 			coordinator.handle(userActivity)
 		}
+	}
+
+	@objc private func screenTimeLimitReached(_ note: Notification) {
+		guard let window else { return }
+		if screenTimeOverlay == nil { screenTimeOverlay = ScreenTimeEnforcementOverlay() }
+		screenTimeOverlay?.show(in: window)
+	}
+
+	@objc private func screenTimeEnforcementDidClear(_ note: Notification) {
+		screenTimeOverlay?.hide()
 	}
 
 	func windowScene(_ windowScene: UIWindowScene, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
