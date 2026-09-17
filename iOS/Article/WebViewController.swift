@@ -245,7 +245,15 @@ final class WebViewController: UIViewController {
 		// own CSS repaints live via @media prefers-color-scheme, but these native
 		// colors previously only re-resolved on the next full renderPage.
 		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: WebViewController, previousTraitCollection: UITraitCollection) in
-			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
+			// TEMP DIAGNOSTIC (notch-bar appearance-toggle bug): confirms
+			// whether this closure fires at all for the transition in
+			// question, and with what before/after values, before doing
+			// anything else. Remove once the bug is resolved.
+			print("[notch-diag] registerForTraitChanges fired: previous=\(previousTraitCollection.userInterfaceStyle.rawValue) current=\(self.traitCollection.userInterfaceStyle.rawValue) webViewID=\(ObjectIdentifier(self.webView ?? UIView()))")
+			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else {
+				print("[notch-diag] guard short-circuited -- traitCollection.userInterfaceStyle unchanged per UIKit, applyResolvedBackgroundColors() NOT called")
+				return
+			}
 			self.applyResolvedBackgroundColors()
 		}
 
@@ -2231,6 +2239,13 @@ private extension WebViewController {
 		// until a third toggle happens to land the read back in sync.
 		let isDark = Self.isDarkForColorResolution(selfTraitCollection: traitCollection, webViewTraitCollection: webView.traitCollection)
 		let colors = Self.resolvedArticleColors(isDark: isDark)
+		// TEMP DIAGNOSTIC: confirms what applyResolvedBackgroundColors()
+		// actually resolved, which theme it read, and which webView instance
+		// it's about to apply that color to (ObjectIdentifier -- if this
+		// changes between calls where you didn't expect a reload, that's a
+		// pooled/dequeued-instance swap, not the same view being updated in
+		// place). Remove once resolved.
+		print("[notch-diag] applyResolvedBackgroundColors: isDark=\(isDark) theme=\(ArticleThemesManager.shared.currentTheme.name) resolvedBackground=\(colors.background) webViewID=\(ObjectIdentifier(webView))")
 		webView.backgroundColor = colors.background
 		webView.underPageBackgroundColor = colors.background
 		webView.scrollView.backgroundColor = colors.background
@@ -2494,6 +2509,14 @@ private extension WebViewController {
 		} else if let webViewBackground = webView?.backgroundColor {
 			notchCoverView.backgroundColor = webViewBackground
 		}
+		// TEMP DIAGNOSTIC: confirms every caller of this function, whether it
+		// passed an explicit color or fell back to webView.backgroundColor,
+		// the final color actually applied to notchCoverView, and which
+		// webView instance was read from -- cross-reference webViewID
+		// against applyResolvedBackgroundColors()'s own log line above to
+		// confirm both are talking about the same live instance, not a
+		// pooled/dequeued swap. Remove once resolved.
+		print("[notch-diag] updateNotchAndPageCounterVisibility: passedExplicit=\(resolvedBackground != nil) finalNotchColor=\(String(describing: notchCoverView.backgroundColor)) webViewID=\(webView.map { String(describing: ObjectIdentifier($0)) } ?? "nil-webView") callStack=\(Thread.callStackSymbols.dropFirst().first ?? "?")")
 		if let resolvedText {
 			pageCounterLabel.textColor = resolvedText
 		}
