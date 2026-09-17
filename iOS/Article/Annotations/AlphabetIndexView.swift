@@ -101,10 +101,17 @@ struct AlphabetIndexView: View {
 		}
 
 		func bucketCharacter(for key: String) -> Character? {
-			guard let firstScalar = key.unicodeScalars.first(where: { CharacterSet.alphanumerics.contains($0) }) else {
-				return key.isEmpty ? nil : "#"
-			}
-			let firstCharacter = Character(firstScalar)
+			// BUG FIX: this used to scan forward with
+			// `key.unicodeScalars.first(where: CharacterSet.alphanumerics.contains)`,
+			// which skips past any leading punctuation/whitespace to find the
+			// first alphanumeric character *anywhere* in the string -- so a
+			// title like `"Quoted Title"` (leading `"`) bucketed under "Q",
+			// not "#". The doc comment above has always said "first character
+			// of each section's sort key ... anything non-alphabetic
+			// collapsed to #" -- this now actually does that: only the
+			// literal first character decides the bucket, matching Contacts'
+			// own behavior for punctuation-leading names.
+			guard let firstCharacter = key.first else { return nil }
 			guard firstCharacter.isLetter else { return "#" }
 			return Character(firstCharacter.uppercased())
 		}

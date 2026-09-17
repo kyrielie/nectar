@@ -12,12 +12,21 @@
 //  it can't be gated on AppDefaults.shared.isFirstRun the way the other
 //  migrations in this file are gated on their own instance state.
 //
+//  .serialized: every test here reads/writes the same handful of keys on the
+//  real, shared AppDefaults.store (UserDefaults.standard) via resetState()/
+//  the migration itself -- without this, Swift Testing's default parallel
+//  execution can interleave two of these tests' reset-mutate-assert
+//  sequences, so one test's resetState() or explicit write lands in the
+//  middle of another's assertions (same reasoning as
+//  AO3IgnoreListTests/AuthorCacheSharedTests elsewhere in this codebase,
+//  which share this exact "plain UserDefaults, no per-test isolation" shape).
+//
 
 import Testing
 import Foundation
 @testable import Nectar
 
-@Suite struct TextReplacementApplyAutomaticallyMigrationTests {
+@Suite(.serialized) struct TextReplacementApplyAutomaticallyMigrationTests {
 
 	/// Resets every key this migration reads or writes, so each test
 	/// starts from a clean slate regardless of run order or what a
