@@ -839,7 +839,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 				self?.scrollToBottom(self as Any)
 			}]
 		case .screenTimeRemaining:
-			return [UIAction(title: function.title, image: function.icon)]
+			return [UIAction(title: function.title, image: function.icon) { _ in }]
 		case .readingStats:
 			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
 				self?.showReadingStatsFromToolbar(self as Any)
@@ -1158,20 +1158,34 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	/// lives here rather than in WebViewController itself: this view
 	/// controller owns the view worth overlaying a banner onto, and is
 	/// also the one that knows how to open Edit History). Tapping the
-	/// banner opens the same whole-book annotations list the toolbar
-	/// button does (showAnnotationsList above) -- not a separate
-	/// destination -- since a rule-driven edit row is just another row in
-	/// that same list (docs/annotations.md's "Consolidated viewer").
+	/// banner opens the unscoped "All Highlights" screen -- not the
+	/// per-chapter/per-book screen showAnnotationsList above opens by
+	/// default -- since a rule-driven edit row could belong to any
+	/// chapter, and the bubble's own "review in Edit History" copy
+	/// promises the full, unscoped list (docs/annotations.md's
+	/// "Consolidated viewer").
 	private func presentTextReplacementSummaryBanner(replacementCount: Int) {
 		textReplacementSummaryBannerPresenter.show(replacementCount: replacementCount, in: view) { [weak self] in
-			self?.showAnnotationsList(self as Any)
+			self?.showAllHighlights()
 		}
+	}
+
+	private func showAllHighlights() {
+		guard let article, let account = article.account else { return }
+
+		let listView = AnnotationsListView(account: account, scope: .everything, onClose: { [weak self] in
+			self?.navigationController?.popViewController(animated: true)
+		}, onNavigateToAnnotation: { [weak self] annotation in
+			self?.navigateToAnnotation(annotation, account: account)
+		})
+		let hostingController = UIHostingController(rootView: listView)
+		navigationController?.pushViewController(hostingController, animated: true)
 	}
 
 	@objc private func showAnnotationsList(_ sender: Any) {
 		guard let article, let account = article.account else { return }
 
-		let listView = AnnotationsListView(account: account, scope: .book(bookKey: article.bookKey), title: article.title, onClose: { [weak self] in
+		let listView = AnnotationsListView(account: account, scope: .chapter(articleID: article.articleID, bookKey: article.bookKey), title: article.title, onClose: { [weak self] in
 			self?.navigationController?.popViewController(animated: true)
 		}, onNavigateToAnnotation: { [weak self] annotation in
 			self?.navigateToAnnotation(annotation, account: account)

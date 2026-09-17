@@ -122,4 +122,79 @@ import Testing
 		#expect(matches.count == 1)
 		#expect(matches[0].startOffset == 0)
 	}
+
+	// MARK: - Leading elisions (Part 6)
+
+	@Test func leavesLeadingElisionCauseUntouched() {
+		let text = "I stayed 'cause I said so."
+		#expect(TextReplacementQuoteConversion.findMatches(in: text).isEmpty)
+	}
+
+	@Test func leavesLeadingElisionTilUntouched() {
+		let text = "Wait 'til tomorrow."
+		#expect(TextReplacementQuoteConversion.findMatches(in: text).isEmpty)
+	}
+
+	@Test func leavesLeadingElisionEmUntouched() {
+		let text = "Bring 'em on."
+		#expect(TextReplacementQuoteConversion.findMatches(in: text).isEmpty)
+	}
+
+	@Test func leavesLeadingElisionTwasUntouched() {
+		let text = "'Twas the night before Christmas."
+		#expect(TextReplacementQuoteConversion.findMatches(in: text).isEmpty)
+	}
+
+	@Test func leavesLeadingElisionTisUntouched() {
+		let text = "'Tis a shame, truly."
+		#expect(TextReplacementQuoteConversion.findMatches(in: text).isEmpty)
+	}
+
+	@Test func leavesLeadingElisionNUntouched() {
+		let text = "Fish 'n' chips for dinner."
+		#expect(TextReplacementQuoteConversion.findMatches(in: text).isEmpty)
+	}
+
+	@Test func leavesLeadingElisionRoundUntouched() {
+		let text = "They gathered 'round midnight."
+		#expect(TextReplacementQuoteConversion.findMatches(in: text).isEmpty)
+	}
+
+	@Test func leavesLeadingElisionBoutUntouched() {
+		let text = "Talk to me 'bout time."
+		#expect(TextReplacementQuoteConversion.findMatches(in: text).isEmpty)
+	}
+
+	@Test func leavesLeadingElisionFraidUntouched() {
+		let text = "I'm 'fraid not."
+		#expect(TextReplacementQuoteConversion.findMatches(in: text).isEmpty)
+	}
+
+	@Test func leavesLeadingElisionCourseUntouched() {
+		let text = "Of 'course, she agreed."
+		#expect(TextReplacementQuoteConversion.findMatches(in: text).isEmpty)
+	}
+
+	@Test func leavesLeadingElisionKayUntouched() {
+		let text = "'Kay then, let's go."
+		#expect(TextReplacementQuoteConversion.findMatches(in: text).isEmpty)
+	}
+
+	@Test func leavesDecadeElisionUntouched() {
+		let text = "It happened back in the '80s."
+		#expect(TextReplacementQuoteConversion.findMatches(in: text).isEmpty)
+	}
+
+	/// The elision check must not swallow genuine dialogue whose opening
+	/// word happens to share no overlap with the exception list -- a
+	/// sanity check that the new check is scoped to the fixed word list,
+	/// not accidentally broadened to reject dialogue generally.
+	@Test func stillConvertsGenuineDialogueAfterElisionCheckIsAdded() {
+		let text = "She said 'hello there' and smiled."
+		let matches = TextReplacementQuoteConversion.findMatches(in: text)
+
+		#expect(matches.count == 1)
+		#expect(matches[0].originalText == "'hello there'")
+		#expect(matches[0].replacementText == "\"hello there\"")
+	}
 }

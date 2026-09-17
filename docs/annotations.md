@@ -166,6 +166,23 @@ worked around, since fixing it (stripping the parens from the defaults,
 or loosening the boundary rule) is a product decision, not just a code
 fix.
 
+**The shipped default typo table** (`TextReplacementRuleTable.defaultTypoTable`),
+in full, current as of this doc:
+
+| Typed | Corrected |
+|---|---|
+| urself | yourself |
+| teh | the |
+| alot | a lot |
+| wich | which |
+| definately | definitely |
+| recieve | receive |
+| seperate | separate |
+| occured | occurred |
+
+Person-editable after seeding — this is only the initial table, not a
+fixed list re-applied on every launch regardless of a person's own edits.
+
 ### Quote conversion (category 2)
 
 `TextReplacementQuoteConversion`
