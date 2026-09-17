@@ -682,6 +682,51 @@
 		unwrapAnnotation(root, annotationID);
 	}
 
+	// Deleting a row that also carries a text edit (hasHighlight and/or
+	// originalText/replacementText set -- see docs/annotations.md,
+	// "Storage shape") needs to put the original text back, not just
+	// unwrap whatever's currently in the DOM. removeAnnotationHighlight's
+	// unwrapAnnotation call keeps the wrapper's *current* text content,
+	// which is correct for a highlight-only row (the DOM text was never
+	// touched) but wrong here: applyTextEdit already mutated the DOM to
+	// replacementText at render time, so unwrapping alone leaves the
+	// replacement text stuck in the document forever, even though the
+	// annotation row itself is gone.
+	//
+	// Finds the wrapper the same way unwrapAnnotation does (via
+	// annotationWrapperSelector), replaces its text content with
+	// originalText, then unwraps it -- same end state a highlight-only
+	// delete leaves, just arrived at via a text swap first. A wrapper with
+	// more than one child node (shouldn't normally happen for either the
+	// mark.nnw-highlight or span.nnw-edit-only shapes this file creates,
+	// both of which wrap a single Text node) is collapsed to one Text node
+	// containing originalText, rather than only touching firstChild and
+	// risking leftover sibling nodes after the swap.
+	// encodedArgs is base64(JSON({annotationID, originalText, rootSelector?})) --
+	// originalText is arbitrary article text (quotes, newlines, etc.), so
+	// this follows the same encoded-args convention
+	// addHighlightFromSelection/computeTextEditPlanEncoded use, rather
+	// than taking originalText as a raw parameter a caller would have to
+	// interpolate directly into the JS call string.
+	function revertTextEdit(encodedArgs) {
+		var args;
+		try {
+			args = JSON.parse(fromBase64(encodedArgs));
+		} catch (e) {
+			return;
+		}
+		var rootSelector = args.rootSelector || DEFAULT_ROOT_SELECTOR;
+		var root = document.querySelector(rootSelector) || document;
+		var wrappers = root.querySelectorAll(annotationWrapperSelector(args.annotationID));
+		wrappers.forEach(function (wrapper) {
+			while (wrapper.firstChild) {
+				wrapper.removeChild(wrapper.firstChild);
+			}
+			wrapper.appendChild(document.createTextNode(args.originalText));
+		});
+		unwrapAnnotation(root, args.annotationID);
+	}
+
 	// ---- Base64 helpers (for the evaluateJavaScript call/response convention) --
 	//
 	// Self-contained rather than reused from main_ios.js's toBase64, since
@@ -1106,6 +1151,7 @@
 		renderAnnotationsEncoded: renderAnnotationsEncoded,
 		addAnnotationHighlight: addAnnotationHighlight,
 		removeAnnotationHighlight: removeAnnotationHighlight,
+		revertTextEdit: revertTextEdit,
 		updateAnnotationColor: updateAnnotationColor,
 		addHighlightFromSelection: addHighlightFromSelection,
 		initAnnotations: initAnnotations,

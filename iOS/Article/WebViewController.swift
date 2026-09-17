@@ -1746,11 +1746,31 @@ extension WebViewController {
 	}
 
 	private func deleteAnnotation(_ annotation: Annotation, account: Account) {
-		// removeAnnotationHighlight unwraps the <mark> and normalizes the
-		// affected text nodes back together -- see annotations.js.
-		webView?.evaluateJavaScript("Annotations.removeAnnotationHighlight(\"\(annotation.annotationID)\")") { _, error in
-			if let error {
-				Self.logger.error("deleteAnnotation: Annotations.removeAnnotationHighlight() JS call failed: \(error.localizedDescription, privacy: .public)")
+		if let originalText = annotation.originalText {
+			// This row carries a text edit (hasHighlight and/or
+			// originalText/replacementText set) -- applyTextEdit already
+			// mutated the DOM to replacementText at render time, so
+			// unwrapping alone (removeAnnotationHighlight's path, below)
+			// would leave the replacement text stuck in the document even
+			// after the row itself is deleted. revertTextEdit puts
+			// originalText back first, then unwraps -- see annotations.js.
+			let args: [String: String] = ["annotationID": annotation.annotationID, "originalText": originalText]
+			guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else { return }
+			let encodedArgs = argsJSON.base64EncodedString()
+
+			webView?.evaluateJavaScript("Annotations.revertTextEdit(\"\(encodedArgs)\")") { _, error in
+				if let error {
+					Self.logger.error("deleteAnnotation: Annotations.revertTextEdit() JS call failed: \(error.localizedDescription, privacy: .public)")
+				}
+			}
+		} else {
+			// Highlight-only row -- the DOM text was never touched, so
+			// unwrapping the <mark> and normalizing the affected text
+			// nodes back together is sufficient. See annotations.js.
+			webView?.evaluateJavaScript("Annotations.removeAnnotationHighlight(\"\(annotation.annotationID)\")") { _, error in
+				if let error {
+					Self.logger.error("deleteAnnotation: Annotations.removeAnnotationHighlight() JS call failed: \(error.localizedDescription, privacy: .public)")
+				}
 			}
 		}
 

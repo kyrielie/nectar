@@ -8,7 +8,7 @@
 
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { loadAnnotations } = require("./setup");
+const { loadAnnotations, encodeArgs } = require("./setup");
 
 test("edit-only row (hasHighlight false) replaces text with no <mark>, but still wraps a tappable span", () => {
 	const { Annotations, document } = loadAnnotations(
@@ -119,6 +119,68 @@ test("applyTextEdit (internal) returns a collapsed Range around the new text", (
 	assert.ok(range, "expected a Range to be returned");
 	assert.equal(range.toString(), "Howdy");
 	assert.equal(document.querySelector("p").textContent, "Howdy world.");
+});
+
+test("revertTextEdit puts originalText back and removes the edit-only wrapper (delete on an edit-only row)", () => {
+	const { Annotations, document } = loadAnnotations(
+		'<div class="articleBody"><p>She sat by the wall.</p></div>'
+	);
+	const annotation = {
+		annotationID: "edit-1",
+		startOffset: 15,
+		endOffset: 19, // "wall"
+		quoteExact: "wall",
+		color: "yellow",
+		hasHighlight: false,
+		originalText: "wall",
+		replacementText: "door"
+	};
+
+	Annotations.renderAnnotations([annotation]);
+	const paragraph = document.querySelector("p");
+	assert.equal(paragraph.textContent, "She sat by the door.", "sanity check: the edit rendered before we try to revert it");
+
+	Annotations.revertTextEdit(encodeArgs({ annotationID: "edit-1", originalText: "wall" }));
+
+	assert.equal(paragraph.textContent, "She sat by the wall.", "expected the original text to be restored");
+	assert.equal(
+		document.querySelector(`span.${Annotations._internal.EDIT_ONLY_CLASS}[data-annotation-id="edit-1"]`),
+		null,
+		"expected the edit-only wrapper to be gone"
+	);
+});
+
+test("revertTextEdit puts originalText back and removes the <mark> (delete on a highlight + edit row)", () => {
+	const { Annotations, document } = loadAnnotations(
+		'<div class="articleBody"><p>She sat by the wall.</p></div>'
+	);
+	const annotation = {
+		annotationID: "edit-2",
+		startOffset: 15,
+		endOffset: 19, // "wall"
+		quoteExact: "wall",
+		color: "blue",
+		hasHighlight: true,
+		originalText: "wall",
+		replacementText: "door"
+	};
+
+	Annotations.renderAnnotations([annotation]);
+	const paragraph = document.querySelector("p");
+	assert.equal(paragraph.textContent, "She sat by the door.", "sanity check: the edit rendered before we try to revert it");
+
+	Annotations.revertTextEdit(encodeArgs({ annotationID: "edit-2", originalText: "wall" }));
+
+	assert.equal(paragraph.textContent, "She sat by the wall.", "expected the original text to be restored");
+	assert.equal(document.querySelector('mark[data-annotation-id="edit-2"]'), null, "expected the <mark> to be gone");
+});
+
+test("revertTextEdit is a no-op for malformed base64/JSON input", () => {
+	const { Annotations, document } = loadAnnotations(
+		'<div class="articleBody"><p>She sat by the wall.</p></div>'
+	);
+	Annotations.revertTextEdit("not valid base64 json!!");
+	assert.equal(document.querySelector("p").textContent, "She sat by the wall.");
 });
 
 test("applyTextEdit (internal) returns null when the span can't be resolved", () => {

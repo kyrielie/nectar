@@ -75,7 +75,6 @@ struct TextReplacementSettingsView: View {
 
 			Section {
 				ruleRows($readerInsertTable)
-				addRuleRow($readerInsertTable)
 				if let currentWork {
 					NavigationLink {
 						TextReplacementPerWorkOverrideView(bookKey: currentWork.bookKey, workTitle: currentWork.title)

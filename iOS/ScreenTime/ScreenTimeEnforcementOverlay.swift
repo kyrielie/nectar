@@ -3,7 +3,7 @@ import UIKit
 final class ScreenTimeEnforcementOverlay: UIView {
 	private let message = UILabel()
 
-	init(frame: CGRect = .zero) {
+	override init(frame: CGRect = .zero) {
 		super.init(frame: frame)
 		backgroundColor = .black
 		isAccessibilityElement = true
