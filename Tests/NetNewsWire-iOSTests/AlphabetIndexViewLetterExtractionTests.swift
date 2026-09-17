@@ -26,7 +26,7 @@ import Foundation
 	func titleSortUppercasesFirstLetter() {
 		let sections = [
 			section(id: "1", title: "apple book"),
-			section(id: "2", title: "Banana Book"),
+			section(id: "2", title: "Banana Book")
 		]
 		let letters = AlphabetIndexView.indexLetters(sections: sections, sortOrder: .title)
 		#expect(letters.map(\.character) == ["A", "B"])
@@ -51,7 +51,7 @@ import Foundation
 		let sections = [
 			section(id: "1", title: "Alpha"),
 			section(id: "2", title: "Apex"),
-			section(id: "3", title: "Ant-Man"),
+			section(id: "3", title: "Ant-Man")
 		]
 		let letters = AlphabetIndexView.indexLetters(sections: sections, sortOrder: .title)
 		#expect(letters.map(\.character) == ["A"])
@@ -62,7 +62,7 @@ import Foundation
 		let sections = [
 			section(id: "1", title: "Zebra"),
 			section(id: "2", title: "1984"),
-			section(id: "3", title: "Alpha"),
+			section(id: "3", title: "Alpha")
 		]
 		let letters = AlphabetIndexView.indexLetters(sections: sections, sortOrder: .title)
 		#expect(letters.map(\.character) == ["#", "A", "Z"])
@@ -72,7 +72,7 @@ import Foundation
 	func authorSortUsesAuthorsField() {
 		let sections = [
 			section(id: "1", title: "Zebra Book", authors: "Alice Author"),
-			section(id: "2", title: "Apple Book", authors: "Zara Zephyr"),
+			section(id: "2", title: "Apple Book", authors: "Zara Zephyr")
 		]
 		let letters = AlphabetIndexView.indexLetters(sections: sections, sortOrder: .author)
 		#expect(letters.map(\.character) == ["A", "Z"])
@@ -82,7 +82,7 @@ import Foundation
 	func authorSortSkipsSectionsWithNoAuthor() {
 		let sections = [
 			section(id: "1", title: "Some Book", authors: nil),
-			section(id: "2", title: "Another Book", authors: "Bob Writer"),
+			section(id: "2", title: "Another Book", authors: "Bob Writer")
 		]
 		let letters = AlphabetIndexView.indexLetters(sections: sections, sortOrder: .author)
 		#expect(letters.map(\.character) == ["B"])
@@ -97,7 +97,7 @@ import Foundation
 	func letterSectionIDPointsAtFirstMatch() {
 		let sections = [
 			section(id: "first-alpha", title: "Alpha One"),
-			section(id: "second-alpha", title: "Alpha Two"),
+			section(id: "second-alpha", title: "Alpha Two")
 		]
 		let letters = AlphabetIndexView.indexLetters(sections: sections, sortOrder: .title)
 		#expect(letters.first?.sectionID == "first-alpha")
