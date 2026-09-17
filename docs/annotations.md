@@ -206,15 +206,38 @@ only the outer `'...'` pair, since the inner content is already `"..."`
 and untouched. Produces the same `TextReplacementMatch` shape
 `TextReplacementRuleEngine` does, so a caller treats both categories'
 output identically once matches are found — only the *finding* differs.
+Pairing search is bounded, not unbounded to the rest of the document: an
+opening candidate's search for its closer stops at the first paragraph
+boundary (`\n\n`) or after 500 UTF-16 code units, whichever comes first
+(`maxClosingSearchDistance`), so a genuinely missing closing `'` in an
+author's prose pairs with, at worst, something a paragraph or a few
+sentences away rather than silently converting everything up to the next
+legitimately-closing `'` anywhere later in the document. A candidate
+whose closer falls outside that bound is left unpaired, and the scan
+resumes from just past that opening candidate rather than aborting the
+whole pass (an unbounded scan could correctly stop entirely on a true
+"no close anywhere" miss; a bounded one can't assume that, since a later
+opening candidate may still find its own in-range closer).
 See `TextReplacementQuoteConversionTests.swift` for the dedicated corpus
-(nested quotes, adjacent contraction/quote boundaries, an unpaired `'`).
+(nested quotes, adjacent contraction/quote boundaries, an unpaired `'`,
+the paragraph-boundary and max-distance bounding cases).
 
 ### Auto-apply on open
 
 `WebViewController.applyTextReplacementRulesIfNeeded()` runs before
 `loadAndRenderAnnotations()` on every page load, gated by
 `AppDefaults.shared.textReplacementApplyAutomatically` (the Settings
-screen's master toggle, default **on**). It's a one-time pass per
+screen's master toggle). Registered default is **off** as of Part 8
+(previously on) — `AppDefaults.migrateTextReplacementApplyAutomaticallyDefaultIfNeeded()`
+(`iOS/AppDefaults.swift`, called from `AppDelegate` before
+`AppDefaults.shared` is constructed anywhere else in the launch
+sequence, since the migration keys off `Key.firstRunDate`'s presence in
+the store directly and that presence check would otherwise already be
+moot by the time any `AppDefaults.shared`-based code runs) writes an
+explicit `true` for every existing user on their first launch of a build
+containing this migration, so the flip only changes what a *fresh*
+install starts on, not an upgrader's already-established behavior. It's
+a one-time pass per
 article, not a repeated one: it first checks whether any existing
 annotation row is already a rule-driven match
 (`!hasHighlight && originalText != nil`), and returns early if so — this
@@ -304,24 +327,65 @@ different purpose — rather than any fandom/tag-matching heuristic; nil
 
 ### Consolidated viewer
 
-`AnnotationsListView` (`iOS/Article/Annotations/`) has one `This Book`/`All`
-tab switcher (a segmented `Picker` bound to `selectedScope`), not two
-separate screens or a fixed scope per entry point. `scope` at `init` only
-decides which tab a freshly-opened screen starts on:
-`ArticleViewController.showAnnotationsList` passes `.book(bookKey:)`
-(opens on `This Book`); the Settings entry points
+`AnnotationsListView` (`iOS/Article/Annotations/`) has a `This Chapter`/
+`Entire Book` tab switcher (a segmented `Picker` bound to `selectedScope`,
+`Scope` being `.chapter(articleID:bookKey:)`/`.book(bookKey:)`/
+`.everything`), not two separate screens or a fixed scope per entry point.
+`scope` at `init` only decides which tab a freshly-opened screen starts on:
+`ArticleViewController.showAnnotationsList` passes `.chapter(articleID:
+bookKey:)` (opens on `This Chapter`); the Settings entry points
 (`TextReplacementSettingsView`'s Edit History row, `AnnotationsSettingsView`)
-pass `.everything` (opens on `All`). Either tab is reachable from either
-entry point once the screen is open, except when there's no book in
-context at all (the Settings case) — there, `showsTabSwitcher` is `false`
-and only `All` is offered, since there is no book for `This Book` to mean.
-`bookKey` (the screen's own fixed book identity, when known) is retained
-independently of `selectedScope` so switching to `All` and back to
-`This Book` doesn't lose which book `This Book` refers to.
-`resolvedBookKey(for:)`/`showsTabSwitcher(bookKey:)` are static functions
-rather than instance-only logic, so `AnnotationsListViewScopeTests` can
-exercise this mapping without constructing a whole view (constructing one
-needs a real `Account`, which this test target has no working path to).
+pass `.everything` directly, with no tab switcher shown at all, since there's
+no book in context for either tab to mean (`showsTabSwitcher` is `false`
+there — see below). Either of `This Chapter`/`Entire Book` is reachable from
+the other once the screen is open. `.everything` is not a third tab on this
+same switcher — it's a separate, second `AnnotationsListView` push, reached
+via an "All Highlights" `NavigationLink` in the toolbar (only offered when
+`showsTabSwitcher` and the screen isn't already showing `.everything` —
+pushing a second `.everything` screen on top of the first would be
+pointless). `bookKey`/`articleID` (the screen's own fixed identity, when
+known) are retained independently of `selectedScope` so switching tabs
+doesn't lose which chapter/book they refer to.
+`resolvedBookKey(for:)`/`resolvedArticleID(for:)`/`showsTabSwitcher(bookKey:)`
+are static functions rather than instance-only logic, so
+`AnnotationsListViewScopeTests` can exercise this mapping without
+constructing a whole view (constructing one needs a real `Account`, which
+this test target has no working path to).
+
+**Two-tier grouping and sort order.** Rows are grouped into an outer
+`BookSection` tier (one per book — `bookOrArticleID`, "Title by Author" as
+its header) containing an inner `AnnotationGroup` tier (one per chapter,
+unchanged from the original single-tier design — see "Anchor resolution"
+above for where `chapterTitle` itself comes from). Chapters *within* one
+book are always reading order (`chapterSortOrder`, parsed off the leading
+integer in `chapterTitle`) — `SortOrder` never touches that inner tier, only
+which order the outer `BookSection`s themselves appear in. `SortOrder`
+(`.dateCreated`, `.title`, `.author`) is `@AppStorage`-backed
+(`AppDefaults.Key.annotationsSortOrder`), so the person's choice survives
+relaunch, and is applied by `AnnotationsListView.resort(sections:by:)`, a
+pure, directly-testable function over the already-built `[BookSection]` —
+switching `SortOrder` re-sorts in place (`.onChange(of: sortOrderRawValue)`)
+rather than re-fetching, since the same rows/groups are already loaded and
+only their outer order changes. `.dateCreated` is the same "book most
+recently annotated first" ordering this view always had, now one of three
+choices rather than the only one; `.title`/`.author` sort alphabetically,
+with a section carrying no resolvable author sorting after every section
+that has one (never crashing to the front on an empty string).
+
+**A–Z index.** `AlphabetIndexView` (`iOS/Article/Annotations/
+AlphabetIndexView.swift`) is a Contacts-style letter strip overlaid on the
+trailing edge of the list, mounted only when `sortOrder != .dateCreated`
+(there's no alphabetic axis on a date-ordered list). Letters are computed
+from whichever field is driving the active sort (`indexLetters`, a pure
+function over the already-sorted `[BookSection]`) — book title for
+`.title`, author name for `.author`, first character uppercased, anything
+non-alphabetic (or an unattributed section under `.author`) collapsed into a
+single `#` bucket that sorts ahead of `A`, matching where Contacts places
+its own catch-all. A single `DragGesture(minimumDistance: 0)` over the whole
+strip (not per-letter tap targets) fires on every position change, giving
+continuous-drag scrubbing rather than discrete taps; `onSelectSection` calls
+back into `AnnotationsListView.list`'s own `ScrollViewReader`, which scrolls
+by `BookSection.id` (the outer tier), not by `AnnotationGroup.id`.
 
 `AnnotationRow` renders field-driven, via `Annotation.rowStyle`
 (`Modules/Articles`): `originalText`/`replacementText` both set picks the
@@ -574,9 +638,48 @@ Pulled into `RSCore` (rather than left as a private method on
   class="nnw-edit-only">` (`annotationWasTapped`; `handleAnnotationTap`
   matches either wrapper). Shows the read-only quote, a note field, the
   five color swatches, the "Edit Text" section (see "Manual edit UI"
-  below), and a destructive delete (with confirmation). Delete calls
+  below), and a destructive delete (with confirmation).
+  `WebViewController.deleteAnnotation` branches on `annotation.originalText`:
+  a highlight-only row (no edit) still just calls
   `Annotations.removeAnnotationHighlight` (unwraps the `<mark>`,
-  `normalize()`s the affected text nodes) before `account.deleteAnnotation`.
+  `normalize()`s the affected text nodes) before `account.deleteAnnotation`;
+  a row carrying a text edit calls `Annotations.revertTextEdit` first
+  (base64-JSON-encoded `{annotationID, originalText}`, same encoded-args
+  convention as `addHighlightFromSelection`/`computeTextEditPlanEncoded`) to
+  swap `replacementText` back to `originalText` in the live DOM — via
+  `annotationWrapperSelector`, so it finds either wrapper shape
+  (`mark.nnw-highlight` or `span.nnw-edit-only`) — before unwrapping, so the
+  edited wording doesn't stay stuck in the rendered article after the row
+  itself is gone. This does not currently re-run
+  `TextReplacementOffsetShift.shiftedAnchorsForRevert` against any *other*
+  row whose offsets were shifted by this edit at save time — a gap flagged,
+  not fixed, here.
+
+  **`AnnotationsListView`'s own swipe-to-delete is a separate call site and
+  now shares this fix via a presenter callback.** The revert logic itself
+  lives in `WebViewController.revertOrUnwrapAnnotationDOM` — the
+  DB-independent half of `deleteAnnotation`, factored out so it can be
+  invoked without also triggering a second, redundant
+  `account.deleteAnnotation`. `AnnotationsListView.delete` calls its
+  `onDeleteAnnotation` closure (if any) before removing the row from
+  `bookSections` and calling `account.deleteAnnotation` itself — this view
+  still has no reference to the open `WebViewController` (see this file's
+  own header comment on how navigation is always handed back to the
+  presenter instead), so it can only hand the annotation back and let the
+  presenter decide whether there's a live DOM to revert at all.
+  `ArticleViewController.revertAnnotationDOMIfCurrentlyOpen` is that
+  presenter: a no-op if the row's article isn't the one currently open
+  behind the list screen (there's no live DOM to leave stale — the correct,
+  reverted text renders next time that article opens, since the DOM
+  mutation only ever happens at render time via `renderAnnotations`),
+  otherwise it calls `revertOrUnwrapAnnotationDOM` against
+  `currentWebViewController` directly. Both `ArticleViewController`
+  construction sites of `AnnotationsListView` (the toolbar-button chapter
+  list and the "All Highlights" everything list) pass this callback,
+  including through the nested "All Highlights" `NavigationLink` pushed
+  from within the chapter-scoped screen. The two Settings entry points
+  (`AnnotationsSettingsView`, `TextReplacementSettingsView`) pass none —
+  correctly, since neither can have a `WebViewController` open behind it.
 - **Manual edit UI**: below the color swatches and above the destructive
   delete action, an "Edit text" field — pre-filled with the highlight's
   current text (its `replacementText` if it already carries an edit,

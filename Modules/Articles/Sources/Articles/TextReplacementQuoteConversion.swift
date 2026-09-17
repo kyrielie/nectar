@@ -98,13 +98,18 @@ public enum TextReplacementQuoteConversion {
 				break
 			}
 			guard let closeLocation = nextClosingCandidate(in: nsText, after: openLocation) else {
-				// No valid close for this open anywhere in the rest of
-				// the text -- unpaired, leave as-is, and there is no
-				// later opening-candidate that could possibly pair
-				// either (any candidate after this one still has no
-				// close), so stop scanning entirely rather than just
-				// advancing past this one open.
-				break
+				// No valid close for this open within the bounded search
+				// radius (see nextClosingCandidate's own doc comment,
+				// Part 7) -- unpaired, leave as-is. Unlike the
+				// pre-Part-7 unbounded scan, this no longer implies no
+				// later opening-candidate could find a close either (a
+				// bounded miss here says nothing about text further on,
+				// possibly past a paragraph break this open couldn't
+				// reach), so advance past just this open and keep
+				// scanning from there, same as the no-whitespace case
+				// below, rather than stopping the whole pass.
+				searchStart = openLocation + 1
+				continue
 			}
 
 			let contentRange = NSRange(location: openLocation + 1, length: closeLocation - openLocation - 1)
@@ -250,15 +255,44 @@ public enum TextReplacementQuoteConversion {
 
 	/// Scans forward from just after `openLocation` for the next `'`
 	/// that qualifies as a closing-candidate: end of text, or followed
-	/// by a code unit in `closingFollowingCodeUnits`.
+	/// by a code unit in `closingFollowingCodeUnits`. Bounded per Part 7
+	/// -- the scan stops (returning nil, i.e. "unpaired") at whichever
+	/// comes first: a paragraph boundary (`\n\n`, checked as any `\n`
+	/// immediately followed by another `\n`, since that's the shape a
+	/// paragraph break actually takes in plain extracted prose here) or
+	/// `maxClosingSearchDistance` UTF-16 code units past `openLocation`.
+	/// Without this bound, a genuinely missing closing `'` in an
+	/// author's prose (not a false-positive elision -- Part 6 already
+	/// handles those) let this function pair the unclosed opening with
+	/// whatever the next legitimately-closing `'` happened to be,
+	/// however far away, silently converting everything in between into
+	/// one enormous double-quoted span. Capping the search radius bounds
+	/// that blast radius to "this paragraph, or a few sentences" instead
+	/// of "the rest of the document" -- see this file's own Part 7
+	/// history for the reasoning, and docs/annotations.md's
+	/// "British-quote conversion" section.
+	private static let maxClosingSearchDistance = 500
+
 	private static func nextClosingCandidate(in nsText: NSString, after openLocation: Int) -> Int? {
 		var i = openLocation + 1
 		let length = nsText.length
-		while i < length {
-			if nsText.character(at: i) == apostropheCodeUnit {
+		let searchLimit = min(length, openLocation + 1 + maxClosingSearchDistance)
+		while i < searchLimit {
+			let unit = nsText.character(at: i)
+			if unit == apostropheCodeUnit {
 				if i == length - 1 || closingFollowingCodeUnits.contains(nsText.character(at: i + 1)) {
 					return i
 				}
+			}
+			// Paragraph boundary: this `\n` immediately followed by
+			// another `\n`. A genuine dialogue span from an author's
+			// prose does not ordinarily cross a paragraph break, so
+			// treating one as a hard stop (rather than just letting the
+			// character-count cap eventually catch it) keeps the bound
+			// meaningful even when maxClosingSearchDistance is large
+			// relative to a short paragraph.
+			if unit == 0x000A, i + 1 < length, nsText.character(at: i + 1) == 0x000A {
+				return nil
 			}
 			i += 1
 		}

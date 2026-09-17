@@ -943,6 +943,10 @@ final class AppDefaults: Sendable {
 		static let hasMigratedToolbarStyleDefault = "hasMigratedToolbarStyleDefault"
 		static let hasMigratedArticleToolbarToggles = "hasMigratedArticleToolbarToggles"
 		static let hasMigratedArticleScrollbarVisibility = "hasMigratedArticleScrollbarVisibility"
+		/// Gates migrateTextReplacementApplyAutomaticallyDefaultIfNeeded()
+		/// -- see that function's own doc comment (Part 8: registered
+		/// default flip from true to false).
+		static let hasMigratedTextReplacementApplyAutomaticallyDefault = "hasMigratedTextReplacementApplyAutomaticallyDefault"
 		static let timelineGroupByFeed = "timelineGroupByFeed"
 		static let refreshClearsReadArticles = "refreshClearsReadArticles"
 		static let timelineNumberOfLines = "timelineNumberOfLines"
@@ -952,6 +956,9 @@ final class AppDefaults: Sendable {
 		static let accentColor = "accentColor"
 		static let surfaceTint = "surfaceTint"
 		static let highlightPalette = "highlightPalette"
+		/// Backs AnnotationsListView.SortOrder -- see that type's doc
+		/// comment (Part 11, "Title by Author" grouping + sort orders).
+		static let annotationsSortOrder = "annotationsSortOrder"
 		/// Legacy Bool key, no longer backed by a live property -- read
 		/// directly via AppDefaults.store by migrateToolbarStyleDefaultIfNeeded()
 		/// only, to carry an upgrader's prior tinted/not-tinted choice onto
@@ -2049,10 +2056,13 @@ final class AppDefaults: Sendable {
 
 	/// The master "apply automatically on open" toggle for the rule-driven
 	/// text-replacement categories (typo fixes, reader-insert names, and
-	/// quote conversion) -- see the plan's "Confirmation policy": default
-	/// **on**, registered in registerDefaults() below (categories 1/3's
-	/// own toggles are the per-category switch underneath this one;
-	/// quote conversion's own toggle below is separately default off).
+	/// quote conversion) -- registered default is **off** as of Part 8
+	/// (previously on; see registerDefaults()'s own comment on this key
+	/// and migrateTextReplacementApplyAutomaticallyDefaultIfNeeded(),
+	/// which writes an explicit `true` for every upgrading user so the
+	/// flip only affects fresh installs). Categories 1/3's own toggles
+	/// are the per-category switch underneath this one; quote
+	/// conversion's own toggle below is separately default off.
 	var textReplacementApplyAutomatically: Bool {
 		get {
 			return AppDefaults.bool(for: Key.textReplacementApplyAutomatically)
@@ -2473,12 +2483,52 @@ final class AppDefaults: Sendable {
 	/// actually being present as a Bool: a fresh install has nothing
 	/// under this key yet, so registerDefaults()'s own String default is
 	/// left alone rather than being immediately overwritten here.
-	@MainActor func migrateArticleScrollbarVisibilityIfNeeded() {
-		guard !AppDefaults.bool(for: Key.hasMigratedArticleScrollbarVisibility) else { return }
+	@MainActor func migrateArticleScrollbarVisibilityIfNeeded() {		guard !AppDefaults.bool(for: Key.hasMigratedArticleScrollbarVisibility) else { return }
 		AppDefaults.setBool(for: Key.hasMigratedArticleScrollbarVisibility, true)
 		guard AppDefaults.store.object(forKey: Key.showArticleScrollbar) is Bool else { return }
 		let wasOn = AppDefaults.bool(for: Key.showArticleScrollbar)
 		articleScrollbarVisibility = wasOn ? .whenNotFullScreen : .off
+	}
+
+	/// One-time migration preserving an existing user's auto-apply
+	/// behavior across Part 8's registered-default flip
+	/// (Key.textReplacementApplyAutomatically: true -> false in
+	/// registerDefaults()). UserDefaults.register(defaults:) values are
+	/// read-time fallbacks, not written at install -- flipping the
+	/// registered default changes the *effective* value for every
+	/// existing user who has never explicitly touched this toggle, not
+	/// just fresh installs, since they have no explicit value stored to
+	/// fall back from. This writes `true` directly into the store (the
+	/// pre-flip behavior) for exactly that population, so the flip only
+	/// changes what a fresh install starts on.
+	///
+	/// A `static` function reading AppDefaults.store directly, called
+	/// from AppDelegate *before* AppDefaults.shared is constructed
+	/// anywhere else in the launch sequence -- unlike every other
+	/// migration in this file, this one cannot be an instance method
+	/// gated by isFirstRun, because isFirstRun's own init closure
+	/// (evaluated the moment AppDefaults.shared is first touched, which
+	/// every other migrate*IfNeeded() call does) writes Key.firstRunDate
+	/// into the store as a side effect if it's absent -- by the time any
+	/// instance method runs, firstRunDate is unconditionally present,
+	/// fresh install or not, so it could never distinguish the two.
+	/// Reading Key.firstRunDate's presence directly, before that first
+	/// AppDefaults.shared access, is what actually preserves the
+	/// distinction: present means this device has launched before (an
+	/// upgrader); absent means this is that very first launch (a fresh
+	/// install), left alone to land on the new false registered default.
+	/// See AppDelegate.application(_:didFinishLaunchingWithOptions:)'s
+	/// call site -- this must run before any `AppDefaults.shared.*` call,
+	/// including the other migrations, or the distinction is already
+	/// lost.
+	///
+	/// Still gated by its own hasMigrated flag, same as every other
+	/// migration here, so this only ever runs once per install.
+	static func migrateTextReplacementApplyAutomaticallyDefaultIfNeeded() {
+		guard !AppDefaults.bool(for: Key.hasMigratedTextReplacementApplyAutomaticallyDefault) else { return }
+		AppDefaults.setBool(for: Key.hasMigratedTextReplacementApplyAutomaticallyDefault, true)
+		guard AppDefaults.store.object(forKey: Key.firstRunDate) is Date else { return }
+		AppDefaults.setBool(for: Key.textReplacementApplyAutomatically, true)
 	}
 
 	/// One-time migration off the pre-unification split model (top-only
@@ -2620,7 +2670,16 @@ final class AppDefaults: Sendable {
 								// comment above. Quote conversion (textReplacementQuoteConversionEnabled)
 								// is intentionally absent here: AppDefaults.bool(for:)'s implicit-false
 								// fallback already gives it the plan's required default off.
-								Key.textReplacementApplyAutomatically: true,
+								// textReplacementApplyAutomatically's registered default is now
+								// **false** (Part 8) -- this only governs a fresh install's
+								// read-time fallback with nothing yet stored under this key.
+								// Every existing user who upgrades into this build already has
+								// (or, via migrateTextReplacementApplyAutomaticallyDefaultIfNeeded()
+								// below, will already have by the time this value is read) an
+								// explicit `true` written directly into the store, which always
+								// wins over this registered fallback -- so this flip changes
+								// fresh-install behavior only, never an upgrader's.
+								Key.textReplacementApplyAutomatically: false,
 								Key.textReplacementTypoFixesEnabled: true,
 										// "Promenade" (Themes/Promenade.nnwtheme), not Self.defaultThemeName --
 										// that constant is a sentinel meaning "use the app's built-in fallback

@@ -52,6 +52,7 @@
 		2BA4B293F8F08024211727E1 /* AboutContributor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03C308B9583C626190542515 /* AboutContributor.swift */; };
 		2C8F9C79DE24FD7749DCC1CB /* UIActivityViewController+Extras.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FD8A9552D28058672B186BC /* UIActivityViewController+Extras.swift */; };
 		2CB3FB68F222A9D3B20A9C2D /* ToolbarOverflowEmptyStateCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43DFE9B593912791E665DB2 /* ToolbarOverflowEmptyStateCell.swift */; };
+		2D112C0AFA3A6799D3CD7790 /* TextReplacementApplyAutomaticallyMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 618FBF9F8D43203EC66A71AF /* TextReplacementApplyAutomaticallyMigrationTests.swift */; };
 		2E62072084912D3696757EEE /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = EE84980D5340C6D89EC2425A /* Main.storyboard */; };
 		2F6C0CAF8D318377EE5704E3 /* BackupManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65FCFB0DDF7F9F270F435198 /* BackupManagerTests.swift */; };
 		2F7BF189595938B71E11653E /* ToolbarStyleMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 988B3C074AED0BEAE52A85C3 /* ToolbarStyleMigrationTests.swift */; };
@@ -190,9 +191,11 @@
 		A1E6FE297DD8CCAD6A4DB11E /* ActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3A9CE0DFDE5C67EA1FE1090 /* ActivityManager.swift */; };
 		A5B5BE4D8A4E6457D650FB1B /* BadgeColorPalettePreviewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = C57C16994F67428CD8F634FD /* BadgeColorPalettePreviewCell.swift */; };
 		A6995CCB304B3852839EE86F /* core.css in Resources */ = {isa = PBXBuildFile; fileRef = 8CB3642DC7A3A654C2C59EB7 /* core.css */; };
+		A6D0FD1671F4402C52EE65B3 /* AlphabetIndexViewLetterExtractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7680740D9BB29783FB6B7F2 /* AlphabetIndexViewLetterExtractionTests.swift */; };
 		A6EB061FE3461E526CB1EB84 /* RSWeb in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 83E2FFE2B1504687524EE79A /* RSWeb */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A73740960A32938AB37CB7C7 /* DefaultAccountNames.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4853704E5BA2FFC9BB28FDFF /* DefaultAccountNames.xcstrings */; };
 		A77B43D4A983A234308F375F /* ArticleThemePreviewWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBC5386FE8A011F4426330E /* ArticleThemePreviewWebView.swift */; };
+		AA1E0A3B7503F4F65DB230BD /* AlphabetIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA57DE7FC85F825E40E400F3 /* AlphabetIndexView.swift */; };
 		AB294D3AC5FA8AC5ACC3E027 /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DC9E81A26EF709D33F254C6 /* SettingsViewController.swift */; };
 		ACC3FD1F9BB13A54884163A8 /* SurfacePaletteNavigationBarAwareToolbarStyleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BD06EB3D612202E428832E9 /* SurfacePaletteNavigationBarAwareToolbarStyleTests.swift */; };
 		AE9D2BB92430E8C59D966BB6 /* SceneCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69F0C8FAC7D57E8F867B28D3 /* SceneCoordinator.swift */; };
@@ -448,6 +451,7 @@
 		5F6C35D29FA3C4A80EB18907 /* CurrentActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentActivityView.swift; sourceTree = "<group>"; };
 		607005E5D40B83ABFA83A77B /* NetNewsWire_iOSTests_target.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = NetNewsWire_iOSTests_target.xcconfig; sourceTree = "<group>"; };
 		610A690A22C74FF3E06952FE /* TextReplacementPerWorkOverrideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextReplacementPerWorkOverrideView.swift; sourceTree = "<group>"; };
+		618FBF9F8D43203EC66A71AF /* TextReplacementApplyAutomaticallyMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextReplacementApplyAutomaticallyMigrationTests.swift; sourceTree = "<group>"; };
 		61EF96CF17922970575AAA96 /* About.rtf */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; path = About.rtf; sourceTree = "<group>"; };
 		62DF02339C37028C72EBA286 /* ContentRules.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ContentRules.json; sourceTree = "<group>"; };
 		632662E7A1CC49A18C4E6751 /* SFSafariViewController+Extras.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SFSafariViewController+Extras.h"; sourceTree = "<group>"; };
@@ -601,9 +605,11 @@
 		F5D302189A66FCBA55931D17 /* KeyboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardManager.swift; sourceTree = "<group>"; };
 		F601B2E752F5C58D433D76E0 /* FetchRequestQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchRequestQueue.swift; sourceTree = "<group>"; };
 		F69991CA984B6577E16A688F /* newsfoot.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = newsfoot.js; sourceTree = "<group>"; };
+		F7680740D9BB29783FB6B7F2 /* AlphabetIndexViewLetterExtractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphabetIndexViewLetterExtractionTests.swift; sourceTree = "<group>"; };
 		F786753E4D2A1B8926DC47BB /* AccountStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStatsView.swift; sourceTree = "<group>"; };
 		F8E7A9D222B2E9794D52A03B /* AddFeedSelectFolderTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFeedSelectFolderTableViewCell.swift; sourceTree = "<group>"; };
 		F8F6B9E13A8B7BEF6317B054 /* ArticleThemeOverflowSafetyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeOverflowSafetyTests.swift; sourceTree = "<group>"; };
+		FA57DE7FC85F825E40E400F3 /* AlphabetIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphabetIndexView.swift; sourceTree = "<group>"; };
 		FC778ACAB880CE5CE33F581E /* CSSImportExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSSImportExtractor.swift; sourceTree = "<group>"; };
 		FC9E92E117DFBD707EEB7DAD /* annotations.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = annotations.js; sourceTree = "<group>"; };
 		FCF1C72C8F04830B0695D3CF /* UnreadFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnreadFeed.swift; sourceTree = "<group>"; };
@@ -809,6 +815,7 @@
 				0F11DBDF4CBFCE07856F8BF8 /* AccentColorIconHexSetTests.swift */,
 				110FA7FA5A10A599860574EA /* AccentColorTableViewControllerSelectionTests.swift */,
 				C8A6E7B6A2FCD1F653F1FE71 /* ActivityItemSourceTests.swift */,
+				F7680740D9BB29783FB6B7F2 /* AlphabetIndexViewLetterExtractionTests.swift */,
 				4BD441DE55365D95E252A9CF /* AnnotationCSVExporterTests.swift */,
 				DEEFE9F5200540ED10CC9C42 /* AnnotationsListViewScopeTests.swift */,
 				6599CCD898569EB339E5E470 /* AppDefaultsBackupTests.swift */,
@@ -840,6 +847,7 @@
 				2ADC0A7692523D27CDB78B4E /* SettingsCellBackgroundHostingTests.swift */,
 				6C0207EAE7D9FA945B9C5FE0 /* SurfacePaletteHexSetTests.swift */,
 				0BD06EB3D612202E428832E9 /* SurfacePaletteNavigationBarAwareToolbarStyleTests.swift */,
+				618FBF9F8D43203EC66A71AF /* TextReplacementApplyAutomaticallyMigrationTests.swift */,
 				E1131AC6CD60A71F96D32E15 /* TimelineCustomizerCellAccentTintTests.swift */,
 				988B3C074AED0BEAE52A85C3 /* ToolbarStyleMigrationTests.swift */,
 				D252BA34B0990FE286CB70CB /* ToolbarStylePickerSelectionTests.swift */,
@@ -1146,6 +1154,7 @@
 		D029F43809C7D7D77876B280 /* Annotations */ = {
 			isa = PBXGroup;
 			children = (
+				FA57DE7FC85F825E40E400F3 /* AlphabetIndexView.swift */,
 				52313268826EC9571DFA5D8B /* AnnotationEditorView.swift */,
 				D6AB0994CB696685CB2A4456 /* AnnotationsListView.swift */,
 				93A2072A00A2EC2E53B6EF3A /* AnnotationsSettingsView.swift */,
@@ -1485,6 +1494,7 @@
 				9671352A9C9E3EAC74C7B126 /* AddFeedSelectFolderTableViewCell.swift in Sources */,
 				481BDCBB56C727BE9E2CADA6 /* AddFeedViewController.swift in Sources */,
 				DA61E21DC5A530F39D0B152E /* AddFolderViewController.swift in Sources */,
+				AA1E0A3B7503F4F65DB230BD /* AlphabetIndexView.swift in Sources */,
 				ED6B74F0F7D309A81B9ECDA6 /* AnnotationCSVExporter.swift in Sources */,
 				36656B3628AD4F3A2EE7F40B /* AnnotationEditorView.swift in Sources */,
 				1439AF2B76E5DEE52C4A001D /* AnnotationsListView.swift in Sources */,
@@ -1651,6 +1661,7 @@
 				CB72FE59D6F52C9D8021E8BC /* AccentColorIconHexSetTests.swift in Sources */,
 				BC6BBF8CA91C7AC3A39FE473 /* AccentColorTableViewControllerSelectionTests.swift in Sources */,
 				E5559C48B3DCA17AFE420F34 /* ActivityItemSourceTests.swift in Sources */,
+				A6D0FD1671F4402C52EE65B3 /* AlphabetIndexViewLetterExtractionTests.swift in Sources */,
 				85240EF87A627D9879337CD8 /* AnnotationCSVExporterTests.swift in Sources */,
 				DA35BB2EB7AD6E800787F3BD /* AnnotationsListViewScopeTests.swift in Sources */,
 				9F3568488EA8BC9855836296 /* AppDefaultsBackupTests.swift in Sources */,
@@ -1682,6 +1693,7 @@
 				77D09FF8A9378467C32A0FD2 /* SettingsCellBackgroundHostingTests.swift in Sources */,
 				824A4C76053C868ADAC6982E /* SurfacePaletteHexSetTests.swift in Sources */,
 				ACC3FD1F9BB13A54884163A8 /* SurfacePaletteNavigationBarAwareToolbarStyleTests.swift in Sources */,
+				2D112C0AFA3A6799D3CD7790 /* TextReplacementApplyAutomaticallyMigrationTests.swift in Sources */,
 				5762A9C29875C984347305CC /* TimelineCustomizerCellAccentTintTests.swift in Sources */,
 				2F7BF189595938B71E11653E /* ToolbarStyleMigrationTests.swift in Sources */,
 				E42A6B51E35DC22A93CE27B6 /* ToolbarStylePickerSelectionTests.swift in Sources */,
