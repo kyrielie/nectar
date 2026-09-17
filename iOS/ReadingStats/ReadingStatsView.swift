@@ -252,11 +252,12 @@ struct ReadingStatsView: View {
 	}
 
 	private func fandomLegendRow(_ wedge: FandomWedge, total: Int) -> some View {
-		HStack(spacing: 8) {
+		let percent = Int((Double(wedge.words) / Double(total) * 100).rounded())
+		return HStack(spacing: 8) {
 			Circle().fill(wedge.color).frame(width: 10, height: 10)
 			Text(wedge.name).font(.footnote).foregroundStyle(.primary).lineLimit(1)
 			Spacer()
-			Text("\(Int((Double(wedge.words) / Double(total) * 100).rounded()))%").font(.footnote).foregroundStyle(.secondary)
+			Text("\(percent)%").font(.footnote).foregroundStyle(.secondary)
 		}
 	}
 
