@@ -83,6 +83,8 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case fullScreenReading = 4
 		case annotations = 5
 		case textReplacement = 6
+		case screenTime = 7
+		case readingStats = 8
 	}
 
 	private enum HelpRow: Int {
@@ -315,6 +317,10 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 					currentWork: currentWorkForTextReplacementOverride
 				))
 				self.navigationController?.pushViewController(hostingController, animated: true)
+			case .screenTime:
+				self.navigationController?.pushViewController(Self.makeSurfacePaletteAwareHostingController(rootView: NavigationStack { ScreenTimeSettingsView() }), animated: true)
+			case .readingStats:
+				self.navigationController?.pushViewController(Self.makeSurfacePaletteAwareHostingController(rootView: NavigationStack { ReadingStatsView() }), animated: true)
 			default:
 				break
 			}

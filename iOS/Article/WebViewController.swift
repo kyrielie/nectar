@@ -525,6 +525,7 @@ final class WebViewController: UIViewController {
 	func setArticle(_ article: Article?, updateView: Bool = true) {
 		if article != self.article {
 			self.article = article
+			ReadingStatsTracker.shared.setArticle(article)
 			if updateView {
 				guard let article = article, let account = article.account else {
 					windowScrollY = 0
@@ -1844,6 +1845,7 @@ extension WebViewController: UIScrollViewDelegate {
 			if let scrollHeight = result["scrollHeight"] as? Double, scrollHeight > 0,
 			   let innerHeight = result["innerHeight"] as? Double {
 				let percentScrolled = (Double(javascriptScrollY) + innerHeight) / scrollHeight
+				ReadingStatsTracker.shared.recordProgress(percentScrolled)
 				if percentScrolled >= 0.99 {
 					self.coordinator.markCurrentArticleAsReadFromScrollCompletion()
 				}
