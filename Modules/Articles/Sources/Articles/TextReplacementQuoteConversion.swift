@@ -177,6 +177,23 @@ public enum TextReplacementQuoteConversion {
 
 	private static let apostropheCodeUnit: UInt16 = 0x0027 // '
 
+	/// Known leading elisions ('cause, 'til, 'em, etc.) that would
+	/// otherwise be misread as a dialogue-opening `'` -- each of these is
+	/// preceded by whitespace/opening punctuation exactly like a real
+	/// opening quote would be, so `openingPrecedingCodeUnits` alone can't
+	/// distinguish them. Checked case-insensitively against the run of
+	/// letters immediately following the candidate `'`, up to the next
+	/// word boundary. Hardcoded list per-decision (no NLTokenizer/
+	/// NLLanguage framework involved) -- see docs/annotations.md's
+	/// "British-quote conversion" section and this list's own research
+	/// backing (Gruber's SmartyPants ships exactly one hardcoded
+	/// exception, decades; the smart-quotes-plus Atom package ships a
+	/// small curated word list for exactly this).
+	private static let leadingElisions: Set<String> = [
+		"cause", "til", "till", "em", "twas", "tis", "n", "round", "bout",
+		"fraid", "course", "kay"
+	]
+
 	/// Scans forward from `from` for the next `'` that qualifies as an
 	/// opening-candidate: start of text, or preceded by a code unit in
 	/// `openingPrecedingCodeUnits`.
@@ -186,12 +203,49 @@ public enum TextReplacementQuoteConversion {
 		while i < length {
 			if nsText.character(at: i) == apostropheCodeUnit {
 				if i == 0 || openingPrecedingCodeUnits.contains(nsText.character(at: i - 1)) {
-					return i
+					if !isLeadingElision(in: nsText, apostropheLocation: i) {
+						return i
+					}
 				}
 			}
 			i += 1
 		}
 		return nil
+	}
+
+	/// True if the candidate opening `'` at `apostropheLocation` is
+	/// immediately followed by a known leading elision (`'cause`, `'til`,
+	/// `'80s`, etc.) rather than genuine dialogue -- checked against the
+	/// run of letters/digits right after the `'`, up to the next word
+	/// boundary (any code unit not a letter or digit).
+	private static func isLeadingElision(in nsText: NSString, apostropheLocation: Int) -> Bool {
+		let length = nsText.length
+		var end = apostropheLocation + 1
+		while end < length {
+			let unit = nsText.character(at: end)
+			let scalar = UnicodeScalar(unit)
+			guard let scalar, CharacterSet.alphanumerics.contains(scalar) else {
+				break
+			}
+			end += 1
+		}
+		guard end > apostropheLocation + 1 else { return false }
+
+		let run = nsText.substring(with: NSRange(location: apostropheLocation + 1, length: end - apostropheLocation - 1))
+		let lowercasedRun = run.lowercased()
+
+		if leadingElisions.contains(lowercasedRun) {
+			return true
+		}
+
+		// Decade pattern: '80s, '90s, '00s -- two digits followed by "s".
+		if lowercasedRun.count == 3,
+		   lowercasedRun.hasSuffix("s"),
+		   lowercasedRun.prefix(2).allSatisfy({ $0.isNumber }) {
+			return true
+		}
+
+		return false
 	}
 
 	/// Scans forward from just after `openLocation` for the next `'`

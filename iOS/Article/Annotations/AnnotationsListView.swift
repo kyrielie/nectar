@@ -3,21 +3,32 @@
 //  NetNewsWire-iOS
 //
 //  Reachable two ways: from the reader's annotations toolbar button
-//  (ArticleViewController.showAnnotationsList(_:), whole open book,
-//  grouped by chapter) and from Settings (unscoped, "everything I've
-//  ever highlighted"). Per the text-replacement feature's "Consolidated
-//  viewer" section, this is now one screen with a This Book/All tab
-//  switcher (see selectedScope/showsTabSwitcher below), not two
-//  separately-launched views that happen to render similar content --
-//  either tab is reachable from either entry point once the screen is
-//  open; only which tab it *opens* on differs, seeded from the `scope`
-//  the caller passed in. The Settings entry point has no book in
-//  context, so it only ever offers the All tab (showsTabSwitcher is
-//  false there). There used to be a third, per-chapter scope reachable
-//  from a toolbar menu with two choices; that menu is gone (see
-//  ArticleViewController.showAnnotationsList's doc comment) since a
-//  single grouped-by-chapter view covers the same need without asking
-//  which scope to open first.
+//  (ArticleViewController.showAnnotationsList(_:), the open article's
+//  chapter) and from Settings (unscoped, "everything I've ever
+//  highlighted"). Per the text-replacement feature's plan (Part 2, "the
+//  combined viewer... needs a chapter scope back"), this is one screen
+//  with a This Chapter/Entire Book tab switcher (see selectedScope/
+//  showsTabSwitcher below) plus a separate "All Highlights" push for
+//  the unscoped case, not two (or three) separately-launched views that
+//  happen to render similar content. Either of the two tabs is
+//  reachable from either entry point once the screen is open; only
+//  which tab it *opens* on differs, seeded from the `scope` the caller
+//  passed in. The Settings entry point has no book in context, so it
+//  only ever offers the unscoped view directly (showsTabSwitcher is
+//  false there, and the caller passes .everything at init). There used
+//  to be a third, per-chapter scope reachable from a *pre-open* toolbar
+//  menu with two choices; that menu is gone (see
+//  ArticleViewController.showAnnotationsList's doc comment). This is a
+//  deliberate reintroduction of a per-chapter scope, but as an
+//  in-screen tab decided after the screen opens, not a menu decided
+//  before -- don't restore the old menu.
+//
+//  "This Chapter" is defined as "annotations on the article currently
+//  open behind this screen" (account.fetchAnnotations(forArticleID:)),
+//  not a heading-precise slice -- chapterTitle (the heading nearest a
+//  highlight's quote) doesn't always align 1:1 with articleID, since one
+//  book's chapters can span more than one articleID (see the Groups
+//  comment below). Flagged as a known simplification, not solved here.
 //
 //  Groups are keyed by (bookKey ?? articleID, chapterTitle) -- NOT by
 //  articleID alone. Two reasons this matters (see docs/book-identity.md,
@@ -53,6 +64,7 @@ import Account
 struct AnnotationsListView: View {
 
 	enum Scope: Hashable {
+		case chapter(articleID: String, bookKey: String?)
 		case book(bookKey: String)
 		case everything
 	}
@@ -60,24 +72,33 @@ struct AnnotationsListView: View {
 	let account: Account
 	/// The book this screen was opened for, when opened from the
 	/// in-context toolbar button -- kept independently of `selectedScope`
-	/// (below) so "This Book" stays available as a tab even after the
-	/// person switches to "All", per the plan's "Consolidated viewer":
-	/// "either tab reachable from either entry point once the screen is
-	/// open." nil when opened from Settings with no single book in
-	/// context, in which case only the "All" tab is offered (see
-	/// `showsTabSwitcher`) -- there is no book to scope "This Book" to.
+	/// (below) so "Entire Book" stays available as a tab even after the
+	/// person switches to "This Chapter" and back, per Part 2: "either
+	/// tab reachable from either entry point once the screen is open."
+	/// nil when opened from Settings with no single book in context, in
+	/// which case the tab switcher itself is hidden (see
+	/// `showsTabSwitcher`) -- there is no book to scope either tab to.
 	let bookKey: String?
 
+	/// The article this screen was opened for, when opened from the
+	/// in-context toolbar button -- nil when opened from Settings with no
+	/// article in context. Threaded through as its own stored property
+	/// (parallel to `bookKey`) rather than recovered from `selectedScope`,
+	/// since the "This Chapter" Picker tag needs a concrete value up
+	/// front the same way the existing `.book` tag already hardcodes
+	/// `bookKey ?? ""`.
+	let articleID: String?
+
 	/// The screen's navigation title, supplied by the caller rather than
-	/// derived here. For the .book case this is the currently-open
-	/// article's own title (already in memory at the call site -- see
-	/// ArticleViewController.showAnnotationsList) rather than a fixed
-	/// placeholder string; nil (or empty) falls back to a generic title
-	/// below, the same fallback shape TableOfContentsViewController uses
-	/// for its own bookTitle parameter. Only shown for the .book tab --
-	/// the .everything tab always uses its own generic title, even if a
-	/// bookKey/title pair was supplied, since "All" showing one book's
-	/// title would be misleading.
+	/// derived here. For the .chapter/.book cases this is the
+	/// currently-open article's own title (already in memory at the call
+	/// site -- see ArticleViewController.showAnnotationsList) rather than
+	/// a fixed placeholder string; nil (or empty) falls back to a generic
+	/// title below, the same fallback shape TableOfContentsViewController
+	/// uses for its own bookTitle parameter. Only shown for those two
+	/// tabs -- the .everything screen always uses its own generic title,
+	/// even if a bookKey/title pair was supplied, since "All Highlights"
+	/// showing one book's title would be misleading.
 	let title: String?
 
 	/// Called when the person taps a row: navigate to (and, once there,
@@ -102,11 +123,12 @@ struct AnnotationsListView: View {
 	@Environment(\.dismiss) private var dismiss
 
 	/// scope's initial value seeds `selectedScope` (below) -- the tab the
-	/// screen opens on, per the plan: "opened from the in-context toolbar
-	/// button defaults to This book; opened from Settings defaults to
-	/// All." ArticleViewController.showAnnotationsList passes
-	/// `.book(bookKey:)`; the Settings entry point (TextReplacementSettingsView/
-	/// AnnotationsSettingsView) passes `.everything`. resolvedBookKey/
+	/// screen opens on. ArticleViewController.showAnnotationsList passes
+	/// `.chapter(articleID:bookKey:)` (opens on "This Chapter"); the
+	/// Settings entry point (TextReplacementSettingsView/
+	/// AnnotationsSettingsView) passes `.everything` directly (no tab
+	/// switcher at all, since there's no book in context -- see
+	/// showsTabSwitcher). resolvedBookKey/resolvedArticleID/
 	/// showsTabSwitcher's own derivations are pulled into static
 	/// functions below purely so AnnotationsListViewScopeTests can
 	/// exercise them without constructing a whole view (which would
@@ -118,7 +140,21 @@ struct AnnotationsListView: View {
 		self.onClose = onClose
 		self.onNavigateToAnnotation = onNavigateToAnnotation
 		self.bookKey = Self.resolvedBookKey(for: scope)
+		self.articleID = Self.resolvedArticleID(for: scope)
 		_selectedScope = State(initialValue: scope)
+	}
+
+	/// The article this screen was opened for, derived from the scope the
+	/// caller passed to init -- nil for `.book`/`.everything`. A static
+	/// function (not inlined into init), same reasoning as
+	/// `resolvedBookKey(for:)` above.
+	static func resolvedArticleID(for scope: Scope) -> String? {
+		switch scope {
+		case .chapter(let articleID, _):
+			return articleID
+		case .book, .everything:
+			return nil
+		}
 	}
 
 	/// The book this screen was opened for, derived from the scope the
@@ -129,6 +165,8 @@ struct AnnotationsListView: View {
 	/// call sites are unambiguous at a glance.
 	static func resolvedBookKey(for scope: Scope) -> String? {
 		switch scope {
+		case .chapter(_, let bookKey):
+			return bookKey
 		case .book(let bookKey):
 			return bookKey
 		case .everything:
@@ -138,17 +176,19 @@ struct AnnotationsListView: View {
 
 	/// The tab currently on screen -- distinct from `bookKey` (the fixed
 	/// identity of the book this screen was opened for, if any) so
-	/// switching to "All" and back to "This Book" doesn't lose which book
-	/// "This Book" refers to.
+	/// switching between "This Chapter" and "Entire Book" doesn't lose
+	/// which book "Entire Book" refers to, and pushing "All Highlights"
+	/// (a separate screen, not a tab on this one) doesn't affect this
+	/// screen's own selectedScope at all.
 	@State private var selectedScope: Scope
 	/// The tab switcher only makes sense when both tabs have somewhere to
 	/// point -- if this screen was opened from Settings with no book in
-	/// context (bookKey == nil), there is no "This Book" to switch to, so
-	/// the switcher is hidden entirely and the screen behaves exactly as
-	/// the old unscoped Settings list did. A static function over the
-	/// resolved bookKey (not a property reading `self.bookKey`) so
-	/// AnnotationsListViewScopeTests can assert on this decision without
-	/// constructing a view instance.
+	/// context (bookKey == nil), there is no "This Chapter"/"Entire Book"
+	/// to switch between, so the switcher is hidden entirely and the
+	/// screen behaves exactly as the old unscoped Settings list did. A
+	/// static function over the resolved bookKey (not a property reading
+	/// `self.bookKey`) so AnnotationsListViewScopeTests can assert on
+	/// this decision without constructing a view instance.
 	static func showsTabSwitcher(bookKey: String?) -> Bool { bookKey != nil }
 	private var showsTabSwitcher: Bool { Self.showsTabSwitcher(bookKey: bookKey) }
 
@@ -216,6 +256,11 @@ struct AnnotationsListView: View {
 
 	private var navigationTitleText: String {
 		switch selectedScope {
+		case .chapter:
+			if let title, !title.isEmpty {
+				return title
+			}
+			return NSLocalizedString("This Chapter", comment: "Annotations list navigation title: single chapter, title unavailable")
 		case .book:
 			if let title, !title.isEmpty {
 				return title
@@ -229,17 +274,18 @@ struct AnnotationsListView: View {
 	var body: some View {
 		VStack(spacing: 0) {
 			if showsTabSwitcher {
-				// "This Book" / "All", per the plan's "Consolidated
-				// viewer" -- the same screen the two previously-separate
-				// entry points now share, rather than two views that
-				// happened to render similar content. Hidden entirely
-				// when there's no book in context to make "This Book"
-				// meaningful (see showsTabSwitcher).
+				// "This Chapter" / "Entire Book", per Part 2 of the plan --
+				// .everything is no longer a tab here; it's reached via the
+				// "All Highlights" toolbar button below, which pushes a
+				// second AnnotationsListView instance (same pattern
+				// TextReplacementSettingsView's Edit History row uses).
+				// Hidden entirely when there's no book in context to make
+				// either tab meaningful (see showsTabSwitcher).
 				Picker(selection: $selectedScope) {
-					Text("This Book", comment: "Annotations list tab: current book only")
+					Text("This Chapter", comment: "Annotations list tab: current chapter/article only")
+						.tag(Scope.chapter(articleID: articleID ?? "", bookKey: bookKey))
+					Text("Entire Book", comment: "Annotations list tab: current book, every chapter")
 						.tag(Scope.book(bookKey: bookKey ?? ""))
-					Text("All", comment: "Annotations list tab: every book")
-						.tag(Scope.everything)
 				} label: {
 					Text("Scope", comment: "Annotations list: tab picker accessibility label")
 				}
@@ -288,6 +334,28 @@ struct AnnotationsListView: View {
 					Image(systemName: "xmark")
 				}
 				.accessibilityLabel(Text("Close", comment: "Annotations list: close button accessibility label"))
+			}
+			// "All Highlights" -- only offered when there's a book in
+			// context to switch *out* of (showsTabSwitcher) and the
+			// screen isn't already showing .everything (pushing a second
+			// .everything screen on top of the first would be pointless).
+			// A plain NavigationLink, same pattern
+			// TextReplacementSettingsView's Edit History row already uses
+			// -- this view is never wrapped in its own NavigationStack
+			// (see this file's header comment), so the link pushes onto
+			// whichever real UINavigationController is hosting this
+			// screen, UIKit's own or a SwiftUI one, without needing a
+			// manual UIHostingController push here. Not a scope change on
+			// this screen, so "This Chapter"/"Entire Book" stay exactly
+			// where the person left them if they come back.
+			if showsTabSwitcher && selectedScope != .everything {
+				ToolbarItem(placement: .topBarLeading) {
+					NavigationLink {
+						AnnotationsListView(account: account, scope: .everything, onClose: onClose, onNavigateToAnnotation: onNavigateToAnnotation)
+					} label: {
+						Text("All Highlights", comment: "Annotations list toolbar: push the unscoped everything view")
+					}
+				}
 			}
 		}
 		.task {
@@ -423,6 +491,8 @@ struct AnnotationsListView: View {
 
 		let annotations: [Annotation]
 		switch selectedScope {
+		case .chapter(let articleID, _):
+			annotations = await account.fetchAnnotations(forArticleID: articleID)
 		case .book(let bookKey):
 			annotations = await account.fetchAnnotations(forBookKey: bookKey)
 		case .everything:
