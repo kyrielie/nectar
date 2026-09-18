@@ -12,8 +12,10 @@ import Account
 	private var isBedtimeLockout = false
 	private var secondsSinceLastBreak = 0
 	private var isShowingBreak = false
+	private var isRecurringBreakLockout = false
+	private var recurringBreakEndDate: Date?
 
-	enum Reason: Equatable { case limit, bedtime }
+	enum Reason: Equatable { case limit, bedtime, recurringBreak }
 
 	private init() {}
 
@@ -39,21 +41,55 @@ import Account
 		AppDefaults.shared.screenTimeMinutesUsedTodaySeconds += elapsed
 		NotificationCenter.default.post(name: .screenTimeUsageDidChange, object: self)
 		evaluate(at: now)
+		evaluateRecurringBreakExpiry(at: now)
 		evaluateBreak(elapsed: elapsed)
 	}
 
-	private static let breakIntervalSeconds = 15 * 60
-
 	private func evaluateBreak(elapsed: Int) {
-		guard AppDefaults.shared.screenTimeTakeABreakEnabled else { return }
+		let mode = AppDefaults.shared.screenTimeTakeABreakMode
+		guard mode != .off else { return }
+		// A daily-limit or bedtime lockout takes priority: don't start (or
+		// keep counting toward) a recurring break underneath a stricter
+		// lockout that's already blocking reading for an unrelated reason.
 		guard !isLimitLockout, !isBedtimeLockout else {
 			if isShowingBreak { isShowingBreak = false }
 			return
 		}
+		guard !isRecurringBreakLockout else { return }
 		secondsSinceLastBreak += elapsed
-		guard secondsSinceLastBreak >= Self.breakIntervalSeconds, !isShowingBreak else { return }
-		isShowingBreak = true
-		NotificationCenter.default.post(name: .screenTimeBreakReached, object: self)
+		let intervalSeconds = AppDefaults.shared.screenTimeBreakReadingMinutes * 60
+		guard secondsSinceLastBreak >= intervalSeconds else { return }
+
+		switch mode {
+		case .off:
+			break
+		case .reminder:
+			guard !isShowingBreak else { return }
+			isShowingBreak = true
+			NotificationCenter.default.post(name: .screenTimeBreakReached, object: self)
+		case .enforced:
+			isRecurringBreakLockout = true
+			recurringBreakEndDate = Self.now().addingTimeInterval(TimeInterval(AppDefaults.shared.screenTimeBreakEnforcedMinutes * 60))
+			// Reuses the same enforcement-overlay notifications the daily
+			// limit and bedtime lockouts post -- SceneDelegate's overlay
+			// show/hide wiring already keys off `activeReasons`, which now
+			// includes `.recurringBreak` (see `activeReasons` below), so
+			// no separate presentation path is needed.
+			NotificationCenter.default.post(name: .screenTimeLimitReached, object: self, userInfo: ["reason": String(describing: Reason.recurringBreak)])
+		}
+	}
+
+	/// Enforced breaks end after a fixed duration rather than a dismiss
+	/// tap, so -- unlike the daily-limit/bedtime lockouts, which clear the
+	/// moment their underlying condition (usage under the limit, outside
+	/// the bedtime window) stops being true -- this needs its own
+	/// elapsed-time check each tick.
+	private func evaluateRecurringBreakExpiry(at date: Date) {
+		guard isRecurringBreakLockout, let endDate = recurringBreakEndDate, date >= endDate else { return }
+		isRecurringBreakLockout = false
+		recurringBreakEndDate = nil
+		secondsSinceLastBreak = 0
+		NotificationCenter.default.post(name: .screenTimeEnforcementDidClear, object: self)
 	}
 
 	func dismissBreak() {
@@ -111,6 +147,7 @@ import Account
 		var result: Set<Reason> = []
 		if isLimitLockout { result.insert(.limit) }
 		if isBedtimeLockout { result.insert(.bedtime) }
+		if isRecurringBreakLockout { result.insert(.recurringBreak) }
 		return result
 	}
 
@@ -120,6 +157,8 @@ import Account
 		isBedtimeLockout = false
 		secondsSinceLastBreak = 0
 		isShowingBreak = false
+		isRecurringBreakLockout = false
+		recurringBreakEndDate = nil
 		lastTick = nil
 	}
 
@@ -145,14 +184,22 @@ import Account
 }
 
 extension ScreenTimeTracker {
-	/// SF Symbol name and friendly copy for the current lockout reason(s),
-	/// used by the status banner in ScreenTimeSettingsView. Not currently
-	/// called from ScreenTimeEnforcementOverlay -- that view has its own
+	/// SF Symbol name and friendly copy for the current lockout reason(s).
+	/// Used by both the status banner in ScreenTimeSettingsView and
+	/// ScreenTimeEnforcementOverlay -- previously the overlay kept its own
 	/// separate, differently-worded `text(for:)` switch over the same
-	/// (limit, bedtime) cases, so the two surfaces' wording can already
-	/// drift out of sync with each other; unifying them (having the
-	/// overlay call this instead) is a follow-up, not yet done. Returns
-	/// nil when there's nothing to show (`reasons` empty).
+	/// cases, which let the two surfaces' wording drift out of sync;
+	/// they're now unified onto this one function. Returns nil when
+	/// there's nothing to show (`reasons` empty).
+	///
+	/// Daily-limit and bedtime lockouts take priority in the message over
+	/// a concurrent recurring break: `.recurringBreak` only shows on its
+	/// own, since it can't outrank a stricter lockout that's also active
+	/// (see evaluateBreak's guard against starting a break under an
+	/// existing limit/bedtime lockout) -- the rare case where a limit or
+	/// bedtime starts *while* an enforced break is already showing just
+	/// takes over the message, which is the same "stricter reason wins"
+	/// behavior the two-case switch already had.
 	static func lockoutStatus(for reasons: Set<Reason>, bedtimeEndMinutesFromMidnight: Int) -> (systemImageName: String, message: String)? {
 		let endTime = Self.timeString(minutesFromMidnight: bedtimeEndMinutesFromMidnight)
 		switch (reasons.contains(.limit), reasons.contains(.bedtime)) {
@@ -163,7 +210,7 @@ extension ScreenTimeTracker {
 		case (false, true):
 			return ("bed.double.fill", "It's bedtime. Reading resumes at \(endTime).")
 		case (false, false):
-			return nil
+			return reasons.contains(.recurringBreak) ? ("pause.circle.fill", "Taking a break. Reading resumes shortly.") : nil
 		}
 	}
 

@@ -85,23 +85,20 @@ struct ReadingStatsView: View {
 
 			Section("Words per day") {
 				dailyBarChart
-					.listRowInsets(EdgeInsets())
-					.padding(.vertical, 8)
+					.listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
 			}
 
 			if !fandomSlices.isEmpty {
 				Section("By fandom") {
 					fandomBreakdown
-						.listRowInsets(EdgeInsets())
-						.padding(.vertical, 8)
+						.listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
 				}
 			}
 
 			if !topTags.isEmpty {
 				Section("Top tags") {
 					tagRankedBars
-						.listRowInsets(EdgeInsets())
-						.padding(.vertical, 8)
+						.listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
 				}
 			}
 
@@ -283,8 +280,19 @@ struct ReadingStatsView: View {
 		let percent = Int((Double(wedge.words) / Double(total) * 100).rounded())
 		return HStack(spacing: 8) {
 			Circle().fill(wedge.color).frame(width: 10, height: 10)
-			Text(wedge.name).font(.footnote).foregroundStyle(.primary).lineLimit(1)
-			Spacer()
+			// Was lineLimit(1) with no layoutPriority, so the Spacer and
+			// the percent label (both effectively zero-width-preferring)
+			// still left this text competing for space with the pie chart
+			// beside it, truncating long fandom names to a couple of
+			// characters. layoutPriority lets it claim room first; the
+			// 2-line limit gives genuinely long names somewhere to go
+			// instead of clipping.
+			Text(wedge.name)
+				.font(.footnote)
+				.foregroundStyle(.primary)
+				.lineLimit(2)
+				.layoutPriority(1)
+			Spacer(minLength: 8)
 			Text("\(percent)%").font(.footnote).foregroundStyle(.secondary)
 		}
 	}
@@ -293,21 +301,36 @@ struct ReadingStatsView: View {
 	/// distinct values to pie-chart usefully), matching the split The
 	/// StoryGraph's own stats page uses between its genre pie and its
 	/// mood bar lists.
+	/// The label used to be a hardcoded 110pt-wide, single-line Text --
+	/// AO3 tags routinely run longer than that at footnote size, so they
+	/// were clipped mid-word regardless of how much row width was
+	/// actually available. Each row now measures its own width and gives
+	/// the label a proportional share (35%) instead of a fixed point
+	/// value, so it scales with the device/list width rather than being
+	/// clipped at the same fixed point on every screen size.
 	private var tagRankedBars: some View {
 		let tags = topTags
 		let maxWords = max(tags.map(\.words).max() ?? 0, 1)
-		return VStack(spacing: 8) {
+		return VStack(spacing: 10) {
 			ForEach(Array(tags.enumerated()), id: \.offset) { _, tag in
-				HStack(spacing: 8) {
-					Text(tag.name).font(.footnote).foregroundStyle(.primary).lineLimit(1).frame(width: 110, alignment: .leading)
-					GeometryReader { geo in
+				GeometryReader { geo in
+					let labelWidth = geo.size.width * 0.35
+					let countWidth: CGFloat = 32
+					let barWidth = max(4, (geo.size.width - labelWidth - countWidth - 16) * CGFloat(tag.words) / CGFloat(maxWords))
+					HStack(spacing: 8) {
+						Text(tag.name)
+							.font(.footnote)
+							.foregroundStyle(.primary)
+							.lineLimit(1)
+							.minimumScaleFactor(0.85)
+							.frame(width: labelWidth, alignment: .leading)
 						RoundedRectangle(cornerRadius: 4, style: .continuous)
 							.fill(Color.accentColor.opacity(0.7))
-							.frame(width: geo.size.width * CGFloat(tag.words) / CGFloat(maxWords))
+							.frame(width: barWidth, height: 8)
+						Text("\(tag.words)").font(.caption2).foregroundStyle(.secondary).frame(width: countWidth, alignment: .trailing)
 					}
-					.frame(height: 8)
-					Text("\(tag.words)").font(.caption2).foregroundStyle(.secondary).frame(width: 32, alignment: .trailing)
 				}
+				.frame(height: 20)
 			}
 		}
 	}

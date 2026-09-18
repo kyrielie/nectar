@@ -8,7 +8,9 @@ struct ScreenTimeSettingsView: View {
 	@State private var end = Self.minutesDate(AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight)
 	@State private var limits = AppDefaults.shared.screenTimeDailyLimitMinutesByWeekday
 	@State private var pendingConfirmation: PendingConfirmation?
-	@State private var takeABreakEnabled = AppDefaults.shared.screenTimeTakeABreakEnabled
+	@State private var takeABreakMode = AppDefaults.shared.screenTimeTakeABreakMode
+	@State private var breakReadingMinutes = AppDefaults.shared.screenTimeBreakReadingMinutes
+	@State private var breakEnforcedMinutes = AppDefaults.shared.screenTimeBreakEnforcedMinutes
 	// Sourced from ScreenTimeTracker.shared.activeReasons, kept in sync via
 	// the same notifications the enforcement overlay reacts to, so the
 	// banner below doesn't go stale while this screen is on screen.
@@ -77,8 +79,6 @@ struct ScreenTimeSettingsView: View {
 					}
 				}
 			}
-			.disabled(!enabled)
-			.opacity(enabled ? 1 : 0.4)
 
 			Section("Bedtime") {
 				Toggle("Enable bedtime", isOn: $bedtimeEnabled)
@@ -88,13 +88,8 @@ struct ScreenTimeSettingsView: View {
 				DatePicker("Ends", selection: $end, displayedComponents: .hourAndMinute)
 					.onChange(of: end) { _, value in updateBedtimeEnd(value) }
 			}
-			.disabled(!enabled)
-			.opacity(enabled ? 1 : 0.4)
 
-			Section {
-				Toggle("Take a Break reminders", isOn: $takeABreakEnabled)
-					.onChange(of: takeABreakEnabled) { _, value in AppDefaults.shared.screenTimeTakeABreakEnabled = value }
-			} footer: { Text("Shows a dismissible reminder every 15 minutes of continuous reading.") }
+			takeABreakSection
 		}
 		.navigationTitle("Screen Time")
 		.navigationBarTitleDisplayMode(.inline)
@@ -112,6 +107,82 @@ struct ScreenTimeSettingsView: View {
 				primaryButton: .default(Text("Keep")),
 				secondaryButton: .cancel(Text("Undo"), action: confirmation.revert)
 			)
+		}
+	}
+
+	/// Pulled out of `body` as its own property -- like `fandomBreakdown`/
+	/// `fandomPieChart` in ReadingStatsView, a Section this size (picker +
+	/// two conditional NavigationLinks + a switch in the footer) inline in
+	/// `body` alongside the other five sections pushed the whole `body`
+	/// getter over Xcode's per-expression type-check budget. No behavior
+	/// change from having this be a separate property.
+	private var takeABreakSection: some View {
+		Section {
+			Picker("Mode", selection: $takeABreakMode) {
+				Text("Off").tag(TakeABreakMode.off)
+				Text("Reminder").tag(TakeABreakMode.reminder)
+				Text("Enforced").tag(TakeABreakMode.enforced)
+			}
+			.onChange(of: takeABreakMode) { _, value in AppDefaults.shared.screenTimeTakeABreakMode = value }
+
+			if takeABreakMode != .off {
+				takeABreakTimerRow(
+					title: "Reading Time",
+					footer: "How long to read before a break is triggered.",
+					minutes: $breakReadingMinutes,
+					store: { AppDefaults.shared.screenTimeBreakReadingMinutes = $0 }
+				)
+			}
+
+			if takeABreakMode == .enforced {
+				takeABreakTimerRow(
+					title: "Break Time",
+					footer: "How long reading is blocked for once a break is triggered.",
+					minutes: $breakEnforcedMinutes,
+					store: { AppDefaults.shared.screenTimeBreakEnforcedMinutes = $0 }
+				)
+			}
+		} header: {
+			Text("Take a Break")
+		} footer: {
+			takeABreakFooterText
+		}
+	}
+
+	@ViewBuilder
+	private var takeABreakFooterText: some View {
+		switch takeABreakMode {
+		case .off:
+			Text("No break reminders while reading.")
+		case .reminder:
+			Text("Shows a dismissible reminder every \(durationString(breakReadingMinutes)) of continuous reading.")
+		case .enforced:
+			Text("Blocks reading for \(durationString(breakEnforcedMinutes)) every \(durationString(breakReadingMinutes)) of continuous reading.")
+		}
+	}
+
+	/// Shared row for both Take a Break timer settings -- same
+	/// NavigationLink-to-CountDownTimerSettingView shape, differing only
+	/// in title/footer copy and which AppDefaults property they write to.
+	private func takeABreakTimerRow(title: String, footer: String, minutes: Binding<Int>, store: @escaping (Int) -> Void) -> some View {
+		NavigationLink {
+			CountDownTimerSettingView(
+				title: title,
+				footer: footer,
+				minutes: Binding(
+					get: { minutes.wrappedValue },
+					set: { newValue in
+						minutes.wrappedValue = newValue
+						store(newValue)
+					}
+				)
+			)
+		} label: {
+			HStack {
+				Text(title)
+				Spacer()
+				Text(durationString(minutes.wrappedValue)).foregroundStyle(.secondary)
+			}
 		}
 	}
 
@@ -325,6 +396,32 @@ private func durationString(_ minutes: Int) -> String {
 	if hours == 0 { return "\(mins)m" }
 	if mins == 0 { return "\(hours)h" }
 	return "\(hours)h \(mins)m"
+}
+
+/// Pushed from ScreenTimeSettingsView's "Take a Break" section for either
+/// of its two timer settings (reading time, enforced break time). Same
+/// countDownTimer-wheel-on-its-own-screen shape as DailyLimitDetailView
+/// below, minus that view's daily-limit-specific "strict limit" confirm
+/// dialog -- neither break timer has an equivalent "going under 2 hours
+/// blocks reading" threshold to warn about.
+private struct CountDownTimerSettingView: View {
+	let title: String
+	let footer: String
+	@Binding var minutes: Int
+
+	var body: some View {
+		Form {
+			Section {
+				CountDownTimerPicker(minutes: $minutes)
+					.frame(maxWidth: .infinity)
+					.listRowInsets(EdgeInsets())
+			} footer: {
+				Text(footer)
+			}
+		}
+		.navigationTitle(title)
+		.navigationBarTitleDisplayMode(.inline)
+	}
 }
 
 /// Pushed per weekday from ScreenTimeSettingsView's "Daily limits"

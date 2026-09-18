@@ -86,7 +86,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		guard let window else { return }
 		screenTimeBreakView?.hide()
 		if screenTimeOverlay == nil { screenTimeOverlay = ScreenTimeEnforcementOverlay() }
-		screenTimeOverlay?.show(in: window, reasons: ScreenTimeTracker.shared.activeReasons)
+		screenTimeOverlay?.show(in: window, reasons: ScreenTimeTracker.shared.activeReasons, bedtimeEndMinutesFromMidnight: AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight)
 	}
 
 	@objc private func screenTimeEnforcementDidClear(_ note: Notification) {
