@@ -18,6 +18,7 @@
 		09F915C31580999C48FF4096 /* AO3ChallengeSolverViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03FA655E91A7DA58F5D44E0 /* AO3ChallengeSolverViewController.swift */; };
 		0C257B3C3DBCEC2DF3864D1F /* ArticleThemeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69C41E0B0165A72DC7F0E0C7 /* ArticleThemeListView.swift */; };
 		0C36E550FACBBAF7BDD93C4B /* CacheCleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2A5425DA3C15784F10FEAF4 /* CacheCleaner.swift */; };
+		0C94777055F3828B2906CD2C /* ScreenTimeTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 708AA5B1FDD379970591EA88 /* ScreenTimeTrackerTests.swift */; };
 		0F772D9D5114AF9C11A782A8 /* AO3OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E62D76FFE81B4363E849E01E /* AO3OnboardingView.swift */; };
 		107E5EF06F2AB15102DA6497 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAEAF0FF77BBE87180FB32D9 /* AboutView.swift */; };
 		1127FDC91F6DB075C4A3D8DD /* template.html in Resources */ = {isa = PBXBuildFile; fileRef = DE2CB3CF69E51FC2CD4B4EE7 /* template.html */; };
@@ -85,6 +86,7 @@
 		3DA20BFB7C763BE1E5A29D1E /* AO3LoginViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6F8CE2122A7A758C4A2F187 /* AO3LoginViewController.swift */; };
 		40A2D7BAF98A3C69E20E06A0 /* PseudoFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 138A81C39C635A84A3FBA3C2 /* PseudoFeed.swift */; };
 		419591A8A19FC7CDF0D8D604 /* SearchTimelineFeedDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311EE70B912DAC45FDB832D1 /* SearchTimelineFeedDelegate.swift */; };
+		423A9999832A197A97058C96 /* ScreenTimeBreakView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC610CDB8FEF65CD28CA49A8 /* ScreenTimeBreakView.swift */; };
 		44DBF519E16D065A86BD8235 /* SettingsAvailabilityLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E07EBBC22B9309D68CCFEC78 /* SettingsAvailabilityLabelTests.swift */; };
 		46760DEB140945380E11FF6C /* ErrorHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F4665A8DDB114A0CD115297 /* ErrorHandler.swift */; };
 		4686628F48C65E88BC866F6F /* GlobalKeyboardShortcuts.plist in Resources */ = {isa = PBXBuildFile; fileRef = C7A4AE8B01600B72F1470293 /* GlobalKeyboardShortcuts.plist */; };
@@ -469,6 +471,7 @@
 		6DC22D7E9A6467F54770E524 /* HTMLMetadata */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HTMLMetadata; path = Modules/HTMLMetadata; sourceTree = SOURCE_ROOT; };
 		6DD2BC954F0CC18E69FE0F7B /* ArticleLogicalDatePublishedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleLogicalDatePublishedTests.swift; sourceTree = "<group>"; };
 		6E2F778291B96C0F1887747A /* ManageStorageViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageStorageViewModel.swift; sourceTree = "<group>"; };
+		708AA5B1FDD379970591EA88 /* ScreenTimeTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeTrackerTests.swift; sourceTree = "<group>"; };
 		714F4781FD830853627123C0 /* AnnotationCSVExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationCSVExporter.swift; sourceTree = "<group>"; };
 		7274C9602D13A4B0EF420321 /* ArticleThemesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemesManager.swift; sourceTree = "<group>"; };
 		74203E5D0371E05B8F1C0045 /* UIViewController+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIViewController+Extras.swift"; sourceTree = "<group>"; };
@@ -610,6 +613,7 @@
 		F8E7A9D222B2E9794D52A03B /* AddFeedSelectFolderTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFeedSelectFolderTableViewCell.swift; sourceTree = "<group>"; };
 		F8F6B9E13A8B7BEF6317B054 /* ArticleThemeOverflowSafetyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeOverflowSafetyTests.swift; sourceTree = "<group>"; };
 		FA57DE7FC85F825E40E400F3 /* AlphabetIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphabetIndexView.swift; sourceTree = "<group>"; };
+		FC610CDB8FEF65CD28CA49A8 /* ScreenTimeBreakView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeBreakView.swift; sourceTree = "<group>"; };
 		FC778ACAB880CE5CE33F581E /* CSSImportExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSSImportExtractor.swift; sourceTree = "<group>"; };
 		FC9E92E117DFBD707EEB7DAD /* annotations.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = annotations.js; sourceTree = "<group>"; };
 		FCF1C72C8F04830B0695D3CF /* UnreadFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnreadFeed.swift; sourceTree = "<group>"; };
@@ -842,6 +846,7 @@
 				7E93222DD033E865745C6A88 /* HighlightPaletteHexSetTests.swift */,
 				3879450BE14C3E2049E08487 /* ReadingStatsCalendarTests.swift */,
 				1751821C52C6926FDD61AE68 /* ScreenTimeCalendarTests.swift */,
+				708AA5B1FDD379970591EA88 /* ScreenTimeTrackerTests.swift */,
 				F0D7BA9E051981936DAE4604 /* SettingsAccentColorLiveUpdateTests.swift */,
 				E07EBBC22B9309D68CCFEC78 /* SettingsAvailabilityLabelTests.swift */,
 				2ADC0A7692523D27CDB78B4E /* SettingsCellBackgroundHostingTests.swift */,
@@ -1262,6 +1267,7 @@
 		FDA7906F50724137A650737C /* ScreenTime */ = {
 			isa = PBXGroup;
 			children = (
+				FC610CDB8FEF65CD28CA49A8 /* ScreenTimeBreakView.swift */,
 				A743FC47954E311FE58F58BF /* ScreenTimeEnforcementOverlay.swift */,
 				C09E641FD398F8181BECC365 /* ScreenTimeSettingsView.swift */,
 				95E21BF7AF1FB3B924976658 /* ScreenTimeTracker.swift */,
@@ -1600,6 +1606,7 @@
 				BA14531CF0B4CBD917A91DDC /* SFSafariViewController+Extras.m in Sources */,
 				AE9D2BB92430E8C59D966BB6 /* SceneCoordinator.swift in Sources */,
 				FD8D85384459098FEF2C81B9 /* SceneDelegate.swift in Sources */,
+				423A9999832A197A97058C96 /* ScreenTimeBreakView.swift in Sources */,
 				B38C5EAC115511B64CEF060A /* ScreenTimeEnforcementOverlay.swift in Sources */,
 				3988A3A8B3A2A794A0E7C7F8 /* ScreenTimeSettingsView.swift in Sources */,
 				39034000063262ED753424D5 /* ScreenTimeTracker.swift in Sources */,
@@ -1688,6 +1695,7 @@
 				6E6919569CA1F94DC5E50F36 /* HighlightPaletteHexSetTests.swift in Sources */,
 				E085F38C03378781C633CD40 /* ReadingStatsCalendarTests.swift in Sources */,
 				B70AF68F08E7458831D0B55B /* ScreenTimeCalendarTests.swift in Sources */,
+				0C94777055F3828B2906CD2C /* ScreenTimeTrackerTests.swift in Sources */,
 				CCCA3EFF538578E81FFF6641 /* SettingsAccentColorLiveUpdateTests.swift in Sources */,
 				44DBF519E16D065A86BD8235 /* SettingsAvailabilityLabelTests.swift in Sources */,
 				77D09FF8A9378467C32A0FD2 /* SettingsCellBackgroundHostingTests.swift in Sources */,
