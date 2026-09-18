@@ -22,13 +22,13 @@ final class ScreenTimeEnforcementOverlay: UIView {
 
 	required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-	func show(in window: UIWindow, reasons: Set<ScreenTimeTracker.Reason>) {
+	func show(in window: UIWindow, reasons: Set<ScreenTimeTracker.Reason>, bedtimeEndMinutesFromMidnight: Int) {
 		guard superview == nil else {
-			message.text = Self.text(for: reasons)
+			message.text = Self.text(for: reasons, bedtimeEndMinutesFromMidnight: bedtimeEndMinutesFromMidnight)
 			accessibilityLabel = message.text
 			return
 		}
-		message.text = Self.text(for: reasons)
+		message.text = Self.text(for: reasons, bedtimeEndMinutesFromMidnight: bedtimeEndMinutesFromMidnight)
 		accessibilityLabel = message.text
 		frame = window.bounds
 		autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -38,13 +38,14 @@ final class ScreenTimeEnforcementOverlay: UIView {
 		UIAccessibility.post(notification: .screenChanged, argument: self)
 	}
 
-	private static func text(for reasons: Set<ScreenTimeTracker.Reason>) -> String {
-		switch (reasons.contains(.limit), reasons.contains(.bedtime)) {
-		case (true, true): return "Screen Time limit reached and bedtime has started"
-		case (true, false): return "Screen Time limit reached"
-		case (false, true): return "Bedtime has started"
-		case (false, false): return "Screen Time limit reached"
-		}
+	/// Delegates to ScreenTimeTracker.lockoutStatus so this overlay and the
+	/// ScreenTimeSettingsView status banner never drift out of sync again
+	/// -- see that function's doc comment. Falls back to the pre-existing
+	/// generic copy only for the reasons-empty case, which show(in:reasons:)
+	/// is never actually called with in practice (SceneDelegate only shows
+	/// the overlay once ScreenTimeTracker.activeReasons is non-empty).
+	private static func text(for reasons: Set<ScreenTimeTracker.Reason>, bedtimeEndMinutesFromMidnight: Int) -> String {
+		ScreenTimeTracker.lockoutStatus(for: reasons, bedtimeEndMinutesFromMidnight: bedtimeEndMinutesFromMidnight)?.message ?? "Screen Time limit reached"
 	}
 
 	func hide() {
