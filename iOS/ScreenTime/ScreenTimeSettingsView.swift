@@ -314,9 +314,11 @@ struct ScreenTimeSettingsView: View {
 
 /// "Xh Ym" duration formatting shared between the daily-limits row labels
 /// in ScreenTimeSettingsView and DailyLimitDetailView's footer, so the
-/// two can't drift out of sync with each other's wording -- same reason
-/// ScreenTimeTracker.lockoutStatus(for:bedtimeEndMinutesFromMidnight:) is
-/// shared between the overlay and the lockout banner.
+/// two can't drift out of sync with each other's wording -- the same
+/// reasoning that motivated ScreenTimeTracker.lockoutStatus(for:
+/// bedtimeEndMinutesFromMidnight:), though that one is currently only
+/// consumed here, not by ScreenTimeEnforcementOverlay -- see
+/// lockoutStatus's own doc comment.
 private func durationString(_ minutes: Int) -> String {
 	let hours = minutes / 60
 	let mins = minutes % 60

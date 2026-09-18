@@ -34,6 +34,9 @@ task**, not this whole index cover-to-cover.
 - **`.nnwtheme` bundle format / authoring / theme families** → `nnwtheme-format.md`
 - **Database schema / SQLite storage layer** → `database.md`
 - **Settings screen, any toggle, or "does setting X exist"** → `settings-screen.md` (main screen) **and** `ao3-authenticated-reading.md` (the separate AO3 account screen — easy to miss)
+- **Screen Time reading limits / bedtime lockout / enforcement overlay** → `screen-time.md`
+- **Reading Stats (words/time tracking, streaks)** → `reading-stats.md`
+- **Full device backup / restore, the Backup settings section** → `backup-restore.md`
 - **Favicon / page metadata extraction** → `metadata-extraction.md`
 - **"What differs from upstream NetNewsWire"** → `upstream-drift.md`
 - **A recurring Auto Layout / UIKit console warning** (before re-investigating one from scratch) → `console-warnings.md`
@@ -99,6 +102,9 @@ it's trusted by default. Specifically:
 | `.nnwtheme` bundle-file layout, per-theme fonts, theme families, `template.html` conventions, AO3 preface styling variables | `nnwtheme-format.md` |
 | `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |
 | Any row/case in `SettingsViewController`'s `*Row` enums, `Settings.storyboard`, or `AppDefaults` | `settings-screen.md` |
+| `ScreenTimeTracker`, `ScreenTimeEnforcementOverlay`, `ScreenTimeSettingsView` | `screen-time.md` |
+| `ReadingStatsTracker`, `ReadingStatsView` | `reading-stats.md` |
+| `BackupManager`, `BackupRestoreCoordinator`, the backup zip's file layout | `backup-restore.md` |
 | `HTMLMetadata`/favicon extraction | `metadata-extraction.md` |
 | `AnnotationsTable`, `Annotation`, `annotations.js`, the `textWasSelected`/`annotationWasTapped` message-handler cases, `AnnotationCSVExporter`, the `annotations` table in `ArticleSQLiteExportTable` | `annotations.md` |
 | Anything you deliberately did differently from upstream NetNewsWire behavior | `upstream-drift.md` |
