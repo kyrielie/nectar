@@ -706,10 +706,8 @@ enum PageCounterDisplayMode: String, CaseIterable, Sendable {
 }
 
 /// When the article web view shows its native vertical scroll indicator.
-/// Replaces the old Bool-backed showArticleScrollbar -- see
-/// AppDefaults.migrateArticleScrollbarVisibilityIfNeeded() for the
-/// one-time upgrade path (old `true` -> .whenNotFullScreen, old `false`
-/// -> .off, so nobody's prior "hide it" choice silently reappears).
+/// Replaces the old Bool-backed showArticleScrollbar, reusing the same
+/// on-disk key name (Key.showArticleScrollbar) for its String rawValue.
 enum ArticleScrollbarVisibility: String, CaseIterable, Sendable {
 	case off
 	case whenNotFullScreen
@@ -748,9 +746,7 @@ enum ToolbarBar: Sendable {
 /// the pre-unification model, the *same* function can be on for both
 /// .top and .bottom simultaneously (duplicates across bars are allowed;
 /// duplicates within the *same* bar are not -- there is exactly one Bool
-/// per (function, bar), not a count). See
-/// AppDefaults.migrateUnifiedToolbarsIfNeeded() for the one-time
-/// migration off the pre-unification per-bar toggles.
+/// per (function, bar), not a count).
 ///
 /// String-backed (unlike CaseIterable alone would require) so a
 /// person's chosen per-bar display order (AppDefaults.toolbarFunctionOrder(for:))
@@ -936,19 +932,6 @@ final class AppDefaults: Sendable {
 		static let lastImageCacheFlushDate = "lastImageCacheFlushDate"
 		static let firstRunDate = "firstRunDate"
 		static let hasShownAO3Onboarding = "hasShownAO3Onboarding"
-		/// Unused as of toolbarStyle's introduction -- kept only so the
-		/// now-dead migrateNavigationBarTintingDefaultIfNeeded() history
-		/// (removed) is still legible from an old value on-disk. See
-		/// hasMigratedToolbarStyleDefault below for the current migration's
-		/// own gate.
-		static let hasMigratedNavigationBarTintingDefault = "hasMigratedNavigationBarTintingDefault"
-		static let hasMigratedToolbarStyleDefault = "hasMigratedToolbarStyleDefault"
-		static let hasMigratedArticleToolbarToggles = "hasMigratedArticleToolbarToggles"
-		static let hasMigratedArticleScrollbarVisibility = "hasMigratedArticleScrollbarVisibility"
-		/// Gates migrateTextReplacementApplyAutomaticallyDefaultIfNeeded()
-		/// -- see that function's own doc comment (Part 8: registered
-		/// default flip from true to false).
-		static let hasMigratedTextReplacementApplyAutoDefault = "hasMigratedTextReplacementApplyAutoDefault"
 		static let timelineGroupByFeed = "timelineGroupByFeed"
 		static let refreshClearsReadArticles = "refreshClearsReadArticles"
 		static let timelineNumberOfLines = "timelineNumberOfLines"
@@ -961,12 +944,6 @@ final class AppDefaults: Sendable {
 		/// Backs AnnotationsListView.SortOrder -- see that type's doc
 		/// comment (Part 11, "Title by Author" grouping + sort orders).
 		static let annotationsSortOrder = "annotationsSortOrder"
-		/// Legacy Bool key, no longer backed by a live property -- read
-		/// directly via AppDefaults.store by migrateToolbarStyleDefaultIfNeeded()
-		/// only, to carry an upgrader's prior tinted/not-tinted choice onto
-		/// the new toolbarStyle key below. Do not reintroduce a property for
-		/// this key.
-		static let useTintedNavigationBar = "useTintedNavigationBar"
 		static let toolbarStyle = "toolbarStyle"
 		static let statsVisible = "statsVisible"
 		static let timelineSortDirection = "timelineSortDirection"
@@ -977,28 +954,10 @@ final class AppDefaults: Sendable {
 		static let articleFullscreenContextMenuEnabled = "articleFullscreenContextMenuEnabled"
 		static let articlePagingSwipeEnabled = "articlePagingSwipeEnabled"
 		static let showFeedNameInReaderView = "showFeedNameInReaderView"
-		static let showPrevNextArticleButtons = "showPrevNextArticleButtons"
-		static let showTableOfContentsAndFind = "showTableOfContentsAndFind"
 		static let articleToolbarShowTheme = "articleToolbarShowTheme"
 		static let articleToolbarShowTableOfContents = "articleToolbarShowTableOfContents"
 		static let articleToolbarShowFind = "articleToolbarShowFind"
 		static let articleToolbarShowPrevNext = "articleToolbarShowPrevNext"
-		static let articleToolbarShowLock = "articleToolbarShowLock"
-		static let articleToolbarShowAnnotations = "articleToolbarShowAnnotations"
-		static let articleToolbarShowSettings = "articleToolbarShowSettings"
-		static let articleToolbarShowCheckForUpdates = "articleToolbarShowCheckForUpdates"
-		/// Legacy Bool keys, pre-unification. No longer backed by a live
-		/// property -- read directly via AppDefaults.store by
-		/// migrateUnifiedToolbarsIfNeeded() only, to carry a person's
-		/// prior top/bottom placement and overflow choice onto the
-		/// toolbarFunctionEnabled(_:on:) keys below. Do not reintroduce
-		/// properties for these keys.
-		static let articleToolbarUseOverflowMenu = "articleToolbarUseOverflowMenu"
-		static let bottomToolbarShowRead = "bottomToolbarShowRead"
-		static let bottomToolbarShowStar = "bottomToolbarShowStar"
-		static let bottomToolbarShowHeart = "bottomToolbarShowHeart"
-		static let bottomToolbarShowNextUnread = "bottomToolbarShowNextUnread"
-		static let bottomToolbarShowAction = "bottomToolbarShowAction"
 		/// Unified toolbar-customization keys. One Bool per (ToolbarFunction,
 		/// ToolbarBar, inline-or-overflow) triple -- see
 		/// isToolbarFunctionEnabled(_:on:)/setToolbarFunctionEnabled(_:on:_:)
@@ -1097,7 +1056,6 @@ final class AppDefaults: Sendable {
 		/// unchanged from before this key existed.
 		static let toolbarTopFunctionOrder = "toolbarTopFunctionOrder"
 		static let toolbarBottomFunctionOrder = "toolbarBottomFunctionOrder"
-		static let hasMigratedUnifiedToolbars = "hasMigratedUnifiedToolbars"
 		static let defaultAnnotationColor = "defaultAnnotationColor"
 		static let annotationCreationMethod = "annotationCreationMethod"
 		static let hideNotchInFullScreen = "hideNotchInFullScreen"
@@ -1147,7 +1105,6 @@ final class AppDefaults: Sendable {
 		static let foldersShowingReadArticles = "foldersShowingReadArticles"
 		static let selectedSidebarItem = "selectedSidebarItem"
 		static let selectedArticle = "selectedArticle"
-		static let didMigrateLegacyStateRestorationInfo = "didMigrateLegacyStateRestorationInfo"
 		static let splitViewPreferredDisplayMode = "splitViewPreferredDisplayMode"
 	}
 
@@ -1166,26 +1123,17 @@ final class AppDefaults: Sendable {
 	/// wrongly replayed onto a fresh install.
 	///
 	/// This array requires manual maintenance -- there is no compiler
-	/// check tying it to `Key`'s contents (119 keys as of this writing;
-	/// 98 included below, 22 excluded, after adding the 54
-	/// unified-toolbar keys). `AppDefaultsBackupTests` has a named test
+	/// check tying it to `Key`'s contents (146 keys as of this writing;
+	/// 119 included below, 27 excluded). `AppDefaultsBackupTests` has a named test
 	/// per excluded key below; adding a new `Key` entry without deciding
 	/// whether it belongs here is a review-time responsibility, not
 	/// something either the compiler or a generic test can catch.
 	///
 	/// Excluded, and why (not merely omitted -- see the corresponding
 	/// named test in AppDefaultsBackupTests for each):
-	/// - `firstRunDate`, `hasShownAO3Onboarding`,
-	///   `hasMigratedNavigationBarTintingDefault`,
-	///   `hasMigratedToolbarStyleDefault`, `hasMigratedArticleToolbarToggles`,
-	///   `hasMigratedUnifiedToolbars`, `hasMigratedArticleScrollbarVisibility`,
-	///   `didMigrateLegacyStateRestorationInfo`: one-time migration/onboarding
-	///   gates. Replaying `true` onto a fresh install would skip onboarding
-	///   or a migration step that install actually needs to run.
-	/// - `useTintedNavigationBar`: dead migration-source-of-truth only, per
-	///   its own doc comment above ("do not reintroduce a property for
-	///   this key") -- there's no live property reading this key for a
-	///   backup to meaningfully capture.
+	/// - `firstRunDate`, `hasShownAO3Onboarding`: one-time onboarding
+	///   gates. Replaying `true` onto a fresh install would skip
+	///   onboarding that install actually needs to run.
 	/// - `lastImageCacheFlushDate`, `lastRefresh`: bookkeeping timestamps,
 	///   not preferences a person set.
 	/// - `selectedArticle`, `selectedSidebarItem`: state restoration, not
@@ -1222,31 +1170,13 @@ final class AppDefaults: Sendable {
 		Key.articleFullscreenContextMenuEnabled,
 		Key.articlePagingSwipeEnabled,
 		Key.showFeedNameInReaderView,
-		Key.showPrevNextArticleButtons,
-		Key.showTableOfContentsAndFind,
 		Key.articleToolbarShowTheme,
 		Key.articleToolbarShowTableOfContents,
 		Key.articleToolbarShowFind,
 		Key.articleToolbarShowPrevNext,
-		Key.articleToolbarShowLock,
-		Key.articleToolbarShowAnnotations,
-		Key.articleToolbarShowSettings,
-		Key.articleToolbarShowCheckForUpdates,
-		Key.articleToolbarUseOverflowMenu,
-		Key.bottomToolbarShowRead,
-		Key.bottomToolbarShowStar,
-		Key.bottomToolbarShowHeart,
-		Key.bottomToolbarShowNextUnread,
-		Key.bottomToolbarShowAction,
 		// Unified toolbar-customization keys (see ToolbarFunction). These
 		// are the keys the new Toolbars settings screen actually writes
-		// to going forward; the legacy articleToolbarShow*/
-		// bottomToolbarShow*/articleToolbarUseOverflowMenu keys above stay
-		// in this allowlist too rather than being removed, since
-		// migrateUnifiedToolbarsIfNeeded() is gated to run once per
-		// device and a restored backup's legacy values must still be
-		// present for that migration to read correctly on a fresh
-		// install that hasn't run it yet.
+		// to going forward.
 		Key.toolbarFnThemeTop, Key.toolbarFnThemeTopOverflow, Key.toolbarFnThemeBottom, Key.toolbarFnThemeBottomOverflow,
 		Key.toolbarFnTableOfContentsTop, Key.toolbarFnTableOfContentsTopOverflow, Key.toolbarFnTableOfContentsBottom, Key.toolbarFnTableOfContentsBottomOverflow,
 		Key.toolbarFnFindTop, Key.toolbarFnFindTopOverflow, Key.toolbarFnFindBottom, Key.toolbarFnFindBottomOverflow,
@@ -1474,37 +1404,6 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	/// Whether the reader view toolbar shows the previous/next article buttons.
-	///
-	/// Retained read/write for migrateArticleToolbarTogglesIfNeeded() and
-	/// for anyone who still has this key on disk; ArticleViewController and
-	/// SettingsViewController no longer read this directly --
-	/// articleToolbarShowPrevNext below is the source of truth.
-	var showPrevNextArticleButtons: Bool {
-		get {
-			return AppDefaults.bool(for: Key.showPrevNextArticleButtons)
-		}
-		set {
-			AppDefaults.setBool(for: Key.showPrevNextArticleButtons, newValue)
-		}
-	}
-
-	/// Whether the reader view toolbar shows Table of Contents/Find buttons.
-	///
-	/// Retained read/write for migrateArticleToolbarTogglesIfNeeded() and
-	/// for anyone who still has this key on disk; ArticleViewController and
-	/// SettingsViewController no longer read this directly --
-	/// articleToolbarShowTableOfContents/articleToolbarShowFind below are
-	/// the source of truth.
-	var showTableOfContentsAndFind: Bool {
-		get {
-			return AppDefaults.bool(for: Key.showTableOfContentsAndFind)
-		}
-		set {
-			AppDefaults.setBool(for: Key.showTableOfContentsAndFind, newValue)
-		}
-	}
-
 	/// Whether the theme button appears in the article reader's top
 	/// toolbar. Defaults to true, matching the button's former
 	/// unconditional presence before this became a setting.
@@ -1518,8 +1417,7 @@ final class AppDefaults: Sendable {
 	}
 
 	/// Whether the table-of-contents button appears in the article
-	/// reader's top toolbar. Defaults to true, matching the legacy
-	/// showTableOfContentsAndFind registered default.
+	/// reader's top toolbar. Defaults to true.
 	var articleToolbarShowTableOfContents: Bool {
 		get {
 			return AppDefaults.bool(for: Key.articleToolbarShowTableOfContents)
@@ -1530,8 +1428,7 @@ final class AppDefaults: Sendable {
 	}
 
 	/// Whether the find-in-article button appears in the article reader's
-	/// top toolbar. Defaults to true, matching the legacy
-	/// showTableOfContentsAndFind registered default.
+	/// top toolbar. Defaults to true.
 	var articleToolbarShowFind: Bool {
 		get {
 			return AppDefaults.bool(for: Key.articleToolbarShowFind)
@@ -1542,8 +1439,7 @@ final class AppDefaults: Sendable {
 	}
 
 	/// Whether the previous/next article buttons appear in the article
-	/// reader's top toolbar. Defaults to false, matching the legacy
-	/// showPrevNextArticleButtons registered default.
+	/// reader's top toolbar. Defaults to false.
 	var articleToolbarShowPrevNext: Bool {
 		get {
 			return AppDefaults.bool(for: Key.articleToolbarShowPrevNext)
@@ -1553,76 +1449,13 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	/// Whether the temporary gesture-lock button appears in the article
-	/// reader's top toolbar. Off by default -- this is an opt-in extra,
-	/// not something everyone needs cluttering the bar. See
-	/// ArticleViewController.lockBarButtonItem/toggleGesturesLocked(_:)
-	/// and SceneCoordinator.isArticleGesturesLocked for the lock itself,
-	/// which is a transient, in-memory, per-session state -- unlike this
-	/// property, it is deliberately not backed by AppDefaults/UserDefaults.
-	var articleToolbarShowLock: Bool {
-		get {
-			return AppDefaults.bool(for: Key.articleToolbarShowLock)
-		}
-		set {
-			AppDefaults.setBool(for: Key.articleToolbarShowLock, newValue)
-		}
-	}
-
-	/// Off by default, same reasoning as articleToolbarShowLock just above:
-	/// this is an opt-in extra, not something everyone needs cluttering the
-	/// bar. See WebViewController's annotations extension for the feature
-	/// this button surfaces.
-	var articleToolbarShowAnnotations: Bool {
-		get {
-			return AppDefaults.bool(for: Key.articleToolbarShowAnnotations)
-		}
-		set {
-			AppDefaults.setBool(for: Key.articleToolbarShowAnnotations, newValue)
-		}
-	}
-
-	/// Off by default, same reasoning as articleToolbarShowLock/
-	/// articleToolbarShowAnnotations above: an opt-in extra, not something
-	/// everyone needs cluttering the bar. Opens Settings, scrolled to the
-	/// Articles section -- see ArticleViewController.showSettingsFromToolbar.
-	var articleToolbarShowSettings: Bool {
-		get {
-			return AppDefaults.bool(for: Key.articleToolbarShowSettings)
-		}
-		set {
-			AppDefaults.setBool(for: Key.articleToolbarShowSettings, newValue)
-		}
-	}
-
-	/// Off by default, same reasoning as the other opt-in toolbar extras
-	/// above. Unlike those, this one's bar-button item also has per-article
-	/// eligibility on top of this toggle -- see
-	/// ArticleViewController.updateUI()'s checkForUpdatesBarButtonItem
-	/// handling, gated on AO3ChapterFetcher.canCheckForUpdates(for:).
-	var articleToolbarShowCheckForUpdates: Bool {
-		get {
-			return AppDefaults.bool(for: Key.articleToolbarShowCheckForUpdates)
-		}
-		set {
-			AppDefaults.setBool(for: Key.articleToolbarShowCheckForUpdates, newValue)
-		}
-	}
-
 	/// Off by default -- an opt-in display mode, not something existing
 	/// users should suddenly see change. Explicitly registered false in
-	/// registerDefaults(), same as articleToolbarShowLock (unlike
-	/// articleToolbarShowAnnotations/articleToolbarShowSettings/
-	/// articleToolbarShowCheckForUpdates above, which rely on
-	/// AppDefaults.bool(for:)'s implicit-false fallback instead).
+	/// registerDefaults().
 	///
 	/// No live property here anymore -- replaced by
 	/// toolbarTopUseOverflowMenu/toolbarBottomUseOverflowMenu below (see
-	/// ToolbarFunction). Key.articleToolbarUseOverflowMenu is retained as
-	/// a migration-source-only key, same "do not reintroduce a property
-	/// for this key" convention as Key.useTintedNavigationBar above --
-	/// read directly via AppDefaults.bool(for:) by
-	/// migrateUnifiedToolbarsIfNeeded() only.
+	/// ToolbarFunction).
 
 	/// The color HighlightColorPopover's note-icon path (which creates a
 	/// highlight without the person picking a color) falls back to, and
@@ -1831,78 +1664,16 @@ final class AppDefaults: Sendable {
 		AppDefaults.store.removeObject(forKey: orderKey)
 	}
 
-	/// Whether the "Toggle Read" button appears in the article reader's
-	/// bottom toolbar. Defaults to true -- see BottomToolbarToggle's own
-	/// doc comment for why this group's default differs from
-	/// ArticleToolbarToggle's opt-in-off-by-default extras.
-	var bottomToolbarShowRead: Bool {
-		get {
-			return AppDefaults.bool(for: Key.bottomToolbarShowRead)
-		}
-		set {
-			AppDefaults.setBool(for: Key.bottomToolbarShowRead, newValue)
-		}
-	}
-
-	/// Whether the "Toggle Starred" (Read Later) button appears in the
-	/// article reader's bottom toolbar. Defaults to true.
-	var bottomToolbarShowStar: Bool {
-		get {
-			return AppDefaults.bool(for: Key.bottomToolbarShowStar)
-		}
-		set {
-			AppDefaults.setBool(for: Key.bottomToolbarShowStar, newValue)
-		}
-	}
-
-	/// Whether the "Loved" heart button appears in the article reader's
-	/// bottom toolbar. Defaults to true.
-	var bottomToolbarShowHeart: Bool {
-		get {
-			return AppDefaults.bool(for: Key.bottomToolbarShowHeart)
-		}
-		set {
-			AppDefaults.setBool(for: Key.bottomToolbarShowHeart, newValue)
-		}
-	}
-
-	/// Whether the "Next Unread" button appears in the article reader's
-	/// bottom toolbar. Defaults to true.
-	var bottomToolbarShowNextUnread: Bool {
-		get {
-			return AppDefaults.bool(for: Key.bottomToolbarShowNextUnread)
-		}
-		set {
-			AppDefaults.setBool(for: Key.bottomToolbarShowNextUnread, newValue)
-		}
-	}
-
-	/// Whether the share/action button appears in the article reader's
-	/// bottom toolbar. Defaults to true.
-	var bottomToolbarShowAction: Bool {
-		get {
-			return AppDefaults.bool(for: Key.bottomToolbarShowAction)
-		}
-		set {
-			AppDefaults.setBool(for: Key.bottomToolbarShowAction, newValue)
-		}
-	}
-
 	/// No live dispatch functions here anymore -- isBottomToolbarToggleEnabled(_:)/
 	/// setBottomToolbarToggleEnabled(_:_:) switched over BottomToolbarToggle,
 	/// which no longer exists post-unification. Replaced by
 	/// isToolbarFunctionEnabled(_:on:)/setToolbarFunctionEnabled(_:on:_:)
 	/// (see ToolbarFunction), parameterized by ToolbarBar instead of
-	/// being two separate top/bottom dispatch pairs. The individual
-	/// bottomToolbarShowRead/ShowStar/ShowHeart/ShowNextUnread/ShowAction
-	/// properties above are retained as migration-source-only reads for
-	/// migrateUnifiedToolbarsIfNeeded() -- do not reintroduce a switch
-	/// dispatch over a per-bar toggle enum for them.
+	/// being two separate top/bottom dispatch pairs.
 
 	/// Whether the top toolbar collapses its overflow-flagged functions
 	/// into a single trailing menu icon. Replaces the pre-unification
-	/// articleToolbarUseOverflowMenu (top-only, no bottom counterpart) --
-	/// see migrateUnifiedToolbarsIfNeeded() for the one-time carry-over.
+	/// articleToolbarUseOverflowMenu (top-only, no bottom counterpart).
 	var toolbarTopUseOverflowMenu: Bool {
 		get {
 			return AppDefaults.bool(for: Key.toolbarTopUseOverflowMenu)
@@ -2420,188 +2191,6 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	var didMigrateLegacyStateRestorationInfo: Bool {
-		get {
-			UserDefaults.standard.bool(forKey: Key.didMigrateLegacyStateRestorationInfo)
-		}
-		set {
-			UserDefaults.standard.set(newValue, forKey: Key.didMigrateLegacyStateRestorationInfo)
-		}
-	}
-
-	/// One-shot: ports an upgrader's prior tinted-bar choice onto the new
-	/// three-state toolbarStyle, so shipping toolbarStyle's .system default
-	/// doesn't read as a regression for anyone who'd already turned tinting
-	/// on. Two cases, checked in order:
-	///   1. The old useTintedNavigationBar Bool key is true (a real prior
-	///      install that had the switch on, whether the person set it
-	///      themselves or case 2 below already set it for them on an
-	///      earlier launch) -> toolbarStyle = .tinted.
-	///   2. useTintedNavigationBar is absent/false, but surfaceTint is
-	///      already non-.default -- the same "predates this setting
-	///      entirely" case the original migrateNavigationBarTintingDefaultIfNeeded()
-	///      handled, preserved here so an install upgrading directly from
-	///      before useTintedNavigationBar existed still lands on .tinted
-	///      instead of silently losing its palette's most visible chrome.
-	/// Otherwise toolbarStyle keeps its registered .system default, so no
-	/// write happens. Call once at launch, after registerDefaults(). Writes
-	/// directly via AppDefaults.store rather than the toolbarStyle property
-	/// setter, to avoid posting .surfaceTintDidChange to a view hierarchy
-	/// that doesn't exist yet this early in launch. Gated by its own flag
-	/// (hasMigratedToolbarStyleDefault), separate from the now-unused
-	/// hasMigratedNavigationBarTintingDefault, since an install that already
-	/// ran that older migration still needs this one to actually populate
-	/// toolbarStyle.
-	@MainActor func migrateToolbarStyleDefaultIfNeeded() {
-		guard !AppDefaults.bool(for: Key.hasMigratedToolbarStyleDefault) else { return }
-		AppDefaults.setBool(for: Key.hasMigratedToolbarStyleDefault, true)
-		guard AppDefaults.bool(for: Key.useTintedNavigationBar) || surfaceTint != .default else { return }
-		AppDefaults.setString(for: Key.toolbarStyle, ToolbarStyle.tinted.rawValue)
-	}
-
-	/// One-time migration off the two independent showTableOfContentsAndFind/
-	/// showPrevNextArticleButtons switches onto the four independent
-	/// articleToolbarShowTheme/ShowTableOfContents/ShowFind/ShowPrevNext
-	/// toggles (ArticleToolbarCustomizerViewController). The legacy pair
-	/// maps directly, since each was already tracking a single concept
-	/// that's now split into its own toggle: showTableOfContentsAndFind
-	/// becomes both articleToolbarShowTableOfContents and
-	/// articleToolbarShowFind, and showPrevNextArticleButtons becomes
-	/// articleToolbarShowPrevNext. The theme button had no legacy switch
-	/// (it was always present), so articleToolbarShowTheme just keeps its
-	/// registered true default here.
-	@MainActor func migrateArticleToolbarTogglesIfNeeded() {
-		guard !AppDefaults.bool(for: Key.hasMigratedArticleToolbarToggles) else { return }
-		AppDefaults.setBool(for: Key.hasMigratedArticleToolbarToggles, true)
-		let legacyTableOfContentsAndFind = AppDefaults.bool(for: Key.showTableOfContentsAndFind)
-		articleToolbarShowTableOfContents = legacyTableOfContentsAndFind
-		articleToolbarShowFind = legacyTableOfContentsAndFind
-		articleToolbarShowPrevNext = AppDefaults.bool(for: Key.showPrevNextArticleButtons)
-	}
-
-	/// One-time upgrade off the old Bool-backed showArticleScrollbar key
-	/// onto ArticleScrollbarVisibility's String rawValue, sharing the
-	/// same on-disk key name (Key.showArticleScrollbar) -- see
-	/// articleScrollbarVisibility's own doc comment. Gated on a value
-	/// actually being present as a Bool: a fresh install has nothing
-	/// under this key yet, so registerDefaults()'s own String default is
-	/// left alone rather than being immediately overwritten here.
-	@MainActor func migrateArticleScrollbarVisibilityIfNeeded() {		guard !AppDefaults.bool(for: Key.hasMigratedArticleScrollbarVisibility) else { return }
-		AppDefaults.setBool(for: Key.hasMigratedArticleScrollbarVisibility, true)
-		guard AppDefaults.store.object(forKey: Key.showArticleScrollbar) is Bool else { return }
-		let wasOn = AppDefaults.bool(for: Key.showArticleScrollbar)
-		articleScrollbarVisibility = wasOn ? .whenNotFullScreen : .off
-	}
-
-	/// One-time migration preserving an existing user's auto-apply
-	/// behavior across Part 8's registered-default flip
-	/// (Key.textReplacementApplyAutomatically: true -> false in
-	/// registerDefaults()). UserDefaults.register(defaults:) values are
-	/// read-time fallbacks, not written at install -- flipping the
-	/// registered default changes the *effective* value for every
-	/// existing user who has never explicitly touched this toggle, not
-	/// just fresh installs, since they have no explicit value stored to
-	/// fall back from. This writes `true` directly into the store (the
-	/// pre-flip behavior) for exactly that population, so the flip only
-	/// changes what a fresh install starts on.
-	///
-	/// A `static` function reading AppDefaults.store directly, called
-	/// from AppDelegate *before* AppDefaults.shared is constructed
-	/// anywhere else in the launch sequence -- unlike every other
-	/// migration in this file, this one cannot be an instance method
-	/// gated by isFirstRun, because isFirstRun's own init closure
-	/// (evaluated the moment AppDefaults.shared is first touched, which
-	/// every other migrate*IfNeeded() call does) writes Key.firstRunDate
-	/// into the store as a side effect if it's absent -- by the time any
-	/// instance method runs, firstRunDate is unconditionally present,
-	/// fresh install or not, so it could never distinguish the two.
-	/// Reading Key.firstRunDate's presence directly, before that first
-	/// AppDefaults.shared access, is what actually preserves the
-	/// distinction: present means this device has launched before (an
-	/// upgrader); absent means this is that very first launch (a fresh
-	/// install), left alone to land on the new false registered default.
-	/// See AppDelegate.application(_:didFinishLaunchingWithOptions:)'s
-	/// call site -- this must run before any `AppDefaults.shared.*` call,
-	/// including the other migrations, or the distinction is already
-	/// lost.
-	///
-	/// Still gated by its own hasMigrated flag, same as every other
-	/// migration here, so this only ever runs once per install.
-	static func migrateTextReplacementApplyAutomaticallyDefaultIfNeeded() {
-		guard !AppDefaults.bool(for: Key.hasMigratedTextReplacementApplyAutoDefault) else { return }
-		AppDefaults.setBool(for: Key.hasMigratedTextReplacementApplyAutoDefault, true)
-		guard AppDefaults.store.object(forKey: Key.firstRunDate) is Date else { return }
-		AppDefaults.setBool(for: Key.textReplacementApplyAutomatically, true)
-	}
-
-	/// One-time migration off the pre-unification split model (top-only
-	/// ArticleToolbarToggle backed by articleToolbarShow*, bottom-only
-	/// BottomToolbarToggle backed by bottomToolbarShow*, and a single
-	/// articleToolbarUseOverflowMenu Bool that only ever applied to the
-	/// top bar) onto the unified ToolbarFunction model, where every
-	/// function has an independent inline/overflow flag per bar.
-	///
-	/// Must run after migrateArticleToolbarTogglesIfNeeded() -- this
-	/// function reads the *properties* that one writes
-	/// (articleToolbarShowTableOfContents etc.), not the older raw
-	/// showTableOfContentsAndFind/showPrevNextArticleButtons keys
-	/// directly, so an upgrader coming from before *that* migration ran
-	/// still ends up with correct placement here. AppDelegate calls both,
-	/// in that order.
-	///
-	/// Placement, not just on/off: every legacy top toggle becomes that
-	/// function placed inline on .top; every legacy bottom toggle becomes
-	/// that function placed inline on .bottom. Nothing is placed on the
-	/// *other* bar (e.g. .theme does not appear on .bottom just because
-	/// duplicates-across-bars is now allowed) -- migration preserves
-	/// prior behavior exactly, it doesn't opt anyone into the new
-	/// cross-bar duplication feature.
-	///
-	/// Overflow: the legacy articleToolbarUseOverflowMenu Bool becomes
-	/// toolbarTopUseOverflowMenu. There is no legacy concept of *which*
-	/// functions were "in" the overflow menu (the old switch collapsed
-	/// everything-that-was-already-enabled into the menu, with no
-	/// separate per-function membership), so migration does not populate
-	/// any toolbarFn*Overflow keys -- an upgrader who had the top overflow
-	/// switch on keeps seeing the same functions, just now via the
-	/// isToolbarFunctionEnabled(_:on:.top) inline flags feeding the
-	/// overflow menu the same way they did pre-unification, until they
-	/// visit the new Toolbars screen and choose to move something into
-	/// overflow explicitly. toolbarBottomUseOverflowMenu has no legacy
-	/// counterpart at all (the bottom bar never had an overflow concept)
-	/// and stays at its registered-default false.
-	@MainActor func migrateUnifiedToolbarsIfNeeded() {
-		guard !AppDefaults.bool(for: Key.hasMigratedUnifiedToolbars) else { return }
-		AppDefaults.setBool(for: Key.hasMigratedUnifiedToolbars, true)
-
-		let legacyTopEnabled: [ToolbarFunction: Bool] = [
-			.theme: articleToolbarShowTheme,
-			.tableOfContents: articleToolbarShowTableOfContents,
-			.find: articleToolbarShowFind,
-			.prevNext: articleToolbarShowPrevNext,
-			.lock: articleToolbarShowLock,
-			.annotations: articleToolbarShowAnnotations,
-			.settings: articleToolbarShowSettings,
-			.checkForUpdates: articleToolbarShowCheckForUpdates
-		]
-		for (function, wasEnabled) in legacyTopEnabled where wasEnabled {
-			setToolbarFunctionEnabled(function, on: .top, true)
-		}
-
-		let legacyBottomEnabled: [ToolbarFunction: Bool] = [
-			.read: bottomToolbarShowRead,
-			.star: bottomToolbarShowStar,
-			.heart: bottomToolbarShowHeart,
-			.nextUnread: bottomToolbarShowNextUnread,
-			.action: bottomToolbarShowAction
-		]
-		for (function, wasEnabled) in legacyBottomEnabled where wasEnabled {
-			setToolbarFunctionEnabled(function, on: .bottom, true)
-		}
-
-		AppDefaults.setBool(for: Key.toolbarTopUseOverflowMenu, AppDefaults.bool(for: Key.articleToolbarUseOverflowMenu))
-	}
-
 	@MainActor static func registerDefaults() {
 		let defaults: [String: Any] = [Key.userInterfaceColorPalette: UserInterfaceColorPalette.automatic.rawValue,
 										Key.timelineGroupByFeed: false,
@@ -2619,27 +2208,14 @@ final class AppDefaults: Sendable {
 										Key.articleFullscreenContextMenuEnabled: true,
 									Key.articlePagingSwipeEnabled: true,
 										Key.showFeedNameInReaderView: false,
-									Key.showPrevNextArticleButtons: false,
-									Key.showTableOfContentsAndFind: true,
 									Key.articleToolbarShowTheme: true,
 									Key.articleToolbarShowTableOfContents: true,
 									Key.articleToolbarShowFind: true,
 									Key.articleToolbarShowPrevNext: false,
-									Key.articleToolbarShowLock: false,
-									Key.bottomToolbarShowRead: true,
-									Key.bottomToolbarShowStar: true,
-									Key.bottomToolbarShowHeart: true,
-									Key.bottomToolbarShowNextUnread: true,
-									Key.bottomToolbarShowAction: true,
-									// Fresh-install defaults for the unified model, mirroring the
-									// legacy per-bar defaults just above -- upgraders instead get
-									// these keys populated by migrateUnifiedToolbarsIfNeeded()
-									// reading the legacy keys, so these registered values only
-									// take effect for a install that never had the legacy keys set.
-									// Top bar: theme/tableOfContents/find on, prevNext/lock off
-									// (matches articleToolbarShow* above). Bottom bar: all five
-									// on (matches bottomToolbarShow* above, "existing always-on
-									// bottom bar" -- see ToolbarFunction's own doc comment).
+									// Fresh-install defaults for the unified model. Top bar:
+									// theme/tableOfContents/find on, prevNext/lock off. Bottom
+									// bar: all five on ("existing always-on bottom bar" -- see
+									// ToolbarFunction's own doc comment).
 									// Every function defaults off on the bar it doesn't belong to
 									// pre-unification (e.g. .read on .top, .theme on .bottom) --
 									// AppDefaults.bool(for:)'s implicit-false fallback covers those,
@@ -2921,92 +2497,4 @@ struct StateRestorationInfo {
 				  selectedArticle: AppDefaults.shared.selectedArticle)
 	}
 
-	// TODO: Delete for NetNewsWire 7.1.
-	init(legacyState: NSUserActivity?) {
-		if AppDefaults.shared.didMigrateLegacyStateRestorationInfo {
-			self.init()
-			return
-		}
-
-		AppDefaults.shared.didMigrateLegacyStateRestorationInfo = true
-
-		// Extract legacy window state if available
-		guard let windowState = legacyState?.userInfo?[UserInfoKey.windowState] as? [AnyHashable: Any] else {
-			self.init()
-			return
-		}
-
-		let hideReadFeeds: Bool
-		if let legacyValue = windowState[UserInfoKey.readFeedsFilterState] as? Bool {
-			hideReadFeeds = legacyValue
-		} else {
-			hideReadFeeds = AppDefaults.shared.hideReadFeeds
-		}
-
-		let expandedContainers: Set<ContainerIdentifier>
-		if let legacyState = windowState[UserInfoKey.containerExpandedWindowState] as? [[AnyHashable: AnyHashable]] {
-			let convertedState = legacyState.compactMap { dict -> [String: String]? in
-				var stringDict = [String: String]()
-				for (key, value) in dict {
-					if let keyString = key as? String, let valueString = value as? String {
-						stringDict[keyString] = valueString
-					}
-				}
-				return stringDict.isEmpty ? nil : stringDict
-			}
-			let containerIdentifiers = convertedState.compactMap { ContainerIdentifier(userInfo: $0) }
-			expandedContainers = Set(containerIdentifiers)
-		} else {
-			expandedContainers = AppDefaults.shared.expandedContainers
-		}
-
-		let sidebarItemsHidingReadArticles: Set<SidebarItemIdentifier>
-		if let legacyState = windowState[UserInfoKey.readArticlesFilterState] as? [[AnyHashable: AnyHashable]: Bool] {
-			let enabledFeeds = legacyState.filter { $0.value == true }
-			let convertedState = enabledFeeds.keys.compactMap { key -> [String: String]? in
-				var stringDict = [String: String]()
-				for (k, v) in key {
-					if let keyString = k as? String, let valueString = v as? String {
-						stringDict[keyString] = valueString
-					}
-				}
-				return stringDict.isEmpty ? nil : stringDict
-			}
-			let sidebarItemIdentifiers = convertedState.compactMap { SidebarItemIdentifier(userInfo: $0) }
-			sidebarItemsHidingReadArticles = Set(sidebarItemIdentifiers)
-		} else {
-			sidebarItemsHidingReadArticles = Set<SidebarItemIdentifier>()
-		}
-
-		var smartFeedsHidingReadArticles = Set<String>()
-		var feedsHidingReadArticles = [String: Set<String>]()
-		for sidebarItem in sidebarItemsHidingReadArticles {
-			switch sidebarItem {
-			case .smartFeed(let id):
-				smartFeedsHidingReadArticles.insert(id)
-			case .feed(let accountID, let feedID):
-				var feedIDs = feedsHidingReadArticles[accountID] ?? Set<String>()
-				feedIDs.insert(feedID)
-				feedsHidingReadArticles[accountID] = feedIDs
-			default:
-				continue
-			}
-		}
-
-		let selectedSidebarItem: SidebarItemIdentifier?
-		if let legacyState = windowState[UserInfoKey.feedIdentifier] as? [String: String],
-		   let sidebarItemIdentifier = SidebarItemIdentifier(userInfo: legacyState) {
-			selectedSidebarItem = sidebarItemIdentifier
-		} else {
-			selectedSidebarItem = AppDefaults.shared.selectedSidebarItem
-		}
-
-		self.init(hideReadFeeds: hideReadFeeds,
-				  expandedContainers: expandedContainers,
-				  selectedSidebarItem: selectedSidebarItem,
-				  smartFeedsHidingReadArticles: smartFeedsHidingReadArticles,
-				  feedsHidingReadArticles: feedsHidingReadArticles,
-				  foldersShowingReadArticles: AppDefaults.shared.foldersShowingReadArticles,
-				  selectedArticle: AppDefaults.shared.selectedArticle)
-	}
 }

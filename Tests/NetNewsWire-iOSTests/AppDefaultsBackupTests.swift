@@ -31,31 +31,6 @@ import Testing
 		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.hasShownAO3Onboarding))
 	}
 
-	@Test func hasMigratedNavigationBarTintingDefaultIsExcluded() {
-		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.hasMigratedNavigationBarTintingDefault))
-	}
-
-	@Test func hasMigratedToolbarStyleDefaultIsExcluded() {
-		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.hasMigratedToolbarStyleDefault))
-	}
-
-	@Test func hasMigratedArticleToolbarTogglesIsExcluded() {
-		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.hasMigratedArticleToolbarToggles))
-	}
-
-	@Test func didMigrateLegacyStateRestorationInfoIsExcluded() {
-		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.didMigrateLegacyStateRestorationInfo))
-	}
-
-	// MARK: - Dead migration-source-of-truth
-
-	@Test func useTintedNavigationBarIsExcluded() {
-		// No live property reads this key anymore -- see its own doc
-		// comment in AppDefaults.Key ("do not reintroduce a property for
-		// this key"). Nothing for a backup to meaningfully capture.
-		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.useTintedNavigationBar))
-	}
-
 	// MARK: - Bookkeeping, not a preference
 
 	@Test func lastImageCacheFlushDateIsExcluded() {
@@ -143,11 +118,6 @@ import Testing
 		let excludedByThisFile: Set<String> = [
 			AppDefaults.Key.firstRunDate,
 			AppDefaults.Key.hasShownAO3Onboarding,
-			AppDefaults.Key.hasMigratedNavigationBarTintingDefault,
-			AppDefaults.Key.hasMigratedToolbarStyleDefault,
-			AppDefaults.Key.hasMigratedArticleToolbarToggles,
-			AppDefaults.Key.didMigrateLegacyStateRestorationInfo,
-			AppDefaults.Key.useTintedNavigationBar,
 			AppDefaults.Key.lastImageCacheFlushDate,
 			AppDefaults.Key.lastRefresh,
 			AppDefaults.Key.selectedArticle,

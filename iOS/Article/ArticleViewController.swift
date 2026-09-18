@@ -51,7 +51,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	private lazy var themeBarButtonItem = UIBarButtonItem(image: Assets.Images.theme, style: .plain, target: self, action: #selector(showThemePicker(_:)))
 	private lazy var findInArticleBarButtonItem = UIBarButtonItem(image: Assets.Images.findInArticle, style: .plain, target: self, action: #selector(beginFind(_:)))
 	private lazy var tableOfContentsBarButtonItem = UIBarButtonItem(image: Assets.Images.tableOfContents, style: .plain, target: self, action: #selector(showTableOfContents(_:)))
-	// Optional gesture-lock toggle (AppDefaults.articleToolbarShowLock). SF
+	// Optional gesture-lock toggle, placement governed by the unified
+	// ToolbarFunction model (see .lock's placement checks below). SF
 	// Symbol rather than an Assets.Images entry, unlike the other three bar
 	// buttons above -- see toggleGesturesLocked(_:), which flips the image
 	// between "lock"/"lock.open" in place, the same way toggleLoved(_:)

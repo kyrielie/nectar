@@ -110,7 +110,8 @@ struct SidebarItemNode: Hashable, Sendable {
 
 	/// Temporary, in-memory session lock on both article paging and
 	/// back-swipe, toggled from ArticleViewController's optional lock
-	/// bar-button item (see AppDefaults.articleToolbarShowLock). Not
+	/// bar-button item (its placement governed by the unified
+	/// ToolbarFunction model). Not
 	/// persisted to AppDefaults/UserDefaults on purpose -- this is meant
 	/// as a momentary "don't let a stray swipe move me off this article"
 	/// guard for the current session, not a standing preference, so it
@@ -412,9 +413,8 @@ struct SidebarItemNode: Hashable, Sendable {
 		}
 	}
 
-	func restoreWindowState(activity: NSUserActivity?) {
-		let stateInfo = StateRestorationInfo(legacyState: activity)
-		restoreWindowState(stateInfo)
+	func restoreWindowState() {
+		restoreWindowState(StateRestorationInfo())
 	}
 
 	private func restoreWindowState(_ stateInfo: StateRestorationInfo) {
