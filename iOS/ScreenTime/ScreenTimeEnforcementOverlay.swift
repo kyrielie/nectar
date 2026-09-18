@@ -8,8 +8,6 @@ final class ScreenTimeEnforcementOverlay: UIView {
 		backgroundColor = .black
 		isAccessibilityElement = true
 		accessibilityTraits = .staticText
-		accessibilityLabel = "Screen Time limit reached"
-		message.text = "Screen Time limit reached"
 		message.textColor = .white
 		message.font = .preferredFont(forTextStyle: .title2)
 		message.textAlignment = .center
@@ -24,14 +22,29 @@ final class ScreenTimeEnforcementOverlay: UIView {
 
 	required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-	func show(in window: UIWindow) {
-		guard superview == nil else { return }
+	func show(in window: UIWindow, reasons: Set<ScreenTimeTracker.Reason>) {
+		guard superview == nil else {
+			message.text = Self.text(for: reasons)
+			accessibilityLabel = message.text
+			return
+		}
+		message.text = Self.text(for: reasons)
+		accessibilityLabel = message.text
 		frame = window.bounds
 		autoresizingMask = [.flexibleWidth, .flexibleHeight]
 		alpha = 0
 		window.addSubview(self)
 		UIView.animate(withDuration: 0.25) { self.alpha = 1 }
 		UIAccessibility.post(notification: .screenChanged, argument: self)
+	}
+
+	private static func text(for reasons: Set<ScreenTimeTracker.Reason>) -> String {
+		switch (reasons.contains(.limit), reasons.contains(.bedtime)) {
+		case (true, true): return "Screen Time limit reached and bedtime has started"
+		case (true, false): return "Screen Time limit reached"
+		case (false, true): return "Bedtime has started"
+		case (false, false): return "Screen Time limit reached"
+		}
 	}
 
 	func hide() {

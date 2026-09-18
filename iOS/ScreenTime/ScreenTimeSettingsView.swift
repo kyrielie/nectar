@@ -7,8 +7,18 @@ struct ScreenTimeSettingsView: View {
 	@State private var start = Self.minutesDate(AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight)
 	@State private var end = Self.minutesDate(AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight)
 	@State private var limits = AppDefaults.shared.screenTimeDailyLimitMinutesByWeekday
+	@State private var pendingConfirmation: PendingConfirmation?
+	@State private var takeABreakEnabled = AppDefaults.shared.screenTimeTakeABreakEnabled
 
 	private let weekdays = Calendar.current.weekdaySymbols
+
+	private struct PendingConfirmation: Identifiable {
+		enum Kind { case dailyLimit(weekday: Int), bedtimeSpan }
+		let id = UUID()
+		let kind: Kind
+		let message: String
+		let revert: () -> Void
+	}
 
 	var body: some View {
 		Form {
@@ -19,7 +29,24 @@ struct ScreenTimeSettingsView: View {
 
 			Section("Daily limits") {
 				ForEach(1...7, id: \.self) { weekday in
-					Stepper("\(weekdays[weekday - 1]): \(limits[weekday, default: 120]) minutes", value: Binding(get: { limits[weekday, default: 120] }, set: { limits[weekday] = $0; AppDefaults.shared.setScreenTimeDailyLimitMinutes($0, for: weekday) }), in: 1...1440, step: 15)
+					Stepper("\(weekdays[weekday - 1]): \(limits[weekday, default: 120]) minutes", value: Binding(
+						get: { limits[weekday, default: 120] },
+						set: { newValue in
+							let oldValue = limits[weekday, default: 120]
+							limits[weekday] = newValue
+							AppDefaults.shared.setScreenTimeDailyLimitMinutes(newValue, for: weekday)
+							if newValue < 120, oldValue >= 120 {
+								pendingConfirmation = PendingConfirmation(
+									kind: .dailyLimit(weekday: weekday),
+									message: "\(weekdays[weekday - 1]) is set to \(newValue) minutes. This is a strict limit — reading will be blocked once it's reached.",
+									revert: {
+										limits[weekday] = oldValue
+										AppDefaults.shared.setScreenTimeDailyLimitMinutes(oldValue, for: weekday)
+									}
+								)
+							}
+						}
+					), in: 60...1440, step: 15)
 				}
 			}
 			.disabled(!enabled)
@@ -29,12 +56,17 @@ struct ScreenTimeSettingsView: View {
 				Toggle("Enable bedtime", isOn: $bedtimeEnabled)
 					.onChange(of: bedtimeEnabled) { _, value in AppDefaults.shared.screenTimeBedtimeEnabled = value }
 				DatePicker("Starts", selection: $start, displayedComponents: .hourAndMinute)
-					.onChange(of: start) { _, value in AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight = minutes(value) }
+					.onChange(of: start) { _, value in updateBedtimeStart(value) }
 				DatePicker("Ends", selection: $end, displayedComponents: .hourAndMinute)
-					.onChange(of: end) { _, value in AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight = minutes(value) }
+					.onChange(of: end) { _, value in updateBedtimeEnd(value) }
 			}
 			.disabled(!enabled)
 			.opacity(enabled ? 1 : 0.4)
+
+			Section {
+				Toggle("Take a Break reminders", isOn: $takeABreakEnabled)
+					.onChange(of: takeABreakEnabled) { _, value in AppDefaults.shared.screenTimeTakeABreakEnabled = value }
+			} footer: { Text("Shows a dismissible reminder every 15 minutes of continuous reading.") }
 
 			Section {
 				NavigationLink("Weekly summary") { ScreenTimeSummaryView() }
@@ -42,10 +74,62 @@ struct ScreenTimeSettingsView: View {
 		}
 		.navigationTitle("Screen Time")
 		.navigationBarTitleDisplayMode(.inline)
+		.alert(item: $pendingConfirmation) { confirmation in
+			Alert(
+				title: Text("Confirm Screen Time setting"),
+				message: Text(confirmation.message),
+				primaryButton: .default(Text("Keep")),
+				secondaryButton: .cancel(Text("Undo"), action: confirmation.revert)
+			)
+		}
+	}
+
+	private func updateBedtimeStart(_ value: Date) {
+		let newStart = minutes(value)
+		let oldStart = minutes(start)
+		let span = ScreenTimeCalendar.bedtimeWindowSpanMinutes(startMinutes: newStart, endMinutes: minutes(end))
+		AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight = newStart
+		if span > ScreenTimeCalendar.maxBedtimeWindowSpanMinutes {
+			// AppDefaults' setter already clamped `end`; re-read the stored value.
+			let clampedEnd = AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight
+			end = Self.minutesDate(clampedEnd)
+			pendingConfirmation = PendingConfirmation(
+				kind: .bedtimeSpan,
+				message: "Bedtime can't be longer than 12 hours, so the end time was moved to \(Self.timeString(end)). Reading will be blocked for the full 12 hours.",
+				revert: {
+					start = Self.minutesDate(oldStart)
+					AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight = oldStart
+				}
+			)
+		}
+	}
+
+	private func updateBedtimeEnd(_ value: Date) {
+		let newEnd = minutes(value)
+		let oldEnd = minutes(end)
+		let span = ScreenTimeCalendar.bedtimeWindowSpanMinutes(startMinutes: minutes(start), endMinutes: newEnd)
+		AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight = newEnd
+		if span > ScreenTimeCalendar.maxBedtimeWindowSpanMinutes {
+			let clampedStart = AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight
+			start = Self.minutesDate(clampedStart)
+			pendingConfirmation = PendingConfirmation(
+				kind: .bedtimeSpan,
+				message: "Bedtime can't be longer than 12 hours, so the start time was moved to \(Self.timeString(start)). Reading will be blocked for the full 12 hours.",
+				revert: {
+					end = Self.minutesDate(oldEnd)
+					AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight = oldEnd
+				}
+			)
+		}
 	}
 
 	private func minutes(_ date: Date) -> Int { let c = Calendar.current.dateComponents([.hour, .minute], from: date); return (c.hour ?? 0) * 60 + (c.minute ?? 0) }
 	private static func minutesDate(_ value: Int) -> Date { Calendar.current.date(from: DateComponents(hour: value / 60, minute: value % 60)) ?? Date() }
+	private static func timeString(_ date: Date) -> String {
+		let formatter = DateFormatter()
+		formatter.timeStyle = .short
+		return formatter.string(from: date)
+	}
 }
 
 struct ScreenTimeSummaryView: View {

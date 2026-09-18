@@ -15,6 +15,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 	var window: UIWindow?
 	var coordinator: SceneCoordinator!
 	private var screenTimeOverlay: ScreenTimeEnforcementOverlay?
+	private var screenTimeBreakView: ScreenTimeBreakView?
 
 	// UIWindowScene delegate
 
@@ -49,6 +50,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		rootViewController.delegate = coordinator
 		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeLimitReached(_:)), name: .screenTimeLimitReached, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeEnforcementDidClear(_:)), name: .screenTimeEnforcementDidClear, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeBreakReached(_:)), name: .screenTimeBreakReached, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeBreakDidClear(_:)), name: .screenTimeBreakDidClear, object: nil)
 
 		coordinator.restoreWindowState(activity: session.stateRestorationActivity)
 
@@ -81,12 +84,23 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 	@objc private func screenTimeLimitReached(_ note: Notification) {
 		guard let window else { return }
+		screenTimeBreakView?.hide()
 		if screenTimeOverlay == nil { screenTimeOverlay = ScreenTimeEnforcementOverlay() }
-		screenTimeOverlay?.show(in: window)
+		screenTimeOverlay?.show(in: window, reasons: ScreenTimeTracker.shared.activeReasons)
 	}
 
 	@objc private func screenTimeEnforcementDidClear(_ note: Notification) {
 		screenTimeOverlay?.hide()
+	}
+
+	@objc private func screenTimeBreakReached(_ note: Notification) {
+		guard let window else { return }
+		if screenTimeBreakView == nil { screenTimeBreakView = ScreenTimeBreakView() }
+		screenTimeBreakView?.show(in: window)
+	}
+
+	@objc private func screenTimeBreakDidClear(_ note: Notification) {
+		screenTimeBreakView?.hide()
 	}
 
 	func windowScene(_ windowScene: UIWindowScene, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
