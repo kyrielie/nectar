@@ -146,10 +146,13 @@ import Account
 
 extension ScreenTimeTracker {
 	/// SF Symbol name and friendly copy for the current lockout reason(s),
-	/// shared by the enforcement overlay and the status banner in
-	/// ScreenTimeSettingsView so the two surfaces can't drift out of sync
-	/// with each other's wording. Returns nil when there's nothing to
-	/// show (`reasons` empty).
+	/// used by the status banner in ScreenTimeSettingsView. Not currently
+	/// called from ScreenTimeEnforcementOverlay -- that view has its own
+	/// separate, differently-worded `text(for:)` switch over the same
+	/// (limit, bedtime) cases, so the two surfaces' wording can already
+	/// drift out of sync with each other; unifying them (having the
+	/// overlay call this instead) is a follow-up, not yet done. Returns
+	/// nil when there's nothing to show (`reasons` empty).
 	static func lockoutStatus(for reasons: Set<Reason>, bedtimeEndMinutesFromMidnight: Int) -> (systemImageName: String, message: String)? {
 		let endTime = Self.timeString(minutesFromMidnight: bedtimeEndMinutesFromMidnight)
 		switch (reasons.contains(.limit), reasons.contains(.bedtime)) {

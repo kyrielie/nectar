@@ -40,16 +40,6 @@
     "%@ words" : {
       "comment" : "Word count"
     },
-    "%@: %lld minutes" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@: %2$lld minutes"
-          }
-        }
-      }
-    },
     "%d account(s) from this backup don't exist on this device and were skipped." : {
       "comment" : "Restore summary — accounts skipped"
     },
@@ -75,16 +65,6 @@
     },
     "%lld" : {
       "comment" : "Text replacement settings: edit history count"
-    },
-    "%lld / %lld min" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld / %2$lld min"
-          }
-        }
-      }
     },
     "%lld months" : {
       "comment" : "Dinosaur staleness threshold in months"
@@ -372,6 +352,9 @@
     "Completed" : {
       "comment" : "Completed"
     },
+    "Confirm daily limit" : {
+
+    },
     "Confirm Screen Time setting" : {
 
     },
@@ -477,6 +460,9 @@
     "Delete" : {
       "comment" : "Delete button"
     },
+    "Delete all reading stats?" : {
+
+    },
     "Delete Feed" : {
       "comment" : "Delete Feed"
     },
@@ -494,6 +480,9 @@
     },
     "Delete Highlight" : {
       "comment" : "Annotation editor: confirm delete button\nAnnotation editor: delete button"
+    },
+    "Delete Reading Stats" : {
+
     },
     "Delete Theme?" : {
       "comment" : "Delete Theme"
@@ -959,9 +948,6 @@
     "Mint" : {
       "comment" : "Mint highlight palette"
     },
-    "Minutes used, last 7 days" : {
-
-    },
     "Monochrome" : {
       "comment" : "Monochrome badge color palette"
     },
@@ -1177,6 +1163,9 @@
     "Period" : {
 
     },
+    "Permanently deletes all recorded reading history, per-book progress, and the all-time word count. This can't be undone." : {
+
+    },
     "Please enter a valid http:// or https:// address." : {
       "comment" : "Invalid address message"
     },
@@ -1218,6 +1207,9 @@
     },
     "Reading Font applies to the article text. Interface Font applies to the byline, dateline, and other chrome." : {
       "comment" : "Font section footer explaining serif/sans split"
+    },
+    "Reading is blocked for the rest of %@ once this limit is reached." : {
+
     },
     "Reading Stats" : {
       "comment" : "Toolbar function: reading stats"
@@ -1544,6 +1536,9 @@
     "This month" : {
 
     },
+    "This permanently deletes all recorded reading history, per-book progress, and the all-time word count. This can't be undone." : {
+
+    },
     "This text is part of an existing highlight or edit. Remove or resize it first." : {
       "comment" : "Text-edit overlap alert message"
     },
@@ -1672,9 +1667,6 @@
     },
     "We were unable to process the selected file.  Please ensure that it is a properly formatted OPML file." : {
       "comment" : "Import Failed Message"
-    },
-    "Weekly summary" : {
-
     },
     "When enabled, reading is blocked immediately after the daily limit or bedtime window begins." : {
 
