@@ -75,10 +75,20 @@ import Foundation
 		}
 	}
 
-	private func utcCalendar() -> Calendar {
-		var calendar = Calendar(identifier: .gregorian)
-		calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-		return calendar
+	/// Matches Calendar.current, which is what evaluate() and
+	/// ScreenTimeCalendar.isWithinBedtimeWindow both actually use in
+	/// production (their `calendar` parameter defaults to .current, and
+	/// nothing here overrides it). A hardcoded UTC calendar built dates
+	/// that could land on a different local calendar day, or a different
+	/// local minutes-from-midnight, than the CI runner's own timezone
+	/// computes for that same Date -- e.g. a UTC "1:30am" landing on the
+	/// previous local day/time, so isWithinBedtimeWindow's minutes-from-
+	/// midnight comparison never matched the intended bedtime window and
+	/// bedtimeReached stayed false. Tests need to build dates in whatever
+	/// calendar production will actually read them back in, not a fixed
+	/// one of the test's own choosing.
+	private func testCalendar() -> Calendar {
+		.current
 	}
 
 	// MARK: - Bug 1
@@ -87,7 +97,7 @@ import Foundation
 		resetState()
 		defer { resetState() }
 
-		let calendar = utcCalendar()
+		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0))!
 
 		setDailyLimit(1) // 1 minute -- 60s threshold, reached quickly
@@ -121,7 +131,7 @@ import Foundation
 		resetState()
 		defer { resetState() }
 
-		let calendar = utcCalendar()
+		let calendar = testCalendar()
 
 		AppDefaults.shared.screenTimeBedtimeEnabled = true
 		AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight = 22 * 60 // 10pm
@@ -146,7 +156,7 @@ import Foundation
 		resetState()
 		defer { resetState() }
 
-		let calendar = utcCalendar()
+		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		setDailyLimit(1)
@@ -159,7 +169,7 @@ import Foundation
 
 		let nextDay = calendar.date(from: DateComponents(year: 2026, month: 1, day: 2, hour: 12, minute: 0, second: 0))!
 		ScreenTimeTracker.now = { nextDay }
-		ScreenTimeTracker.shared.tick()
+		ScreenTimeTracker.shared.simulateDidBecomeActiveForTesting()
 
 		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.limit))
 		#expect(AppDefaults.shared.screenTimeMinutesUsedTodaySeconds == 0)
@@ -170,7 +180,7 @@ import Foundation
 		resetState()
 		defer { resetState() }
 
-		let calendar = utcCalendar()
+		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		setDailyLimit(1)
@@ -181,12 +191,13 @@ import Foundation
 		let observer = NotificationCenter.default.addObserver(forName: .screenTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFireCount += 1 }
 		defer { NotificationCenter.default.removeObserver(observer) }
 
-		// Reproduce didBecomeActive()'s exact ordering: lastTick is set to
-		// the new `now` *before* tick() runs, so elapsed == 0 inside tick().
+		// simulateDidBecomeActiveForTesting reproduces didBecomeActive()'s
+		// exact ordering: lastTick is set to the new `now` before tick()
+		// runs, so elapsed == 0 inside that tick() -- this is the "even
+		// when elapsed is zero" case this test is named for.
 		let nextDay = calendar.date(from: DateComponents(year: 2026, month: 1, day: 2, hour: 12, minute: 0, second: 0))!
 		ScreenTimeTracker.now = { nextDay }
-		ScreenTimeTracker.shared.tick() // sets lastTick = nextDay via its own defer
-		ScreenTimeTracker.shared.tick() // elapsed == 0 on this call
+		ScreenTimeTracker.shared.simulateDidBecomeActiveForTesting()
 
 		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.limit))
 		#expect(clearFireCount == 1)
@@ -198,7 +209,7 @@ import Foundation
 		resetState()
 		defer { resetState() }
 
-		let calendar = utcCalendar()
+		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 21, minute: 58))!
 
 		setDailyLimit(1)
@@ -223,7 +234,7 @@ import Foundation
 
 		let nextDay = calendar.date(from: DateComponents(year: 2026, month: 1, day: 2, hour: 23, minute: 1))!
 		ScreenTimeTracker.now = { nextDay }
-		ScreenTimeTracker.shared.tick()
+		ScreenTimeTracker.shared.simulateDidBecomeActiveForTesting()
 		#expect(ScreenTimeTracker.shared.activeReasons.isEmpty)
 		#expect(clearFireCount == 1)
 	}
@@ -234,7 +245,7 @@ import Foundation
 		resetState()
 		defer { resetState() }
 
-		let calendar = utcCalendar()
+		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		nonisolated(unsafe) var limitReachedFired = false
@@ -251,7 +262,7 @@ import Foundation
 
 		let nextDay = calendar.date(from: DateComponents(year: 2026, month: 1, day: 2, hour: 12, minute: 0, second: 0))!
 		ScreenTimeTracker.now = { nextDay }
-		ScreenTimeTracker.shared.tick()
+		ScreenTimeTracker.shared.simulateDidBecomeActiveForTesting()
 
 		#expect(!limitReachedFired)
 		#expect(!clearFired)
@@ -264,7 +275,7 @@ import Foundation
 		defer { resetState() }
 
 		AppDefaults.shared.screenTimeTakeABreakEnabled = true
-		let calendar = utcCalendar()
+		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		nonisolated(unsafe) var breakReachedCount = 0
@@ -282,7 +293,7 @@ import Foundation
 		defer { resetState() }
 
 		AppDefaults.shared.screenTimeTakeABreakEnabled = true
-		let calendar = utcCalendar()
+		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		nonisolated(unsafe) var breakReachedCount = 0
@@ -310,7 +321,7 @@ import Foundation
 
 		AppDefaults.shared.screenTimeTakeABreakEnabled = true
 		setDailyLimit(1) // 60s limit, reached well before the 15-minute break mark
-		let calendar = utcCalendar()
+		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		nonisolated(unsafe) var breakReachedCount = 0
@@ -329,7 +340,7 @@ import Foundation
 		defer { resetState() }
 		// screenTimeTakeABreakEnabled left at its default (false).
 
-		let calendar = utcCalendar()
+		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		nonisolated(unsafe) var breakReachedCount = 0
