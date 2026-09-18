@@ -53,7 +53,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeBreakReached(_:)), name: .screenTimeBreakReached, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeBreakDidClear(_:)), name: .screenTimeBreakDidClear, object: nil)
 
-		coordinator.restoreWindowState(activity: session.stateRestorationActivity)
+		coordinator.restoreWindowState()
 
 		updateUserInterfaceStyle()
 
