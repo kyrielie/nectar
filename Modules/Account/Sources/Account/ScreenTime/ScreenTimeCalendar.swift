@@ -19,4 +19,14 @@ public enum ScreenTimeCalendar {
 		}
 		return minutes >= startMinutes || minutes < endMinutes
 	}
+
+	public static let maxBedtimeWindowSpanMinutes = 720
+
+	public static func bedtimeWindowSpanMinutes(startMinutes: Int, endMinutes: Int) -> Int {
+		guard startMinutes != endMinutes else { return 0 }
+		if endMinutes > startMinutes {
+			return endMinutes - startMinutes
+		}
+		return (1440 - startMinutes) + endMinutes
+	}
 }

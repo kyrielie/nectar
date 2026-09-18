@@ -910,6 +910,8 @@ extension Notification.Name {
 	public static let screenTimeUsageDidChange = Notification.Name("ScreenTimeUsageDidChangeNotification")
 	public static let screenTimeLimitReached = Notification.Name("ScreenTimeLimitReachedNotification")
 	public static let screenTimeEnforcementDidClear = Notification.Name("ScreenTimeEnforcementDidClearNotification")
+	public static let screenTimeBreakReached = Notification.Name("ScreenTimeBreakReachedNotification")
+	public static let screenTimeBreakDidClear = Notification.Name("ScreenTimeBreakDidClearNotification")
 	public static let readingStatsDidChange = Notification.Name("ReadingStatsDidChangeNotification")
 }
 
@@ -1112,6 +1114,7 @@ final class AppDefaults: Sendable {
 		static let screenTimeMinutesUsedTodaySeconds = "screenTimeMinutesUsedTodaySeconds"
 		static let screenTimeUsageDate = "screenTimeUsageDate"
 		static let screenTimeDailyUsageHistory = "screenTimeDailyUsageHistory"
+		static let screenTimeTakeABreakEnabled = "screenTimeTakeABreakEnabled"
 		static let readingStatsTrackingEnabled = "readingStatsTrackingEnabled"
 		static let readingStatsDailyHistory = "readingStatsDailyHistory"
 		static let readingStatsProgressByBookKey = "readingStatsProgressByBookKey"
@@ -2665,6 +2668,7 @@ final class AppDefaults: Sendable {
 																	 Key.screenTimeEnabled: false,
 																	 Key.screenTimeBedtimeEnabled: false,
 																	 Key.screenTimeDailyLimitMinutesByWeekday: "{\"1\":120,\"2\":120,\"3\":120,\"4\":120,\"5\":120,\"6\":120,\"7\":120}",
+									 Key.screenTimeTakeABreakEnabled: false,
 																	 Key.readingStatsTrackingEnabled: true,
 								// Text Replacement feature defaults -- see the Key block's own
 								// comment above. Quote conversion (textReplacementQuoteConversionEnabled)
@@ -2720,7 +2724,7 @@ extension AppDefaults {
 
 	func setScreenTimeDailyLimitMinutes(_ minutes: Int, for weekday: Int) {
 		var limits = screenTimeDailyLimitMinutesByWeekday
-		limits[weekday] = max(1, minutes)
+		limits[weekday] = max(60, minutes)
 		screenTimeDailyLimitMinutesByWeekday = limits
 	}
 
@@ -2731,12 +2735,24 @@ extension AppDefaults {
 
 	var screenTimeBedtimeStartMinutesFromMidnight: Int {
 		get { AppDefaults.int(for: Key.screenTimeBedtimeStartMinutesFromMidnight) }
-		set { AppDefaults.setInt(for: Key.screenTimeBedtimeStartMinutesFromMidnight, newValue) }
+		set {
+			let currentEnd = screenTimeBedtimeEndMinutesFromMidnight
+			if ScreenTimeCalendar.bedtimeWindowSpanMinutes(startMinutes: newValue, endMinutes: currentEnd) > ScreenTimeCalendar.maxBedtimeWindowSpanMinutes {
+				AppDefaults.setInt(for: Key.screenTimeBedtimeEndMinutesFromMidnight, (newValue + ScreenTimeCalendar.maxBedtimeWindowSpanMinutes) % 1440)
+			}
+			AppDefaults.setInt(for: Key.screenTimeBedtimeStartMinutesFromMidnight, newValue)
+		}
 	}
 
 	var screenTimeBedtimeEndMinutesFromMidnight: Int {
 		get { AppDefaults.int(for: Key.screenTimeBedtimeEndMinutesFromMidnight) }
-		set { AppDefaults.setInt(for: Key.screenTimeBedtimeEndMinutesFromMidnight, newValue) }
+		set {
+			let currentStart = screenTimeBedtimeStartMinutesFromMidnight
+			if ScreenTimeCalendar.bedtimeWindowSpanMinutes(startMinutes: currentStart, endMinutes: newValue) > ScreenTimeCalendar.maxBedtimeWindowSpanMinutes {
+				AppDefaults.setInt(for: Key.screenTimeBedtimeStartMinutesFromMidnight, ((newValue - ScreenTimeCalendar.maxBedtimeWindowSpanMinutes) % 1440 + 1440) % 1440)
+			}
+			AppDefaults.setInt(for: Key.screenTimeBedtimeEndMinutesFromMidnight, newValue)
+		}
 	}
 
 	var screenTimeMinutesUsedTodaySeconds: Int {
@@ -2752,6 +2768,11 @@ extension AppDefaults {
 	var screenTimeDailyUsageHistory: [String: Int] {
 		get { AppDefaults.decode([String: Int].self, key: Key.screenTimeDailyUsageHistory, default: [:]) }
 		set { AppDefaults.encode(Dictionary(uniqueKeysWithValues: newValue.sorted { $0.key < $1.key }.suffix(14)), key: Key.screenTimeDailyUsageHistory) }
+	}
+
+	var screenTimeTakeABreakEnabled: Bool {
+		get { AppDefaults.bool(for: Key.screenTimeTakeABreakEnabled) }
+		set { AppDefaults.setBool(for: Key.screenTimeTakeABreakEnabled, newValue) }
 	}
 
 	var readingStatsTrackingEnabled: Bool {
