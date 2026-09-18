@@ -103,6 +103,7 @@
 		4E7362661B0643809D41364A /* OpenInSafariActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D17832F911B416F4391D0850 /* OpenInSafariActivity.swift */; };
 		4E77E646DD953F7BC2D776B2 /* FolderPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D98A966A81601E0BC186DB5 /* FolderPickerView.swift */; };
 		4F234E9911A2A59B972EF6BF /* ShareAO3SeriesLinkActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A76D25654EA755DDA2BA82DF /* ShareAO3SeriesLinkActivity.swift */; };
+		50C4DDBD50AFD2E9CC47B4C2 /* CountDownTimerPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 823CB5BABACFAA6BFC4035A5 /* CountDownTimerPicker.swift */; };
 		52EF752E6D9F8D1036C0C39A /* AO3SearchResultsFetchCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2DF249B398D8ED1527BA9FE /* AO3SearchResultsFetchCoordinator.swift */; };
 		5359FE92B04870B0444E56BA /* ArticleRendererStripFakeParagraphIndentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BD2C21916AA07DB85053663 /* ArticleRendererStripFakeParagraphIndentsTests.swift */; };
 		5434B26FC005C3ABF52FE77D /* ArticlesDatabase in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 7AA7C6FF61201945FA287D24 /* ArticlesDatabase */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -484,6 +485,7 @@
 		7DE280DE15D62A0E4A8F6B8B /* ArticleThemePreviewSampleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemePreviewSampleTests.swift; sourceTree = "<group>"; };
 		7E93222DD033E865745C6A88 /* HighlightPaletteHexSetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighlightPaletteHexSetTests.swift; sourceTree = "<group>"; };
 		7F4665A8DDB114A0CD115297 /* ErrorHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorHandler.swift; sourceTree = "<group>"; };
+		823CB5BABACFAA6BFC4035A5 /* CountDownTimerPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountDownTimerPicker.swift; sourceTree = "<group>"; };
 		8521720A8BD99B7FE4C42704 /* ActivityLogViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityLogViewModel.swift; sourceTree = "<group>"; };
 		8558D10A2225396DFF02A326 /* SingleLineUILabelSizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleLineUILabelSizer.swift; sourceTree = "<group>"; };
 		85804202280B7C468DCBA3E8 /* Nectar-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Nectar-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1267,6 +1269,7 @@
 		FDA7906F50724137A650737C /* ScreenTime */ = {
 			isa = PBXGroup;
 			children = (
+				823CB5BABACFAA6BFC4035A5 /* CountDownTimerPicker.swift */,
 				FC610CDB8FEF65CD28CA49A8 /* ScreenTimeBreakView.swift */,
 				A743FC47954E311FE58F58BF /* ScreenTimeEnforcementOverlay.swift */,
 				C09E641FD398F8181BECC365 /* ScreenTimeSettingsView.swift */,
@@ -1543,6 +1546,7 @@
 				0C36E550FACBBAF7BDD93C4B /* CacheCleaner.swift in Sources */,
 				F7FE77CCA4E1D6B8C16881DF /* ColorPaletteTableViewController.swift in Sources */,
 				8C28380B3660064273040340 /* ContextMenuPreviewViewController.swift in Sources */,
+				50C4DDBD50AFD2E9CC47B4C2 /* CountDownTimerPicker.swift in Sources */,
 				39195814C92E57E87AF3A2A8 /* CurrentActivityView.swift in Sources */,
 				1D47243B003794CC02891A99 /* CurrentActivityViewModel.swift in Sources */,
 				5A81DF1C837451235F5E5F28 /* DeleteCommand.swift in Sources */,
