@@ -1369,8 +1369,10 @@ public enum FetchType {
 	}
 
 	/// Empty caches that can reasonably be emptied. Call when the app goes in the background, for instance.
-	func emptyCaches() {
-		database.emptyCaches()
+	/// `clearStatusesCache` defaults to true; the ordinary-backgrounding caller passes false -- see
+	/// `ArticlesDatabase.emptyCaches(clearStatusesCache:)`'s doc comment.
+	func emptyCaches(clearStatusesCache: Bool = true) {
+		database.emptyCaches(clearStatusesCache: clearStatusesCache)
 	}
 
 	// MARK: - Container

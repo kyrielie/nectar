@@ -372,6 +372,9 @@
     "Completed" : {
       "comment" : "Completed"
     },
+    "Confirm Screen Time setting" : {
+
+    },
     "Connect" : {
       "comment" : "Connect"
     },
@@ -802,6 +805,9 @@
     },
     "Justify Text" : {
       "comment" : "Justify Text toggle"
+    },
+    "Keep" : {
+
     },
     "Keep Archived Version" : {
       "comment" : "Command"
@@ -1399,6 +1405,9 @@
     "Show Website" : {
       "comment" : "Show Website"
     },
+    "Shows a dismissible reminder every 15 minutes of continuous reading." : {
+
+    },
     "Shows current activity" : {
       "comment" : "Current Activity accessibility hint"
     },
@@ -1470,6 +1479,9 @@
     },
     "Tag Display" : {
       "comment" : "Tag Display"
+    },
+    "Take a Break reminders" : {
+
     },
     "Text Color" : {
       "comment" : "Text Color (light) picker label"
@@ -1600,6 +1612,9 @@
     },
     "Transparent" : {
       "comment" : "Transparent badge color palette"
+    },
+    "Undo" : {
+
     },
     "Unknown" : {
       "comment" : "Annotation copy: unknown author fallback\nUnknown Value"

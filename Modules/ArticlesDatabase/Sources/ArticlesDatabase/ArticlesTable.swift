@@ -1452,7 +1452,33 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		emptyCaches()
 	}
 
-	func emptyCaches() {
+	/// Clears the in-memory `Article` object cache, and -- unless
+	/// `clearStatusesCache` is false -- the `ArticleStatus` cache too.
+	///
+	/// These two used to always clear together, but `StatusesTable`'s
+	/// cache is specifically what `StatusesTable.saveReadingProgress`
+	/// (and the read/starred/loved/lastOpenedAt writes alongside it)
+	/// mutate in place so that `article.status.readingProgress` etc. stay
+	/// synchronously correct for anyone already holding a reference to
+	/// that `Article` -- see that function's own doc comment. Clearing it
+	/// on every ordinary backgrounding (AccountManager.
+	/// handleAppDidGoToBackground, previously always clearing both)
+	/// orphaned whatever `Article` objects the timeline's collection view
+	/// snapshot was still displaying: the next in-place progress mutation
+	/// landed on a freshly-cached, disconnected `ArticleStatus` instance,
+	/// while the timeline kept rendering the frozen pre-clear one
+	/// indefinitely, since nothing re-fetches Article objects from disk
+	/// on foreground or on returning to the timeline. `StatusesTable`'s
+	/// own cache is also small (a handful of scalars/bools per article,
+	/// not the heavier compressed-HTML content `articlesCache` can hold),
+	/// so it was never a meaningful memory-pressure win to clear on
+	/// ordinary backgrounding in the first place -- see
+	/// `StatusesTable.emptyCaches()`'s own doc comment: its one stated
+	/// reason for existing is the backup-restore merge case, not general
+	/// memory hygiene. Genuine memory pressure (`handleLowMemory` above,
+	/// and `AccountManager.handleLowMemory`) still clears both, via the
+	/// default `true`.
+	func emptyCaches(clearStatusesCache: Bool = true) {
 		queue.runInDatabase { _ in
 			self.articlesCache.withLock { $0 = [String: Article]() }
 			// Same queue as this closure itself runs on, so this preserves
@@ -1461,7 +1487,9 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			// StatusesTable.emptyCaches's doc comment for why this is needed
 			// at all (a stale cached ArticleStatus otherwise survives a
 			// backup-restore merge indefinitely).
-			self.statusesTable.emptyCaches()
+			if clearStatusesCache {
+				self.statusesTable.emptyCaches()
+			}
 		}
 	}
 

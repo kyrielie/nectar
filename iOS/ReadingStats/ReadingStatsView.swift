@@ -6,6 +6,12 @@ import Articles
 struct ReadingStatsView: View {
 	@State private var trackingEnabled = AppDefaults.shared.readingStatsTrackingEnabled
 	@State private var month = false
+	@State private var showingDeleteConfirmation = false
+	// Bumped after resetReadingStats() to force the AppDefaults-backed
+	// computed properties below (totals, dailyWordCounts, etc.) to
+	// re-read -- they aren't @State themselves, so nothing else would
+	// tell SwiftUI to recompute them.
+	@State private var refreshID = UUID()
 	@AppStorage(AppDefaults.Key.highlightPalette) private var highlightPaletteRawValue = HighlightPalette.default.rawValue
 	@Environment(\.colorScheme) private var colorScheme
 
@@ -112,9 +118,31 @@ struct ReadingStatsView: View {
 			Section("All time") {
 				metricRow("Total words read", "\(AppDefaults.shared.readingStatsAllTimeWords)")
 			}
+
+			Section {
+				Button("Delete Reading Stats", role: .destructive) {
+					showingDeleteConfirmation = true
+				}
+			} footer: {
+				Text("Permanently deletes all recorded reading history, per-book progress, and the all-time word count. This can't be undone.")
+			}
 		}
+		.id(refreshID)
 		.navigationTitle("Reading Stats")
 		.navigationBarTitleDisplayMode(.inline)
+		.confirmationDialog(
+			"Delete all reading stats?",
+			isPresented: $showingDeleteConfirmation,
+			titleVisibility: .visible
+		) {
+			Button("Delete Reading Stats", role: .destructive) {
+				AppDefaults.shared.resetReadingStats()
+				refreshID = UUID()
+			}
+			Button("Cancel", role: .cancel) {}
+		} message: {
+			Text("This permanently deletes all recorded reading history, per-book progress, and the all-time word count. This can't be undone.")
+		}
 	}
 
 	private var metricsGrid: some View {

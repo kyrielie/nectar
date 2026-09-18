@@ -2765,9 +2765,15 @@ extension AppDefaults {
 		set { AppDefaults.setDate(for: Key.screenTimeUsageDate, newValue) }
 	}
 
+	/// Trimmed to 35 days (5 Sunday-aligned weeks) on every write, so a
+	/// full month of week navigation in ScreenTimeSettingsView's weekly
+	/// summary always has data available regardless of which day of the
+	/// week "today" falls on. Every rollover write in ScreenTimeTracker
+	/// goes through this same setter, so trimming here is sufficient --
+	/// there's no separate trim-on-rollover step.
 	var screenTimeDailyUsageHistory: [String: Int] {
 		get { AppDefaults.decode([String: Int].self, key: Key.screenTimeDailyUsageHistory, default: [:]) }
-		set { AppDefaults.encode(Dictionary(uniqueKeysWithValues: newValue.sorted { $0.key < $1.key }.suffix(14)), key: Key.screenTimeDailyUsageHistory) }
+		set { AppDefaults.encode(Dictionary(uniqueKeysWithValues: newValue.sorted { $0.key < $1.key }.suffix(35)), key: Key.screenTimeDailyUsageHistory) }
 	}
 
 	var screenTimeTakeABreakEnabled: Bool {
@@ -2793,6 +2799,23 @@ extension AppDefaults {
 	var readingStatsAllTimeWords: Int {
 		get { AppDefaults.int(for: Key.readingStatsAllTimeWords) }
 		set { AppDefaults.setInt(for: Key.readingStatsAllTimeWords, newValue) }
+	}
+
+	/// Wipes all recorded reading-stats data -- the daily history the
+	/// charts/streak are built from, per-book reading progress, and the
+	/// all-time word counter -- but leaves `readingStatsTrackingEnabled`
+	/// untouched, mirroring resetToolbarDefaults(for:)'s scoping (that
+	/// resets placement/order but not the feature's own on/off switch).
+	/// Implemented as key removal, not re-writing to `[:]`/`0`, for the
+	/// same reason as resetToolbarDefaults(for:): removing the key falls
+	/// back to whatever default already applies (empty dictionary, zero),
+	/// so there's nothing to keep in sync here if those defaults ever
+	/// change. This is destructive and not recoverable -- callers should
+	/// confirm with the user first.
+	func resetReadingStats() {
+		AppDefaults.store.removeObject(forKey: Key.readingStatsDailyHistory)
+		AppDefaults.store.removeObject(forKey: Key.readingStatsProgressByBookKey)
+		AppDefaults.store.removeObject(forKey: Key.readingStatsAllTimeWords)
 	}
 
 	static var firstRunDate: Date? {

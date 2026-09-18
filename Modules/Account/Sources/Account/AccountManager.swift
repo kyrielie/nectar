@@ -477,9 +477,15 @@ import ActivityLog
 	// MARK: - Caches
 
 	/// Empty caches that can reasonably be emptied — when the app moves to the background, for instance.
-	public func emptyCaches() {
+	/// `clearStatusesCache` defaults to true (genuine memory pressure -- see `handleLowMemory`
+	/// below). `handleAppDidGoToBackground` below passes false: clearing the ArticleStatus cache
+	/// on every ordinary backgrounding orphaned whatever Article objects the timeline was still
+	/// displaying, silently dropping in-place reading-progress mutations until an unrelated full
+	/// refetch happened to occur -- see ArticlesTable.emptyCaches(clearStatusesCache:)'s doc
+	/// comment for the full investigation.
+	public func emptyCaches(clearStatusesCache: Bool = true) {
 		for account in accounts {
-			account.emptyCaches()
+			account.emptyCaches(clearStatusesCache: clearStatusesCache)
 		}
 	}
 
@@ -510,7 +516,7 @@ import ActivityLog
 	}
 
 	@objc func handleAppDidGoToBackground(_ notification: Notification) {
-		emptyCaches()
+		emptyCaches(clearStatusesCache: false)
 	}
 }
 
