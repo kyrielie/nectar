@@ -9,11 +9,18 @@ struct ScreenTimeSettingsView: View {
 	@State private var limits = AppDefaults.shared.screenTimeDailyLimitMinutesByWeekday
 	@State private var pendingConfirmation: PendingConfirmation?
 	@State private var takeABreakEnabled = AppDefaults.shared.screenTimeTakeABreakEnabled
+	// Sourced from ScreenTimeTracker.shared.activeReasons, kept in sync via
+	// the same notifications the enforcement overlay reacts to, so the
+	// banner below doesn't go stale while this screen is on screen.
+	@State private var activeLockoutReasons: Set<ScreenTimeTracker.Reason> = ScreenTimeTracker.shared.activeReasons
+	// 0 = the current Sunday-start calendar week; increasing goes further
+	// into the past. See weeklySummarySection/weekStart below.
+	@State private var weeksBack = 0
 
 	private let weekdays = Calendar.current.weekdaySymbols
 
 	private struct PendingConfirmation: Identifiable {
-		enum Kind { case dailyLimit(weekday: Int), bedtimeSpan }
+		enum Kind { case screenTimeEnable, bedtimeSpan }
 		let id = UUID()
 		let kind: Kind
 		let message: String
@@ -22,31 +29,52 @@ struct ScreenTimeSettingsView: View {
 
 	var body: some View {
 		Form {
+			weeklySummarySection
+
+			if let status = ScreenTimeTracker.lockoutStatus(for: activeLockoutReasons, bedtimeEndMinutesFromMidnight: AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight) {
+				Section {
+					Label(status.message, systemImage: status.systemImageName)
+						.foregroundStyle(.secondary)
+				}
+			}
+
 			Section {
 				Toggle("Enable Screen Time", isOn: $enabled)
-					.onChange(of: enabled) { _, value in AppDefaults.shared.screenTimeEnabled = value }
+					.onChange(of: enabled) { _, value in
+						AppDefaults.shared.screenTimeEnabled = value
+						if value {
+							pendingConfirmation = PendingConfirmation(
+								kind: .screenTimeEnable,
+								message: "Reading will be blocked immediately once today's limit or bedtime window is reached.",
+								revert: {
+									enabled = false
+									AppDefaults.shared.screenTimeEnabled = false
+								}
+							)
+						}
+					}
 			} footer: { Text("When enabled, reading is blocked immediately after the daily limit or bedtime window begins.") }
 
 			Section("Daily limits") {
 				ForEach(1...7, id: \.self) { weekday in
-					Stepper("\(weekdays[weekday - 1]): \(limits[weekday, default: 120]) minutes", value: Binding(
-						get: { limits[weekday, default: 120] },
-						set: { newValue in
-							let oldValue = limits[weekday, default: 120]
-							limits[weekday] = newValue
-							AppDefaults.shared.setScreenTimeDailyLimitMinutes(newValue, for: weekday)
-							if newValue < 120, oldValue >= 120 {
-								pendingConfirmation = PendingConfirmation(
-									kind: .dailyLimit(weekday: weekday),
-									message: "\(weekdays[weekday - 1]) is set to \(newValue) minutes. This is a strict limit — reading will be blocked once it's reached.",
-									revert: {
-										limits[weekday] = oldValue
-										AppDefaults.shared.setScreenTimeDailyLimitMinutes(oldValue, for: weekday)
-									}
-								)
-							}
+					NavigationLink {
+						DailyLimitDetailView(
+							weekdayName: weekdays[weekday - 1],
+							minutes: Binding(
+								get: { limits[weekday, default: 120] },
+								set: { newValue in
+									limits[weekday] = newValue
+									AppDefaults.shared.setScreenTimeDailyLimitMinutes(newValue, for: weekday)
+								}
+							)
+						)
+					} label: {
+						HStack {
+							Text(weekdays[weekday - 1])
+							Spacer()
+							Text(durationString(limits[weekday, default: 120])).foregroundStyle(.secondary)
 						}
-					), in: 60...1440, step: 15)
+					}
 				}
 			}
 			.disabled(!enabled)
@@ -67,13 +95,16 @@ struct ScreenTimeSettingsView: View {
 				Toggle("Take a Break reminders", isOn: $takeABreakEnabled)
 					.onChange(of: takeABreakEnabled) { _, value in AppDefaults.shared.screenTimeTakeABreakEnabled = value }
 			} footer: { Text("Shows a dismissible reminder every 15 minutes of continuous reading.") }
-
-			Section {
-				NavigationLink("Weekly summary") { ScreenTimeSummaryView() }
-			}
 		}
 		.navigationTitle("Screen Time")
 		.navigationBarTitleDisplayMode(.inline)
+		.onAppear { activeLockoutReasons = ScreenTimeTracker.shared.activeReasons }
+		.onReceive(NotificationCenter.default.publisher(for: .screenTimeLimitReached)) { _ in
+			activeLockoutReasons = ScreenTimeTracker.shared.activeReasons
+		}
+		.onReceive(NotificationCenter.default.publisher(for: .screenTimeEnforcementDidClear)) { _ in
+			activeLockoutReasons = []
+		}
 		.alert(item: $pendingConfirmation) { confirmation in
 			Alert(
 				title: Text("Confirm Screen Time setting"),
@@ -130,9 +161,8 @@ struct ScreenTimeSettingsView: View {
 		formatter.timeStyle = .short
 		return formatter.string(from: date)
 	}
-}
 
-struct ScreenTimeSummaryView: View {
+	// MARK: Weekly summary
 
 	private struct DailyUsage: Identifiable {
 		let id: String
@@ -142,54 +172,92 @@ struct ScreenTimeSummaryView: View {
 		let isToday: Bool
 	}
 
-	private var dailyUsage: [DailyUsage] {
+	/// Sunday-start regardless of device locale, per explicit request --
+	/// not Calendar.current, whose firstWeekday follows the user's locale.
+	private static var sundayCalendar: Calendar = {
+		var calendar = Calendar(identifier: .gregorian)
+		calendar.firstWeekday = 1
+		return calendar
+	}()
+
+	/// How many weeks back "Previous" will go. Bounded by how far back
+	/// screenTimeDailyUsageHistory actually retains data (35 days / 5
+	/// weeks including the current one -- see AppDefaults'
+	/// screenTimeDailyUsageHistory), so the navigator never lands on a
+	/// week that's guaranteed to show as empty.
+	private static let maxWeeksBack = 4
+
+	private var weekStart: Date {
+		let calendar = Self.sundayCalendar
+		let currentWeekStart = calendar.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
+		return calendar.date(byAdding: .weekOfYear, value: -weeksBack, to: currentWeekStart) ?? currentWeekStart
+	}
+
+	private var weeklyUsage: [DailyUsage] {
+		let calendar = Self.sundayCalendar
 		let history = AppDefaults.shared.screenTimeDailyUsageHistory
-		let calendar = Calendar.current
 		let today = calendar.startOfDay(for: Date())
-		return (0..<7).reversed().compactMap { offset -> DailyUsage? in
-			guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { return nil }
+		let start = weekStart
+		return (0..<7).compactMap { offset -> DailyUsage? in
+			guard let day = calendar.date(byAdding: .day, value: offset, to: start) else { return nil }
 			let key = Self.dateKeyFormatter.string(from: day)
 			let weekday = calendar.component(.weekday, from: day)
-			return DailyUsage(id: key, label: Self.dayLetterFormatter.string(from: day), minutesUsed: history[key] ?? 0, limitMinutes: AppDefaults.shared.screenTimeDailyLimitMinutes(for: weekday), isToday: offset == 0)
+			return DailyUsage(id: key, label: Self.dayLetterFormatter.string(from: day), minutesUsed: history[key] ?? 0, limitMinutes: AppDefaults.shared.screenTimeDailyLimitMinutes(for: weekday), isToday: calendar.isDate(day, inSameDayAs: today))
 		}
 	}
 
-	var body: some View {
-		List {
+	private var weekRangeLabel: String {
+		let calendar = Self.sundayCalendar
+		let start = weekStart
+		let end = calendar.date(byAdding: .day, value: 6, to: start) ?? start
+		let sameMonth = calendar.component(.month, from: start) == calendar.component(.month, from: end)
+		let startString = Self.monthDayFormatter.string(from: start)
+		let endString = sameMonth ? Self.dayOnlyFormatter.string(from: end) : Self.monthDayFormatter.string(from: end)
+		return "Week of \(startString)–\(endString)"
+	}
+
+	private var weeklySummarySection: some View {
+		Section {
+			HStack {
+				Button {
+					weeksBack += 1
+				} label: {
+					Image(systemName: "chevron.left")
+				}
+				.disabled(weeksBack >= Self.maxWeeksBack)
+
+				Spacer()
+				Text(weekRangeLabel).font(.subheadline.weight(.medium)).foregroundStyle(.primary)
+				Spacer()
+
+				Button {
+					weeksBack -= 1
+				} label: {
+					Image(systemName: "chevron.right")
+				}
+				.disabled(weeksBack <= 0)
+			}
+			.buttonStyle(.plain)
+			.foregroundStyle(.secondary)
+
 			if AppDefaults.shared.screenTimeDailyUsageHistory.isEmpty {
-				Section {
-					Text("No Screen Time history yet.").foregroundStyle(.secondary)
-				}
+				Text("No Screen Time history yet.").foregroundStyle(.secondary)
 			} else {
-				Section("Minutes used, last 7 days") {
-					usageBarChart
-						.listRowInsets(EdgeInsets())
-						.padding(.vertical, 8)
-				}
-				Section {
-					ForEach(dailyUsage) { day in
-						HStack {
-							Text(day.id)
-							Spacer()
-							Text("\(day.minutesUsed) / \(day.limitMinutes) min")
-								.foregroundStyle(day.minutesUsed > day.limitMinutes ? .red : .secondary)
-						}
-					}
-				}
+				weeklyUsageBarChart
+					.listRowInsets(EdgeInsets())
+					.padding(.vertical, 8)
 			}
 		}
-		.navigationTitle("Weekly summary")
-		.navigationBarTitleDisplayMode(.inline)
 	}
 
 	/// Bar height is minutes used; the thin line across each bar marks
 	/// that day's configured limit, so going over reads immediately as
 	/// "bar taller than its own line" rather than requiring a lookup
-	/// against the list below. Both bar height and line position share
-	/// one scale (maxValue below) so the line's vertical position is
+	/// against a list below. Both bar height and line position share one
+	/// scale (maxValue below) so the line's vertical position is
 	/// comparable across days even as each day's own limit changes.
-	private var usageBarChart: some View {
-		let days = dailyUsage
+	private var weeklyUsageBarChart: some View {
+		let days = weeklyUsage
 		let maxValue = max(days.map { max($0.minutesUsed, $0.limitMinutes) }.max() ?? 1, 1)
 		let chartHeight: CGFloat = 100
 		return VStack(alignment: .leading, spacing: 6) {
@@ -230,4 +298,76 @@ struct ScreenTimeSummaryView: View {
 		formatter.dateFormat = "EEEEE"
 		return formatter
 	}()
+
+	private static let monthDayFormatter: DateFormatter = {
+		let formatter = DateFormatter()
+		formatter.dateFormat = "MMM d"
+		return formatter
+	}()
+
+	private static let dayOnlyFormatter: DateFormatter = {
+		let formatter = DateFormatter()
+		formatter.dateFormat = "d"
+		return formatter
+	}()
+}
+
+/// "Xh Ym" duration formatting shared between the daily-limits row labels
+/// in ScreenTimeSettingsView and DailyLimitDetailView's footer, so the
+/// two can't drift out of sync with each other's wording -- same reason
+/// ScreenTimeTracker.lockoutStatus(for:bedtimeEndMinutesFromMidnight:) is
+/// shared between the overlay and the lockout banner.
+private func durationString(_ minutes: Int) -> String {
+	let hours = minutes / 60
+	let mins = minutes % 60
+	if hours == 0 { return "\(mins)m" }
+	if mins == 0 { return "\(hours)h" }
+	return "\(hours)h \(mins)m"
+}
+
+/// Pushed per weekday from ScreenTimeSettingsView's "Daily limits"
+/// section -- the countDownTimer wheel (see CountDownTimerPicker) is too
+/// tall to sit inline in a Form row alongside six other weekdays, so each
+/// weekday gets its own screen, matching how Settings → Screen Time →
+/// App Limits → Add Limit is its own pushed screen in iOS Screen Time.
+private struct DailyLimitDetailView: View {
+	let weekdayName: String
+	@Binding var minutes: Int
+	@State private var pendingConfirmation: PendingConfirmation?
+
+	private struct PendingConfirmation: Identifiable {
+		let id = UUID()
+		let message: String
+		let revert: () -> Void
+	}
+
+	var body: some View {
+		Form {
+			Section {
+				CountDownTimerPicker(minutes: $minutes)
+					.onChange(of: minutes) { oldValue, newValue in
+						if newValue < 120, oldValue >= 120 {
+							pendingConfirmation = PendingConfirmation(
+								message: "\(weekdayName) is set to \(durationString(newValue)). This is a strict limit — reading will be blocked once it's reached.",
+								revert: { minutes = oldValue }
+							)
+						}
+					}
+					.frame(maxWidth: .infinity)
+					.listRowInsets(EdgeInsets())
+			} footer: {
+				Text("Reading is blocked for the rest of \(weekdayName) once this limit is reached.")
+			}
+		}
+		.navigationTitle(weekdayName)
+		.navigationBarTitleDisplayMode(.inline)
+		.alert(item: $pendingConfirmation) { confirmation in
+			Alert(
+				title: Text("Confirm daily limit"),
+				message: Text(confirmation.message),
+				primaryButton: .default(Text("Keep")),
+				secondaryButton: .cancel(Text("Undo"), action: confirmation.revert)
+			)
+		}
+	}
 }

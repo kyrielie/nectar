@@ -143,3 +143,31 @@ import Account
 	}
 #endif
 }
+
+extension ScreenTimeTracker {
+	/// SF Symbol name and friendly copy for the current lockout reason(s),
+	/// shared by the enforcement overlay and the status banner in
+	/// ScreenTimeSettingsView so the two surfaces can't drift out of sync
+	/// with each other's wording. Returns nil when there's nothing to
+	/// show (`reasons` empty).
+	static func lockoutStatus(for reasons: Set<Reason>, bedtimeEndMinutesFromMidnight: Int) -> (systemImageName: String, message: String)? {
+		let endTime = Self.timeString(minutesFromMidnight: bedtimeEndMinutesFromMidnight)
+		switch (reasons.contains(.limit), reasons.contains(.bedtime)) {
+		case (true, true):
+			return ("bed.double.fill", "It's bedtime, and today's reading time is up too. More time tomorrow, after \(endTime).")
+		case (true, false):
+			return ("clock.fill", "Today's reading time is up. More time starts tomorrow.")
+		case (false, true):
+			return ("bed.double.fill", "It's bedtime. Reading resumes at \(endTime).")
+		case (false, false):
+			return nil
+		}
+	}
+
+	private static func timeString(minutesFromMidnight: Int) -> String {
+		let date = Calendar.current.date(from: DateComponents(hour: minutesFromMidnight / 60, minute: minutesFromMidnight % 60)) ?? Date()
+		let formatter = DateFormatter()
+		formatter.timeStyle = .short
+		return formatter.string(from: date)
+	}
+}

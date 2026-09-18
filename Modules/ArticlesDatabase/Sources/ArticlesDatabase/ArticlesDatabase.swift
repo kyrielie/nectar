@@ -1200,9 +1200,14 @@ public struct ArticleStorageInfo: Sendable {
 
 	/// Call to free up some memory. Should be done when the app is backgrounded, for instance.
 	/// This does not empty *all* caches — just the ones that are empty-able.
-	public func emptyCaches() {
+	/// `clearStatusesCache` defaults to true (genuine memory pressure); pass false for the
+	/// ordinary-backgrounding case, where clearing the (small, cheap) ArticleStatus cache buys
+	/// little memory and breaks the live in-place mutation `StatusesTable.saveReadingProgress`
+	/// and friends depend on -- see `ArticlesTable.emptyCaches(clearStatusesCache:)`'s own doc
+	/// comment for the full story.
+	public func emptyCaches(clearStatusesCache: Bool = true) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		articlesTable.emptyCaches()
+		articlesTable.emptyCaches(clearStatusesCache: clearStatusesCache)
 	}
 
 	// MARK: - Cleanup

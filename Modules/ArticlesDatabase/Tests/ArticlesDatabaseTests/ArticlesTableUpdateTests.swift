@@ -157,6 +157,61 @@ struct ArticlesTableUpdateTests {
 		#expect(secondArticles.first?.status.readingProgress == 0.42)
 	}
 
+	// b3. Regression guard for the timeline progress-bar staleness bug:
+	// emptyCaches(clearStatusesCache: false) -- the ordinary-backgrounding
+	// path (AccountManager.handleAppDidGoToBackground) -- must leave an
+	// already-fetched Article's cached ArticleStatus object in place, so a
+	// later saveReadingProgress still mutates that same instance and
+	// anyone already holding a reference to it (a collection view's
+	// diffable-data-source snapshot, in the app) sees the update live,
+	// with no re-fetch. emptyCaches(clearStatusesCache: true) -- genuine
+	// memory pressure (AccountManager.handleLowMemory) -- is the contrasting
+	// case: it's expected, not a bug, for an already-held Article's status
+	// to stop updating live after that clear, since the cached object it
+	// pointed to is gone; a caller needs a fresh fetch to see further
+	// changes. Both halves are asserted here so a future change can't
+	// silently flip one behavior into the other.
+	@Test("emptyCaches(clearStatusesCache: false) preserves live in-place reading-progress updates; true does not")
+	func emptyCachesClearStatusesCacheControlsLiveUpdatePersistence() async throws {
+		let backgroundedDB = TestFixtures.makeDatabase()
+		let lowMemoryDB = TestFixtures.makeDatabase()
+
+		let backgroundedItem = TestFixtures.makeParsedItem(uniqueID: "u-bg", feedURL: "https://example.com/feed-bg")
+		let lowMemoryItem = TestFixtures.makeParsedItem(uniqueID: "u-lm", feedURL: "https://example.com/feed-lm")
+		_ = await backgroundedDB.updateAsync(parsedItems: [backgroundedItem], feedID: "feed-bg", deleteOlder: false)
+		_ = await lowMemoryDB.updateAsync(parsedItems: [lowMemoryItem], feedID: "feed-lm", deleteOlder: false)
+		let backgroundedArticleID = Article.calculatedArticleID(feedID: "feed-bg", uniqueID: "u-bg")
+		let lowMemoryArticleID = Article.calculatedArticleID(feedID: "feed-lm", uniqueID: "u-lm")
+
+		// Article objects held onto across the cache clear, the same way the
+		// timeline's collection view snapshot holds onto Article objects it
+		// fetched before an app backgrounding/memory-pressure event.
+		let heldBackgroundedArticle = await backgroundedDB.fetchArticlesAsync(articleIDs: [backgroundedArticleID]).first
+		let heldLowMemoryArticle = await lowMemoryDB.fetchArticlesAsync(articleIDs: [lowMemoryArticleID]).first
+
+		_ = await backgroundedDB.saveReadingProgressAsync(0.3, articleID: backgroundedArticleID)
+		_ = await lowMemoryDB.saveReadingProgressAsync(0.3, articleID: lowMemoryArticleID)
+		#expect(heldBackgroundedArticle?.status.readingProgress == 0.3)
+		#expect(heldLowMemoryArticle?.status.readingProgress == 0.3)
+
+		backgroundedDB.emptyCaches(clearStatusesCache: false)
+		lowMemoryDB.emptyCaches(clearStatusesCache: true)
+
+		_ = await backgroundedDB.saveReadingProgressAsync(0.75, articleID: backgroundedArticleID)
+		_ = await lowMemoryDB.saveReadingProgressAsync(0.75, articleID: lowMemoryArticleID)
+
+		// The disk-persisted value is correct either way -- both DB writes
+		// always succeed regardless of cache state.
+		let freshBackgroundedArticles = await backgroundedDB.fetchArticlesAsync(articleIDs: [backgroundedArticleID])
+		let freshLowMemoryArticles = await lowMemoryDB.fetchArticlesAsync(articleIDs: [lowMemoryArticleID])
+		#expect(freshBackgroundedArticles.first?.status.readingProgress == 0.75)
+		#expect(freshLowMemoryArticles.first?.status.readingProgress == 0.75)
+
+		// The already-held Article object is where the two cases diverge.
+		#expect(heldBackgroundedArticle?.status.readingProgress == 0.75, "clearStatusesCache: false should keep mutating the already-held object in place")
+		#expect(heldLowMemoryArticle?.status.readingProgress == 0.3, "clearStatusesCache: true is expected to orphan the already-held object -- this is the documented, deliberate trade-off for genuine memory pressure")
+	}
+
 	// e. Regression guard for the AO3 "timeline date moves backward after
 	// content fetch" bug, at the storage layer. A search-results fetch
 	// (AO3SearchResultsExtractor) only ever supplies dateModified ("last

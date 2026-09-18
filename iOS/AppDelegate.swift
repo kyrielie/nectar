@@ -237,25 +237,34 @@ import Images
 		let wrappedCompletionHandler = UnsafeSendable(value: completionHandler)
 
 		Task { @MainActor in
-			let response = wrappedResponse.value
-			let userInfo = response.notification.request.content.userInfo
-
-			switch response.actionIdentifier {
-			case UserNotificationManager.ActionIdentifier.markAsRead:
-				handleMarkAsRead(userInfo: userInfo)
-			case UserNotificationManager.ActionIdentifier.markAsStarred:
-				handleMarkAsStarred(userInfo: userInfo)
-			default:
-				if let sceneDelegate = response.targetScene?.delegate as? SceneDelegate {
-					sceneDelegate.handle(response)
-					DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: {
-						sceneDelegate.coordinator.dismissIfLaunchingFromExternalAction()
-					})
-				}
-			}
-			wrappedCompletionHandler.value()
+			handleNotificationResponse(wrappedResponse.value, completionHandler: wrappedCompletionHandler.value)
 		}
     }
+
+	/// Pulled out of userNotificationCenter(_:didReceive:withCompletionHandler:)'s
+	/// Task body -- that closure combined a switch and a targetScene cast in
+	/// one inferred expression tree, which pushed it over Xcode's per-expression
+	/// type-check budget. Same extraction pattern already used elsewhere in
+	/// this codebase (FandomWedge, ToolbarsCustomizerViewController). No
+	/// behavior change.
+	@MainActor private func handleNotificationResponse(_ response: UNNotificationResponse, completionHandler: @escaping () -> Void) {
+		let userInfo = response.notification.request.content.userInfo
+
+		switch response.actionIdentifier {
+		case UserNotificationManager.ActionIdentifier.markAsRead:
+			handleMarkAsRead(userInfo: userInfo)
+		case UserNotificationManager.ActionIdentifier.markAsStarred:
+			handleMarkAsStarred(userInfo: userInfo)
+		default:
+			if let sceneDelegate = response.targetScene?.delegate as? SceneDelegate {
+				sceneDelegate.handle(response)
+				DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: {
+					sceneDelegate.coordinator.dismissIfLaunchingFromExternalAction()
+				})
+			}
+		}
+		completionHandler()
+	}
 }
 
 // MARK: App Initialization
