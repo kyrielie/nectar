@@ -34,11 +34,11 @@
             "versions": [
                 {
                     "version": "0.1.8",
-                    "buildVersion": "7108.49",
+                    "buildVersion": "7108.51",
                     "date": "2026-09-16T05:26:46Z",
                     "localizedDescription": "**Full Changelog**: https://github.com/kyrielie/nectar/compare/v0.1.7...v0.1.8\r\n\r\n- Fix bug with color of notch hide bar, hopefully.\r\n- Added text edit annotations (in line note/grammar fixes).\r\n- Replace text globally (Y/N \u2192 name)\r\n- Fix highlight clipping with low line height.\r\n- Added more options when importing AO3 links via text paste (folder choice). \r\n- Fixed find in article bug\r\n- Added reading stats and screen time limits\r\n- Improved all highlights menu\r\n- Changed defaults for text replacement",
                     "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.1.8/Nectar-unsigned.ipa",
-                    "size": 5084070,
+                    "size": 5093712,
                     "minOSVersion": "17.0",
                     "marketingVersion": "0.1.8"
                 },
