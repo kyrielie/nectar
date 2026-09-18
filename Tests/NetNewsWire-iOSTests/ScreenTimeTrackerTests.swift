@@ -45,7 +45,9 @@ import Foundation
 		AppDefaults.shared.screenTimeMinutesUsedTodaySeconds = 0
 		AppDefaults.shared.screenTimeUsageDate = nil
 		AppDefaults.shared.screenTimeDailyUsageHistory = [:]
-		AppDefaults.shared.screenTimeTakeABreakEnabled = false
+		AppDefaults.shared.screenTimeTakeABreakMode = .off
+		AppDefaults.shared.screenTimeBreakReadingMinutes = 15
+		AppDefaults.shared.screenTimeBreakEnforcedMinutes = 15
 		ScreenTimeTracker.shared.resetForTesting()
 		ScreenTimeTracker.now = { Date() }
 	}
@@ -274,7 +276,7 @@ import Foundation
 		resetState()
 		defer { resetState() }
 
-		AppDefaults.shared.screenTimeTakeABreakEnabled = true
+		AppDefaults.shared.screenTimeTakeABreakMode = .reminder
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
@@ -292,7 +294,7 @@ import Foundation
 		resetState()
 		defer { resetState() }
 
-		AppDefaults.shared.screenTimeTakeABreakEnabled = true
+		AppDefaults.shared.screenTimeTakeABreakMode = .reminder
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
@@ -319,7 +321,7 @@ import Foundation
 		resetState()
 		defer { resetState() }
 
-		AppDefaults.shared.screenTimeTakeABreakEnabled = true
+		AppDefaults.shared.screenTimeTakeABreakMode = .reminder
 		setDailyLimit(1) // 60s limit, reached well before the 15-minute break mark
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
@@ -338,7 +340,7 @@ import Foundation
 	@Test func breakReminder_disabledByDefault() {
 		resetState()
 		defer { resetState() }
-		// screenTimeTakeABreakEnabled left at its default (false).
+		// screenTimeTakeABreakMode left at its default (.off).
 
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
@@ -350,5 +352,52 @@ import Foundation
 		drive(from: start, to: start.addingTimeInterval(16 * 60))
 
 		#expect(breakReachedCount == 0)
+	}
+
+	@Test func breakEnforced_locksOutAfterReadingIntervalAndClearsAfterBreakDuration() {
+		resetState()
+		defer { resetState() }
+
+		AppDefaults.shared.screenTimeTakeABreakMode = .enforced
+		AppDefaults.shared.screenTimeBreakReadingMinutes = 15
+		AppDefaults.shared.screenTimeBreakEnforcedMinutes = 5
+		let calendar = testCalendar()
+		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
+
+		nonisolated(unsafe) var limitReachedFired = false
+		nonisolated(unsafe) var clearFired = false
+		let reachedObserver = NotificationCenter.default.addObserver(forName: .screenTimeLimitReached, object: nil, queue: nil) { _ in limitReachedFired = true }
+		let clearObserver = NotificationCenter.default.addObserver(forName: .screenTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFired = true }
+		defer {
+			NotificationCenter.default.removeObserver(reachedObserver)
+			NotificationCenter.default.removeObserver(clearObserver)
+		}
+
+		let breakStart = start.addingTimeInterval(15 * 60)
+		drive(from: start, to: breakStart)
+		#expect(limitReachedFired)
+		#expect(ScreenTimeTracker.shared.activeReasons.contains(.recurringBreak))
+		#expect(!clearFired)
+
+		drive(from: breakStart, to: breakStart.addingTimeInterval(5 * 60))
+		#expect(clearFired)
+		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.recurringBreak))
+	}
+
+	@Test func breakEnforced_doesNotStartUnderAnExistingLimitLockout() {
+		resetState()
+		defer { resetState() }
+
+		AppDefaults.shared.screenTimeTakeABreakMode = .enforced
+		AppDefaults.shared.screenTimeBreakReadingMinutes = 15
+		setDailyLimit(1) // 60s limit, reached well before the 15-minute break mark
+		let calendar = testCalendar()
+		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
+
+		drive(from: start, to: start.addingTimeInterval(61))
+		#expect(ScreenTimeTracker.shared.activeReasons.contains(.limit))
+
+		drive(from: start.addingTimeInterval(61), to: start.addingTimeInterval(16 * 60))
+		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.recurringBreak))
 	}
 }

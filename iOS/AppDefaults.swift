@@ -1073,6 +1073,9 @@ final class AppDefaults: Sendable {
 		static let screenTimeUsageDate = "screenTimeUsageDate"
 		static let screenTimeDailyUsageHistory = "screenTimeDailyUsageHistory"
 		static let screenTimeTakeABreakEnabled = "screenTimeTakeABreakEnabled"
+		static let screenTimeTakeABreakMode = "screenTimeTakeABreakMode"
+		static let screenTimeBreakReadingMinutes = "screenTimeBreakReadingMinutes"
+		static let screenTimeBreakEnforcedMinutes = "screenTimeBreakEnforcedMinutes"
 		static let readingStatsTrackingEnabled = "readingStatsTrackingEnabled"
 		static let readingStatsDailyHistory = "readingStatsDailyHistory"
 		static let readingStatsProgressByBookKey = "readingStatsProgressByBookKey"
@@ -2244,7 +2247,9 @@ final class AppDefaults: Sendable {
 																	 Key.screenTimeEnabled: false,
 																	 Key.screenTimeBedtimeEnabled: false,
 																	 Key.screenTimeDailyLimitMinutesByWeekday: "{\"1\":120,\"2\":120,\"3\":120,\"4\":120,\"5\":120,\"6\":120,\"7\":120}",
-									 Key.screenTimeTakeABreakEnabled: false,
+									 Key.screenTimeTakeABreakMode: TakeABreakMode.off.rawValue,
+									 Key.screenTimeBreakReadingMinutes: 15,
+									 Key.screenTimeBreakEnforcedMinutes: 15,
 																	 Key.readingStatsTrackingEnabled: true,
 								// Text Replacement feature defaults -- see the Key block's own
 								// comment above. Quote conversion (textReplacementQuoteConversionEnabled)
@@ -2270,6 +2275,13 @@ final class AppDefaults: Sendable {
 									   Key.splitViewPreferredDisplayMode: UISplitViewController.DisplayMode.oneBesideSecondary.rawValue]
 		AppDefaults.store.register(defaults: defaults)
 	}
+}
+
+/// See `AppDefaults.screenTimeTakeABreakMode`'s doc comment.
+enum TakeABreakMode: String, CaseIterable, Sendable {
+	case off
+	case reminder
+	case enforced
 }
 
 extension AppDefaults {
@@ -2352,9 +2364,40 @@ extension AppDefaults {
 		set { AppDefaults.encode(Dictionary(uniqueKeysWithValues: newValue.sorted { $0.key < $1.key }.suffix(35)), key: Key.screenTimeDailyUsageHistory) }
 	}
 
-	var screenTimeTakeABreakEnabled: Bool {
-		get { AppDefaults.bool(for: Key.screenTimeTakeABreakEnabled) }
-		set { AppDefaults.setBool(for: Key.screenTimeTakeABreakEnabled, newValue) }
+	/// Take a Break has three modes, not a bool: `.off`, `.reminder` (a
+	/// dismissible nudge every `screenTimeBreakReadingMinutes`, no block --
+	/// the only mode that used to exist), and `.enforced` (same recurring
+	/// trigger, but blocks reading for `screenTimeBreakEnforcedMinutes`
+	/// the way a daily limit or bedtime does -- see ScreenTimeTracker's
+	/// `.recurringBreak` lockout reason).
+	var screenTimeTakeABreakMode: TakeABreakMode {
+		get {
+			if let raw = AppDefaults.string(for: Key.screenTimeTakeABreakMode), let mode = TakeABreakMode(rawValue: raw) {
+				return mode
+			}
+			// Migration for anyone upgrading with the old bool-only setting
+			// already turned on: preserve their reminders rather than
+			// silently reverting them to off. No legacy value stored means
+			// this is a fresh install, which registers "off" below.
+			return AppDefaults.bool(for: Key.screenTimeTakeABreakEnabled) ? .reminder : .off
+		}
+		set { AppDefaults.setString(for: Key.screenTimeTakeABreakMode, newValue.rawValue) }
+	}
+
+	/// The recurring "reading time" interval before a break (of either
+	/// enforced kind) triggers. Was a hardcoded 15-minute constant on
+	/// ScreenTimeTracker; now user-configurable, matching the daily-limit
+	/// timer picker.
+	var screenTimeBreakReadingMinutes: Int {
+		get { max(1, AppDefaults.int(for: Key.screenTimeBreakReadingMinutes)) }
+		set { AppDefaults.setInt(for: Key.screenTimeBreakReadingMinutes, max(1, newValue)) }
+	}
+
+	/// How long an `.enforced` break blocks reading for once triggered.
+	/// Unused in `.reminder`/`.off` modes.
+	var screenTimeBreakEnforcedMinutes: Int {
+		get { max(1, AppDefaults.int(for: Key.screenTimeBreakEnforcedMinutes)) }
+		set { AppDefaults.setInt(for: Key.screenTimeBreakEnforcedMinutes, max(1, newValue)) }
 	}
 
 	var readingStatsTrackingEnabled: Bool {
