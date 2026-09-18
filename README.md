@@ -63,10 +63,12 @@ Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWi
 - **Book identity across duplicates** — the same work showing up in more than one collection feed, or re-imported from Calibre, is recognized as one book. Marking it read, starred, or Loved, or updating reading progress, applies to every copy at once and survives unsubscribing/re-subscribing.
 - **Live AO3 chapter fetching** — in-progress works can fetch new chapters on demand, with per-host rate-limit backoff and a regression guard that refuses to overwrite good content with a bad/short fetch.
 - **Markdown content** — items can carry a Markdown body instead of HTML; Nectar renders it for display.
-- **Loved**, alongside the usual Read and Starred (Read Later) states, with its own smart feed and heart indicator.
+- **Mark article status**, as Read, Read Later and or Loved. When logged in and setting is toggled, integrates with AO3 kudos.
 - **Timeline layout customization** — icon size, summary line count, and metadata/tag previews are adjustable from Settings, with a live preview.
 - **Reader theming** — Accent Color and Surface Palette let you retint the app's chrome independently of the article reader's own theme, with a matching set of bundled `.nnwtheme`s.
 - **Annotations and highlights** - save quotes, write notes. 
+- **Text replacement** - Fix typos and grammar mistakes, replace Y/N with name.
+- **Screen Time and Reading Stats** - Limit yourself and track reading habits.
 
 ## Installation
 
