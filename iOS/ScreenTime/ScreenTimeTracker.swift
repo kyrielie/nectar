@@ -122,5 +122,24 @@ import Account
 		isShowingBreak = false
 		lastTick = nil
 	}
+
+	/// Mirrors didBecomeActive()'s exact sequence -- lastTick is reset to
+	/// `Self.now()` *before* tick() runs, so tick()'s own `elapsed`
+	/// computation is always ~0 here, exactly as it is on a real resume.
+	/// Tests simulating "app was backgrounded, a day passed, app resumed"
+	/// should drive time forward through this helper rather than a raw
+	/// tick() call: a raw tick() after jumping `now` forward by a whole day
+	/// computes a huge `elapsed` (~24h) against the *old* lastTick, and
+	/// since rolloverIfNeeded (called earlier in that same tick()) already
+	/// zeroed the day's counter, that whole elapsed gets credited to the
+	/// new day -- instantly re-triggering the limit lockout tick() was
+	/// meant to clear. Production never hits that path: every day-boundary
+	/// crossing goes through didBecomeActive(), never a bare tick() against
+	/// a stale lastTick, so a raw tick() in a test exercises a sequence
+	/// that can't actually happen.
+	func simulateDidBecomeActiveForTesting() {
+		lastTick = Self.now()
+		tick()
+	}
 #endif
 }
