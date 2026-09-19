@@ -1076,6 +1076,10 @@ final class AppDefaults: Sendable {
 		static let screenTimeTakeABreakMode = "screenTimeTakeABreakMode"
 		static let screenTimeBreakReadingMinutes = "screenTimeBreakReadingMinutes"
 		static let screenTimeBreakEnforcedMinutes = "screenTimeBreakEnforcedMinutes"
+		static let screenTimeRecurringBreakEndDate = "screenTimeRecurringBreakEndDate"
+		static let screenTimeSecondsSinceLastBreak = "screenTimeSecondsSinceLastBreak"
+		static let screenTimeLastResignDate = "screenTimeLastResignDate"
+		static let screenTimeIndicatorDisplayMode = "screenTimeIndicatorDisplayMode"
 		static let readingStatsTrackingEnabled = "readingStatsTrackingEnabled"
 		static let readingStatsDailyHistory = "readingStatsDailyHistory"
 		static let readingStatsProgressByBookKey = "readingStatsProgressByBookKey"
@@ -1213,6 +1217,7 @@ final class AppDefaults: Sendable {
 		Key.screenTimeBedtimeEnabled, Key.screenTimeBedtimeStartMinutesFromMidnight,
 		Key.screenTimeBedtimeEndMinutesFromMidnight, Key.screenTimeMinutesUsedTodaySeconds,
 		Key.screenTimeUsageDate, Key.screenTimeDailyUsageHistory,
+		Key.screenTimeIndicatorDisplayMode,
 		Key.readingStatsTrackingEnabled, Key.readingStatsDailyHistory,
 		Key.readingStatsProgressByBookKey, Key.readingStatsAllTimeWords,
 		Key.useSystemBrowser,
@@ -2274,6 +2279,12 @@ enum TakeABreakMode: String, CaseIterable, Sendable {
 	case enforced
 }
 
+/// See `AppDefaults.screenTimeIndicatorDisplayMode`'s doc comment.
+enum ScreenTimeIndicatorDisplayMode: String, CaseIterable, Sendable {
+	case off
+	case pie
+}
+
 extension AppDefaults {
 
 	private static func decode<T: Decodable>(_ type: T.Type, key: String, default value: T) -> T {
@@ -2397,6 +2408,37 @@ extension AppDefaults {
 	var screenTimeBreakEnforcedMinutes: Int {
 		get { max(1, AppDefaults.int(for: Key.screenTimeBreakEnforcedMinutes)) }
 		set { AppDefaults.setInt(for: Key.screenTimeBreakEnforcedMinutes, max(1, newValue)) }
+	}
+
+	/// Persisted mirror of `ScreenTimeTracker`'s in-memory
+	/// `recurringBreakEndDate`, so an active enforced break survives a
+	/// force-quit instead of silently clearing.
+	var screenTimeRecurringBreakEndDate: Date? {
+		get { AppDefaults.date(for: Key.screenTimeRecurringBreakEndDate) }
+		set { AppDefaults.setDate(for: Key.screenTimeRecurringBreakEndDate, newValue) }
+	}
+
+	/// Persisted mirror of `ScreenTimeTracker`'s in-memory
+	/// `secondsSinceLastBreak`.
+	var screenTimeSecondsSinceLastBreak: Int {
+		get { AppDefaults.int(for: Key.screenTimeSecondsSinceLastBreak) }
+		set { AppDefaults.setInt(for: Key.screenTimeSecondsSinceLastBreak, newValue) }
+	}
+
+	/// Timestamp of the last `willResignActive`, used on the next
+	/// `didBecomeActive` to detect time spent away from the app long
+	/// enough to count as a break, closing the force-quit loophole.
+	var screenTimeLastResignDate: Date? {
+		get { AppDefaults.date(for: Key.screenTimeLastResignDate) }
+		set { AppDefaults.setDate(for: Key.screenTimeLastResignDate, newValue) }
+	}
+
+	/// Whether the Screen Time pie indicator shows in fullscreen reading,
+	/// independent of `pageCounterDisplayMode`. Default `.pie` preserves
+	/// today's always-on-when-conditions-met behavior for existing users.
+	var screenTimeIndicatorDisplayMode: ScreenTimeIndicatorDisplayMode {
+		get { ScreenTimeIndicatorDisplayMode(rawValue: AppDefaults.string(for: Key.screenTimeIndicatorDisplayMode) ?? "") ?? .pie }
+		set { AppDefaults.setString(for: Key.screenTimeIndicatorDisplayMode, newValue.rawValue) }
 	}
 
 	var readingStatsTrackingEnabled: Bool {

@@ -7,13 +7,25 @@ import Account
 	static var now: () -> Date = { Date() }
 
 	private var timer: Timer?
-	private var lastTick: Date?
+	private let activeTime = ActiveTimeAccumulator(isActive: UIApplication.shared.applicationState != .background)
 	private var isLimitLockout = false
 	private var isBedtimeLockout = false
-	private var secondsSinceLastBreak = 0
 	private var isShowingBreak = false
 	private var isRecurringBreakLockout = false
-	private var recurringBreakEndDate: Date?
+
+	/// In-memory mirror of `AppDefaults.shared.screenTimeSecondsSinceLastBreak`.
+	/// Persisted so time away from the app (including a force-quit) is
+	/// accounted for -- see `didBecomeActive`'s away-reset check.
+	private var secondsSinceLastBreak: Int {
+		get { AppDefaults.shared.screenTimeSecondsSinceLastBreak }
+		set { AppDefaults.shared.screenTimeSecondsSinceLastBreak = newValue }
+	}
+
+	/// In-memory mirror of `AppDefaults.shared.screenTimeRecurringBreakEndDate`.
+	private var recurringBreakEndDate: Date? {
+		get { AppDefaults.shared.screenTimeRecurringBreakEndDate }
+		set { AppDefaults.shared.screenTimeRecurringBreakEndDate = newValue }
+	}
 
 	enum Reason: Equatable { case limit, bedtime, recurringBreak }
 
@@ -23,26 +35,65 @@ import Account
 		guard timer == nil else { return }
 		NotificationCenter.default.addObserver(self, selector: #selector(willResignActive), name: UIApplication.willResignActiveNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(didBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
-		lastTick = Self.now()
-		timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(tick), userInfo: nil, repeats: true)
+		if UIApplication.shared.applicationState != .background {
+			activeTime.becomeActive(now: Self.now())
+		}
+		// Closes the force-quit loophole: read any persisted enforced break
+		// back into memory rather than defaulting to "not locked." An
+		// end date already in the past is cleared via the same expiry path.
+		if let endDate = recurringBreakEndDate {
+			if endDate > Self.now() {
+				isRecurringBreakLockout = true
+			} else {
+				recurringBreakEndDate = nil
+				secondsSinceLastBreak = 0
+			}
+		}
+		timer = Timer(timeInterval: 1, target: self, selector: #selector(tick), userInfo: nil, repeats: true)
+		RunLoop.current.add(timer!, forMode: .common)
 	}
 
-	@objc private func willResignActive() { tick(); lastTick = nil }
-	@objc private func didBecomeActive() { lastTick = Self.now(); tick() }
+	@objc private func willResignActive() {
+		tick()
+		activeTime.resignActive()
+		AppDefaults.shared.screenTimeLastResignDate = Self.now()
+	}
+
+	@objc private func didBecomeActive() {
+		let now = Self.now()
+		evaluateRecurringBreakExpiry(at: now) // clears an expired persisted break first
+		if let lastResign = AppDefaults.shared.screenTimeLastResignDate,
+		   now.timeIntervalSince(lastResign) >= TimeInterval(AppDefaults.shared.screenTimeBreakEnforcedMinutes * 60) {
+			secondsSinceLastBreak = 0
+			if isShowingBreak { dismissBreak() }
+		}
+		activeTime.becomeActive(now: now)
+		tick()
+	}
 
 	@objc func tick() {
-		guard AppDefaults.shared.screenTimeEnabled else { lastTick = Self.now(); return }
+		guard AppDefaults.shared.screenTimeEnabled else { return }
 		let now = Self.now()
-		defer { lastTick = now }
-		guard let previous = lastTick else { return }
 		rolloverIfNeeded(at: now)
-		let elapsed = max(0, Int(now.timeIntervalSince(previous).rounded(.down)))
-		guard elapsed > 0 else { evaluate(at: now); return }
-		AppDefaults.shared.screenTimeMinutesUsedTodaySeconds += elapsed
-		NotificationCenter.default.post(name: .screenTimeUsageDidChange, object: self)
-		evaluate(at: now)
-		evaluateRecurringBreakExpiry(at: now)
-		evaluateBreak(elapsed: elapsed)
+		// Don't credit usage seconds while an enforcement overlay from
+		// *this* tick's prior state is already showing -- see the
+		// lockout-pause fix below. Read the flags before evaluate(at:)
+		// runs, since evaluate() is what would flip them for this tick.
+		let wasLockedBeforeThisTick = isLimitLockout || isBedtimeLockout
+		if let elapsed = activeTime.tick(now: now) {
+			if !wasLockedBeforeThisTick {
+				AppDefaults.shared.screenTimeMinutesUsedTodaySeconds += elapsed
+				NotificationCenter.default.post(name: .screenTimeUsageDidChange, object: self)
+			}
+			evaluate(at: now)
+			evaluateRecurringBreakExpiry(at: now)
+			if !wasLockedBeforeThisTick {
+				evaluateBreak(elapsed: elapsed)
+			}
+		} else {
+			evaluate(at: now)
+			evaluateRecurringBreakExpiry(at: now)
+		}
 	}
 
 	private func evaluateBreak(elapsed: Int) {
@@ -152,33 +203,47 @@ import Account
 	}
 
 #if DEBUG
+	/// Also invalidates and clears `timer` (and removes NotificationCenter
+	/// observers) rather than leaving it set -- `start()` is guarded by
+	/// `timer == nil` so it only runs its one-time setup (observer
+	/// registration, reading a persisted `recurringBreakEndDate` back in)
+	/// once per process. Without resetting `timer` here, any test after
+	/// the first to call `start()` would hit that guard and silently
+	/// no-op, never re-running the break-persistence read-back logic
+	/// `start()` is actually testing.
 	func resetForTesting() {
+		NotificationCenter.default.removeObserver(self)
+		timer?.invalidate()
+		timer = nil
 		isLimitLockout = false
 		isBedtimeLockout = false
 		secondsSinceLastBreak = 0
 		isShowingBreak = false
 		isRecurringBreakLockout = false
 		recurringBreakEndDate = nil
-		lastTick = nil
+		AppDefaults.shared.screenTimeLastResignDate = nil
+		activeTime.resetForTesting(isActive: UIApplication.shared.applicationState != .background)
 	}
 
-	/// Mirrors didBecomeActive()'s exact sequence -- lastTick is reset to
-	/// `Self.now()` *before* tick() runs, so tick()'s own `elapsed`
-	/// computation is always ~0 here, exactly as it is on a real resume.
+	/// Calls the real `didBecomeActive()` rather than re-implementing part
+	/// of its sequence -- a prior version here only replayed the
+	/// `activeTime.becomeActive(now:)`/`tick()` pair and skipped
+	/// `didBecomeActive()`'s away-time reset check entirely, so tests
+	/// exercising that check (via this helper) silently exercised nothing.
 	/// Tests simulating "app was backgrounded, a day passed, app resumed"
 	/// should drive time forward through this helper rather than a raw
-	/// tick() call: a raw tick() after jumping `now` forward by a whole day
-	/// computes a huge `elapsed` (~24h) against the *old* lastTick, and
-	/// since rolloverIfNeeded (called earlier in that same tick()) already
-	/// zeroed the day's counter, that whole elapsed gets credited to the
-	/// new day -- instantly re-triggering the limit lockout tick() was
-	/// meant to clear. Production never hits that path: every day-boundary
-	/// crossing goes through didBecomeActive(), never a bare tick() against
-	/// a stale lastTick, so a raw tick() in a test exercises a sequence
-	/// that can't actually happen.
+	/// tick() call: `ActiveTimeAccumulator.tick(now:)` returns nil while
+	/// inactive rather than crediting against a stale timestamp, so a bare
+	/// tick() with no preceding becomeActive(now:) call has no reference
+	/// point to measure from.
 	func simulateDidBecomeActiveForTesting() {
-		lastTick = Self.now()
-		tick()
+		didBecomeActive()
+	}
+
+	/// Exposes the private `willResignActive()` sequence for tests that
+	/// need to simulate a resign/suspend without a real notification.
+	func willResignActiveForTesting() {
+		willResignActive()
 	}
 #endif
 }

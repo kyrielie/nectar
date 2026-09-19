@@ -46,6 +46,10 @@ pushes `AO3AccountSettingsView` directly (see below).
   **Screen Time**, a disclosure row pushing `ScreenTimeSettingsView`, and
   **Reading Stats**, a disclosure row pushing `ReadingStatsView`. Screen
   Time enforcement is independent of Reading Stats tracking.
+  `ScreenTimeSettingsView` also has its own "Show indicator while
+  reading" toggle (`screenTimeIndicatorDisplayMode`), independent of the
+  Page Counter toggle below — see `screen-time.md` for the full
+  interaction.
   (also `annotations.md`: master auto-apply toggle, reader-insert names
   — with a per-work override `NavigationLink` into
   `TextReplacementPerWorkOverrideView` when a "current work" is

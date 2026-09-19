@@ -4,6 +4,7 @@ import Account
 struct ScreenTimeSettingsView: View {
 	@State private var enabled = AppDefaults.shared.screenTimeEnabled
 	@State private var dailyLimitEnabled = AppDefaults.shared.screenTimeDailyLimitEnabled
+	@State private var indicatorEnabled = AppDefaults.shared.screenTimeIndicatorDisplayMode != .off
 	@State private var bedtimeEnabled = AppDefaults.shared.screenTimeBedtimeEnabled
 	@State private var start = Self.minutesDate(AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight)
 	@State private var end = Self.minutesDate(AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight)
@@ -105,6 +106,15 @@ struct ScreenTimeSettingsView: View {
 			takeABreakSection
 				.disabled(enabled)
 				.opacity(enabled ? 0.4 : 1)
+
+			Section {
+				Toggle("Show indicator while reading", isOn: $indicatorEnabled)
+					.onChange(of: indicatorEnabled) { _, value in
+						AppDefaults.shared.screenTimeIndicatorDisplayMode = value ? .pie : .off
+					}
+			} footer: {
+				Text("Shows a small pie indicator of today's remaining reading time in fullscreen reading, independent of the Page Counter setting.")
+			}
 		}
 		.navigationTitle("Screen Time")
 		.navigationBarTitleDisplayMode(.inline)
