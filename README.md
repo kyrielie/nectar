@@ -69,6 +69,7 @@ Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWi
 - **Annotations and highlights** - save quotes, write notes. 
 - **Text replacement** - Fix typos and grammar mistakes, replace Y/N with name.
 - **Screen Time and Reading Stats** - Limit yourself and track reading habits.
+- **Backup and Restore** - Export your full library, settings, and reading history to a `.zip` and restore or merge it later, on this device or another.
 
 ## Installation
 
@@ -98,7 +99,7 @@ If you'd rather install a single release without adding a source:
 
 ### Building from source
 
-Building your own signed IPA (useful if you want to build off `main` rather than the latest tagged release) is documented in [`docs/building-an-ipa-for-sideloadly.md`](./docs/building-an-ipa-for-sideloadly.md). In short:
+Building your own signed IPA (useful if you want to build off `main` rather than the latest tagged release) requires Xcode and `xcodegen` to generate the project, then archiving and signing the resulting `.ipa` yourself (with a free or paid Apple ID) the same way Sideloadly expects for the prebuilt release above. In short:
 
 ```bash
 git clone --recursive https://github.com/kyrielie/nectar.git

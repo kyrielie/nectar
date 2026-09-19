@@ -39,6 +39,15 @@ public enum AccountError: LocalizedError {
 	/// silently-empty feed the person might otherwise mistake for a
 	/// genuinely-empty subscriptions list.
 	case ao3ListingRequiresSignIn(feed: Feed)
+	/// Add-time fetch of a newly-created AO3 search/tag-listing feed came
+	/// back as `AO3SearchResultsFetchOutcome.filtersNotApplied` -- the
+	/// request URL was at least `AO3FilterURLLength.limit` long and AO3
+	/// silently dropped its `work_search[...]` query, serving its own
+	/// unfiltered "Latest Works" listing instead of erroring. Retrying
+	/// the identical URL won't help, so `LocalAccountDelegate.createFeed`
+	/// removes the feed it had already created before throwing this: the
+	/// feed is not kept. `feed` is that removed feed.
+	case ao3FiltersNotApplied(feed: Feed)
 
 	public var isCredentialsError: Bool {
 		if case .wrappedError(let error, _, _) = self {
@@ -92,6 +101,8 @@ public enum AccountError: LocalizedError {
 			return NSLocalizedString("Blocked by a Cloudflare challenge -- try again later", comment: "AO3 Cloudflare challenge")
 		case .ao3ListingRequiresSignIn:
 			return NSLocalizedString("This feed requires a signed-in AO3 account.", comment: "AO3 listing requires sign-in")
+		case .ao3FiltersNotApplied:
+			return NSLocalizedString("AO3 couldn’t apply this search’s filters because the URL is too long, and returned its unfiltered “Latest Works” listing instead.", comment: "AO3 filters not applied")
 		}
 	}
 
@@ -101,6 +112,8 @@ public enum AccountError: LocalizedError {
 			return nil
 		case .createErrorAlreadySubscribed:
 			return nil
+		case .ao3FiltersNotApplied:
+			return NSLocalizedString("Try removing a few filters, or use AO3's numeric tag-ID search format, then paste the shorter URL again.", comment: "AO3 filter URL too long recovery")
 		case .wrappedError(let error, _, _):
 			switch error {
 			case WebserviceError.httpError(let status):

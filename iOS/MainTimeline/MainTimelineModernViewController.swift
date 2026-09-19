@@ -1251,6 +1251,8 @@ extension MainTimelineModernViewController {
 				self.ao3LoadMoreState = .error(NSLocalizedString("Blocked by a Cloudflare challenge -- try again later", comment: "AO3 load more error"))
 			case .notSignedIn:
 				self.ao3LoadMoreState = .error(NSLocalizedString("This feed requires a signed-in AO3 account", comment: "AO3 load more error"))
+			case .filtersNotApplied:
+				self.ao3LoadMoreState = .error(NSLocalizedString("AO3 ignored this search's filters (URL too long)", comment: "AO3 load more error"))
 			}
 			self.ao3LoadMoreFooterView?.state = self.ao3LoadMoreState
 		}
@@ -1288,6 +1290,8 @@ extension MainTimelineModernViewController {
 					self.ao3LoadMoreState = .error(message)
 				case .notSignedIn:
 					self.ao3LoadMoreState = .error(NSLocalizedString("This feed requires a signed-in AO3 account", comment: "AO3 load more error"))
+				case .filtersNotApplied:
+					self.ao3LoadMoreState = .error(NSLocalizedString("AO3 ignored this search's filters (URL too long)", comment: "AO3 load more error"))
 				}
 				self.ao3LoadMoreFooterView?.state = self.ao3LoadMoreState
 			}

@@ -435,6 +435,12 @@ import os
 					// messaging from .registrationRequired above, matching
 					// AccountError.ao3ListingRequiresSignIn's copy.
 					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "This feed requires a signed-in AO3 account"]), activityKind: activityKind)
+				case .filtersNotApplied:
+					// Only reachable for a filtered URL at or past
+					// AO3FilterURLLength.limit. Nothing is imported --
+					// AO3's unfiltered "Latest Works" listing isn't the
+					// search this feed subscribes to.
+					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "AO3 ignored this search's filters because its URL is too long"]), activityKind: activityKind)
 				}
 			} catch {
 				Self.logger.error("LocalAccountRefresher: AO3 search-results fetch failed for \(url.absoluteString): \(error.localizedDescription)")
