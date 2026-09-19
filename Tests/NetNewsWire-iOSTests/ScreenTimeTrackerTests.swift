@@ -401,4 +401,104 @@ import Foundation
 		drive(from: start.addingTimeInterval(61), to: start.addingTimeInterval(16 * 60))
 		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.recurringBreak))
 	}
+
+	// MARK: - ActiveTimeAccumulator wiring (background credit, clamping, lockout pause)
+
+	@Test func suspendedBackgroundTime_isNotCredited() {
+		resetState()
+		defer { resetState() }
+
+		let calendar = testCalendar()
+		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
+		ScreenTimeTracker.now = { start }
+		ScreenTimeTracker.shared.tick()
+
+		// Simulate resign, then a long real-world gap (suspend), then resume --
+		// no tick() calls happen while backgrounded, mirroring a suspended process.
+		ScreenTimeTracker.shared.willResignActiveForTesting()
+		let fourHoursLater = start.addingTimeInterval(4 * 60 * 60)
+		ScreenTimeTracker.now = { fourHoursLater }
+		ScreenTimeTracker.shared.simulateDidBecomeActiveForTesting()
+
+		#expect(AppDefaults.shared.screenTimeMinutesUsedTodaySeconds < 10)
+	}
+
+	@Test func forwardClockJumpMidForeground_isCappedPerTick() {
+		resetState()
+		defer { resetState() }
+
+		let calendar = testCalendar()
+		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
+		ScreenTimeTracker.now = { start }
+		ScreenTimeTracker.shared.tick()
+
+		// No resign/active cycle -- a single tick() call far in the future,
+		// simulating a clock jump without a suspend.
+		let muchLater = start.addingTimeInterval(600)
+		ScreenTimeTracker.now = { muchLater }
+		ScreenTimeTracker.shared.tick()
+
+		#expect(AppDefaults.shared.screenTimeMinutesUsedTodaySeconds <= 5)
+	}
+
+	@Test func lockoutPause_usageDoesNotAccrueWhileLockedOut() {
+		resetState()
+		defer { resetState() }
+
+		let calendar = testCalendar()
+		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
+		setDailyLimit(1)
+		drive(from: start, to: start.addingTimeInterval(61))
+		#expect(ScreenTimeTracker.shared.activeReasons.contains(.limit))
+
+		let usedAtLockout = AppDefaults.shared.screenTimeMinutesUsedTodaySeconds
+		drive(from: start.addingTimeInterval(61), to: start.addingTimeInterval(120))
+		#expect(AppDefaults.shared.screenTimeMinutesUsedTodaySeconds == usedAtLockout)
+	}
+
+	@Test func breakPersistence_survivesForceQuit_expiredBreakClearsOnRelaunch() {
+		resetState()
+		defer { resetState() }
+
+		let calendar = testCalendar()
+		let past = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
+		AppDefaults.shared.screenTimeRecurringBreakEndDate = past
+		ScreenTimeTracker.now = { past.addingTimeInterval(60) }
+		ScreenTimeTracker.shared.start()
+		defer { ScreenTimeTracker.shared.resetForTesting() }
+
+		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.recurringBreak))
+		#expect(AppDefaults.shared.screenTimeRecurringBreakEndDate == nil)
+	}
+
+	@Test func breakPersistence_survivesForceQuit_activeBreakStaysLockedOnRelaunch() {
+		resetState()
+		defer { resetState() }
+
+		let calendar = testCalendar()
+		let now = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
+		AppDefaults.shared.screenTimeRecurringBreakEndDate = now.addingTimeInterval(300)
+		ScreenTimeTracker.now = { now }
+		ScreenTimeTracker.shared.start()
+		defer { ScreenTimeTracker.shared.resetForTesting() }
+
+		#expect(ScreenTimeTracker.shared.activeReasons.contains(.recurringBreak))
+	}
+
+	@Test func awayReset_clearsSecondsSinceLastBreakAfterLongEnoughAway() {
+		resetState()
+		defer { resetState() }
+
+		AppDefaults.shared.screenTimeBreakEnforcedMinutes = 5
+		let calendar = testCalendar()
+		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
+		AppDefaults.shared.screenTimeSecondsSinceLastBreak = 500
+		AppDefaults.shared.screenTimeLastResignDate = start
+
+		let farEnoughAway = start.addingTimeInterval(6 * 60)
+		ScreenTimeTracker.now = { farEnoughAway }
+		ScreenTimeTracker.shared.simulateDidBecomeActiveForTesting()
+
+		#expect(AppDefaults.shared.screenTimeSecondsSinceLastBreak == 0)
+	}
 }

@@ -191,8 +191,23 @@ What each caller does with it:
   Both show an alert containing the error description and recovery
   suggestion (`presentError(_:)` alone would drop the suggestion).
 - **Refresh:** reported through `reportFeedRefreshError`; nothing imported.
+  `LocalAccountRefresher.fetchAndImportAO3SearchResults` — the OPML-import
+  add-time fetch, per the call-site table above — handles
+  `.filtersNotApplied` the identical way: `reportFeedRefreshError`,
+  nothing imported, feed kept. This is the same routine-Refresh behavior,
+  not a separate code path; it's distinct from manual Add Feed's
+  create-then-remove-on-failure behavior above only because an
+  OPML-imported feed already exists as a feed before this fetch runs, the
+  same way a routine refresh's feed already exists.
 - **Load more / inspector page fetch:** shown as the footer or
   validation error text.
+
+**Known test gap:** no tests currently exist for `AO3SearchResultsFetcher`'s
+`.filtersNotApplied` outcome itself, `LocalAccountDelegate.createFeed`'s
+feed-removal-on-failure branch, `LocalAccountRefresher.fetchAndImportAO3SearchResults`'s
+handling of it, or `AddFeedViewController`'s long-URL warning UI — only
+`AO3FilterURLLengthTests` (URL-length tiers) and one importer-test outcome
+exist today.
 
 "Add Anyway" sets `userAcceptedLongAO3URL` so the re-entrant `add(_:)`
 does not warn twice; it is cleared when the URL text changes and after
