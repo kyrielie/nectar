@@ -14,7 +14,7 @@ import Account
 	nonisolated let containerID: ContainerIdentifier? = ContainerIdentifier.smartFeedController
 
 	public static let shared = SmartFeedsController()
-	let nameForDisplay = NSLocalizedString("Smart Feeds", comment: "Smart Feeds group title")
+	let nameForDisplay = NSLocalizedString("Smart shelves", comment: "Smart Feeds group title")
 
 	var smartFeeds = [SidebarItem]()
 	let todayFeed = SmartFeed(delegate: TodayFeedDelegate())

@@ -488,7 +488,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 	func updateClearReadArticlesReasonLabel() {
 		let coordinator = (presentingParentController as? RootSplitViewController)?.coordinator
 		let filterOnNow = coordinator?.isReadArticlesFiltered ?? false
-		clearReadArticlesReasonLabel.text = filterOnNow ? nil : NSLocalizedString("Only applies when the Read Articles filter is on", comment: "Clear read articles inapplicable reason")
+		clearReadArticlesReasonLabel.text = filterOnNow ? nil : NSLocalizedString("Only applies when the Read Works filter is on", comment: "Clear read articles inapplicable reason")
 		clearReadArticlesReasonLabel.isHidden = filterOnNow
 	}
 
@@ -514,8 +514,8 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 	/// format that silently varies by feed or by response size; see
 	/// docs/sqlite-transfer.md for the format itself.
 	func presentFeedTransferFormatPicker(sourceView: UIView, sourceRect: CGRect) {
-		let title = NSLocalizedString("Feed Transfer Format", comment: "Feed transfer format picker title")
-		let message = NSLocalizedString("Affects only feeds that support the SQLite transfer protocol. Most feeds are unaffected.", comment: "Feed transfer format picker explanation")
+		let title = NSLocalizedString("Transfer Format", comment: "Feed transfer format picker title")
+		let message = NSLocalizedString("Affects only Ambrosia-paired shelves. Most shelves are unaffected.", comment: "Feed transfer format picker explanation")
 		let alert = UIAlertController(title: title, message: message, preferredStyle: .actionSheet)
 
 		if let popoverController = alert.popoverPresentationController {
@@ -656,7 +656,7 @@ private extension SettingsViewController {
 	}
 
 	func exportOPMLAccountPicker(sourceView: UIView, sourceRect: CGRect) {
-		let title = NSLocalizedString("Choose an account with the subscriptions to export", comment: "Export Account")
+		let title = NSLocalizedString("Choose an account to export", comment: "Export Account")
 		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
 
 		if let popoverController = alert.popoverPresentationController {
@@ -688,7 +688,7 @@ private extension SettingsViewController {
 	}
 
 	func exportArticlesCSVAccountPicker(sourceView: UIView, sourceRect: CGRect) {
-		let title = NSLocalizedString("Choose an account with the articles to export", comment: "Export Account")
+		let title = NSLocalizedString("Choose an account to export", comment: "Export Account")
 		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
 
 		if let popoverController = alert.popoverPresentationController {
@@ -835,7 +835,7 @@ private extension SettingsViewController {
 			return
 		}
 
-		let title = NSLocalizedString("Choose an account with the highlights to export", comment: "Export Account")
+		let title = NSLocalizedString("Choose an account to export", comment: "Export Account")
 		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
 
 		if let popoverController = alert.popoverPresentationController {

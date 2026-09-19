@@ -432,7 +432,7 @@ struct ArticleThemeListView: View {
 		} header: {
 			Text("Font", comment: "Font section header")
 		} footer: {
-			Text("Reading Font applies to the article text. Interface Font applies to the byline, dateline, and other chrome.", comment: "Font section footer explaining serif/sans split")
+			Text("Reading Font applies to the work text. Interface Font applies to the byline, dateline, and other chrome.", comment: "Font section footer explaining serif/sans split")
 		}
 	}
 

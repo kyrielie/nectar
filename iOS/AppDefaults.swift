@@ -793,9 +793,9 @@ extension ToolbarFunction {
 		case .tableOfContents:
 			return NSLocalizedString("Table of Contents", comment: "Toolbar function: table of contents")
 		case .find:
-			return NSLocalizedString("Find in Article", comment: "Toolbar function: find")
+			return NSLocalizedString("Find in Work", comment: "Toolbar function: find")
 		case .prevNext:
-			return NSLocalizedString("Previous & Next Article", comment: "Toolbar function: previous and next article")
+			return NSLocalizedString("Previous & Next Work", comment: "Toolbar function: previous and next article")
 		case .lock:
 			return NSLocalizedString("Lock Gestures", comment: "Toolbar function: lock gestures")
 		case .annotations:

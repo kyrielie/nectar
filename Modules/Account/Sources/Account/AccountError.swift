@@ -72,9 +72,9 @@ public enum AccountError: LocalizedError {
 	public var errorDescription: String? {
 		switch self {
 		case .createErrorNotFound:
-			return NSLocalizedString("The feed couldn’t be found and can’t be added.", comment: "Not found")
+			return NSLocalizedString("That link couldn’t be found and can’t be added.", comment: "Not found")
 		case .createErrorAlreadySubscribed:
-			return NSLocalizedString("You are already subscribed to this feed and can’t add it again.", comment: "Already subscribed")
+			return NSLocalizedString("This link is already on one of your shelves, so it can’t be added again.", comment: "Already subscribed")
 		case .opmlImportInProgress:
 			return NSLocalizedString("An OPML import for this account is already running.", comment: "Import running")
 		case .invalidParameter:
@@ -100,7 +100,7 @@ public enum AccountError: LocalizedError {
 		case .ao3CloudflareChallenge:
 			return NSLocalizedString("Blocked by a Cloudflare challenge -- try again later", comment: "AO3 Cloudflare challenge")
 		case .ao3ListingRequiresSignIn:
-			return NSLocalizedString("This feed requires a signed-in AO3 account.", comment: "AO3 listing requires sign-in")
+			return NSLocalizedString("This shelf requires a signed-in AO3 account.", comment: "AO3 listing requires sign-in")
 		case .ao3FiltersNotApplied:
 			return NSLocalizedString("AO3 couldn’t apply this search’s filters because the URL is too long, and returned its unfiltered “Latest Works” listing instead.", comment: "AO3 filters not applied")
 		}

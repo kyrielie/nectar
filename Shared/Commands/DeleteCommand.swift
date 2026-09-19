@@ -244,11 +244,11 @@ final class DeleteCommand: UndoableCommand {
 
 private struct DeleteActionName {
 
-	private static let deleteFeed = NSLocalizedString("Delete Feed", comment: "Delete Feed")
-	private static let deleteFeeds = NSLocalizedString("Delete Feeds", comment: "Delete Feeds")
+	private static let deleteFeed = NSLocalizedString("Delete Shelf", comment: "Delete Feed")
+	private static let deleteFeeds = NSLocalizedString("Delete Shelves", comment: "Delete Feeds")
 	private static let deleteFolder = NSLocalizedString("Delete Folder", comment: "Command")
 	private static let deleteFolders = NSLocalizedString("Delete Folders", comment: "command")
-	private static let deleteFeedsAndFolders = NSLocalizedString("Delete Feeds and Folders", comment: "command")
+	private static let deleteFeedsAndFolders = NSLocalizedString("Delete Shelves and Folders", comment: "command")
 
 	@MainActor static func name(for nodes: [Node]) -> String? {
 

@@ -278,7 +278,7 @@ import Articles
         if self.url.contains("www.reddit.com") {
             return NSLocalizedString("Notify about new posts", comment: "notifyNameDisplay / Reddit")
         } else {
-            return NSLocalizedString("Notify about new articles", comment: "notifyNameDisplay / Default")
+            return NSLocalizedString("Notify about new works", comment: "notifyNameDisplay / Default")
         }
     }
 

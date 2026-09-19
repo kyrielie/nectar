@@ -36,7 +36,7 @@
                             <rect key="frame" x="0.0" y="174" width="414" height="150"/>
                             <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                             <subviews>
-                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Local accounts do not sync your feeds across devices." textAlignment="center" lineBreakMode="wordWrap" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="5ce-ZL-glQ">
+                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Local accounts do not sync your library across devices." textAlignment="center" lineBreakMode="wordWrap" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="5ce-ZL-glQ">
                                     <rect key="frame" x="20" y="8" width="373" height="14.5"/>
                                     <fontDescription key="fontDescription" style="UICTFontTextStyleCaption1"/>
                                     <color key="textColor" systemColor="secondaryLabelColor"/>

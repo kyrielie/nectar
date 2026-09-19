@@ -36,6 +36,7 @@ task**, not this whole index cover-to-cover.
 - **Settings screen, any toggle, or "does setting X exist"** → `settings-screen.md` (main screen) **and** `ao3-authenticated-reading.md` (the separate AO3 account screen — easy to miss)
 - **Screen Time reading limits / bedtime lockout / enforcement overlay** → `screen-time.md`
 - **Reading Stats (words/time tracking, streaks)** → `reading-stats.md`
+- **UI vocabulary (Shelf/Chapter/Work/Library) vs. the underlying Feed/Article code vocabulary, or wording for a new user-facing string** → `terminology.md`
 - **Full device backup / restore, the Backup settings section** → `backup-restore.md`
 - **The in-app Guide (Settings → Help → Guide), its overlay presentation, or its static page content** → `guide.md`
 - **Favicon / page metadata extraction** → `metadata-extraction.md`
@@ -105,6 +106,7 @@ it's trusted by default. Specifically:
 | Any row/case in `SettingsViewController`'s `*Row` enums, `Settings.storyboard`, or `AppDefaults` | `settings-screen.md` |
 | `ScreenTimeTracker`, `ScreenTimeEnforcementOverlay`, `ScreenTimeSettingsView` | `screen-time.md` |
 | `ReadingStatsTracker`, `ReadingStatsView` | `reading-stats.md` |
+| Any new or renamed user-facing string, or a decision about which vocabulary (UI vs. code) a screen should use | `terminology.md` |
 | `BackupManager`, `BackupRestoreCoordinator`, the backup zip's file layout | `backup-restore.md` |
 | `GuideOverlayView`, `GuideContent`, `HelpRow.guide` | `guide.md` |
 | `HTMLMetadata`/favicon extraction | `metadata-extraction.md` |

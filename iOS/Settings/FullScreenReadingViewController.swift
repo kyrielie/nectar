@@ -172,7 +172,7 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 	}
 
 	func presentArticleScrollbarVisibilityPicker(sourceView: UIView, sourceRect: CGRect) {
-		let title = NSLocalizedString("Article Scrollbar", comment: "Article scrollbar picker title")
+		let title = NSLocalizedString("Work Scrollbar", comment: "Article scrollbar picker title")
 		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
 
 		if let popoverController = alert.popoverPresentationController {

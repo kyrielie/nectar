@@ -10,7 +10,7 @@ import UIKit
 
 final class FindInArticleActivity: UIActivity {
 	override var activityTitle: String? {
-		NSLocalizedString("Find in Article", comment: "Find in Article")
+		NSLocalizedString("Find in Work", comment: "Find in Article")
 	}
 
 	override var activityType: UIActivity.ActivityType? {

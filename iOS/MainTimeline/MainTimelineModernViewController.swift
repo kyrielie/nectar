@@ -828,10 +828,10 @@ private extension MainTimelineModernViewController {
 		searchController.searchResultsUpdater = self
 		searchController.obscuresBackgroundDuringPresentation = false
 		searchController.searchBar.delegate = self
-		searchController.searchBar.placeholder = NSLocalizedString("Search Articles", comment: "Search Articles")
+		searchController.searchBar.placeholder = NSLocalizedString("Search Works", comment: "Search Articles")
 		searchController.searchBar.scopeButtonTitles = [
 			NSLocalizedString("Here", comment: "Here"),
-			NSLocalizedString("All Articles", comment: "All Articles")
+			NSLocalizedString("All Works", comment: "All Articles")
 		]
 		searchController.searchBar.barTintColor = .clear
 		searchController.searchBar.scopeBarBackgroundImage = UIImage()
@@ -1090,10 +1090,10 @@ private extension MainTimelineModernViewController {
 
 		if isReadArticlesFiltered {
 			filterButton.tintColor = Assets.Colors.primaryAccent
-			filterButton.accLabelText = NSLocalizedString("Selected - Filter Read Articles", comment: "Selected - Filter Read Articles")
+			filterButton.accLabelText = NSLocalizedString("Selected - Filter Read Works", comment: "Selected - Filter Read Articles")
 		} else {
 			filterButton.tintColor = .label
-			filterButton.accLabelText = NSLocalizedString("Filter Read Articles", comment: "Filter Read Articles")
+			filterButton.accLabelText = NSLocalizedString("Filter Read Works", comment: "Filter Read Articles")
 		}
 
 		collectionView?.selectItem(at: nil, animated: false, scrollPosition: .top)
@@ -1250,7 +1250,7 @@ extension MainTimelineModernViewController {
 				self.presentAO3LoadMoreVerificationPrompt(challengedURL: challengedURL, feed: feed, account: account)
 				self.ao3LoadMoreState = .error(NSLocalizedString("Blocked by a Cloudflare challenge -- try again later", comment: "AO3 load more error"))
 			case .notSignedIn:
-				self.ao3LoadMoreState = .error(NSLocalizedString("This feed requires a signed-in AO3 account", comment: "AO3 load more error"))
+				self.ao3LoadMoreState = .error(NSLocalizedString("This shelf requires a signed-in AO3 account", comment: "AO3 load more error"))
 			case .filtersNotApplied:
 				self.ao3LoadMoreState = .error(NSLocalizedString("AO3 ignored this search's filters (URL too long)", comment: "AO3 load more error"))
 			}
@@ -1289,7 +1289,7 @@ extension MainTimelineModernViewController {
 				case .failed(let message):
 					self.ao3LoadMoreState = .error(message)
 				case .notSignedIn:
-					self.ao3LoadMoreState = .error(NSLocalizedString("This feed requires a signed-in AO3 account", comment: "AO3 load more error"))
+					self.ao3LoadMoreState = .error(NSLocalizedString("This shelf requires a signed-in AO3 account", comment: "AO3 load more error"))
 				case .filtersNotApplied:
 					self.ao3LoadMoreState = .error(NSLocalizedString("AO3 ignored this search's filters (URL too long)", comment: "AO3 load more error"))
 				}
@@ -1771,7 +1771,7 @@ extension MainTimelineModernViewController {
 		guard let feed = article.feed,
 			!timelineFeedIsEqualTo(feed) else { return nil }
 
-		let title = NSLocalizedString("Go to Feed", comment: "Go to Feed")
+		let title = NSLocalizedString("Go to Shelf", comment: "Go to Feed")
 		let action = UIAction(title: title, image: Assets.Images.openInSidebar) { [weak self] _ in
 			self?.discloseFeed(feed, animations: [.scroll, .navigation])
 		}
@@ -1782,7 +1782,7 @@ extension MainTimelineModernViewController {
 		guard let feed = article.feed,
 			!timelineFeedIsEqualTo(feed) else { return nil }
 
-		let title = NSLocalizedString("Go to Feed", comment: "Go to Feed")
+		let title = NSLocalizedString("Go to Shelf", comment: "Go to Feed")
 		let action = UIAlertAction(title: title, style: .default) { [weak self] _ in
 			self?.discloseFeed(feed, animations: [.scroll, .navigation])
 			completion(true)
@@ -1845,7 +1845,7 @@ extension MainTimelineModernViewController {
 
 	func copyArticleURLAction(_ article: Article) -> UIAction? {
 		guard let url = article.preferredURL else { return nil }
-		let title = NSLocalizedString("Copy Article URL", comment: "Command")
+		let title = NSLocalizedString("Copy Work Link", comment: "Command")
 		let action = UIAction(title: title, image: Assets.Images.copy) { _ in
 			UIPasteboard.general.url = url
 		}

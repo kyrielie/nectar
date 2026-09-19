@@ -378,7 +378,7 @@ struct AnnotationsListView: View {
 			if let title, !title.isEmpty {
 				return title
 			}
-			return NSLocalizedString("This Book", comment: "Annotations list navigation title: whole book, title unavailable")
+			return NSLocalizedString("This Work", comment: "Annotations list navigation title: whole book, title unavailable")
 		case .everything:
 			return NSLocalizedString("All Highlights", comment: "Annotations list navigation title: everything")
 		}
@@ -397,7 +397,7 @@ struct AnnotationsListView: View {
 				Picker(selection: $selectedScope) {
 					Text("This Chapter", comment: "Annotations list tab: current chapter/article only")
 						.tag(Scope.chapter(articleID: articleID ?? "", bookKey: bookKey))
-					Text("Entire Book", comment: "Annotations list tab: current book, every chapter")
+					Text("This Work", comment: "Annotations list tab: current book, every chapter")
 						.tag(Scope.book(bookKey: bookKey ?? ""))
 				} label: {
 					Text("Scope", comment: "Annotations list: tab picker accessibility label")
@@ -514,7 +514,7 @@ struct AnnotationsListView: View {
 		ContentUnavailableView(
 			NSLocalizedString("No Highlights", comment: "Annotations list empty state title"),
 			systemImage: "highlighter",
-			description: Text("Select text in an article to highlight it.", comment: "Annotations list empty state message")
+			description: Text("Select text in a work to highlight it.", comment: "Annotations list empty state message")
 		)
 	}
 
