@@ -28,14 +28,14 @@ final class AddAccountViewController: UITableViewController, AddAccountDismissDe
 		var sectionHeader: String {
 			switch self {
 			case .local:
-				return NSLocalizedString("Local", comment: "Local Account")
+				return NSLocalizedString("Library", comment: "Local Account")
 			}
 		}
 
 		var sectionFooter: String {
 			switch self {
 			case .local:
-				return NSLocalizedString("Local accounts do not sync your feeds across devices", comment: "Local Account")
+				return NSLocalizedString("Local accounts do not sync your library across devices", comment: "Local Account")
 			}
 		}
 

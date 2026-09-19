@@ -168,7 +168,7 @@ final class AddFeedViewController: UITableViewController {
 	private func presentAO3VerificationPrompt(challengedURL: URL, feed: Feed, account: Account) {
 		let alert = UIAlertController(
 			title: NSLocalizedString("AO3 Needs Verification", comment: "AO3 Cloudflare challenge prompt title"),
-			message: NSLocalizedString("The feed was added, but AO3 needs you to verify you're not a bot before its results can load. Verify now?", comment: "AO3 Cloudflare challenge prompt message"),
+			message: NSLocalizedString("The shelf was added, but AO3 needs you to verify you're not a bot before its results can load. Verify now?", comment: "AO3 Cloudflare challenge prompt message"),
 			preferredStyle: .alert
 		)
 		alert.addAction(UIAlertAction(title: NSLocalizedString("Not Now", comment: "Decline AO3 verification"), style: .cancel) { [weak self] _ in
@@ -200,7 +200,7 @@ final class AddFeedViewController: UITableViewController {
 
 	private func presentAO3LongURLWarning() {
 		let limit = NumberFormatter.localizedString(from: NSNumber(value: AO3FilterURLLength.limit), number: .decimal)
-		let messageFormat = NSLocalizedString("This URL is longer than %@ characters. AO3 may ignore the search’s filters and show its unfiltered “Latest Works” listing instead. If that happens, the feed won’t be added.", comment: "AO3 long filter URL warning message")
+		let messageFormat = NSLocalizedString("This URL is longer than %@ characters. AO3 may ignore the search’s filters and show its unfiltered “Latest Works” listing instead. If that happens, the shelf won’t be added.", comment: "AO3 long filter URL warning message")
 		let alert = UIAlertController(
 			title: NSLocalizedString("AO3 Search URL Is Very Long", comment: "AO3 long filter URL warning title"),
 			message: String(format: messageFormat, limit),

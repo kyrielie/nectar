@@ -129,7 +129,7 @@ private extension KeyboardManager {
 	static func globalAuxilaryKeyCommands() -> [UIKeyCommand] {
 		var keys = [UIKeyCommand]()
 
-		let addNewFeedTitle = NSLocalizedString("New Feed", comment: "Command")
+		let addNewFeedTitle = NSLocalizedString("New Shelf", comment: "Command")
 		keys.append(KeyboardManager.createKeyCommand(title: addNewFeedTitle, action: "addNewFeed:", input: "n", modifiers: [.command]))
 
 		let addNewFolderTitle = NSLocalizedString("New Folder", comment: "Command")
@@ -153,7 +153,7 @@ private extension KeyboardManager {
 		let gotoSettings = NSLocalizedString("Go To Settings", comment: "Go To Settings")
 			keys.append(KeyboardManager.createKeyCommand(title: gotoSettings, action: "goToSettings:", input: ",", modifiers: [.command]))
 
-		let articleSearchTitle = NSLocalizedString("Article Search", comment: "Article Search")
+		let articleSearchTitle = NSLocalizedString("Work Search", comment: "Article Search")
 		keys.append(KeyboardManager.createKeyCommand(title: articleSearchTitle, action: "articleSearch:", input: "f", modifiers: [.command, .alternate]))
 
 		let markAllAsReadTitle = NSLocalizedString("Mark All as Read", comment: "Command")
@@ -162,10 +162,10 @@ private extension KeyboardManager {
 		let cleanUp = NSLocalizedString("Clean Up", comment: "Clean Up button")
 		keys.append(KeyboardManager.createKeyCommand(title: cleanUp, action: "cleanUp:", input: "'", modifiers: [.command]))
 
-		let toggleReadFeedsFilter = NSLocalizedString("Toggle Read Feeds Filter", comment: "Toggle Read Feeds Filter")
+		let toggleReadFeedsFilter = NSLocalizedString("Toggle Read Shelves Filter", comment: "Toggle Read Feeds Filter")
 		keys.append(KeyboardManager.createKeyCommand(title: toggleReadFeedsFilter, action: "toggleReadFeedsFilter:", input: "f", modifiers: [.command, .shift]))
 
-		let toggleReadArticlesFilter = NSLocalizedString("Toggle Read Articles Filter", comment: "Toggle Read Articles Filter")
+		let toggleReadArticlesFilter = NSLocalizedString("Toggle Read Works Filter", comment: "Toggle Read Articles Filter")
 		keys.append(KeyboardManager.createKeyCommand(title: toggleReadArticlesFilter, action: "toggleReadArticlesFilter:", input: "h", modifiers: [.command, .shift]))
 
 		return keys
@@ -180,7 +180,7 @@ private extension KeyboardManager {
 		let nextDownTitle = NSLocalizedString("Select Next Down", comment: "Select Next Down")
 		keys.append(KeyboardManager.createKeyCommand(title: nextDownTitle, action: "selectNextDown:", input: UIKeyCommand.inputDownArrow, modifiers: []))
 
-		let getFeedInfo = NSLocalizedString("Get Feed Info", comment: "Get Feed Info")
+		let getFeedInfo = NSLocalizedString("Get Shelf Info", comment: "Get Feed Info")
 		keys.append(KeyboardManager.createKeyCommand(title: getFeedInfo, action: "showFeedInspector:", input: "i", modifiers: .command))
 
 		return keys
@@ -207,10 +207,10 @@ private extension KeyboardManager {
 		let toggleLovedTitle = NSLocalizedString("Toggle Loved Status", comment: "Toggle Loved Status")
 		keys.append(KeyboardManager.createKeyCommand(title: toggleLovedTitle, action: "toggleLoved:", input: "v", modifiers: [.command, .shift]))
 
-		let findInArticleTitle = NSLocalizedString("Find in Article", comment: "Find in Article")
+		let findInArticleTitle = NSLocalizedString("Find in Work", comment: "Find in Article")
 		keys.append(KeyboardManager.createKeyCommand(title: findInArticleTitle, action: "beginFind:", input: "f", modifiers: [.command]))
 
-		let getFeedInfo = NSLocalizedString("Get Feed Info", comment: "Get Feed Info")
+		let getFeedInfo = NSLocalizedString("Get Shelf Info", comment: "Get Feed Info")
 		keys.append(KeyboardManager.createKeyCommand(title: getFeedInfo, action: "showFeedInspector:", input: "i", modifiers: .command))
 
 		let toggleSidebar = NSLocalizedString("Toggle Sidebar", comment: "Toggle Sidebar")

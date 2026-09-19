@@ -73,19 +73,19 @@
                     </toolbarItems>
                     <navigationItem key="navigationItem" largeTitleDisplayMode="never" id="mOI-FS-AaM">
                         <rightBarButtonItems>
-                            <barButtonItem title="Next Article" image="chevron.down" catalog="system" id="2qz-M5-Yhk">
+                            <barButtonItem title="Next Work" image="chevron.down" catalog="system" id="2qz-M5-Yhk">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="boolean" keyPath="accEnabled" value="YES"/>
-                                    <userDefinedRuntimeAttribute type="string" keyPath="accLabelText" value="Next Article"/>
+                                    <userDefinedRuntimeAttribute type="string" keyPath="accLabelText" value="Next Work"/>
                                 </userDefinedRuntimeAttributes>
                                 <connections>
                                     <action selector="nextArticle:" destination="JEX-9P-axG" id="P77-KM-j8D"/>
                                 </connections>
                             </barButtonItem>
-                            <barButtonItem title="Previous Article" image="chevron.up" catalog="system" id="v4j-fq-23N">
+                            <barButtonItem title="Previous Work" image="chevron.up" catalog="system" id="v4j-fq-23N">
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="boolean" keyPath="accEnabled" value="YES"/>
-                                    <userDefinedRuntimeAttribute type="string" keyPath="accLabelText" value="Previous Article"/>
+                                    <userDefinedRuntimeAttribute type="string" keyPath="accLabelText" value="Previous Work"/>
                                 </userDefinedRuntimeAttributes>
                                 <connections>
                                     <action selector="prevArticle:" destination="JEX-9P-axG" id="cMZ-tk-I4W"/>
@@ -183,7 +183,7 @@
         <!--Feeds-->
         <scene sceneID="NDp-hg-obE">
             <objects>
-                <collectionViewController storyboardIdentifier="MainFeedCollectionViewController" title="Feeds" useStoryboardIdentifierAsRestorationIdentifier="YES" clearsSelectionOnViewWillAppear="NO" id="6Bn-mF-MPS" customClass="MainFeedCollectionViewController" customModule="NetNewsWire" customModuleProvider="target" sceneMemberID="viewController">
+                <collectionViewController storyboardIdentifier="MainFeedCollectionViewController" title="Your archive" useStoryboardIdentifierAsRestorationIdentifier="YES" clearsSelectionOnViewWillAppear="NO" id="6Bn-mF-MPS" customClass="MainFeedCollectionViewController" customModule="NetNewsWire" customModuleProvider="target" sceneMemberID="viewController">
                     <collectionView key="view" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" dataMode="prototypes" prefetchingEnabled="NO" id="7gd-ro-2Jf">
                         <rect key="frame" x="0.0" y="0.0" width="402" height="874"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -382,10 +382,10 @@
                         <barButtonItem style="plain" systemItem="flexibleSpace" id="xNq-ig-7IX"/>
                         <barButtonItem title="Add" image="plus" catalog="system" id="iTI-PO-3e6"/>
                     </toolbarItems>
-                    <navigationItem key="navigationItem" title="Feeds" id="zgM-dx-bIO">
+                    <navigationItem key="navigationItem" title="Your archive" id="zgM-dx-bIO">
                         <barButtonItem key="rightBarButtonItem" image="line.3.horizontal.decrease" catalog="system" id="pBp-WF-vxp">
                             <userDefinedRuntimeAttributes>
-                                <userDefinedRuntimeAttribute type="string" keyPath="accLabelText" value="Feeds Filter"/>
+                                <userDefinedRuntimeAttribute type="string" keyPath="accLabelText" value="Filter Read Shelves"/>
                             </userDefinedRuntimeAttributes>
                             <connections>
                                 <action selector="toggleFilter:" destination="6Bn-mF-MPS" id="ZgH-7w-cAC"/>

@@ -35,7 +35,7 @@ struct AccountNotificationInspectorView: View {
 					.buttonStyle(.borderedProminent)
 					.tint(.accentColor)
 				}
-				.navigationTitle(Text("New Article Notifications", comment: "New Article Notifications"))
+				.navigationTitle(Text("New Work Notifications", comment: "New Article Notifications"))
 				.navigationSubtitleIfAvailable(account.nameForDisplay)
 				.navigationBarTitleDisplayMode(.inline)
 				.toolbar {
@@ -62,7 +62,7 @@ struct AccountNotificationInspectorView: View {
 					}
 					.tint(.accentColor)
 				}
-				.navigationTitle(Text("New Article Notifications", comment: "New Article Notifications"))
+				.navigationTitle(Text("New Work Notifications", comment: "New Article Notifications"))
 				.navigationBarTitleDisplayMode(.inline)
 				.navigationSubtitleIfAvailable(account.nameForDisplay)
 				.toolbar {

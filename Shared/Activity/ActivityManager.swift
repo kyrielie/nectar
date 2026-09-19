@@ -64,7 +64,7 @@ import Images
 		guard nextUnreadActivity == nil else { return }
 
 		nextUnreadActivity = NSUserActivity(activityType: ActivityType.nextUnread.rawValue)
-		nextUnreadActivity!.title = NSLocalizedString("See first unread article", comment: "First Unread")
+		nextUnreadActivity!.title = NSLocalizedString("See first unread work", comment: "First Unread")
 
 		#if os(iOS)
 		nextUnreadActivity!.suggestedInvocationPhrase = nextUnreadActivity!.title
@@ -159,7 +159,7 @@ import Images
 	func makeSelectFeedActivity(sidebarItem: SidebarItem) -> NSUserActivity {
 		let activity = NSUserActivity(activityType: ActivityType.selectFeed.rawValue)
 
-		let localizedText = NSLocalizedString("See articles in  “%@”", comment: "See articles in Folder")
+		let localizedText = NSLocalizedString("See works in  “%@”", comment: "See articles in Folder")
 		let title = NSString.localizedStringWithFormat(localizedText as NSString, sidebarItem.nameForDisplay) as String
 		activity.title = title
 

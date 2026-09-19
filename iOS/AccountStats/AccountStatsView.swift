@@ -130,9 +130,9 @@ private extension AccountStatsView {
 	func statItems(databaseSizeBytes: Int, feedCount: Int, folderCount: Int, articleCount: Int, statusesCount: Int, unreadCount: Int, starredCount: Int) -> [StatItem] {
 		[
 			StatItem(label: NSLocalizedString("Databases", comment: "Database size row label"), value: Self.formattedSize(databaseSizeBytes)),
-			StatItem(label: NSLocalizedString("Feeds", comment: "Feeds"), value: Self.formattedNumber(feedCount)),
+			StatItem(label: NSLocalizedString("Shelves", comment: "Feeds"), value: Self.formattedNumber(feedCount)),
 			StatItem(label: NSLocalizedString("Folders", comment: "Folders"), value: Self.formattedNumber(folderCount)),
-			StatItem(label: NSLocalizedString("Articles", comment: "Articles"), value: Self.formattedNumber(articleCount)),
+			StatItem(label: NSLocalizedString("Works", comment: "Articles"), value: Self.formattedNumber(articleCount)),
 			StatItem(label: NSLocalizedString("Statuses", comment: "Statuses"), value: Self.formattedNumber(statusesCount)),
 			StatItem(label: NSLocalizedString("Unread", comment: "Unread"), value: Self.formattedNumber(unreadCount)),
 			StatItem(label: NSLocalizedString("Read Later", comment: "Read Later"), value: Self.formattedNumber(starredCount))

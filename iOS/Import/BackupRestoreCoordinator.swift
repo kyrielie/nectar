@@ -100,7 +100,7 @@ final class BackupRestoreCoordinator: NSObject {
 		guard settingsIncluded else {
 			return notice
 		}
-		let settingsNote = NSLocalizedString("This backup also includes Settings. You can restore your feeds and reading history only, or also replace this device's Settings with the backup's.", comment: "Settings restore note")
+		let settingsNote = NSLocalizedString("This backup also includes Settings. You can restore your library and reading history only, or also replace this device's Settings with the backup's.", comment: "Settings restore note")
 		return "\(settingsNote)\n\n\(notice)"
 	}
 
