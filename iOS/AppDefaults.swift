@@ -1082,6 +1082,7 @@ final class AppDefaults: Sendable {
 		static let screenTimeIndicatorDisplayMode = "screenTimeIndicatorDisplayMode"
 		static let readingStatsTrackingEnabled = "readingStatsTrackingEnabled"
 		static let readingStatsDailyHistory = "readingStatsDailyHistory"
+		static let readingStatsDailyWords = "readingStatsDailyWords"
 		static let readingStatsProgressByBookKey = "readingStatsProgressByBookKey"
 		static let readingStatsAllTimeWords = "readingStatsAllTimeWords"
 		/// Text Replacement feature (docs/annotations.md's "Storage shape";
@@ -1218,7 +1219,7 @@ final class AppDefaults: Sendable {
 		Key.screenTimeBedtimeEndMinutesFromMidnight, Key.screenTimeMinutesUsedTodaySeconds,
 		Key.screenTimeUsageDate, Key.screenTimeDailyUsageHistory,
 		Key.screenTimeIndicatorDisplayMode,
-		Key.readingStatsTrackingEnabled, Key.readingStatsDailyHistory,
+		Key.readingStatsTrackingEnabled, Key.readingStatsDailyHistory, Key.readingStatsDailyWords,
 		Key.readingStatsProgressByBookKey, Key.readingStatsAllTimeWords,
 		Key.useSystemBrowser,
 		Key.currentThemeName
@@ -2451,6 +2452,37 @@ extension AppDefaults {
 		set { AppDefaults.encode(Dictionary(uniqueKeysWithValues: newValue.sorted { $0.key < $1.key }.suffix(35)), key: Key.readingStatsDailyHistory) }
 	}
 
+	/// Words credited per day (`"yyyy-MM-dd"` -> words), trimmed to 371 days
+	/// (53 weeks) on every write -- the most `ReadingHeatmapView`'s
+	/// year-of-activity grid can span (365 days plus up to 6 to align to
+	/// the week's first day; see `ReadingHeatmapData.daysAndStartDate`).
+	/// Deliberately a separate, tiny store rather than widening
+	/// `readingStatsDailyHistory`'s 35-day cap: that dictionary is decoded,
+	/// mutated, and re-encoded in full by `ReadingStatsTracker.tick()` every
+	/// second while reading, and each day's entry carries per-fandom/per-tag
+	/// maps and per-work sets, so keeping a year of it would make every one
+	/// of those writes roughly ten times larger. Read via
+	/// `readingStatsDailyWordCounts`, not directly, so days that predate
+	/// this store still appear.
+	var readingStatsDailyWords: [String: Int] {
+		get { AppDefaults.decode([String: Int].self, key: Key.readingStatsDailyWords, default: [:]) }
+		set { AppDefaults.encode(Dictionary(uniqueKeysWithValues: newValue.sorted { $0.key < $1.key }.suffix(371)), key: Key.readingStatsDailyWords) }
+	}
+
+	/// What the Streaks/Monthly UI reads: `readingStatsDailyWords`, with any
+	/// day where `readingStatsDailyHistory` recorded more words filled in
+	/// from there. That covers days recorded before `readingStatsDailyWords`
+	/// existed (no migration step needed) and the day of the upgrade itself,
+	/// where the new store only saw the words read after upgrading. Per-day
+	/// word counts only ever grow within a day, so `max` is safe.
+	var readingStatsDailyWordCounts: [String: Int] {
+		var merged = readingStatsDailyWords
+		for (key, entry) in readingStatsDailyHistory where entry.wordsRead > merged[key, default: 0] {
+			merged[key] = entry.wordsRead
+		}
+		return merged
+	}
+
 	var readingStatsProgressByBookKey: [String: Double] {
 		get { AppDefaults.decode([String: Double].self, key: Key.readingStatsProgressByBookKey, default: [:]) }
 		set { AppDefaults.encode(newValue, key: Key.readingStatsProgressByBookKey) }
@@ -2474,6 +2506,7 @@ extension AppDefaults {
 	/// confirm with the user first.
 	func resetReadingStats() {
 		AppDefaults.store.removeObject(forKey: Key.readingStatsDailyHistory)
+		AppDefaults.store.removeObject(forKey: Key.readingStatsDailyWords)
 		AppDefaults.store.removeObject(forKey: Key.readingStatsProgressByBookKey)
 		AppDefaults.store.removeObject(forKey: Key.readingStatsAllTimeWords)
 	}

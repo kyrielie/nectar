@@ -143,6 +143,9 @@ import Account
 		}
 		history[key] = entry
 		AppDefaults.shared.readingStatsDailyHistory = history
+		var dailyWords = AppDefaults.shared.readingStatsDailyWords
+		dailyWords[key, default: 0] += words
+		AppDefaults.shared.readingStatsDailyWords = dailyWords
 		AppDefaults.shared.readingStatsAllTimeWords += words
 		NotificationCenter.default.post(name: .readingStatsDidChange, object: self)
 	}

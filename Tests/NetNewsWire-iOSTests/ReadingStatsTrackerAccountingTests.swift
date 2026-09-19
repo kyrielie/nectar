@@ -24,6 +24,7 @@ import Articles
 	private func resetState() {
 		AppDefaults.shared.readingStatsTrackingEnabled = true
 		AppDefaults.shared.readingStatsDailyHistory = [:]
+		AppDefaults.shared.readingStatsDailyWords = [:]
 		AppDefaults.shared.readingStatsProgressByBookKey = [:]
 		AppDefaults.shared.readingStatsAllTimeWords = 0
 		ReadingStatsTracker.shared.resetForTesting()
@@ -151,5 +152,70 @@ import Articles
 		#expect(entry?.wordsRead == 500)
 		#expect(entry?.worksByFandom.isEmpty == true)
 		#expect(entry?.worksByTag.isEmpty == true)
+	}
+
+	// MARK: - Daily words store (feeds Streaks/Monthly)
+
+	@Test func recordProgress_writesDailyWordsStore() {
+		resetState()
+		defer { resetState() }
+
+		let start = Date(timeIntervalSince1970: 1_700_000_000)
+		ReadingStatsTracker.now = { start }
+		let article = makeArticle(bookKey: "book-daily", wordCount: 100_000)
+		ReadingStatsTracker.shared.setArticle(article)
+		ReadingStatsTracker.shared.recordProgress(0.01)
+
+		let credited = AppDefaults.shared.readingStatsAllTimeWords
+		#expect(credited > 0)
+		let daily = AppDefaults.shared.readingStatsDailyWords
+		#expect(daily.count == 1)
+		#expect(daily.values.reduce(0, +) == credited)
+	}
+
+	@Test func dailyWordCounts_takeTheLargerOfStoreAndHistory() {
+		resetState()
+		defer { resetState() }
+
+		// A day recorded before the daily store existed, a day the store
+		// only partly saw (the day of the upgrade), and a store-only day.
+		AppDefaults.shared.readingStatsDailyHistory = [
+			"2026-01-01": ReadingStatsDailyEntry(wordsRead: 100),
+			"2026-01-02": ReadingStatsDailyEntry(wordsRead: 80)
+		]
+		AppDefaults.shared.readingStatsDailyWords = ["2026-01-02": 30, "2026-01-03": 60]
+
+		let merged = AppDefaults.shared.readingStatsDailyWordCounts
+		#expect(merged == ["2026-01-01": 100, "2026-01-02": 80, "2026-01-03": 60])
+	}
+
+	@Test func dailyWordsStore_keepsOnlyTheLast371Days() {
+		resetState()
+		defer { resetState() }
+
+		var calendar = Calendar(identifier: .gregorian)
+		calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+		let formatter = DateFormatter()
+		formatter.calendar = calendar
+		formatter.timeZone = calendar.timeZone
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		formatter.dateFormat = "yyyy-MM-dd"
+		let first = calendar.date(from: DateComponents(year: 2025, month: 1, day: 1))!
+		let keys = (0..<400).map { formatter.string(from: calendar.date(byAdding: .day, value: $0, to: first)!) }
+		AppDefaults.shared.readingStatsDailyWords = Dictionary(uniqueKeysWithValues: keys.map { ($0, 1) })
+
+		let stored = AppDefaults.shared.readingStatsDailyWords
+		#expect(stored.count == 371)
+		#expect(stored[keys[0]] == nil)
+		#expect(stored[keys[399]] == 1)
+	}
+
+	@Test func resetReadingStats_clearsDailyWordsStore() {
+		resetState()
+		defer { resetState() }
+
+		AppDefaults.shared.readingStatsDailyWords = ["2026-01-01": 10]
+		AppDefaults.shared.resetReadingStats()
+		#expect(AppDefaults.shared.readingStatsDailyWords.isEmpty)
 	}
 }

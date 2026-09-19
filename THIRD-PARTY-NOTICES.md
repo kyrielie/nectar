@@ -1,9 +1,7 @@
 # Third-Party Notices
 
 Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire)
-and is itself MIT-licensed (see [`LICENSE`](./LICENSE)). This file aggregates
-attributions for third-party code, article themes, and fonts referenced
-throughout the codebase.
+and is itself MIT-licensed (see [`LICENSE`](./LICENSE)). This file aggregates attributions for third-party code, article themes, and fonts referenced throughout the codebase.
 
 ## Base project
 
@@ -12,11 +10,27 @@ throughout the codebase.
 | [Ranchero-Software/NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) | MIT | Nectar's base fork. |
 | [kyrielie/ambrosia](https://github.com/kyrielie/ambrosia) | MIT | Companion JSON Feed–based backend Nectar is repointed at. |
 
-## AO3 tooling (reference only)
+## Reading Stats (GPL-3.0)
 
-Nectar is a read-only AO3 client. It does not run, embed, or link against
-any of otwarchive's code, and none of the tools below were copied from —
-each entry states exactly what was checked and why.
+| Project | License | Used for |
+| --- | --- | --- |
+| [Aidoku/Aidoku](https://github.com/Aidoku/Aidoku) | GPL-3.0 | The Streaks section (current/longest streak platters and the year activity heatmap) and the Monthly section (words-per-month bar chart with year pills) of Reading Stats. Adapted from Aidoku's `Insights` feature: `HeatmapData.swift`, `YearlyMonthData.swift`, `HeatmapView.swift`, `InsightPlatterView.swift`, `InsightsView.swift` (streaks block), `StatsGridView.swift` (monthly chart card and year selector), `YearlyMonthChartView.swift`, and the `getStreakLengths`/`getReadingHeatmapData`/`getChapterYearlyReadingData` methods of `CoreDataManager+ReadingSession.swift`. Copyright (c) the Aidoku authors (those files' headers credit Skitty). |
+
+- `Modules/Account/Sources/Account/ReadingStats/ReadingStatsCalendar.swift` (the streak, heatmap and monthly-data types and functions)
+- `iOS/ReadingStats/ReadingInsightPlatterView.swift`
+- `iOS/ReadingStats/ReadingHeatmapView.swift`
+- `iOS/ReadingStats/ReadingStreaksView.swift`
+- `iOS/ReadingStats/ReadingMonthlyChartCard.swift`
+- `iOS/ReadingStats/ReadingYearlyMonthChartView.swift`
+
+The full license text is in [`LICENSES/GPL-3.0.txt`](./LICENSES/GPL-3.0.txt).
+The rest of the repository remains MIT-licensed. A Nectar build includes the
+GPL-3.0 files above, so distributing a built app means distributing it under
+GPL-3.0's terms for those files; this repository is the corresponding source.
+
+## AO3 tooling
+
+Nectar is a read-only AO3 client.
 
 | Project | License | Used for |
 | --- | --- | --- |
