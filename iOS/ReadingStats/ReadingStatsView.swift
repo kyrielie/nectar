@@ -3,9 +3,12 @@ import SwiftUI
 import Account
 import Articles
 
+enum StatsMetric { case words, works }
+
 struct ReadingStatsView: View {
 	@State private var trackingEnabled = AppDefaults.shared.readingStatsTrackingEnabled
 	@State private var month = false
+	@State private var statsMetric: StatsMetric = .words
 	@State private var showingDeleteConfirmation = false
 	// Bumped after resetReadingStats() to force the AppDefaults-backed
 	// computed properties below (totals, dailyWordCounts, etc.) to
@@ -43,19 +46,26 @@ struct ReadingStatsView: View {
 		}
 	}
 
-	/// Top 4 fandoms by words this period, remainder folded into "Other" --
-	/// mirrors the mockup's pie chart, and keeps the wedge count within
-	/// Annotation.Color.allCases' 5 colors without a separate palette.
-	private var fandomSlices: [(name: String, words: Int)] {
-		let sorted = totals.byFandom.sorted { $0.value > $1.value }
+	/// Top 4 by the current metric (words or completed works) this period,
+	/// remainder folded into "Other" -- mirrors the mockup's pie chart, and
+	/// keeps the wedge count within Annotation.Color.allCases' 5 colors
+	/// without a separate palette. Reuses the same PieSlice/FandomWedge
+	/// rendering unchanged for both metrics -- no special-case fallback to
+	/// ranked rows at low work counts, per the resolved decision to keep a
+	/// single code path.
+	private var fandomSlices: [(name: String, value: Int)] {
+		let source = statsMetric == .works ? totals.worksByFandom : totals.byFandom
+		let sorted = source.sorted { $0.value > $1.value }
 		guard sorted.count > 4 else { return sorted.map { ($0.key, $0.value) } }
 		let top = sorted.prefix(4).map { ($0.key, $0.value) }
 		let other = sorted.dropFirst(4).reduce(0) { $0 + $1.value }
 		return other > 0 ? top + [("Other", other)] : top
 	}
 
-	private var topTags: [(name: String, words: Int)] {
-		Array(totals.byTag.sorted { $0.value > $1.value }.prefix(5).map { ($0.key, $0.value) })
+	private var topTags: [(name: String, value: Int)] {
+		let source = statsMetric == .works ? totals.worksByTag : totals.byTag
+		let sorted = source.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+		return Array(sorted.prefix(5).map { ($0.key, $0.value) })
 	}
 
 	var body: some View {
@@ -69,11 +79,23 @@ struct ReadingStatsView: View {
 
 			Section {
 				Picker("Period", selection: $month) {
-					Text("This week").tag(false)
-					Text("This month").tag(true)
+					Text("Last 7 days").tag(false)
+					Text("Last 30 days").tag(true)
 				}
 				.pickerStyle(.segmented)
 				.labelsHidden()
+			}
+			.listRowSeparator(.hidden)
+
+			Section {
+				Picker("Metric", selection: $statsMetric) {
+					Text("Words").tag(StatsMetric.words)
+					Text("Works").tag(StatsMetric.works)
+				}
+				.pickerStyle(.segmented)
+				.labelsHidden()
+			} footer: {
+				Text("Controls both the fandom breakdown and top tags below.")
 			}
 			.listRowSeparator(.hidden)
 
@@ -83,22 +105,38 @@ struct ReadingStatsView: View {
 					.padding(.vertical, 8)
 			}
 
+			// Moved out from under the period picker (it was already hard-
+			// fixed to 7 days regardless of the picker's selection) so it no
+			// longer visually implies a connection to "Last 7 days"/"Last 30
+			// days" above -- see dailyWordCounts' doc comment.
 			Section("Words per day") {
 				dailyBarChart
 					.listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
 			}
 
 			if !fandomSlices.isEmpty {
-				Section("By fandom") {
+				Section {
 					fandomBreakdown
 						.listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+				} header: {
+					Text("By fandom")
+				} footer: {
+					Text(statsMetric == .words
+						? "A work's full word count counts toward every fandom it carries, so this can add up to more than total words read."
+						: "A completed work counts toward every fandom it carries.")
 				}
 			}
 
 			if !topTags.isEmpty {
-				Section("Top tags") {
+				Section {
 					tagRankedBars
 						.listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+				} header: {
+					Text("Top tags")
+				} footer: {
+					Text(statsMetric == .words
+						? "A work's full word count counts toward every tag it carries, so this can add up to more than total words read."
+						: "A completed work counts toward every tag it carries.")
 				}
 			}
 
@@ -222,22 +260,22 @@ struct ReadingStatsView: View {
 	private struct FandomWedge: Identifiable {
 		let id: Int
 		let name: String
-		let words: Int
+		let value: Int
 		let color: Color
 		let start: Angle
 		let end: Angle
 	}
 
-	private func fandomWedges(for slices: [(name: String, words: Int)]) -> [FandomWedge] {
-		let total = max(slices.reduce(0) { $0 + $1.words }, 1)
+	private func fandomWedges(for slices: [(name: String, value: Int)]) -> [FandomWedge] {
+		let total = max(slices.reduce(0) { $0 + $1.value }, 1)
 		var cumulative = 0.0
 		return slices.enumerated().map { index, slice in
-			let fraction = Double(slice.words) / Double(total)
+			let fraction = Double(slice.value) / Double(total)
 			let start = Angle(degrees: cumulative * 360)
 			cumulative += fraction
 			let end = Angle(degrees: cumulative * 360)
 			let color = Annotation.Color.allCases[index % Annotation.Color.allCases.count].swiftUIColor(palette: highlightPalette, isDark: colorScheme == .dark)
-			return FandomWedge(id: index, name: slice.name, words: slice.words, color: color, start: start, end: end)
+			return FandomWedge(id: index, name: slice.name, value: slice.value, color: color, start: start, end: end)
 		}
 	}
 
@@ -268,7 +306,7 @@ struct ReadingStatsView: View {
 	}
 
 	private func fandomLegend(_ wedges: [FandomWedge]) -> some View {
-		let total = max(wedges.reduce(0) { $0 + $1.words }, 1)
+		let total = max(wedges.reduce(0) { $0 + $1.value }, 1)
 		return VStack(alignment: .leading, spacing: 8) {
 			ForEach(wedges) { wedge in
 				fandomLegendRow(wedge, total: total)
@@ -277,7 +315,7 @@ struct ReadingStatsView: View {
 	}
 
 	private func fandomLegendRow(_ wedge: FandomWedge, total: Int) -> some View {
-		let percent = Int((Double(wedge.words) / Double(total) * 100).rounded())
+		let percent = Int((Double(wedge.value) / Double(total) * 100).rounded())
 		return HStack(spacing: 8) {
 			Circle().fill(wedge.color).frame(width: 10, height: 10)
 			// Was lineLimit(1) with no layoutPriority, so the Spacer and
@@ -293,44 +331,31 @@ struct ReadingStatsView: View {
 				.lineLimit(2)
 				.layoutPriority(1)
 			Spacer(minLength: 8)
-			Text("\(percent)%").font(.footnote).foregroundStyle(.secondary)
+			Text("\(percent)%")
+				.font(.footnote)
+				.foregroundStyle(.secondary)
+				.monospacedDigit()
+				.fixedSize()
 		}
 	}
 
-	/// Ranked bars rather than a second pie -- tags are long-tail (too many
-	/// distinct values to pie-chart usefully), matching the split The
-	/// StoryGraph's own stats page uses between its genre pie and its
-	/// mood bar lists.
-	/// The label used to be a hardcoded 110pt-wide, single-line Text --
-	/// AO3 tags routinely run longer than that at footnote size, so they
-	/// were clipped mid-word regardless of how much row width was
-	/// actually available. Each row now measures its own width and gives
-	/// the label a proportional share (35%) instead of a fixed point
-	/// value, so it scales with the device/list width rather than being
-	/// clipped at the same fixed point on every screen size.
+	/// Plain rows rather than the old GeometryReader-based proportional bar
+	/// chart, which clipped long AO3 tags regardless of available width.
 	private var tagRankedBars: some View {
-		let tags = topTags
-		let maxWords = max(tags.map(\.words).max() ?? 0, 1)
-		return VStack(spacing: 10) {
-			ForEach(Array(tags.enumerated()), id: \.offset) { _, tag in
-				GeometryReader { geo in
-					let labelWidth = geo.size.width * 0.35
-					let countWidth: CGFloat = 32
-					let barWidth = max(4, (geo.size.width - labelWidth - countWidth - 16) * CGFloat(tag.words) / CGFloat(maxWords))
-					HStack(spacing: 8) {
-						Text(tag.name)
-							.font(.footnote)
-							.foregroundStyle(.primary)
-							.lineLimit(1)
-							.minimumScaleFactor(0.85)
-							.frame(width: labelWidth, alignment: .leading)
-						RoundedRectangle(cornerRadius: 4, style: .continuous)
-							.fill(Color.accentColor.opacity(0.7))
-							.frame(width: barWidth, height: 8)
-						Text("\(tag.words)").font(.caption2).foregroundStyle(.secondary).frame(width: countWidth, alignment: .trailing)
-					}
+		VStack(spacing: 10) {
+			ForEach(Array(topTags.enumerated()), id: \.offset) { _, tag in
+				HStack {
+					Text(tag.name)
+						.font(.footnote)
+						.foregroundStyle(.primary)
+						.lineLimit(2)
+					Spacer(minLength: 8)
+					Text(statsMetric == .works ? "\(tag.value) works" : "\(tag.value)")
+						.font(.footnote)
+						.foregroundStyle(.secondary)
+						.monospacedDigit()
+						.fixedSize()
 				}
-				.frame(height: 20)
 			}
 		}
 	}

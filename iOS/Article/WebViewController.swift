@@ -174,6 +174,14 @@ final class WebViewController: UIViewController {
 	// persisted. See scrollRestoreComplete(generation:scrollY:scrollHeight:).
 	private var isRestoringScrollPosition = false
 
+	// True while the currently-rendered content is a not-yet-fetched AO3
+	// stub (see isProvisionalAO3Stub(_:)) or, briefly, while a fetched
+	// chapter's content is being swapped in. Scroll/progress samples taken
+	// while this is true don't reflect the real document and must not be
+	// recorded as reading progress or Reading Stats credit -- see the
+	// guard in scrollPositionDidChange's message handler.
+	private var isContentProvisional = false
+
 	// Safety net: if page.html's completion message never arrives (JS error,
 	// ResizeObserver unsupported and load/fonts.ready somehow never fire,
 	// print preview, etc.), don't block real scroll saves forever.
@@ -372,6 +380,10 @@ final class WebViewController: UIViewController {
 		// dismissal lets WebKit's full-screen entry continuation fire on a stale view
 		// hierarchy and trip a RELEASE_ASSERT in WebFullScreenManagerProxy on iOS 26.
 		stopWebViewActivity()
+		// Leaving the reader shouldn't leave secondsActive accruing against
+		// the last-viewed book while the person is elsewhere in the app
+		// (timeline, settings, etc.) -- clear the tracker's snapshot.
+		ReadingStatsTracker.shared.setArticle(nil)
 	}
 
 	// MARK: Notifications
@@ -420,6 +432,11 @@ final class WebViewController: UIViewController {
 				return
 			}
 			self.article = refetchedArticle
+			// Makes the provisional window explicit around the content swap
+			// itself (it already was true if the article started as a stub) --
+			// cleared once scrollRestoreComplete confirms the new content has
+			// settled, see the scrollRestoreComplete case below.
+			self.isContentProvisional = true
 			self.loadWebView(reason: "ao3ChapterFetchDidComplete(\(fetchedArticleID))")
 			// Task 8: this notification also fires when the fetch's result
 			// was a detected regression stashed as a pending update rather
@@ -526,10 +543,24 @@ final class WebViewController: UIViewController {
 
 	// MARK: API
 
+	/// True for an AO3-sourced article whose real chapter content hasn't
+	/// been fetched yet -- an RSS/Atom-imported stub, still on `contentHTML
+	/// == nil`/empty. Scroll/progress samples against a stub don't reflect
+	/// the actual work, so they must be withheld until the real content
+	/// swaps in (see ao3ChapterFetchDidComplete(_:)). Internal, not
+	/// private, so it can be exercised directly in tests -- WebViewController
+	/// itself can't easily be instantiated in the test target (see
+	/// WebViewControllerAppearanceToggleTests.swift's header comment).
+	static func isProvisionalAO3Stub(_ article: Article?) -> Bool {
+		guard let article, article.bookKey.hasPrefix("ao3-work:") else { return false }
+		return (article.contentHTML?.isEmpty ?? true)
+	}
+
 	func setArticle(_ article: Article?, updateView: Bool = true) {
 		if article != self.article {
 			self.article = article
 			ReadingStatsTracker.shared.setArticle(article)
+			isContentProvisional = Self.isProvisionalAO3Stub(article)
 			if updateView {
 				guard let article = article, let account = article.account else {
 					windowScrollY = 0
@@ -990,6 +1021,15 @@ extension WebViewController: WKScriptMessageHandler {
 			// article got shorter than the saved position, so the browser clamped
 			// to max scroll).
 			windowScrollY = reportedScrollY
+			// The real content has settled -- clear the provisional guard and,
+			// if this was an AO3 stub-to-fetched-content swap, refresh Reading
+			// Stats' snapshot so it reflects the real word count/fandoms/tags
+			// instead of the stub's, and restarts the session from the
+			// restored position rather than the stub's.
+			isContentProvisional = false
+			if let article {
+				ReadingStatsTracker.shared.setArticle(article)
+			}
 		case MessageName.textWasSelected:
 			textWasSelected(body: message.body as? [String: Any])
 		case MessageName.annotationWasTapped:
@@ -1857,6 +1897,14 @@ extension WebViewController: UIScrollViewDelegate {
 				}
 				self.maxObservedScrollHeight = max(self.maxObservedScrollHeight, scrollHeight)
 			}
+			// The rendered content is a not-yet-fetched AO3 stub, or a fetched
+			// chapter still settling in after a swap -- none of these samples
+			// reflect the real document, so don't write back position, credit
+			// Reading Stats, mark read, or persist anything from them.
+			guard !self.isContentProvisional else {
+				Self.logger.debug("scrollPositionDidChange: discarding sample, content is provisional (scrollY=\(javascriptScrollY, privacy: .public))")
+				return
+			}
 			self.windowScrollY = javascriptScrollY
 			// (Routine per-sample log removed -- this fires on every scroll tick and
 			// was the single largest noise source in the console during normal
@@ -2544,7 +2592,12 @@ private extension WebViewController {
 		let limitSeconds = AppDefaults.shared.screenTimeDailyLimitMinutes(for: weekday) * 60
 		let usedSeconds = AppDefaults.shared.screenTimeMinutesUsedTodaySeconds
 		screenTimePieIndicatorView.fraction = limitSeconds > 0 ? CGFloat(usedSeconds) / CGFloat(limitSeconds) : 0
-		screenTimePieIndicatorView.isHidden = pageCounterLabel.isHidden
+		// Own display-mode toggle (independent of pageCounterDisplayMode),
+		// gated the same way pageCounterLabel is above -- same fullscreen-
+		// chrome visibility rule, just keyed off the indicator's own mode
+		// instead of the page counter's.
+		let indicatorModeOn = AppDefaults.shared.screenTimeIndicatorDisplayMode != .off
+		screenTimePieIndicatorView.isHidden = !(indicatorModeOn && isFullScreenAvailable && AppDefaults.shared.articleFullscreenEnabled)
 	}
 
 	@objc private func screenTimeUsageDidChange(_ note: Notification) {
