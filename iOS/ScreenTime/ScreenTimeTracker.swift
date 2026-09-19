@@ -212,6 +212,12 @@ import Account
 	/// no-op, never re-running the break-persistence read-back logic
 	/// `start()` is actually testing.
 	func resetForTesting() {
+		// Intentional: this is a #if DEBUG test-only reset, not deinit --
+		// it exists so a test-created observer registration from a prior
+		// start() call doesn't leak into the next test (see the doc
+		// comment above). The lint rule's deinit-only assumption doesn't
+		// apply to this test-lifecycle reset path.
+		// swiftlint:disable:next notification_center_detachment
 		NotificationCenter.default.removeObserver(self)
 		timer?.invalidate()
 		timer = nil

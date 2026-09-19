@@ -358,17 +358,7 @@ extension AO3SearchResultsFetcher {
 	}
 }
 
-// MARK: - Cloudflare challenge detection
-
-private extension AO3SearchResultsFetcher {
-
-	/// Forwards to `AO3CloudflareChallenge.isChallengePage(_:)` below --
-	/// kept as a same-named private method here (rather than calling
-	/// `AO3CloudflareChallenge` directly at each call site above) so this
-	/// file's own two call sites didn't need to change.
-	static func isCloudflareChallenge(_ html: String) -> Bool {
-		AO3CloudflareChallenge.isChallengePage(html)
-	}
+extension AO3SearchResultsFetcher {
 
 	/// True if `url`'s query carries at least one `work_search[...]`
 	/// parameter -- i.e. this was a filtered search/tag-listing request,
@@ -379,13 +369,31 @@ private extension AO3SearchResultsFetcher {
 	/// doesn't need (the URL reaching here has already been through that
 	/// gate once, earlier in the pipeline).
 	///
-	/// Explicitly `internal` (not the enclosing `private extension`'s
-	/// file-private default) because `AO3FilterURLLength`, in another
-	/// file of this module, calls it.
-	internal static func requestHasFilters(_ url: URL) -> Bool {
+	/// Lives in this (non-`private`) extension, not the `private extension`
+	/// below alongside the Cloudflare-detection helpers it was originally
+	/// grouped with, because `AO3FilterURLLength`, in another file of this
+	/// module, calls it -- and a `private extension`'s members can't be
+	/// raised back to `internal`: writing `internal` on a member there is
+	/// flagged as a redundant/conflicting access-modifier warning, since
+	/// the enclosing extension's `private` already caps every member's
+	/// effective access regardless of what's written on the member itself.
+	static func requestHasFilters(_ url: URL) -> Bool {
 		URLComponents(url: url, resolvingAgainstBaseURL: false)?
 			.queryItems?
 			.contains { $0.name.hasPrefix("work_search[") } ?? false
+	}
+}
+
+// MARK: - Cloudflare challenge detection
+
+private extension AO3SearchResultsFetcher {
+
+	/// Forwards to `AO3CloudflareChallenge.isChallengePage(_:)` below --
+	/// kept as a same-named private method here (rather than calling
+	/// `AO3CloudflareChallenge` directly at each call site above) so this
+	/// file's own two call sites didn't need to change.
+	static func isCloudflareChallenge(_ html: String) -> Bool {
+		AO3CloudflareChallenge.isChallengePage(html)
 	}
 }
 
