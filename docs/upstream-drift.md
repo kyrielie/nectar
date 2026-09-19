@@ -297,14 +297,13 @@ The overall Summary table's 224 Nectar-original total has not been
 recomputed to reflect this specific +16; treat it as a further stale
 input on top of the already-noted `nectar-architecture.md` discrepancy.
 
-### `iOS/` (32 files)
+### `iOS/` (31 files)
 
 - `iOS/Article/AO3AuthenticatedWebViewController.swift`
 - `iOS/Article/ShareAO3SeriesLinkActivity.swift`
 - `iOS/Article/TableOfContentsViewController.swift`
 - `iOS/Import/AO3LinkListImportView.swift`
 - `iOS/Import/OPMLImportCoordinator.swift`
-- `iOS/MainFeed/AO3OnboardingView.swift`
 - `iOS/MainTimeline/Cell/BadgeColorTable.swift`
 - `iOS/Nectar-iOS-Bridging-Header.h`
 - `iOS/Resources/About.rtf`

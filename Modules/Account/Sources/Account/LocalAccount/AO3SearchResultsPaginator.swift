@@ -35,6 +35,10 @@ import RSParser
 		/// missing or was rejected between page 1's add-time fetch (which
 		/// went through `fetchRequiringSignIn`) and this later page.
 		case notSignedIn
+		/// See `AO3SearchResultsFetchOutcome.filtersNotApplied`. Nothing
+		/// was imported. Reachable for a page past page 1 whose URL,
+		/// with `page=N` appended, reached `AO3FilterURLLength.limit`.
+		case filtersNotApplied
 	}
 
 	// MARK: - Infill / arbitrary-page fetch
@@ -210,6 +214,8 @@ import RSParser
 			return .cloudflareChallenge(challengedURL: challengedURL)
 		case .notSignedIn:
 			return .notSignedIn
+		case .filtersNotApplied:
+			return .filtersNotApplied
 		}
 	}
 

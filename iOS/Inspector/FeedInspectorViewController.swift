@@ -304,6 +304,8 @@ private extension FeedInspectorViewController {
 				self.presentAO3FetchVerificationPrompt(challengedURL: challengedURL, page: page, account: account)
 			case .notSignedIn:
 				self.ao3PagesCell?.showValidationError(NSLocalizedString("This feed requires a signed-in AO3 account", comment: "AO3 load more error"))
+			case .filtersNotApplied:
+				self.ao3PagesCell?.showValidationError(NSLocalizedString("AO3 ignored this search's filters (URL too long)", comment: "AO3 load more error"))
 			}
 
 			self.ao3PagesCell?.configure(feed: self.feed, isFetchInFlight: self.isAO3FetchInFlight) { [weak self] page in
@@ -353,6 +355,8 @@ private extension FeedInspectorViewController {
 					self.ao3PagesCell?.showValidationError(message)
 				case .notSignedIn:
 					self.ao3PagesCell?.showValidationError(NSLocalizedString("This feed requires a signed-in AO3 account", comment: "AO3 load more error"))
+				case .filtersNotApplied:
+					self.ao3PagesCell?.showValidationError(NSLocalizedString("AO3 ignored this search's filters (URL too long)", comment: "AO3 load more error"))
 				}
 				self.ao3PagesCell?.configure(feed: self.feed, isFetchInFlight: self.isAO3FetchInFlight) { [weak self] page in
 					self?.fetchAO3Page(page)

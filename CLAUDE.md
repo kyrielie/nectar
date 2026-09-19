@@ -37,6 +37,7 @@ task**, not this whole index cover-to-cover.
 - **Screen Time reading limits / bedtime lockout / enforcement overlay** → `screen-time.md`
 - **Reading Stats (words/time tracking, streaks)** → `reading-stats.md`
 - **Full device backup / restore, the Backup settings section** → `backup-restore.md`
+- **The in-app Guide (Settings → Help → Guide), its overlay presentation, or its static page content** → `guide.md`
 - **Favicon / page metadata extraction** → `metadata-extraction.md`
 - **"What differs from upstream NetNewsWire"** → `upstream-drift.md`
 - **A recurring Auto Layout / UIKit console warning** (before re-investigating one from scratch) → `console-warnings.md`
@@ -89,7 +90,7 @@ it's trusted by default. Specifically:
 | `OrderedSet<Feed>`, `Container.topLevelFeeds`, `addFeedToTreeAtTopLevel(_:at:)`, `AccountDelegate.moveFeed`'s `targetIndex` parameter | `feed-reordering.md` |
 | `OrderedSet<Folder>`, `Container.folders`, `Folder.parent`/`.pathNames`, `addFolderToTree(_:at:)`, `AccountDelegate.moveFolder`, `ContainerIdentifier.folder`/`SidebarItemIdentifier.folder`'s path encoding, `OPMLNormalizer`'s nesting behavior, the depth-3 cap | `nested-folders.md` |
 | `AO3IgnoreList`, `AO3SummaryExtractor` call sites in `RSSItem`/`AtomParser`, AO3 RSS/Atom subscription wiring | `ao3-direct-feed-ingestion.md` |
-| `FeedSettings.ao3SearchFetchedPages`/`.ao3SearchTotalPages`, `AO3SearchResultsPaginator.nextPageToFetch`/`.validate`/`.fetchSpecificPage`, `AO3SearchResultsImporter.importFetchedPage`, `AO3SearchResultsFetchCoordinator.presentSolverAndRetry`'s `updatesFeedName` parameter, `FeedInspectorViewController`'s AO3 Pages section | `ao3-arbitrary-page-fetch.md` |
+| `FeedSettings.ao3SearchFetchedPages`/`.ao3SearchTotalPages`, `AO3SearchResultsPaginator.nextPageToFetch`/`.validate`/`.fetchSpecificPage`, `AO3SearchResultsImporter.importFetchedPage`, `AO3FilterURLLength`, `AO3FilterFallbackPage`, `AddFeedViewController`'s long-URL warning, `AO3SearchResultsFetchCoordinator.presentSolverAndRetry`'s `updatesFeedName` parameter, `FeedInspectorViewController`'s AO3 Pages section | `ao3-arbitrary-page-fetch.md` |
 | The AO3 HTML extractors themselves (`Modules/RSParser/.../Feeds/Extensions/`) | `ao3-feeds.md` |
 | `Feed.repoint(to:)`, `collectionKeyIndex`, `rewriteAmbrosiaJSONFeedURLs` | `feed-repointing.md` |
 | `LocalAccountRefresher.feedShouldBeSkipped`, `BGTaskScheduler`/`backgroundRefreshDeadline`, `LastOpenedFeedDelegate` | `refresh-throttling.md` |
@@ -105,6 +106,7 @@ it's trusted by default. Specifically:
 | `ScreenTimeTracker`, `ScreenTimeEnforcementOverlay`, `ScreenTimeSettingsView` | `screen-time.md` |
 | `ReadingStatsTracker`, `ReadingStatsView` | `reading-stats.md` |
 | `BackupManager`, `BackupRestoreCoordinator`, the backup zip's file layout | `backup-restore.md` |
+| `GuideOverlayView`, `GuideContent`, `HelpRow.guide` | `guide.md` |
 | `HTMLMetadata`/favicon extraction | `metadata-extraction.md` |
 | `AnnotationsTable`, `Annotation`, `annotations.js`, the `textWasSelected`/`annotationWasTapped` message-handler cases, `AnnotationCSVExporter`, the `annotations` table in `ArticleSQLiteExportTable` | `annotations.md` |
 | Anything you deliberately did differently from upstream NetNewsWire behavior | `upstream-drift.md` |

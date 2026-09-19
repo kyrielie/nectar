@@ -87,7 +87,7 @@ that array so it doesn't silently drift.
 
 Migration/state-bookkeeping keys are deliberately excluded and must never
 be replayed onto another device: `firstRunDate`,
-`hasShownAO3Onboarding`, `hasMigratedNavigationBarTintingDefault`,
+`hasMigratedNavigationBarTintingDefault`,
 `hasMigratedToolbarStyleDefault`, `hasMigratedArticleToolbarToggles`,
 `didMigrateLegacyStateRestorationInfo`, `lastImageCacheFlushDate`,
 `useTintedNavigationBar` (dead migration-source-of-truth only — no

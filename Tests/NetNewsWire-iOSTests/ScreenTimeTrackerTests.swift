@@ -40,6 +40,7 @@ import Foundation
 
 	private func resetState() {
 		AppDefaults.shared.screenTimeEnabled = true
+		AppDefaults.shared.screenTimeDailyLimitEnabled = true
 		AppDefaults.shared.screenTimeBedtimeEnabled = false
 		AppDefaults.shared.screenTimeDailyLimitMinutesByWeekday = [1: 120, 2: 120, 3: 120, 4: 120, 5: 120, 6: 120, 7: 120]
 		AppDefaults.shared.screenTimeMinutesUsedTodaySeconds = 0

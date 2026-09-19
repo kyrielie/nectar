@@ -3,6 +3,7 @@ import Account
 
 struct ScreenTimeSettingsView: View {
 	@State private var enabled = AppDefaults.shared.screenTimeEnabled
+	@State private var dailyLimitEnabled = AppDefaults.shared.screenTimeDailyLimitEnabled
 	@State private var bedtimeEnabled = AppDefaults.shared.screenTimeBedtimeEnabled
 	@State private var start = Self.minutesDate(AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight)
 	@State private var end = Self.minutesDate(AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight)
@@ -55,9 +56,11 @@ struct ScreenTimeSettingsView: View {
 							)
 						}
 					}
-			} footer: { Text("When enabled, reading is blocked immediately after the daily limit or bedtime window begins.") }
+			} footer: { Text("When enabled, reading is blocked immediately after the daily limit or bedtime window begins. Turn Screen Time off to change limits, bedtime, or Take a Break settings — they're locked while it's on so a change can't land mid-session and cause a different lockout than the one you started with.") }
 
 			Section("Daily limits") {
+				Toggle("Enable daily limit", isOn: $dailyLimitEnabled)
+					.onChange(of: dailyLimitEnabled) { _, value in AppDefaults.shared.screenTimeDailyLimitEnabled = value }
 				ForEach(1...7, id: \.self) { weekday in
 					NavigationLink {
 						DailyLimitDetailView(
@@ -79,6 +82,14 @@ struct ScreenTimeSettingsView: View {
 					}
 				}
 			}
+			// Locked (not editable) while Screen Time is on -- editing a
+			// limit or bedtime mid-session could silently change what's
+			// currently blocking (or about to block) reading without the
+			// person realizing why; turning Screen Time off first makes
+			// that impossible. Same treatment applied to Bedtime and
+			// takeABreakSection below.
+			.disabled(enabled)
+			.opacity(enabled ? 0.4 : 1)
 
 			Section("Bedtime") {
 				Toggle("Enable bedtime", isOn: $bedtimeEnabled)
@@ -88,8 +99,12 @@ struct ScreenTimeSettingsView: View {
 				DatePicker("Ends", selection: $end, displayedComponents: .hourAndMinute)
 					.onChange(of: end) { _, value in updateBedtimeEnd(value) }
 			}
+			.disabled(enabled)
+			.opacity(enabled ? 0.4 : 1)
 
 			takeABreakSection
+				.disabled(enabled)
+				.opacity(enabled ? 0.4 : 1)
 		}
 		.navigationTitle("Screen Time")
 		.navigationBarTitleDisplayMode(.inline)
@@ -317,6 +332,7 @@ struct ScreenTimeSettingsView: View {
 				weeklyUsageBarChart
 					.listRowInsets(EdgeInsets())
 					.padding(.vertical, 8)
+					.padding(.horizontal, 16)
 			}
 		}
 	}

@@ -118,7 +118,7 @@ import Account
 	private func evaluate(at date: Date) {
 		let calendar = Calendar.current
 		let weekday = calendar.component(.weekday, from: date)
-		let limitReached = AppDefaults.shared.screenTimeMinutesUsedTodaySeconds >= AppDefaults.shared.screenTimeDailyLimitMinutes(for: weekday) * 60
+		let limitReached = AppDefaults.shared.screenTimeDailyLimitEnabled && AppDefaults.shared.screenTimeMinutesUsedTodaySeconds >= AppDefaults.shared.screenTimeDailyLimitMinutes(for: weekday) * 60
 		let bedtimeReached = AppDefaults.shared.screenTimeBedtimeEnabled && ScreenTimeCalendar.isWithinBedtimeWindow(date, startMinutes: AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight, endMinutes: AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight)
 
 		let wasLocked = isLimitLockout || isBedtimeLockout

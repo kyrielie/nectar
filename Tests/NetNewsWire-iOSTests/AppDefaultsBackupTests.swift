@@ -27,10 +27,6 @@ import Testing
 		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.firstRunDate))
 	}
 
-	@Test func hasShownAO3OnboardingIsExcluded() {
-		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.hasShownAO3Onboarding))
-	}
-
 	// MARK: - Bookkeeping, not a preference
 
 	@Test func lastImageCacheFlushDateIsExcluded() {
@@ -117,7 +113,6 @@ import Testing
 	@Test func everyExcludedKeyAboveIsExhaustive() {
 		let excludedByThisFile: Set<String> = [
 			AppDefaults.Key.firstRunDate,
-			AppDefaults.Key.hasShownAO3Onboarding,
 			AppDefaults.Key.lastImageCacheFlushDate,
 			AppDefaults.Key.lastRefresh,
 			AppDefaults.Key.selectedArticle,

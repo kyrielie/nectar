@@ -112,9 +112,6 @@
     "Add a note…" : {
       "comment" : "Annotation editor: note field placeholder"
     },
-    "Add an AO3 Feed" : {
-      "comment" : "AO3 onboarding primary action"
-    },
     "Add Feed" : {
       "comment" : "Add Feed"
     },
@@ -256,6 +253,16 @@
     "Blocked by a Cloudflare challenge -- try again later" : {
       "comment" : "AO3 load more error"
     },
+    "Blocks reading for %@ every %@ of continuous reading." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Blocks reading for %1$@ every %2$@ of continuous reading."
+          }
+        }
+      }
+    },
     "Blue" : {
       "comment" : "Highlight color"
     },
@@ -320,7 +327,7 @@
       "comment" : "Manage Storage VACUUM explanation"
     },
     "Close" : {
-      "comment" : "Annotations list: close button accessibility label\nClose"
+      "comment" : "Annotations list: close button accessibility label\nClose\nGuide overlay: close button accessibility label"
     },
     "Close Image" : {
       "comment" : "Close Image"
@@ -496,6 +503,9 @@
     "Dismiss" : {
       "comment" : "Dismiss"
     },
+    "done" : {
+      "comment" : "Guide overlay: advance hint, last page fully revealed"
+    },
     "Done" : {
       "comment" : "Done"
     },
@@ -532,6 +542,9 @@
     "Enable bedtime" : {
 
     },
+    "Enable daily limit" : {
+
+    },
     "Enable Notifications" : {
       "comment" : "Notifications"
     },
@@ -542,6 +555,9 @@
 
     },
     "Ends" : {
+
+    },
+    "Enforced" : {
 
     },
     "Enter Server URL" : {
@@ -666,9 +682,6 @@
     },
     "Folders" : {
       "comment" : "Folders"
-    },
-    "Follow a tag, a user, or a specific work on Archive of Our Own, and Nectar will pull in full chapter text as it's posted -- no ads, no extra taps out to the browser." : {
-
     },
     "Font" : {
       "comment" : "Font section header"
@@ -948,6 +961,9 @@
     "Mint" : {
       "comment" : "Mint highlight palette"
     },
+    "Mode" : {
+
+    },
     "Monochrome" : {
       "comment" : "Monochrome badge color palette"
     },
@@ -971,6 +987,9 @@
     },
     "Nav Bar" : {
       "comment" : "Surface palette preview: nav bar swatch caption"
+    },
+    "Nectar" : {
+
     },
     "Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) (MIT) and is the companion app for [Ambrosia](https://github.com/kyrielie/ambrosia) (MIT). Thanks also to the [Organization for Transformative Works](https://github.com/otwcode/otwarchive) (GPL-2.0-or-later), nianeyna's [ao3downloader](https://github.com/nianeyna/ao3downloader) (GPL-3.0), and ArmindoFlores's [ao3_api](https://github.com/ArmindoFlores/ao3_api) (MIT), for AO3 parsing reference. Several bundled article themes are inspired by community AO3 workskins, including work by [ZerafinaCSS](https://github.com/ZerafinaCSS/neos), the [Dracula Theme](https://github.com/dracula/archive-of-our-own) project, and [BlackBatCat](https://github.com/Wolfbatcat/ao3-rose-pine), among others. Full attribution for every theme and third-party code reference is in [`THIRD-PARTY-NOTICES.md`](https://github.com/kyrielie/nectar/blob/main/THIRD-PARTY-NOTICES.md) in the source repository. Broadsheet theme from [here](https://github.com/stuartbreckenridge/NNWThemesBroadsheet)." : {
 
@@ -1012,6 +1031,9 @@
     "No Activity Logged" : {
       "comment" : "Activity log empty state"
     },
+    "No break reminders while reading." : {
+
+    },
     "No current activity." : {
       "comment" : "Current Activity empty state"
     },
@@ -1040,7 +1062,7 @@
 
     },
     "Not Now" : {
-      "comment" : "AO3 onboarding dismiss action\nDecline AO3 verification"
+      "comment" : "Decline AO3 verification"
     },
     "Not Signed In" : {
       "comment" : "AO3 signed-out status"
@@ -1229,6 +1251,9 @@
     "Refresh" : {
       "comment" : "Refresh\nRefresh highlight palette"
     },
+    "Reminder" : {
+
+    },
     "Remove" : {
       "comment" : "Remove\nRemove from Read Later"
     },
@@ -1397,7 +1422,7 @@
     "Show Website" : {
       "comment" : "Show Website"
     },
-    "Shows a dismissible reminder every 15 minutes of continuous reading." : {
+    "Shows a dismissible reminder every %@ of continuous reading." : {
 
     },
     "Shows current activity" : {
@@ -1472,8 +1497,11 @@
     "Tag Display" : {
       "comment" : "Tag Display"
     },
-    "Take a Break reminders" : {
+    "Take a Break" : {
 
+    },
+    "tap" : {
+      "comment" : "Guide overlay: advance hint, more pages remain"
     },
     "Text Color" : {
       "comment" : "Text Color (light) picker label"
@@ -1668,7 +1696,7 @@
     "We were unable to process the selected file.  Please ensure that it is a properly formatted OPML file." : {
       "comment" : "Import Failed Message"
     },
-    "When enabled, reading is blocked immediately after the daily limit or bedtime window begins." : {
+    "When enabled, reading is blocked immediately after the daily limit or bedtime window begins. Turn Screen Time off to change limits, bedtime, or Take a Break settings — they're locked while it's on so a change can't land mid-session and cause a different lockout than the one you started with." : {
 
     },
     "When off, no new reading activity is recorded. Existing history is kept." : {

@@ -52,6 +52,7 @@ final class WebViewController: UIViewController {
 	private var notchCoverView: UIView!
 	private var notchCoverViewHeightConstraint: NSLayoutConstraint!
 	private var pageCounterLabel: UILabel!
+	private var screenTimePieIndicatorView: ScreenTimePieIndicatorView!
 
 	// The only authoritative reference to "the" current webview. Previously this was
 	// a computed property returning view.subviews[0], which silently returned whichever
@@ -235,6 +236,7 @@ final class WebViewController: UIViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(statusesDidChange(_:)), name: .StatusesDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(accountDidDownloadArticles(_:)), name: .AccountDidDownloadArticles, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(highlightPaletteDidChange(_:)), name: .highlightPaletteDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeUsageDidChange(_:)), name: .screenTimeUsageDidChange, object: nil)
 
 		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,
 		// IPHONEOS_DEPLOYMENT_TARGET = 17.0), so use registerForTraitChanges rather
@@ -2459,6 +2461,22 @@ private extension WebViewController {
 			// before treating it as correct. Do not further adjust this blind.
 			pageCounterLabel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: Self.pageCounterLeadingInset)
 		])
+
+		// Trailing-side counterpart to pageCounterLabel above -- same
+		// vertical placement, mirrored inset, sized to roughly match the
+		// label's cap-height rather than guessed independently.
+		screenTimePieIndicatorView = ScreenTimePieIndicatorView()
+		screenTimePieIndicatorView.tintColor = pageCounterLabel.textColor
+		screenTimePieIndicatorView.isHidden = true
+		screenTimePieIndicatorView.translatesAutoresizingMaskIntoConstraints = false
+		view.addSubview(screenTimePieIndicatorView)
+
+		NSLayoutConstraint.activate([
+			screenTimePieIndicatorView.centerYAnchor.constraint(equalTo: notchCoverView.centerYAnchor),
+			screenTimePieIndicatorView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -Self.pageCounterLeadingInset),
+			screenTimePieIndicatorView.widthAnchor.constraint(equalToConstant: 16),
+			screenTimePieIndicatorView.heightAnchor.constraint(equalToConstant: 16)
+		])
 	}
 
 	private static let pageCounterLeadingInset: CGFloat = 44
@@ -2507,6 +2525,30 @@ private extension WebViewController {
 		// device/setting eligibility, or it stayed visible even with the bars
 		// showing.
 		pageCounterLabel.isHidden = !(pageCounterOn && isFullScreenAvailable && AppDefaults.shared.articleFullscreenEnabled)
+		updateScreenTimePieIndicatorView(resolvedText: resolvedText)
+	}
+
+	/// Shares pageCounterLabel's own visibility rule (same fullscreen-chrome
+	/// gating, computed just above) rather than a second copy of it, so the
+	/// two can't independently drift out of sync -- additionally hidden
+	/// whenever there's no active daily limit to show progress against.
+	private func updateScreenTimePieIndicatorView(resolvedText: UIColor? = nil) {
+		if let resolvedText {
+			screenTimePieIndicatorView.tintColor = resolvedText
+		}
+		guard AppDefaults.shared.screenTimeEnabled, AppDefaults.shared.screenTimeDailyLimitEnabled else {
+			screenTimePieIndicatorView.isHidden = true
+			return
+		}
+		let weekday = Calendar.current.component(.weekday, from: Date())
+		let limitSeconds = AppDefaults.shared.screenTimeDailyLimitMinutes(for: weekday) * 60
+		let usedSeconds = AppDefaults.shared.screenTimeMinutesUsedTodaySeconds
+		screenTimePieIndicatorView.fraction = limitSeconds > 0 ? CGFloat(usedSeconds) / CGFloat(limitSeconds) : 0
+		screenTimePieIndicatorView.isHidden = pageCounterLabel.isHidden
+	}
+
+	@objc private func screenTimeUsageDidChange(_ note: Notification) {
+		updateScreenTimePieIndicatorView()
 	}
 
 	func updateBottomSafeAreaForFullScreen() {

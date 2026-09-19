@@ -526,6 +526,21 @@ private extension LocalAccountDelegate {
 					throw AccountError.ao3CloudflareChallenge(challengedURL: challengedURL, feed: feed)
 				case .notSignedIn:
 					throw AccountError.ao3ListingRequiresSignIn(feed: feed)
+				case .filtersNotApplied:
+					// Only reachable for a filtered URL at or past
+					// AO3FilterURLLength.limit (shorter fetches are
+					// never inspected). Retrying this exact URL won't
+					// help, and the person shouldn't be left with a
+					// feed that would only ever fill with AO3's
+					// unrelated "Latest Works" listing, so the feed
+					// this attempt already created is removed before
+					// throwing. Removed synchronously via the container
+					// (all LocalAccountDelegate.removeFeed does) rather
+					// than Account.removeFeed, which hops through a
+					// Task and would let the caller present its error
+					// while the feed is still in the tree.
+					container.removeFeedFromTreeAtTopLevel(feed)
+					throw AccountError.ao3FiltersNotApplied(feed: feed)
 				}
 			} catch let error as AccountError {
 				throw error

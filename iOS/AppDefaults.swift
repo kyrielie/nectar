@@ -931,7 +931,6 @@ final class AppDefaults: Sendable {
 		static let userInterfaceColorPalette = "userInterfaceColorPalette"
 		static let lastImageCacheFlushDate = "lastImageCacheFlushDate"
 		static let firstRunDate = "firstRunDate"
-		static let hasShownAO3Onboarding = "hasShownAO3Onboarding"
 		static let timelineGroupByFeed = "timelineGroupByFeed"
 		static let refreshClearsReadArticles = "refreshClearsReadArticles"
 		static let timelineNumberOfLines = "timelineNumberOfLines"
@@ -1066,6 +1065,7 @@ final class AppDefaults: Sendable {
 		static let articleThemeOverrides = "articleThemeOverrides"
 		static let screenTimeEnabled = "screenTimeEnabled"
 		static let screenTimeDailyLimitMinutesByWeekday = "screenTimeDailyLimitMinutesByWeekday"
+		static let screenTimeDailyLimitEnabled = "screenTimeDailyLimitEnabled"
 		static let screenTimeBedtimeEnabled = "screenTimeBedtimeEnabled"
 		static let screenTimeBedtimeStartMinutesFromMidnight = "screenTimeBedtimeStartMinutesFromMidnight"
 		static let screenTimeBedtimeEndMinutesFromMidnight = "screenTimeBedtimeEndMinutesFromMidnight"
@@ -1134,8 +1134,8 @@ final class AppDefaults: Sendable {
 	///
 	/// Excluded, and why (not merely omitted -- see the corresponding
 	/// named test in AppDefaultsBackupTests for each):
-	/// - `firstRunDate`, `hasShownAO3Onboarding`: one-time onboarding
-	///   gates. Replaying `true` onto a fresh install would skip
+	/// - `firstRunDate`: one-time onboarding
+	///   gate. Replaying `true` onto a fresh install would skip
 	///   onboarding that install actually needs to run.
 	/// - `lastImageCacheFlushDate`, `lastRefresh`: bookkeeping timestamps,
 	///   not preferences a person set.
@@ -1209,6 +1209,7 @@ final class AppDefaults: Sendable {
 		Key.showLastUpdatedLabel,
 		Key.articleThemeOverrides,
 		Key.screenTimeEnabled, Key.screenTimeDailyLimitMinutesByWeekday,
+		Key.screenTimeDailyLimitEnabled,
 		Key.screenTimeBedtimeEnabled, Key.screenTimeBedtimeStartMinutesFromMidnight,
 		Key.screenTimeBedtimeEndMinutesFromMidnight, Key.screenTimeMinutesUsedTodaySeconds,
 		Key.screenTimeUsageDate, Key.screenTimeDailyUsageHistory,
@@ -1798,20 +1799,6 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	/// Whether the AO3 first-run onboarding screen (shown once, only when
-	/// the local account has zero subscribed feeds) has already been shown.
-	/// Off by default; set once the screen is dismissed (by either action)
-	/// so it never shows again regardless of the account's feed count
-	/// afterward. See MainFeedCollectionViewController.presentAO3OnboardingIfNeeded().
-	var hasShownAO3Onboarding: Bool {
-		get {
-			return AppDefaults.bool(for: Key.hasShownAO3Onboarding)
-		}
-		set {
-			AppDefaults.setBool(for: Key.hasShownAO3Onboarding, newValue)
-		}
-	}
-
 	/// layered on top of whichever theme (default or imported) is active. See
 	/// ArticleThemeOverrides.cssOverrideBlock and ArticleRenderer.styleString().
 	var articleThemeOverrides: ArticleThemeOverrides {
@@ -2247,6 +2234,9 @@ final class AppDefaults: Sendable {
 																	 Key.screenTimeEnabled: false,
 																	 Key.screenTimeBedtimeEnabled: false,
 																	 Key.screenTimeDailyLimitMinutesByWeekday: "{\"1\":120,\"2\":120,\"3\":120,\"4\":120,\"5\":120,\"6\":120,\"7\":120}",
+																	 // Default true preserves the pre-existing always-on
+																	 // behavior for anyone upgrading into this build.
+																	 Key.screenTimeDailyLimitEnabled: true,
 									 Key.screenTimeTakeABreakMode: TakeABreakMode.off.rawValue,
 									 Key.screenTimeBreakReadingMinutes: 15,
 									 Key.screenTimeBreakEnforcedMinutes: 15,
@@ -2314,6 +2304,15 @@ extension AppDefaults {
 		var limits = screenTimeDailyLimitMinutesByWeekday
 		limits[weekday] = max(60, minutes)
 		screenTimeDailyLimitMinutesByWeekday = limits
+	}
+
+	/// Independent of `screenTimeDailyLimitMinutesByWeekday` itself, so
+	/// the limit can be turned off without losing the configured minutes
+	/// per weekday -- symmetric with `screenTimeBedtimeEnabled` below.
+	/// Default true preserves the pre-existing always-on behavior.
+	var screenTimeDailyLimitEnabled: Bool {
+		get { AppDefaults.bool(for: Key.screenTimeDailyLimitEnabled) }
+		set { AppDefaults.setBool(for: Key.screenTimeDailyLimitEnabled, newValue) }
 	}
 
 	var screenTimeBedtimeEnabled: Bool {

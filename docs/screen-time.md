@@ -2,7 +2,7 @@
 
 Screen Time is an opt-in, local-only reading limit. `ScreenTimeTracker` records foreground seconds while the app is active, using the device calendar for usage-day and bedtime calculations. Daily limits are stored independently for each weekday. A bedtime window may wrap midnight.
 
-When a limit or enabled bedtime window is crossed, the tracker posts a limit notification. Each connected scene presents its scene-local black enforcement overlay; there is no dismiss, grace period, or extension path. Device-clock changes are an accepted limitation.
+When a limit or enabled bedtime window is crossed, the tracker posts a limit notification. Each connected scene presents its scene-local black enforcement overlay; there is no dismiss, grace period, or extension path for a daily-limit or bedtime lockout specifically (Take a Break, below, has its own separate dismiss/timer paths). Bedtime and usage-day calculations consistently read the device's current `Calendar.current`/timezone (`ScreenTimeCalendar`'s helpers, `evaluate(at:)`), so a timezone change or DST transition is reflected the moment the next tick runs, not stuck on whatever zone was active when tracking started. What's still unhandled: the person manually moving the device clock backward mid-session. `tick()` clamps a negative `now.timeIntervalSince(previous)` to zero, so usage simply stops accruing rather than going negative, but the bedtime-window check re-evaluates against the rolled-back time on the very next tick — so winding the clock back out of a bedtime window ends the lockout immediately, and winding it back into one starts a new lockout immediately. There's no detection of the rollback itself, just a consistent (if manipulable) read of whatever the clock currently says.
 
 `ScreenTimeSettingsView`'s "Daily limits" and "Bedtime" sections are
 editable regardless of whether "Enable Screen Time" is on — the toggle
@@ -13,6 +13,14 @@ can be set. They previously carried `.disabled(!enabled)` /
 and unreachable while Screen Time was off; both modifiers were removed
 since nothing about setting a limit or bedtime window actually depends on
 the feature being enabled.
+
+The "Daily limits" section has its own "Enable daily limit" toggle
+(`AppDefaults.screenTimeDailyLimitEnabled`), independent of the per-weekday
+minutes so the limit can be turned off without losing the configured values,
+symmetric with `screenTimeBedtimeEnabled`. `ScreenTimeTracker.evaluate(at:)`
+only computes `limitReached` when it is on. It defaults to `true` (registered
+default) so upgraders keep the previous always-on behavior, and it is in
+`backupEligibleKeys`.
 
 `ScreenTimeSettingsView`'s in-settings lockout status line (SF Symbol +
 message, above the "Enable Screen Time" toggle) and
