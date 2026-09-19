@@ -275,6 +275,10 @@ fetch/retry/pagination stack it's built on top of.
   - `.cloudflareChallenge(challengedURL:)` — sniffed from the response
     body independently of status code (a Cloudflare block/challenge page
     can arrive as a 200, 403, or overlapping a 429).
+  - `.filtersNotApplied`: only for a filtered request URL at or past
+    `AO3FilterURLLength.limit`, whose 200 response is AO3's unfiltered
+    "Latest Works" fallback. Shorter requests are never inspected. See
+    `ao3-arbitrary-page-fetch.md`.
 - **`AO3SearchResultsImporter`** — factors out the shared "parse fetched
   HTML and import it" sequence (`AO3SearchResultsExtractor.extract` →
   `account.updateAsync` → `account.sendNotificationAbout` → insert into

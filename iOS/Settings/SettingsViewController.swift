@@ -89,6 +89,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 
 	private enum HelpRow: Int {
 		case about = 0
+		case guide = 1
 	}
 
 	private enum BackupRow: Int {
@@ -369,6 +370,21 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 			case .about:
 				let hosting = Self.makeSurfacePaletteAwareHostingController(rootView: AboutView())
 				self.navigationController?.pushViewController(hosting, animated: true)
+			case .guide:
+				tableView.selectRow(at: nil, animated: true, scrollPosition: .none)
+				// .overFullScreen, not the default .pageSheet, so the real
+				// Settings screen stays visible-but-inert behind
+				// GuideTheme.scrim instead of being covered by a sheet --
+				// same modal-presentation choice as
+				// MainFeedCollectionViewController.openInAppBrowser().
+				// GuideOverlayView's own background is transparent
+				// (the scrim), which only reads correctly over
+				// .overFullScreen's non-dimmed presentation, not the
+				// system-dimmed default.
+				let hosting = UIHostingController(rootView: GuideOverlayView())
+				hosting.modalPresentationStyle = .overFullScreen
+				hosting.view.backgroundColor = .clear
+				self.present(hosting, animated: true)
 			default:
 				break
 			}

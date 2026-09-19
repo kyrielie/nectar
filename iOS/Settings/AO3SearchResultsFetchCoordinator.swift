@@ -44,6 +44,9 @@ import Account
 		/// headless `fetch(url:feedURL:)` this wraps doesn't do the
 		/// sign-in retry itself.
 		case notSignedIn
+		/// See `AO3SearchResultsFetchOutcome.filtersNotApplied`. Nothing
+		/// was imported.
+		case filtersNotApplied
 	}
 
 	/// Tries the headless path only -- does not present anything. On a
@@ -64,6 +67,8 @@ import Account
 				return .needsVerification(challengedURL: challengedURL)
 			case .notSignedIn:
 				return .notSignedIn
+			case .filtersNotApplied:
+				return .filtersNotApplied
 			}
 		} catch {
 			return .failed(error.localizedDescription)
@@ -117,7 +122,7 @@ import Account
 			return .cancelled
 		}
 
-		let importOutcome = await AO3SearchResultsImporter.importFetchedPage(html: html, feedURL: feedURL, feed: feed, account: account, advancePageTo: advancePageTo)
+		let importOutcome = await AO3SearchResultsImporter.importFetchedPage(html: html, feedURL: feedURL, feed: feed, account: account, advancePageTo: advancePageTo, requestURL: challengedURL)
 		switch importOutcome {
 		case .imported(let newWorkCount, let hasNextPage, let pageTitle):
 			// feed.name only, never editedName -- editedName is
@@ -139,6 +144,8 @@ import Account
 			return .noResults(pageTitle: pageTitle)
 		case .registrationRequired:
 			return .registrationRequired
+		case .filtersNotApplied:
+			return .filtersNotApplied
 		}
 	}
 }

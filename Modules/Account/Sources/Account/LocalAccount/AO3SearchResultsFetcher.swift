@@ -43,6 +43,16 @@ public enum AO3SearchResultsFetchOutcome {
 	case registrationRequired
 	case rateLimited
 	case cloudflareChallenge(challengedURL: URL)
+	/// The response was a normal 200, and `AO3SearchResultsExtractor`
+	/// parsed it as an ordinary results page (structurally identical to a
+	/// real `.success` or `.noResults`) -- but its title matches
+	/// `AO3FilterFallbackPage`'s known signature for AO3's silent
+	/// unfiltered-listing fallback, and the request URL was filtered and
+	/// at least `AO3FilterURLLength.limit` long. AO3 dropped the filters
+	/// rather than applying or erroring on them. Never returned for a
+	/// shorter request: those responses aren't inspected. See
+	/// `AO3FilterFallbackPage`'s doc comment for the mechanism.
+	case filtersNotApplied
 	/// Distinct from `.registrationRequired`: this listing type
 	/// (subscriptions, marked-for-later) is always-yours and
 	/// always-private, so an anonymous fetch of it is expected to be
@@ -150,8 +160,14 @@ public enum AO3SearchResultsFetcher {
 
 				switch AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL) {
 				case .success(let items, let hasNextPage, let pageTitle, let totalPages):
+					if AO3FilterURLLength.needsFallbackCheck(url), AO3FilterFallbackPage.isFallbackPage(pageTitle: pageTitle) {
+						return .filtersNotApplied
+					}
 					return .success(items, hasNextPage: hasNextPage, pageTitle: pageTitle, totalPages: totalPages)
 				case .noResults(let pageTitle, let totalPages):
+					if AO3FilterURLLength.needsFallbackCheck(url), AO3FilterFallbackPage.isFallbackPage(pageTitle: pageTitle) {
+						return .filtersNotApplied
+					}
 					return .noResults(pageTitle: pageTitle, totalPages: totalPages)
 				case .registrationRequired:
 					return .registrationRequired
@@ -270,8 +286,14 @@ extension AO3SearchResultsFetcher {
 					}
 					switch AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL) {
 					case .success(let items, let hasNextPage, let pageTitle, let totalPages):
+						if AO3FilterURLLength.needsFallbackCheck(url), AO3FilterFallbackPage.isFallbackPage(pageTitle: pageTitle) {
+							return .filtersNotApplied
+						}
 						return .success(items, hasNextPage: hasNextPage, pageTitle: pageTitle, totalPages: totalPages)
 					case .noResults(let pageTitle, let totalPages):
+						if AO3FilterURLLength.needsFallbackCheck(url), AO3FilterFallbackPage.isFallbackPage(pageTitle: pageTitle) {
+							return .filtersNotApplied
+						}
 						return .noResults(pageTitle: pageTitle, totalPages: totalPages)
 					case .registrationRequired:
 						// The stored session itself is what's rejected --
@@ -347,6 +369,24 @@ private extension AO3SearchResultsFetcher {
 	static func isCloudflareChallenge(_ html: String) -> Bool {
 		AO3CloudflareChallenge.isChallengePage(html)
 	}
+
+	/// True if `url`'s query carries at least one `work_search[...]`
+	/// parameter -- i.e. this was a filtered search/tag-listing request,
+	/// not a plain unfiltered one. Mirrors
+	/// `LocalAccountRefresher.isAO3ListingFeed`'s own `work_search[`-prefix
+	/// check so the two stay in sync; duplicated rather than shared
+	/// because that one also folds in host/path checks this call site
+	/// doesn't need (the URL reaching here has already been through that
+	/// gate once, earlier in the pipeline).
+	///
+	/// Explicitly `internal` (not the enclosing `private extension`'s
+	/// file-private default) because `AO3FilterURLLength`, in another
+	/// file of this module, calls it.
+	internal static func requestHasFilters(_ url: URL) -> Bool {
+		URLComponents(url: url, resolvingAgainstBaseURL: false)?
+			.queryItems?
+			.contains { $0.name.hasPrefix("work_search[") } ?? false
+	}
 }
 
 /// Public (AO3SearchResultsFetcher itself is internal to this module, so a
@@ -376,5 +416,37 @@ public enum AO3CloudflareChallenge {
 
 	public static func isChallengePage(_ html: String) -> Bool {
 		challengeMarkers.contains { html.contains($0) }
+	}
+}
+
+/// A `work_search[...]`-parameterized request URL (a filtered search or
+/// tag listing) that's long enough doesn't reliably get its filters
+/// applied. AO3 doesn't error in this case; it silently drops the query it
+/// can't process and serves its own plain, unfiltered "Latest Works"
+/// listing instead, as an ordinary 200 OK. That page is structurally a
+/// completely normal, well-formed AO3 results page --
+/// `AO3SearchResultsExtractor.extract` has no way to tell it apart from a
+/// real, intentional `.noResults` search, since nothing about the HTML
+/// itself is malformed or missing.
+///
+/// Confirmed from a real captured fallback response (a heavily-excluded
+/// `work_search[...]` URL that returned this instead of filtered
+/// results): the page's `<title>` is always the literal string below,
+/// distinct from a real filtered/tag search page's title, which always
+/// reflects the fandom/tag/query actually being searched (see
+/// `AO3SearchResultsExtractor.extractPageTitle`). That makes the title
+/// alone a safe, low-risk marker -- no body-text scanning needed, and no
+/// risk of colliding with a real filtered page's content the way a
+/// body-text marker might.
+///
+/// The length this kicks in at is not a documented AO3 number -- see
+/// `AO3FilterURLLength` for what was and wasn't confirmed, and for which
+/// requests are checked at all. This type makes no assumption about
+/// length; it only inspects the title of a response it is handed.
+public enum AO3FilterFallbackPage {
+	private static let fallbackTitle = "Latest Works | Archive of Our Own"
+
+	public static func isFallbackPage(pageTitle: String?) -> Bool {
+		pageTitle == fallbackTitle
 	}
 }

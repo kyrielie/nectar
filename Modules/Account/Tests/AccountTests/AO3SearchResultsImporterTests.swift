@@ -94,4 +94,61 @@ import RSWeb
 		// advancePageTo -- only a genuine .success import inserts.
 		XCTAssertNil(feed.ao3SearchFetchedPages)
 	}
+
+	// MARK: - Fallback page (AO3FilterFallbackPage)
+
+	/// A results-shaped page carrying AO3's unfiltered "Latest Works"
+	/// title, as returned when AO3 drops an over-long `work_search[...]`
+	/// query.
+	private func fallbackPageHTML(workID: String) -> String {
+		"""
+		<html><head><title>Latest Works | Archive of Our Own</title></head><body>
+		<li class="work-\(workID)">
+		<h4 class="heading"><a href="/works/\(workID)">An Unrelated Work</a> by <a rel="author" href="/users/author">author</a></h4>
+		</li>
+		</body></html>
+		"""
+	}
+
+	private func filteredURL(length: Int) -> URL {
+		let prefix = "https://archiveofourown.org/works?work_search%5Bquery%5D="
+		return URL(string: prefix + String(repeating: "a", count: length - prefix.utf8.count))!
+	}
+
+	func testFallbackPageAtLimitIsNotImported() async {
+		let outcome = await AO3SearchResultsImporter.importFetchedPage(html: fallbackPageHTML(workID: "55555"), feedURL: feed.url, feed: feed, account: account, advancePageTo: 1, requestURL: filteredURL(length: AO3FilterURLLength.limit))
+
+		guard case .filtersNotApplied = outcome else {
+			XCTFail("expected .filtersNotApplied, got \(outcome)")
+			return
+		}
+		XCTAssertNil(feed.ao3SearchFetchedPages)
+	}
+
+	func testFallbackPageUnderLimitIsNotInspected() async {
+		let outcome = await AO3SearchResultsImporter.importFetchedPage(html: fallbackPageHTML(workID: "55556"), feedURL: feed.url, feed: feed, account: account, advancePageTo: 1, requestURL: filteredURL(length: AO3FilterURLLength.limit - 1))
+
+		guard case .imported = outcome else {
+			XCTFail("expected .imported, got \(outcome)")
+			return
+		}
+	}
+
+	func testFallbackPageWithNoRequestURLIsNotInspected() async {
+		let outcome = await AO3SearchResultsImporter.importFetchedPage(html: fallbackPageHTML(workID: "55557"), feedURL: feed.url, feed: feed, account: account, advancePageTo: 1)
+
+		guard case .imported = outcome else {
+			XCTFail("expected .imported, got \(outcome)")
+			return
+		}
+	}
+
+	func testOrdinaryTitleAtLimitIsStillImported() async {
+		let outcome = await AO3SearchResultsImporter.importFetchedPage(html: searchResultsHTML(workID: "55558"), feedURL: feed.url, feed: feed, account: account, advancePageTo: 1, requestURL: filteredURL(length: AO3FilterURLLength.limit))
+
+		guard case .imported = outcome else {
+			XCTFail("expected .imported, got \(outcome)")
+			return
+		}
+	}
 }

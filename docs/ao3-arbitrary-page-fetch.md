@@ -143,6 +143,61 @@ since the inspector's arbitrary-fetch action can deliberately refetch
 page 1 itself (a real, expected case under the "additive" rule) without
 that meaning "this is the initial add-time fetch."
 
+## Long filtered URLs and AO3's fallback page
+
+AO3 does not error on a filtered (`work_search[...]`) URL it can't
+process. It serves its unfiltered "Latest Works" listing as an ordinary
+200, structurally identical to a real results page, so nothing in the
+extractor can tell it apart. The one reliable marker is the page title,
+`Latest Works | Archive of Our Own` (`AO3FilterFallbackPage`), which the
+extractor's suffix-stripping leaves intact because it only strips
+` - Works | Archive of Our Own`.
+
+`AO3FilterURLLength` decides which requests are inspected. The limit is
+4096 bytes of `URL.absoluteString`. What was confirmed: a 3,949-character
+filtered URL worked, and a longer one (exact length unknown, the capture
+was truncated at 4,096) got the fallback. 4096 is a chosen bound, not a
+documented AO3 number, and URLs between 3,950 and 4,095 are untested by
+design: they are never checked. It decides "filtered" via
+`AO3SearchResultsFetcher.requestHasFilters(_:)`, which lives in that
+file's `private extension` but is explicitly marked `internal` so
+the cross-file call compiles.
+
+| Request URL length | Add Feed screen | Fetched response |
+| --- | --- | --- |
+| under 4096 | nothing | not inspected |
+| exactly 4096 | no warning | checked for the fallback title |
+| over 4096 | warning with Cancel / Add Anyway | checked for the fallback title |
+
+The check is applied to each request URL, not once to the feed URL: a
+later page appends `page=N`, so a stored page-1 URL just under the limit
+can cross it on page 2. It runs at every place a results page is turned
+into works: both `AO3SearchResultsFetcher` extraction sites (which feed
+create, refresh, load-more and the inspector) and
+`AO3SearchResultsImporter.importFetchedPage`, whose `requestURL`
+parameter exists only for this (the Cloudflare-solver path never goes
+through the fetcher; `presentSolverAndRetry` passes the challenged URL).
+A fallback page is never imported. The result is
+`AO3SearchResultsFetchOutcome.filtersNotApplied`, carried as
+`PageOutcome.filtersNotApplied`, `AO3SearchResultsFetchCoordinator.Outcome.filtersNotApplied`
+and `ImportOutcome.filtersNotApplied`.
+
+What each caller does with it:
+
+- **Add Feed:** the feed is not kept. `LocalAccountDelegate.createFeed`
+  creates the feed before fetching, so it removes it again before
+  throwing `AccountError.ao3FiltersNotApplied`; the Cloudflare-solver
+  path in `AddFeedViewController` removes the feed it had already added.
+  Both show an alert containing the error description and recovery
+  suggestion (`presentError(_:)` alone would drop the suggestion).
+- **Refresh:** reported through `reportFeedRefreshError`; nothing imported.
+- **Load more / inspector page fetch:** shown as the footer or
+  validation error text.
+
+"Add Anyway" sets `userAcceptedLongAO3URL` so the re-entrant `add(_:)`
+does not warn twice; it is cleared when the URL text changes and after
+each attempt. It does not skip the fallback check.
+
 ## Delete-and-re-add
 
 Fetched-page history clears at re-add time (both the manual delete/re-add
@@ -211,4 +266,7 @@ page adds any new works, never removes any.
 `AO3SearchResultsImporter.importFetchedPage`,
 `AO3SearchResultsFetchCoordinator.presentSolverAndRetry`'s
 `updatesFeedName` parameter, `FeedInspectorViewController`'s AO3 Pages
-section, `AO3PagesInspectorCell`.
+section, `AO3PagesInspectorCell`, `AO3FilterURLLength`,
+`AO3FilterFallbackPage`, `AO3SearchResultsFetchOutcome.filtersNotApplied`,
+`AccountError.ao3FiltersNotApplied`, `AddFeedViewController`'s long-URL
+warning (`userAcceptedLongAO3URL`).

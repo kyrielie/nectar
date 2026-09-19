@@ -62,7 +62,10 @@ pushes `AO3AccountSettingsView` directly (see below).
 - **`.troubleshooting`** (`TroubleshootingRow`): error log, activity log,
   account stats, "dinosaurs" (easter egg / debug row — not investigated
   further here), manage storage.
-- **`.help`** (`HelpRow`): About.
+- **`.help`** (`HelpRow`): About, Guide. Guide is presented
+  `.overFullScreen` (not pushed, unlike every other row here) so the
+  real Settings screen stays visible-but-inert behind
+  `GuideOverlayView`'s scrim; see `guide.md`.
 - **`.ao3Account`**: single row, pushes `AO3AccountSettingsView` — a
   SwiftUI screen covering AO3 sign-in, kudos-on-like, refetch cadence, and
   the Ambrosia local-only-reader toggle. **Not covered by the row
@@ -85,8 +88,8 @@ Two storage tiers exist beyond `Settings.storyboard`'s rows:
 
 - **`AppDefaults`** (`iOS/AppDefaults.swift`) backs everything listed
   above, plus some flags with no UI row at all (state like
-  `hasShownAO3Onboarding`, `articleWindowScrollY` — restoration/onboarding
-  bookkeeping, not a person-facing setting).
+  `articleWindowScrollY` — restoration bookkeeping, not a person-facing
+  setting).
 - **`NectarAppGroupUserDefaults`**-backed preferences, living in
   `Modules/Account` rather than `AppDefaults` specifically so
   Account-module code (`AO3ChapterFetcher`, `AO3KudosManager`) can read
