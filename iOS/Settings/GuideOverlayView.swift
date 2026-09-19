@@ -54,7 +54,7 @@ private extension Color {
 	init(light: String, dark: String, opacity: Double = 1) {
 		let uiColor = UIColor { traitCollection in
 			let hex = traitCollection.userInterfaceStyle == .dark ? dark : light
-			return GuideHexColor(hex: hex)?.withAlphaComponent(opacity) ?? .clear
+			return guideHexColor(hex: hex)?.withAlphaComponent(opacity) ?? .clear
 		}
 		self.init(uiColor: uiColor)
 	}
@@ -65,7 +65,7 @@ private extension Color {
 /// plain `UIColor(hex:)` initializer to avoid any ambiguity with
 /// ArticleThemeListView.swift's unrelated `Color(hex:)` parser elsewhere
 /// in the app, even though both are file-private.
-private func GuideHexColor(hex: String) -> UIColor? {
+private func guideHexColor(hex: String) -> UIColor? {
 	var sanitized = hex
 	if sanitized.hasPrefix("#") { sanitized.removeFirst() }
 	guard sanitized.count == 6, let value = UInt32(sanitized, radix: 16) else { return nil }
