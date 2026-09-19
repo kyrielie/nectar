@@ -233,7 +233,7 @@ extension FeedInspectorViewController {
 			title = NSLocalizedString("Copy Home Page URL", comment: "Command")
 			urlString = feed.homePageURL
 		} else if logicalIndexPath == feedURLIndexPath {
-			title = NSLocalizedString("Copy Feed URL", comment: "Command")
+			title = NSLocalizedString("Copy Link", comment: "Command")
 			urlString = feed.url
 		} else {
 			return nil
@@ -272,7 +272,7 @@ private extension FeedInspectorViewController {
 	func fetchAO3Page(_ page: Int) {
 		guard !isAO3FetchInFlight else { return }
 		guard let account = feed.account else {
-			ao3PagesCell?.showValidationError(NSLocalizedString("This feed's account is unavailable", comment: "AO3 arbitrary-page-fetch: missing account"))
+			ao3PagesCell?.showValidationError(NSLocalizedString("This shelf's account is unavailable", comment: "AO3 arbitrary-page-fetch: missing account"))
 			return
 		}
 
@@ -303,7 +303,7 @@ private extension FeedInspectorViewController {
 			case .cloudflareChallenge(let challengedURL):
 				self.presentAO3FetchVerificationPrompt(challengedURL: challengedURL, page: page, account: account)
 			case .notSignedIn:
-				self.ao3PagesCell?.showValidationError(NSLocalizedString("This feed requires a signed-in AO3 account", comment: "AO3 load more error"))
+				self.ao3PagesCell?.showValidationError(NSLocalizedString("This shelf requires a signed-in AO3 account", comment: "AO3 load more error"))
 			case .filtersNotApplied:
 				self.ao3PagesCell?.showValidationError(NSLocalizedString("AO3 ignored this search's filters (URL too long)", comment: "AO3 load more error"))
 			}
@@ -354,7 +354,7 @@ private extension FeedInspectorViewController {
 				case .failed(let message):
 					self.ao3PagesCell?.showValidationError(message)
 				case .notSignedIn:
-					self.ao3PagesCell?.showValidationError(NSLocalizedString("This feed requires a signed-in AO3 account", comment: "AO3 load more error"))
+					self.ao3PagesCell?.showValidationError(NSLocalizedString("This shelf requires a signed-in AO3 account", comment: "AO3 load more error"))
 				case .filtersNotApplied:
 					self.ao3PagesCell?.showValidationError(NSLocalizedString("AO3 ignored this search's filters (URL too long)", comment: "AO3 load more error"))
 				}

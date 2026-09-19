@@ -64,7 +64,7 @@ final class OPMLImportCoordinator: NSObject {
 	private func presentAccountPicker() {
 		guard let presentingController else { Self.current = nil; return }
 
-		let title = NSLocalizedString("Choose an account to receive the imported feeds and folders", comment: "Import Account")
+		let title = NSLocalizedString("Choose an account to receive the imported shelves and folders", comment: "Import Account")
 		let alert = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
 
 		if let popoverController = alert.popoverPresentationController {

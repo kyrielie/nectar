@@ -135,7 +135,7 @@ struct AO3LinkListImportView: View {
 				} header: {
 					Text(NSLocalizedString("Paste AO3 Links", comment: "Pasted AO3 link-list import text box header"))
 				} footer: {
-					Text(NSLocalizedString("Paste any text containing archiveofourown.org work links -- everything else is ignored. This is a one-time import, not a feed: pasted works won't refresh with new stats or chapters until you open them.", comment: "Pasted AO3 link-list import footer"))
+					Text(NSLocalizedString("Paste any text containing archiveofourown.org work links -- everything else is ignored. This is a one-time import, not a shelf: pasted works won't refresh with new stats or chapters until you open them.", comment: "Pasted AO3 link-list import footer"))
 				}
 
 				if let resultMessage {

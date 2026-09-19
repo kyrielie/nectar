@@ -127,7 +127,7 @@ final class ColorPaletteTableViewController: UITableViewController, SettingsPale
 	override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
 		switch Section(rawValue: section) {
 		case .toolbarStyle:
-			return NSLocalizedString("Default: the top navigation bar and bottom toolbar use plain system appearance. Blend: both bars match the current article's background color. Tinted: both bars pick up the Surface Palette's tint color.", comment: "Toolbar style picker footer")
+			return NSLocalizedString("Default: the top navigation bar and bottom toolbar use plain system appearance. Blend: both bars match the current work's background color. Tinted: both bars pick up the Surface Palette's tint color.", comment: "Toolbar style picker footer")
 		default:
 			return nil
 		}

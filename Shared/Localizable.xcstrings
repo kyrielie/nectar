@@ -112,9 +112,6 @@
     "Add a note…" : {
       "comment" : "Annotation editor: note field placeholder"
     },
-    "Add Feed" : {
-      "comment" : "Add Feed"
-    },
     "Add Folder" : {
       "comment" : "Add Folder"
     },
@@ -136,9 +133,6 @@
     "Affects only feeds that support the SQLite transfer protocol. Most feeds are unaffected." : {
       "comment" : "Feed transfer format picker explanation"
     },
-    "All Articles" : {
-      "comment" : "All Articles"
-    },
     "All functions are already placed in this bar." : {
       "comment" : "Toolbar: overflow-picks empty state"
     },
@@ -153,6 +147,9 @@
     },
     "All Unread" : {
       "comment" : "All Unread pseudo-feed title"
+    },
+    "All Works" : {
+      "comment" : "All Articles"
     },
     "Always" : {
       "comment" : "Article scrollbar: always"
@@ -204,15 +201,6 @@
     },
     "Are you sure you want to remove this account? This cannot be undone." : {
       "comment" : "Remove Account"
-    },
-    "Article Scrollbar" : {
-      "comment" : "Article scrollbar picker title"
-    },
-    "Article Search" : {
-      "comment" : "Article Search"
-    },
-    "Articles" : {
-      "comment" : "Articles"
     },
     "Author" : {
       "comment" : "Annotations list: sort order option, author name A-Z\nSort field"
@@ -302,17 +290,11 @@
     "Check for Updates (Enable AO3 Updates in Settings)" : {
       "comment" : "Command, disabled: Ambrosia article with the AO3 network toggle off"
     },
+    "Choose an account to export" : {
+      "comment" : "Export Account"
+    },
     "Choose an account to receive the imported feeds and folders" : {
       "comment" : "Import Account"
-    },
-    "Choose an account with the articles to export" : {
-      "comment" : "Export Account"
-    },
-    "Choose an account with the highlights to export" : {
-      "comment" : "Export Account"
-    },
-    "Choose an account with the subscriptions to export" : {
-      "comment" : "Export Account"
     },
     "Choose an export format" : {
       "comment" : "Export Format"
@@ -368,9 +350,6 @@
     "Connect" : {
       "comment" : "Connect"
     },
-    "Copy Article URL" : {
-      "comment" : "Command"
-    },
     "Copy Contents" : {
       "comment" : "Copy Contents button"
     },
@@ -384,6 +363,9 @@
       "comment" : "Annotations list: copy highlight context menu action"
     },
     "Copy Home Page URL" : {
+      "comment" : "Command"
+    },
+    "Copy Work Link" : {
       "comment" : "Command"
     },
     "Couldn't Load Page" : {
@@ -473,12 +455,6 @@
     "Delete Feed" : {
       "comment" : "Delete Feed"
     },
-    "Delete Feeds" : {
-      "comment" : "Delete Feeds"
-    },
-    "Delete Feeds and Folders" : {
-      "comment" : "command"
-    },
     "Delete Folder" : {
       "comment" : "Command"
     },
@@ -490,6 +466,15 @@
     },
     "Delete Reading Stats" : {
 
+    },
+    "Delete Shelf" : {
+      "comment" : "Delete Feed"
+    },
+    "Delete Shelves" : {
+      "comment" : "Delete Feeds"
+    },
+    "Delete Shelves and Folders" : {
+      "comment" : "command"
     },
     "Delete Theme?" : {
       "comment" : "Delete Theme"
@@ -569,9 +554,6 @@
     "Enter the address shown in your library app's preferences, e.g. http://192.168.1.5:8765" : {
       "comment" : "Enter Server URL message"
     },
-    "Entire Book" : {
-      "comment" : "Annotations list tab: current book, every chapter"
-    },
     "Error" : {
       "comment" : "Error"
     },
@@ -605,23 +587,17 @@
     "Export" : {
       "comment" : "Annotations settings: export section header"
     },
-    "Export Articles…" : {
-      "comment" : "Command"
-    },
     "Export as CSV…" : {
       "comment" : "Annotations settings: CSV export row"
     },
     "Export as SQLite…" : {
       "comment" : "Annotations settings: SQLite export row"
     },
+    "Export Works…" : {
+      "comment" : "Command"
+    },
     "Failed" : {
       "comment" : "Failed"
-    },
-    "Feed Transfer Format" : {
-      "comment" : "Feed transfer format picker title"
-    },
-    "Feeds" : {
-      "comment" : "Feeds"
     },
     "Fetch" : {
       "comment" : "AO3 arbitrary-page-fetch: fetch button"
@@ -650,16 +626,16 @@
     "Fewest Words First" : {
       "comment" : "Ascending sort direction — word count"
     },
-    "Filter Read Articles" : {
-      "comment" : "Filter Read Articles"
-    },
-    "Filter Read Feeds" : {
+    "Filter Read Shelves" : {
       "comment" : "Filter Read Feeds"
+    },
+    "Filter Read Works" : {
+      "comment" : "Filter Read Articles"
     },
     "Find" : {
       "comment" : "Text replacement rule: input field placeholder"
     },
-    "Find in Article" : {
+    "Find in Work" : {
       "comment" : "Find in Article\nToolbar function: find"
     },
     "Finding feed" : {
@@ -698,11 +674,11 @@
     "Full Screen" : {
       "comment" : "Surface palette preview: full screen swatch caption"
     },
-    "Get Feed Info" : {
-      "comment" : "Get Feed Info"
-    },
     "Get Info" : {
       "comment" : "Get Info"
+    },
+    "Get Shelf Info" : {
+      "comment" : "Get Feed Info"
     },
     "Go To All Unread" : {
       "comment" : "Go To All Unread"
@@ -769,6 +745,9 @@
     },
     "Import Failed" : {
       "comment" : "Import Failed"
+    },
+    "Import Link" : {
+      "comment" : "Add Feed"
     },
     "Import OPML…" : {
       "comment" : "Import OPML\nImport OPML button"
@@ -841,6 +820,9 @@
     "Left & Right" : {
       "comment" : "Left & Right margin label"
     },
+    "Library" : {
+      "comment" : "Local Account"
+    },
     "Light" : {
       "comment" : "Light"
     },
@@ -868,13 +850,10 @@
     "Load more results" : {
       "comment" : "AO3 load more results button"
     },
-    "Local" : {
+    "Local accounts do not sync your library across devices" : {
       "comment" : "Local Account"
     },
-    "Local accounts do not sync your feeds across devices" : {
-      "comment" : "Local Account"
-    },
-    "Local accounts do not sync your feeds across devices." : {
+    "Local accounts do not sync your library across devices." : {
       "comment" : "Local"
     },
     "Lock Gestures" : {
@@ -913,16 +892,13 @@
     "Mark All In This Timeline As…" : {
       "comment" : "Mark all sheet title"
     },
-    "Mark Article Unread" : {
-      "comment" : "Mark Article Unread"
-    },
     "Mark as Read" : {
       "comment" : "Command"
     },
     "Mark As Read" : {
       "comment" : "Mark As Read"
     },
-    "Mark as read for all matching articles." : {
+    "Mark as read for all matching works." : {
       "comment" : "Mark as read for all matching articles."
     },
     "Mark as Unread" : {
@@ -948,6 +924,9 @@
     },
     "Mark Unstarred" : {
       "comment" : "command"
+    },
+    "Mark Work Unread" : {
+      "comment" : "Mark Article Unread"
     },
     "Marked as Read" : {
       "comment" : "Accessibility announcement"
@@ -1004,14 +983,14 @@
     "Neutral" : {
       "comment" : "Neutral highlight palette"
     },
-    "New Article Notifications" : {
-      "comment" : "New Article Notifications"
-    },
-    "New Feed" : {
-      "comment" : "Command"
-    },
     "New Folder" : {
       "comment" : "Command"
+    },
+    "New Shelf" : {
+      "comment" : "Command"
+    },
+    "New Work Notifications" : {
+      "comment" : "New Article Notifications"
     },
     "Newest First" : {
       "comment" : "Descending sort direction — date"
@@ -1019,14 +998,14 @@
     "Next" : {
       "comment" : "Inline series navigation link"
     },
-    "Next Article" : {
-      "comment" : "Next Article\nOverflow menu: next article"
-    },
     "Next Unread" : {
       "comment" : "Next Unread\nToolbar function: next unread"
     },
-    "Next Unread Article" : {
+    "Next Unread Work" : {
       "comment" : "Next Unread Article"
+    },
+    "Next Work" : {
+      "comment" : "Next Article\nOverflow menu: next article"
     },
     "No Activity Logged" : {
       "comment" : "Activity log empty state"
@@ -1104,7 +1083,7 @@
     "Only applies when sorted by Date" : {
       "comment" : "Group by Feed inapplicable reason"
     },
-    "Only applies when the Read Articles filter is on" : {
+    "Only applies when the Read Works filter is on" : {
       "comment" : "Clear read articles inapplicable reason"
     },
     "Only Outside Full Screen" : {
@@ -1209,10 +1188,10 @@
     "Previous" : {
       "comment" : "Inline series navigation link"
     },
-    "Previous & Next Article" : {
+    "Previous & Next Work" : {
       "comment" : "Toolbar function: previous and next article"
     },
-    "Previous Article" : {
+    "Previous Work" : {
       "comment" : "Overflow menu: previous article\nPrevious Article"
     },
     "Purple" : {
@@ -1350,9 +1329,6 @@
     "Search" : {
       "comment" : "Search"
     },
-    "Search Articles" : {
-      "comment" : "Search Articles"
-    },
     "Search Bar" : {
       "comment" : "Surface palette preview: search bar swatch caption"
     },
@@ -1362,10 +1338,13 @@
     "Search: " : {
       "comment" : "Search smart feed title prefix"
     },
+    "Search Works" : {
+      "comment" : "Search Articles"
+    },
     "See articles in  “%@”" : {
       "comment" : "See articles in Folder"
     },
-    "See first unread article" : {
+    "See first unread work" : {
       "comment" : "First Unread"
     },
     "Select Next Down" : {
@@ -1374,14 +1353,14 @@
     "Select Next Up" : {
       "comment" : "Select Next Up"
     },
-    "Select text in an article to highlight it." : {
+    "Select text in a work to highlight it." : {
       "comment" : "Annotations list empty state message"
     },
-    "Selected - Filter Read Articles" : {
-      "comment" : "Selected - Filter Read Articles"
-    },
-    "Selected - Filter Read Feeds" : {
+    "Selected - Filter Read Shelves" : {
       "comment" : "Selected - Filter Read Feeds"
+    },
+    "Selected - Filter Read Works" : {
+      "comment" : "Selected - Filter Read Articles"
     },
     "Selected - Lock Gestures" : {
       "comment" : "Selected - Lock Gestures"
@@ -1389,7 +1368,7 @@
     "Selected - Loved" : {
       "comment" : "Selected - Loved"
     },
-    "Selected - Mark Article Unread" : {
+    "Selected - Mark Work Unread" : {
       "comment" : "Selected - Mark Article Unread"
     },
     "Selected - Read Later" : {
@@ -1412,6 +1391,9 @@
     },
     "Share AO3 Series Link" : {
       "comment" : "Command"
+    },
+    "Shelves" : {
+      "comment" : "Feeds"
     },
     "Show feeds that haven’t updated in…" : {
       "comment" : "Show stale feeds text"
@@ -1449,7 +1431,7 @@
     "Slate" : {
       "comment" : "Slate accent color\nSlate surface palette"
     },
-    "Smart Feeds" : {
+    "Smart shelves" : {
       "comment" : "Smart Feeds group title"
     },
     "Some themes justify text on their own. Turn on Override Justification to force it on or off regardless of the theme. Hyphenation works best paired with justified text on narrow screens." : {
@@ -1546,17 +1528,11 @@
     "This backup also includes Settings. You can restore your feeds and reading history only, or also replace this device's Settings with the backup's." : {
       "comment" : "Settings restore note"
     },
-    "This Book" : {
-      "comment" : "Annotations list navigation title: whole book, title unavailable"
-    },
     "This Chapter" : {
       "comment" : "Annotations list navigation title: single chapter, title unavailable\nAnnotations list tab: current chapter/article only"
     },
     "This device cannot send emails." : {
       "comment" : "This device cannot send emails."
-    },
-    "This feed requires a signed-in AO3 account" : {
-      "comment" : "AO3 load more error"
     },
     "This feed's account is unavailable" : {
       "comment" : "AO3 arbitrary-page-fetch: missing account"
@@ -1566,6 +1542,9 @@
     },
     "This permanently deletes all recorded reading history, per-book progress, and the all-time word count. This can't be undone." : {
 
+    },
+    "This shelf requires a signed-in AO3 account" : {
+      "comment" : "AO3 load more error"
     },
     "This text is part of an existing highlight or edit. Remove or resize it first." : {
       "comment" : "Text-edit overlap alert message"
@@ -1585,6 +1564,9 @@
     "This week" : {
 
     },
+    "This Work" : {
+      "comment" : "Annotations list navigation title: whole book, title unavailable"
+    },
     "Timeline Layout" : {
       "comment" : "Timeline Layout"
     },
@@ -1600,17 +1582,17 @@
     "Toggle Read" : {
       "comment" : "Toolbar function: toggle read"
     },
-    "Toggle Read Articles Filter" : {
-      "comment" : "Toggle Read Articles Filter"
-    },
-    "Toggle Read Feeds Filter" : {
-      "comment" : "Toggle Read Feeds Filter"
-    },
     "Toggle Read Later Status" : {
       "comment" : "Toggle Read Later Status"
     },
+    "Toggle Read Shelves Filter" : {
+      "comment" : "Toggle Read Feeds Filter"
+    },
     "Toggle Read Status" : {
       "comment" : "Toggle Read Status"
+    },
+    "Toggle Read Works Filter" : {
+      "comment" : "Toggle Read Articles Filter"
     },
     "Toggle Sidebar" : {
       "comment" : "Toggle Sidebar"
@@ -1632,6 +1614,9 @@
     },
     "Track reading activity" : {
 
+    },
+    "Transfer Format" : {
+      "comment" : "Feed transfer format picker title"
     },
     "Transparent" : {
       "comment" : "Transparent badge color palette"
@@ -1690,7 +1675,7 @@
     "Warm" : {
       "comment" : "Warm highlight palette"
     },
-    "We reached the server, but couldn't process its feed list." : {
+    "We reached the server, but couldn't process its list." : {
       "comment" : "OPML fetch import failed message"
     },
     "We were unable to process the selected file.  Please ensure that it is a properly formatted OPML file." : {
@@ -1719,6 +1704,15 @@
     },
     "Words per day" : {
 
+    },
+    "Work Scrollbar" : {
+      "comment" : "Article scrollbar picker title"
+    },
+    "Work Search" : {
+      "comment" : "Article Search"
+    },
+    "Works" : {
+      "comment" : "Articles"
     },
     "Works an author has archive-locked to registered users never appear in RSS at all, signed in or not -- RSS has no concept of an authenticated request. Nectar's AO3 sign-in above only helps once a locked work's link reaches Nectar some other way." : {
       "comment" : "AO3 RSS limitations: archive-locked works"

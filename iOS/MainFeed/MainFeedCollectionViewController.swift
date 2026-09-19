@@ -815,7 +815,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 					try? FileManager.default.removeItem(at: tempURL)
 					if case .failure = result {
 						let title = NSLocalizedString("Import Failed", comment: "Import Failed")
-						let message = NSLocalizedString("We reached the server, but couldn't process its feed list.", comment: "OPML fetch import failed message")
+						let message = NSLocalizedString("We reached the server, but couldn't process its list.", comment: "OPML fetch import failed message")
 						self?.presentError(title: title, message: message)
 					}
 				}
@@ -1017,12 +1017,12 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 
 	func setFilterButtonToActive() {
 		filterButton.tintColor = Assets.Colors.primaryAccent
-		filterButton?.accLabelText = NSLocalizedString("Selected - Filter Read Feeds", comment: "Selected - Filter Read Feeds")
+		filterButton?.accLabelText = NSLocalizedString("Selected - Filter Read Shelves", comment: "Selected - Filter Read Feeds")
 	}
 
 	func setFilterButtonToInactive() {
 		filterButton.tintColor = .label
-		filterButton?.accLabelText = NSLocalizedString("Filter Read Feeds", comment: "Filter Read Feeds")
+		filterButton?.accLabelText = NSLocalizedString("Filter Read Shelves", comment: "Filter Read Feeds")
 	}
 
 	// MARK: - Notifications
@@ -1108,7 +1108,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 
 		var menuItems: [UIAction] = []
 
-		let addFeedActionTitle = NSLocalizedString("Add Feed", comment: "Add Feed")
+		let addFeedActionTitle = NSLocalizedString("Import Link", comment: "Add Feed")
 		let addFeedAction = UIAction(title: addFeedActionTitle, image: Assets.Images.plus) { _ in
 			self.coordinator.showAddFeed()
 		}
@@ -1152,7 +1152,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
 		let cancelAction = UIAlertAction(title: cancelTitle, style: .cancel)
 
-		let addFeedActionTitle = NSLocalizedString("Add Feed", comment: "Add Feed")
+		let addFeedActionTitle = NSLocalizedString("Import Link", comment: "Add Feed")
 		let addFeedAction = UIAlertAction(title: addFeedActionTitle, style: .default) { _ in
 			self.coordinator.showAddFeed()
 		}
@@ -1420,7 +1420,7 @@ extension MainFeedCollectionViewController {
 				  return nil
 			  }
 
-		let title = NSLocalizedString("Copy Feed URL", comment: "Command")
+		let title = NSLocalizedString("Copy Link", comment: "Command")
 		let action = UIAction(title: title, image: Assets.Images.copy) { _ in
 			UIPasteboard.general.url = url
 		}
@@ -1433,7 +1433,7 @@ extension MainFeedCollectionViewController {
 				  return nil
 			  }
 
-		let title = NSLocalizedString("Copy Feed URL", comment: "Command")
+		let title = NSLocalizedString("Copy Link", comment: "Command")
 		let action = UIAlertAction(title: title, style: .default) { _ in
 			UIPasteboard.general.url = url
 			completion(true)
@@ -1606,7 +1606,7 @@ extension MainFeedCollectionViewController {
 				  return nil
 			  }
 
-		let title = NSLocalizedString("Export Articles…", comment: "Command")
+		let title = NSLocalizedString("Export Works…", comment: "Command")
 		let action = UIAction(title: title, image: Assets.Images.share) { [weak self] _ in
 			self?.presentExportFormatPicker(sourceView: contentView, sourceRect: contentView.bounds, sidebarItem: sidebarItem)
 		}
@@ -1770,8 +1770,8 @@ extension MainFeedCollectionViewController {
 			let localizedInformativeText = NSLocalizedString("Are you sure you want to delete the “%@” folder?", comment: "Folder delete text")
 			message = NSString.localizedStringWithFormat(localizedInformativeText as NSString, sidebarItem.nameForDisplay) as String
 		} else {
-			title = NSLocalizedString("Delete Feed", comment: "Delete Feed")
-			let localizedInformativeText = NSLocalizedString("Are you sure you want to delete the “%@” feed?", comment: "Feed delete text")
+			title = NSLocalizedString("Delete Shelf", comment: "Delete Feed")
+			let localizedInformativeText = NSLocalizedString("Are you sure you want to delete the “%@” shelf? Works you've read, starred, loved, or started stay in your library. Works you haven't touched are removed.", comment: "Feed delete text")
 			message = NSString.localizedStringWithFormat(localizedInformativeText as NSString, sidebarItem.nameForDisplay) as String
 		}
 

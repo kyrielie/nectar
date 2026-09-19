@@ -125,7 +125,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	private lazy var nextArticleBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.nextArticle, style: .plain, target: self, action: #selector(nextArticle(_:)))
 	private lazy var readTopBarButtonItem: UIBarButtonItem = {
 		let item = UIBarButtonItem(image: Assets.Images.circleOpen, style: .plain, target: self, action: #selector(toggleRead(_:)))
-		item.accLabelText = NSLocalizedString("Mark Article Unread", comment: "Mark Article Unread")
+		item.accLabelText = NSLocalizedString("Mark Work Unread", comment: "Mark Article Unread")
 		return item
 	}()
 	private lazy var starTopBarButtonItem: UIBarButtonItem = {
@@ -536,13 +536,13 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			allBarButtonItemInstances(for: .read).forEach {
 				$0.image = Assets.Images.circleOpen
 				$0.isEnabled = article.isAvailableToMarkUnread
-				$0.accLabelText = NSLocalizedString("Mark Article Unread", comment: "Mark Article Unread")
+				$0.accLabelText = NSLocalizedString("Mark Work Unread", comment: "Mark Article Unread")
 			}
 		} else {
 			allBarButtonItemInstances(for: .read).forEach {
 				$0.image = Assets.Images.circleClosed
 				$0.isEnabled = true
-				$0.accLabelText = NSLocalizedString("Selected - Mark Article Unread", comment: "Selected - Mark Article Unread")
+				$0.accLabelText = NSLocalizedString("Selected - Mark Work Unread", comment: "Selected - Mark Article Unread")
 			}
 		}
 
@@ -773,8 +773,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 				self?.beginFind()
 			}]
 		case .prevNext:
-			let nextTitle = NSLocalizedString("Next Article", comment: "Overflow menu: next article")
-			let prevTitle = NSLocalizedString("Previous Article", comment: "Overflow menu: previous article")
+			let nextTitle = NSLocalizedString("Next Work", comment: "Overflow menu: next article")
+			let prevTitle = NSLocalizedString("Previous Work", comment: "Overflow menu: previous article")
 			return [
 				UIAction(title: nextTitle, image: Assets.Images.nextArticle, attributes: coordinator.isNextArticleAvailable ? [] : .disabled) { [weak self] _ in
 					self?.coordinator.selectNextArticle()

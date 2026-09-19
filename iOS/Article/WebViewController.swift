@@ -2661,7 +2661,7 @@ private extension WebViewController {
 
 	func prevArticleAction() -> UIAction? {
 		guard coordinator.isPrevArticleAvailable else { return nil }
-		let title = NSLocalizedString("Previous Article", comment: "Previous Article")
+		let title = NSLocalizedString("Previous Work", comment: "Previous Article")
 		return UIAction(title: title, image: Assets.Images.prevArticle) { [weak self] _ in
 			self?.coordinator.selectPrevArticle()
 		}
@@ -2669,7 +2669,7 @@ private extension WebViewController {
 
 	func nextArticleAction() -> UIAction? {
 		guard coordinator.isNextArticleAvailable else { return nil }
-		let title = NSLocalizedString("Next Article", comment: "Next Article")
+		let title = NSLocalizedString("Next Work", comment: "Next Article")
 		return UIAction(title: title, image: Assets.Images.nextArticle) { [weak self] _ in
 			self?.coordinator.selectNextArticle()
 		}
@@ -2723,7 +2723,7 @@ private extension WebViewController {
 
 	func nextUnreadArticleAction() -> UIAction? {
 		guard coordinator.isNextUnreadAvailable else { return nil }
-		let title = NSLocalizedString("Next Unread Article", comment: "Next Unread Article")
+		let title = NSLocalizedString("Next Unread Work", comment: "Next Unread Article")
 		return UIAction(title: title, image: Assets.Images.nextUnread) { [weak self] _ in
 			self?.coordinator.selectNextUnread()
 		}

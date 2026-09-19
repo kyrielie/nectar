@@ -97,7 +97,7 @@
                         </connections>
                     </tableView>
                     <toolbarItems/>
-                    <navigationItem key="navigationItem" title="Add Feed" id="i1W-2z-PAk">
+                    <navigationItem key="navigationItem" title="Import Link" id="i1W-2z-PAk">
                         <barButtonItem key="leftBarButtonItem" title="Cancel" id="QpU-Ro-nHd">
                             <connections>
                                 <action selector="cancel:" destination="7aE-6a-iP7" id="g4H-Mc-Jnh"/>

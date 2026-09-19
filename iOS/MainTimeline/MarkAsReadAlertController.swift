@@ -41,7 +41,7 @@ extension UIBarButtonItem: MarkAsReadAlertControllerSourceType {}
 	                             completion: @escaping (UIAlertAction) -> Void) -> UIAlertController where T: MarkAsReadAlertControllerSourceType {
 
 		let title = NSLocalizedString("Mark As Read", comment: "Mark As Read")
-		let message = NSLocalizedString("Mark as read for all matching articles.",
+		let message = NSLocalizedString("Mark as read for all matching works.",
 										comment: "Mark as read for all matching articles.")
 		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
 		let settingsTitle = NSLocalizedString("Open Settings", comment: "Open Settings button")

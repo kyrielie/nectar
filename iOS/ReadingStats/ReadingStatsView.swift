@@ -159,7 +159,7 @@ struct ReadingStatsView: View {
 					showingDeleteConfirmation = true
 				}
 			} footer: {
-				Text("Permanently deletes all recorded reading history, per-book progress, and the all-time word count. This can't be undone.")
+				Text("Permanently deletes all recorded reading history, per-work progress, and the all-time word count. This can't be undone.")
 			}
 		}
 		.id(refreshID)
@@ -176,7 +176,7 @@ struct ReadingStatsView: View {
 			}
 			Button("Cancel", role: .cancel) {}
 		} message: {
-			Text("This permanently deletes all recorded reading history, per-book progress, and the all-time word count. This can't be undone.")
+			Text("This permanently deletes all recorded reading history, per-work progress, and the all-time word count. This can't be undone.")
 		}
 	}
 

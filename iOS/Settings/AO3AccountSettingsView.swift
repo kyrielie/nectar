@@ -67,7 +67,7 @@ struct AO3AccountSettingsView: View {
 						AO3PrefetchNewWorksPreference.isEnabled = newValue
 					}
 			} footer: {
-				Text(NSLocalizedString("Downloads a work's text as soon as it appears in your tag and user feeds, instead of waiting until you open it. Uses more AO3 requests, but protects against a work being deleted or locked before you get to it. Off by default. Doesn't apply to AO3 search results, which never fetch content automatically.", comment: "AO3 prefetch-on-arrival toggle footer"))
+				Text(NSLocalizedString("Downloads a work's text as soon as it appears in your tag and user shelves, instead of waiting until you open it. Uses more AO3 requests, but protects against a work being deleted or locked before you get to it. Off by default. Doesn't apply to AO3 search results, which never fetch content automatically.", comment: "AO3 prefetch-on-arrival toggle footer"))
 			}
 
 			Section {
@@ -126,7 +126,7 @@ struct AO3AccountSettingsView: View {
 						.frame(maxWidth: .infinity)
 				}
 			} footer: {
-				Text(NSLocalizedString("If an AO3 search-results feed reports a Cloudflare challenge, use this to prove to Cloudflare that Nectar is being used by a real person -- the same check AO3 shows in a regular browser sometimes. This isn't tied to your AO3 account and doesn't require being signed in; it usually needs re-doing periodically.", comment: "AO3 Cloudflare challenge section footer"))
+				Text(NSLocalizedString("If an AO3 search-results shelf reports a Cloudflare challenge, use this to prove to Cloudflare that Nectar is being used by a real person -- the same check AO3 shows in a regular browser sometimes. This isn't tied to your AO3 account and doesn't require being signed in; it usually needs re-doing periodically.", comment: "AO3 Cloudflare challenge section footer"))
 			}
 		}
 		.navigationTitle(Text(verbatim: "Archive of Our Own"))
