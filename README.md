@@ -123,7 +123,10 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) before opening a PR.
 
 ## Acknowledgments
 
-Nectar's AO3 HTML extractors were cross-checked against (not ported from)
+The Streaks and Monthly sections of Reading Stats are adapted from
+[Aidoku](https://github.com/Aidoku/Aidoku)'s Insights feature (GPL-3.0); the
+adapted files are GPL-3.0-licensed, see [License](#license). Nectar's AO3 HTML
+extractors were cross-checked against (not ported from)
 [nianeyna/ao3downloader](https://github.com/nianeyna/ao3downloader) (GPL-3.0)
 and [ArmindoFlores/ao3_api](https://github.com/ArmindoFlores/ao3_api) (MIT),
 and reference [otwarchive](https://github.com/otwcode/otwarchive)'s own
@@ -135,4 +138,4 @@ sources and licenses, including per-theme detail in each theme's own
 
 ## License
 
-Nectar is available under the same license as NetNewsWire — see [`LICENSE`](./LICENSE) (MIT).
+Nectar is available under the same license as NetNewsWire (see [`LICENSE`](./LICENSE), MIT), except for the Reading Stats files adapted from [Aidoku](https://github.com/Aidoku/Aidoku), which are GPL-3.0-licensed (see [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md) for the file list and [`LICENSES/GPL-3.0.txt`](./LICENSES/GPL-3.0.txt) for the license text).

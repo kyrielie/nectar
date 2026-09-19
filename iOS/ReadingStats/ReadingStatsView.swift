@@ -11,7 +11,7 @@ struct ReadingStatsView: View {
 	@State private var statsMetric: StatsMetric = .words
 	@State private var showingDeleteConfirmation = false
 	// Bumped after resetReadingStats() to force the AppDefaults-backed
-	// computed properties below (totals, dailyWordCounts, etc.) to
+	// computed properties below (totals, dailyWords, etc.) to
 	// re-read -- they aren't @State themselves, so nothing else would
 	// tell SwiftUI to recompute them.
 	@State private var refreshID = UUID()
@@ -28,22 +28,16 @@ struct ReadingStatsView: View {
 		return ReadingStatsCalendar.totals(history: AppDefaults.shared.readingStatsDailyHistory, range: start...end, calendar: .current)
 	}
 
-	/// Always the trailing 7 days, independent of the week/month picker
-	/// above -- a 30-bar chart doesn't read usefully at phone width, and
-	/// the mockup this screen is built from only ever showed a 7-day
-	/// view. The picker still scopes the metric cards and the fandom/tag
-	/// breakdowns below; only this chart's window is fixed.
-	private var dailyWordCounts: [(label: String, words: Int, isToday: Bool)] {
-		let history = AppDefaults.shared.readingStatsDailyHistory
-		let calendar = Calendar.current
-		let keyFormatter = Self.dateKeyFormatter
-		let today = calendar.startOfDay(for: Date())
-		return (0..<7).reversed().compactMap { offset -> (String, Int, Bool)? in
-			guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { return nil }
-			let key = keyFormatter.string(from: day)
-			let words = history[key]?.wordsRead ?? 0
-			return (Self.dayLetterFormatter.string(from: day), words, offset == 0)
-		}
+	/// Words read per day for the full retained year, independent of the
+	/// Last 7 days/Last 30 days picker above -- the Streaks and Monthly
+	/// sections read this, the picker only scopes Summary, By fandom, and
+	/// Top tags. See `AppDefaults.readingStatsDailyWordCounts`.
+	private var dailyWords: [String: Int] {
+		AppDefaults.shared.readingStatsDailyWordCounts
+	}
+
+	private var streaks: (current: Int, longest: Int) {
+		ReadingStatsCalendar.streakLengths(dailyWords: dailyWords)
 	}
 
 	/// Top 4 by the current metric (words or completed works) this period,
@@ -105,15 +99,6 @@ struct ReadingStatsView: View {
 					.padding(.vertical, 8)
 			}
 
-			// Moved out from under the period picker (it was already hard-
-			// fixed to 7 days regardless of the picker's selection) so it no
-			// longer visually implies a connection to "Last 7 days"/"Last 30
-			// days" above -- see dailyWordCounts' doc comment.
-			Section("Words per day") {
-				dailyBarChart
-					.listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-			}
-
 			if !fandomSlices.isEmpty {
 				Section {
 					fandomBreakdown
@@ -140,16 +125,44 @@ struct ReadingStatsView: View {
 				}
 			}
 
+			// Streaks and Monthly: ported from Aidoku (https://github.com/Aidoku/Aidoku),
+			// GPL-3.0-licensed there and here -- see THIRD-PARTY-NOTICES.md.
+			// Neither follows the period picker (both span the retained year),
+			// hence their position after the picker-scoped sections above.
+			// Rows are clear so each Aidoku platter reads as its own card.
+			Section {
+				let words = dailyWords
+				let lengths = ReadingStatsCalendar.streakLengths(dailyWords: words)
+				ReadingStreaksView(currentStreak: lengths.current, longestStreak: lengths.longest, heatmapData: ReadingStatsCalendar.heatmapData(dailyWords: words))
+					.listRowBackground(Color.clear)
+					.listRowSeparator(.hidden)
+					.listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+			} header: {
+				Text("Streaks")
+			} footer: {
+				Text("A day counts toward a streak once any words are credited that day. Darker squares mean more words read.")
+			}
+
+			let monthly = ReadingStatsCalendar.yearlyMonthData(dailyWords: dailyWords)
+			if !monthly.isEmpty {
+				Section("Monthly") {
+					ReadingMonthlyChartCard(chartData: monthly)
+						.listRowBackground(Color.clear)
+						.listRowSeparator(.hidden)
+						.listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+				}
+			}
+
 			// Only "total words read" is shown here -- that's the one
 			// all-time counter that actually exists
-			// (AppDefaults.readingStatsAllTimeWords, never pruned).
-			// "Longest streak ever" and per-session stats (average/
-			// longest session, most-read fandom all-time) aren't
-			// tracked anywhere yet -- readingStatsDailyHistory only
-			// keeps a rolling 35-day window, and there's no discrete
-			// session log, just a daily secondsActive total. Showing
-			// those here would mean fabricating numbers rather than
-			// reading real data.
+			// (AppDefaults.readingStatsAllTimeWords, never pruned). The
+			// longest streak above and the monthly chart read the retained
+			// year (AppDefaults.readingStatsDailyWords), so "longest" means
+			// longest within that year, not ever. Per-session stats (average/
+			// longest session, most-read fandom all-time) still aren't
+			// tracked: there's no discrete session log, just a daily
+			// secondsActive total, so those would mean fabricating numbers
+			// rather than reading real data.
 			Section("All time") {
 				metricRow("Total words read", "\(AppDefaults.shared.readingStatsAllTimeWords)")
 			}
@@ -185,7 +198,7 @@ struct ReadingStatsView: View {
 			metricCard("Words read", "\(totals.wordsRead)")
 			metricCard("Words / hour", String(format: "%.0f", totals.wordsPerHour))
 			metricCard("Works read", "\(totals.worksCompleted)")
-			metricCard("Streak", "\(ReadingStatsCalendar.currentStreak(history: AppDefaults.shared.readingStatsDailyHistory, asOf: Date())) days")
+			metricCard("Streak", "\(streaks.current > 1 ? streaks.current : 0) days")
 		}
 	}
 
@@ -207,32 +220,10 @@ struct ReadingStatsView: View {
 		}
 	}
 
-	private var dailyBarChart: some View {
-		let counts = dailyWordCounts
-		let maxWords = max(counts.map(\.words).max() ?? 0, 1)
-		return VStack(alignment: .leading, spacing: 6) {
-			HStack(alignment: .bottom, spacing: 6) {
-				ForEach(Array(counts.enumerated()), id: \.offset) { _, day in
-					RoundedRectangle(cornerRadius: 3, style: .continuous)
-						.fill(day.isToday ? Color.accentColor : Color.accentColor.opacity(0.35))
-						.frame(height: max(4, CGFloat(day.words) / CGFloat(maxWords) * 90))
-						.frame(maxWidth: .infinity)
-				}
-			}
-			.frame(height: 90, alignment: .bottom)
-			HStack(spacing: 6) {
-				ForEach(Array(counts.enumerated()), id: \.offset) { _, day in
-					Text(day.label).font(.caption2).foregroundStyle(.secondary).frame(maxWidth: .infinity)
-				}
-			}
-		}
-	}
-
-	/// Filled pie wedges via a custom Shape rather than Swift Charts --
-	/// this codebase has no existing `import Charts` anywhere and no
-	/// checkable deployment target in this snapshot, so this avoids
-	/// betting on an API that might not be available. Trim-on-a-stroked-
-	/// Circle gives ring segments, not filled wedges, hence the Shape.
+	/// Filled pie wedges via a custom Shape. Written before Swift Charts
+	/// was imported for the monthly chart (ReadingYearlyMonthChartView),
+	/// and left as is rather than reworked. Trim-on-a-stroked-Circle gives
+	/// ring segments, not filled wedges, hence the Shape.
 	private struct PieSlice: Shape {
 		let startAngle: Angle
 		let endAngle: Angle
@@ -359,18 +350,4 @@ struct ReadingStatsView: View {
 			}
 		}
 	}
-
-	private static let dateKeyFormatter: DateFormatter = {
-		let formatter = DateFormatter()
-		formatter.locale = Locale(identifier: "en_US_POSIX")
-		formatter.dateFormat = "yyyy-MM-dd"
-		return formatter
-	}()
-
-	private static let dayLetterFormatter: DateFormatter = {
-		let formatter = DateFormatter()
-		formatter.locale = Locale(identifier: "en_US_POSIX")
-		formatter.dateFormat = "EEEEE"
-		return formatter
-	}()
 }
