@@ -537,7 +537,7 @@ rule against asserting things that haven't been verified by reading the code.
 - `iOS/KeyboardManager.swift`
 - `iOS/MainFeed/Collection View Cells/MainFeedCollectionViewCell.swift`
 - `iOS/MainFeed/Collection View Cells/MainFeedCollectionViewFolderCell.swift`
-- `iOS/MainFeed/MainFeedCollectionViewController.swift` -- AO3/Ambrosia feed additions, accent-color button retinting (see accent-color-light-dark-fix.patch)
+- `iOS/MainFeed/MainFeedCollectionViewController.swift` -- AO3/Ambrosia feed additions, accent-color button retinting (see accent-color-light-dark-fix.patch), chevron-only back button on the timeline screen (`backButtonDisplayMode = .minimal`)
 - `iOS/MainFeed/RefreshProgressView.swift`
 - `iOS/MainTimeline/Cell/MainTimelineCell.swift`
 - `iOS/MainTimeline/Cell/MainTimelineCellData.swift`

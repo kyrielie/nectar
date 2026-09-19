@@ -7,6 +7,39 @@
     " → " : {
 
     },
+    "%@: %lld words" : {
+
+    },
+    "A day counts toward a streak once any words are credited that day. Darker squares mean more words read." : {
+
+    },
+    "Current streak" : {
+
+    },
+    "Days" : {
+
+    },
+    "Longest streak" : {
+
+    },
+    "Monthly" : {
+
+    },
+    "No current streak" : {
+
+    },
+    "Read every day to build a streak." : {
+
+    },
+    "Streaks" : {
+
+    },
+    "word" : {
+
+    },
+    "words" : {
+
+    },
     "“%@” has separate light and dark mode colors and follows your system appearance setting." : {
       "comment" : "Theme appearance footer, light+dark theme"
     },
@@ -1015,7 +1048,7 @@
     "Nectar" : {
 
     },
-    "Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) (MIT) and is the companion app for [Ambrosia](https://github.com/kyrielie/ambrosia) (MIT). Thanks also to the [Organization for Transformative Works](https://github.com/otwcode/otwarchive) (GPL-2.0-or-later), nianeyna's [ao3downloader](https://github.com/nianeyna/ao3downloader) (GPL-3.0), and ArmindoFlores's [ao3_api](https://github.com/ArmindoFlores/ao3_api) (MIT), for AO3 parsing reference. Several bundled article themes are inspired by community AO3 workskins, including work by [ZerafinaCSS](https://github.com/ZerafinaCSS/neos), the [Dracula Theme](https://github.com/dracula/archive-of-our-own) project, and [BlackBatCat](https://github.com/Wolfbatcat/ao3-rose-pine), among others. Full attribution for every theme and third-party code reference is in [`THIRD-PARTY-NOTICES.md`](https://github.com/kyrielie/nectar/blob/main/THIRD-PARTY-NOTICES.md) in the source repository. Broadsheet theme from [here](https://github.com/stuartbreckenridge/NNWThemesBroadsheet)." : {
+    "Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) (MIT) and is the companion app for [Ambrosia](https://github.com/kyrielie/ambrosia) (MIT). Thanks also to the [Organization for Transformative Works](https://github.com/otwcode/otwarchive) (GPL-2.0-or-later), nianeyna's [ao3downloader](https://github.com/nianeyna/ao3downloader) (GPL-3.0), and ArmindoFlores's [ao3_api](https://github.com/ArmindoFlores/ao3_api) (MIT), for AO3 parsing reference. The Streaks and Monthly sections of Reading Stats are adapted from [Aidoku](https://github.com/Aidoku/Aidoku) (GPL-3.0). Several bundled article themes are inspired by community AO3 workskins, including work by [ZerafinaCSS](https://github.com/ZerafinaCSS/neos), the [Dracula Theme](https://github.com/dracula/archive-of-our-own) project, and [BlackBatCat](https://github.com/Wolfbatcat/ao3-rose-pine), among others. Full attribution for every theme and third-party code reference is in [`THIRD-PARTY-NOTICES.md`](https://github.com/kyrielie/nectar/blob/main/THIRD-PARTY-NOTICES.md) in the source repository. Broadsheet theme from [here](https://github.com/stuartbreckenridge/NNWThemesBroadsheet)." : {
 
     },
     "NetNewsWire 7 is dedicated to everyone working to save democracy in the United States and around the world." : {
@@ -1751,9 +1784,6 @@
       "comment" : "Sort field"
     },
     "Words" : {
-
-    },
-    "Words per day" : {
 
     },
     "Work Scrollbar" : {

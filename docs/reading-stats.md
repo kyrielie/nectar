@@ -149,11 +149,13 @@ active metric.
 The period picker's segments are labeled "Last 7 days"/"Last 30 days"
 (previously "This week"/"This month", which read as calendar-aligned
 periods rather than the trailing N-day windows the code actually
-computes). The "Words per day" bar chart is intentionally always a fixed
-trailing 7 days regardless of which period is selected — a 30-bar chart
-doesn't read usefully at phone width — and its section is no longer
-positioned directly under the period picker, to avoid visually implying
-the chart's window follows the picker's selection.
+computes). The picker scopes Summary, By fandom, and Top tags only; the
+Streaks and Monthly sections below them span the retained year and ignore
+it, which is why they sit after the picker-scoped sections. (The former
+"Words per day" 7-bar chart was removed: the Streaks heatmap is a daily
+view of the whole year.) The picker deliberately keeps "Last 7 days"/"Last
+30 days" rather than "Weekly"/"Monthly", so it can't be confused with the
+calendar-month Monthly chart.
 
 The fandom-legend percent labels use `.monospacedDigit()` and
 `.fixedSize()` so a value like "100%" can't be clipped by neighboring
@@ -161,3 +163,41 @@ flexible-width text. The top-tags list was rewritten from a
 `GeometryReader`-based proportional bar chart (which clipped long AO3 tag
 names regardless of available width) to plain label/value rows.
 
+## Streaks and Monthly (adapted from Aidoku)
+
+The Streaks section (current/longest streak platters plus a year-long,
+week-aligned activity heatmap) and the Monthly section (words per month,
+tap-to-expand year pills when history spans more than one year) are
+adapted from [Aidoku](https://github.com/Aidoku/Aidoku)'s Insights
+feature, GPL-3.0. The adapted files are GPL-3.0-licensed, carry an
+attribution header, and are listed in `THIRD-PARTY-NOTICES.md`:
+`ReadingStatsCalendar.swift` (streak/heatmap/monthly logic),
+`ReadingInsightPlatterView`, `ReadingHeatmapView`, `ReadingStreaksView`,
+`ReadingMonthlyChartCard`, and `ReadingYearlyMonthChartView` (all in
+`iOS/ReadingStats/`). The SwiftUI views follow Aidoku's layout and sizing
+closely so upstream changes can be diffed against them; deviations are
+noted in each file's header. Attribution also appears in the About
+screen's Open Source text and the README.
+
+**Storage.** These sections read `AppDefaults.readingStatsDailyWordCounts`,
+a merge of two stores: `readingStatsDailyWords` (`[String: Int]`, one entry
+per day, trimmed to 371 days = 53 weeks, the most the heatmap spans) and,
+for any day where it recorded more words, `readingStatsDailyHistory`. The
+371-day store is separate from the 35-day detailed history on purpose:
+`ReadingStatsTracker.tick()` decodes, mutates, and re-encodes the whole
+history JSON every second while reading, and each day's entry carries
+per-fandom/per-tag maps and per-work sets, so widening it would make every
+one of those writes about ten times larger. Nothing is backfilled: days
+before the daily-words store existed only appear if they're still within
+the 35-day history, so the heatmap and Monthly chart fill in over time.
+`resetReadingStats()` clears both stores.
+
+**Streak semantics.** `ReadingStatsCalendar.streakLengths(dailyWords:)` is
+Aidoku's `getStreakLengths`: a streak needs at least 2 consecutive reading
+days, and the current streak must end today or yesterday. The Summary
+"Streak" card and the Streaks section both read it (the card shows 0 when
+the current streak is 1 or none). "Longest streak" is the longest within
+the retained 371 days, not ever. This replaced the earlier
+`currentStreak(history:asOf:)`, which counted a lone day as a streak and,
+when today was empty, counted back from the most recent active day however
+long ago it was.

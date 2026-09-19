@@ -87,6 +87,11 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
+		// Chevron-only back button on the timeline screen this sidebar pushes
+		// to (compact width), matching the article screen's back button set
+		// in MainTimelineModernViewController.viewDidLoad. UIKit takes the
+		// pushed screen's back-button label from this screen's navigationItem.
+		navigationItem.backButtonDisplayMode = .minimal
 		registerForNotifications()
 		configureCurrentActivityButton()
 		configureCollectionView()
