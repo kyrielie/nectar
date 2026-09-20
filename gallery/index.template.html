@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nectar Themes</title>
+<meta name="description" content="Extra reader themes for Nectar. Preview each one, then install it in one tap.">
+<style>
+__FONTS__
+:root{--paper:#e6dabd;--plate:#efe6cf;--ink:#2a2118;--mut:#655540;--green:#3d4a35;--madder:#7b3225;--vine:#3d4a35;--gold:#b48a2c;--gold-ink:#7f5b14;--gilt:#f0dc9c;--rule:#2a211859}
+@media (prefers-color-scheme:dark){:root{--paper:#1b1812;--plate:#242017;--ink:#e6d9ba;--mut:#a89b7c;--vine:#78906a;--madder:#a3453a;--gold:#cba54a;--gold-ink:#d6b366;--rule:#e6d9ba4d}}
+*{box-sizing:border-box}
+html{scroll-padding-top:4rem}
+body{margin:0;color:var(--ink);font:400 1.125rem/1.55 "Sorts Mill Goudy",Georgia,"Times New Roman",serif;font-synthesis:none;font-kerning:normal;font-variant-ligatures:common-ligatures;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;background:var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .27 0 0 0 0 .15 0 0 0 .2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+h1,h2,strong,button{font-weight:400}
+.wrap{max-width:1120px;margin:0 auto;padding:0 clamp(14px,4vw,32px)}
+.band{border-block:3px double var(--gold);background:var(--plate);padding:6px 0}
+.band svg{display:block;width:100%;height:52px}
+.title{text-align:center;padding:clamp(28px,6vw,60px) 0 8px}
+h1{font-size:clamp(4rem,15vw,9rem);line-height:.9;margin:0;letter-spacing:.01em}
+.sub-t{font-style:italic;font-size:clamp(1.25rem,3.6vw,1.9rem);color:var(--gold-ink);margin:.4rem 0 0}
+.fleuron{display:flex;align-items:center;gap:14px;max-width:340px;margin:clamp(18px,3vw,30px) auto}
+.fleuron::before,.fleuron::after{content:"";flex:1;border-top:1px solid var(--gold)}
+.fleuron i{width:9px;height:9px;background:var(--gold);transform:rotate(45deg);box-shadow:0 0 0 3px var(--paper),0 0 0 4px var(--gold)}
+.lede{max-width:32em;margin:0 auto;text-align:justify;hyphens:auto;-webkit-hyphens:auto;text-wrap:pretty}
+@media (max-width:639px){.lede{text-align:left}}
+.lede::first-letter{float:left;font-size:3.6em;line-height:.72;padding:.244em .1em 0;margin:.06em .12em 0 0;background:var(--madder);color:var(--gilt)}
+.note{max-width:32em;margin:16px auto 0;font-style:italic;color:var(--mut);font-size:1rem;text-align:center;border-block:1px solid var(--gold);padding:6px 0}
+.bar{position:sticky;top:0;z-index:5;margin-top:22px;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-block:3px double var(--gold);padding:8px 0;padding-top:calc(8px + env(safe-area-inset-top))}
+.bar .wrap{display:flex;gap:22px;align-items:baseline;flex-wrap:wrap}
+.chip,.seg button,.sub button{font:inherit;cursor:pointer}
+.chip{background:none;border:0;border-bottom:1px solid transparent;color:var(--mut);font-style:italic;font-size:1.1rem;padding:0 2px}
+.chip[aria-pressed=true]{color:var(--gold-ink);border-bottom-color:var(--gold)}
+#count{margin-left:auto;color:var(--mut);font-style:italic;font-size:1rem}
+#grid{display:grid;grid-template-columns:repeat(2,1fr);gap:clamp(26px,4vw,44px) clamp(14px,3vw,30px);padding:34px 0 40px}
+@media (min-width:640px){#grid{grid-template-columns:repeat(3,1fr)}}
+@media (min-width:920px){#grid{grid-template-columns:repeat(4,1fr)}}
+.card{display:flex;flex-direction:column;gap:6px;min-width:0;text-align:center}
+.card[hidden]{display:none}
+.pvw{position:relative;padding:7px;background:var(--plate);border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:3px;margin:4px 4px 12px}
+.pv{all:unset;display:block;width:100%;position:relative;aspect-ratio:390/600;overflow:hidden;border:1px solid var(--rule);cursor:zoom-in;background:var(--plate)}
+.pv:focus-visible{outline:2px solid var(--gold-ink);outline-offset:2px}
+.pv iframe{position:absolute;inset:0 auto auto 0;width:390px;height:600px;border:0;transform-origin:0 0;transform:scale(var(--s,.4));pointer-events:none}
+.pvw .seg{position:absolute;left:50%;bottom:16px;transform:translateX(-50%)}
+.seg{display:inline-flex;background:var(--paper);border:1px solid var(--gold)}
+.seg button{border:0;background:none;color:var(--mut);font-style:italic;font-size:.95rem;padding:1px 10px}
+.seg button[aria-pressed=true]{background:var(--green);color:var(--gilt)}
+.meta{flex:1}
+.meta h2{font-size:1.45rem;line-height:1.15;margin:0}
+.meta p{margin:2px 0 0;color:var(--mut);font-style:italic;font-size:.9rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.row{display:flex;margin-top:6px}
+.btn{flex:1;text-align:center;background:var(--green);color:var(--gilt);text-decoration:none;font-size:1.15rem;letter-spacing:.06em;padding:8px 12px;border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:-4px}
+.btn:hover{background:#4a5a40}
+.btn:focus-visible,.chip:focus-visible,.seg button:focus-visible,.sub a:focus-visible,.sub button:focus-visible{outline:2px solid var(--gold-ink);outline-offset:2px}
+.sub{display:flex;gap:18px;justify-content:center;font-style:italic;font-size:.95rem}
+.sub a,.sub button{color:var(--mut);background:none;border:0;padding:0;text-decoration:underline;text-decoration-color:var(--gold);text-underline-offset:.22em}
+dialog{border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:4px;background:var(--paper);color:var(--ink);padding:12px;width:min(430px,92vw)}
+dialog::backdrop{background:#150f06b3}
+dialog iframe{display:block;width:100%;height:min(680px,64vh);border:1px solid var(--rule);background:var(--plate)}
+.dh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px}
+.dh strong{font-size:1.5rem;margin-right:auto}
+footer{text-align:center;color:var(--mut);font-style:italic;font-size:1rem;padding:0 0 44px;max-width:34em;margin:0 auto}
+footer .fleuron{margin-top:0}
+</style>
+</head>
+<body>
+<div class="band" aria-hidden="true"><svg><defs><path id="vn-leaf" d="M-8 0C-8 -0.16 -7.73 -0.36 -7.6 -0.49C-7.47 -0.62 -7.33 -0.71 -7.2 -0.8C-7.07 -0.88 -6.93 -0.95 -6.8 -1C-6.67 -1.05 -6.53 -1.07 -6.4 -1.09C-6.27 -1.1 -6.13 -1.09 -6 -1.12C-5.87 -1.14 -5.73 -1.17 -5.6 -1.24C-5.47 -1.32 -5.33 -1.43 -5.2 -1.55C-5.07 -1.66 -4.93 -1.81 -4.8 -1.93C-4.67 -2.06 -4.53 -2.2 -4.4 -2.3C-4.27 -2.4 -4.13 -2.5 -4 -2.56C-3.87 -2.61 -3.73 -2.64 -3.6 -2.64C-3.47 -2.64 -3.33 -2.59 -3.2 -2.55C-3.07 -2.5 -2.93 -2.42 -2.8 -2.36C-2.67 -2.31 -2.53 -2.23 -2.4 -2.2C-2.27 -2.17 -2.13 -2.16 -2 -2.19C-1.87 -2.22 -1.73 -2.29 -1.6 -2.38C-1.47 -2.48 -1.33 -2.62 -1.2 -2.76C-1.07 -2.9 -0.93 -3.08 -0.8 -3.22C-0.67 -3.37 -0.53 -3.52 -0.4 -3.62C-0.27 -3.72 -0.13 -3.8 0 -3.82C0.13 -3.84 0.27 -3.82 0.4 -3.76C0.53 -3.7 0.67 -3.59 0.8 -3.47C0.93 -3.36 1.07 -3.21 1.2 -3.09C1.33 -2.97 1.47 -2.84 1.6 -2.77C1.73 -2.69 1.87 -2.64 2 -2.64C2.13 -2.64 2.27 -2.69 2.4 -2.76C2.53 -2.83 2.67 -2.96 2.8 -3.08C2.93 -3.19 3.07 -3.34 3.2 -3.45C3.33 -3.56 3.47 -3.66 3.6 -3.71C3.73 -3.76 3.87 -3.78 4 -3.75C4.13 -3.72 4.27 -3.62 4.4 -3.52C4.53 -3.43 4.67 -3.27 4.8 -3.16C4.93 -3.04 5.07 -2.92 5.2 -2.83C5.33 -2.75 5.47 -2.69 5.6 -2.65C5.73 -2.61 5.87 -2.6 6 -2.57C6.13 -2.54 6.27 -2.53 6.4 -2.48C6.53 -2.43 6.67 -2.36 6.8 -2.26C6.93 -2.16 7.07 -2.04 7.2 -1.89C7.33 -1.74 7.47 -1.66 7.6 -1.34C7.73 -1.03 8 -0.45 8 0C8 0.45 7.73 1.03 7.6 1.34C7.47 1.66 7.33 1.74 7.2 1.89C7.07 2.04 6.93 2.16 6.8 2.26C6.67 2.36 6.53 2.43 6.4 2.48C6.27 2.53 6.13 2.54 6 2.57C5.87 2.6 5.73 2.61 5.6 2.65C5.47 2.69 5.33 2.75 5.2 2.83C5.07 2.92 4.93 3.04 4.8 3.16C4.67 3.27 4.53 3.43 4.4 3.52C4.27 3.62 4.13 3.72 4 3.75C3.87 3.78 3.73 3.76 3.6 3.71C3.47 3.66 3.33 3.56 3.2 3.45C3.07 3.34 2.93 3.19 2.8 3.08C2.67 2.96 2.53 2.83 2.4 2.76C2.27 2.69 2.13 2.64 2 2.64C1.87 2.64 1.73 2.69 1.6 2.77C1.47 2.84 1.33 2.97 1.2 3.09C1.07 3.21 0.93 3.36 0.8 3.47C0.67 3.59 0.53 3.7 0.4 3.76C0.27 3.82 0.13 3.84 0 3.82C-0.13 3.8 -0.27 3.72 -0.4 3.62C-0.53 3.52 -0.67 3.37 -0.8 3.22C-0.93 3.08 -1.07 2.9 -1.2 2.76C-1.33 2.62 -1.47 2.48 -1.6 2.38C-1.73 2.29 -1.87 2.22 -2 2.19C-2.13 2.16 -2.27 2.17 -2.4 2.2C-2.53 2.23 -2.67 2.31 -2.8 2.36C-2.93 2.42 -3.07 2.5 -3.2 2.55C-3.33 2.59 -3.47 2.64 -3.6 2.64C-3.73 2.64 -3.87 2.61 -4 2.56C-4.13 2.5 -4.27 2.4 -4.4 2.3C-4.53 2.2 -4.67 2.06 -4.8 1.93C-4.93 1.81 -5.07 1.66 -5.2 1.55C-5.33 1.43 -5.47 1.32 -5.6 1.24C-5.73 1.17 -5.87 1.14 -6 1.12C-6.13 1.09 -6.27 1.1 -6.4 1.09C-6.53 1.07 -6.67 1.05 -6.8 1C-6.93 0.95 -7.07 0.88 -7.2 0.8C-7.33 0.71 -7.47 0.62 -7.6 0.49C-7.73 0.36 -8 0.16 -8 0Z"/><path id="vn-p4" d="M3.8 0C3.81 0 3.82 0 3.86 0.01C3.89 0.02 3.95 0.03 4.02 0.06C4.09 0.09 4.18 0.13 4.26 0.19C4.35 0.25 4.45 0.32 4.53 0.42C4.62 0.51 4.7 0.63 4.77 0.76C4.84 0.88 4.9 1.03 4.94 1.18C4.97 1.34 4.99 1.51 4.99 1.67C4.99 1.84 4.96 2.01 4.92 2.18C4.87 2.34 4.8 2.5 4.72 2.64C4.64 2.78 4.53 2.92 4.42 3.02C4.31 3.12 4.18 3.21 4.04 3.26C3.91 3.32 3.77 3.35 3.62 3.35C3.48 3.35 3.34 3.32 3.19 3.26C3.05 3.21 2.91 3.12 2.77 3.02C2.63 2.92 2.5 2.78 2.37 2.64C2.24 2.5 2.11 2.34 1.98 2.18C1.86 2.01 1.74 1.84 1.62 1.67C1.5 1.51 1.39 1.34 1.28 1.18C1.16 1.03 1.05 0.88 0.95 0.76C0.84 0.63 0.74 0.51 0.65 0.42C0.55 0.32 0.46 0.25 0.38 0.19C0.3 0.13 0.23 0.09 0.18 0.06C0.12 0.03 0.07 0.02 0.05 0.01C0.02 0 0 0 0 0C0 0 0.02 0 0.05 -0.01C0.07 -0.02 0.12 -0.03 0.18 -0.06C0.23 -0.09 0.3 -0.13 0.38 -0.19C0.46 -0.25 0.55 -0.32 0.65 -0.42C0.74 -0.51 0.84 -0.63 0.95 -0.76C1.05 -0.88 1.16 -1.03 1.28 -1.18C1.39 -1.34 1.5 -1.51 1.62 -1.67C1.74 -1.84 1.86 -2.01 1.98 -2.18C2.11 -2.34 2.24 -2.5 2.37 -2.64C2.5 -2.78 2.63 -2.92 2.77 -3.02C2.91 -3.12 3.05 -3.21 3.19 -3.26C3.34 -3.32 3.48 -3.35 3.62 -3.35C3.77 -3.35 3.91 -3.32 4.04 -3.26C4.18 -3.21 4.31 -3.12 4.42 -3.02C4.53 -2.92 4.64 -2.78 4.72 -2.64C4.8 -2.5 4.87 -2.34 4.92 -2.18C4.96 -2.01 4.99 -1.84 4.99 -1.67C4.99 -1.51 4.97 -1.34 4.94 -1.18C4.9 -1.03 4.84 -0.88 4.77 -0.76C4.7 -0.63 4.62 -0.51 4.53 -0.42C4.45 -0.32 4.35 -0.25 4.26 -0.19C4.18 -0.13 4.09 -0.09 4.02 -0.06C3.95 -0.03 3.89 -0.02 3.86 -0.01C3.82 0 3.81 0 3.8 0C3.79 0 3.79 0 3.8 0Z"/><g id="vn-gf"><use href="#vn-p4" fill="var(--gold)" transform="rotate(0)"/><use href="#vn-p4" fill="var(--gold)" transform="rotate(90)"/><use href="#vn-p4" fill="var(--gold)" transform="rotate(180)"/><use href="#vn-p4" fill="var(--gold)" transform="rotate(270)"/><circle r="2.2" fill="var(--vine)"/></g><path id="vn-p6" d="M6.23 0C6.25 0 6.27 0 6.33 0.01C6.39 0.02 6.49 0.04 6.6 0.08C6.71 0.12 6.86 0.18 7 0.26C7.14 0.34 7.3 0.45 7.44 0.58C7.57 0.71 7.72 0.87 7.83 1.05C7.94 1.23 8.04 1.43 8.1 1.64C8.16 1.86 8.2 2.09 8.19 2.32C8.19 2.55 8.14 2.8 8.07 3.02C8 3.24 7.88 3.47 7.75 3.67C7.61 3.86 7.44 4.05 7.25 4.19C7.07 4.33 6.85 4.46 6.63 4.53C6.42 4.61 6.18 4.65 5.95 4.65C5.71 4.65 5.47 4.61 5.24 4.53C5.01 4.46 4.77 4.33 4.55 4.19C4.32 4.05 4.1 3.86 3.88 3.67C3.67 3.47 3.46 3.24 3.26 3.02C3.05 2.8 2.86 2.55 2.66 2.32C2.47 2.09 2.28 1.86 2.09 1.64C1.91 1.43 1.73 1.23 1.56 1.05C1.38 0.87 1.21 0.71 1.06 0.58C0.91 0.45 0.76 0.34 0.63 0.26C0.5 0.18 0.38 0.12 0.29 0.08C0.2 0.04 0.12 0.02 0.07 0.01C0.03 0 0 0 0 0C0 0 0.03 0 0.07 -0.01C0.12 -0.02 0.2 -0.04 0.29 -0.08C0.38 -0.12 0.5 -0.18 0.63 -0.26C0.76 -0.34 0.91 -0.45 1.06 -0.58C1.21 -0.71 1.38 -0.87 1.56 -1.05C1.73 -1.23 1.91 -1.43 2.09 -1.64C2.28 -1.86 2.47 -2.09 2.66 -2.32C2.86 -2.55 3.05 -2.8 3.26 -3.02C3.46 -3.24 3.67 -3.47 3.88 -3.67C4.1 -3.86 4.32 -4.05 4.55 -4.19C4.77 -4.33 5.01 -4.46 5.24 -4.53C5.47 -4.61 5.71 -4.65 5.95 -4.65C6.18 -4.65 6.42 -4.61 6.63 -4.53C6.85 -4.46 7.07 -4.33 7.25 -4.19C7.44 -4.05 7.61 -3.86 7.75 -3.67C7.88 -3.47 8 -3.24 8.07 -3.02C8.14 -2.8 8.19 -2.55 8.19 -2.32C8.2 -2.09 8.16 -1.86 8.1 -1.64C8.04 -1.43 7.94 -1.23 7.83 -1.05C7.72 -0.87 7.57 -0.71 7.44 -0.58C7.3 -0.45 7.14 -0.34 7 -0.26C6.86 -0.18 6.71 -0.12 6.6 -0.08C6.49 -0.04 6.39 -0.02 6.33 -0.01C6.27 0 6.25 0 6.23 0C6.21 0 6.21 0 6.23 0Z"/><pattern id="vine" width="72" height="52" patternUnits="userSpaceOnUse"><path d="M0 26C12 2 24 2 36 26S60 50 72 26" fill="none" stroke="var(--vine)" stroke-width="1.5"/><path d="M0 26C12 50 24 50 36 26S60 2 72 26" fill="none" stroke="var(--vine)" stroke-width="1.5"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(22.41 7.4) rotate(43)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(19.08 45.03) rotate(-39)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(7.69 31.87) rotate(81)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(9.91 17.09) rotate(-180)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(49.72 8.93) rotate(130)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(62.51 20.29) rotate(13)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(65.41 32.85) rotate(119)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(49.11 42.33) rotate(-135)"/><use href="#vn-gf" transform="translate(51.62 26.52) rotate(0)"/><g transform="translate(35.98 26.02) rotate(0)"><use href="#vn-p6" fill="var(--madder)" transform="rotate(0)"/><use href="#vn-p6" fill="var(--madder)" transform="rotate(60)"/><use href="#vn-p6" fill="var(--madder)" transform="rotate(120)"/><use href="#vn-p6" fill="var(--madder)" transform="rotate(180)"/><use href="#vn-p6" fill="var(--madder)" transform="rotate(240)"/><use href="#vn-p6" fill="var(--madder)" transform="rotate(300)"/><path d="M4.29 0C4.29 0.12 4.26 0.25 4.2 0.37C4.14 0.48 4.04 0.6 3.94 0.69C3.83 0.79 3.7 0.88 3.57 0.96C3.45 1.04 3.31 1.1 3.2 1.16C3.08 1.23 2.97 1.28 2.89 1.35C2.8 1.41 2.74 1.47 2.69 1.55C2.65 1.63 2.62 1.72 2.61 1.83C2.6 1.93 2.61 2.06 2.61 2.19C2.61 2.32 2.62 2.47 2.62 2.62C2.61 2.76 2.6 2.92 2.57 3.06C2.54 3.2 2.49 3.34 2.42 3.45C2.35 3.56 2.25 3.66 2.15 3.72C2.04 3.78 1.91 3.81 1.78 3.82C1.65 3.82 1.5 3.8 1.37 3.76C1.23 3.71 1.09 3.64 0.96 3.57C0.83 3.51 0.7 3.42 0.59 3.35C0.48 3.29 0.38 3.22 0.28 3.18C0.18 3.13 0.09 3.11 0 3.11C-0.09 3.11 -0.18 3.13 -0.28 3.18C-0.38 3.22 -0.48 3.29 -0.59 3.35C-0.7 3.42 -0.83 3.51 -0.96 3.57C-1.09 3.64 -1.23 3.71 -1.37 3.76C-1.5 3.8 -1.65 3.82 -1.78 3.82C-1.91 3.81 -2.04 3.78 -2.15 3.72C-2.25 3.66 -2.35 3.56 -2.42 3.45C-2.49 3.34 -2.54 3.2 -2.57 3.06C-2.6 2.92 -2.61 2.76 -2.62 2.62C-2.62 2.47 -2.61 2.32 -2.61 2.19C-2.61 2.06 -2.6 1.93 -2.61 1.83C-2.62 1.72 -2.65 1.63 -2.69 1.55C-2.74 1.47 -2.8 1.41 -2.89 1.35C-2.97 1.28 -3.08 1.23 -3.2 1.16C-3.31 1.1 -3.45 1.04 -3.57 0.96C-3.7 0.88 -3.83 0.79 -3.94 0.69C-4.04 0.6 -4.14 0.48 -4.2 0.37C-4.26 0.25 -4.29 0.12 -4.29 0C-4.29 -0.12 -4.26 -0.25 -4.2 -0.37C-4.14 -0.48 -4.04 -0.6 -3.94 -0.69C-3.83 -0.79 -3.7 -0.88 -3.57 -0.96C-3.45 -1.04 -3.31 -1.1 -3.2 -1.16C-3.08 -1.23 -2.97 -1.28 -2.89 -1.35C-2.8 -1.41 -2.74 -1.47 -2.69 -1.55C-2.65 -1.63 -2.62 -1.72 -2.61 -1.83C-2.6 -1.93 -2.61 -2.06 -2.61 -2.19C-2.61 -2.32 -2.62 -2.47 -2.62 -2.62C-2.61 -2.76 -2.6 -2.92 -2.57 -3.06C-2.54 -3.2 -2.49 -3.34 -2.42 -3.45C-2.35 -3.56 -2.25 -3.66 -2.15 -3.72C-2.04 -3.78 -1.91 -3.81 -1.78 -3.82C-1.65 -3.82 -1.5 -3.8 -1.37 -3.76C-1.23 -3.71 -1.09 -3.64 -0.96 -3.57C-0.83 -3.51 -0.7 -3.42 -0.59 -3.35C-0.48 -3.29 -0.38 -3.22 -0.28 -3.18C-0.18 -3.13 -0.09 -3.11 0 -3.11C0.09 -3.11 0.18 -3.13 0.28 -3.18C0.38 -3.22 0.48 -3.29 0.59 -3.35C0.7 -3.42 0.83 -3.51 0.96 -3.57C1.09 -3.64 1.23 -3.71 1.37 -3.76C1.5 -3.8 1.65 -3.82 1.78 -3.82C1.91 -3.81 2.04 -3.78 2.15 -3.72C2.25 -3.66 2.35 -3.56 2.42 -3.45C2.49 -3.34 2.54 -3.2 2.57 -3.06C2.6 -2.92 2.61 -2.76 2.62 -2.62C2.62 -2.47 2.61 -2.32 2.61 -2.19C2.61 -2.06 2.6 -1.93 2.61 -1.83C2.62 -1.72 2.65 -1.63 2.69 -1.55C2.74 -1.47 2.8 -1.41 2.89 -1.35C2.97 -1.28 3.08 -1.23 3.2 -1.16C3.31 -1.1 3.45 -1.04 3.57 -0.96C3.7 -0.88 3.83 -0.79 3.94 -0.69C4.04 -0.6 4.14 -0.48 4.2 -0.37C4.26 -0.25 4.29 -0.12 4.29 0Z" fill="#5c0700"/><circle cx="0" cy="0" r="0.5" fill="var(--madder)"/><circle cx="1.85" cy="0" r="0.28" fill="var(--madder)"/><circle cx="-1.85" cy="0" r="0.28" fill="var(--madder)"/><circle cx="0" cy="2.04" r="0.28" fill="var(--madder)"/><circle cx="0" cy="-2.03" r="0.28" fill="var(--madder)"/><circle cx="1.41" cy="1.41" r="0.25" fill="var(--madder)"/><circle cx="-1.41" cy="-1.41" r="0.25" fill="var(--madder)"/></g><use href="#vn-gf" transform="translate(35.77 41.98) rotate(0)"/><use href="#vn-gf" transform="translate(35.99 8.01) rotate(0)"/><use href="#vn-gf" transform="translate(20.55 26.14) rotate(0)"/><path d="M0 26C12 2 24 2 36 26S60 50 72 26" fill="none" stroke="var(--vine)" stroke-width="1" transform="translate(-52 1.5)"/><path d="M0 26C12 2 24 2 36 26S60 50 72 26" fill="none" stroke="var(--vine)" stroke-width="1" transform="translate(51.5 1.5)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(7.6 43.99) rotate(-10)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(64.56 11.55) rotate(165)"/><use href="#vn-gf" transform="translate(64.85 45.26) rotate(0)"/><use href="#vn-gf" transform="translate(8.99 7.12) rotate(0)"/></pattern></defs><rect width="100%" height="100%" fill="url(#vine)"/></svg></div>
+<div class="wrap">
+<header class="title">
+<h1>Nectar Themes</h1>
+<p class="sub-t">for book nerds and color lovers</p>
+<div class="fleuron" aria-hidden="true"><i></i></div>
+<p class="lede">Additional themes for Nectar. Customize your reading experience using these premade themes inspired by existing AO3 skins, fandoms, and historical typesetting. Nectar is compatible with any NetNewsWire theme. You can also make your own theme! Read the theme docs in the github repository.</p>
+<p class="note" id="note" hidden>Install opens Nectar and automatically installs the theme. AO3 site skins must be modified to be used with Nectar.</p>
+</header>
+</div>
+<div class="bar"><div class="wrap"><div id="chips" role="group" aria-label="Filter by tone"></div><span id="count" aria-live="polite"></span></div></div>
+<div class="wrap">
+<main id="grid"></main>
+<footer><div class="fleuron" aria-hidden="true"><i></i></div><p>Set in Sorts Mill Goudy. Frieze inspired by William Morris. Tap a preview to enlarge it.</p></footer>
+</div>
+<dialog id="dlg"><div class="dh"><strong id="dname"></strong><span id="dseg"></span><button class="chip" id="dclose">Close</button></div><iframe id="dframe" title="Theme preview"></iframe><div class="row" id="dact" style="margin-top:10px"></div></dialog>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const D = JSON.parse(document.getElementById("data").textContent), T = D.themes, CORE = __CORE__;
+const iOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const sysDark = matchMedia("(prefers-color-scheme:dark)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const smart = s => String(s).replace(/(^|[\s(\[])"/g, "$1\u201c").replace(/"/g, "\u201d").replace(/(^|[\s(\[])'/g, "$1\u2018").replace(/'/g, "\u2019");
+const zipURL = t => D.base + t.zip;
+const deepLink = t => D.scheme + "://theme/add?url=" + encodeURIComponent(zipURL(t));
+
+/* Same structure as the sample in iOS/Settings/ArticleThemePreviewWebView.swift, with shorter text so more of each theme fits in a thumbnail. */
+const SAMPLE = `<div id="ao3SyntheticPreface"><dl class="tags"><dt>Warnings:</dt><dd>No Archive Warnings Apply</dd><dt>Chapters:</dt><dd>2/2</dd></dl></div>
+<div class="summary module"><h3 class="heading">Summary:</h3><blockquote class="userstuff"><p>Frodo meets a ranger in Bree.</p></blockquote></div>
+<div class="notes module"><h3 class="heading">Notes:</h3><blockquote class="userstuff"><p>Written at Bag End.</p></blockquote></div>
+<div class="chapter preface group"><h3 class="title">Chapter 2: A Sample Heading</h3></div>
+<div class="userstuff module" role="article"><p>Bree was the chief village of Bree-land, a small country a few miles broad whose chief claim to fame was its aluminum siding industry.</p><p>The Men of Bree were cheerful and independent: they belonged to nobody but themselves. In the lands beyond Bree there were mysterious wanderers.</p></div>`;
+const SUB = {title: "The Prancing Pony", preferred_link: "#", external_link_label: "Link:", external_link_stripped: "archiveofourown.org/works/p0ny", external_link: "https://example.com/pony", feed_link_title: "The Shire Post", feed_link: "#", byline: "by J. R. R. Tolkien", avatar_src: "data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=", dateline_style: "articleDatelineTitle", datetime_long: "June 9, 2026", datetime_medium: "Jun 9, 2026", datetime_short: "6/9/26", date_long: "June 9, 2026", date_medium: "Jun 9, 2026", date_short: "6/9/26", time_long: "12:00:00 PM", time_medium: "12:00 PM", time_short: "12:00 PM", body: SAMPLE};
+
+/* Runs inside each preview frame. Mirrors applyVersalCaps/applyChapterDividers in Shared/Article Rendering/main.js. */
+function frameScript() {
+  const box = document.getElementById("bodyContainer");
+  const icon = document.getElementById("nnwImageIcon"); if (icon) icon.remove();
+  document.addEventListener("click", e => { if (e.target.closest("a")) e.preventDefault(); });
+  if (!box) return;
+  const apparatus = p => !!p.closest(".summary,.notes,.preface,#ao3SyntheticPreface,#ao3Preface");
+  const isHead = n => (n.tagName === "H2" && n.classList.contains("heading")) || (n.tagName === "H3" && n.classList.contains("title"));
+  if (box.hasAttribute("data-versal-target")) {
+    const end = /[.!?]["'\u201d\u2019)\]]*(\s|$)/;
+    const versal = p => {
+      if (!p || p.querySelector(".versalCap")) return;
+      const w = document.createTreeWalker(p, NodeFilter.SHOW_TEXT); let last = null, n;
+      while ((n = w.nextNode())) { const m = end.exec(n.textContent); if (m) { n.splitText(m.index + m[0].length); last = n; break; } }
+      if (!last) return;
+      const s = document.createElement("span"); s.className = "versalCap";
+      let c = p.firstChild; while (c) { const nx = c.nextSibling; s.appendChild(c); if (c === last) break; c = nx; }
+      p.insertBefore(s, p.firstChild);
+    };
+    const after = h => { const w = document.createTreeWalker(box, NodeFilter.SHOW_ELEMENT); w.currentNode = h; let n;
+      while ((n = w.nextNode())) { if (isHead(n)) return null; if (n.tagName === "P" && !apparatus(n)) return n; } return null; };
+    versal([...box.querySelectorAll("p")].find(p => !apparatus(p)));
+    box.querySelectorAll("h2.heading,h3.title").forEach(h => versal(after(h)));
+  }
+  if (box.hasAttribute("data-chapter-divider")) {
+    const ch = box.getAttribute("data-chapter-divider-char"), cl = box.getAttribute("data-chapter-divider-class");
+    if (ch && cl) box.querySelectorAll("h2.heading,h3.title").forEach(h => {
+      const d = document.createElement("div"); d.className = cl; d.setAttribute("aria-hidden", "true"); d.textContent = ch; h.parentNode.insertBefore(d, h);
+    });
+  }
+}
+
+/* iOS branch of the @supports split, and a forced light/dark branch of prefers-color-scheme. */
+function themeCSS(t, mode) {
+  const dark = mode === "dark", on = "@media all", off = "@media not all";
+  return (CORE + "\n" + t.css)
+    .replace(/@supports\s+not\s*\(\s*-webkit-touch-callout\s*:\s*none\s*\)/g, off)
+    .replace(/@supports\s*\(\s*-webkit-touch-callout\s*:\s*none\s*\)/g, on)
+    .replace(/@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/g, dark ? on : off)
+    .replace(/@media\s*\(\s*prefers-color-scheme\s*:\s*light\s*\)/g, dark ? off : on);
+}
+function frameDoc(t, mode, scroll) {
+  const html = t.template.replace(/\[\[(\w+)\]\]/g, (_, k) => k in SUB ? SUB[k] : "");
+  const scheme = (t.dark ? `html{color-scheme:${mode}!important}` : "") + (scroll ? "" : "html,body{scrollbar-width:none}::-webkit-scrollbar{display:none}");
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${t.imp}</style><style>${scheme}body{margin:0;padding:16px 0;-webkit-text-size-adjust:none}${themeCSS(t, mode)}</style></head><body>${html}<script>(${frameScript})()<\/script></body></html>`;
+}
+
+const state = new Map(T.map(t => [t.slug, t.dark && sysDark ? "dark" : "light"]));
+let filter = "all", openSlug = null;
+
+function segHTML(t) {
+  const m = state.get(t.slug);
+  return `<div class="seg" data-s="${t.slug}" role="group" aria-label="Preview mode"><button data-m="light" aria-pressed="${m === "light"}">Light</button><button data-m="dark" aria-pressed="${m === "dark"}">Dark</button></div>`;
+}
+function actions(t) {
+  return `<a class="btn" href="${deepLink(t)}">Install</a>`;
+}
+function copy(t, btn) {
+  const done = () => { const o = btn.textContent; btn.textContent = "Copied"; setTimeout(() => btn.textContent = o, 1400); };
+  (navigator.clipboard ? navigator.clipboard.writeText(deepLink(t)) : Promise.reject()).then(done, () => prompt("Copy this link", deepLink(t)));
+}
+function setMode(t, mode) {
+  state.set(t.slug, mode);
+  const card = $(`[data-slug="${t.slug}"]`);
+  card.querySelector("iframe").srcdoc = frameDoc(t, mode);
+  document.querySelectorAll(`.seg[data-s="${t.slug}"] button`).forEach(b => b.setAttribute("aria-pressed", b.dataset.m === mode));
+  if (openSlug === t.slug) $("#dframe").srcdoc = frameDoc(t, mode, true);
+}
+function build() {
+  const grid = $("#grid");
+  T.forEach(t => {
+    const mode = state.get(t.slug), el = document.createElement("article");
+    el.className = "card"; el.dataset.slug = t.slug; el.dataset.tone = t.tone;
+    el.innerHTML = `<div class="pvw"><button class="pv" aria-label="Enlarge preview of ${esc(t.name)}"><iframe title="${esc(t.name)} preview" loading="lazy" tabindex="-1"></iframe></button>${t.dark ? segHTML(t) : ""}</div>
+<div class="meta"><h2>${esc(t.name)}</h2><p title="${esc(smart(t.by))}">${esc(smart(t.by))}</p></div>
+<div class="row">${actions(t)}</div>
+<div class="sub"><a href="${zipURL(t)}" download>Zip</a><button type="button">Copy link</button></div>`;
+    el.querySelector("iframe").srcdoc = frameDoc(t, mode);
+    el.querySelector(".pv").onclick = () => openDlg(t);
+    bindSeg(el, t);
+    el.querySelector(".sub button").onclick = e => copy(t, e.currentTarget);
+    grid.appendChild(el);
+  });
+}
+function bindSeg(root, t) { root.querySelectorAll(".seg button").forEach(b => b.onclick = () => setMode(t, b.dataset.m)); }
+function openDlg(t) {
+  openSlug = t.slug;
+  $("#dname").textContent = t.name;
+  $("#dframe").srcdoc = frameDoc(t, state.get(t.slug), true);
+  $("#dact").innerHTML = actions(t);
+  $("#dseg").innerHTML = t.dark ? segHTML(t) : ""; bindSeg($("#dseg"), t);
+  $("#dlg").showModal();
+}
+const ro = new ResizeObserver(es => es.forEach(e => e.target.style.setProperty("--s", e.target.clientWidth / 390)));
+function scale() { document.querySelectorAll(".pv").forEach(p => p.style.setProperty("--s", p.clientWidth / 390)); }
+function applyFilter() {
+  let n = 0;
+  document.querySelectorAll(".card").forEach(c => {
+    const tone = c.dataset.tone, show = filter === "all" || tone === filter || tone === "both";
+    c.hidden = !show; if (show) n++;
+  });
+  $("#count").textContent = n + (n === 1 ? " theme" : " themes");
+  document.querySelectorAll(".chip[data-f]").forEach(b => b.setAttribute("aria-pressed", b.dataset.f === filter));
+  scale();
+}
+$("#chips").innerHTML = [["all", "All"], ["light", "Light"], ["dark", "Dark"]].map(([f, l]) => `<button class="chip" data-f="${f}" aria-pressed="${f === "all"}">${l}</button>`).join(" ");
+$("#chips").onclick = e => { const f = e.target.dataset && e.target.dataset.f; if (f) { filter = f; applyFilter(); } };
+$("#dclose").onclick = () => $("#dlg").close();
+$("#dlg").onclick = e => { if (e.target === e.currentTarget) e.currentTarget.close(); };
+$("#dlg").addEventListener("close", () => { openSlug = null; $("#dframe").srcdoc = ""; });
+if (!iOS) $("#note").hidden = false;
+build(); applyFilter();
+document.querySelectorAll(".pv").forEach(p => ro.observe(p));
+</script>
+</body>
+</html>
