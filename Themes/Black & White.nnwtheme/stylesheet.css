@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
 /* Black & White 
 Pure monochrome, no accent hue -- link color is body text color, distinguished by underline weight and small-caps instead.
    Palette:
@@ -97,7 +98,7 @@ body > header .headerTable th {
 	color: var(--header-color);
 	padding: 0.2em;
 	border: none;
-	font-family: Menlo, "Courier New", Courier, monospace;
+	font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
 	font-size: 0.9rem;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
@@ -198,7 +199,7 @@ pre {
 
 code,
 pre {
-	font-family: Menlo, "Courier New", Courier, monospace;
+	font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
 	font-size: 0.85rem;
 	letter-spacing: -0.027em;
 	-webkit-hyphens: none;
@@ -415,7 +416,7 @@ a.footnote:hover,
 		word-break: break-word;
 		-webkit-hyphens: auto;
 		-webkit-text-size-adjust: none;
-		font-family: Menlo, "Courier New", Courier, monospace;
+		font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
 		font-size: [[font-size]]px;
 	}
 
@@ -440,7 +441,7 @@ a.footnote:hover,
 		margin-bottom: 64px;
 		padding-left: 48px;
 		padding-right: 48px;
-		font-family: Menlo, "Courier New", Courier, monospace;
+		font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
 	}
 
 	.smallText {
