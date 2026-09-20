@@ -40,13 +40,20 @@ import Foundation
 	/// Every bundled theme must constrain img/figure/video/object width itself --
 	/// core.css's overflow-x: hidden (above) only clips content that still overflows
 	/// despite this, it doesn't make oversized images fit their column.
+	///
+	/// Covers both Themes/ (app-embedded) and gallery-themes/ (gallery-only) --
+	/// splitting the 33 themes across the two directories must not narrow this
+	/// suite's real coverage down to just the themes the app ships today.
 	@Test func everyBundledThemeConstrainsMediaWidth() throws {
-		let themesDirectory = Self.repoThemesDirectory()
-		let contents = try FileManager.default.contentsOfDirectory(atPath: themesDirectory.path)
-		let themeBundleNames = contents.filter { $0.hasSuffix(".nnwtheme") }
-		#expect(!themeBundleNames.isEmpty, "Expected to find .nnwtheme bundles under \(themesDirectory.path)")
+		let themeDirectories = Self.repoThemeDirectories()
+		var themeBundleNames: [(name: String, directory: URL)] = []
+		for themesDirectory in themeDirectories {
+			let contents = try FileManager.default.contentsOfDirectory(atPath: themesDirectory.path)
+			themeBundleNames += contents.filter { $0.hasSuffix(".nnwtheme") }.map { ($0, themesDirectory) }
+		}
+		#expect(!themeBundleNames.isEmpty, "Expected to find .nnwtheme bundles under \(themeDirectories.map(\.path))")
 
-		for bundleName in themeBundleNames {
+		for (bundleName, themesDirectory) in themeBundleNames {
 			let stylesheetURL = themesDirectory.appendingPathComponent(bundleName).appendingPathComponent("stylesheet.css")
 			guard let css = try? String(contentsOf: stylesheetURL, encoding: .utf8) else { continue }
 
@@ -68,13 +75,18 @@ import Foundation
 		fatalError("Could not locate \(relativePath) by walking up from \(#filePath)")
 	}
 
-	private static func repoThemesDirectory() -> URL {
+	/// Both theme directories, resolved the same walk-up-to-repo-root way --
+	/// gallery-themes/ holds the themes moved out of the app bundle (see
+	/// gallery/build.py's BUNDLED set and docs/nnwtheme-format.md), so a theme's
+	/// current folder is which directory ships it, not whether it exists at all.
+	private static func repoThemeDirectories() -> [URL] {
 		var url = URL(fileURLWithPath: #filePath)
 		while url.pathComponents.count > 1 {
 			url.deleteLastPathComponent()
-			let candidate = url.appendingPathComponent("Themes")
-			if FileManager.default.fileExists(atPath: candidate.path) {
-				return candidate
+			let themes = url.appendingPathComponent("Themes")
+			if FileManager.default.fileExists(atPath: themes.path) {
+				let galleryThemes = url.appendingPathComponent("gallery-themes")
+				return [themes, galleryThemes].filter { FileManager.default.fileExists(atPath: $0.path) }
 			}
 		}
 		fatalError("Could not locate repo Themes/ directory by walking up from \(#filePath)")
