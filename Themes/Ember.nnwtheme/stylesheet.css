@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Source+Serif+4:ital,wght@0,400..700;1,400..700&family=Inter:wght@400..700&display=swap');
 /* Ember -- ported from the AO3 workskin "ao3-darkred" (GPLv3; see
    License.md). That skin has no CSS custom properties and targets AO3's own
    DOM directly (#header, .dropdown, dl.meta), so nothing there is
@@ -98,7 +99,7 @@ body > header .headerTable th {
 	color: var(--header-color);
 	padding: 0.2em;
 	border: none;
-	font-family: sans-serif;
+	font-family: Inter, sans-serif;
 	font-size: 0.9rem;
 }
 body > header .headerTable td.avatar {
@@ -197,7 +198,7 @@ pre {
 
 code,
 pre {
-	font-family: "SF Mono", Menlo, "Courier New", Courier, monospace;
+	font-family: "JetBrains Mono", "SF Mono", Menlo, "Courier New", Courier, monospace;
 	font-size: 0.85rem;
 	letter-spacing: -0.027em;
 	-webkit-hyphens: none;
@@ -389,7 +390,7 @@ a.footnote:hover,
 		word-break: break-word;
 		-webkit-hyphens: auto;
 		-webkit-text-size-adjust: none;
-		font-family: Charter, Georgia, sans-serif;
+		font-family: "Source Serif 4", Charter, Georgia, serif;
 		font-size: [[font-size]]px;
 	}
 
@@ -414,7 +415,7 @@ a.footnote:hover,
 		margin-bottom: 64px;
 		padding-left: 48px;
 		padding-right: 48px;
-		font-family: Charter, Georgia, sans-serif;
+		font-family: "Source Serif 4", Charter, Georgia, serif;
 	}
 
 	.smallText {

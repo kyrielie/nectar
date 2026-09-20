@@ -1,13 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
-/* Black & White 
-Pure monochrome, no accent hue -- link color is body text color, distinguished by underline weight and small-caps instead.
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap');
+/* Moonlit Wisteria -- palette *inspired by* intothisshadow's Moonlit Wisteria AO3 skin (so-obsessed.com) -- that source has no explicit license, so this reimplements the documented :root palette (Starlight Cream background, Ink Stem text, the skin's own "a11y replacement" Deep Violet for links) from scratch. The skin's decorative display font ("Admiration Pains") isn't on Google Fonts, so it's dropped rather than substituted; only the skin's own body serif (Lora, confirmed on Google Fonts) is carried over.
    Palette:
-     body background   <- #FFFFFF
-     body text          <- #000000
-     link                <- #000000
-     header border        <- #000000
-     table/rule border     <- #D6D6D6
-   Real structural differentiation, not just recolor: monospaced/typewriter body font (Menlo/Courier) instead of the serif every other bundled theme uses, uppercase small-caps dateline and preface labels, thick 2px borders throughout, square (not rounded) avatar corners -- reads like a printed manuscript rather than a magazine page.
+     body background   <- #F5EDE8
+     body text          <- #5C4F6B
+     link                <- #6B5A90
+     header border        <- #F2C4BE
+     table/rule border     <- #C9BFD8
+   Differentiation: warm cream-and-violet pastel palette (the only bundled theme in this hue family besides Rosé Pine, and lighter/warmer than it), a soft dotted link underline in the skin's own lavender-soft tone, and fully rounded (50%) avatar corners matching the skin's floral, soft-edged visual language.
    Structure follows the bundled Sepia.nnwtheme (same selectors, same
    iOS/macOS @supports split); shared iOS/macOS structural rules (max-width,
    hyphens, footnote popover, table borders, etc.) are the same base every
@@ -19,19 +19,19 @@ body {
 	margin-right: auto;
 	word-wrap: break-word;
 	max-width: 44em;
-	background-color: #FFFFFF;
-	color: #000000;
+	background-color: #F5EDE8;
+	color: #5C4F6B;
 }
 
 [href] {
 	text-decoration-line: underline;
-	text-decoration-style: solid;
-	text-decoration-color: currentColor;
-	text-decoration-thickness: 2px;
+	text-decoration-style: dotted;
+	text-decoration-color: var(--link-underline-color);
+	text-decoration-thickness: 1px;
 	text-underline-offset: 0.15em;
 }
 [href]:hover {
-	text-decoration-thickness: 3px;
+	opacity: 0.8;
 }
 
 #nnwImageIcon {
@@ -50,34 +50,34 @@ body {
 }
 
 :root {
-	--header-table-border-color: #000000;
-	--header-color: #000000;
-	--body-code-color: #000000;
-	--system-message-color: #000000;
-	--feedlink-color: #000000;
-	--article-title-color: #000000;
-	--article-date-color: #000000;
-	--table-cell-border-color: #D6D6D6;
-	--primary-accent-color: #000000;
-	--secondary-accent-color: #000000;
-	--block-quote-border-color: #000000;
-	--link-underline-color: currentColor;
-	--link-underline-special: currentColor;
+	--header-table-border-color: #F2C4BE;
+	--header-color: #A89EC0;
+	--body-code-color: #8B7AA8;
+	--system-message-color: #A89EC0;
+	--feedlink-color: #5C4F6B;
+	--article-title-color: #5C4F6B;
+	--article-date-color: #A89EC0;
+	--table-cell-border-color: #C9BFD8;
+	--primary-accent-color: #6B5A90;
+	--secondary-accent-color: #6B5A90;
+	--block-quote-border-color: #C9BFD8;
+	--link-underline-color: color-mix(in hsl, currentColor, transparent 40%);
+	--link-underline-special: color-mix(in hsl, currentColor, transparent 80%);
 	/* Consumed by core.css's #ao3SyntheticPreface/#ao3Preface rules. */
-	--ao3-preface-border-color: rgba(0, 0, 0, 0.3);
+	--ao3-preface-border-color: #C9BFD8;
 }
 
 /* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
    higher-specificity 'body a' below still wins the cascade. See the fix
    applied to Ember/Sepia/Tiqoe Dark/Rose Pine for why this is needed. */
 a {
-	color: #000000;
+	color: #6B5A90;
 }
 
 body a,
 body a:visited,
 body a * {
-	color: #000000;
+	color: #6B5A90;
 }
 
 body > header {
@@ -98,10 +98,8 @@ body > header .headerTable th {
 	color: var(--header-color);
 	padding: 0.2em;
 	border: none;
-	font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
+	font-family: Inter, -apple-system, "Segoe UI", sans-serif;
 	font-size: 0.9rem;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
 }
 body > header .headerTable td.avatar {
 	width: 33%;
@@ -122,11 +120,11 @@ body > .systemMessage {
 }
 
 .avatar img {
-	border-radius: 0px;
+	border-radius: 50%;
 }
 
 .feedIcon {
-	border-radius: 0px;
+	border-radius: 50%;
 }
 
 .rightAlign {
@@ -141,8 +139,6 @@ body > .systemMessage {
 	text-decoration-color: transparent;
 	color: var(--article-title-color);
 	margin-top: 26px;
-	text-transform: uppercase;
-	letter-spacing: 0.02em;
 }
 
 .articleDateline {
@@ -199,7 +195,7 @@ pre {
 
 code,
 pre {
-	font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
+	font-family: "JetBrains Mono", "SF Mono", Menlo, "Courier New", Courier, monospace;
 	font-size: 0.85rem;
 	letter-spacing: -0.027em;
 	-webkit-hyphens: none;
@@ -214,7 +210,7 @@ pre {
 	border-spacing: 0;
 	border: 1px solid var(--table-cell-border-color);
 	font-size: inherit;
-	border-width: 2px;
+	border-radius: 8px;
 }
 
 .nnw-overflow table table {
@@ -295,7 +291,8 @@ sub {
 }
 
 hr {
-	border: 2px solid #000000;
+	border: none;
+	border-top: 1px solid var(--table-cell-border-color);
 }
 
 .iframeWrap {
@@ -316,7 +313,7 @@ blockquote {
 	margin-inline-start: 0;
 	margin-inline-end: 0;
 	padding-inline-start: 15px;
-	border-inline-start: 2px solid var(--block-quote-border-color);
+	border-inline-start: 3px solid var(--block-quote-border-color);
 }
 
 /* Feed Specific */
@@ -351,35 +348,35 @@ blockquote {
 
 /* Newsfoot theme */
 .newsfoot-footnote-popover {
-	background: #FFFFFF;
-	box-shadow: 0 0 0 2px #000000;
-	color: #000000;
+	background: #FFFAF8;
+	box-shadow: 0 2px 4px rgba(107, 90, 144, 0.15), 0 3px 6px rgba(107, 90, 144, 0.08);
+	color: #5C4F6B;
 	padding: 1px;
-	border: 2px solid #000000;
+	border-radius: 8px;
 }
 
 .newsfoot-footnote-popover-arrow {
-	background: #FFFFFF;
+	background: #FAF5F2;
 	border: 1px solid var(--table-cell-border-color);
 }
 
 .newsfoot-footnote-popover-inner {
-	background: #FFFFFF;
-	border: 2px solid #000000;
+	background: #FAF5F2;
+	border-radius: 8px;
 }
 
 body a.footnote,
 body a.footnote:visited,
 .newsfoot-footnote-popover + a.footnote:hover {
 	background: var(--table-cell-border-color);
-	color: #000000;
+	color: #5C4F6B;
 	transition: background-color 200ms ease-out;
 }
 
 a.footnote:hover,
 .newsfoot-footnote-popover + a.footnote {
-	background: #000000;
-	color: #FFFFFF;
+	background: #6B5A90;
+	color: #F5EDE8;
 	transition: background-color 200ms ease-out;
 }
 
@@ -387,19 +384,21 @@ a.footnote:hover,
    rules live in core.css -- this theme only supplies appearance). */
 #ao3SyntheticPreface,
 #ao3Preface {
-	border-bottom-width: 2px;
+	border: 1px solid var(--ao3-preface-border-color);
+	border-radius: 12px;
+	padding: 0.8em 1em 1em 1em;
+	background: #FAF5F2;
 }
 #ao3SyntheticPreface dt,
 #ao3Preface dt {
-	font-variant: small-caps;
-	letter-spacing: 0.04em;
+	color: var(--primary-accent-color);
 }
 
 .ao3ChapterFetchNotice {
 	margin: 0 0 1em 0;
 	padding: 0.6em 0.8em;
-	border-left: 3px solid #000000;
-	background: #F5F5F5;
+	border-left: 3px solid rgba(107, 90, 144, 0.4);
+	background: rgba(107, 90, 144, 0.06);
 	font-size: 0.9em;
 	font-style: italic;
 	color: var(--header-color);
@@ -416,7 +415,7 @@ a.footnote:hover,
 		word-break: break-word;
 		-webkit-hyphens: auto;
 		-webkit-text-size-adjust: none;
-		font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
+		font-family: 'Lora', Georgia, serif;
 		font-size: [[font-size]]px;
 	}
 
@@ -441,7 +440,7 @@ a.footnote:hover,
 		margin-bottom: 64px;
 		padding-left: 48px;
 		padding-right: 48px;
-		font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
+		font-family: 'Lora', Georgia, serif;
 	}
 
 	.smallText {
@@ -465,11 +464,11 @@ a.footnote:hover,
 	}
 
 	pre {
-		border: 1px solid #000000;
+		border: 1px solid #6B5A90;
 		padding: 10px;
 	}
 
 	.nnw-overflow table {
-		border: 1px solid #000000;
+		border: 1px solid #6B5A90;
 	}
 }
