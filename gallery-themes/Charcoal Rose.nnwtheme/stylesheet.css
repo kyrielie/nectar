@@ -1,13 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
-/* Black & White 
-Pure monochrome, no accent hue -- link color is body text color, distinguished by underline weight and small-caps instead.
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Source+Serif+4:ital,wght@0,400..700;1,400..700&family=Inter:wght@400..700&display=swap');
+/* Charcoal Rose 
    Palette:
-     body background   <- #FFFFFF
-     body text          <- #000000
-     link                <- #000000
-     header border        <- #000000
-     table/rule border     <- #D6D6D6
-   Real structural differentiation, not just recolor: monospaced/typewriter body font (Menlo/Courier) instead of the serif every other bundled theme uses, uppercase small-caps dateline and preface labels, thick 2px borders throughout, square (not rounded) avatar corners -- reads like a printed manuscript rather than a magazine page.
+     body background   <- #1D1D1D
+     body text          <- #D3C5C8
+     link                <- #F59DB3
+     header border        <- #2B2B2B
+     table/rule border     <- #434343
+   Differentiation: italic serif titles and a soft rose glow on link hover (text-shadow), dashed rose preface border with generous padding -- softer and more romantic than Rosé Pine's crisper look despite a similar dark-plus-pink family.
    Structure follows the bundled Sepia.nnwtheme (same selectors, same
    iOS/macOS @supports split); shared iOS/macOS structural rules (max-width,
    hyphens, footnote popover, table borders, etc.) are the same base every
@@ -19,19 +18,20 @@ body {
 	margin-right: auto;
 	word-wrap: break-word;
 	max-width: 44em;
-	background-color: #FFFFFF;
-	color: #000000;
+	background-color: #1D1D1D;
+	color: #D3C5C8;
 }
 
 [href] {
 	text-decoration-line: underline;
 	text-decoration-style: solid;
-	text-decoration-color: currentColor;
-	text-decoration-thickness: 2px;
+	text-decoration-color: var(--link-underline-color);
+	text-decoration-thickness: 1px;
 	text-underline-offset: 0.15em;
 }
 [href]:hover {
-	text-decoration-thickness: 3px;
+	text-shadow: 0 0 6px rgba(245, 157, 179, 0.5);
+	color: color-mix(in hsl, var(--link-underline-color), white 15%);
 }
 
 #nnwImageIcon {
@@ -50,34 +50,34 @@ body {
 }
 
 :root {
-	--header-table-border-color: #000000;
-	--header-color: #000000;
-	--body-code-color: #000000;
-	--system-message-color: #000000;
-	--feedlink-color: #000000;
-	--article-title-color: #000000;
-	--article-date-color: #000000;
-	--table-cell-border-color: #D6D6D6;
-	--primary-accent-color: #000000;
-	--secondary-accent-color: #000000;
-	--block-quote-border-color: #000000;
-	--link-underline-color: currentColor;
-	--link-underline-special: currentColor;
+	--header-table-border-color: #2B2B2B;
+	--header-color: #A38F93;
+	--body-code-color: #F59DB3;
+	--system-message-color: #A38F93;
+	--feedlink-color: #D3C5C8;
+	--article-title-color: #D3C5C8;
+	--article-date-color: #A38F93;
+	--table-cell-border-color: #434343;
+	--primary-accent-color: #F59DB3;
+	--secondary-accent-color: #F59DB3;
+	--block-quote-border-color: #434343;
+	--link-underline-color: color-mix(in hsl, currentColor, transparent 35%);
+	--link-underline-special: color-mix(in hsl, currentColor, transparent 75%);
 	/* Consumed by core.css's #ao3SyntheticPreface/#ao3Preface rules. */
-	--ao3-preface-border-color: rgba(0, 0, 0, 0.3);
+	--ao3-preface-border-color: rgba(211, 197, 200, 0.2);
 }
 
 /* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
    higher-specificity 'body a' below still wins the cascade. See the fix
    applied to Ember/Sepia/Tiqoe Dark/Rose Pine for why this is needed. */
 a {
-	color: #000000;
+	color: #F59DB3;
 }
 
 body a,
 body a:visited,
 body a * {
-	color: #000000;
+	color: #F59DB3;
 }
 
 body > header {
@@ -98,10 +98,8 @@ body > header .headerTable th {
 	color: var(--header-color);
 	padding: 0.2em;
 	border: none;
-	font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
+	font-family: Inter, sans-serif;
 	font-size: 0.9rem;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
 }
 body > header .headerTable td.avatar {
 	width: 33%;
@@ -122,11 +120,11 @@ body > .systemMessage {
 }
 
 .avatar img {
-	border-radius: 0px;
+	border-radius: 6px;
 }
 
 .feedIcon {
-	border-radius: 0px;
+	border-radius: 6px;
 }
 
 .rightAlign {
@@ -141,15 +139,12 @@ body > .systemMessage {
 	text-decoration-color: transparent;
 	color: var(--article-title-color);
 	margin-top: 26px;
-	text-transform: uppercase;
-	letter-spacing: 0.02em;
+	font-style: italic;
 }
 
 .articleDateline {
 	margin-bottom: 5px;
 	font-weight: bold;
-	font-variant: small-caps;
-	letter-spacing: 0.04em;
 }
 
 .articleDateline [href] {
@@ -199,7 +194,7 @@ pre {
 
 code,
 pre {
-	font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
+	font-family: "JetBrains Mono", "SF Mono", Menlo, "Courier New", Courier, monospace;
 	font-size: 0.85rem;
 	letter-spacing: -0.027em;
 	-webkit-hyphens: none;
@@ -214,7 +209,6 @@ pre {
 	border-spacing: 0;
 	border: 1px solid var(--table-cell-border-color);
 	font-size: inherit;
-	border-width: 2px;
 }
 
 .nnw-overflow table table {
@@ -295,7 +289,7 @@ sub {
 }
 
 hr {
-	border: 2px solid #000000;
+	border: 1.5px solid var(--table-cell-border-color);
 }
 
 .iframeWrap {
@@ -316,7 +310,7 @@ blockquote {
 	margin-inline-start: 0;
 	margin-inline-end: 0;
 	padding-inline-start: 15px;
-	border-inline-start: 2px solid var(--block-quote-border-color);
+	border-inline-start: 3px solid var(--block-quote-border-color);
 }
 
 /* Feed Specific */
@@ -351,35 +345,33 @@ blockquote {
 
 /* Newsfoot theme */
 .newsfoot-footnote-popover {
-	background: #FFFFFF;
-	box-shadow: 0 0 0 2px #000000;
-	color: #000000;
+	background: #2B2B2B;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 3px 6px rgba(0, 0, 0, 0.25);
+	color: #D3C5C8;
 	padding: 1px;
-	border: 2px solid #000000;
 }
 
 .newsfoot-footnote-popover-arrow {
-	background: #FFFFFF;
+	background: #1D1D1D;
 	border: 1px solid var(--table-cell-border-color);
 }
 
 .newsfoot-footnote-popover-inner {
-	background: #FFFFFF;
-	border: 2px solid #000000;
+	background: #1D1D1D;
 }
 
 body a.footnote,
 body a.footnote:visited,
 .newsfoot-footnote-popover + a.footnote:hover {
 	background: var(--table-cell-border-color);
-	color: #000000;
+	color: #D3C5C8;
 	transition: background-color 200ms ease-out;
 }
 
 a.footnote:hover,
 .newsfoot-footnote-popover + a.footnote {
-	background: #000000;
-	color: #FFFFFF;
+	background: #F59DB3;
+	color: #1D1D1D;
 	transition: background-color 200ms ease-out;
 }
 
@@ -387,19 +379,19 @@ a.footnote:hover,
    rules live in core.css -- this theme only supplies appearance). */
 #ao3SyntheticPreface,
 #ao3Preface {
-	border-bottom-width: 2px;
+	border-bottom-style: dashed;
+	padding-bottom: 1.4em;
 }
 #ao3SyntheticPreface dt,
 #ao3Preface dt {
-	font-variant: small-caps;
-	letter-spacing: 0.04em;
+	color: var(--primary-accent-color);
 }
 
 .ao3ChapterFetchNotice {
 	margin: 0 0 1em 0;
 	padding: 0.6em 0.8em;
-	border-left: 3px solid #000000;
-	background: #F5F5F5;
+	border-left: 3px solid rgba(245, 157, 179, 0.4);
+	background: rgba(245, 157, 179, 0.06);
 	font-size: 0.9em;
 	font-style: italic;
 	color: var(--header-color);
@@ -416,7 +408,7 @@ a.footnote:hover,
 		word-break: break-word;
 		-webkit-hyphens: auto;
 		-webkit-text-size-adjust: none;
-		font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
+		font-family: "Source Serif 4", Charter, Georgia, serif;
 		font-size: [[font-size]]px;
 	}
 
@@ -441,7 +433,7 @@ a.footnote:hover,
 		margin-bottom: 64px;
 		padding-left: 48px;
 		padding-right: 48px;
-		font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
+		font-family: "Source Serif 4", Charter, Georgia, serif;
 	}
 
 	.smallText {
@@ -465,11 +457,11 @@ a.footnote:hover,
 	}
 
 	pre {
-		border: 1px solid #000000;
+		border: 1px solid #F59DB3;
 		padding: 10px;
 	}
 
 	.nnw-overflow table {
-		border: 1px solid #000000;
+		border: 1px solid #F59DB3;
 	}
 }
