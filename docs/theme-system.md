@@ -40,11 +40,12 @@ Nectar ships 14 themes in `Themes/`: the eight NetNewsWire-origin themes
 (Appanoose, Biblioteca, Hyperlegible, NewsFax, Promenade, Sepia, Tiqoe Dark,
 Verdana Revival) plus six Nectar customs (Black & White, Duskbloom, Ember,
 Powder Pink, Tumblr Blue, Vintage Letter Green). Only `Themes/` is copied into
-the app bundle (`project.yml`). The other 19 authored themes live in
+the app bundle (`project.yml`). The other 26 authored themes live in
 `gallery-themes/`, are not in the app, and are published only on the theme
 gallery (`gallery/build.py`), from which a person installs them via the
-`netnewswire://theme/add` URL scheme. See `nnwtheme-format.md` for the
-directory rules. Most themes are **generated**: produced
+`nectar://theme/add` URL scheme. See `nnwtheme-format.md` for the
+directory rules and `docs/theme-gallery.md` for the gallery page itself.
+Most themes are **generated**: produced
 from a single Python script, `buildscripts/theme-generation/generate_ported_themes.py`,
 which fills a shared structural CSS/HTML template with per-theme palette and
 font data so that structural rules (header table, footnote popovers, table

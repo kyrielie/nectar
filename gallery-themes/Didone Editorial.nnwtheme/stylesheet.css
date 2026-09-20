@@ -1,0 +1,287 @@
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,500;0,700;1,500&family=Newsreader:ital,wght@0,400;0,600;1,400&display=swap');
+
+/* Didone Editorial -- Original high-contrast editorial design; set in Bodoni Moda (Owen Earl, SIL OFL) and Newsreader (Production Type, SIL OFL). Original CSS for Nectar. */
+
+:root {
+	--font-main: 'Bodoni Moda', Didot, 'Bodoni 72', serif;
+	--font-body: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+	--font-code: "SF Mono", Menlo, monospace;
+
+	--paper: #fbf8f2;
+	--ink: #161412;
+	--ink-muted: rgba(22, 20, 18, 0.62);
+	--ox: #7a1f2b;
+	--rule: #161412;
+	--link: #7a1f2b;
+	--visited-link: #5a3a3f;
+	--accent: var(--ox);
+	--table-border: rgba(22, 20, 18, 0.3);
+	--code-color: #2a2622;
+	--code-bg: rgba(22, 20, 18, 0.05);
+	--blockquote-bg: rgba(122, 31, 43, 0.05);
+	--system-message-color: var(--ink-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper: #16130f;
+		--ink: #ece6dc;
+		--ink-muted: rgba(236, 230, 220, 0.62);
+		--ox: #d9707f;
+		--rule: #ece6dc;
+		--link: #d9707f;
+		--visited-link: #b98a92;
+		--table-border: rgba(236, 230, 220, 0.3);
+		--code-color: #e6dfd2;
+		--code-bg: rgba(236, 230, 220, 0.07);
+		--blockquote-bg: rgba(217, 112, 127, 0.08);
+	}
+}
+
+.didoneHeader {
+	text-align: center;
+	padding-top: 0.6em;
+}
+.didoneHeader .articleTitle h1 {
+	margin: 0.3em 0 0 0;
+	font-family: var(--font-main);
+	font-weight: 700;
+	font-size: 2em;
+	line-height: 1.05;
+}
+.didoneHeader .articleTitle h1 a, .didoneHeader .articleTitle h1 a:link, .didoneHeader .articleTitle h1 a:visited {
+	color: var(--ink);
+	text-decoration: none;
+}
+.didoneHeader .byline {
+	margin-top: 0.3em;
+	font-style: italic;
+	color: var(--ox);
+}
+.didoneHeader .byline a, .didoneHeader .byline a:link, .didoneHeader .byline a:visited {
+	color: var(--ox);
+	text-decoration: none;
+}
+
+.didoneBody {
+	line-height: 1.6;
+}
+.didoneBody a {
+	text-decoration: underline;
+	text-decoration-color: var(--ox);
+}
+
+/* AO3 preface: double-ruled "Particulars" box. */
+#ao3SyntheticPreface,
+#ao3Preface {
+	margin: 1.5em 0;
+	padding: 1em 1.1em;
+	border: 3px double var(--rule);
+	font-size: 0.85em;
+}
+#ao3SyntheticPreface::before,
+#ao3Preface::before {
+	content: "THE PARTICULARS";
+	display: block;
+	text-align: center;
+	font-family: var(--font-main);
+	font-weight: 500;
+	font-size: 0.72em;
+	letter-spacing: 0.3em;
+	margin-bottom: 0.9em;
+}
+#ao3SyntheticPreface dt,
+#ao3Preface dt {
+	font-style: italic;
+	font-weight: 400;
+	color: var(--ox);
+}
+
+.summary.module {
+	margin: 0 0 1.5em 0;
+	padding: 0 0.4em;
+	text-align: center;
+	font-size: 1.05em;
+}
+.summary.module h3.heading {
+	margin: 0 0 0.4em 0;
+	font-family: var(--font-main);
+	font-weight: 500;
+	font-size: 0.7em;
+	letter-spacing: 0.3em;
+	text-transform: uppercase;
+}
+.summary.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	font-style: italic;
+}
+
+.notes.module,
+.end.notes.module {
+	margin: 0 0 1.5em 0;
+	padding-left: 1em;
+	border-left: 1px solid var(--rule);
+}
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	margin: 0 0 0.3em 0;
+	font-family: var(--font-main);
+	font-weight: 500;
+	font-size: 0.7em;
+	letter-spacing: 0.3em;
+	text-transform: uppercase;
+	color: var(--ox);
+}
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	font-style: italic;
+	color: var(--ink-muted);
+}
+
+.didoneOrnament {
+	margin: 2.2em 0 0.5em 0;
+	text-align: center;
+	font-size: 0.9em;
+	color: var(--ox);
+}
+.didoneBody h2.heading,
+.didoneBody h3.title {
+	margin: 0 0 1.1em 0;
+	padding: 0.3em 0;
+	border-top: 1px solid var(--rule);
+	border-bottom: 1px solid var(--rule);
+	font-family: var(--font-main);
+	font-style: italic;
+	font-weight: 500;
+	font-size: 1.8em;
+	text-align: center;
+}
+.didoneBody h2.heading a, .didoneBody h3.title a {
+	color: var(--ink);
+	text-decoration: none;
+}
+
+.didoneBody p:has(> .versalCap:first-child)::first-letter {
+	font-family: var(--font-main);
+	font-weight: 700;
+	font-size: 4.4em;
+	line-height: 0.8;
+	float: left;
+	color: var(--ox);
+	margin: 0.06em 0.08em 0 0;
+}
+.versalCap {
+	font-variant: small-caps;
+	letter-spacing: 0.05em;
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-body);
+	word-wrap: break-word;
+}
+
+/* Exact-selector color declarations for ArticleThemeColorExtractor (it matches
+   `body`, `.articleBody`, `a` and `.articleBody a` by exact string). Higher-
+   specificity rules below still win the cascade. */
+a {
+	color: var(--link);
+}
+.articleBody a {
+	color: var(--link);
+}
+body a, body a * {
+	color: var(--link);
+}
+body a:visited {
+	color: var(--visited-link);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+.didoneBody blockquote:not(.userstuff) {
+	margin-left: 0;
+	padding: 0.5em 1.1em;
+	border-left: 4px solid var(--accent);
+	background-color: var(--blockquote-bg);
+}
+
+.didoneBody code, .didoneBody pre {
+	font-family: var(--font-code);
+	color: var(--code-color);
+	background-color: var(--code-bg);
+}
+.didoneBody pre {
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.didoneBody table {
+	border-collapse: collapse;
+}
+.didoneBody td, .didoneBody th {
+	border: 1px solid var(--table-border);
+	padding: 0.4em 0.6em;
+}
+
+.didoneBody hr {
+	border: 0;
+	border-top: 1px solid var(--table-border);
+}
+
+/* Keep oversized fic art from forcing horizontal scroll. */
+img, figure, video, object {
+	max-width: 100%;
+	height: auto !important;
+}
+.didoneBody div {
+	max-width: 100%;
+}
+
+.didoneFooter {
+	margin-top: 2em;
+	padding-top: 1em;
+	border-top: 1px solid var(--table-border);
+	font-family: var(--font-main);
+	font-size: 0.75em;
+	color: var(--ink-muted);
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+		word-break: break-word;
+		-webkit-text-size-adjust: none;
+		font-size: [[font-size]]px;
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+	}
+	.smallText { font-size: 14px; }
+	.mediumText { font-size: 16px; }
+	.largeText { font-size: 18px; }
+	.xlargeText { font-size: 20px; }
+	.xxlargeText { font-size: 22px; }
+}

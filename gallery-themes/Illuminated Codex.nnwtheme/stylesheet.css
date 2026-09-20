@@ -1,0 +1,394 @@
+@import url('https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@300;400;700&family=Noto+Sans+Symbols+2&family=Texturina:wght@400;700&display=swap');
+
+/* Illuminated Codex -- Original design inspired by medieval illuminated manuscripts; set in Grenze Gotisch (Omnibus-Type, SIL OFL), Texturina (Guillermo Torres / Omnibus-Type, SIL OFL) and Noto Sans Symbols 2 (Google, SIL OFL). Original CSS for Nectar. */
+
+:root {
+	--font-main: 'Grenze Gotisch', Georgia, serif;
+	--font-body: 'Grenze Gotisch', 'Iowan Old Style', Georgia, serif;
+	--font-preface: 'Texturina', Georgia, serif;
+	--font-ornament: 'Noto Sans Symbols 2', Georgia, serif;
+	--font-code: "SF Mono", Menlo, monospace;
+
+	--paper: #efe0bc;
+	--ink: #2a1c10;
+	--ink-muted: rgba(42, 28, 16, 0.62);
+	--red: #a8281f;
+	--frame-blue: #1f3a7a;
+	--gold: #b8892b;
+	--gold-soft: rgba(184, 137, 43, 0.6);
+	--initial-bg: #1f3a7a;
+	--initial-ink: #f7dc8a;
+	--stain: rgba(120, 70, 20, 0.3);
+	--preface-bg: rgba(184, 137, 43, 0.13);
+	--summary-bg: rgba(168, 40, 31, 0.06);
+	--link: #a8281f;
+	--visited-link: #7a3a2a;
+	--accent: var(--red);
+	--table-border: rgba(42, 28, 16, 0.3);
+	--code-color: #3a2a1a;
+	--code-bg: rgba(42, 28, 16, 0.06);
+	--blockquote-bg: rgba(168, 40, 31, 0.06);
+	--system-message-color: var(--ink-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper: #17110c;
+		--ink: #e9dcc0;
+		--ink-muted: rgba(233, 220, 192, 0.62);
+		--red: #e4735f;
+		--frame-blue: #6f8fe0;
+		--gold: #d4a94a;
+		--gold-soft: rgba(212, 169, 74, 0.6);
+		--initial-bg: #27459a;
+		--initial-ink: #f7dc8a;
+		--stain: rgba(0, 0, 0, 0.5);
+		--preface-bg: rgba(212, 169, 74, 0.10);
+		--summary-bg: rgba(228, 115, 95, 0.09);
+		--link: #e4735f;
+		--visited-link: #c9a06e;
+		--table-border: rgba(233, 220, 192, 0.3);
+		--code-color: #e4d9c0;
+		--code-bg: rgba(233, 220, 192, 0.08);
+		--blockquote-bg: rgba(228, 115, 95, 0.08);
+	}
+}
+
+/* Page furniture drawn with position: fixed so the wobble filter only ever runs
+   on a viewport-sized box, never on the full (possibly very tall) article. */
+html::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background:
+		radial-gradient(ellipse at 8% 4%, var(--stain), transparent 42%),
+		radial-gradient(ellipse at 96% 97%, var(--stain), transparent 46%);
+}
+body::before, body::after {
+	content: "";
+	position: fixed;
+	z-index: 2;
+	pointer-events: none;
+}
+body::before {
+	inset: 8px;
+	border: 2px solid var(--frame-blue);
+	filter: url(#codexWobble);
+}
+body::after {
+	inset: 15px;
+	border: 1px solid var(--gold);
+	filter: url(#codexWobble);
+}
+
+.codexHeader {
+	text-align: center;
+	margin-bottom: 0.4em;
+}
+.codexHeader .articleTitle h1 {
+	font-family: var(--font-main);
+	font-weight: 700;
+	font-size: 1.7em;
+	line-height: 1.15;
+	color: var(--red);
+	margin: 0.6em 0 0.15em 0;
+}
+.codexHeader .articleTitle h1 a, .codexHeader .articleTitle h1 a:link, .codexHeader .articleTitle h1 a:visited {
+	color: var(--red);
+	text-decoration: none;
+}
+.codexHeader .byline {
+	font-variant: small-caps;
+	letter-spacing: 0.08em;
+}
+.codexHeader .byline a, .codexHeader .byline a:link, .codexHeader .byline a:visited {
+	color: var(--ink);
+	text-decoration: none;
+}
+
+.codexBody {
+	font-size: 1.03em;
+	font-weight: 300;
+	line-height: 1.66;
+	text-align: justify;
+	-webkit-hyphens: auto;
+	hyphens: auto;
+}
+.codexBody strong, .codexBody b {
+	font-weight: 700;
+}
+.codexBody a {
+	text-decoration: underline;
+	text-decoration-color: var(--gold);
+}
+
+/* AO3 preface: the "Argumentum" panel. The box itself is a plain filled rect;
+   the wobbly blue outline is a filtered ::after so the text never distorts. */
+#ao3SyntheticPreface,
+#ao3Preface {
+	position: relative;
+	margin: 2em 0;
+	padding: 1.1em 1.1em 0.9em 1.1em;
+	border: 0;
+	border-radius: 6px 3px 7px 4px;
+	background-color: var(--preface-bg);
+	font-size: 0.9em;
+	text-align: left;
+	-webkit-hyphens: none;
+	hyphens: none;
+}
+#ao3SyntheticPreface::before,
+#ao3Preface::before {
+	content: "Argumentum";
+	display: block;
+	text-align: center;
+	font-family: var(--font-main);
+	font-weight: 700;
+	font-size: 1.4em;
+	line-height: 1;
+	color: var(--red);
+	margin: 0 0 0.55em 0;
+	padding-bottom: 0.4em;
+	border-bottom: 1px solid var(--gold-soft);
+}
+#ao3SyntheticPreface::after,
+#ao3Preface::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border: 2px solid var(--frame-blue);
+	pointer-events: none;
+	filter: url(#codexWobble);
+}
+#ao3SyntheticPreface dl.tags,
+#ao3Preface dl.tags {
+	font-family: var(--font-preface);
+	font-weight: 400;
+	line-height: 1.55;
+}
+#ao3SyntheticPreface dt,
+#ao3Preface dt {
+	color: var(--red);
+	font-variant: small-caps;
+	letter-spacing: 0.06em;
+	font-weight: 700;
+}
+
+/* Summary: full red wobbly box, no "Summary:" label. */
+.summary.module {
+	position: relative;
+	margin: 0 0 1.8em 0;
+	padding: 0.9em 1.1em;
+	border-radius: 6px 3px 7px 4px;
+	background-color: var(--summary-bg);
+}
+.summary.module::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border: 2px solid var(--red);
+	pointer-events: none;
+	filter: url(#codexWobble);
+}
+.summary.module h3.heading {
+	display: none;
+}
+.summary.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	font-style: italic;
+}
+
+/* Notes: an unboxed marginal aside. */
+.notes.module,
+.end.notes.module {
+	margin: 0 0 1.6em 0;
+	padding-left: 1em;
+	border-left: 2px solid var(--gold);
+}
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	margin: 0 0 0.3em 0;
+	font-size: 0.85em;
+	font-weight: 700;
+	font-variant: small-caps;
+	letter-spacing: 0.08em;
+	color: var(--red);
+}
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	font-style: italic;
+	color: var(--ink-muted);
+}
+
+/* Chapter ornament (inserted by the shared applyChapterDividers) + heading. */
+.codexOrnament {
+	display: flex;
+	align-items: center;
+	gap: 0.6em;
+	margin: 2em 0 0.2em 0;
+	font-family: var(--font-ornament);
+	font-size: 1.9em;
+	font-weight: 400;
+	line-height: 1;
+	color: var(--gold);
+	text-align: center;
+	-webkit-hyphens: none;
+	hyphens: none;
+}
+.codexOrnament::before, .codexOrnament::after {
+	content: "";
+	flex: 1;
+	height: 2px;
+	background: linear-gradient(90deg, transparent, var(--gold));
+}
+.codexOrnament::after {
+	transform: scaleX(-1);
+}
+.codexBody h2.heading,
+.codexBody h3.title {
+	margin: 0.2em 0 0.7em 0;
+	font-family: var(--font-main);
+	font-weight: 400;
+	font-size: 1.5em;
+	letter-spacing: 0.02em;
+	color: var(--red);
+	text-align: center;
+}
+.codexBody h2.heading a, .codexBody h3.title a {
+	color: var(--red);
+	text-decoration: none;
+}
+
+/* Illuminated capital: blue panel, gold outline, first letter of each chapter
+   (shared applyVersalCaps wraps the opening sentence in .versalCap; no
+   first-sentence styling on purpose). */
+.codexBody p:has(> .versalCap:first-child)::first-letter {
+	font-family: var(--font-main);
+	font-weight: 700;
+	font-size: 3.7em;
+	line-height: 0.85;
+	float: left;
+	color: var(--initial-ink);
+	background-color: var(--initial-bg);
+	border: 2px solid var(--gold);
+	border-radius: 9px 4px 11px 5px / 5px 10px 4px 9px;
+	padding: 0.06em 0.1em 0.02em 0.1em;
+	margin: 0.06em 0.14em 0 0;
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-body);
+	word-wrap: break-word;
+}
+
+/* Exact-selector color declarations for ArticleThemeColorExtractor (it matches
+   `body`, `.articleBody`, `a` and `.articleBody a` by exact string). Higher-
+   specificity rules below still win the cascade. */
+a {
+	color: var(--link);
+}
+.articleBody a {
+	color: var(--link);
+}
+body a, body a * {
+	color: var(--link);
+}
+body a:visited {
+	color: var(--visited-link);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+.codexBody blockquote:not(.userstuff) {
+	margin-left: 0;
+	padding: 0.5em 1.1em;
+	border-left: 4px solid var(--accent);
+	background-color: var(--blockquote-bg);
+}
+
+.codexBody code, .codexBody pre {
+	font-family: var(--font-code);
+	color: var(--code-color);
+	background-color: var(--code-bg);
+}
+.codexBody pre {
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.codexBody table {
+	border-collapse: collapse;
+}
+.codexBody td, .codexBody th {
+	border: 1px solid var(--table-border);
+	padding: 0.4em 0.6em;
+}
+
+.codexBody hr {
+	border: 0;
+	border-top: 1px solid var(--table-border);
+}
+
+/* Keep oversized fic art from forcing horizontal scroll. */
+img, figure, video, object {
+	max-width: 100%;
+	height: auto !important;
+}
+.codexBody div {
+	max-width: 100%;
+}
+
+.codexFooter {
+	margin-top: 2em;
+	padding-top: 1em;
+	border-top: 1px solid var(--table-border);
+	font-family: var(--font-main);
+	font-size: 0.75em;
+	color: var(--ink-muted);
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+		word-break: break-word;
+		-webkit-text-size-adjust: none;
+		font-size: [[font-size]]px;
+	}
+	body {
+		padding-left: 28px;
+		padding-right: 28px;
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+	}
+	.smallText { font-size: 14px; }
+	.mediumText { font-size: 16px; }
+	.largeText { font-size: 18px; }
+	.xlargeText { font-size: 20px; }
+	.xxlargeText { font-size: 22px; }
+}

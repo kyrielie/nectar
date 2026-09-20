@@ -1,0 +1,279 @@
+@import url('https://fonts.googleapis.com/css2?family=Libertinus+Math&family=Long+Cang&family=Ma+Shan+Zheng&display=swap');
+
+/* Four Nations -- Original four-elements design (water, earth, fire, air); set in Long Cang (Chen Xiaomin, SIL OFL), Ma Shan Zheng (SIL OFL) and Libertinus Math (Philipp H. Poll, SIL OFL). Original CSS for Nectar. */
+
+:root {
+	--font-main: 'Long Cang', 'Kaiti SC', 'STKaiti', serif;
+	--font-seal: 'Ma Shan Zheng', 'Kaiti SC', 'STKaiti', serif;
+	--font-body: 'Libertinus Math', Georgia, serif;
+	--font-code: "SF Mono", Menlo, monospace;
+
+	--paper: #fbfaf6;
+	--ink: #2c2a24;
+	--ink-muted: rgba(44, 42, 36, 0.62);
+	--title: #171512;
+	--water: #2e6f95;
+	--earth: #5c7a4a;
+	--fire: #b83c1f;
+	--air: #8a8272;
+	--water-tint: rgba(46, 111, 149, 0.05);
+	--fire-tint: rgba(184, 60, 31, 0.05);
+	--link: #b83c1f;
+	--visited-link: #8a8272;
+	--accent: var(--water);
+	--table-border: rgba(44, 42, 36, 0.3);
+	--code-color: #3a372f;
+	--code-bg: rgba(44, 42, 36, 0.06);
+	--blockquote-bg: rgba(46, 111, 149, 0.06);
+	--system-message-color: var(--ink-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper: #15140f;
+		--ink: #e6e2d4;
+		--ink-muted: rgba(230, 226, 212, 0.62);
+		--title: #f3efe4;
+		--water: #6fb2d8;
+		--earth: #8fb57a;
+		--fire: #e2704f;
+		--air: #b7ae9b;
+		--water-tint: rgba(111, 178, 216, 0.08);
+		--fire-tint: rgba(226, 112, 79, 0.08);
+		--link: #e2704f;
+		--visited-link: #b7ae9b;
+		--table-border: rgba(230, 226, 212, 0.3);
+		--code-color: #e2ddce;
+		--code-bg: rgba(230, 226, 212, 0.07);
+		--blockquote-bg: rgba(111, 178, 216, 0.08);
+	}
+}
+
+.nationsHeader {
+	text-align: center;
+}
+.nationsHeader .articleTitle h1 {
+	margin: 0.3em 0 0 0;
+	font-family: var(--font-main);
+	font-weight: 400;
+	font-size: 2.5em;
+	line-height: 1.2;
+}
+.nationsHeader .articleTitle h1 a, .nationsHeader .articleTitle h1 a:link, .nationsHeader .articleTitle h1 a:visited {
+	color: var(--title);
+	text-decoration: none;
+}
+.nationsHeader .byline {
+	margin: 0.4em 0 0.2em 0;
+	letter-spacing: 0.08em;
+	color: var(--fire);
+}
+.nationsHeader .byline a, .nationsHeader .byline a:link, .nationsHeader .byline a:visited {
+	color: var(--fire);
+	text-decoration: none;
+}
+
+.nationsBody {
+	font-size: 1.06em;
+	line-height: 1.68;
+}
+.nationsBody a {
+	text-decoration: underline;
+}
+
+/* AO3 preface: water above, fire below. */
+#ao3SyntheticPreface,
+#ao3Preface {
+	margin: 1.8em 0;
+	padding: 1.2em 1.1em;
+	border: 0;
+	border-top: 3px solid var(--water);
+	border-bottom: 3px solid var(--fire);
+	background-color: transparent;
+	background-image: linear-gradient(180deg, var(--water-tint), var(--fire-tint));
+	font-size: 0.85em;
+}
+#ao3SyntheticPreface dt,
+#ao3Preface dt {
+	font-weight: 400;
+	color: var(--earth);
+}
+
+.summary.module {
+	margin: 0 0 1.8em 0;
+	padding: 0.9em 1.1em;
+	border-left: 4px solid var(--water);
+	border-right: 4px solid var(--fire);
+}
+.summary.module h3.heading {
+	margin: 0 0 0.4em 0;
+	font-weight: 400;
+	letter-spacing: 0.1em;
+	color: var(--fire);
+}
+.summary.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+}
+
+.notes.module,
+.end.notes.module {
+	margin: 0 0 1.6em 0;
+	padding-left: 1em;
+	border-left: 2px solid var(--air);
+	font-style: italic;
+}
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	margin: 0 0 0.3em 0;
+	font-style: normal;
+	font-weight: 400;
+	letter-spacing: 0.1em;
+	color: var(--air);
+}
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--ink-muted);
+}
+
+/* Water, Earth, Fire, Air (the divider is one text node, so the four glyphs
+   are colored by a hard-stop gradient clipped to the text; each CJK glyph is
+   1em wide, so four glyphs = four equal 25% stops). */
+.nationsSeals {
+	display: table;
+	position: relative;
+	left: 0.2em;
+	margin: 2em auto 0.7em auto;
+	font-family: var(--font-seal);
+	font-size: 1.7em;
+	line-height: 1.3;
+	letter-spacing: 0.4em;
+	white-space: nowrap;
+	color: transparent;
+	background-image: linear-gradient(90deg, var(--water) 0 25%, var(--earth) 25% 50%, var(--fire) 50% 75%, var(--air) 75%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+.nationsBody h2.heading,
+.nationsBody h3.title {
+	margin: 0 0 0.7em 0;
+	font-family: var(--font-main);
+	font-weight: 400;
+	font-size: 1.9em;
+	text-align: center;
+}
+.nationsBody h2.heading a, .nationsBody h3.title a {
+	color: var(--title);
+	text-decoration: none;
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-body);
+	word-wrap: break-word;
+}
+
+/* Exact-selector color declarations for ArticleThemeColorExtractor (it matches
+   `body`, `.articleBody`, `a` and `.articleBody a` by exact string). Higher-
+   specificity rules below still win the cascade. */
+a {
+	color: var(--link);
+}
+.articleBody a {
+	color: var(--link);
+}
+body a, body a * {
+	color: var(--link);
+}
+body a:visited {
+	color: var(--visited-link);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+.nationsBody blockquote:not(.userstuff) {
+	margin-left: 0;
+	padding: 0.5em 1.1em;
+	border-left: 4px solid var(--accent);
+	background-color: var(--blockquote-bg);
+}
+
+.nationsBody code, .nationsBody pre {
+	font-family: var(--font-code);
+	color: var(--code-color);
+	background-color: var(--code-bg);
+}
+.nationsBody pre {
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.nationsBody table {
+	border-collapse: collapse;
+}
+.nationsBody td, .nationsBody th {
+	border: 1px solid var(--table-border);
+	padding: 0.4em 0.6em;
+}
+
+.nationsBody hr {
+	border: 0;
+	border-top: 1px solid var(--table-border);
+}
+
+/* Keep oversized fic art from forcing horizontal scroll. */
+img, figure, video, object {
+	max-width: 100%;
+	height: auto !important;
+}
+.nationsBody div {
+	max-width: 100%;
+}
+
+.nationsFooter {
+	margin-top: 2em;
+	padding-top: 1em;
+	border-top: 1px solid var(--table-border);
+	font-family: var(--font-main);
+	font-size: 0.75em;
+	color: var(--ink-muted);
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+		word-break: break-word;
+		-webkit-text-size-adjust: none;
+		font-size: [[font-size]]px;
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+	}
+	.smallText { font-size: 14px; }
+	.mediumText { font-size: 16px; }
+	.largeText { font-size: 18px; }
+	.xlargeText { font-size: 20px; }
+	.xxlargeText { font-size: 22px; }
+}
