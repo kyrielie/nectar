@@ -58,9 +58,7 @@ import Foundation
 		}
 
 		private static func readThemeStylesheet(_ themeName: String) throws -> String {
-			let themesDirectory = ArticleThemeColorExtractorTests.repoThemesDirectory()
-			let stylesheetURL = themesDirectory
-				.appendingPathComponent("\(themeName).nnwtheme")
+			let stylesheetURL = try ArticleThemeColorExtractorTests.locateThemeBundle(themeName)
 				.appendingPathComponent("stylesheet.css")
 			return try String(contentsOf: stylesheetURL, encoding: .utf8)
 		}
@@ -104,8 +102,7 @@ import Foundation
 
 		private static func composedCSS(themeName: String) throws -> String {
 			let coreCSS = try String(contentsOf: ArticleThemeColorExtractorTests.repoCoreCSSFile(), encoding: .utf8)
-			let stylesheetURL = ArticleThemeColorExtractorTests.repoThemesDirectory()
-				.appendingPathComponent("\(themeName).nnwtheme")
+			let stylesheetURL = try ArticleThemeColorExtractorTests.locateThemeBundle(themeName)
 				.appendingPathComponent("stylesheet.css")
 			let stylesheetCSS = try String(contentsOf: stylesheetURL, encoding: .utf8)
 			// Mirrors ArticleTheme.init(url:isAppTheme:): core.css + "\n" + the
@@ -178,20 +175,36 @@ import Foundation
 
 	/// Same walk-up-to-repo-root pattern as ArticleThemePlistFamilyTests/
 	/// ArticleThemeOverflowSafetyTests -- Bundle.main inside a test target is the
-	/// test runner's bundle, not the app's, and doesn't have Themes/ copied in.
-	fileprivate static func repoThemesDirectory() -> URL {
+	/// test runner's bundle, not the app's, and doesn't have either directory
+	/// copied in. Returns whichever of Themes/ (app-embedded) and
+	/// gallery-themes/ (gallery-only) actually exist at the repo root.
+	fileprivate static func repoThemeDirectories() -> [URL] {
 		var url = URL(fileURLWithPath: #filePath)
 		while url.pathComponents.count > 1 {
 			url.deleteLastPathComponent()
-			let candidate = url.appendingPathComponent("Themes")
-			if FileManager.default.fileExists(atPath: candidate.path) {
-				return candidate
+			let themes = url.appendingPathComponent("Themes")
+			if FileManager.default.fileExists(atPath: themes.path) {
+				let galleryThemes = url.appendingPathComponent("gallery-themes")
+				return [themes, galleryThemes].filter { FileManager.default.fileExists(atPath: $0.path) }
 			}
 		}
 		fatalError("Could not locate repo Themes/ directory by walking up from \(#filePath)")
 	}
 
-	/// Same walk-up-to-repo-root approach as `repoThemesDirectory()`, for
+	/// Finds `<themeName>.nnwtheme`, checking Themes/ first, then gallery-themes/
+	/// -- a theme's current folder is which directory ships it (e.g. Broadsheet
+	/// moved to gallery-themes/), not whether the bundle exists at all.
+	fileprivate static func locateThemeBundle(_ themeName: String) throws -> URL {
+		for directory in repoThemeDirectories() {
+			let candidate = directory.appendingPathComponent("\(themeName).nnwtheme")
+			if FileManager.default.fileExists(atPath: candidate.path) {
+				return candidate
+			}
+		}
+		throw CocoaError(.fileNoSuchFile)
+	}
+
+	/// Same walk-up-to-repo-root approach as `repoThemeDirectories()`, for
 	/// `core.css` -- needed by `ComposedThemeDarkBlockCollision` to build CSS the
 	/// same way `ArticleTheme.init()` actually does (core.css prepended), not
 	/// just a theme's own stylesheet.css in isolation.
