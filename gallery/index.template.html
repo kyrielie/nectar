@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Nectar Themes</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%237b3225'/%3E%3Ctext x='32' y='46' font-family='Georgia,serif' font-size='38' text-anchor='middle' fill='%23f0dc9c'%3EN%3C/text%3E%3C/svg%3E">
 <meta name="description" content="Extra reader themes for Nectar. Preview each one, then install it in one tap.">
 <style>
 __FONTS__
@@ -24,8 +25,8 @@ h1{font-size:clamp(4rem,15vw,9rem);line-height:.9;margin:0;letter-spacing:.01em}
 .fleuron i{width:9px;height:9px;background:var(--gold);transform:rotate(45deg);box-shadow:0 0 0 3px var(--paper),0 0 0 4px var(--gold)}
 .lede{max-width:32em;margin:0 auto;text-align:justify;hyphens:auto;-webkit-hyphens:auto;text-wrap:pretty}
 @media (max-width:639px){.lede{text-align:left}}
-.lede::first-letter{float:left;font-size:3.6em;line-height:.72;padding:.244em .1em 0;margin:.06em .12em 0 0;background:var(--madder);color:var(--gilt)}
-.note{max-width:32em;margin:16px auto 0;font-style:italic;color:var(--mut);font-size:1rem;text-align:center;border-block:1px solid var(--gold);padding:6px 0}
+.lede::first-letter{float:left;font-size:3.6em;line-height:.72;padding:.244em .1em .1em;margin:.06em .12em 0 0;background:var(--madder);color:var(--gilt)}
+.note{max-width:32em;margin:16px auto 0;font-style:italic;color:var(--mut);font-size:1rem;text-align:center;border-block:1px solid var(--gold);border-radius:3px;padding:6px 0}
 .bar{position:sticky;top:0;z-index:5;margin-top:22px;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-block:3px double var(--gold);padding:8px 0;padding-top:calc(8px + env(safe-area-inset-top))}
 .bar .wrap{display:flex;gap:22px;align-items:baseline;flex-wrap:wrap}
 .chip,.seg button,.sub button{font:inherit;cursor:pointer}
@@ -37,26 +38,26 @@ h1{font-size:clamp(4rem,15vw,9rem);line-height:.9;margin:0;letter-spacing:.01em}
 @media (min-width:920px){#grid{grid-template-columns:repeat(4,1fr)}}
 .card{display:flex;flex-direction:column;gap:6px;min-width:0;text-align:center}
 .card[hidden]{display:none}
-.pvw{position:relative;padding:7px;background:var(--plate);border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:3px;margin:4px 4px 12px}
-.pv{all:unset;display:block;width:100%;position:relative;aspect-ratio:390/600;overflow:hidden;border:1px solid var(--rule);cursor:zoom-in;background:var(--plate)}
+.pvw{position:relative;padding:7px;background:var(--plate);border:1px solid var(--gold);border-radius:4px;outline:1px solid var(--gold);outline-offset:3px;margin:4px 4px 12px}
+.pv{all:unset;display:block;width:100%;position:relative;aspect-ratio:390/600;overflow:hidden;border:1px solid var(--rule);border-radius:2px;cursor:zoom-in;background:var(--plate)}
 .pv:focus-visible{outline:2px solid var(--gold-ink);outline-offset:2px}
 .pv iframe{position:absolute;inset:0 auto auto 0;width:390px;height:600px;border:0;transform-origin:0 0;transform:scale(var(--s,.4));pointer-events:none}
 .pvw .seg{position:absolute;left:50%;bottom:16px;transform:translateX(-50%)}
-.seg{display:inline-flex;background:var(--paper);border:1px solid var(--gold)}
+.seg{display:inline-flex;background:var(--paper);border:1px solid var(--gold);border-radius:3px;overflow:hidden}
 .seg button{border:0;background:none;color:var(--mut);font-style:italic;font-size:.95rem;padding:1px 10px}
 .seg button[aria-pressed=true]{background:var(--green);color:var(--gilt)}
 .meta{flex:1}
 .meta h2{font-size:1.45rem;line-height:1.15;margin:0}
 .meta p{margin:2px 0 0;color:var(--mut);font-style:italic;font-size:.9rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .row{display:flex;margin-top:6px}
-.btn{flex:1;text-align:center;background:var(--green);color:var(--gilt);text-decoration:none;font-size:1.15rem;letter-spacing:.06em;padding:8px 12px;border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:-4px}
+.btn{flex:1;text-align:center;background:var(--green);color:var(--gilt);text-decoration:none;font-size:1.15rem;letter-spacing:.06em;padding:8px 12px;border:1px solid var(--gold);border-radius:3px;outline:1px solid var(--gold);outline-offset:-4px}
 .btn:hover{background:#4a5a40}
 .btn:focus-visible,.chip:focus-visible,.seg button:focus-visible,.sub a:focus-visible,.sub button:focus-visible{outline:2px solid var(--gold-ink);outline-offset:2px}
 .sub{display:flex;gap:18px;justify-content:center;font-style:italic;font-size:.95rem}
 .sub a,.sub button{color:var(--mut);background:none;border:0;padding:0;text-decoration:underline;text-decoration-color:var(--gold);text-underline-offset:.22em}
-dialog{border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:4px;background:var(--paper);color:var(--ink);padding:12px;width:min(430px,92vw)}
+dialog{border:1px solid var(--gold);border-radius:5px;outline:1px solid var(--gold);outline-offset:4px;background:var(--paper);color:var(--ink);padding:12px;width:min(430px,92vw)}
 dialog::backdrop{background:#150f06b3}
-dialog iframe{display:block;width:100%;height:min(680px,64vh);border:1px solid var(--rule);background:var(--plate)}
+dialog iframe{display:block;width:100%;height:min(680px,64vh);border:1px solid var(--rule);border-radius:2px;background:var(--plate)}
 .dh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px}
 .dh strong{font-size:1.5rem;margin-right:auto}
 footer{text-align:center;color:var(--mut);font-style:italic;font-size:1rem;padding:0 0 44px;max-width:34em;margin:0 auto}
