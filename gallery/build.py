@@ -185,7 +185,7 @@ def main():
         t["kb"] = round(zp.stat().st_size / 1024, 1)
         del t["dir"]
 
-    data = {"base": args.base_url, "scheme": "netnewswire", "themes": themes}
+    data = {"base": args.base_url, "scheme": "nectar", "themes": themes}
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     core = json.dumps(CORE_CSS.read_text(encoding="utf-8")).replace("</", "<\\/")
     html = TEMPLATE.read_text(encoding="utf-8").replace("__DATA__", payload).replace("__CORE__", core).replace("__FONTS__", font_css())
