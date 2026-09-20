@@ -275,6 +275,9 @@ existing upstream files. Grouped by top-level directory.
 
 24 new `.nnwtheme` bundles (article-view CSS themes), not itemized
 individually here -- see `docs/theme-system.md` for the theme system itself.
+Of these, only Black & White, Duskbloom, Ember, Powder Pink, Tumblr Blue and Vintage
+Letter Green still ship in `Themes/`; the other 19 now live in `gallery-themes/` and
+are gallery-only (see `docs/nnwtheme-format.md`).
 Names: `Aldine.nnwtheme`, `Beetlejuice.nnwtheme`, `Black & White.nnwtheme`, `Broadsheet.nnwtheme`, `Charcoal Rose.nnwtheme`, `Constellations.nnwtheme`, `Deco Line.nnwtheme`, `Dracula.nnwtheme`, `Dusky Purple.nnwtheme`, `Ember.nnwtheme`, `Kelmscott.nnwtheme`, `Kennerley.nnwtheme`, `Marigold Press.nnwtheme`, `Midnight Teal.nnwtheme`, `Moonlit Wisteria.nnwtheme`, `Pastel Whimsy.nnwtheme`, `Poudre et Plume.nnwtheme`, `Powder Pink.nnwtheme`, `Rosarivo.nnwtheme`, `Rosé Pine Dawn.nnwtheme`, `Rosé Pine Moon.nnwtheme`, `Rosé Pine.nnwtheme`, `Tumblr Blue.nnwtheme`, `Vintage Letter Green.nnwtheme`.
 
 ### `appstore/` (1 file)

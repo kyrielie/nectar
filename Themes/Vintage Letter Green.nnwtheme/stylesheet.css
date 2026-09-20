@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Libre+Baskerville:ital,wght@0,400..700;1,400..700&display=swap');
 /* Vintage Letter Green -- ported from the AO3 workskin "Vintage Letter
    Green" (github.com/Wolfbatcat/Vintage-Letter-Green-AO3-Skin, MIT
    licensed). That skin is a whole-site overlay built around a fixed
@@ -36,7 +37,7 @@
 	--sage-border: #cadab2;
 	--rule-color: #cadab2;
 	--code-color: #4a5c22;
-	--font-serif: Georgia, "Iowan Old Style", Charter, serif;
+	--font-serif: "Libre Baskerville", Georgia, "Iowan Old Style", serif;
 }
 @media (prefers-color-scheme: dark) {
 	:root {
@@ -229,7 +230,7 @@ pre {
 
 code,
 pre {
-	font-family: "SF Mono", Menlo, "Courier New", Courier, monospace;
+	font-family: "JetBrains Mono", "SF Mono", Menlo, "Courier New", Courier, monospace;
 	font-size: 0.85rem;
 	letter-spacing: -0.027em;
 	-webkit-hyphens: none;

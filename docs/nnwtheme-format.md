@@ -79,6 +79,18 @@ not a base64-embedded `@font-face`. `Hyperlegible.nnwtheme` is the reference pat
   allowlist rather than this variable convention; retrofitting every bundled theme
   to it and simplifying that override to a two-line `:root` block instead is
   tracked as a separate, larger follow-up.
+- Do not lead a font stack with an Apple-only face (`ui-serif`, `ui-sans-serif`,
+  `-apple-system`, `-apple-system-body`, `SF Pro Text`, `SF Mono`, `Menlo`,
+  `Charter`, `Iowan Old Style`): they resolve only on Apple platforms, so the
+  same theme falls through to a browser default on the gallery page in
+  Chrome/Firefox. Name a real Google Fonts family first and keep the Apple face
+  as a later fallback. The stand-ins in use: Charter -> Source Serif 4, SF Pro ->
+  Inter, SF Mono/Menlo -> JetBrains Mono, Iowan Old Style -> Lora, Georgia ->
+  Libre Baskerville. Also note `font: ui-serif, ...` is invalid CSS (the `font`
+  shorthand requires a size), so use `font-family`. The eight NetNewsWire default
+  themes are exempt and keep their upstream stacks.
+- Themes must not claim to be free of network dependencies (Duskbloom's header
+  comment used to); every custom theme now `@import`s Google Fonts.
 - Only reference font families genuinely published on Google Fonts -- confirm on
   fonts.google.com before writing the `@import`, don't guess a family name.
 
@@ -212,6 +224,25 @@ leave the `data-chapter-divider*` attributes unset entirely.
 
 `Vintage Letter Green.nnwtheme` is the reference theme for this pattern.
 
+
+## Where a theme lives: `Themes/` vs `gallery-themes/`
+
+- `Themes/` is bundled into the app (`project.yml` adds it as a resources
+  folder). It holds the eight NetNewsWire-origin themes (Appanoose, Biblioteca,
+  Hyperlegible, NewsFax, Promenade, Sepia, Tiqoe Dark, Verdana Revival) and the
+  six Nectar customs that still ship (Black & White, Duskbloom, Ember, Powder
+  Pink, Tumblr Blue, Vintage Letter Green). Promenade cannot move: it is the
+  fresh-install default (`AppDefaults.swift`, `Key.currentThemeName`).
+- `gallery-themes/` holds every other authored theme. These are not in the app;
+  they are built into the public gallery and installed from there.
+- `gallery/build.py` publishes every bundle from both directories that is not in
+  its `BUNDLED` set. `BUNDLED` must list exactly the bundles that live in
+  `Themes/`. Moving a theme between the directories means updating `BUNDLED`
+  (and `SHIPPED` in `buildscripts/theme-generation/generate_ported_themes.py`
+  for generated themes) in the same change.
+- Tests (`ArticleThemeOverflowSafetyTests`, `ArticleThemePlistFamilyTests`,
+  `ArticleThemeColorExtractorTests`) scan both directories, so a theme keeps full
+  test coverage wherever it lives.
 
 ## Theme families
 

@@ -14,7 +14,7 @@ import UIKit
 /// This is a small regex-based scanner, not a full CSS parser -- see docs/theme-system.md
 /// and docs/article-color-pipeline.md for the pipeline this sits in. It understands the patterns actually used across the shipped
 /// themes (Default, Appanoose, Biblioteca, Hyperlegible, NewsFax, Promenade, Sepia,
-/// Tiqoe Dark, Verdana Revival):
+/// Tiqoe Dark, Verdana Revival, plus the gallery-only themes under gallery-themes/):
 ///   - literal `#hex`/`rgb()`/`rgba()` colors
 ///   - a modest set of common named CSS colors
 ///   - `var(--custom-property)`, resolved against that theme's own `:root` declarations,

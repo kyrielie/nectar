@@ -1,37 +1,40 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
-/* Black & White 
-Pure monochrome, no accent hue -- link color is body text color, distinguished by underline weight and small-caps instead.
-   Palette:
-     body background   <- #FFFFFF
-     body text          <- #000000
-     link                <- #000000
-     header border        <- #000000
-     table/rule border     <- #D6D6D6
-   Real structural differentiation, not just recolor: monospaced/typewriter body font (Menlo/Courier) instead of the serif every other bundled theme uses, uppercase small-caps dateline and preface labels, thick 2px borders throughout, square (not rounded) avatar corners -- reads like a printed manuscript rather than a magazine page.
-   Structure follows the bundled Sepia.nnwtheme (same selectors, same
-   iOS/macOS @supports split); shared iOS/macOS structural rules (max-width,
-   hyphens, footnote popover, table borders, etc.) are the same base every
-   bundled theme needs so embeds/footnotes/tables don't fall back to
-   unstyled defaults. */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Source+Serif+4:ital,wght@0,400..700;1,400..700&family=Inter:wght@400..700&display=swap');
+/* Beetlejuice
+
+   Structure follows the bundled Sepia.nnwtheme (same selectors, same iOS/macOS
+   @supports split); values pulled from that skin's site-wide palette:
+     body background     <- #111111 (its .region/fieldset/table background)
+     body text            <- #eee
+     link                 <- #646464 muted gray link, with the source's
+                             `text-shadow: 1px 1px 2px black` carried over --
+                             on a near-black page that shadow just deepens
+                             the ink rather than reading as a glow
+     link hover            <- #2bac04 acid green (source's #header a color /
+                             .actions color), with the brighter #1fbd00 used
+                             for the hover background elsewhere in the skin
+                             borrowed here as hover text color instead, since
+                             pill backgrounds don't have an article analog
+     visited                <- #999 (source's a:visited)
+     borders/rules           <- #555 / #222 (source's border-color values)
+   No separate dark variant -- the source skin has no light mode either,
+   this *is* its one mode, single-mode like Sepia/Ember/Tiqoe Dark. */
 
 body {
 	margin-left: auto;
 	margin-right: auto;
 	word-wrap: break-word;
 	max-width: 44em;
-	background-color: #FFFFFF;
-	color: #000000;
+	background-color: #111111;
+	color: #eeeeee;
 }
 
 [href] {
-	text-decoration-line: underline;
-	text-decoration-style: solid;
-	text-decoration-color: currentColor;
-	text-decoration-thickness: 2px;
-	text-underline-offset: 0.15em;
+	text-decoration: none;
+	font-weight: 600;
 }
 [href]:hover {
-	text-decoration-thickness: 3px;
+	color: var(--link-hover-color);
+	text-shadow: 0 0 6px rgba(43, 172, 4, 0.55);
 }
 
 #nnwImageIcon {
@@ -50,34 +53,36 @@ body {
 }
 
 :root {
-	--header-table-border-color: #000000;
-	--header-color: #000000;
-	--body-code-color: #000000;
-	--system-message-color: #000000;
-	--feedlink-color: #000000;
-	--article-title-color: #000000;
-	--article-date-color: #000000;
-	--table-cell-border-color: #D6D6D6;
-	--primary-accent-color: #000000;
-	--secondary-accent-color: #000000;
-	--block-quote-border-color: #000000;
-	--link-underline-color: currentColor;
-	--link-underline-special: currentColor;
+	--header-table-border-color: #555555;
+	--header-color: #999999;
+	--body-code-color: #2bac04;
+	--system-message-color: #999999;
+	--feedlink-color: #eeeeee;
+	--article-title-color: #eeeeee;
+	--article-date-color: #999999;
+	--table-cell-border-color: #222222;
+	--primary-accent-color: #2bac04;
+	--secondary-accent-color: #646464;
+	--link-hover-color: #2bac04;
+	--block-quote-border-color: #555555;
+	--link-underline-color: color-mix(in hsl, currentColor, transparent 30%);
+	--link-underline-special: color-mix(in hsl, currentColor, transparent 70%);
 	/* Consumed by core.css's #ao3SyntheticPreface/#ao3Preface rules. */
-	--ao3-preface-border-color: rgba(0, 0, 0, 0.3);
+	--ao3-preface-border-color: #555555;
 }
 
-/* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
-   higher-specificity 'body a' below still wins the cascade. See the fix
-   applied to Ember/Sepia/Tiqoe Dark/Rose Pine for why this is needed. */
+/* Exact-selector fallback for ArticleThemeColorExtractor (see the fix
+   applied to Ember/Sepia/Tiqoe Dark/Rose Pine for why this is additive and
+   harmless -- higher-specificity 'body a' below still wins the cascade). */
 a {
-	color: #000000;
+	color: var(--secondary-accent-color);
 }
 
 body a,
 body a:visited,
 body a * {
-	color: #000000;
+	color: var(--secondary-accent-color);
+	text-shadow: 1px 1px 2px black;
 }
 
 body > header {
@@ -98,10 +103,8 @@ body > header .headerTable th {
 	color: var(--header-color);
 	padding: 0.2em;
 	border: none;
-	font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
+	font-family: Inter, sans-serif;
 	font-size: 0.9rem;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
 }
 body > header .headerTable td.avatar {
 	width: 33%;
@@ -122,11 +125,12 @@ body > .systemMessage {
 }
 
 .avatar img {
-	border-radius: 0px;
+	border-radius: 4px;
+	filter: grayscale(15%) contrast(1.05);
 }
 
 .feedIcon {
-	border-radius: 0px;
+	border-radius: 4px;
 }
 
 .rightAlign {
@@ -141,14 +145,14 @@ body > .systemMessage {
 	text-decoration-color: transparent;
 	color: var(--article-title-color);
 	margin-top: 26px;
-	text-transform: uppercase;
 	letter-spacing: 0.02em;
 }
 
 .articleDateline {
 	margin-bottom: 5px;
 	font-weight: bold;
-	font-variant: small-caps;
+	text-transform: uppercase;
+	font-size: 0.85em;
 	letter-spacing: 0.04em;
 }
 
@@ -199,7 +203,7 @@ pre {
 
 code,
 pre {
-	font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
+	font-family: "JetBrains Mono", "SF Mono", Menlo, "Courier New", Courier, monospace;
 	font-size: 0.85rem;
 	letter-spacing: -0.027em;
 	-webkit-hyphens: none;
@@ -214,7 +218,6 @@ pre {
 	border-spacing: 0;
 	border: 1px solid var(--table-cell-border-color);
 	font-size: inherit;
-	border-width: 2px;
 }
 
 .nnw-overflow table table {
@@ -295,7 +298,7 @@ sub {
 }
 
 hr {
-	border: 2px solid #000000;
+	border: 1.5px solid var(--table-cell-border-color);
 }
 
 .iframeWrap {
@@ -316,7 +319,7 @@ blockquote {
 	margin-inline-start: 0;
 	margin-inline-end: 0;
 	padding-inline-start: 15px;
-	border-inline-start: 2px solid var(--block-quote-border-color);
+	border-inline-start: 3px solid var(--primary-accent-color);
 }
 
 /* Feed Specific */
@@ -351,58 +354,64 @@ blockquote {
 
 /* Newsfoot theme */
 .newsfoot-footnote-popover {
-	background: #FFFFFF;
-	box-shadow: 0 0 0 2px #000000;
-	color: #000000;
+	background: #1a1a1a;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 3px 6px rgba(0, 0, 0, 0.35);
+	color: #eeeeee;
 	padding: 1px;
-	border: 2px solid #000000;
 }
 
 .newsfoot-footnote-popover-arrow {
-	background: #FFFFFF;
-	border: 1px solid var(--table-cell-border-color);
+	background: #111111;
+	border: 1px solid #222222;
 }
 
 .newsfoot-footnote-popover-inner {
-	background: #FFFFFF;
-	border: 2px solid #000000;
+	background: #111111;
 }
 
 body a.footnote,
 body a.footnote:visited,
 .newsfoot-footnote-popover + a.footnote:hover {
-	background: var(--table-cell-border-color);
-	color: #000000;
+	background: #222222;
+	color: #eeeeee;
+	text-shadow: none;
 	transition: background-color 200ms ease-out;
 }
 
 a.footnote:hover,
 .newsfoot-footnote-popover + a.footnote {
-	background: #000000;
-	color: #FFFFFF;
+	background: #2bac04;
+	color: #111111;
+	text-shadow: none;
 	transition: background-color 200ms ease-out;
 }
 
-/* AO3 direct-reading preface (#ao3SyntheticPreface/#ao3Preface structural
-   rules live in core.css -- this theme only supplies appearance). */
+/* AO3 direct-reading preface (#ao3SyntheticPreface/#ao3Preface, defined
+   structurally in core.css -- see this repo's iOS/AppDefaults.swift-adjacent
+   ArticleThemeOverrides doc for why core.css owns layout and themes only
+   own appearance). Dashed acid-green rule and small-caps labels instead of
+   Sepia's plain divider, matching the source skin's terminal/marquee feel. */
 #ao3SyntheticPreface,
 #ao3Preface {
-	border-bottom-width: 2px;
+	border-bottom-style: dashed;
 }
 #ao3SyntheticPreface dt,
 #ao3Preface dt {
 	font-variant: small-caps;
-	letter-spacing: 0.04em;
+	color: var(--primary-accent-color);
 }
 
+/* Chapter-fetch-in-progress notice -- styled per theme since core.css
+   doesn't carry this rule (it lives in the default theme's own
+   stylesheet.css, which non-default themes don't inherit). */
 .ao3ChapterFetchNotice {
 	margin: 0 0 1em 0;
 	padding: 0.6em 0.8em;
-	border-left: 3px solid #000000;
-	background: #F5F5F5;
+	border-left: 3px solid var(--primary-accent-color);
+	background: rgba(43, 172, 4, 0.08);
 	font-size: 0.9em;
 	font-style: italic;
-	color: var(--header-color);
+	color: #cccccc;
 }
 
 /* iOS Specific */
@@ -416,7 +425,7 @@ a.footnote:hover,
 		word-break: break-word;
 		-webkit-hyphens: auto;
 		-webkit-text-size-adjust: none;
-		font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
+		font-family: "Source Serif 4", Charter, Georgia, serif;
 		font-size: [[font-size]]px;
 	}
 
@@ -441,7 +450,7 @@ a.footnote:hover,
 		margin-bottom: 64px;
 		padding-left: 48px;
 		padding-right: 48px;
-		font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;
+		font-family: "Source Serif 4", Charter, Georgia, serif;
 	}
 
 	.smallText {
@@ -465,11 +474,11 @@ a.footnote:hover,
 	}
 
 	pre {
-		border: 1px solid #000000;
+		border: 1px solid var(--primary-accent-color);
 		padding: 10px;
 	}
 
 	.nnw-overflow table {
-		border: 1px solid #000000;
+		border: 1px solid var(--primary-accent-color);
 	}
 }
