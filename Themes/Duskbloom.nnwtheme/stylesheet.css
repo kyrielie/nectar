@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap');
 /* Duskbloom
    One theme, two palettes: dark mode ports ZerafinaCSS's "neos" Charcoal
    Rose skin; light mode carries intothisshadow's Moonlit Wisteria palette.
@@ -8,9 +7,9 @@
    than left inconsistent between light and dark:
 
      - Font: both sources used a single site-wide serif (Charter/Georgia
-       for Charcoal Rose, Lora for Moonlit Wisteria). Replaced with Lora
-       everywhere (via a Google Fonts @import, so it renders the same outside
-       WebKit/Apple platforms; Iowan Old Style stays as the offline fallback).
+       for Charcoal Rose, Lora for Moonlit Wisteria). Replaced with Iowan
+       Old Style everywhere -- a system font on iOS/macOS (ships in Apple
+       Books), so no @import/network dependency at all.
      - Link underline: Charcoal Rose used a solid underline + rose glow on
        hover; Moonlit Wisteria used a dotted underline + opacity fade.
        Unified on dotted + a soft glow, so the interaction is identical in
@@ -55,9 +54,9 @@
    unstyled defaults. */
 
 :root {
-	--font-body: 'Lora', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
-	--font-main: Inter, -apple-system, Helvetica, Arial, sans-serif;
-	--font-code: "JetBrains Mono", "SF Mono", Menlo, "Courier New", Courier, monospace;
+	--font-body: 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+	--font-main: -apple-system, Helvetica, Arial, sans-serif;
+	--font-code: "SF Mono", Menlo, "Courier New", Courier, monospace;
 
 	--radius: 10px;
 

@@ -41,7 +41,6 @@ Nectar is a read-only AO3 client.
 ## Article themes (`.nnwtheme`)
 
 Full detail for each theme lives in its own `Themes/<Name>.nnwtheme/License.md`
-(or `gallery-themes/<Name>.nnwtheme/License.md` for the gallery-only themes)
 where one exists. 
 
 | Theme(s) | Source | License |
@@ -58,18 +57,10 @@ where one exists.
 
 ## Fonts
 
-Every Nectar custom theme (all bundles in `Themes/` and `gallery-themes/`
-except the eight NetNewsWire defaults: Appanoose, Biblioteca, Hyperlegible,
-NewsFax, Promenade, Sepia, Tiqoe Dark, Verdana Revival) uses a `@import` from
-Google Fonts. Where a theme originally named an Apple-only face, a close Google
-Fonts stand-in is used and the Apple face is kept as a fallback: Charter to
-Source Serif 4, SF Pro / `-apple-system` to Inter, SF Mono / Menlo to JetBrains
-Mono, Iowan Old Style to Lora (Duskbloom, Kennerley chrome text), and Georgia
-to Libre Baskerville (Vintage Letter Green, Broadsheet). All are SIL OFL. The
-fonts are pulled at render time under each font's own open
+Themes using a `@import` from Google Fonts (Aldine, Deco Line, Hyperlegible,
+Kelmscott, Kennerley, Marigold Press, Moonlit Wisteria, Pastel Whimsy, Poudre
+et Plume, Rosarivo) pull the font at render time under each font's own open
 license (SIL Open Font License for most Google Fonts entries); no font files
 are bundled in this repository. NewsFax bundles the ModeSeven font directly —
-see `Themes/NewsFax.nnwtheme/License.md`. The theme gallery page (`gallery/`)
-loads Sorts Mill Goudy (SIL OFL) from Google Fonts the same way; the previously
-bundled woff2 copies and their license file were removed.
+see `Themes/NewsFax.nnwtheme/License.md`.
 

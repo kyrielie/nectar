@@ -9,11 +9,6 @@
 import os
 
 BASE_DIR = "Themes"
-# Only these generated themes ship inside the app; every other generated theme is
-# written to GALLERY_DIR and is published on the theme gallery only (see
-# gallery/build.py, whose BUNDLED set must stay in sync with this).
-SHIPPED = {"Black & White", "Powder Pink", "Tumblr Blue"}
-GALLERY_DIR = "gallery-themes"
 
 STYLESHEET_TEMPLATE = """/* {name} -- {credit_comment}
    Palette:
@@ -860,47 +855,8 @@ FONT_IMPORTS = {
 }
 
 
-# Google Fonts stand-ins for Apple-only faces. Apple system fonts (SF Pro via
-# -apple-system, SF Mono, Menlo, Charter) only exist on Apple platforms, so the
-# same theme renders in a browser default on the public gallery page. Each stack
-# keeps the Apple face as a fallback after the Google font.
-_G_SERIF = "Source+Serif+4:ital,wght@0,400..700;1,400..700"   # for Charter
-_G_SANS = "Inter:wght@400..700"                               # for -apple-system / SF Pro
-_G_MONO = "JetBrains+Mono:wght@400;700"                       # for SF Mono / Menlo
-FONT_SUBSTITUTIONS = [
-    ('font-family: "SF Mono", Menlo, "Courier New", Courier, monospace;',
-     'font-family: "JetBrains Mono", "SF Mono", Menlo, "Courier New", Courier, monospace;', _G_MONO),
-    ('font-family: Menlo, "Courier New", Courier, monospace;',
-     'font-family: "JetBrains Mono", Menlo, "Courier New", Courier, monospace;', _G_MONO),
-    ('font-family: Charter, Georgia, sans-serif;',
-     'font-family: "Source Serif 4", Charter, Georgia, serif;', _G_SERIF),
-    ('font-family: -apple-system, "SF Pro Text", sans-serif;',
-     'font-family: Inter, -apple-system, "SF Pro Text", "Segoe UI", sans-serif;', _G_SANS),
-    ('font-family: -apple-system, sans-serif;',
-     'font-family: Inter, -apple-system, "Segoe UI", sans-serif;', _G_SANS),
-    ('font-family: sans-serif;',
-     'font-family: Inter, sans-serif;', _G_SANS),
-]
-
-
-def apply_google_fonts(css):
-    """Swap Apple-only stacks for Google Fonts ones and prepend one @import covering them."""
-    families = []
-    for old, new, fam in FONT_SUBSTITUTIONS:
-        if old in css:
-            css = css.replace(old, new)
-            if fam not in families:
-                families.append(fam)
-    # Skip families a theme already imports itself (e.g. Pastel Whimsy's JetBrains Mono).
-    imported = "".join(line for line in css.splitlines() if line.startswith("@import"))
-    families = [f for f in families if f.split(":")[0] not in imported]
-    if families:
-        css = "@import url('https://fonts.googleapis.com/css2?" + "&".join("family=" + f for f in families) + "&display=swap');\n" + css
-    return css
-
-
 for t in themes:
-    dirname = os.path.join(BASE_DIR if t["name"] in SHIPPED else GALLERY_DIR, f"{t['name']}.nnwtheme")
+    dirname = os.path.join(BASE_DIR, f"{t['name']}.nnwtheme")
     os.makedirs(dirname, exist_ok=True)
 
     def xml_escape(s):
@@ -916,7 +872,6 @@ for t in themes:
     css = STYLESHEET_TEMPLATE.format(**t)
     if t["name"] in FONT_IMPORTS:
         css = FONT_IMPORTS[t["name"]] + css
-    css = apply_google_fonts(css)
     with open(os.path.join(dirname, "stylesheet.css"), "w") as f:
         f.write(css)
 

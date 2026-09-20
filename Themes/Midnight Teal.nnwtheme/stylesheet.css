@@ -1,11 +1,11 @@
-/* Tumblr Blue -- ported from the tumblr-blue variant of the neos AO3 workskin family (ZerafinaCSS, MIT). Deep navy background, light gray body text, classic Tumblr-blue link accent.
+/* Midnight Teal -- ported from the midnight-black variant of the neos AO3 workskin family (ZerafinaCSS, MIT). True-black background, pale teal-gray text, a bright cyan-teal link accent.
    Palette:
-     body background   <- #1A2735
-     body text          <- #B3B3B3
-     link                <- #529ECC
-     header border        <- transparent
-     table/rule border     <- rgba(255, 255, 255, 0.13)
-   Differentiation: bold, no-underline links (Tumblr's own dashboard convention) with an underline only on hover, flat sans-serif throughout instead of a serif body face, and a semi-transparent white preface card echoing the source skin's translucent-panel-on-navy look.
+     body background   <- #000000
+     body text          <- #DAE6E1
+     link                <- #00A8AD
+     header border        <- #111515
+     table/rule border     <- #333B3B
+   Differentiation: geometric sans-serif body font (not the serif every other bundled theme defaults to) for a cleaner, more modern-editorial feel, no link underline at all -- links are bold and colored only, like a UI rather than a printed page -- and a left-accent-bar preface treatment instead of a bottom rule.
    Structure follows the bundled Sepia.nnwtheme (same selectors, same
    iOS/macOS @supports split); shared iOS/macOS structural rules (max-width,
    hyphens, footnote popover, table borders, etc.) are the same base every
@@ -17,18 +17,17 @@ body {
 	margin-right: auto;
 	word-wrap: break-word;
 	max-width: 44em;
-	background-color: #1A2735;
-	color: #B3B3B3;
+	background-color: #000000;
+	color: #DAE6E1;
 }
 
 [href] {
 	text-decoration-line: none;
-	font-weight: 700;
+	font-weight: 600;
 }
 [href]:hover {
 	text-decoration-line: underline;
 	text-decoration-thickness: 1px;
-	text-underline-offset: 0.15em;
 }
 
 #nnwImageIcon {
@@ -47,34 +46,34 @@ body {
 }
 
 :root {
-	--header-table-border-color: transparent;
-	--header-color: #7A8A99;
-	--body-code-color: #7EC0E8;
-	--system-message-color: #7A8A99;
-	--feedlink-color: #B3B3B3;
-	--article-title-color: #B3B3B3;
-	--article-date-color: #7A8A99;
-	--table-cell-border-color: rgba(255, 255, 255, 0.13);
-	--primary-accent-color: #529ECC;
-	--secondary-accent-color: #529ECC;
-	--block-quote-border-color: rgba(255, 255, 255, 0.13);
+	--header-table-border-color: #111515;
+	--header-color: #7A8C89;
+	--body-code-color: #4DD9DD;
+	--system-message-color: #7A8C89;
+	--feedlink-color: #DAE6E1;
+	--article-title-color: #DAE6E1;
+	--article-date-color: #7A8C89;
+	--table-cell-border-color: #333B3B;
+	--primary-accent-color: #00A8AD;
+	--secondary-accent-color: #00A8AD;
+	--block-quote-border-color: #333B3B;
 	--link-underline-color: transparent;
 	--link-underline-special: transparent;
 	/* Consumed by core.css's #ao3SyntheticPreface/#ao3Preface rules. */
-	--ao3-preface-border-color: rgba(255, 255, 255, 0.13);
+	--ao3-preface-border-color: #00A8AD;
 }
 
 /* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
    higher-specificity 'body a' below still wins the cascade. See the fix
    applied to Ember/Sepia/Tiqoe Dark/Rose Pine for why this is needed. */
 a {
-	color: #529ECC;
+	color: #00A8AD;
 }
 
 body a,
 body a:visited,
 body a * {
-	color: #529ECC;
+	color: #00A8AD;
 }
 
 body > header {
@@ -285,8 +284,7 @@ sub {
 }
 
 hr {
-	border: none;
-	border-top: 1px solid rgba(255, 255, 255, 0.13);
+	border: 1.5px solid var(--table-cell-border-color);
 }
 
 .iframeWrap {
@@ -342,33 +340,33 @@ blockquote {
 
 /* Newsfoot theme */
 .newsfoot-footnote-popover {
-	background: #233043;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 3px 6px rgba(0, 0, 0, 0.25);
-	color: #B3B3B3;
+	background: #111515;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 3px 6px rgba(0, 0, 0, 0.35);
+	color: #DAE6E1;
 	padding: 1px;
 }
 
 .newsfoot-footnote-popover-arrow {
-	background: #1A2735;
+	background: #000000;
 	border: 1px solid var(--table-cell-border-color);
 }
 
 .newsfoot-footnote-popover-inner {
-	background: #1A2735;
+	background: #000000;
 }
 
 body a.footnote,
 body a.footnote:visited,
 .newsfoot-footnote-popover + a.footnote:hover {
 	background: var(--table-cell-border-color);
-	color: #B3B3B3;
+	color: #DAE6E1;
 	transition: background-color 200ms ease-out;
 }
 
 a.footnote:hover,
 .newsfoot-footnote-popover + a.footnote {
-	background: #529ECC;
-	color: #1A2735;
+	background: #00A8AD;
+	color: #000000;
 	transition: background-color 200ms ease-out;
 }
 
@@ -376,10 +374,9 @@ a.footnote:hover,
    rules live in core.css -- this theme only supplies appearance). */
 #ao3SyntheticPreface,
 #ao3Preface {
-	border: 1px solid var(--ao3-preface-border-color);
-	border-radius: 6px;
-	padding: 0.8em 1em 1em 1em;
-	background: rgba(255, 255, 255, 0.04);
+	border-bottom: none;
+	border-left: 3px solid var(--ao3-preface-border-color);
+	padding-left: 1em;
 }
 #ao3SyntheticPreface dt,
 #ao3Preface dt {
@@ -389,8 +386,8 @@ a.footnote:hover,
 .ao3ChapterFetchNotice {
 	margin: 0 0 1em 0;
 	padding: 0.6em 0.8em;
-	border-left: 3px solid rgba(82, 158, 204, 0.4);
-	background: rgba(82, 158, 204, 0.08);
+	border-left: 3px solid #00A8AD;
+	background: rgba(0, 168, 173, 0.08);
 	font-size: 0.9em;
 	font-style: italic;
 	color: var(--header-color);
@@ -456,11 +453,11 @@ a.footnote:hover,
 	}
 
 	pre {
-		border: 1px solid #529ECC;
+		border: 1px solid #00A8AD;
 		padding: 10px;
 	}
 
 	.nnw-overflow table {
-		border: 1px solid #529ECC;
+		border: 1px solid #00A8AD;
 	}
 }

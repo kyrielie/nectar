@@ -9,13 +9,12 @@ gallery-themes/) that is not listed in BUNDLED, this:
   2. writes dist/zips/<slug>.nnwtheme.zip (folder inside keeps the real bundle
      name, because the app derives the theme name from that folder),
   3. writes dist/index.html with every theme's CSS/template inlined, so the page
-     needs no fetches for its own data and also works when opened straight from
-     disk. Web fonts (the page's own Sorts Mill Goudy, and any theme @import) load
-     from Google Fonts; offline they fall back to each stack's system serif.
+     needs no fetches and also works when opened straight from disk.
 
 Standard library only.
 """
 import argparse
+import base64
 import json
 import plistlib
 import re
@@ -28,19 +27,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CORE_CSS = ROOT / "Shared" / "Article Rendering" / "core.css"
 TEMPLATE = Path(__file__).resolve().parent / "index.template.html"
+FONTS = Path(__file__).resolve().parent / "fonts"
 
-# Themes that ship inside the app (everything in Themes/) and are never published
-# to the gallery. Anything else, i.e. everything in gallery-themes/, is published.
-#   - The eight NetNewsWire-origin themes. Promenade is a hard dependency (see the
-#     fallback comment near AppDefaults.swift:2265).
-#   - The six Nectar customs that still ship in the app.
-BUNDLED = {
-    # NetNewsWire-origin
-    "Appanoose", "Biblioteca", "Hyperlegible", "NewsFax", "Promenade", "Sepia",
-    "Tiqoe Dark", "Verdana Revival",
-    # Nectar customs that ship in the app
-    "Black & White", "Duskbloom", "Ember", "Powder Pink", "Tumblr Blue", "Vintage Letter Green",
-}
+# Themes that stay inside the app and are never published to the gallery.
+# Promenade is a hard dependency (see the fallback comment near
+# AppDefaults.swift:2265). Biblioteca, Appanoose, Hyperlegible, Sepia and
+# Verdana Revival are the NetNewsWire starter themes; NewsFax is Stuart
+# Breckenridge's. Anything not listed here is published to the gallery.
+BUNDLED = {"Appanoose", "Biblioteca", "Hyperlegible", "NewsFax", "Promenade", "Sepia", "Verdana Revival"}
 # Any bundle whose ThemeIdentifier starts with one of these is also excluded,
 # so a new NetNewsWire starter theme added to Themes/ is skipped automatically.
 BUNDLED_ID_PREFIXES = ("com.netnewswire.themes.",)
@@ -141,6 +135,19 @@ def write_zip(theme, out_dir):
     return dest
 
 
+def font_css():
+    """Inline the OFL webfonts as data URIs so the page stays a single file."""
+    faces = []
+    for style in ("normal", "italic"):
+        f = FONTS / f"sorts-mill-goudy-latin-400-{style}.woff2"
+        b64 = base64.b64encode(f.read_bytes()).decode()
+        faces.append(
+            "@font-face{font-family:'Sorts Mill Goudy';font-style:%s;font-weight:400;font-display:swap;"
+            "src:url(data:font/woff2;base64,%s) format('woff2')}" % (style, b64)
+        )
+    return "\n".join(faces)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(ROOT / "gallery" / "dist"))
@@ -181,7 +188,7 @@ def main():
     data = {"base": args.base_url, "scheme": "nectar", "themes": themes}
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     core = json.dumps(CORE_CSS.read_text(encoding="utf-8")).replace("</", "<\\/")
-    html = TEMPLATE.read_text(encoding="utf-8").replace("__DATA__", payload).replace("__CORE__", core)
+    html = TEMPLATE.read_text(encoding="utf-8").replace("__DATA__", payload).replace("__CORE__", core).replace("__FONTS__", font_css())
     (out / "index.html").write_text(html, encoding="utf-8")
     (out / ".nojekyll").write_text("")
     print(f"built {len(themes)} themes -> {out}")
