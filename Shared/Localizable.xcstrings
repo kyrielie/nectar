@@ -7,39 +7,6 @@
     " → " : {
 
     },
-    "%@: %lld words" : {
-
-    },
-    "A day counts toward a streak once any words are credited that day. Darker squares mean more words read." : {
-
-    },
-    "Current streak" : {
-
-    },
-    "Days" : {
-
-    },
-    "Longest streak" : {
-
-    },
-    "Monthly" : {
-
-    },
-    "No current streak" : {
-
-    },
-    "Read every day to build a streak." : {
-
-    },
-    "Streaks" : {
-
-    },
-    "word" : {
-
-    },
-    "words" : {
-
-    },
     "“%@” has separate light and dark mode colors and follows your system appearance setting." : {
       "comment" : "Theme appearance footer, light+dark theme"
     },
@@ -72,6 +39,9 @@
     },
     "%@ words" : {
       "comment" : "Word count"
+    },
+    "%@: %lld words" : {
+
     },
     "%d account(s) from this backup don't exist on this device and were skipped." : {
       "comment" : "Restore summary — accounts skipped"
@@ -116,6 +86,9 @@
 
     },
     "A completed work counts toward every tag it carries." : {
+
+    },
+    "A day counts toward a streak once any words are credited that day. Darker squares mean more words read." : {
 
     },
     "A history of what the app has done over the web — feed refreshes, status syncs, favicon lookups, and more — with the result of each. Keeps the most recent 500 entries and clears when the app relaunches." : {
@@ -446,6 +419,9 @@
     "Current Activity" : {
       "comment" : "Current Activity"
     },
+    "Current streak" : {
+
+    },
     "Custom Background Color" : {
       "comment" : "Custom Background Color toggle"
     },
@@ -499,6 +475,9 @@
     },
     "Date Created" : {
       "comment" : "Annotations list: sort order option, most recent first"
+    },
+    "Days" : {
+
     },
     "Deactivate" : {
       "comment" : "Deactivate"
@@ -934,6 +913,9 @@
     "Lock Gestures" : {
       "comment" : "Lock Gestures\nOverflow menu: lock gestures\nToolbar function: lock gestures"
     },
+    "Longest streak" : {
+
+    },
     "Loved" : {
       "comment" : "Loved\nToolbar function: loved"
     },
@@ -1024,6 +1006,12 @@
     "Monochrome" : {
       "comment" : "Monochrome badge color palette"
     },
+    "Month" : {
+
+    },
+    "Monthly" : {
+
+    },
     "More" : {
       "comment" : "More"
     },
@@ -1093,6 +1081,9 @@
     },
     "No current activity." : {
       "comment" : "Current Activity empty state"
+    },
+    "No current streak" : {
+
     },
     "No dinosaurs" : {
       "comment" : "No dinosaurs footer text."
@@ -1274,6 +1265,9 @@
     },
     "Purple" : {
       "comment" : "Highlight color"
+    },
+    "Read every day to build a streak." : {
+
     },
     "Read Later" : {
       "comment" : "Command\nRead Later\nToolbar function: read later"
@@ -1542,6 +1536,9 @@
     "Statuses" : {
       "comment" : "Statuses"
     },
+    "Streaks" : {
+
+    },
     "Style Corrections" : {
       "comment" : "Text replacement settings: style corrections section header"
     },
@@ -1741,6 +1738,9 @@
     "Vacuuming may make databases faster." : {
       "comment" : "Vacuum explanation"
     },
+    "Value" : {
+
+    },
     "Verified %@" : {
       "comment" : "AO3 Cloudflare challenge status: verified some time ago"
     },
@@ -1780,8 +1780,14 @@
     "WIP" : {
       "comment" : "Completion status"
     },
+    "word" : {
+
+    },
     "Word Count" : {
       "comment" : "Sort field"
+    },
+    "words" : {
+
     },
     "Words" : {
 

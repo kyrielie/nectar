@@ -42,7 +42,16 @@ import Foundation
 		}
 
 		@Test func blackAndWhiteResolvesIdenticallyRegardlessOfIsDark() throws {
-			let css = try Self.readThemeStylesheet("Black & White")
+			// Black & White's stylesheet.css leads with an `@import` line (a Google
+			// Fonts request). ArticleTheme.init() always runs CSSImportExtractor
+			// first and only ever hands ArticleThemeColorExtractor the remaining
+			// CSS (see ComposedThemeDarkBlockCollision above) -- reading the raw
+			// file here instead would leave the import glued onto `body`'s
+			// selector text (`@import url(...); body`), which never matches `body`
+			// and silently falls through to the light/dark fallback this test is
+			// specifically checking doesn't diverge.
+			let rawCSS = try Self.readThemeStylesheet("Black & White")
+			let css = CSSImportExtractor.extract(from: rawCSS).remainingCSS
 			let colors = ArticleThemeColorExtractor.colors(css: css)
 
 			// Black & White declares an explicit body background-color/color, but no

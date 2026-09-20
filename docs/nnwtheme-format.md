@@ -19,9 +19,9 @@ The `Info.plist` requires the following keys/types:
 |`ThemeIdentifier`|`String`|Unique identifier for the theme, e.g. using reverse domain name.|
 |`Name`|`String`|Theme name|
 |`CreatorHomePage`|`String`||
-|`CreatorName`|`String`||
+|`CreatorName`|`String`|Also shown as the "Description" in the theme gallery's detail modal (`gallery/build.py`'s `by` field). The gallery grid card itself shows only the theme name -- see `docs/theme-gallery.md`.|
 |`Version`|`Integer`||
-|`Family`|`String`|Optional. Groups sibling bundles that are the same design with different accents/palettes (e.g. "Rosé Pine") for display in the theme gallery. Omit unless there are genuinely 2+ sibling bundles -- a family of one just adds gallery nesting for nothing, and isn't how any single-variant theme (including Dracula, reduced to one accent) is set up.|
+|`Family`|`String`|Optional. Groups sibling bundles that are the same design with different accents/palettes (e.g. "Rosé Pine"). Omit unless there are genuinely 2+ sibling bundles -- a family of one adds nothing, and isn't how any single-variant theme (including Dracula, reduced to one accent) is set up. Not currently read by the theme gallery (see "Theme families" below).|
 |`FamilyVariant`|`String`|Optional. This bundle's variant label within `Family` (e.g. "Moon", "Purple"). Meaningless without `Family` also being set.|
 
 ### template.html
@@ -248,12 +248,14 @@ leave the `data-chapter-divider*` attributes unset entirely.
 
 Two or more `.nnwtheme` bundles that are the same design with different accents or
 palettes (Dracula's hue variants before the reduction to one; Rosé Pine's Main/Moon/
-Dawn palettes) can declare `Family`/`FamilyVariant` in `Info.plist` to be grouped
-together in the theme gallery, with one thumbnail and per-variant swatch dots rather
-than N separate grid cells. This is presentational only -- it doesn't merge the
-bundles at runtime, doesn't change storage or deletion, and each variant is still
-picked, imported, and deleted as its own complete theme. Don't add `Family` for a
-single bundle; it needs at least one sibling to mean anything.
+Dawn palettes) can declare `Family`/`FamilyVariant` in `Info.plist`. This is
+presentational metadata only -- it doesn't merge the bundles at runtime, doesn't
+change storage or deletion, and each variant is still picked, imported, and deleted
+as its own complete theme. Don't add `Family` for a single bundle; it needs at
+least one sibling to mean anything. As of this writing, the theme gallery
+(`gallery/build.py`, `gallery/index.template.html`) does not read `Family` or
+`FamilyVariant` -- it lists every published bundle as its own grid card, with no
+family grouping or swatch dots. See `docs/theme-gallery.md`.
 
 Distinguish a genuine family from a single theme with an accent-color setting baked
 in: if the bundles differ only in one or two color values with everything else
@@ -263,10 +265,10 @@ Rosé Pine's three variants differ in background, text, and border colors across
 board -- a genuine multi-palette family, not an accent swap -- which is why they're
 grouped rather than merged.
 
-## Add Themes Directly to NetNewsWire with URL Scheme
-On iOS and macOS, themes can be opened directly in NetNewsWire using the below URL scheme:
+## Add Themes Directly to Nectar with URL Scheme
+On iOS and macOS, themes can be opened directly in Nectar using the below URL scheme:
 
-`netnewswire://theme/add?url={url}`
+`nectar://theme/add?url={url}`
 
 When using this URL scheme the theme being shared must be zipped.
 

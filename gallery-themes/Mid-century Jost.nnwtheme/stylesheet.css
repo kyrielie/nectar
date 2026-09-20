@@ -1,0 +1,297 @@
+@import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
+/* Mid-century Jost -- Original mid-century modern design; set in Jost (Owen Earl, SIL OFL), a Futura-style geometric sans. Original CSS for Nectar. */
+
+:root {
+	--font-main: 'Jost', Futura, 'Century Gothic', sans-serif;
+	--font-body: 'Jost', Futura, 'Century Gothic', sans-serif;
+	--font-code: "SF Mono", Menlo, monospace;
+
+	--paper: #f2e8d2;
+	--ink: #2c2a26;
+	--ink-muted: rgba(44, 42, 38, 0.62);
+	--teal: #1f5f5b;
+	--mustard: #d99a29;
+	--orange: #c8592a;
+	--preface-bg: #f8f1e0;
+	--hairline: #d3c5a5;
+	--link: #c8592a;
+	--visited-link: #8a5a3a;
+	--accent: var(--mustard);
+	--table-border: rgba(44, 42, 38, 0.3);
+	--code-color: #3a352c;
+	--code-bg: rgba(44, 42, 38, 0.06);
+	--blockquote-bg: rgba(217, 154, 41, 0.12);
+	--system-message-color: var(--ink-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper: #1e1c18;
+		--ink: #efe6d0;
+		--ink-muted: rgba(239, 230, 208, 0.62);
+		--teal: #4fb0a8;
+		--mustard: #e8b04a;
+		--orange: #e07a4f;
+		--preface-bg: #282520;
+		--hairline: #4a4438;
+		--link: #e07a4f;
+		--visited-link: #b98a5a;
+		--table-border: rgba(239, 230, 208, 0.3);
+		--code-color: #e8dfc8;
+		--code-bg: rgba(239, 230, 208, 0.08);
+		--blockquote-bg: rgba(232, 176, 74, 0.10);
+	}
+}
+
+.jostHeader {
+	border-top: 14px solid var(--teal);
+	padding-top: 1.7em;
+}
+.jostHeader .articleTitle h1 {
+	margin: 0;
+	font-weight: 700;
+	font-size: 2.3em;
+	line-height: 1.05;
+	color: var(--teal);
+}
+.jostHeader .articleTitle h1 a, .jostHeader .articleTitle h1 a:link, .jostHeader .articleTitle h1 a:visited {
+	color: var(--teal);
+	text-decoration: none;
+}
+.jostHeader .byline {
+	margin: 1em 0 0 0;
+	font-size: 0.85em;
+	font-weight: 500;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--orange);
+}
+.jostHeader .byline a, .jostHeader .byline a:link, .jostHeader .byline a:visited {
+	color: var(--orange);
+	text-decoration: none;
+}
+
+.jostBody {
+	line-height: 1.7;
+}
+.jostBody p {
+	margin-bottom: var(--paragraph-spacing, 1.2em);
+}
+.jostBody a {
+	text-decoration: underline;
+}
+
+/* AO3 preface: a ruled specification card. */
+#ao3SyntheticPreface,
+#ao3Preface {
+	margin: 2.2em 0;
+	padding: 1.2em 1.3em 1.4em 1.3em;
+	border: 2px solid var(--ink);
+	border-radius: 0;
+	background-color: var(--preface-bg);
+	font-size: 0.84em;
+}
+#ao3SyntheticPreface dl.tags,
+#ao3Preface dl.tags {
+	row-gap: 0.8em;
+}
+#ao3SyntheticPreface dt,
+#ao3Preface dt {
+	border-top: 1px solid var(--hairline);
+	padding-top: 0.9em;
+	font-size: 0.76em;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--orange);
+}
+#ao3SyntheticPreface dd:not(.wide),
+#ao3Preface dd:not(.wide) {
+	border-top: 1px solid var(--hairline);
+	padding-top: 0.8em;
+}
+#ao3SyntheticPreface dl.tags > dt:first-child,
+#ao3Preface dl.tags > dt:first-child,
+#ao3SyntheticPreface dl.tags > dt:first-child + dd,
+#ao3Preface dl.tags > dt:first-child + dd {
+	border-top: 0;
+	padding-top: 0;
+}
+
+.summary.module {
+	margin: 0 0 2.2em 0;
+}
+.summary.module h3.heading {
+	margin: 0 0 0.6em 0;
+	font-size: 0.74em;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--teal);
+}
+.summary.module blockquote.userstuff {
+	margin: 0;
+	padding: 0 0 0 1.1em;
+	border: none;
+	border-left: 5px solid var(--mustard);
+	background: none;
+	font-size: 1.08em;
+	font-weight: 500;
+}
+
+.notes.module,
+.end.notes.module {
+	margin: 0 0 2em 0;
+	padding-left: 1em;
+	border-left: 2px solid var(--hairline);
+}
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	margin: 0 0 0.4em 0;
+	font-size: 0.74em;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--teal);
+}
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--ink-muted);
+}
+
+/* Tri-colour bar before each chapter. rem margins on purpose: the bar is
+   font-size: 0 (to hide its placeholder character), so em margins would
+   resolve to zero. */
+.jostBar {
+	display: block;
+	width: 72px;
+	height: 10px;
+	margin: 3.25rem 0 2rem 0;
+	font-size: 0;
+	line-height: 0;
+	border-radius: 2px;
+	background: linear-gradient(90deg, var(--teal) 0 33%, var(--mustard) 33% 66%, var(--orange) 66%);
+}
+.jostBody h2.heading,
+.jostBody h3.title {
+	margin: 0 0 1.1em 0;
+	font-weight: 700;
+	font-size: 1.7em;
+	line-height: 1.1;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--teal);
+}
+.jostBody h2.heading a, .jostBody h3.title a {
+	color: var(--teal);
+	text-decoration: none;
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-body);
+	word-wrap: break-word;
+}
+
+/* Exact-selector color declarations for ArticleThemeColorExtractor (it matches
+   `body`, `.articleBody`, `a` and `.articleBody a` by exact string). Higher-
+   specificity rules below still win the cascade. */
+a {
+	color: var(--link);
+}
+.articleBody a {
+	color: var(--link);
+}
+body a, body a * {
+	color: var(--link);
+}
+body a:visited {
+	color: var(--visited-link);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+.jostBody blockquote:not(.userstuff) {
+	margin-left: 0;
+	padding: 0.5em 1.1em;
+	border-left: 4px solid var(--accent);
+	background-color: var(--blockquote-bg);
+}
+
+.jostBody code, .jostBody pre {
+	font-family: var(--font-code);
+	color: var(--code-color);
+	background-color: var(--code-bg);
+}
+.jostBody pre {
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.jostBody table {
+	border-collapse: collapse;
+}
+.jostBody td, .jostBody th {
+	border: 1px solid var(--table-border);
+	padding: 0.4em 0.6em;
+}
+
+.jostBody hr {
+	border: 0;
+	border-top: 1px solid var(--table-border);
+}
+
+/* Keep oversized fic art from forcing horizontal scroll. */
+img, figure, video, object {
+	max-width: 100%;
+	height: auto !important;
+}
+.jostBody div {
+	max-width: 100%;
+}
+
+.jostFooter {
+	margin-top: 2em;
+	padding-top: 1em;
+	border-top: 1px solid var(--table-border);
+	font-family: var(--font-main);
+	font-size: 0.75em;
+	color: var(--ink-muted);
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+		word-break: break-word;
+		-webkit-text-size-adjust: none;
+		font-size: [[font-size]]px;
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+	}
+	.smallText { font-size: 14px; }
+	.mediumText { font-size: 16px; }
+	.largeText { font-size: 18px; }
+	.xlargeText { font-size: 20px; }
+	.xxlargeText { font-size: 22px; }
+}
