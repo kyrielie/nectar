@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Name</key>
+	<string>Sticker Pop</string>
+	<key>ThemeIdentifier</key>
+	<string>com.nectar.themes.stickerpop</string>
+	<key>CreatorHomePage</key>
+	<string>https://github.com/kyrielie/nectar</string>
+	<key>CreatorName</key>
+	<string>Original pastel kitsch design; set in Lilita One (Juan Montoreano, SIL OFL), Mochiy Pop One (FONTDASU, SIL OFL) and Zen Maru Gothic (Yoshimichi Ohira, SIL OFL)</string>
+	<key>Version</key>
+	<integer>1</integer>
+</dict>
+</plist>

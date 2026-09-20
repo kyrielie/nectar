@@ -82,11 +82,11 @@ struct ReadingYearlyMonthChartView: View {
 			AxisMarks(values: Array(1...12)) { value in
 				let locale = Locale.current
 				let isCJK = ["ja", "zh", "ko"].contains(locale.language.languageCode?.identifier ?? "")
+				// skip every other in cjk (because labels are wider)
 				if
 					let intValue = value.as(Int.self),
 					let month = ReadingMonth(rawValue: intValue),
-					!isCJK || (isCJK && intValue % 2 == 1) // skip every other in cjk (because labels are wider)
-				{
+					!isCJK || (isCJK && intValue % 2 == 1) {
 					let value = data.value(for: month)
 					AxisValueLabel(anchor: .top) {
 						let xOffset: CGFloat = if #available(iOS 27.0, *) {

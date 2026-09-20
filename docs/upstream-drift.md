@@ -273,11 +273,17 @@ existing upstream files. Grouped by top-level directory.
 
 ### `Themes/` (73 files)
 
-24 new `.nnwtheme` bundles (article-view CSS themes), not itemized
-individually here -- see `docs/theme-system.md` for the theme system itself.
-Of these, only Black & White, Duskbloom, Ember, Powder Pink, Tumblr Blue and Vintage
-Letter Green still ship in `Themes/`; the other 19 now live in `gallery-themes/` and
-are gallery-only (see `docs/nnwtheme-format.md`).
+24 new `.nnwtheme` bundles (article-view CSS themes) as of this snapshot, not
+itemized individually here -- see `docs/theme-system.md` for the theme system
+itself. Of these, only Black & White, Duskbloom, Ember, Powder Pink, Tumblr Blue
+and Vintage Letter Green still ship in `Themes/`; the other 18 named below lived
+in `gallery-themes/` at the time of this snapshot (see `docs/nnwtheme-format.md`).
+**Stale as of the current tree:** `gallery-themes/` now holds 26 bundles, not 19 --
+seven more (Craft Table, Didone Editorial, Four Nations, Illuminated Codex,
+Mid-century Jost, Screenplay, Sticker Pop) have been added since this drift entry
+was written. This section is a point-in-time diff against upstream at the commit
+it describes, not a running total -- see `docs/theme-gallery.md` for the current
+gallery-only theme count.
 Names: `Aldine.nnwtheme`, `Beetlejuice.nnwtheme`, `Black & White.nnwtheme`, `Broadsheet.nnwtheme`, `Charcoal Rose.nnwtheme`, `Constellations.nnwtheme`, `Deco Line.nnwtheme`, `Dracula.nnwtheme`, `Dusky Purple.nnwtheme`, `Ember.nnwtheme`, `Kelmscott.nnwtheme`, `Kennerley.nnwtheme`, `Marigold Press.nnwtheme`, `Midnight Teal.nnwtheme`, `Moonlit Wisteria.nnwtheme`, `Pastel Whimsy.nnwtheme`, `Poudre et Plume.nnwtheme`, `Powder Pink.nnwtheme`, `Rosarivo.nnwtheme`, `Rosé Pine Dawn.nnwtheme`, `Rosé Pine Moon.nnwtheme`, `Rosé Pine.nnwtheme`, `Tumblr Blue.nnwtheme`, `Vintage Letter Green.nnwtheme`.
 
 ### `appstore/` (1 file)

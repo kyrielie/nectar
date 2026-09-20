@@ -1,0 +1,333 @@
+@import url('https://fonts.googleapis.com/css2?family=Lilita+One&family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@500;700&display=swap');
+
+/* Sticker Pop -- Original pastel kitsch design; set in Lilita One (Juan Montoreano, SIL OFL), Mochiy Pop One (FONTDASU, SIL OFL) and Zen Maru Gothic (Yoshimichi Ohira, SIL OFL). Original CSS for Nectar. */
+
+:root {
+	--font-main: 'Mochiy Pop One', 'Hiragino Maru Gothic ProN', sans-serif;
+	--font-display: 'Lilita One', 'Mochiy Pop One', sans-serif;
+	--font-body: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', -apple-system, sans-serif;
+	--font-code: "SF Mono", Menlo, monospace;
+
+	--paper: #fbf3fb;
+	--ink: #3a2b46;
+	--ink-muted: rgba(58, 43, 70, 0.62);
+	--pink: #ff5da2;
+	--blue: #7ec8e3;
+	--lav: #b9a6ff;
+	--yellow: #ffce54;
+	--pink-soft: #ffd9ec;
+	--blue-soft: #d6ecff;
+	--box: #ffffff;
+	--prose-bg: #fffdfd;
+	--bg-a: #fff3fb;
+	--bg-b: #eef6ff;
+	--dot-a: #ffd9ec;
+	--dot-b: #d6ecff;
+	--glow: rgba(122, 92, 255, 0.16);
+	--link: #ff5da2;
+	--visited-link: #9a7fe0;
+	--accent: #b9a6ff;
+	--table-border: rgba(58, 43, 70, 0.3);
+	--code-color: #4a3a58;
+	--code-bg: rgba(58, 43, 70, 0.06);
+	--blockquote-bg: rgba(185, 166, 255, 0.14);
+	--system-message-color: var(--ink-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper: #211a2b;
+		--ink: #f1e6f7;
+		--ink-muted: rgba(241, 230, 247, 0.62);
+		--pink: #ff7db5;
+		--blue: #7fd0ea;
+		--lav: #b9a6ff;
+		--yellow: #ffce54;
+		--pink-soft: #4a2a42;
+		--blue-soft: #1f3a4a;
+		--box: #2b2238;
+		--prose-bg: #2a2136;
+		--bg-a: #241b2f;
+		--bg-b: #1b2230;
+		--dot-a: #3a2436;
+		--dot-b: #1e2e3e;
+		--glow: rgba(185, 166, 255, 0.12);
+		--link: #ff7db5;
+		--visited-link: #b9a6ff;
+		--table-border: rgba(241, 230, 247, 0.3);
+		--code-color: #eadcf2;
+		--code-bg: rgba(241, 230, 247, 0.08);
+		--blockquote-bg: rgba(185, 166, 255, 0.12);
+	}
+}
+
+body {
+	background-image:
+		radial-gradient(circle at 12% 18%, var(--dot-a) 0 4px, transparent 5px),
+		radial-gradient(circle at 60% 70%, var(--dot-b) 0 4px, transparent 5px),
+		linear-gradient(150deg, var(--bg-a), var(--bg-b));
+	background-size: 26px 26px, 26px 26px, 100% 100%;
+}
+
+.stickerHeader {
+	text-align: center;
+}
+.stickerHeader .articleTitle h1 {
+	margin: 0.4em 0 0 0;
+	font-family: var(--font-display);
+	font-weight: 400;
+	font-size: 1.9em;
+	line-height: 1.25;
+	word-spacing: 0.08em;
+	-webkit-hyphens: none;
+	hyphens: none;
+	text-shadow: 2px 2px 0 var(--box), 3px 3px 0 var(--blue);
+	transform: rotate(-1.2deg);
+}
+.stickerHeader .articleTitle h1 a, .stickerHeader .articleTitle h1 a:link, .stickerHeader .articleTitle h1 a:visited {
+	color: var(--pink);
+	text-decoration: none;
+}
+.stickerHeader .byline {
+	margin: 0.6em 0 0.3em 0;
+	font-family: var(--font-main);
+	color: var(--blue);
+}
+.stickerHeader .byline a, .stickerHeader .byline a:link, .stickerHeader .byline a:visited {
+	color: var(--blue);
+	text-decoration: none;
+}
+
+.stickerBody {
+	font-weight: 500;
+	line-height: 1.7;
+}
+.stickerBody strong, .stickerBody b {
+	font-weight: 700;
+}
+
+/* AO3 preface: pink sticker card. */
+#ao3SyntheticPreface,
+#ao3Preface {
+	margin: 1.8em 0;
+	padding: 1.1em 1.1em 1.2em 1.1em;
+	border: 3px solid var(--pink);
+	border-radius: 20px;
+	background-color: var(--box);
+	box-shadow: 3px 3px 0 var(--pink-soft);
+	font-size: 0.85em;
+}
+#ao3SyntheticPreface dl.tags,
+#ao3Preface dl.tags {
+	row-gap: 0.7em;
+}
+#ao3SyntheticPreface dt,
+#ao3Preface dt {
+	font-family: var(--font-main);
+	font-weight: 400;
+	color: var(--pink);
+}
+
+.summary.module {
+	margin: 0 0 1.8em 0;
+	padding: 1.1em 1.2em;
+	border: 3px dashed var(--lav);
+	border-radius: 20px;
+	background-color: var(--box);
+	box-shadow: 3px 3px 0 var(--blue-soft);
+}
+.summary.module h3.heading {
+	margin: 0 0 0.4em 0;
+	font-family: var(--font-main);
+	font-weight: 400;
+	color: var(--lav);
+}
+.summary.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+}
+
+.notes.module,
+.end.notes.module {
+	margin: 0 0 1.6em 0;
+	padding-left: 1em;
+	border-left: 3px dotted var(--lav);
+	font-style: italic;
+}
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	margin: 0 0 0.3em 0;
+	font-family: var(--font-main);
+	font-style: normal;
+	font-weight: 400;
+	color: var(--lav);
+}
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--ink-muted);
+}
+
+.stickerStar {
+	margin: 1.8em 0 0.6em 0;
+	text-align: center;
+	font-size: 1.4em;
+	letter-spacing: 0.5em;
+	color: var(--yellow);
+}
+.stickerBody h2.heading,
+.stickerBody h3.title {
+	margin: 0 0 1.1em 0;
+	padding: 0.5em 0.8em;
+	border: 3px solid var(--blue);
+	border-radius: 18px;
+	background-color: var(--box);
+	box-shadow: 3px 3px 0 var(--pink-soft);
+	font-family: var(--font-display);
+	font-weight: 400;
+	font-size: 1.4em;
+	text-align: center;
+	text-shadow: 2px 2px 0 var(--box);
+}
+.stickerBody h2.heading a, .stickerBody h3.title a {
+	color: var(--blue);
+	text-decoration: none;
+}
+
+/* The chapter prose sits in its own rounded card. AO3ChapterHTMLExtractor
+   always nests real prose in div.userstuff.module[role="article"]
+   (multi-chapter) or div#chapters[role="article"] (single chapter). */
+.stickerBody div.userstuff.module[role="article"],
+.stickerBody div#chapters[role="article"] {
+	margin-bottom: 1.4em;
+	padding: 16px 18px 18px 18px;
+	border: 3px solid var(--box);
+	border-radius: 22px;
+	background-color: var(--prose-bg);
+	box-shadow: 5px 5px 0 var(--blue-soft), 0 2px 14px var(--glow);
+}
+
+.stickerBody p:has(> .versalCap:first-child)::first-letter {
+	font-family: var(--font-display);
+	font-weight: 400;
+	font-size: 2.6em;
+	line-height: 0.8;
+	float: left;
+	color: var(--pink);
+	margin: 0.04em 0.1em 0 0;
+}
+.versalCap {
+	font-family: var(--font-display);
+	font-size: 1.08em;
+	letter-spacing: 0.02em;
+	color: var(--blue);
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-body);
+	word-wrap: break-word;
+}
+
+/* Exact-selector color declarations for ArticleThemeColorExtractor (it matches
+   `body`, `.articleBody`, `a` and `.articleBody a` by exact string). Higher-
+   specificity rules below still win the cascade. */
+a {
+	color: var(--link);
+}
+.articleBody a {
+	color: var(--link);
+}
+body a, body a * {
+	color: var(--link);
+}
+body a:visited {
+	color: var(--visited-link);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+.stickerBody blockquote:not(.userstuff) {
+	margin-left: 0;
+	padding: 0.5em 1.1em;
+	border-left: 4px solid var(--accent);
+	background-color: var(--blockquote-bg);
+}
+
+.stickerBody code, .stickerBody pre {
+	font-family: var(--font-code);
+	color: var(--code-color);
+	background-color: var(--code-bg);
+}
+.stickerBody pre {
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.stickerBody table {
+	border-collapse: collapse;
+}
+.stickerBody td, .stickerBody th {
+	border: 1px solid var(--table-border);
+	padding: 0.4em 0.6em;
+}
+
+.stickerBody hr {
+	border: 0;
+	border-top: 1px solid var(--table-border);
+}
+
+/* Keep oversized fic art from forcing horizontal scroll. */
+img, figure, video, object {
+	max-width: 100%;
+	height: auto !important;
+}
+.stickerBody div {
+	max-width: 100%;
+}
+
+.stickerFooter {
+	margin-top: 2em;
+	padding-top: 1em;
+	border-top: 1px solid var(--table-border);
+	font-family: var(--font-main);
+	font-size: 0.75em;
+	color: var(--ink-muted);
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+		word-break: break-word;
+		-webkit-text-size-adjust: none;
+		font-size: [[font-size]]px;
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+	}
+	.smallText { font-size: 14px; }
+	.mediumText { font-size: 16px; }
+	.largeText { font-size: 18px; }
+	.xlargeText { font-size: 20px; }
+	.xxlargeText { font-size: 22px; }
+}

@@ -1,0 +1,313 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Yarndings+20&display=swap');
+
+/* Craft Table -- Original yarn-craft design; set in Quicksand (Andrew Paglinawan, SIL OFL) with Yarndings 20 ornaments (Sarah Cadigan-Fried, SIL OFL). Original CSS for Nectar. */
+
+:root {
+	--font-main: 'Quicksand', 'Avenir Next Rounded', -apple-system, sans-serif;
+	--font-body: 'Quicksand', 'Avenir Next Rounded', -apple-system, sans-serif;
+	--font-ornament: 'Yarndings 20', serif;
+	--font-code: "SF Mono", Menlo, monospace;
+
+	--paper: #fdf6ec;
+	--ink: #3c332a;
+	--ink-muted: rgba(60, 51, 42, 0.62);
+	--dash: #e2c6a8;
+	--coral: #c85a4a;
+	--sage: #5c9e86;
+	--mustard: #e0a94c;
+	--pref-border: #cfe3d4;
+	--pref-bg: #f3f8f1;
+	--summary-bg: #fdeee8;
+	--felt: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .35 0 0 0 0 .25 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+	--link: #c85a4a;
+	--visited-link: #8a6a5a;
+	--accent: var(--sage);
+	--table-border: rgba(60, 51, 42, 0.3);
+	--code-color: #4a3f34;
+	--code-bg: rgba(60, 51, 42, 0.06);
+	--blockquote-bg: rgba(92, 158, 134, 0.10);
+	--system-message-color: var(--ink-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper: #241d19;
+		--ink: #efe2d0;
+		--ink-muted: rgba(239, 226, 208, 0.62);
+		--dash: #5a4636;
+		--coral: #ec8b7a;
+		--sage: #86c5ab;
+		--mustard: #e8b866;
+		--pref-border: #3f5a4d;
+		--pref-bg: #21302a;
+		--summary-bg: #3a2622;
+		--felt: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .75 0 0 0 0 .65 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+		--link: #ec8b7a;
+		--visited-link: #c4a08f;
+		--table-border: rgba(239, 226, 208, 0.3);
+		--code-color: #eadcc8;
+		--code-bg: rgba(239, 226, 208, 0.08);
+		--blockquote-bg: rgba(134, 197, 171, 0.10);
+	}
+}
+
+/* Soft felt texture: a tiny tiled noise, tinted per appearance via --felt. */
+body {
+	background-image: var(--felt);
+}
+
+.craftPage {
+	padding: 1.6em 1.3em;
+	border: 3px dashed var(--dash);
+	border-radius: 14px;
+}
+
+.craftHeader {
+	text-align: center;
+}
+.craftHeader .articleTitle h1 {
+	margin: 0.2em 0 0 0;
+	font-weight: 700;
+	font-size: 1.8em;
+	line-height: 1.15;
+	color: var(--coral);
+}
+.craftHeader .articleTitle h1 a, .craftHeader .articleTitle h1 a:link, .craftHeader .articleTitle h1 a:visited {
+	color: var(--coral);
+	text-decoration: none;
+}
+.craftHeader .byline {
+	margin: 0.3em 0 0.2em 0;
+	font-weight: 600;
+	color: var(--sage);
+}
+.craftHeader .byline a, .craftHeader .byline a:link, .craftHeader .byline a:visited {
+	color: var(--sage);
+	text-decoration: none;
+}
+
+.craftBody {
+	font-weight: 500;
+	line-height: 1.65;
+}
+.craftBody a {
+	text-decoration: underline;
+	text-decoration-style: dotted;
+}
+
+/* AO3 preface: a soft green card with a Yarndings tulip tab. */
+#ao3SyntheticPreface,
+#ao3Preface {
+	position: relative;
+	margin: 1.8em 0;
+	padding: 1.2em 1.2em 1.3em 1.2em;
+	border: 2px solid var(--pref-border);
+	border-radius: 16px;
+	background-color: var(--pref-bg);
+	font-size: 0.86em;
+}
+#ao3SyntheticPreface::before,
+#ao3Preface::before {
+	content: "f";
+	position: absolute;
+	top: -0.6em;
+	left: 1em;
+	padding: 0 0.15em;
+	font-family: var(--font-ornament);
+	font-size: 1.6em;
+	line-height: 1;
+	color: var(--mustard);
+	background-color: var(--paper);
+}
+#ao3SyntheticPreface dl.tags,
+#ao3Preface dl.tags {
+	row-gap: 0.7em;
+}
+#ao3SyntheticPreface dt,
+#ao3Preface dt {
+	font-weight: 700;
+	color: var(--sage);
+}
+
+.summary.module {
+	margin: 0 0 1.8em 0;
+	padding: 1em 1.2em;
+	border-radius: 14px;
+	background-color: var(--summary-bg);
+}
+.summary.module h3.heading {
+	margin: 0 0 0.4em 0;
+	font-weight: 700;
+	color: var(--coral);
+}
+.summary.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+}
+
+.notes.module,
+.end.notes.module {
+	margin: 0 0 1.6em 0;
+	padding-left: 1em;
+	border-left: 3px dashed var(--sage);
+	font-style: italic;
+}
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	margin: 0 0 0.3em 0;
+	font-style: normal;
+	font-weight: 700;
+	color: var(--sage);
+}
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--ink-muted);
+}
+
+/* Fair Isle-style stitch row before each chapter: Yarndings 20 star (j) and
+   diamond (r) glyphs, colored per glyph with a hard-stop gradient clipped to
+   the text (every Yarndings glyph shares one advance width, so 5 glyphs = 5
+   equal 20% stops). */
+.craftStitch {
+	display: table;
+	position: relative;
+	left: 0.15em;
+	margin: 1.8em auto 0.6em auto;
+	font-family: var(--font-ornament);
+	font-size: 1.5em;
+	line-height: 1.2;
+	letter-spacing: 0.3em;
+	white-space: nowrap;
+	color: transparent;
+	background-image: linear-gradient(90deg, var(--mustard) 0 20%, var(--sage) 20% 40%, var(--mustard) 40% 60%, var(--sage) 60% 80%, var(--mustard) 80%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+.craftBody h2.heading,
+.craftBody h3.title {
+	margin: 0 0 0.8em 0;
+	font-weight: 700;
+	font-size: 1.5em;
+	color: var(--sage);
+	text-align: center;
+}
+.craftBody h2.heading a, .craftBody h3.title a {
+	color: var(--sage);
+	text-decoration: none;
+}
+
+.versalCap {
+	font-weight: 700;
+	color: var(--coral);
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-body);
+	word-wrap: break-word;
+}
+
+/* Exact-selector color declarations for ArticleThemeColorExtractor (it matches
+   `body`, `.articleBody`, `a` and `.articleBody a` by exact string). Higher-
+   specificity rules below still win the cascade. */
+a {
+	color: var(--link);
+}
+.articleBody a {
+	color: var(--link);
+}
+body a, body a * {
+	color: var(--link);
+}
+body a:visited {
+	color: var(--visited-link);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+.craftBody blockquote:not(.userstuff) {
+	margin-left: 0;
+	padding: 0.5em 1.1em;
+	border-left: 4px solid var(--accent);
+	background-color: var(--blockquote-bg);
+}
+
+.craftBody code, .craftBody pre {
+	font-family: var(--font-code);
+	color: var(--code-color);
+	background-color: var(--code-bg);
+}
+.craftBody pre {
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.craftBody table {
+	border-collapse: collapse;
+}
+.craftBody td, .craftBody th {
+	border: 1px solid var(--table-border);
+	padding: 0.4em 0.6em;
+}
+
+.craftBody hr {
+	border: 0;
+	border-top: 1px solid var(--table-border);
+}
+
+/* Keep oversized fic art from forcing horizontal scroll. */
+img, figure, video, object {
+	max-width: 100%;
+	height: auto !important;
+}
+.craftBody div {
+	max-width: 100%;
+}
+
+.craftFooter {
+	margin-top: 2em;
+	padding-top: 1em;
+	border-top: 1px solid var(--table-border);
+	font-family: var(--font-main);
+	font-size: 0.75em;
+	color: var(--ink-muted);
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+		word-break: break-word;
+		-webkit-text-size-adjust: none;
+		font-size: [[font-size]]px;
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+	}
+	.smallText { font-size: 14px; }
+	.mediumText { font-size: 16px; }
+	.largeText { font-size: 18px; }
+	.xlargeText { font-size: 20px; }
+	.xxlargeText { font-size: 22px; }
+}

@@ -32,6 +32,7 @@ task**, not this whole index cover-to-cover.
 - **Badge Colors (timeline rating/category/warning pill tinting)** → `app-chrome-palette.md`
 - **Article theme (`.nnwtheme`) system itself** → `theme-system.md`
 - **`.nnwtheme` bundle format / authoring / theme families** → `nnwtheme-format.md`
+- **The theme gallery (`gallery/`), its build pipeline, or the install deep link** → `theme-gallery.md`
 - **Database schema / SQLite storage layer** → `database.md`
 - **Settings screen, any toggle, or "does setting X exist"** → `settings-screen.md` (main screen) **and** `ao3-authenticated-reading.md` (the separate AO3 account screen — easy to miss)
 - **Screen Time reading limits / bedtime lockout / enforcement overlay** → `screen-time.md`
@@ -102,6 +103,7 @@ it's trusted by default. Specifically:
 | `SurfacePalette`, `AccentColor`, `SurfacePaletteNavigationBarAware`, `ToolbarStyle`/`toolbarStyle`, `BadgeColorPalette`, `BadgeColorTable` | `app-chrome-palette.md` |
 | `.nnwtheme` bundles, `ArticleTheme`, `ArticleThemesManager`, `core.css`/`stylesheet.css` structure | `theme-system.md` |
 | `.nnwtheme` bundle-file layout, per-theme fonts, theme families, `template.html` conventions, AO3 preface styling variables | `nnwtheme-format.md` |
+| `gallery/build.py`, `gallery/index.template.html`, `BUNDLED`/`BUNDLED_ID_PREFIXES`, `.github/workflows/gallery.yml` | `theme-gallery.md` |
 | `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |
 | Any row/case in `SettingsViewController`'s `*Row` enums, `Settings.storyboard`, or `AppDefaults` | `settings-screen.md` |
 | `ScreenTimeTracker`, `ScreenTimeEnforcementOverlay`, `ScreenTimeSettingsView` | `screen-time.md` |

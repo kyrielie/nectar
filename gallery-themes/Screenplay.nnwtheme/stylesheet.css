@@ -1,0 +1,294 @@
+@import url('https://fonts.googleapis.com/css2?family=Cutive+Mono&display=swap');
+
+/* Screenplay -- Original design after the screenplay page; set in Cutive Mono (Vernon Adams, SIL OFL). Original CSS for Nectar. */
+
+:root {
+	--font-main: 'Cutive Mono', 'Courier New', Courier, monospace;
+	--font-body: 'Cutive Mono', 'Courier New', Courier, monospace;
+	--font-code: 'Cutive Mono', 'Courier New', Courier, monospace;
+
+	--paper: #fffdf6;
+	--ink: #1b1a17;
+	--ink-muted: rgba(27, 26, 23, 0.62);
+	--hole: #d6d0bf;
+	--postit: #fff176;
+	--postit-tab: #f4e34f;
+	--postit-ink: #1b1a17;
+	--link: #1b1a17;
+	--visited-link: #5a564c;
+	--accent: #1b1a17;
+	--table-border: rgba(27, 26, 23, 0.3);
+	--code-color: #1b1a17;
+	--code-bg: rgba(27, 26, 23, 0.05);
+	--blockquote-bg: rgba(27, 26, 23, 0.04);
+	--system-message-color: var(--ink-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper: #1d1c19;
+		--ink: #e8e4d8;
+		--ink-muted: rgba(232, 228, 216, 0.62);
+		--hole: #34322c;
+		--link: #e8e4d8;
+		--visited-link: #a8a394;
+		--table-border: rgba(232, 228, 216, 0.3);
+		--code-color: #e8e4d8;
+		--code-bg: rgba(232, 228, 216, 0.07);
+		--blockquote-bg: rgba(232, 228, 216, 0.05);
+	}
+}
+
+/* Three-hole punch strip down the left edge, repeated every 1100px so long
+   works read as a stack of pages rather than one endless sheet. */
+body {
+	background-image:
+		radial-gradient(circle at 16px 20%, var(--hole) 5px, transparent 6px),
+		radial-gradient(circle at 16px 50%, var(--hole) 5px, transparent 6px),
+		radial-gradient(circle at 16px 80%, var(--hole) 5px, transparent 6px);
+	background-size: 40px 1100px;
+	background-repeat: repeat-y;
+	background-position: left top;
+}
+
+.scriptHeader {
+	text-align: center;
+	padding-top: 0.6em;
+}
+.scriptHeader .articleTitle h1 {
+	margin: 0.8em 0 0.3em 0;
+	font-family: var(--font-main);
+	font-weight: 400;
+	font-size: 1.25em;
+	text-transform: uppercase;
+	text-decoration: underline;
+	text-underline-offset: 0.25em;
+}
+.scriptHeader .articleTitle h1 a, .scriptHeader .articleTitle h1 a:link, .scriptHeader .articleTitle h1 a:visited {
+	color: var(--ink);
+	text-decoration: none;
+}
+.scriptHeader .byline {
+	margin-bottom: 0.4em;
+}
+.scriptHeader .byline a, .scriptHeader .byline a:link, .scriptHeader .byline a:visited {
+	color: var(--ink);
+	text-decoration: none;
+}
+
+.scriptBody {
+	font-size: 0.91em;
+	line-height: 1.65;
+	text-align: left;
+}
+.scriptBody a {
+	text-decoration: underline;
+}
+
+/* AO3 preface: title-page rules with a FADE IN: cue. */
+#ao3SyntheticPreface,
+#ao3Preface {
+	margin: 1.8em 0;
+	padding: 1em 0;
+	border: 0;
+	border-top: 1px solid var(--ink);
+	border-bottom: 1px solid var(--ink);
+	font-size: 0.93em;
+}
+#ao3SyntheticPreface::before,
+#ao3Preface::before {
+	content: "FADE IN:";
+	display: block;
+	margin-bottom: 0.9em;
+}
+#ao3SyntheticPreface dt,
+#ao3Preface dt {
+	font-weight: 400;
+	text-transform: uppercase;
+}
+
+/* Summary: a post-it note. Text stays dark in both appearances because the
+   note is yellow in both. */
+.summary.module {
+	width: 88%;
+	margin: 0 0 2em -6px;
+	padding: 1.1em 1em 1.2em 1em;
+	background: linear-gradient(var(--postit-tab) 0 9px, var(--postit) 9px);
+	color: var(--postit-ink);
+	font-size: 0.92em;
+	transform: rotate(-1.3deg);
+	box-shadow: 0 7px 8px -5px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(0, 0, 0, 0.08);
+}
+.summary.module a, .summary.module a:link, .summary.module a:visited {
+	color: var(--postit-ink);
+}
+.summary.module h3.heading {
+	margin: 0 0 0.3em 0;
+	font-weight: 400;
+	font-size: 1em;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+.summary.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+}
+
+.notes.module,
+.end.notes.module {
+	margin: 0 0 1.6em 2em;
+	font-style: italic;
+}
+.notes.module h3.heading,
+.end.notes.module h3.heading {
+	margin: 0 0 0.3em 0;
+	font-weight: 400;
+	font-size: 1em;
+	text-transform: uppercase;
+}
+.notes.module blockquote.userstuff,
+.end.notes.module blockquote.userstuff {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--ink-muted);
+}
+
+/* Each chapter opens with a right-aligned CUT TO: and a slugline. */
+.scriptCut {
+	margin: 2em 0 1em 0;
+	text-align: right;
+	text-transform: uppercase;
+}
+.scriptBody h2.heading,
+.scriptBody h3.title {
+	margin: 0 0 1.2em 0;
+	font-weight: 400;
+	font-size: 1em;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+}
+.scriptBody h2.heading::before, .scriptBody h3.title::before {
+	content: "INT. ";
+}
+.scriptBody h2.heading::after, .scriptBody h3.title::after {
+	content: " - LATER";
+}
+.scriptBody h2.heading a, .scriptBody h3.title a {
+	color: var(--ink);
+	text-decoration: none;
+}
+
+.versalCap {
+	text-transform: uppercase;
+}
+
+body {
+	color-scheme: light dark;
+	background-color: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-body);
+	word-wrap: break-word;
+}
+
+/* Exact-selector color declarations for ArticleThemeColorExtractor (it matches
+   `body`, `.articleBody`, `a` and `.articleBody a` by exact string). Higher-
+   specificity rules below still win the cascade. */
+a {
+	color: var(--link);
+}
+.articleBody a {
+	color: var(--link);
+}
+body a, body a * {
+	color: var(--link);
+}
+body a:visited {
+	color: var(--visited-link);
+}
+
+body > .systemMessage {
+	color: var(--system-message-color);
+}
+
+.scriptBody blockquote:not(.userstuff) {
+	margin-left: 0;
+	padding: 0.5em 1.1em;
+	border-left: 4px solid var(--accent);
+	background-color: var(--blockquote-bg);
+}
+
+.scriptBody code, .scriptBody pre {
+	font-family: var(--font-code);
+	color: var(--code-color);
+	background-color: var(--code-bg);
+}
+.scriptBody pre {
+	padding: 0.8em;
+	overflow-x: auto;
+}
+
+.scriptBody table {
+	border-collapse: collapse;
+}
+.scriptBody td, .scriptBody th {
+	border: 1px solid var(--table-border);
+	padding: 0.4em 0.6em;
+}
+
+.scriptBody hr {
+	border: 0;
+	border-top: 1px solid var(--table-border);
+}
+
+/* Keep oversized fic art from forcing horizontal scroll. */
+img, figure, video, object {
+	max-width: 100%;
+	height: auto !important;
+}
+.scriptBody div {
+	max-width: 100%;
+}
+
+.scriptFooter {
+	margin-top: 2em;
+	padding-top: 1em;
+	border-top: 1px solid var(--table-border);
+	font-family: var(--font-main);
+	font-size: 0.75em;
+	color: var(--ink-muted);
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+		word-break: break-word;
+		-webkit-text-size-adjust: none;
+		font-size: [[font-size]]px;
+	}
+	body {
+		padding-left: 44px;
+	}
+}
+
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+	}
+	.smallText { font-size: 14px; }
+	.mediumText { font-size: 16px; }
+	.largeText { font-size: 18px; }
+	.xlargeText { font-size: 20px; }
+	.xxlargeText { font-size: 22px; }
+}
