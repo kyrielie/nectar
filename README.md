@@ -23,7 +23,6 @@
 > Before continuing, please read the AO3 admin post [Why AO3 Doesn't Have an Official App](https://archiveofourown.org/admin_posts/35806) and be aware of [the history of unofficial apps that accessed AO3 on fanlore](https://fanlore.org/wiki/AO3_App_Wars). Please be aware that it is recommended to use AO3 in your browser. This app does not require you to log in using your account. Be aware that "**if you log in to AO3 on these apps, (like Nectar) the apps' developers may gain access to your username and password. You're trusting both that the developer is not malicious and that they have taken all proper precautions to keep your login information safe. If your login information is exposed to someone with malicious intent, they could log into your account to post Terms of Service-violating content, delete your works, change your account's credentials so you can't log in, or even delete your account.**" (from AO3 admin post).
 
 - [x] This app will always be free and open source. (If you don't trust me, you can look at the code and build the application yourself.)
-- [x] This app does not distribute fics. 
 - [x] This app does it's best to respect AO3's TOS, servers, and policies.
 - [x] Nectar logs you in using the Safari browser. Your login details stay on your phone.
 - [x] Your reading history stays private on your phone.
@@ -41,6 +40,16 @@ Use AO3 in your browser to filter works, copy the url and paste it as a feed in 
 Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) and uses its code and license, but is not affiliated with or supported by the NetNewsWire project. It is not associated with Archive of Our Own; it makes requests to AO3's servers only when you open a work. Your reading history and progress stay on your device and are never shared.
 
 > **Status:** beta software under active development. Expect rough edges. 
+
+## What Nectar doesn't do:
+
+- [ ] Make AO3 look incredibly beautiful. It's an IOS app, it looks like an IOS app. If you want AO3 to look amazing use a site skin like the amazing [neos](https://github.com/ZerafinaCSS/neos) or [Rosé Pine](https://github.com/Wolfbatcat/ao3-rose-pine). There's lots of site skins out there, some that inspired less good looking themes for Nectar like those made by [intothisshadow](https://www.so-obsessed.com/ao3-site-skins/). 
+- [ ] Download AO3 works in bulk. That's something that you can do with other programs like [ao3downloader](https://github.com/nianeyna/ao3downloader) or by downloading an existing bulk copy of the archive. Nectar allows you to subscribe to authors and filtered work pages to wait for new chapters and works. Is it meant to help you discover new works and make sure they don't disappear. 
+- [ ] Nectar does not distribute works. It's empty when you first download it, you need to import works from AO3. That means you won't find any already deleted works using this app.
+- [ ] Make backups automatically. If you delete the app, you delete all your reading history, saved works, progress, everything. You need to do a manual backup or risk losing everything if you lose your phone. 
+
+> [!TIP]
+> Check out a [new page](https://kyrielie.github.io/nectar/themes/) for additional themes for Nectar! 20+ themes to choose from, specifically designed for Nectar: https://kyrielie.github.io/nectar/themes/
 
 ---
 
