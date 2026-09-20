@@ -48,7 +48,8 @@ h1{font-size:clamp(4rem,15vw,9rem);line-height:.9;margin:0;letter-spacing:.01em}
 .seg button[aria-pressed=true]{background:var(--green);color:var(--gilt)}
 .meta{flex:1}
 .meta h2{font-size:1.45rem;line-height:1.15;margin:0}
-.meta p{margin:2px 0 0;color:var(--mut);font-style:italic;font-size:.9rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.meta p{margin:2px 0 0;color:var(--mut);font-style:italic;font-size:.9rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.meta p:focus-visible{outline:2px solid var(--gold-ink);outline-offset:2px}
 .row{display:flex;margin-top:6px}
 .btn{flex:1;text-align:center;background:var(--green);color:var(--gilt);text-decoration:none;font-size:1.15rem;letter-spacing:.06em;padding:8px 12px;border:1px solid var(--gold);border-radius:3px;outline:1px solid var(--gold);outline-offset:-4px}
 .btn:hover{background:#4a5a40}
@@ -58,6 +59,8 @@ h1{font-size:clamp(4rem,15vw,9rem);line-height:.9;margin:0;letter-spacing:.01em}
 dialog{border:1px solid var(--gold);border-radius:5px;outline:1px solid var(--gold);outline-offset:4px;background:var(--paper);color:var(--ink);padding:12px;width:min(430px,92vw)}
 dialog::backdrop{background:#150f06b3}
 dialog iframe{display:block;width:100%;height:min(680px,64vh);border:1px solid var(--rule);border-radius:2px;background:var(--plate)}
+.dtext{margin:10px 2px 0;max-height:6.5em;overflow-y:auto;color:var(--mut);font-style:italic;font-size:.95rem;line-height:1.4}
+.dtext:empty{display:none}
 .dh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px}
 .dh strong{font-size:1.5rem;margin-right:auto}
 footer{text-align:center;color:var(--mut);font-style:italic;font-size:1rem;padding:0 0 44px;max-width:34em;margin:0 auto}
@@ -80,7 +83,7 @@ footer .fleuron{margin-top:0}
 <main id="grid"></main>
 <footer><div class="fleuron" aria-hidden="true"><i></i></div><p>Set in Sorts Mill Goudy. Frieze inspired by William Morris. Tap a preview to enlarge it.</p></footer>
 </div>
-<dialog id="dlg"><div class="dh"><strong id="dname"></strong><span id="dseg"></span><button class="chip" id="dclose">Close</button></div><iframe id="dframe" title="Theme preview"></iframe><div class="row" id="dact" style="margin-top:10px"></div></dialog>
+<dialog id="dlg"><div class="dh"><strong id="dname"></strong><span id="dseg"></span><button class="chip" id="dclose">Close</button></div><iframe id="dframe" title="Theme preview"></iframe><p class="dtext" id="dtext"></p><div class="row" id="dact" style="margin-top:10px"></div></dialog>
 
 <script id="data" type="application/json">__DATA__</script>
 <script>
@@ -180,6 +183,12 @@ function build() {
 <div class="sub"><a href="${zipURL(t)}" download>Zip</a><button type="button">Copy link</button></div>`;
     el.querySelector("iframe").srcdoc = frameDoc(t, mode);
     el.querySelector(".pv").onclick = () => openDlg(t);
+    const byline = el.querySelector(".meta p");
+    byline.tabIndex = 0;
+    byline.setAttribute("role", "button");
+    byline.setAttribute("aria-label", `Show full description for ${t.name}`);
+    byline.onclick = () => openDlg(t);
+    byline.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDlg(t); } };
     bindSeg(el, t);
     el.querySelector(".sub button").onclick = e => copy(t, e.currentTarget);
     grid.appendChild(el);
@@ -192,6 +201,7 @@ function openDlg(t) {
   $("#dframe").srcdoc = frameDoc(t, state.get(t.slug), true);
   $("#dact").innerHTML = actions(t);
   $("#dseg").innerHTML = t.dark ? segHTML(t) : ""; bindSeg($("#dseg"), t);
+  $("#dtext").textContent = smart(t.by);
   $("#dlg").showModal();
 }
 const ro = new ResizeObserver(es => es.forEach(e => e.target.style.setProperty("--s", e.target.clientWidth / 390)));
@@ -202,11 +212,15 @@ function applyFilter() {
     const tone = c.dataset.tone, show = filter === "all" || tone === filter || tone === "both";
     c.hidden = !show; if (show) n++;
   });
+  /* "Light"/"Dark" filters double as a preview-mode switch for every dark-capable
+     card, not just a visibility filter -- "All" leaves each card's mode as the
+     user last set it rather than forcing it back to a system default. */
+  if (filter === "light" || filter === "dark") T.forEach(t => t.dark && setMode(t, filter));
   $("#count").textContent = n + (n === 1 ? " theme" : " themes");
   document.querySelectorAll(".chip[data-f]").forEach(b => b.setAttribute("aria-pressed", b.dataset.f === filter));
   scale();
 }
-$("#chips").innerHTML = [["all", "All"], ["light", "Light"], ["dark", "Dark"]].map(([f, l]) => `<button class="chip" data-f="${f}" aria-pressed="${f === "all"}">${l}</button>`).join(" ");
+$("#chips").innerHTML = [["all", "All"], ["light", "Light mode"], ["dark", "Dark mode"]].map(([f, l]) => `<button class="chip" data-f="${f}" aria-pressed="${f === "all"}">${l}</button>`).join(" ");
 $("#chips").onclick = e => { const f = e.target.dataset && e.target.dataset.f; if (f) { filter = f; applyFilter(); } };
 $("#dclose").onclick = () => $("#dlg").close();
 $("#dlg").onclick = e => { if (e.target === e.currentTarget) e.currentTarget.close(); };
