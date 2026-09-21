@@ -26,9 +26,32 @@ public final class ArticleThemeDownloader: Sendable {
 	private init() {}
 
 	public func handleFile(at location: URL) throws {
+		let movedFileLocation = try moveDownloadedTheme(from: location)
+		try finishImportingTheme(at: movedFileLocation)
+	}
+
+	/// Moves the just-downloaded `.tmp` file to `downloadDirectory`, renaming it to
+	/// `.zip`. Callers driven by `URLSessionDownloadTask`'s completion handler must
+	/// call this *synchronously* within that handler -- the system deletes the `.tmp`
+	/// file as soon as the handler returns, so hopping to another queue/Task first
+	/// (even `Task { @MainActor in ... }`) races the deletion and can fail with
+	/// "...tmp couldn't be moved... because either the former doesn't exist...".
+	/// See `SceneDelegate`'s theme-URL handler.
+	/// - Parameter location: The temporary file location handed to the download's
+	///   completion handler.
+	/// - Returns: The moved file's new location.
+	public func moveDownloadedTheme(from location: URL) throws -> URL {
 		createDownloadDirectoryIfRequired()
-		let movedFileLocation = try moveTheme(from: location)
-		let unzippedFileLocation = try unzipFile(at: movedFileLocation)
+		return try moveTheme(from: location)
+	}
+
+	/// Unzips an already-moved theme archive and posts `.didEndDownloadingTheme`.
+	/// Safe to call from anywhere (main actor or otherwise) since it no longer
+	/// touches the ephemeral download temp file -- see `moveDownloadedTheme(from:)`.
+	/// - Parameter location: The moved `.zip` file's location, as returned by
+	///   `moveDownloadedTheme(from:)`.
+	public func finishImportingTheme(at location: URL) throws {
+		let unzippedFileLocation = try unzipFile(at: location)
 		NotificationCenter.default.post(name: .didEndDownloadingTheme, object: nil, userInfo: ["url": unzippedFileLocation])
 	}
 

@@ -55,7 +55,10 @@
 }
 
 /* Page furniture drawn with position: fixed so the wobble filter only ever runs
-   on a viewport-sized box, never on the full (possibly very tall) article. */
+   on a viewport-sized box, never on the full (possibly very tall) article.
+   inset uses env(safe-area-inset-*) on top of the base offset so the frame
+   clears the notch/Dynamic Island/status bar and the home indicator instead
+   of sitting flush against the physical screen edge underneath them. */
 html::before {
 	content: "";
 	position: fixed;
@@ -73,12 +76,12 @@ body::before, body::after {
 	pointer-events: none;
 }
 body::before {
-	inset: 8px;
+	inset: calc(8px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
 	border: 2px solid var(--frame-blue);
 	filter: url(#codexWobble);
 }
 body::after {
-	inset: 15px;
+	inset: calc(15px + env(safe-area-inset-top)) calc(15px + env(safe-area-inset-right)) calc(15px + env(safe-area-inset-bottom)) calc(15px + env(safe-area-inset-left));
 	border: 1px solid var(--gold);
 	filter: url(#codexWobble);
 }
