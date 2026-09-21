@@ -1,0 +1,68 @@
+{
+  "_comment": "Optional fields left empty (\"\" or []) are not shown on the page. Fill one in and rebuild to show its section. See docs/landing-page.md.",
+
+  "site_url": "https://kyrielie.github.io/nectar/",
+  "repo_url": "https://github.com/kyrielie/nectar",
+  "source_url": "https://kyrielie.github.io/nectar/source.json",
+  "themes_url": "https://kyrielie.github.io/nectar/themes/",
+  "description": "Nectar is a free, open-source iOS reader for Archive of Our Own. Saved reading position, offline caching, notes and highlights, reading stats and themes.",
+
+  "min_ios": "",
+  "devices": "",
+  "install_time": "",
+  "install_step_images": [],
+
+  "demo_video": "",
+  "demo_poster": "",
+  "demo_caption": "A quick look at reading in Nectar.",
+
+  "og_image": "",
+
+  "testimonials": [],
+  "community": [],
+  "tip_url": "",
+  "tip_label": "Support development",
+  "press_contact": "",
+
+  "changelog": [],
+
+  "faq": [
+    {
+      "q": "Do I need to log in to AO3?",
+      "a": "No. You can read without ever logging in. If you choose to log in, Nectar signs you in through Safari and your login details stay on your phone. AO3 warns that any third-party app you sign in to could gain access to your username and password, so please read [their post](https://archiveofourown.org/admin_posts/35806) first."
+    },
+    {
+      "q": "Is Nectar on the App Store?",
+      "a": "No. It is distributed as an unsigned IPA that you sideload yourself. AltStore or SideStore is the recommended route, and Sideloadly also works. The install steps are below."
+    },
+    {
+      "q": "Which iOS versions and devices does it support?",
+      "requires": "min_ios",
+      "a": "Nectar needs {min_ios}. {devices}"
+    },
+    {
+      "q": "How do I get fics into Nectar?",
+      "a": "Filter works on AO3 in your browser, copy the URL, and paste it as a feed in Nectar. You can also load any list of AO3 links to import your open tabs, or point Nectar at an Ambrosia library."
+    },
+    {
+      "q": "Where is my reading history stored?",
+      "a": "On your phone. Nectar caches any work you open, and your reading history and progress are never shared. You can export your library, settings and reading history to a .zip and restore or merge it later, on this device or another."
+    },
+    {
+      "q": "Does Nectar distribute fics or break AO3's rules?",
+      "a": "Nectar does not distribute fics. It requests a work from AO3's servers only when you open it, and it does its best to respect AO3's terms of service, servers and policies. It is unofficial and not associated with Archive of Our Own."
+    },
+    {
+      "q": "Is Nectar a general feed reader?",
+      "a": "Not really. It is built on NetNewsWire and should technically work with any RSS or JSON feed, but it is designed to be archival. There is no automatic cache cleanup, so subscribing to something like a news site will make storage unmanageable."
+    },
+    {
+      "q": "What is Ambrosia?",
+      "a": "[Ambrosia](https://github.com/kyrielie/ambrosia) is a local fanfiction library that serves a JSON Feed extension carrying fic metadata such as word count, chapter progress, fandom and rating. Nectar can sync large Ambrosia collections."
+    },
+    {
+      "q": "Is it really free?",
+      "a": "Yes. It will always be free and open source, under the MIT license. A few Reading Stats files adapted from Aidoku are GPL-3.0."
+    }
+  ]
+}
