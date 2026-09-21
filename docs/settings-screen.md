@@ -93,7 +93,22 @@ Two storage tiers exist beyond `Settings.storyboard`'s rows:
 - **`AppDefaults`** (`iOS/AppDefaults.swift`) backs everything listed
   above, plus some flags with no UI row at all (state like
   `articleWindowScrollY` — restoration bookkeeping, not a person-facing
-  setting).
+  setting). It is split by feature where a feature has its own directory:
+  the Screen Time and Reading Stats keys, properties, and mode enums
+  (`TakeABreakMode`, `ScreenTimeIndicatorDisplayMode`) live in
+  `iOS/ScreenTime/AppDefaults+ScreenTime.swift` and
+  `iOS/ReadingStats/AppDefaults+ReadingStats.swift` as
+  `extension AppDefaults` / `extension AppDefaults.Key` blocks. Everything
+  else is still in `AppDefaults.swift`, now grouped with `// MARK:` banners
+  (the `Key` struct, then the property groups: reader, toolbar, annotations,
+  text replacement, timeline layout, state restoration). The
+  `backupEligibleKeys` allowlist and `registerDefaults()` stay central and
+  reference the moved keys by name, so a new key still needs an explicit
+  decision in both places wherever its property lives. The Codable-in-
+  `UserDefaults` helpers (`AppDefaults.decode`/`encode`) are internal, not
+  private, so feature files can use them. To add a setting for a feature that
+  has a directory, put its key and property in an `AppDefaults+<Feature>.swift`
+  next to that feature rather than growing `AppDefaults.swift`.
 - **`NectarAppGroupUserDefaults`**-backed preferences, living in
   `Modules/Account` rather than `AppDefaults` specifically so
   Account-module code (`AO3ChapterFetcher`, `AO3KudosManager`) can read

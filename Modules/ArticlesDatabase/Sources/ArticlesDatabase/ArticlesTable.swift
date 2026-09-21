@@ -1443,6 +1443,12 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	// MARK: - Reading progress (Phase A1)
 
+	/// Writes bookState (the durable cross-feed record) and then statuses for
+	/// this article and every sibling sharing its bookKey. The statuses write
+	/// is not just a fallback: statuses is where the UI reads progress from
+	/// (ArticleStatus.readingProgress is bulk-loaded), so the sibling loop is
+	/// what makes already-open copies repaint. Contrast saveScrollPosition,
+	/// whose read path is a bookKey-first point read. See book-identity.md.
 	func saveReadingProgress(_ readingProgress: Double, articleID: String, _ completion: @escaping @Sendable (Set<String>) -> Void) {
 		queue.runInTransaction { database in
 			var changedArticleIDs: Set<String> = [articleID]

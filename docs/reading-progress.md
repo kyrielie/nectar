@@ -34,13 +34,15 @@ mechanism referenced throughout the reading-progress section below.
    `innerHeight`, writes the raw offset via
    `account.saveScrollPosition(_:forArticleID:)` — resolved to the
    article's `bookKey` and written to `BookStateTable` when a `bookKey` is
-   available (shared across every feed's copy of the same book), falling
-   back to the per-article `StatusesTable` column otherwise (see
+   available (shared across every feed's copy of the same book), and also
+   written to the per-article `StatusesTable` column (see
    `book-identity.md`) — and separately checks the existing 99%-of-height
    threshold to mark the article read.
 3. `setArticle` restores position for the article being opened via
-   `account.fetchScrollPosition(forArticleID:)`, resolved through the same
-   `bookKey`-first/`StatusesTable`-fallback lookup.
+   `account.fetchScrollPosition(forArticleID:)`, resolved `bookKey`-first
+   with a `StatusesTable` fallback that applies both when no `bookKey`
+   resolves and when a `bookKey` resolves but has no `bookState` row yet
+   (see `book-identity.md`; a missing row is not read as position 0).
    `isAwaitingInitialScrollFetch` suppresses `viewDidLoad`'s unconditional
    render-at-0 while this fetch is in flight. Separately,
    `isRestoringScrollPosition` (a single `Bool`, not a count) suppresses
@@ -65,7 +67,46 @@ mechanism referenced throughout the reading-progress section below.
    removed mechanism historically, not a live property -- update or
    remove it rather than assuming it still exists.
 5. `readingProgress` is `bookKey`-shared the same way scroll
-   position/read/starred/loved are — see `book-identity.md`.
+   position/read/starred/loved are, but with the opposite primary read
+   store: the UI reads it from `statuses` (`ArticleStatus.readingProgress`),
+   with `bookState` as the durable cross-feed record. See
+   `book-identity.md`, "`readingProgress`: durable record vs. live read
+   model."
+
+## Per-sample evaluation and the completion threshold
+
+`ReadingProgressEvaluator` (`Shared/ReadingProgress/`) owns the pure math
+for one scroll sample: the completion fraction
+(`(scrollY + innerHeight) / scrollHeight`, clamped to 0...1 for
+persistence and display), the "is this article done" decision, and the
+page-counter numbers. It has no UIKit/WebKit dependency, so it is covered by
+`ReadingProgressEvaluatorTests` without a live `WKWebView`.
+
+`WebViewController.scrollPositionDidChange` still owns everything that
+depends on its private state: the four discard guards (the `33554432`
+sentinel, `isRestoringScrollPosition`, shrinking `scrollHeight`, and
+`isContentProvisional`) and the side effects (persist scroll position and
+reading progress, mark read, feed `ReadingStatsTracker`, update the page
+counter). It builds a `ReadingProgressSample` only after the guards pass.
+
+- **One threshold.** `ReadingProgressEvaluator.completionThreshold` (0.99)
+  is the single definition of "complete". `WebViewController` (mark read)
+  and `ReadingStatsTracker` (completed-work credit) both call
+  `ReadingProgressEvaluator.isComplete(_:)`, so a threshold change cannot
+  desync "marked read" from "counted as completed". The two are still
+  different events; see `reading-stats.md`.
+- **A document that fits in the viewport is complete on open.** Its
+  fraction is at or above 1 on the first accepted sample, so a one-screen
+  chapter is marked read as soon as it is displayed. This is existing
+  behavior, pinned by
+  `ReadingProgressEvaluatorTests.documentThatFitsInViewport_readsAsComplete`.
+- **Page counter edge cases.** In page-count mode the current page is
+  always within `1...total` (rubber-band overscroll past the top no longer
+  shows page 0), and a reported viewport height of 0 leaves the label
+  unchanged instead of converting an infinite ratio to `Int`.
+- **Non-finite input** (`NaN`/infinity in any of the three readings) or a
+  non-positive `scrollHeight` produces no sample, so nothing is persisted
+  or credited for it.
 
 ## In-article jump history (scrollBack)
 
@@ -106,4 +147,4 @@ has no `bookKey` sharing. It is a plain `[Double]` stack of pre-jump
   position a person would want to jump back from the way a Table-of-Contents
   or annotation jump is.
 
-The 99%-of-document-height completion point also feeds `ReadingStatsTracker` for reading-activity accounting; changes to this threshold affect both read-state behavior and stats.
+The 99%-of-document-height completion point (`ReadingProgressEvaluator.completionThreshold`) also feeds `ReadingStatsTracker` for reading-activity accounting; changes to this threshold affect both read-state behavior and stats.

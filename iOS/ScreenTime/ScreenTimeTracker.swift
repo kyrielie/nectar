@@ -6,7 +6,7 @@ import Account
 	static let shared = ScreenTimeTracker()
 	static var now: () -> Date = { Date() }
 
-	private var timer: Timer?
+	private let ticker = ForegroundTicker()
 	private let activeTime = ActiveTimeAccumulator(isActive: UIApplication.shared.applicationState != .background)
 	private var isLimitLockout = false
 	private var isBedtimeLockout = false
@@ -32,25 +32,22 @@ import Account
 	private init() {}
 
 	func start() {
-		guard timer == nil else { return }
-		NotificationCenter.default.addObserver(self, selector: #selector(willResignActive), name: UIApplication.willResignActiveNotification, object: nil)
-		NotificationCenter.default.addObserver(self, selector: #selector(didBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
-		if UIApplication.shared.applicationState != .background {
-			activeTime.becomeActive(now: Self.now())
-		}
-		// Closes the force-quit loophole: read any persisted enforced break
-		// back into memory rather than defaulting to "not locked." An
-		// end date already in the past is cleared via the same expiry path.
-		if let endDate = recurringBreakEndDate {
-			if endDate > Self.now() {
-				isRecurringBreakLockout = true
-			} else {
-				recurringBreakEndDate = nil
-				secondsSinceLastBreak = 0
+		ticker.start(target: self, tick: #selector(tick), willResignActive: #selector(willResignActive), didBecomeActive: #selector(didBecomeActive)) {
+			if UIApplication.shared.applicationState != .background {
+				activeTime.becomeActive(now: Self.now())
+			}
+			// Closes the force-quit loophole: read any persisted enforced break
+			// back into memory rather than defaulting to "not locked." An
+			// end date already in the past is cleared via the same expiry path.
+			if let endDate = recurringBreakEndDate {
+				if endDate > Self.now() {
+					isRecurringBreakLockout = true
+				} else {
+					recurringBreakEndDate = nil
+					secondsSinceLastBreak = 0
+				}
 			}
 		}
-		timer = Timer(timeInterval: 1, target: self, selector: #selector(tick), userInfo: nil, repeats: true)
-		RunLoop.current.add(timer!, forMode: .common)
 	}
 
 	@objc private func willResignActive() {
@@ -203,24 +200,19 @@ import Account
 	}
 
 #if DEBUG
-	/// Also invalidates and clears `timer` (and removes NotificationCenter
-	/// observers) rather than leaving it set -- `start()` is guarded by
-	/// `timer == nil` so it only runs its one-time setup (observer
-	/// registration, reading a persisted `recurringBreakEndDate` back in)
-	/// once per process. Without resetting `timer` here, any test after
-	/// the first to call `start()` would hit that guard and silently
-	/// no-op, never re-running the break-persistence read-back logic
-	/// `start()` is actually testing.
+	/// Also tears down the ticker's timer and NotificationCenter observers
+	/// (`ForegroundTicker.stopForTesting(target:)`) rather than leaving them
+	/// running -- `start()` is guarded by `ticker.isRunning` so it only runs
+	/// its one-time setup (observer registration, reading a persisted
+	/// `recurringBreakEndDate` back in) once per process. Without this, any
+	/// test after the first to call `start()` would hit that guard and
+	/// silently no-op, never re-running the break-persistence read-back
+	/// logic `start()` is actually testing. This is a #if DEBUG test-only
+	/// reset, not a deinit path: it exists so a test-created observer
+	/// registration from a prior `start()` call doesn't leak into the next
+	/// test.
 	func resetForTesting() {
-		// Intentional: this is a #if DEBUG test-only reset, not deinit --
-		// it exists so a test-created observer registration from a prior
-		// start() call doesn't leak into the next test (see the doc
-		// comment above). The lint rule's deinit-only assumption doesn't
-		// apply to this test-lifecycle reset path.
-		// swiftlint:disable:next notification_center_detachment
-		NotificationCenter.default.removeObserver(self)
-		timer?.invalidate()
-		timer = nil
+		ticker.stopForTesting(target: self)
 		isLimitLockout = false
 		isBedtimeLockout = false
 		secondsSinceLastBreak = 0

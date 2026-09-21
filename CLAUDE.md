@@ -97,7 +97,7 @@ it's trusted by default. Specifically:
 | The AO3 HTML extractors themselves (`Modules/RSParser/.../Feeds/Extensions/`) | `ao3-feeds.md` |
 | `Feed.repoint(to:)`, `collectionKeyIndex`, `rewriteAmbrosiaJSONFeedURLs` | `feed-repointing.md` |
 | `LocalAccountRefresher.feedShouldBeSkipped`, `BGTaskScheduler`/`backgroundRefreshDeadline`, `LastOpenedFeedDelegate` | `refresh-throttling.md` |
-| `WebViewController`'s scroll-position tracking, `BookStateTable` reading-progress fields, `articleWindowScrollY` | `reading-progress.md` |
+| `WebViewController`'s scroll-position tracking, `ReadingProgressEvaluator`/`ReadingProgressSample`, the completion threshold, `BookStateTable` reading-progress fields, `articleWindowScrollY` | `reading-progress.md` |
 | `AO3ChapterFetcher`, `AO3ChapterHTMLExtractor`, `AO3PrefaceRenderer`, `Downloader`'s per-host 429 handling | `ao3-preface-rendering.md` |
 | `AO3SessionStore`, `AO3AuthenticatedFetcher`, `AO3AuthenticatedWebViewController`, `AO3ChallengeSessionStore`, `AO3KudosManager`, `AO3AccountSettingsView`, or any `NectarAppGroupUserDefaults`-backed AO3 preference | `ao3-authenticated-reading.md` |
 | `ArticleThemeColorExtractor`, `ArticleResolvedColors`, `WebViewController.applyResolvedBackgroundColors`/`registerForTraitChanges` | `article-color-pipeline.md` |
@@ -107,9 +107,10 @@ it's trusted by default. Specifically:
 | `gallery/build.py`, `gallery/index.template.html`, `BUNDLED`/`BUNDLED_ID_PREFIXES`, `.github/workflows/gallery.yml` | `theme-gallery.md` |
 | `landing/` (`build.py`, `template.html`, `site.json`), the optional-section rules, `gallery.yml` (publishes landing page and gallery) | `landing-page.md` |
 | `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |
-| Any row/case in `SettingsViewController`'s `*Row` enums, `Settings.storyboard`, or `AppDefaults` | `settings-screen.md` |
+| Any row/case in `SettingsViewController`'s `*Row` enums, `Settings.storyboard`, `AppDefaults`, or an `AppDefaults+<Feature>.swift` extension file | `settings-screen.md` |
+| `.swiftlint.yml`'s `file_length`/`type_body_length` thresholds, or adding a large new file/type to `iOS/` | `module-layout.md` |
 | `ScreenTimeTracker`, `ScreenTimeEnforcementOverlay`, `ScreenTimeSettingsView` | `screen-time.md` |
-| `ReadingStatsTracker`, `ReadingStatsView` | `reading-stats.md` |
+| `ReadingStatsTracker`, `ReadingStatsView`, how completed works are counted | `reading-stats.md` |
 | Any new or renamed user-facing string, or a decision about which vocabulary (UI vs. code) a screen should use | `terminology.md` |
 | `BackupManager`, `BackupRestoreCoordinator`, the backup zip's file layout | `backup-restore.md` |
 | `GuideOverlayView`, `GuideContent`, `HelpRow.guide` | `guide.md` |

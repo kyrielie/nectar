@@ -1913,36 +1913,39 @@ extension WebViewController: UIScrollViewDelegate {
 
 			// Scroll-percentage-gated read marking (Phase 2). scrollHeight includes the
 			// full document; innerHeight is the viewport. Once the bottom of the viewport
-			// has reached 99% of the document height, treat the article as read.
-			if let scrollHeight = result["scrollHeight"] as? Double, scrollHeight > 0,
-			   let innerHeight = result["innerHeight"] as? Double {
-				let percentScrolled = (Double(javascriptScrollY) + innerHeight) / scrollHeight
-				ReadingStatsTracker.shared.recordProgress(percentScrolled)
-				if percentScrolled >= 0.99 {
+			// has reached the completion threshold (ReadingProgressEvaluator.completionThreshold,
+			// shared with ReadingStatsTracker), treat the article as read. The math itself
+			// lives in ReadingProgressEvaluator so it can be tested without a WKWebView.
+			if let scrollHeight = result["scrollHeight"] as? Double,
+			   let innerHeight = result["innerHeight"] as? Double,
+			   let sample = ReadingProgressEvaluator.sample(scrollY: Double(javascriptScrollY), scrollHeight: scrollHeight, viewportHeight: innerHeight) {
+				ReadingStatsTracker.shared.recordProgress(sample.rawFraction)
+				if sample.isComplete {
 					self.coordinator.markCurrentArticleAsReadFromScrollCompletion()
 				}
 
 				// Page counter (§7). Reuses this same JS bridge payload rather than
-				// adding a second round trip -- percentScrolled/scrollHeight/innerHeight
-				// are already exactly what's needed.
+				// adding a second round trip -- the sample already carries exactly
+				// what's needed.
 				switch AppDefaults.shared.pageCounterDisplayMode {
 				case .off:
 					break
 				case .percentage:
-					let clamped = min(max(percentScrolled, 0), 1)
-					self.pageCounterLabel.text = "\(Int((clamped * 100).rounded()))%"
+					self.pageCounterLabel.text = "\(sample.percentRounded)%"
 				case .pageCount:
-					let totalPages = max(1, Int((scrollHeight / innerHeight).rounded(.up)))
-					let currentPage = min(totalPages, Int((Double(javascriptScrollY) / innerHeight).rounded()) + 1)
-					self.pageCounterLabel.text = "\(currentPage)/\(totalPages)"
+					// nil when the viewport reports zero height; leave the label as-is
+					// rather than converting an infinite ratio to Int.
+					if let page = ReadingProgressEvaluator.pageCounter(for: sample) {
+						self.pageCounterLabel.text = "\(page.current)/\(page.total)"
+					}
 				}
 
 				// Visible reading progress (Phase A1). Reuses this same JS bridge payload
-				// rather than adding a second round trip -- percentScrolled is already the
-				// 0...1 fraction the card wants, just clamped to a valid range.
+				// rather than adding a second round trip -- the sample's clamped fraction
+				// is already the 0...1 value the card wants.
 				if let article = self.article, let account = article.account {
 					let articleID = article.articleID
-					let readingProgress = min(max(percentScrolled, 0), 1)
+					let readingProgress = sample.fraction
 					self.lastKnownReadingProgress = readingProgress
 					Task {
 						await account.saveReadingProgress(readingProgress, forArticleID: articleID)

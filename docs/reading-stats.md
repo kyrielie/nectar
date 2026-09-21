@@ -57,7 +57,9 @@ currently open, and ends (`endSession()`) when:
 
 - `setArticle(_:)` is called with a different book than the one currently
   open, or with `nil`.
-- The app resigns active (`willResignActive`).
+- The app resigns active (`willResignActive`). The tracker's timer and
+  resign/become-active observers are set up by a `ForegroundTicker`; see
+  `screen-time.md`, "Active-time accounting".
 - No scroll sample has arrived within `idleSessionThresholdSeconds` (see
   below) — checked at the top of every `tick()`.
 
@@ -120,6 +122,29 @@ prevents provisional-content scroll samples from being credited.
 `ReadingStatsDailyEntry` gained `worksByFandom`/`worksByTag: [String:
 Set<String>]`, populated in `recordProgress(_:)` alongside
 `completedBookKeys` whenever a work crosses the 99% completion threshold.
+
+That threshold is `ReadingProgressEvaluator.completionThreshold`, and the
+check is `ReadingProgressEvaluator.isComplete(_:)`, the same predicate
+`WebViewController` uses to mark the article read (see
+`reading-progress.md`), so the two cannot drift apart from a threshold
+change alone. They are still different events:
+
+- Marking read fires on any accepted scroll sample at or past the
+  threshold, and is sticky once set.
+- The completion branch in `recordProgress(_:)` is only reached after
+  `guard words > 0`, i.e. on a sample that earns credited words. Credit is
+  the net movement past the session baseline (`max(readingStatsProgressByBookKey[key],
+  article.status.readingProgress)`), so a work already finished to 1.0
+  earns nothing on a re-read and is never counted as completed again;
+  `sessionReread_literalPlanFormula_doesNotCreditAfterFullCompletion` pins
+  this.
+- `setArticle(_:)` clears `currentArticle` for an article without a
+  positive `wordCount`, so such an article can be marked read but never
+  counts toward completed works.
+
+Making completion independent of word credit is a product decision that has
+not been made; do not fold it into unrelated changes, since it would change
+how stats history is counted.
 `ReadingStatsCalendar.totals(history:range:calendar:)` unions these sets
 across the requested date range (not a per-day sum, since the same
 completed book can appear in more than one day's entry within a range)
