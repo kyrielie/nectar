@@ -157,6 +157,39 @@ struct ArticlesTableUpdateTests {
 		#expect(secondArticles.first?.status.readingProgress == 0.42)
 	}
 
+	// b2b. bookState is the durable record for readingProgress: a new
+	// articleID for a bookKey that already has progress is seeded from it on
+	// import, the same way read/starred/loved are, so a re-subscribed or
+	// newly collection-imported copy doesn't reset to nil. See
+	// book-identity.md ("readingProgress: durable record vs. live read
+	// model").
+	@Test("a new articleID for a bookKey with saved reading progress is seeded with that progress on import")
+	func readingProgressSeedsNewArticleIDOnSameBookKey() async throws {
+		let db = TestFixtures.makeDatabase()
+
+		let original = TestFixtures.makeParsedItem(
+			uniqueID: "u1",
+			feedURL: "https://example.com/feed-a",
+			ao3WorkID: "77777"
+		)
+		_ = await db.updateAsync(parsedItems: [original], feedID: "feed-a", deleteOlder: false)
+		let originalArticleID = Article.calculatedArticleID(feedID: "feed-a", uniqueID: "u1")
+		_ = await db.saveReadingProgressAsync(0.6, articleID: originalArticleID)
+
+		// Same bookKey (same ao3WorkID), different feed/uniqueID: a
+		// brand-new articleID with a brand-new statuses row.
+		let resubscribed = TestFixtures.makeParsedItem(
+			uniqueID: "u2",
+			feedURL: "https://example.com/feed-c",
+			ao3WorkID: "77777"
+		)
+		_ = await db.updateAsync(parsedItems: [resubscribed], feedID: "feed-c", deleteOlder: false)
+		let newArticleID = Article.calculatedArticleID(feedID: "feed-c", uniqueID: "u2")
+
+		let articles = await db.fetchArticlesAsync(articleIDs: [newArticleID])
+		#expect(articles.first?.status.readingProgress == 0.6)
+	}
+
 	// b3. Regression guard for the timeline progress-bar staleness bug:
 	// emptyCaches(clearStatusesCache: false) -- the ordinary-backgrounding
 	// path (AccountManager.handleAppDidGoToBackground) -- must leave an

@@ -14,7 +14,7 @@ import Account
 		let tags: [String]
 	}
 
-	private var timer: Timer?
+	private let ticker = ForegroundTicker()
 	private let activeTime = ActiveTimeAccumulator(isActive: UIApplication.shared.applicationState != .background)
 	private var currentArticle: ArticleSnapshot?
 	private var sessionBaseline: Double = 0
@@ -48,14 +48,11 @@ import Account
 	private init() {}
 
 	func start() {
-		guard timer == nil else { return }
-		NotificationCenter.default.addObserver(self, selector: #selector(willResignActive), name: UIApplication.willResignActiveNotification, object: nil)
-		NotificationCenter.default.addObserver(self, selector: #selector(didBecomeActive), name: UIApplication.didBecomeActiveNotification, object: nil)
-		if UIApplication.shared.applicationState != .background {
-			activeTime.becomeActive(now: Self.now())
+		ticker.start(target: self, tick: #selector(tick), willResignActive: #selector(willResignActive), didBecomeActive: #selector(didBecomeActive)) {
+			if UIApplication.shared.applicationState != .background {
+				activeTime.becomeActive(now: Self.now())
+			}
 		}
-		timer = Timer(timeInterval: 1, target: self, selector: #selector(tick), userInfo: nil, repeats: true)
-		RunLoop.current.add(timer!, forMode: .common)
 	}
 
 	/// Called with a non-provisional article to start (or continue) a
@@ -136,7 +133,9 @@ import Account
 		entry.wordsRead += words
 		for fandom in article.fandoms { entry.wordsByFandom[fandom, default: 0] += words }
 		for tag in article.tags { entry.wordsByTag[tag, default: 0] += words }
-		if clamped >= 0.99 {
+		// Same predicate WebViewController uses to mark the article read; see
+		// ReadingProgressEvaluator.completionThreshold.
+		if ReadingProgressEvaluator.isComplete(clamped) {
 			entry.completedBookKeys.insert(article.bookKey)
 			for fandom in article.fandoms { entry.worksByFandom[fandom, default: []].insert(article.bookKey) }
 			for tag in article.tags { entry.worksByTag[tag, default: []].insert(article.bookKey) }

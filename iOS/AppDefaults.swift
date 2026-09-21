@@ -928,6 +928,7 @@ final class AppDefaults: Sendable {
 	nonisolated(unsafe) static let store: UserDefaults = .standard
 
 	struct Key {
+		// MARK: - Appearance, timeline layout, and reader behavior
 		static let userInterfaceColorPalette = "userInterfaceColorPalette"
 		static let lastImageCacheFlushDate = "lastImageCacheFlushDate"
 		static let firstRunDate = "firstRunDate"
@@ -957,6 +958,7 @@ final class AppDefaults: Sendable {
 		static let articleToolbarShowTableOfContents = "articleToolbarShowTableOfContents"
 		static let articleToolbarShowFind = "articleToolbarShowFind"
 		static let articleToolbarShowPrevNext = "articleToolbarShowPrevNext"
+		// MARK: - Toolbar customization
 		/// Unified toolbar-customization keys. One Bool per (ToolbarFunction,
 		/// ToolbarBar, inline-or-overflow) triple -- see
 		/// isToolbarFunctionEnabled(_:on:)/setToolbarFunctionEnabled(_:on:_:)
@@ -1055,36 +1057,20 @@ final class AppDefaults: Sendable {
 		/// unchanged from before this key existed.
 		static let toolbarTopFunctionOrder = "toolbarTopFunctionOrder"
 		static let toolbarBottomFunctionOrder = "toolbarBottomFunctionOrder"
+		// MARK: - Annotations
 		static let defaultAnnotationColor = "defaultAnnotationColor"
 		static let annotationCreationMethod = "annotationCreationMethod"
+		// MARK: - Article display
 		static let hideNotchInFullScreen = "hideNotchInFullScreen"
 		static let pageCounterDisplayMode = "pageCounterDisplayMode"
 		static let disableArticleLinks = "disableArticleLinks"
 		static let showArticleScrollbar = "showArticleScrollbar"
 		static let showLastUpdatedLabel = "showLastUpdatedLabel"
 		static let articleThemeOverrides = "articleThemeOverrides"
-		static let screenTimeEnabled = "screenTimeEnabled"
-		static let screenTimeDailyLimitMinutesByWeekday = "screenTimeDailyLimitMinutesByWeekday"
-		static let screenTimeDailyLimitEnabled = "screenTimeDailyLimitEnabled"
-		static let screenTimeBedtimeEnabled = "screenTimeBedtimeEnabled"
-		static let screenTimeBedtimeStartMinutesFromMidnight = "screenTimeBedtimeStartMinutesFromMidnight"
-		static let screenTimeBedtimeEndMinutesFromMidnight = "screenTimeBedtimeEndMinutesFromMidnight"
-		static let screenTimeMinutesUsedTodaySeconds = "screenTimeMinutesUsedTodaySeconds"
-		static let screenTimeUsageDate = "screenTimeUsageDate"
-		static let screenTimeDailyUsageHistory = "screenTimeDailyUsageHistory"
-		static let screenTimeTakeABreakEnabled = "screenTimeTakeABreakEnabled"
-		static let screenTimeTakeABreakMode = "screenTimeTakeABreakMode"
-		static let screenTimeBreakReadingMinutes = "screenTimeBreakReadingMinutes"
-		static let screenTimeBreakEnforcedMinutes = "screenTimeBreakEnforcedMinutes"
-		static let screenTimeRecurringBreakEndDate = "screenTimeRecurringBreakEndDate"
-		static let screenTimeSecondsSinceLastBreak = "screenTimeSecondsSinceLastBreak"
-		static let screenTimeLastResignDate = "screenTimeLastResignDate"
-		static let screenTimeIndicatorDisplayMode = "screenTimeIndicatorDisplayMode"
-		static let readingStatsTrackingEnabled = "readingStatsTrackingEnabled"
-		static let readingStatsDailyHistory = "readingStatsDailyHistory"
-		static let readingStatsDailyWords = "readingStatsDailyWords"
-		static let readingStatsProgressByBookKey = "readingStatsProgressByBookKey"
-		static let readingStatsAllTimeWords = "readingStatsAllTimeWords"
+		// Screen Time and Reading Stats keys live with their features, as
+		// `extension AppDefaults.Key` in iOS/ScreenTime/AppDefaults+ScreenTime.swift
+		// and iOS/ReadingStats/AppDefaults+ReadingStats.swift.
+		// MARK: - Text replacement
 		/// Text Replacement feature (docs/annotations.md's "Storage shape";
 		/// see the feature's own implementation plan, "Confirmation policy"
 		/// and "Settings screen"). One master toggle plus three
@@ -1100,6 +1086,7 @@ final class AppDefaults: Sendable {
 		/// scoped to category 3 (reader-insert names) only -- see that
 		/// type's own header comment.
 		static let textReplacementPerWorkOverride = "textReplacementPerWorkOverride"
+		// MARK: - Refresh, add-feed sheet, theme, and state restoration
 		static let lastRefresh = "lastRefresh"
 		static let addFeedAccountID = "addFeedAccountID"
 		static let addFeedFolderPath = "addFeedFolderPath"
@@ -1115,6 +1102,8 @@ final class AppDefaults: Sendable {
 		static let selectedArticle = "selectedArticle"
 		static let splitViewPreferredDisplayMode = "splitViewPreferredDisplayMode"
 	}
+
+	// MARK: - Backup allowlist
 
 	/// Backup/restore plan: the explicit allowlist of `Key.*` entries that
 	/// are person-facing preferences, safe to write into a backup's
@@ -1225,6 +1214,8 @@ final class AppDefaults: Sendable {
 		Key.currentThemeName
 	]
 
+	// MARK: - Build and first-run info
+
 	let isDeveloperBuild: Bool = {
 		if let dev = Bundle.main.object(forInfoDictionaryKey: "DeveloperEntitlements") as? String, dev == "-dev" {
 			return true
@@ -1240,6 +1231,8 @@ final class AppDefaults: Sendable {
 		return true
 	}()
 
+	// MARK: - Interface color palette
+
 	static var userInterfaceColorPalette: UserInterfaceColorPalette {
 		get {
 			if let result = UserInterfaceColorPalette(rawValue: int(for: Key.userInterfaceColorPalette)) {
@@ -1252,6 +1245,8 @@ final class AppDefaults: Sendable {
 			NotificationCenter.default.post(name: .userInterfaceColorPaletteDidUpdate, object: self)
 		}
 	}
+
+	// MARK: - Add Feed / Add Folder sheet, browser, and image cache
 
 	var addFeedAccountID: String? {
 		get {
@@ -1298,6 +1293,8 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	// MARK: - Timeline behavior
+
 	var timelineGroupByFeed: Bool {
 		get {
 			return AppDefaults.bool(for: Key.timelineGroupByFeed)
@@ -1334,6 +1331,8 @@ final class AppDefaults: Sendable {
 			AppDefaults.setInt(for: Key.timelineSortField, newValue.rawValue)
 		}
 	}
+
+	// MARK: - Article reader: fullscreen, gestures, and legacy toolbar keys
 
 	var articleFullscreenAvailable: Bool {
 		get {
@@ -1467,6 +1466,8 @@ final class AppDefaults: Sendable {
 	/// toolbarTopUseOverflowMenu/toolbarBottomUseOverflowMenu below (see
 	/// ToolbarFunction).
 
+	// MARK: - Annotations
+
 	/// The color HighlightColorPopover's note-icon path (which creates a
 	/// highlight without the person picking a color) falls back to, and
 	/// the starting selection in the annotations toolbar menu's "Default
@@ -1502,6 +1503,8 @@ final class AppDefaults: Sendable {
 			AppDefaults.setString(for: Key.annotationCreationMethod, newValue.rawValue)
 		}
 	}
+
+	// MARK: - Toolbar customization
 
 	/// Table-driven key lookup for the unified toolbar model: (inline key,
 	/// overflow key) per (ToolbarFunction, ToolbarBar). A hand-written
@@ -1725,6 +1728,8 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	// MARK: - Article display
+
 	/// Whether the notch/Dynamic Island area is masked (solid black) while in
 	/// fullscreen reading mode, instead of showing through as normal. Exposed
 	/// as its own toggle -- independent of the page counter below -- for
@@ -1805,6 +1810,8 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	// MARK: - Article theme overrides
+
 	/// layered on top of whichever theme (default or imported) is active. See
 	/// ArticleThemeOverrides.cssOverrideBlock and ArticleRenderer.styleString().
 	var articleThemeOverrides: ArticleThemeOverrides {
@@ -1823,6 +1830,8 @@ final class AppDefaults: Sendable {
 			NotificationCenter.default.post(name: .articleThemeOverridesDidChange, object: self)
 		}
 	}
+
+	// MARK: - Text replacement
 
 	/// The master "apply automatically on open" toggle for the rule-driven
 	/// text-replacement categories (typo fixes, reader-insert names, and
@@ -1946,6 +1955,8 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	// MARK: - Split view and last refresh
+
 	var splitViewPreferredDisplayMode: Int {
 		get {
 			return AppDefaults.int(for: Key.splitViewPreferredDisplayMode)
@@ -1963,6 +1974,8 @@ final class AppDefaults: Sendable {
 			AppDefaults.setDate(for: Key.lastRefresh, newValue)
 		}
 	}
+
+	// MARK: - Timeline layout and appearance settings
 
 	var timelineNumberOfLines: Int {
 		get {
@@ -2085,6 +2098,8 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	// MARK: - Current article theme
+
 	var currentThemeName: String? {
 		get {
 			return AppDefaults.string(for: Key.currentThemeName)
@@ -2093,6 +2108,8 @@ final class AppDefaults: Sendable {
 			AppDefaults.setString(for: Key.currentThemeName, newValue)
 		}
 	}
+
+	// MARK: - Sidebar and selection state (state restoration)
 
 	var hideReadFeeds: Bool {
 		get {
@@ -2187,6 +2204,8 @@ final class AppDefaults: Sendable {
 		}
 	}
 
+	// MARK: - Registered defaults
+
 	@MainActor static func registerDefaults() {
 		let defaults: [String: Any] = [Key.userInterfaceColorPalette: UserInterfaceColorPalette.automatic.rawValue,
 										Key.timelineGroupByFeed: false,
@@ -2273,243 +2292,21 @@ final class AppDefaults: Sendable {
 	}
 }
 
-/// See `AppDefaults.screenTimeTakeABreakMode`'s doc comment.
-enum TakeABreakMode: String, CaseIterable, Sendable {
-	case off
-	case reminder
-	case enforced
-}
-
-/// See `AppDefaults.screenTimeIndicatorDisplayMode`'s doc comment.
-enum ScreenTimeIndicatorDisplayMode: String, CaseIterable, Sendable {
-	case off
-	case pie
-}
-
 extension AppDefaults {
 
-	private static func decode<T: Decodable>(_ type: T.Type, key: String, default value: T) -> T {
+	// MARK: - Codable-in-UserDefaults helpers
+
+	static func decode<T: Decodable>(_ type: T.Type, key: String, default value: T) -> T {
 		guard let string = string(for: key), let data = string.data(using: .utf8), let decoded = try? JSONDecoder().decode(type, from: data) else { return value }
 		return decoded
 	}
 
-	private static func encode<T: Encodable>(_ value: T, key: String) {
+	static func encode<T: Encodable>(_ value: T, key: String) {
 		guard let data = try? JSONEncoder().encode(value), let string = String(data: data, encoding: .utf8) else { return }
 		setString(for: key, string)
 	}
 
-	var screenTimeEnabled: Bool {
-		get { AppDefaults.bool(for: Key.screenTimeEnabled) }
-		set { AppDefaults.setBool(for: Key.screenTimeEnabled, newValue) }
-	}
-
-	var screenTimeDailyLimitMinutesByWeekday: [Int: Int] {
-		get { AppDefaults.decode([Int: Int].self, key: Key.screenTimeDailyLimitMinutesByWeekday, default: [:]) }
-		set { AppDefaults.encode(newValue, key: Key.screenTimeDailyLimitMinutesByWeekday) }
-	}
-
-	func screenTimeDailyLimitMinutes(for weekday: Int) -> Int {
-		screenTimeDailyLimitMinutesByWeekday[weekday] ?? 120
-	}
-
-	func setScreenTimeDailyLimitMinutes(_ minutes: Int, for weekday: Int) {
-		var limits = screenTimeDailyLimitMinutesByWeekday
-		limits[weekday] = max(60, minutes)
-		screenTimeDailyLimitMinutesByWeekday = limits
-	}
-
-	/// Independent of `screenTimeDailyLimitMinutesByWeekday` itself, so
-	/// the limit can be turned off without losing the configured minutes
-	/// per weekday -- symmetric with `screenTimeBedtimeEnabled` below.
-	/// Default true preserves the pre-existing always-on behavior.
-	var screenTimeDailyLimitEnabled: Bool {
-		get { AppDefaults.bool(for: Key.screenTimeDailyLimitEnabled) }
-		set { AppDefaults.setBool(for: Key.screenTimeDailyLimitEnabled, newValue) }
-	}
-
-	var screenTimeBedtimeEnabled: Bool {
-		get { AppDefaults.bool(for: Key.screenTimeBedtimeEnabled) }
-		set { AppDefaults.setBool(for: Key.screenTimeBedtimeEnabled, newValue) }
-	}
-
-	var screenTimeBedtimeStartMinutesFromMidnight: Int {
-		get { AppDefaults.int(for: Key.screenTimeBedtimeStartMinutesFromMidnight) }
-		set {
-			let currentEnd = screenTimeBedtimeEndMinutesFromMidnight
-			if ScreenTimeCalendar.bedtimeWindowSpanMinutes(startMinutes: newValue, endMinutes: currentEnd) > ScreenTimeCalendar.maxBedtimeWindowSpanMinutes {
-				AppDefaults.setInt(for: Key.screenTimeBedtimeEndMinutesFromMidnight, (newValue + ScreenTimeCalendar.maxBedtimeWindowSpanMinutes) % 1440)
-			}
-			AppDefaults.setInt(for: Key.screenTimeBedtimeStartMinutesFromMidnight, newValue)
-		}
-	}
-
-	var screenTimeBedtimeEndMinutesFromMidnight: Int {
-		get { AppDefaults.int(for: Key.screenTimeBedtimeEndMinutesFromMidnight) }
-		set {
-			let currentStart = screenTimeBedtimeStartMinutesFromMidnight
-			if ScreenTimeCalendar.bedtimeWindowSpanMinutes(startMinutes: currentStart, endMinutes: newValue) > ScreenTimeCalendar.maxBedtimeWindowSpanMinutes {
-				AppDefaults.setInt(for: Key.screenTimeBedtimeStartMinutesFromMidnight, ((newValue - ScreenTimeCalendar.maxBedtimeWindowSpanMinutes) % 1440 + 1440) % 1440)
-			}
-			AppDefaults.setInt(for: Key.screenTimeBedtimeEndMinutesFromMidnight, newValue)
-		}
-	}
-
-	var screenTimeMinutesUsedTodaySeconds: Int {
-		get { AppDefaults.int(for: Key.screenTimeMinutesUsedTodaySeconds) }
-		set { AppDefaults.setInt(for: Key.screenTimeMinutesUsedTodaySeconds, newValue) }
-	}
-
-	var screenTimeUsageDate: Date? {
-		get { AppDefaults.date(for: Key.screenTimeUsageDate) }
-		set { AppDefaults.setDate(for: Key.screenTimeUsageDate, newValue) }
-	}
-
-	/// Trimmed to 35 days (5 Sunday-aligned weeks) on every write, so a
-	/// full month of week navigation in ScreenTimeSettingsView's weekly
-	/// summary always has data available regardless of which day of the
-	/// week "today" falls on. Every rollover write in ScreenTimeTracker
-	/// goes through this same setter, so trimming here is sufficient --
-	/// there's no separate trim-on-rollover step.
-	var screenTimeDailyUsageHistory: [String: Int] {
-		get { AppDefaults.decode([String: Int].self, key: Key.screenTimeDailyUsageHistory, default: [:]) }
-		set { AppDefaults.encode(Dictionary(uniqueKeysWithValues: newValue.sorted { $0.key < $1.key }.suffix(35)), key: Key.screenTimeDailyUsageHistory) }
-	}
-
-	/// Take a Break has three modes, not a bool: `.off`, `.reminder` (a
-	/// dismissible nudge every `screenTimeBreakReadingMinutes`, no block --
-	/// the only mode that used to exist), and `.enforced` (same recurring
-	/// trigger, but blocks reading for `screenTimeBreakEnforcedMinutes`
-	/// the way a daily limit or bedtime does -- see ScreenTimeTracker's
-	/// `.recurringBreak` lockout reason).
-	var screenTimeTakeABreakMode: TakeABreakMode {
-		get {
-			if let raw = AppDefaults.string(for: Key.screenTimeTakeABreakMode), let mode = TakeABreakMode(rawValue: raw) {
-				return mode
-			}
-			// Migration for anyone upgrading with the old bool-only setting
-			// already turned on: preserve their reminders rather than
-			// silently reverting them to off. No legacy value stored means
-			// this is a fresh install, which registers "off" below.
-			return AppDefaults.bool(for: Key.screenTimeTakeABreakEnabled) ? .reminder : .off
-		}
-		set { AppDefaults.setString(for: Key.screenTimeTakeABreakMode, newValue.rawValue) }
-	}
-
-	/// The recurring "reading time" interval before a break (of either
-	/// enforced kind) triggers. Was a hardcoded 15-minute constant on
-	/// ScreenTimeTracker; now user-configurable, matching the daily-limit
-	/// timer picker.
-	var screenTimeBreakReadingMinutes: Int {
-		get { max(1, AppDefaults.int(for: Key.screenTimeBreakReadingMinutes)) }
-		set { AppDefaults.setInt(for: Key.screenTimeBreakReadingMinutes, max(1, newValue)) }
-	}
-
-	/// How long an `.enforced` break blocks reading for once triggered.
-	/// Unused in `.reminder`/`.off` modes.
-	var screenTimeBreakEnforcedMinutes: Int {
-		get { max(1, AppDefaults.int(for: Key.screenTimeBreakEnforcedMinutes)) }
-		set { AppDefaults.setInt(for: Key.screenTimeBreakEnforcedMinutes, max(1, newValue)) }
-	}
-
-	/// Persisted mirror of `ScreenTimeTracker`'s in-memory
-	/// `recurringBreakEndDate`, so an active enforced break survives a
-	/// force-quit instead of silently clearing.
-	var screenTimeRecurringBreakEndDate: Date? {
-		get { AppDefaults.date(for: Key.screenTimeRecurringBreakEndDate) }
-		set { AppDefaults.setDate(for: Key.screenTimeRecurringBreakEndDate, newValue) }
-	}
-
-	/// Persisted mirror of `ScreenTimeTracker`'s in-memory
-	/// `secondsSinceLastBreak`.
-	var screenTimeSecondsSinceLastBreak: Int {
-		get { AppDefaults.int(for: Key.screenTimeSecondsSinceLastBreak) }
-		set { AppDefaults.setInt(for: Key.screenTimeSecondsSinceLastBreak, newValue) }
-	}
-
-	/// Timestamp of the last `willResignActive`, used on the next
-	/// `didBecomeActive` to detect time spent away from the app long
-	/// enough to count as a break, closing the force-quit loophole.
-	var screenTimeLastResignDate: Date? {
-		get { AppDefaults.date(for: Key.screenTimeLastResignDate) }
-		set { AppDefaults.setDate(for: Key.screenTimeLastResignDate, newValue) }
-	}
-
-	/// Whether the Screen Time pie indicator shows in fullscreen reading,
-	/// independent of `pageCounterDisplayMode`. Default `.pie` preserves
-	/// today's always-on-when-conditions-met behavior for existing users.
-	var screenTimeIndicatorDisplayMode: ScreenTimeIndicatorDisplayMode {
-		get { ScreenTimeIndicatorDisplayMode(rawValue: AppDefaults.string(for: Key.screenTimeIndicatorDisplayMode) ?? "") ?? .pie }
-		set { AppDefaults.setString(for: Key.screenTimeIndicatorDisplayMode, newValue.rawValue) }
-	}
-
-	var readingStatsTrackingEnabled: Bool {
-		get { AppDefaults.bool(for: Key.readingStatsTrackingEnabled) }
-		set { AppDefaults.setBool(for: Key.readingStatsTrackingEnabled, newValue) }
-	}
-
-	var readingStatsDailyHistory: [String: ReadingStatsDailyEntry] {
-		get { AppDefaults.decode([String: ReadingStatsDailyEntry].self, key: Key.readingStatsDailyHistory, default: [:]) }
-		set { AppDefaults.encode(Dictionary(uniqueKeysWithValues: newValue.sorted { $0.key < $1.key }.suffix(35)), key: Key.readingStatsDailyHistory) }
-	}
-
-	/// Words credited per day (`"yyyy-MM-dd"` -> words), trimmed to 371 days
-	/// (53 weeks) on every write -- the most `ReadingHeatmapView`'s
-	/// year-of-activity grid can span (365 days plus up to 6 to align to
-	/// the week's first day; see `ReadingHeatmapData.daysAndStartDate`).
-	/// Deliberately a separate, tiny store rather than widening
-	/// `readingStatsDailyHistory`'s 35-day cap: that dictionary is decoded,
-	/// mutated, and re-encoded in full by `ReadingStatsTracker.tick()` every
-	/// second while reading, and each day's entry carries per-fandom/per-tag
-	/// maps and per-work sets, so keeping a year of it would make every one
-	/// of those writes roughly ten times larger. Read via
-	/// `readingStatsDailyWordCounts`, not directly, so days that predate
-	/// this store still appear.
-	var readingStatsDailyWords: [String: Int] {
-		get { AppDefaults.decode([String: Int].self, key: Key.readingStatsDailyWords, default: [:]) }
-		set { AppDefaults.encode(Dictionary(uniqueKeysWithValues: newValue.sorted { $0.key < $1.key }.suffix(371)), key: Key.readingStatsDailyWords) }
-	}
-
-	/// What the Streaks/Monthly UI reads: `readingStatsDailyWords`, with any
-	/// day where `readingStatsDailyHistory` recorded more words filled in
-	/// from there. That covers days recorded before `readingStatsDailyWords`
-	/// existed (no migration step needed) and the day of the upgrade itself,
-	/// where the new store only saw the words read after upgrading. Per-day
-	/// word counts only ever grow within a day, so `max` is safe.
-	var readingStatsDailyWordCounts: [String: Int] {
-		var merged = readingStatsDailyWords
-		for (key, entry) in readingStatsDailyHistory where entry.wordsRead > merged[key, default: 0] {
-			merged[key] = entry.wordsRead
-		}
-		return merged
-	}
-
-	var readingStatsProgressByBookKey: [String: Double] {
-		get { AppDefaults.decode([String: Double].self, key: Key.readingStatsProgressByBookKey, default: [:]) }
-		set { AppDefaults.encode(newValue, key: Key.readingStatsProgressByBookKey) }
-	}
-
-	var readingStatsAllTimeWords: Int {
-		get { AppDefaults.int(for: Key.readingStatsAllTimeWords) }
-		set { AppDefaults.setInt(for: Key.readingStatsAllTimeWords, newValue) }
-	}
-
-	/// Wipes all recorded reading-stats data -- the daily history the
-	/// charts/streak are built from, per-book reading progress, and the
-	/// all-time word counter -- but leaves `readingStatsTrackingEnabled`
-	/// untouched, mirroring resetToolbarDefaults(for:)'s scoping (that
-	/// resets placement/order but not the feature's own on/off switch).
-	/// Implemented as key removal, not re-writing to `[:]`/`0`, for the
-	/// same reason as resetToolbarDefaults(for:): removing the key falls
-	/// back to whatever default already applies (empty dictionary, zero),
-	/// so there's nothing to keep in sync here if those defaults ever
-	/// change. This is destructive and not recoverable -- callers should
-	/// confirm with the user first.
-	func resetReadingStats() {
-		AppDefaults.store.removeObject(forKey: Key.readingStatsDailyHistory)
-		AppDefaults.store.removeObject(forKey: Key.readingStatsDailyWords)
-		AppDefaults.store.removeObject(forKey: Key.readingStatsProgressByBookKey)
-		AppDefaults.store.removeObject(forKey: Key.readingStatsAllTimeWords)
-	}
+	// MARK: - First-run date and typed UserDefaults accessors
 
 	static var firstRunDate: Date? {
 		get {

@@ -12,12 +12,24 @@
 //  can drift out of sync with each other.
 //
 //  This table is the *primary* store for read/starred/loved/scrollPosition
-//  going forward; the parallel columns on `statuses` remain as a fallback for
-//  the rare row with no resolvable bookKey (see ArticlesTable.bookKeysForArticleIDs'
-//  `bookKey ?? uniqueID` convention -- in practice this fallback should be
-//  nearly unreachable, but it costs nothing to keep). Fallback rows are
-//  ordinary `statuses` rows and so are cleaned up automatically whenever a
-//  feed's articles/statuses are deleted -- no special-casing needed for that.
+//  going forward. The parallel columns on `statuses` are a fallback in two
+//  cases: a row with no resolvable bookKey (see
+//  ArticlesTable.bookKeysForArticleIDs' `bookKey ?? uniqueID` convention --
+//  in practice nearly unreachable), and, for scrollPosition only, a
+//  resolvable bookKey that has no row here yet (a position saved before
+//  this table existed, for a book not since re-opened -- see
+//  ArticlesTable.fetchScrollPosition). Fallback rows are ordinary `statuses`
+//  rows and so are cleaned up automatically whenever a feed's
+//  articles/statuses are deleted -- no special-casing needed for that.
+//
+//  readingProgress is the deliberate exception to "primary": this table is
+//  its durable cross-feed record (written by ArticlesTable.saveReadingProgress,
+//  and read in bulk by ArticlesTable.update to seed newly imported copies of
+//  the same book), but the UI reads it from `statuses` through
+//  ArticleStatus.readingProgress, because timeline cards bulk-load progress
+//  with every ArticleStatus. A point read like scrollPosition's can be
+//  bookKey-first; a bulk read cannot without joining this table into every
+//  article fetch. See book-identity.md.
 //
 //  Because the key is bookKey (not articleID), the same book appearing in
 //  more than one Ambrosia collection feed at once shares one row here: a
@@ -107,6 +119,11 @@ final class BookStateTable: DatabaseTable, Sendable {
 	}
 
 	// MARK: - Scroll position / reading progress
+	//
+	// There is intentionally no single-key readingProgress getter here: the
+	// UI never point-reads it from this table (see the file header), and
+	// the only reader is the bulk `state(for:)` lookup in
+	// ArticlesTable.update.
 
 	/// nil when this bookKey has no row at all -- distinct from a row that
 	/// exists and holds 0 (top of document). Callers that need to fall back
@@ -120,10 +137,6 @@ final class BookStateTable: DatabaseTable, Sendable {
 
 	func setScrollPosition(_ value: Double, bookKey: String, _ database: FMDatabase) {
 		upsert(bookKeys: [bookKey], column: DatabaseKey.scrollPosition, value: value, database)
-	}
-
-	func readingProgress(for bookKey: String, _ database: FMDatabase) -> Double? {
-		state(for: [bookKey], database)[bookKey]?.readingProgress
 	}
 
 	func setReadingProgress(_ value: Double, bookKey: String, _ database: FMDatabase) {

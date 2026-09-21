@@ -91,7 +91,10 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   `ArticleStringFormatter` (title/summary truncation and caching),
   `ArticleRenderer` (HTML page assembly for the web view), `Assets.swift`
   (icon/color constants, including the fork's Loved/heart and Ambrosia
-  additions), and `SmartFeeds/` (Today/Unread/Starred/Loved/Read/**Last
+  additions), `ReadingProgress/ReadingProgressEvaluator` (the pure math
+  behind per-scroll-sample reading progress and the shared completion
+  threshold, split out of `WebViewController` so it can be unit-tested; see
+  `reading-progress.md`), and `SmartFeeds/` (Today/Unread/Starred/Loved/Read/**Last
   Opened** smart feeds — `LovedFeedDelegate` uses a dedicated filled-heart
   icon, not the Starred bookmark icon; `LastOpenedFeedDelegate` is a
   Nectar-original smart feed with no upstream counterpart, described in
@@ -101,7 +104,15 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
     per-row display state from an `Article`; `MainTimelineCellLayout`
     computes rects; `MainTimelineCell` renders.
   - `iOS/Article` — `WebViewController` (article web view, scroll
-    tracking, read-marking), `ArticleViewController`.
+    tracking, read-marking; the per-sample progress math itself lives in
+    `Shared/ReadingProgress`), `ArticleViewController`.
+  - `iOS/AppDefaults.swift`: the settings singleton. Feature-owned settings
+    are split into `extension AppDefaults` files next to the feature
+    (`iOS/ScreenTime/AppDefaults+ScreenTime.swift`,
+    `iOS/ReadingStats/AppDefaults+ReadingStats.swift`); see
+    `settings-screen.md`. Other groups (reader, toolbar, annotations, text
+    replacement) are still in the main file under `// MARK:` banners and are
+    the next candidates to move.
   - `iOS/Settings` — `SettingsViewController` (app settings list) and
     `TimelineCustomizerCollectionViewController` (Timeline Layout screen:
     icon size, line count, and a live `MainTimelineCell` preview). See
@@ -111,3 +122,44 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
 
 Note: several `#if os(macOS)` branches survive from the upstream NetNewsWire
 codebase but nothing macOS is currently built or shipped for Nectar.
+
+## Lint size ratchet
+
+`.swiftlint.yml` enables `file_length` and `type_body_length` as
+warnings only. They exist to make growth in the app target's largest
+files visible, not to enforce a target size: `swiftlint lint --strict`
+runs in CI (`.github/workflows/ci.yml`) and promotes any reported warning
+to a failure, so each threshold must stay above the current worst file or
+it breaks the build.
+
+- `file_length` is set just above `iOS/Article/WebViewController.swift`
+  (3,135 lines as of this writing).
+- `type_body_length` (2600) was not measured against the real largest type
+  body and is likely far too loose; measure with a local `swiftlint` run
+  and lower it to just above the real maximum.
+- Lower both numbers as the large files shrink. Do not jump to SwiftLint's
+  defaults (400 / 250), which would flag most of the largest files at once.
+
+The files this is aimed at are the ones over 1,000 lines in `iOS/`, all of
+which are view controllers, a coordinator, or a settings singleton:
+`WebViewController`, `SceneCoordinator`, `AppDefaults`,
+`MainTimelineModernViewController`, `MainFeedCollectionViewController`,
+`ArticleViewController`, `AnnotationsListView`, `SettingsViewController`.
+`Shared/` and `Modules/` have essentially none. The pattern that keeps
+them from growing further is to extract logic downward into plain
+value types or the owning package (e.g. `Shared/`, `ArticlesDatabase`) and
+test it there, rather than adding more to the view controller; see
+`ProvisionalAO3StubDetectionTests` and
+`SurfacePaletteNavigationBarAwareToolbarStyleTests` for the two extraction
+patterns already used in this repo.
+
+## Test plans
+
+CI runs `Nectar-CI.xctestplan` (`-testPlan Nectar-CI` in
+`.github/workflows/ci.yml` and `test.sh`); `NetNewsWire-iOS.xctestplan` is
+the default plan and runs only `Nectar-iOSTests`. A package's test target
+only runs in CI if it is listed in `Nectar-CI.xctestplan`: having a
+`.testTarget` in a package's `Package.swift` is not enough. When adding a
+package test target, add its entry there too. Both plans have
+`codeCoverage` enabled so coverage of the large `iOS/` files can be tracked
+over time; it does not change test behavior.
