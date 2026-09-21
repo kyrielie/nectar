@@ -11,6 +11,7 @@
 //
 
 import Foundation
+import Account
 
 extension AppDefaults.Key {
 	static let screenTimeEnabled = "screenTimeEnabled"
