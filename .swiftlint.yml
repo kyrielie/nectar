@@ -16,16 +16,39 @@ large_tuple:
   warning: 5
   error: 6
 
+# Baseline-and-ratchet (see the reading-progress refactor investigation
+# plan, Part 4, "the cheapest high-leverage change in this entire
+# document"): file_length/type_body_length were previously in
+# disabled_rules below, which is why WebViewController.swift (3,135
+# lines), SceneCoordinator.swift (2,786), and AppDefaults.swift (2,617)
+# grew unopposed -- `swiftlint lint --strict` runs in CI
+# (.github/workflows/ci.yml) and would otherwise have been the mechanism
+# that caught this.
+#
+# Thresholds below are set just above today's worst offender
+# (WebViewController.swift), as warnings only (no `error:` key), so this
+# change cannot fail the existing `--strict` CI run today -- `--strict`
+# only promotes WARNINGS to errors for violations the rule actually
+# reports, and nothing currently exceeds these numbers. As files shrink
+# (see the plan's Part 4 recommendations), ratchet these thresholds down;
+# do not jump straight to SwiftLint's own defaults (200/type_body_length,
+# 400/file_length) in one step, since that would immediately flag most of
+# the eight files named in the plan and invite reverting this instead of
+# fixing them incrementally.
+file_length:
+  warning: 3200
+
+type_body_length:
+  warning: 2600
+
 disabled_rules:
   - todo
   - for_where
-  - file_length
   - force_cast
   - force_try
   - cyclomatic_complexity
   - generic_type_name
   - function_body_length
-  - type_body_length
   - function_parameter_count
   - line_length
   - function_name_whitespace

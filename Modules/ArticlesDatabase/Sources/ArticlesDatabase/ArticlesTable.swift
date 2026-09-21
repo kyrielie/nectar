@@ -1074,24 +1074,47 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	// uniqueID via bookKeysForArticleIDs' existing convention -- see there),
 	// so scroll position survives feed deletion/re-subscription and is shared
 	// across every feed's copy of the same book, same as read/starred/loved.
-	// statusesTable.scrollPosition remains only as a last-resort fallback for
-	// the case where the articleID doesn't resolve to any row at all (so no
-	// key of any kind is available); that fallback row is deleted along with
-	// the rest of the article/statuses data on feed deletion, which is
-	// acceptable -- there's no book-level identity to preserve it under.
+	//
+	// statusesTable.scrollPosition is a fallback for two distinct cases, not
+	// one: (1) the articleID doesn't resolve to any bookKey at all -- rare,
+	// since bookKeysForArticleIDs falls back to uniqueID -- and (2) a bookKey
+	// resolves but bookStateTable has no row for it yet, which is reachable
+	// whenever a position was saved before that book's row existed (see
+	// saveScrollPosition below) and the book hasn't been re-opened since to
+	// create one. fetchScrollPosition below must check for a missing row, not
+	// just fall through on case (1) -- see its own comment. A statuses
+	// fallback row is deleted along with the rest of the article/statuses
+	// data on feed deletion, which is acceptable -- there's no book-level
+	// identity to preserve it under.
 
 	func saveScrollPosition(_ scrollPosition: Double, articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
 		queue.runInTransaction { database in
 			if let bookKey = self.bookKeysForArticleIDs([articleID], database).first {
 				self.bookStateTable.setScrollPosition(scrollPosition, bookKey: bookKey, database)
 			}
-			// Always write through to statuses too -- same as saveReadingProgress
-			// below. bookKeysForArticleIDs always resolves a bookKey (it falls
-			// back to uniqueID -- see ParsedItem.bookKey's last-resort case),
-			// so the old if/else here meant this line never ran in practice and
-			// statuses.scrollPosition sat at its schema default forever.
-			// BackupSQLiteImportTable's statuses merge (arbitrated by
-			// lastOpenedAt) depends on this column holding the real value.
+			// Always write through to statuses too. bookKeysForArticleIDs
+			// always resolves a bookKey (it falls back to uniqueID -- see
+			// ParsedItem.bookKey's last-resort case), so the old if/else here
+			// meant this line never ran in practice and statuses.scrollPosition
+			// sat at its schema default forever. BackupSQLiteImportTable's
+			// statuses merge (arbitrated by lastOpenedAt) depends on this
+			// column holding the real value, and so does fetchScrollPosition's
+			// no-bookState-row fallback above.
+			//
+			// Deliberately NOT propagated to sibling articleIDs sharing this
+			// bookKey, unlike saveReadingProgress below -- this is this
+			// method's one remaining difference from that method's shape, not
+			// an oversight: fetchScrollPosition only ever reads a sibling's
+			// own statuses row in the fallback (no-bookState-row) case, and in
+			// that case bookStateTable.setScrollPosition just above has
+			// already created the shared row every sibling's lookup will find
+			// on its *next* fetch. A stale per-sibling statuses.scrollPosition
+			// value is therefore only ever observed once, on read paths that
+			// don't go through this table at all (e.g. BackupSQLiteImportTable's
+			// per-articleID statuses merge) -- acceptable for a fallback column,
+			// but worth this note existing so a future reader doesn't "fix" the
+			// asymmetry by copying saveReadingProgress's sibling loop here
+			// without re-deriving why it isn't needed.
 			self.statusesTable.saveScrollPosition(scrollPosition, articleID: articleID, database)
 			DispatchQueue.main.async {
 				completion()
@@ -1101,9 +1124,18 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	func fetchScrollPosition(articleID: String, _ completion: @escaping @Sendable (Double) -> Void) {
 		queue.runInDatabase { database in
+			// A resolved bookKey with no bookState row (e.g. a position saved
+			// back when statuses.scrollPosition was the only store, for a book
+			// never since re-opened -- see saveScrollPosition's comment) must
+			// NOT be treated as "position 0": that's indistinguishable from a
+			// real top-of-document position and silently drops the value still
+			// sitting in statuses.scrollPosition. Only fall through to
+			// statusesTable when bookStateTable has no row at all for this key,
+			// not merely when its value happens to be 0.
 			let scrollPosition: Double
-			if let bookKey = self.bookKeysForArticleIDs([articleID], database).first {
-				scrollPosition = self.bookStateTable.scrollPosition(for: bookKey, database)
+			if let bookKey = self.bookKeysForArticleIDs([articleID], database).first,
+			   let bookStatePosition = self.bookStateTable.scrollPosition(for: bookKey, database) {
+				scrollPosition = bookStatePosition
 			} else {
 				scrollPosition = self.statusesTable.fetchScrollPosition(articleID: articleID, database)
 			}
