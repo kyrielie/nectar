@@ -1,23 +1,31 @@
-name: Publish theme gallery
+name: Publish site (landing page and theme gallery)
 
-# Builds gallery/ and publishes it to the gh-pages branch under /themes/,
-# alongside the AltStore source.json that release.yml already publishes there.
-# Only files under themes/ are touched, so source.json is never clobbered.
+# Builds landing/ and gallery/ and publishes them to the gh-pages branch:
+#   landing page  -> /index.html
+#   theme gallery -> /themes/
+# alongside the AltStore source.json, icon.png and screenshots/ that release.yml
+# already publishes there. Only index.html and the themes/ folder are touched, so
+# those other files are never clobbered.
+#
+# The file keeps its old name (gallery.yml) so existing references stay valid.
 
 on:
   push:
     branches: [main]
     paths:
+      - "landing/**"
+      - "appstore/source.template.json"
       - "gallery/**"
       - "gallery-themes/**"
       - "Themes/**"
       - "Shared/Article Rendering/core.css"
+      - ".github/workflows/gallery.yml"
   workflow_dispatch:
 
 permissions:
   contents: write
 
-# Serializes gallery runs with each other only. release.yml (publish-source)
+# Serializes site runs with each other only. release.yml (publish-source)
 # also pushes to gh-pages, but it is deliberately not in this group: a shared
 # group keeps only one pending run and would cancel a queued source.json
 # publish. The two touch disjoint paths, so the push below rebases and retries
@@ -39,23 +47,27 @@ jobs:
           ref: gh-pages
           path: pages
 
+      - name: Build landing page
+        run: python3 main/landing/build.py --out build-landing
+
       - name: Build gallery
         run: python3 main/gallery/build.py --out build
 
-      - name: Publish to gh-pages/themes
+      - name: Publish to gh-pages
         run: |
+          cp build-landing/index.html pages/index.html
           rm -rf pages/themes
           mkdir -p pages/themes
           cp -R build/. pages/themes/
           cd pages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add index.html themes
           if git diff --cached --quiet; then
-            echo "No gallery changes"
+            echo "No site changes"
             exit 0
           fi
-          git commit -m "Publish theme gallery"
+          git commit -m "Publish site"
           for attempt in 1 2 3; do
             if git push origin HEAD:gh-pages; then
               exit 0
