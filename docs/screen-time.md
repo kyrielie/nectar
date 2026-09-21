@@ -16,10 +16,24 @@ gap as active reading time. Each `tick(now:)` call caps what it credits at
 5 seconds (`maxCreditPerTick`), bounding both a forward clock jump and any
 gap between ticks, and carries a sub-second remainder across calls so
 short resign/active cycles don't lose time to flooring. Both trackers
-register their `Timer` in `.common` run-loop mode (`RunLoop.current.add(_:
-forMode: .common)`) rather than `Timer.scheduledTimer`'s default `.default`
-mode, so ticks keep firing while the person is actively scrolling — the
-default mode suspends timers during scroll tracking.
+also own a `ForegroundTicker` (`iOS/Shared/ForegroundTicker.swift`), which
+holds the one-time `start()` setup: register the resign/become-active
+observers, run the tracker's own `prepare` step, then start the one-second
+`Timer` in `.common` run-loop mode (`RunLoop.current.add(_: forMode:
+.common)`) rather than `Timer.scheduledTimer`'s default `.default` mode, so
+ticks keep firing while the person is actively scrolling (the default
+mode suspends timers during scroll tracking). `ForegroundTicker` is
+composition, not a base class, on purpose: it owns only that lifecycle. What
+`tick()`, `willResignActive()`, and `didBecomeActive()` do stays in each
+tracker, because they differ in ways that matter (`ScreenTimeTracker.tick()`
+must run `evaluate(at:)` and `evaluateRecurringBreakExpiry(at:)` even on a
+tick that credits no foreground time, so a bedtime window opening or an
+enforced break expiring is caught on wall-clock time;
+`ReadingStatsTracker.tick()` returns early in that case). `start()` is a
+no-op once the ticker is running; `ScreenTimeTracker.resetForTesting()`
+tears it down (`stopForTesting(target:)`) so tests can exercise `start()`'s
+setup again, while `ReadingStatsTracker.resetForTesting()` does not, because
+no test starts that tracker's ticker.
 
 When a limit or enabled bedtime window is crossed, the tracker posts a limit notification. Each connected scene presents its scene-local black enforcement overlay; there is no dismiss, grace period, or extension path for a daily-limit or bedtime lockout specifically (Take a Break, below, has its own separate dismiss/timer paths). Bedtime and usage-day calculations consistently read the device's current `Calendar.current`/timezone (`ScreenTimeCalendar`'s helpers, `evaluate(at:)`), so a timezone change or DST transition is reflected the moment the next tick runs, not stuck on whatever zone was active when tracking started. What's still unhandled: the person manually moving the device clock backward mid-session. `tick()` clamps a negative `now.timeIntervalSince(previous)` to zero, so usage simply stops accruing rather than going negative, but the bedtime-window check re-evaluates against the rolled-back time on the very next tick — so winding the clock back out of a bedtime window ends the lockout immediately, and winding it back into one starts a new lockout immediately. There's no detection of the rollback itself, just a consistent (if manipulable) read of whatever the clock currently says.
 

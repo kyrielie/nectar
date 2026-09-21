@@ -9,7 +9,7 @@
     }
   ],
   "defaultOptions" : {
-    "codeCoverage" : false,
+    "codeCoverage" : true,
     "targetForVariableExpansion" : {
       "containerPath" : "container:NetNewsWire.xcodeproj",
       "identifier" : "E918341AC3D5C53E25D90D02",
@@ -85,6 +85,13 @@
         "containerPath" : "container:Modules/ErrorLog",
         "identifier" : "ErrorLogTests",
         "name" : "ErrorLogTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/FeedFinder",
+        "identifier" : "FeedFinderTests",
+        "name" : "FeedFinderTests"
       }
     }
   ],

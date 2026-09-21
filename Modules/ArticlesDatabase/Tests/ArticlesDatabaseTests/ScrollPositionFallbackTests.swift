@@ -2,12 +2,11 @@
 //  ScrollPositionFallbackTests.swift
 //  ArticlesDatabaseTests
 //
-//  Regression coverage for a read-path gap found while investigating
-//  ArticlesTable.saveScrollPosition/fetchScrollPosition's asymmetry with
-//  saveReadingProgress (see the reading-progress refactor investigation
-//  plan, Part 3, "step 3 result"): fetchScrollPosition read only
-//  bookStateTable whenever a bookKey resolved, with no fallback to
-//  statuses.scrollPosition unless the bookKey itself failed to resolve.
+//  Regression coverage for a read-path gap in
+//  ArticlesTable.fetchScrollPosition (behavior documented in
+//  book-identity.md): it used to read only bookStateTable whenever a
+//  bookKey resolved, with no fallback to statuses.scrollPosition unless
+//  the bookKey itself failed to resolve.
 //  BookStateTable.scrollPosition(for:) collapsed "no row for this bookKey"
 //  to 0, which is indistinguishable from a real top-of-document position --
 //  so a bookKey that resolves but has no bookState row yet (reachable for

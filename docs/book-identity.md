@@ -36,19 +36,53 @@ per-`bookKey` kudos dedup/retry-once-signed-in logic — see
 - Scroll position (`ArticlesTable.saveScrollPosition`/`fetchScrollPosition`)
   is likewise `bookKey`-keyed through `BookStateTable` when a `bookKey`
   resolves, so it survives feed deletion/re-subscription and is shared
-  across every feed's copy of the same book. `StatusesTable`'s own
-  `scrollPosition` column remains only as a last-resort fallback for an
-  `articleID` that doesn't resolve to any key at all.
-- `readingProgress` is also part of `BookStateTable`'s write-through:
-  `ArticlesTable.saveReadingProgress` looks up the `articleID`'s `bookKey`,
-  writes through `BookStateTable.setReadingProgress`, and propagates the
-  same value to every other `articleID` sharing that `bookKey` via
-  `StatusesTable`, the same pattern as read/starred/loved/scrollPosition
-  above. Two copies of the same book reached through different feeds are
-  the same book to read -- if you're partway through one feed's copy,
-  opening the other feed's copy should show the same position rather than
-  resetting to 0 and risking a stale overwrite on the next scroll-position
-  write.
+  across every feed's copy of the same book. `fetchScrollPosition` reads
+  `BookStateTable` first and falls back to `StatusesTable`'s own
+  `scrollPosition` column in two cases: the `articleID` doesn't resolve to
+  any key at all, **or** it resolves but `bookState` has no row for that key
+  yet (a position saved back when `statuses.scrollPosition` was the only
+  store, for a book not since re-opened). The second case is distinguished
+  from a real saved position of 0 by `BookStateTable.scrollPosition(for:)`
+  returning `nil` for "no row", not 0; regression coverage is
+  `ScrollPositionFallbackTests`. `saveScrollPosition` writes `bookState`
+  and the `statuses` column for the one `articleID` only; it deliberately
+  does not propagate to siblings, because a sibling only ever reads its own
+  `statuses` column in the no-row fallback case above, and the
+  `bookState` write has already created the shared row that sibling's next
+  fetch will find.
+
+### `readingProgress`: durable record vs. live read model
+
+`readingProgress` is **not** the mirror image of the other flags by
+accident; it has a different read pattern, and that dictates which store
+is authoritative for what:
+
+| | `scrollPosition` | `readingProgress` |
+| --- | --- | --- |
+| Read pattern | one point read when an article opens | bulk-loaded into every `ArticleStatus` for timeline cards |
+| Store the UI reads | `bookState` (statuses only as fallback) | `statuses`, via `ArticleStatus.readingProgress` |
+| Role of `bookState` | primary | durable cross-feed record, seeds new `statuses` rows |
+| Role of `statuses` | fallback | live read model |
+
+- `ArticlesTable.saveReadingProgress` looks up the `articleID`'s `bookKey`,
+  writes `BookStateTable.setReadingProgress`, then writes `statuses` for
+  the `articleID` **and every sibling** sharing that `bookKey`. The
+  sibling loop is what makes an already-loaded copy in another feed repaint
+  live; it is not optional the way it is for `scrollPosition`.
+- `bookState.readingProgress` is read in bulk (never per key) by
+  `ArticlesTable.update`, which seeds a newly created `statuses` row from
+  it, the same way read/starred/loved are seeded, so a re-subscribed or
+  newly collection-imported copy of a book the reader already has progress
+  on doesn't reset to nil. Regression coverage:
+  `ArticlesTableUpdateTests.readingProgressSeedsNewArticleIDOnSameBookKey`.
+- There is intentionally no single-key `readingProgress` getter on
+  `BookStateTable`. An earlier one existed and had no callers; it was
+  removed so nobody assumes that path is live. Moving the UI's read path
+  onto `bookState` would mean joining it into every bulk article fetch;
+  that trade was considered and rejected.
+- Two copies of the same book reached through different feeds are the same
+  book to read: if you're partway through one feed's copy, opening the
+  other feed's copy shows the same position.
 
 `StatusesTable`'s parallel read/starred/loved/scrollPosition columns remain
 as the fallback path for the rare row with no resolvable `bookKey`; these

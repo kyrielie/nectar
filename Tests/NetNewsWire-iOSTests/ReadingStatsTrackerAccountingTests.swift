@@ -100,6 +100,41 @@ import Articles
 		#expect(creditedForJump < 100)
 	}
 
+	/// Reading Stats counts a work as completed on the same predicate
+	/// WebViewController uses to mark it read (ReadingProgressEvaluator's
+	/// completion threshold). Driving the tracker with values derived from
+	/// that constant means this fails if either side is changed alone.
+	@Test func completion_isCountedAtTheSharedThreshold() {
+		resetState()
+		defer { resetState() }
+
+		let start = Date(timeIntervalSince1970: 1_700_000_000)
+		ReadingStatsTracker.now = { start }
+		let article = makeArticle(bookKey: "book-threshold-at", wordCount: 1_000)
+		ReadingStatsTracker.shared.setArticle(article)
+		ReadingStatsTracker.shared.recordProgress(ReadingProgressEvaluator.completionThreshold)
+
+		let history = AppDefaults.shared.readingStatsDailyHistory
+		#expect(history.values.contains { $0.completedBookKeys.contains("book-threshold-at") })
+	}
+
+	@Test func completion_isNotCountedJustBelowTheSharedThreshold() {
+		resetState()
+		defer { resetState() }
+
+		let start = Date(timeIntervalSince1970: 1_700_000_000)
+		ReadingStatsTracker.now = { start }
+		let article = makeArticle(bookKey: "book-threshold-below", wordCount: 1_000)
+		ReadingStatsTracker.shared.setArticle(article)
+		ReadingStatsTracker.shared.recordProgress(ReadingProgressEvaluator.completionThreshold - 0.001)
+
+		// Words are credited (so the completion branch is actually reached),
+		// but the work isn't counted as completed.
+		#expect(AppDefaults.shared.readingStatsAllTimeWords > 0)
+		let history = AppDefaults.shared.readingStatsDailyHistory
+		#expect(!history.values.contains { $0.completedBookKeys.contains("book-threshold-below") })
+	}
+
 	/// NOTE ON PLAN DISCREPANCY: the plan's own 3c prose claims re-reading a
 	/// finished work "now credits again" because "sessionStart resets to
 	/// the low re-read position at the start of the new session" -- but
