@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nectar: an iOS reader for Archive of Our Own</title>
+<meta name="description" content="Nectar is a free, open-source iOS reader for Archive of Our Own. Saved reading position, offline caching, notes and highlights, reading stats and themes.">
+<link rel="canonical" href="https://kyrielie.github.io/nectar/">
+<meta name="theme-color" content="#f6f1e6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1418" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Nectar">
+<meta property="og:title" content="Nectar: an iOS reader for Archive of Our Own">
+<meta property="og:description" content="Nectar is a free, open-source iOS reader for Archive of Our Own. Saved reading position, offline caching, notes and highlights, reading stats and themes.">
+<meta property="og:url" content="https://kyrielie.github.io/nectar/">
+<meta property="og:image" content="https://kyrielie.github.io/nectar/icon.png">
+<meta property="og:image:alt" content="Nectar app icon">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Nectar: an iOS reader for Archive of Our Own">
+<meta name="twitter:description" content="Nectar is a free, open-source iOS reader for Archive of Our Own. Saved reading position, offline caching, notes and highlights, reading stats and themes.">
+<meta name="twitter:image" content="https://kyrielie.github.io/nectar/icon.png">
+<link rel="apple-touch-icon" href="https://kyrielie.github.io/nectar/icon.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%238a2f22'/%3E%3Ctext x='32' y='47' font-size='44' text-anchor='middle' fill='%23f7e9b8' font-family='Georgia,serif'%3EN%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sorts+Mill+Goudy:ital@0;1&display=swap">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "MobileApplication", "name": "Nectar", "description": "Nectar is a free, open-source iOS reader for Archive of Our Own. Saved reading position, offline caching, notes and highlights, reading stats and themes.", "url": "https://kyrielie.github.io/nectar/", "operatingSystem": "iOS", "applicationCategory": "Entertainment", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+<style>
+:root{--r:0.5px;--paper:#f6f1e6;--plate:#fffdf8;--ink:#231c14;--mut:#5a4c3a;--btn:#2f4a3a;--btn-h:#3b5a48;--madder:#8a2f22;--vine:#2f4a3a;--gold:#a67c1f;--gold-ink:#75520f;--gilt:#f7e9b8;--rule:#231c1459;--tint:#efe6d2}
+@media (prefers-color-scheme:dark){:root{--paper:#1a1418;--plate:#241c22;--ink:#efe4d2;--mut:#b7a69c;--btn:#7a2f4a;--btn-h:#8d3b58;--madder:#a8455f;--vine:#7f9a8a;--gold:#cfa85f;--gold-ink:#d9b774;--gilt:#f6ead2;--rule:#efe4d24d;--tint:#20191e}}
+:root[data-theme="dark"]{--paper:#1a1418;--plate:#241c22;--ink:#efe4d2;--mut:#b7a69c;--btn:#7a2f4a;--btn-h:#8d3b58;--madder:#a8455f;--vine:#7f9a8a;--gold:#cfa85f;--gold-ink:#d9b774;--gilt:#f6ead2;--rule:#efe4d24d;--tint:#20191e}
+:root[data-theme="light"]{--paper:#f6f1e6;--plate:#fffdf8;--ink:#231c14;--mut:#5a4c3a;--btn:#2f4a3a;--btn-h:#3b5a48;--madder:#8a2f22;--vine:#2f4a3a;--gold:#a67c1f;--gold-ink:#75520f;--gilt:#f7e9b8;--rule:#231c1459;--tint:#efe6d2}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-behavior:smooth;scroll-padding-top:4.5rem}
+body{margin:0;min-height:100%;color:var(--ink);font:400 1.125rem/1.55 "Sorts Mill Goudy",Georgia,"Times New Roman",serif;font-synthesis:none;font-kerning:normal;font-variant-ligatures:common-ligatures;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;background:var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .27 0 0 0 0 .15 0 0 0 .2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+h1,h2,h3,h4,strong,button,summary{font-weight:400}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 clamp(16px,4vw,32px)}
+.band{border-block:3px double var(--gold);background:transparent;padding:6px 0}
+.band svg{display:block;width:100%;height:52px}
+/* nav */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--paper) 90%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-block:3px double var(--gold)}
+.bar .in{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:6px 0}
+.bar b{font-size:1.35rem;letter-spacing:.02em;font-weight:400}
+.bar nav{display:flex;gap:18px;overflow-x:auto;white-space:nowrap;font-style:italic;font-size:1rem;scrollbar-width:none}
+.bar nav::-webkit-scrollbar{display:none}
+.bar nav a{color:var(--mut);text-decoration:none;padding:2px 0}
+.bar nav a:hover{color:var(--gold-ink);text-decoration:underline;text-decoration-color:var(--gold);text-underline-offset:.22em}
+/* hero */
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(24px,5vw,64px);align-items:center;padding:clamp(28px,6vw,72px) 0 clamp(36px,6vw,72px)}
+.kick{font-style:italic;color:var(--gold-ink);font-size:clamp(1.05rem,2.4vw,1.35rem);margin:0 0 .4rem;letter-spacing:.02em}
+h1{font-size:clamp(4.2rem,13vw,8.4rem);line-height:.88;margin:0;letter-spacing:.01em}
+.tag{font-size:clamp(1.3rem,3vw,1.75rem);line-height:1.25;margin:1.1rem 0 0;font-style:italic;color:var(--gold-ink);max-width:22em}
+.lede{margin:1.4rem 0 0;max-width:30em;text-wrap:pretty}
+.lede::first-letter{float:left;font-size:3.6em;line-height:.72;padding:.244em .1em .1em;margin:.06em .12em 0 0;background:var(--madder);color:var(--gilt)}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin:1.8rem 0 .8rem;clear:both}
+.btn{display:inline-block;text-decoration:none;text-align:center;font:inherit;font-size:1.15rem;letter-spacing:.06em;padding:12px 26px;background:var(--btn);color:var(--gilt);border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:-5px;cursor:pointer}
+.btn:hover{background:var(--btn-h)}
+.btn.alt{background:transparent;color:var(--ink)}
+.btn.alt:hover{background:var(--tint)}
+.fine{font-style:italic;font-size:.95rem;color:var(--mut);margin:0}
+.center{text-align:center}
+/* screenshots and video */
+.stage{display:flex;justify-content:center}
+.shot{position:relative;margin:0;padding:8px;background:var(--plate);box-shadow:10px 10px 0 -1px var(--rule)}
+.shot::before{content:"";position:absolute;inset:0;border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:4px;pointer-events:none;z-index:1}
+.shot img,.shot video{display:block;width:100%;height:auto;border:1px solid var(--rule);background:var(--paper)}
+.shot figcaption{font-style:italic;font-size:.9rem;color:var(--mut);text-align:center;padding:8px 4px 2px}
+.hero .shot{width:min(300px,78vw)}
+.reel{display:flex;gap:clamp(16px,3vw,28px);overflow-x:auto;scroll-snap-type:x mandatory;padding:14px 14px 30px;margin:0 -14px;-webkit-overflow-scrolling:touch}
+.reel .shot{flex:0 0 clamp(200px,58vw,250px);scroll-snap-align:center}
+.demo{display:flex;justify-content:center}
+.demo .shot{width:min(340px,86vw)}
+/* sections */
+section{padding:clamp(34px,6vw,64px) 0}
+.head{text-align:center;margin:0 0 clamp(22px,4vw,40px)}
+h2{font-size:clamp(2rem,5.6vw,3.4rem);line-height:1;margin:0}
+.head p{font-style:italic;color:var(--gold-ink);margin:.5rem 0 0;font-size:1.2rem}
+.fleuron{display:flex;align-items:center;gap:14px;max-width:340px;margin:0 auto}
+.fleuron::before,.fleuron::after{content:"";flex:1;border-top:1px solid var(--gold)}
+.fleuron i{width:9px;height:9px;background:var(--gold);transform:rotate(45deg);box-shadow:0 0 0 3px var(--paper),0 0 0 4px var(--gold)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(14px,2.4vw,26px)}
+.card{position:relative;min-width:0;padding:22px 20px 20px;background:var(--plate);border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:-6px}
+.card .n{font-style:italic;color:var(--gold-ink);font-size:.95rem;letter-spacing:.06em}
+.card h3{font-size:1.4rem;line-height:1.15;margin:.15rem 0 .5rem}
+.card p{margin:0 0 .6rem;font-size:1rem;line-height:1.5;color:var(--mut)}
+.card p:last-child{margin-bottom:0}
+.card a{color:var(--gold-ink)}
+.card ul{margin:.4rem 0 0;padding-left:1.1rem;font-size:.98rem;line-height:1.45;color:var(--mut)}
+.card h4{font-size:1.05rem;margin:.9rem 0 .2rem;color:var(--ink)}
+.wide{grid-column:span 2}
+/* themes */
+.themes{background:var(--tint);border-block:3px double var(--gold)}
+.swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:0 0 26px}
+.sw{padding:5px;background:var(--plate);border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:2px;margin:3px}
+.sw div{height:92px;padding:9px;font-size:2rem;line-height:1;border:1px solid var(--rule)}
+.sw div i{display:block;height:3px;margin:6px 0 0;opacity:.55;background:currentColor}
+.sw div i+i{width:70%;margin-top:4px}
+.sw span{display:block;text-align:center;font-size:.9rem;line-height:1.2;padding-top:5px}
+/* ledger */
+.ledger{max-width:44rem;margin:0 auto;padding:0;list-style:none;border-block:3px double var(--gold)}
+.ledger li{display:grid;grid-template-columns:2.2rem 1fr;gap:6px;padding:14px 4px;border-bottom:1px solid var(--rule)}
+.ledger li:last-child{border-bottom:0}
+.ledger li::before{content:"";width:9px;height:9px;background:var(--madder);transform:rotate(45deg);margin:.62em 0 0 .4rem}
+.ledger strong{color:var(--ink)}
+.ledger span{color:var(--mut)}
+.subhead{max-width:44rem;margin:clamp(28px,5vw,48px) auto 14px;text-align:center;font-size:1.6rem}
+/* quotes */
+.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:clamp(14px,2.4vw,26px)}
+.quotes blockquote{margin:0;padding:22px 20px;background:var(--plate);border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:-6px}
+.quotes p{margin:0;font-style:italic}
+.quotes cite{display:block;margin-top:10px;font-size:.95rem;color:var(--mut);font-style:normal}
+/* faq */
+.faq{max-width:46rem;margin:0 auto;border-block:3px double var(--gold)}
+.faq details{border-bottom:1px solid var(--rule)}
+.faq details:last-child{border-bottom:0}
+.faq summary{cursor:pointer;list-style:none;padding:14px 4px 14px 2rem;position:relative;font-size:1.15rem}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::before{content:"";position:absolute;left:.5rem;top:1.3em;width:8px;height:8px;background:var(--madder);transform:rotate(45deg)}
+.faq details[open] summary::before{background:var(--gold);transform:rotate(45deg) scale(1.25)}
+.faq .a{padding:0 4px 16px 2rem;color:var(--mut);font-size:1.02rem;line-height:1.55}
+.faq .a a{color:var(--gold-ink)}
+/* install */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(14px,2.4vw,26px);counter-reset:s}
+.step{position:relative;min-width:0;padding:26px 20px 20px;background:var(--plate);border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:-6px;counter-increment:s}
+.step::before{content:counter(s,upper-roman);position:absolute;top:-1px;left:-1px;padding:2px 10px 3px;background:var(--madder);color:var(--gilt);font-size:1.1rem}
+.step h3{font-size:1.3rem;margin:.5rem 0 .4rem}
+.step p{margin:0;font-size:1rem;color:var(--mut);line-height:1.5}
+.src{display:flex;margin-top:12px;border:1px solid var(--gold)}
+.src code{flex:1;min-width:0;padding:8px 10px;font:500 .8rem/1.3 ui-monospace,Menlo,Consolas,monospace;overflow-x:auto;white-space:nowrap;background:var(--paper);color:var(--ink)}
+.src button{border:0;border-left:1px solid var(--gold);background:var(--btn);color:var(--gilt);font:inherit;font-size:.95rem;padding:0 14px;cursor:pointer}
+.src button:hover{background:var(--btn-h)}
+.trouble{max-width:46rem;margin:clamp(24px,4vw,40px) auto 0}
+.warn{max-width:44rem;margin:clamp(24px,4vw,40px) auto 0;padding:18px 22px;border:1px solid var(--madder);outline:1px solid var(--madder);outline-offset:-5px;background:var(--plate)}
+.warn strong{color:var(--madder);letter-spacing:.06em;font-variant:small-caps}
+.warn p{margin:.3rem 0 0;font-size:1rem;color:var(--mut);line-height:1.5}
+/* support */
+#latest{font-style:italic}
+.tip a.btn{margin-top:6px}
+footer{text-align:center;color:var(--mut);font-style:italic;font-size:1rem;padding:0 0 48px;max-width:42em;margin:0 auto}
+footer .fleuron{margin:0 auto 22px}
+footer p{margin:.3rem 0}
+footer a{color:var(--gold-ink)}
+/* mobile dock */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:6;display:none;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--plate);border-top:3px double var(--gold);visibility:hidden;transform:translateY(100%);transition:transform .2s}
+.dock.on{visibility:visible;transform:none}
+.dock .btn{display:block}
+@media (max-width:860px){.hero{grid-template-columns:1fr}.grid,.steps{grid-template-columns:1fr}.wide{grid-column:auto}.swatches{grid-template-columns:repeat(3,1fr)}.dock{display:block}body{padding-bottom:78px}.bar .in{justify-content:center}.bar b{display:none}}
+@media (max-width:520px){.swatches{grid-template-columns:repeat(2,1fr)}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.dock{transition:none}}
+</style>
+</head>
+<body>
+<div class="band" aria-hidden="true"><svg><defs><path id="vn-leaf" d="M-8 0C-8 -0.16 -7.73 -0.36 -7.6 -0.49C-7.47 -0.62 -7.33 -0.71 -7.2 -0.8C-7.07 -0.88 -6.93 -0.95 -6.8 -1C-6.67 -1.05 -6.53 -1.07 -6.4 -1.09C-6.27 -1.1 -6.13 -1.09 -6 -1.12C-5.87 -1.14 -5.73 -1.17 -5.6 -1.24C-5.47 -1.32 -5.33 -1.43 -5.2 -1.55C-5.07 -1.66 -4.93 -1.81 -4.8 -1.93C-4.67 -2.06 -4.53 -2.2 -4.4 -2.3C-4.27 -2.4 -4.13 -2.5 -4 -2.56C-3.87 -2.61 -3.73 -2.64 -3.6 -2.64C-3.47 -2.64 -3.33 -2.59 -3.2 -2.55C-3.07 -2.5 -2.93 -2.42 -2.8 -2.36C-2.67 -2.31 -2.53 -2.23 -2.4 -2.2C-2.27 -2.17 -2.13 -2.16 -2 -2.19C-1.87 -2.22 -1.73 -2.29 -1.6 -2.38C-1.47 -2.48 -1.33 -2.62 -1.2 -2.76C-1.07 -2.9 -0.93 -3.08 -0.8 -3.22C-0.67 -3.37 -0.53 -3.52 -0.4 -3.62C-0.27 -3.72 -0.13 -3.8 0 -3.82C0.13 -3.84 0.27 -3.82 0.4 -3.76C0.53 -3.7 0.67 -3.59 0.8 -3.47C0.93 -3.36 1.07 -3.21 1.2 -3.09C1.33 -2.97 1.47 -2.84 1.6 -2.77C1.73 -2.69 1.87 -2.64 2 -2.64C2.13 -2.64 2.27 -2.69 2.4 -2.76C2.53 -2.83 2.67 -2.96 2.8 -3.08C2.93 -3.19 3.07 -3.34 3.2 -3.45C3.33 -3.56 3.47 -3.66 3.6 -3.71C3.73 -3.76 3.87 -3.78 4 -3.75C4.13 -3.72 4.27 -3.62 4.4 -3.52C4.53 -3.43 4.67 -3.27 4.8 -3.16C4.93 -3.04 5.07 -2.92 5.2 -2.83C5.33 -2.75 5.47 -2.69 5.6 -2.65C5.73 -2.61 5.87 -2.6 6 -2.57C6.13 -2.54 6.27 -2.53 6.4 -2.48C6.53 -2.43 6.67 -2.36 6.8 -2.26C6.93 -2.16 7.07 -2.04 7.2 -1.89C7.33 -1.74 7.47 -1.66 7.6 -1.34C7.73 -1.03 8 -0.45 8 0C8 0.45 7.73 1.03 7.6 1.34C7.47 1.66 7.33 1.74 7.2 1.89C7.07 2.04 6.93 2.16 6.8 2.26C6.67 2.36 6.53 2.43 6.4 2.48C6.27 2.53 6.13 2.54 6 2.57C5.87 2.6 5.73 2.61 5.6 2.65C5.47 2.69 5.33 2.75 5.2 2.83C5.07 2.92 4.93 3.04 4.8 3.16C4.67 3.27 4.53 3.43 4.4 3.52C4.27 3.62 4.13 3.72 4 3.75C3.87 3.78 3.73 3.76 3.6 3.71C3.47 3.66 3.33 3.56 3.2 3.45C3.07 3.34 2.93 3.19 2.8 3.08C2.67 2.96 2.53 2.83 2.4 2.76C2.27 2.69 2.13 2.64 2 2.64C1.87 2.64 1.73 2.69 1.6 2.77C1.47 2.84 1.33 2.97 1.2 3.09C1.07 3.21 0.93 3.36 0.8 3.47C0.67 3.59 0.53 3.7 0.4 3.76C0.27 3.82 0.13 3.84 0 3.82C-0.13 3.8 -0.27 3.72 -0.4 3.62C-0.53 3.52 -0.67 3.37 -0.8 3.22C-0.93 3.08 -1.07 2.9 -1.2 2.76C-1.33 2.62 -1.47 2.48 -1.6 2.38C-1.73 2.29 -1.87 2.22 -2 2.19C-2.13 2.16 -2.27 2.17 -2.4 2.2C-2.53 2.23 -2.67 2.31 -2.8 2.36C-2.93 2.42 -3.07 2.5 -3.2 2.55C-3.33 2.59 -3.47 2.64 -3.6 2.64C-3.73 2.64 -3.87 2.61 -4 2.56C-4.13 2.5 -4.27 2.4 -4.4 2.3C-4.53 2.2 -4.67 2.06 -4.8 1.93C-4.93 1.81 -5.07 1.66 -5.2 1.55C-5.33 1.43 -5.47 1.32 -5.6 1.24C-5.73 1.17 -5.87 1.14 -6 1.12C-6.13 1.09 -6.27 1.1 -6.4 1.09C-6.53 1.07 -6.67 1.05 -6.8 1C-6.93 0.95 -7.07 0.88 -7.2 0.8C-7.33 0.71 -7.47 0.62 -7.6 0.49C-7.73 0.36 -8 0.16 -8 0Z"/><path id="vn-p4" d="M3.8 0C3.81 0 3.82 0 3.86 0.01C3.89 0.02 3.95 0.03 4.02 0.06C4.09 0.09 4.18 0.13 4.26 0.19C4.35 0.25 4.45 0.32 4.53 0.42C4.62 0.51 4.7 0.63 4.77 0.76C4.84 0.88 4.9 1.03 4.94 1.18C4.97 1.34 4.99 1.51 4.99 1.67C4.99 1.84 4.96 2.01 4.92 2.18C4.87 2.34 4.8 2.5 4.72 2.64C4.64 2.78 4.53 2.92 4.42 3.02C4.31 3.12 4.18 3.21 4.04 3.26C3.91 3.32 3.77 3.35 3.62 3.35C3.48 3.35 3.34 3.32 3.19 3.26C3.05 3.21 2.91 3.12 2.77 3.02C2.63 2.92 2.5 2.78 2.37 2.64C2.24 2.5 2.11 2.34 1.98 2.18C1.86 2.01 1.74 1.84 1.62 1.67C1.5 1.51 1.39 1.34 1.28 1.18C1.16 1.03 1.05 0.88 0.95 0.76C0.84 0.63 0.74 0.51 0.65 0.42C0.55 0.32 0.46 0.25 0.38 0.19C0.3 0.13 0.23 0.09 0.18 0.06C0.12 0.03 0.07 0.02 0.05 0.01C0.02 0 0 0 0 0C0 0 0.02 0 0.05 -0.01C0.07 -0.02 0.12 -0.03 0.18 -0.06C0.23 -0.09 0.3 -0.13 0.38 -0.19C0.46 -0.25 0.55 -0.32 0.65 -0.42C0.74 -0.51 0.84 -0.63 0.95 -0.76C1.05 -0.88 1.16 -1.03 1.28 -1.18C1.39 -1.34 1.5 -1.51 1.62 -1.67C1.74 -1.84 1.86 -2.01 1.98 -2.18C2.11 -2.34 2.24 -2.5 2.37 -2.64C2.5 -2.78 2.63 -2.92 2.77 -3.02C2.91 -3.12 3.05 -3.21 3.19 -3.26C3.34 -3.32 3.48 -3.35 3.62 -3.35C3.77 -3.35 3.91 -3.32 4.04 -3.26C4.18 -3.21 4.31 -3.12 4.42 -3.02C4.53 -2.92 4.64 -2.78 4.72 -2.64C4.8 -2.5 4.87 -2.34 4.92 -2.18C4.96 -2.01 4.99 -1.84 4.99 -1.67C4.99 -1.51 4.97 -1.34 4.94 -1.18C4.9 -1.03 4.84 -0.88 4.77 -0.76C4.7 -0.63 4.62 -0.51 4.53 -0.42C4.45 -0.32 4.35 -0.25 4.26 -0.19C4.18 -0.13 4.09 -0.09 4.02 -0.06C3.95 -0.03 3.89 -0.02 3.86 -0.01C3.82 0 3.81 0 3.8 0C3.79 0 3.79 0 3.8 0Z"/><g id="vn-gf"><use href="#vn-p4" fill="var(--gold)" transform="rotate(0)"/><use href="#vn-p4" fill="var(--gold)" transform="rotate(90)"/><use href="#vn-p4" fill="var(--gold)" transform="rotate(180)"/><use href="#vn-p4" fill="var(--gold)" transform="rotate(270)"/><circle r="2.2" fill="var(--vine)"/></g><path id="vn-p6" d="M6.23 0C6.25 0 6.27 0 6.33 0.01C6.39 0.02 6.49 0.04 6.6 0.08C6.71 0.12 6.86 0.18 7 0.26C7.14 0.34 7.3 0.45 7.44 0.58C7.57 0.71 7.72 0.87 7.83 1.05C7.94 1.23 8.04 1.43 8.1 1.64C8.16 1.86 8.2 2.09 8.19 2.32C8.19 2.55 8.14 2.8 8.07 3.02C8 3.24 7.88 3.47 7.75 3.67C7.61 3.86 7.44 4.05 7.25 4.19C7.07 4.33 6.85 4.46 6.63 4.53C6.42 4.61 6.18 4.65 5.95 4.65C5.71 4.65 5.47 4.61 5.24 4.53C5.01 4.46 4.77 4.33 4.55 4.19C4.32 4.05 4.1 3.86 3.88 3.67C3.67 3.47 3.46 3.24 3.26 3.02C3.05 2.8 2.86 2.55 2.66 2.32C2.47 2.09 2.28 1.86 2.09 1.64C1.91 1.43 1.73 1.23 1.56 1.05C1.38 0.87 1.21 0.71 1.06 0.58C0.91 0.45 0.76 0.34 0.63 0.26C0.5 0.18 0.38 0.12 0.29 0.08C0.2 0.04 0.12 0.02 0.07 0.01C0.03 0 0 0 0 0C0 0 0.03 0 0.07 -0.01C0.12 -0.02 0.2 -0.04 0.29 -0.08C0.38 -0.12 0.5 -0.18 0.63 -0.26C0.76 -0.34 0.91 -0.45 1.06 -0.58C1.21 -0.71 1.38 -0.87 1.56 -1.05C1.73 -1.23 1.91 -1.43 2.09 -1.64C2.28 -1.86 2.47 -2.09 2.66 -2.32C2.86 -2.55 3.05 -2.8 3.26 -3.02C3.46 -3.24 3.67 -3.47 3.88 -3.67C4.1 -3.86 4.32 -4.05 4.55 -4.19C4.77 -4.33 5.01 -4.46 5.24 -4.53C5.47 -4.61 5.71 -4.65 5.95 -4.65C6.18 -4.65 6.42 -4.61 6.63 -4.53C6.85 -4.46 7.07 -4.33 7.25 -4.19C7.44 -4.05 7.61 -3.86 7.75 -3.67C7.88 -3.47 8 -3.24 8.07 -3.02C8.14 -2.8 8.19 -2.55 8.19 -2.32C8.2 -2.09 8.16 -1.86 8.1 -1.64C8.04 -1.43 7.94 -1.23 7.83 -1.05C7.72 -0.87 7.57 -0.71 7.44 -0.58C7.3 -0.45 7.14 -0.34 7 -0.26C6.86 -0.18 6.71 -0.12 6.6 -0.08C6.49 -0.04 6.39 -0.02 6.33 -0.01C6.27 0 6.25 0 6.23 0C6.21 0 6.21 0 6.23 0Z"/><pattern id="vine" width="72" height="52" patternUnits="userSpaceOnUse"><path d="M0 26C12 2 24 2 36 26S60 50 72 26" fill="none" stroke="var(--vine)" stroke-width="1.5"/><path d="M0 26C12 50 24 50 36 26S60 2 72 26" fill="none" stroke="var(--vine)" stroke-width="1.5"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(22.41 7.4) rotate(43)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(19.08 45.03) rotate(-39)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(7.69 31.87) rotate(81)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(9.91 17.09) rotate(-180)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(49.72 8.93) rotate(130)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(62.51 20.29) rotate(13)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(65.41 32.85) rotate(119)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(49.11 42.33) rotate(-135)"/><use href="#vn-gf" transform="translate(51.62 26.52) rotate(0)"/><g transform="translate(35.98 26.02) rotate(0)"><use href="#vn-p6" fill="var(--madder)" transform="rotate(0)"/><use href="#vn-p6" fill="var(--madder)" transform="rotate(60)"/><use href="#vn-p6" fill="var(--madder)" transform="rotate(120)"/><use href="#vn-p6" fill="var(--madder)" transform="rotate(180)"/><use href="#vn-p6" fill="var(--madder)" transform="rotate(240)"/><use href="#vn-p6" fill="var(--madder)" transform="rotate(300)"/><path d="M4.29 0C4.29 0.12 4.26 0.25 4.2 0.37C4.14 0.48 4.04 0.6 3.94 0.69C3.83 0.79 3.7 0.88 3.57 0.96C3.45 1.04 3.31 1.1 3.2 1.16C3.08 1.23 2.97 1.28 2.89 1.35C2.8 1.41 2.74 1.47 2.69 1.55C2.65 1.63 2.62 1.72 2.61 1.83C2.6 1.93 2.61 2.06 2.61 2.19C2.61 2.32 2.62 2.47 2.62 2.62C2.61 2.76 2.6 2.92 2.57 3.06C2.54 3.2 2.49 3.34 2.42 3.45C2.35 3.56 2.25 3.66 2.15 3.72C2.04 3.78 1.91 3.81 1.78 3.82C1.65 3.82 1.5 3.8 1.37 3.76C1.23 3.71 1.09 3.64 0.96 3.57C0.83 3.51 0.7 3.42 0.59 3.35C0.48 3.29 0.38 3.22 0.28 3.18C0.18 3.13 0.09 3.11 0 3.11C-0.09 3.11 -0.18 3.13 -0.28 3.18C-0.38 3.22 -0.48 3.29 -0.59 3.35C-0.7 3.42 -0.83 3.51 -0.96 3.57C-1.09 3.64 -1.23 3.71 -1.37 3.76C-1.5 3.8 -1.65 3.82 -1.78 3.82C-1.91 3.81 -2.04 3.78 -2.15 3.72C-2.25 3.66 -2.35 3.56 -2.42 3.45C-2.49 3.34 -2.54 3.2 -2.57 3.06C-2.6 2.92 -2.61 2.76 -2.62 2.62C-2.62 2.47 -2.61 2.32 -2.61 2.19C-2.61 2.06 -2.6 1.93 -2.61 1.83C-2.62 1.72 -2.65 1.63 -2.69 1.55C-2.74 1.47 -2.8 1.41 -2.89 1.35C-2.97 1.28 -3.08 1.23 -3.2 1.16C-3.31 1.1 -3.45 1.04 -3.57 0.96C-3.7 0.88 -3.83 0.79 -3.94 0.69C-4.04 0.6 -4.14 0.48 -4.2 0.37C-4.26 0.25 -4.29 0.12 -4.29 0C-4.29 -0.12 -4.26 -0.25 -4.2 -0.37C-4.14 -0.48 -4.04 -0.6 -3.94 -0.69C-3.83 -0.79 -3.7 -0.88 -3.57 -0.96C-3.45 -1.04 -3.31 -1.1 -3.2 -1.16C-3.08 -1.23 -2.97 -1.28 -2.89 -1.35C-2.8 -1.41 -2.74 -1.47 -2.69 -1.55C-2.65 -1.63 -2.62 -1.72 -2.61 -1.83C-2.6 -1.93 -2.61 -2.06 -2.61 -2.19C-2.61 -2.32 -2.62 -2.47 -2.62 -2.62C-2.61 -2.76 -2.6 -2.92 -2.57 -3.06C-2.54 -3.2 -2.49 -3.34 -2.42 -3.45C-2.35 -3.56 -2.25 -3.66 -2.15 -3.72C-2.04 -3.78 -1.91 -3.81 -1.78 -3.82C-1.65 -3.82 -1.5 -3.8 -1.37 -3.76C-1.23 -3.71 -1.09 -3.64 -0.96 -3.57C-0.83 -3.51 -0.7 -3.42 -0.59 -3.35C-0.48 -3.29 -0.38 -3.22 -0.28 -3.18C-0.18 -3.13 -0.09 -3.11 0 -3.11C0.09 -3.11 0.18 -3.13 0.28 -3.18C0.38 -3.22 0.48 -3.29 0.59 -3.35C0.7 -3.42 0.83 -3.51 0.96 -3.57C1.09 -3.64 1.23 -3.71 1.37 -3.76C1.5 -3.8 1.65 -3.82 1.78 -3.82C1.91 -3.81 2.04 -3.78 2.15 -3.72C2.25 -3.66 2.35 -3.56 2.42 -3.45C2.49 -3.34 2.54 -3.2 2.57 -3.06C2.6 -2.92 2.61 -2.76 2.62 -2.62C2.62 -2.47 2.61 -2.32 2.61 -2.19C2.61 -2.06 2.6 -1.93 2.61 -1.83C2.62 -1.72 2.65 -1.63 2.69 -1.55C2.74 -1.47 2.8 -1.41 2.89 -1.35C2.97 -1.28 3.08 -1.23 3.2 -1.16C3.31 -1.1 3.45 -1.04 3.57 -0.96C3.7 -0.88 3.83 -0.79 3.94 -0.69C4.04 -0.6 4.14 -0.48 4.2 -0.37C4.26 -0.25 4.29 -0.12 4.29 0Z" fill="#5c0700"/><circle cx="0" cy="0" r="0.5" fill="var(--madder)"/><circle cx="1.85" cy="0" r="0.28" fill="var(--madder)"/><circle cx="-1.85" cy="0" r="0.28" fill="var(--madder)"/><circle cx="0" cy="2.04" r="0.28" fill="var(--madder)"/><circle cx="0" cy="-2.03" r="0.28" fill="var(--madder)"/><circle cx="1.41" cy="1.41" r="0.25" fill="var(--madder)"/><circle cx="-1.41" cy="-1.41" r="0.25" fill="var(--madder)"/></g><use href="#vn-gf" transform="translate(35.77 41.98) rotate(0)"/><use href="#vn-gf" transform="translate(35.99 8.01) rotate(0)"/><use href="#vn-gf" transform="translate(20.55 26.14) rotate(0)"/><path d="M0 26C12 2 24 2 36 26S60 50 72 26" fill="none" stroke="var(--vine)" stroke-width="1" transform="translate(-52 1.5)"/><path d="M0 26C12 2 24 2 36 26S60 50 72 26" fill="none" stroke="var(--vine)" stroke-width="1" transform="translate(51.5 1.5)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(7.6 43.99) rotate(-10)"/><use href="#vn-leaf" fill="var(--vine)" transform="translate(64.56 11.55) rotate(165)"/><use href="#vn-gf" transform="translate(64.85 45.26) rotate(0)"/><use href="#vn-gf" transform="translate(8.99 7.12) rotate(0)"/></pattern></defs><rect width="100%" height="100%" fill="url(#vine)"/></svg></div>
+<div class="bar"><div class="wrap in"><b>Nectar</b><nav aria-label="Sections"><a href="#features">Features</a><a href="#themes">Themes</a><a href="#faq">Questions</a><a href="#install">Install</a><a href="#support">Help</a><a href="https://github.com/kyrielie/nectar">GitHub</a></nav></div></div>
+
+<main id="top" class="wrap">
+<div class="hero">
+<div>
+<p class="kick">An unofficial reader for Archive of Our Own</p>
+<h1>Nectar</h1>
+<p class="tag">Read fic the way you read a book. Keep your place, keep your library.</p>
+<p class="lede">Nectar is an iOS app that opens any AO3 work, saves your reading position and caches what you read, so a long fic is always waiting where you left it. It shows each work with its own author's styling, and adds notes, highlights, stats and themes on top.</p>
+<div class="cta" id="herocta">
+<a class="btn" href="https://altdirect.app/?url=https://kyrielie.github.io/nectar/source.json">Add to AltStore</a>
+<a class="btn alt" href="https://github.com/kyrielie/nectar">View on GitHub</a>
+</div>
+<p class="fine">Free and open source. Beta software. Not on the App Store: you sideload it.</p>
+</div>
+<div class="stage"><figure class="shot"><img src="https://kyrielie.github.io/nectar/screenshots/1.png" alt="Nectar app screenshot 1 of 6" width="300" decoding="async" fetchpriority="high"></figure></div>
+</div>
+</main>
+
+
+
+<section id="screens">
+<div class="wrap">
+<div class="head"><h2>See it</h2><p>Screenshots from the app.</p></div>
+<div class="reel">
+<figure class="shot"><img src="https://kyrielie.github.io/nectar/screenshots/2.png" alt="Nectar app screenshot 2 of 6" width="250" loading="lazy" decoding="async"></figure>
+<figure class="shot"><img src="https://kyrielie.github.io/nectar/screenshots/3.png" alt="Nectar app screenshot 3 of 6" width="250" loading="lazy" decoding="async"></figure>
+<figure class="shot"><img src="https://kyrielie.github.io/nectar/screenshots/4.png" alt="Nectar app screenshot 4 of 6" width="250" loading="lazy" decoding="async"></figure>
+<figure class="shot"><img src="https://kyrielie.github.io/nectar/screenshots/5.png" alt="Nectar app screenshot 5 of 6" width="250" loading="lazy" decoding="async"></figure>
+<figure class="shot"><img src="https://kyrielie.github.io/nectar/screenshots/6.png" alt="Nectar app screenshot 6 of 6" width="250" loading="lazy" decoding="async"></figure>
+</div>
+</div>
+</section>
+
+<section id="features">
+<div class="wrap">
+<div class="head"><div class="fleuron" aria-hidden="true"><i></i></div><h2 style="margin-top:.6em">What it does</h2><p>Everything here is in the app today.</p></div>
+<div class="grid">
+<div class="card"><span class="n">I</span><h3>A timeline that knows fic</h3><p>Word count, chapters, completion, fandom, relationships, characters, ratings, warnings and series show on every card, with a progress bar drawn from how far you have scrolled.</p></div>
+<div class="card"><span class="n">II</span><h3>Reads like AO3</h3><p>Each work loads with the creator's own styling on, then adds saved position, offline-friendly caching and a distraction-free reader.</p></div>
+<div class="card"><span class="n">III</span><h3>One book, many copies</h3><p>The same work in two collections, or re-imported from Calibre, is recognised as one book. Mark it read, starred or loved once and it applies everywhere.</p></div>
+<div class="card"><span class="n">IV</span><h3>Live chapters</h3><p>Fetch new chapters of an in-progress work on demand, with rate-limit backoff and a guard that will not overwrite good text with a short or bad fetch.</p></div>
+<div class="card"><span class="n">V</span><h3>Notes and highlights</h3><p>Save quotes and write notes as you read. Fix typos and grammar with text replacement, or swap Y/N for a name.</p></div>
+<div class="card"><span class="n">VI</span><h3>Stats and Screen Time</h3><p>Track your reading habits, or set yourself a limit. Both are kept on your phone.</p></div>
+<div class="card wide"><span class="n">VII</span><h3>Bring your own library</h3><p>Filter works on AO3 in your browser, paste the search link as a feed, or load a list of links to import your open tabs. Nectar also works with Ambrosia, a local fanfiction library, including large collections over a dedicated sync route.</p></div>
+<div class="card"><span class="n">VIII</span><h3>Back up everything</h3><p>Export your library, settings and reading history to a .zip, then restore or merge it later on this device or another.</p></div>
+</div>
+</div>
+</section>
+
+
+
+<section class="themes" id="themes">
+<div class="wrap">
+<div class="head"><h2>Dress the page</h2><p>Retint the app with an accent colour and surface palette, and pick a reader theme.</p></div>
+<div class="swatches" aria-hidden="true">
+<div class="sw"><div style="background:#f8f1e3;color:#4f321c">Aa<i></i><i></i></div><span>Sepia</span></div>
+<div class="sw"><div style="background:#1d1d1d;color:#d3c5c8">Aa<i></i><i></i></div><span>Duskbloom</span></div>
+<div class="sw"><div style="background:#f7f6f5;color:#6c2d52">Aa<i></i><i></i></div><span>Powder Pink</span></div>
+<div class="sw"><div style="background:#1a2735;color:#b3b3b3">Aa<i></i><i></i></div><span>Tumblr Blue</span></div>
+<div class="sw"><div style="background:#fdfaec;color:#3b2a13">Aa<i></i><i></i></div><span>Vintage Letter Green</span></div>
+<div class="sw"><div style="background:#ffffff;color:#000000">Aa<i></i><i></i></div><span>Black &amp; White</span></div>
+</div>
+<p class="center" style="margin:0 0 20px">Themes are standard NetNewsWire <code style="font-size:.9em">.nnwtheme</code> bundles. Nineteen more live on the theme gallery, one tap to install.</p>
+<div class="center"><a class="btn" href="https://kyrielie.github.io/nectar/themes/">Browse the theme gallery</a></div>
+</div>
+</section>
+
+<section id="trust">
+<div class="wrap">
+<div class="head"><h2>Fair dealing</h2><p>What Nectar promises, and what it will not do.</p></div>
+<ul class="ledger">
+<li><span><strong>Free and open source.</strong> Always. Read the code, or build the app yourself.</span></li>
+<li><span><strong>Does not distribute fics.</strong> Works are fetched from AO3 only when you open one.</span></li>
+<li><span><strong>Respects AO3.</strong> It does its best to honour AO3's terms of service, servers and policies.</span></li>
+<li><span><strong>Private by design.</strong> Sign-in happens in Safari and your login details stay on your phone. Your reading history never leaves it.</span></li>
+<li><span><strong>No account needed.</strong> You can read without ever logging in.</span></li>
+</ul>
+<h3 class="subhead">Good to know</h3>
+<ul class="ledger">
+<li><span><strong>Beta software.</strong> Expect rough edges while it is under active development.</span></li>
+<li><span><strong>Made for AO3 and Ambrosia.</strong> It should work with any RSS or JSON feed, but it is not a general feed reader.</span></li>
+<li><span><strong>It keeps what you open.</strong> The cache is archival and never cleans itself up, so subscribing to a busy news feed will fill your storage.</span></li>
+<li><span><strong>Sideloaded.</strong> It is not on the App Store, so installing takes a few extra steps.</span></li>
+</ul>
+</div>
+</section>
+
+<section id="faq">
+<div class="wrap">
+<div class="head"><h2>Questions</h2><p>The short answers.</p></div>
+<div class="faq">
+<details><summary>Do I need to log in to AO3?</summary><div class="a">No. You can read without ever logging in. If you choose to log in, Nectar signs you in through Safari and your login details stay on your phone. AO3 warns that any third-party app you sign in to could gain access to your username and password, so please read <a href="https://archiveofourown.org/admin_posts/35806">their post</a> first.</div></details>
+<details><summary>Is Nectar on the App Store?</summary><div class="a">No. It is distributed as an unsigned IPA that you sideload yourself. AltStore or SideStore is the recommended route, and Sideloadly also works. The install steps are below.</div></details>
+<details><summary>How do I get fics into Nectar?</summary><div class="a">Filter works on AO3 in your browser, copy the URL, and paste it as a feed in Nectar. You can also load any list of AO3 links to import your open tabs, or point Nectar at an Ambrosia library.</div></details>
+<details><summary>Where is my reading history stored?</summary><div class="a">On your phone. Nectar caches any work you open, and your reading history and progress are never shared. You can export your library, settings and reading history to a .zip and restore or merge it later, on this device or another.</div></details>
+<details><summary>Does Nectar distribute fics or break AO3&#x27;s rules?</summary><div class="a">Nectar does not distribute fics. It requests a work from AO3&#x27;s servers only when you open it, and it does its best to respect AO3&#x27;s terms of service, servers and policies. It is unofficial and not associated with Archive of Our Own.</div></details>
+<details><summary>Is Nectar a general feed reader?</summary><div class="a">Not really. It is built on NetNewsWire and should technically work with any RSS or JSON feed, but it is designed to be archival. There is no automatic cache cleanup, so subscribing to something like a news site will make storage unmanageable.</div></details>
+<details><summary>What is Ambrosia?</summary><div class="a"><a href="https://github.com/kyrielie/ambrosia">Ambrosia</a> is a local fanfiction library that serves a JSON Feed extension carrying fic metadata such as word count, chapter progress, fandom and rating. Nectar can sync large Ambrosia collections.</div></details>
+<details><summary>Is it really free?</summary><div class="a">Yes. It will always be free and open source, under the MIT license. A few Reading Stats files adapted from Aidoku are GPL-3.0.</div></details>
+</div>
+</div>
+</section>
+
+<section id="install">
+<div class="wrap">
+<div class="head"><h2>Install</h2><p>Nectar is sideloaded. AltStore is the way I test.</p></div>
+<div class="steps">
+<div class="step"><h3>Get AltStore</h3><p>Install AltStore or SideStore and pair it with your Apple ID. AltStore Classic needs a computer running AltServer.</p></div>
+<div class="step"><h3>Add the source</h3><p>Open AltStore, add Nectar's source, then install Nectar from it. New releases appear there automatically.</p>
+<div class="src"><code id="srcurl">https://kyrielie.github.io/nectar/source.json</code><button type="button" id="copy">Copy</button></div></div>
+<div class="step"><h3>Read</h3><p>Paste an AO3 search link as a feed and open a work.</p></div>
+</div>
+
+<div class="cta" style="justify-content:center;margin-top:28px"><a class="btn" href="https://altdirect.app/?url=https://kyrielie.github.io/nectar/source.json">Add to AltStore</a><a class="btn alt" href="https://github.com/kyrielie/nectar/releases/latest">Download the IPA</a></div>
+<div class="trouble faq">
+<details><summary>It stopped opening after a week</summary><div class="a">With a free Apple ID, a sideloaded app's signature expires after about 7 days. If you installed with Sideloadly, reinstall the same IPA and it opens again, with no rebuild needed. A paid Apple Developer account extends this to a year.</div></details>
+<details><summary>I can't install a fourth sideloaded app</summary><div class="a">By default you can only install 3 sideloaded apps. <a href="https://github.com/LiveContainer/LiveContainer">LiveContainer</a> lets you install more.</div></details>
+<details><summary>I would rather not use AltStore</summary><div class="a">Sideloadly also works. Download <code>Nectar-unsigned.ipa</code> from the <a href="https://github.com/kyrielie/nectar/releases/latest">latest release</a>, drag it into Sideloadly, and sign in with your Apple ID. You can also build it yourself from source; the README has the steps.</div></details>
+</div>
+<div class="warn"><strong>Read this first.</strong><p>Nectar is unofficial and not associated with Archive of Our Own. AO3 recommends using the site in your browser, and warns that a third-party app you sign in to could gain access to your username and password. Nectar does not require you to log in. Please read the AO3 post on why there is no official app before you decide.</p><p><a href="https://archiveofourown.org/admin_posts/35806">Why AO3 doesn't have an official app</a></p></div>
+</div>
+</section>
+
+<section id="support">
+<div class="wrap">
+<div class="head"><h2>Help and updates</h2><p>Nectar is still growing. Tell me what breaks.</p></div>
+<div class="grid">
+<div class="card"><span class="n">Bugs and feedback</span><h3>Report a problem</h3><p>Feedback goes through GitHub. It helps to include your Nectar version, your iOS version, and what you were doing when it went wrong.</p><p><a href="https://github.com/kyrielie/nectar/issues">Open an issue</a></p></div>
+<div class="card"><span class="n">Releases</span><h3>What is new</h3><p id="latest" hidden></p><p><a href="https://github.com/kyrielie/nectar/releases">All releases and release notes</a></p>
+
+</div>
+<div class="card"><span class="n">Your data</span><h3>Stays with you</h3><ul><li>Your reading history and progress stay on your device and are never shared.</li><li>Nectar signs you in through Safari, and your login details stay on your phone.</li><li>It contacts AO3's servers only when you open a work.</li><li>The only privacy permission it declares is adding images to your Photos, so you can save images from an article.</li></ul></div>
+
+
+</div>
+</div>
+</section>
+
+<div class="wrap"><footer>
+<div class="fleuron" aria-hidden="true"><i></i></div>
+<p>Set in Sorts Mill Goudy. Nectar is a fork of <a href="https://github.com/Ranchero-Software/NetNewsWire">NetNewsWire</a> and is not affiliated with or supported by that project.</p>
+<p>MIT licensed, with some Reading Stats files under GPL-3.0. <a href="https://github.com/kyrielie/nectar">Source on GitHub</a></p>
+<p>Press assets: <a href="https://kyrielie.github.io/nectar/icon.png">icon</a>, <a href="https://kyrielie.github.io/nectar/screenshots/1.png">screenshot 1</a>, <a href="https://kyrielie.github.io/nectar/screenshots/2.png">screenshot 2</a>, <a href="https://kyrielie.github.io/nectar/screenshots/3.png">screenshot 3</a>, <a href="https://kyrielie.github.io/nectar/screenshots/4.png">screenshot 4</a>, <a href="https://kyrielie.github.io/nectar/screenshots/5.png">screenshot 5</a>, <a href="https://kyrielie.github.io/nectar/screenshots/6.png">screenshot 6</a></p>
+
+</footer></div>
+
+<div class="dock" id="dock"><a class="btn" href="https://altdirect.app/?url=https://kyrielie.github.io/nectar/source.json">Add to AltStore</a></div>
+
+<script>
+(function(){
+var b=document.getElementById("copy"),c=document.getElementById("srcurl");
+if(b&&c){b.addEventListener("click",function(){var t=c.textContent.trim();
+function done(ok){b.textContent=ok?"Copied":"Select and copy";setTimeout(function(){b.textContent="Copy"},1600)}
+function sel(){try{var r=document.createRange();r.selectNodeContents(c);var s=getSelection();s.removeAllRanges();s.addRange(r)}catch(e){}done(false)}
+try{navigator.clipboard.writeText(t).then(function(){done(true)},sel)}catch(e){sel()}});}
+var d=document.getElementById("dock"),h=document.getElementById("herocta");
+if(d&&h&&"IntersectionObserver"in window){new IntersectionObserver(function(e){d.classList.toggle("on",!e[0].isIntersecting&&e[0].boundingClientRect.top<0)}).observe(h)}
+var l=document.getElementById("latest");
+if(l&&window.fetch){fetch("https://api.github.com/repos/kyrielie/nectar/releases?per_page=1",{headers:{Accept:"application/vnd.github+json"}}).then(function(r){return r.ok?r.json():Promise.reject()}).then(function(j){
+var r=j&&j[0];if(!r||!r.tag_name)return;var a=document.createElement("a");a.href=r.html_url;a.textContent=r.tag_name;
+var when="";try{when=" ("+new Date(r.published_at).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})+")"}catch(e){}
+l.textContent="Latest release: ";l.appendChild(a);l.appendChild(document.createTextNode(when));l.hidden=false}).catch(function(){})}
+})();
+</script>
+</body>
+</html>
