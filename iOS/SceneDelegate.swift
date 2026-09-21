@@ -171,7 +171,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 				return
 			}
 
-			// Handle theme URLs: netnewswire://theme/add?url={url}
+			// Handle theme URLs: nectar://theme/add?url={url}
 			guard let comps = URLComponents(url: context.url, resolvingAgainstBaseURL: false),
 				  "theme" == comps.host,
 				 let queryItems = comps.queryItems else {
@@ -186,13 +186,28 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 						NotificationCenter.default.post(name: .didBeginDownloadingTheme, object: nil)
 					}
 					let task = URLSession.shared.downloadTask(with: request) { location, _, error in
-						guard
-							  let location = location else { return }
+						guard let location = location else { return }
 
-						Task { @MainActor in
-							do {
-								try ArticleThemeDownloader.shared.handleFile(at: location)
-							} catch {
+						// URLSessionDownloadTask deletes the temp file at `location` as soon
+						// as this completion handler returns -- moving it off to the app's
+						// own Downloads directory must happen synchronously, here, rather
+						// than inside an async Task hop (which runs on a later runloop turn,
+						// by which point the temp file is very likely already gone: "...tmp
+						// couldn't be moved to Downloads because either the former doesn't
+						// exist..."). The unzip/notification work that follows doesn't touch
+						// the vanishing temp file, so only the move itself needs to be
+						// synchronous; that can safely continue on the main actor.
+						do {
+							let movedFileLocation = try ArticleThemeDownloader.shared.moveDownloadedTheme(from: location)
+							Task { @MainActor in
+								do {
+									try ArticleThemeDownloader.shared.finishImportingTheme(at: movedFileLocation)
+								} catch {
+									NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
+								}
+							}
+						} catch {
+							Task { @MainActor in
 								NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
 							}
 						}
