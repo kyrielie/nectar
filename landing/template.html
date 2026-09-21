@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nectar: an iOS reader for Archive of Our Own</title>
+<meta name="description" content="{{description}}">
+<link rel="canonical" href="{{site_url}}">
+<meta name="theme-color" content="#f6f1e6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1418" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Nectar">
+<meta property="og:title" content="Nectar: an iOS reader for Archive of Our Own">
+<meta property="og:description" content="{{description}}">
+<meta property="og:url" content="{{site_url}}">
+<meta property="og:image" content="{{og_image}}">
+<meta property="og:image:alt" content="{{og_image_alt}}">
+<meta name="twitter:card" content="{{twitter_card}}">
+<meta name="twitter:title" content="Nectar: an iOS reader for Archive of Our Own">
+<meta name="twitter:description" content="{{description}}">
+<meta name="twitter:image" content="{{og_image}}">
+<link rel="apple-touch-icon" href="{{icon_url}}">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%238a2f22'/%3E%3Ctext x='32' y='47' font-size='44' text-anchor='middle' fill='%23f7e9b8' font-family='Georgia,serif'%3EN%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sorts+Mill+Goudy:ital@0;1&display=swap">
+<script type="application/ld+json">{{jsonld}}</script>
+<style>
+:root{--r:0.5px;--paper:#f6f1e6;--plate:#fffdf8;--ink:#231c14;--mut:#5a4c3a;--btn:#2f4a3a;--btn-h:#3b5a48;--madder:#8a2f22;--vine:#2f4a3a;--gold:#a67c1f;--gold-ink:#75520f;--gilt:#f7e9b8;--rule:#231c1459;--tint:#efe6d2}
+@media (prefers-color-scheme:dark){:root{--paper:#1a1418;--plate:#241c22;--ink:#efe4d2;--mut:#b7a69c;--btn:#7a2f4a;--btn-h:#8d3b58;--madder:#a8455f;--vine:#7f9a8a;--gold:#cfa85f;--gold-ink:#d9b774;--gilt:#f6ead2;--rule:#efe4d24d;--tint:#20191e}}
+:root[data-theme="dark"]{--paper:#1a1418;--plate:#241c22;--ink:#efe4d2;--mut:#b7a69c;--btn:#7a2f4a;--btn-h:#8d3b58;--madder:#a8455f;--vine:#7f9a8a;--gold:#cfa85f;--gold-ink:#d9b774;--gilt:#f6ead2;--rule:#efe4d24d;--tint:#20191e}
+:root[data-theme="light"]{--paper:#f6f1e6;--plate:#fffdf8;--ink:#231c14;--mut:#5a4c3a;--btn:#2f4a3a;--btn-h:#3b5a48;--madder:#8a2f22;--vine:#2f4a3a;--gold:#a67c1f;--gold-ink:#75520f;--gilt:#f7e9b8;--rule:#231c1459;--tint:#efe6d2}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-behavior:smooth;scroll-padding-top:4.5rem}
+body{margin:0;min-height:100%;color:var(--ink);font:400 1.125rem/1.55 "Sorts Mill Goudy",Georgia,"Times New Roman",serif;font-synthesis:none;font-kerning:normal;font-variant-ligatures:common-ligatures;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;background:var(--paper) {{texture}}}
+h1,h2,h3,h4,strong,button,summary{font-weight:400}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 clamp(16px,4vw,32px)}
+.band{border-block:3px double var(--gold);background:transparent;padding:6px 0}
+.band svg{display:block;width:100%;height:52px}
+/* nav */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--paper) 90%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-block:3px double var(--gold)}
+.bar .in{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:6px 0}
+.bar b{font-size:1.35rem;letter-spacing:.02em;font-weight:400}
+.bar nav{display:flex;gap:18px;overflow-x:auto;white-space:nowrap;font-style:italic;font-size:1rem;scrollbar-width:none}
+.bar nav::-webkit-scrollbar{display:none}
+.bar nav a{color:var(--mut);text-decoration:none;padding:2px 0}
+.bar nav a:hover{color:var(--gold-ink);text-decoration:underline;text-decoration-color:var(--gold);text-underline-offset:.22em}
+/* hero */
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(24px,5vw,64px);align-items:center;padding:clamp(28px,6vw,72px) 0 clamp(36px,6vw,72px)}
+.kick{font-style:italic;color:var(--gold-ink);font-size:clamp(1.05rem,2.4vw,1.35rem);margin:0 0 .4rem;letter-spacing:.02em}
+h1{font-size:clamp(4.2rem,13vw,8.4rem);line-height:.88;margin:0;letter-spacing:.01em}
+.tag{font-size:clamp(1.3rem,3vw,1.75rem);line-height:1.25;margin:1.1rem 0 0;font-style:italic;color:var(--gold-ink);max-width:22em}
+.lede{margin:1.4rem 0 0;max-width:30em;text-wrap:pretty}
+.lede::first-letter{float:left;font-size:3.6em;line-height:.72;padding:.244em .1em .1em;margin:.06em .12em 0 0;background:var(--madder);color:var(--gilt)}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin:1.8rem 0 .8rem;clear:both}
+.btn{display:inline-block;text-decoration:none;text-align:center;font:inherit;font-size:1.15rem;letter-spacing:.06em;padding:12px 26px;background:var(--btn);color:var(--gilt);border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:-5px;cursor:pointer}
+.btn:hover{background:var(--btn-h)}
+.btn.alt{background:transparent;color:var(--ink)}
+.btn.alt:hover{background:var(--tint)}
+.fine{font-style:italic;font-size:.95rem;color:var(--mut);margin:0}
+.center{text-align:center}
+/* screenshots and video */
+.stage{display:flex;justify-content:center}
+.shot{position:relative;margin:0;padding:8px;background:var(--plate);box-shadow:10px 10px 0 -1px var(--rule)}
+.shot::before{content:"";position:absolute;inset:0;border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:4px;pointer-events:none;z-index:1}
+.shot img,.shot video{display:block;width:100%;height:auto;border:1px solid var(--rule);background:var(--paper)}
+.shot figcaption{font-style:italic;font-size:.9rem;color:var(--mut);text-align:center;padding:8px 4px 2px}
+.hero .shot{width:min(300px,78vw)}
+.reel{display:flex;gap:clamp(16px,3vw,28px);overflow-x:auto;scroll-snap-type:x mandatory;padding:14px 14px 30px;margin:0 -14px;-webkit-overflow-scrolling:touch}
+.reel .shot{flex:0 0 clamp(200px,58vw,250px);scroll-snap-align:center}
+.demo{display:flex;justify-content:center}
+.demo .shot{width:min(340px,86vw)}
+/* sections */
+section{padding:clamp(34px,6vw,64px) 0}
+.head{text-align:center;margin:0 0 clamp(22px,4vw,40px)}
+h2{font-size:clamp(2rem,5.6vw,3.4rem);line-height:1;margin:0}
+.head p{font-style:italic;color:var(--gold-ink);margin:.5rem 0 0;font-size:1.2rem}
+.fleuron{display:flex;align-items:center;gap:14px;max-width:340px;margin:0 auto}
+.fleuron::before,.fleuron::after{content:"";flex:1;border-top:1px solid var(--gold)}
+.fleuron i{width:9px;height:9px;background:var(--gold);transform:rotate(45deg);box-shadow:0 0 0 3px var(--paper),0 0 0 4px var(--gold)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(14px,2.4vw,26px)}
+.card{position:relative;min-width:0;padding:22px 20px 20px;background:var(--plate);border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:-6px}
+.card .n{font-style:italic;color:var(--gold-ink);font-size:.95rem;letter-spacing:.06em}
+.card h3{font-size:1.4rem;line-height:1.15;margin:.15rem 0 .5rem}
+.card p{margin:0 0 .6rem;font-size:1rem;line-height:1.5;color:var(--mut)}
+.card p:last-child{margin-bottom:0}
+.card a{color:var(--gold-ink)}
+.card ul{margin:.4rem 0 0;padding-left:1.1rem;font-size:.98rem;line-height:1.45;color:var(--mut)}
+.card h4{font-size:1.05rem;margin:.9rem 0 .2rem;color:var(--ink)}
+.wide{grid-column:span 2}
+/* themes */
+.themes{background:var(--tint);border-block:3px double var(--gold)}
+.swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:0 0 26px}
+.sw{padding:5px;background:var(--plate);border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:2px;margin:3px}
+.sw div{height:92px;padding:9px;font-size:2rem;line-height:1;border:1px solid var(--rule)}
+.sw div i{display:block;height:3px;margin:6px 0 0;opacity:.55;background:currentColor}
+.sw div i+i{width:70%;margin-top:4px}
+.sw span{display:block;text-align:center;font-size:.9rem;line-height:1.2;padding-top:5px}
+/* ledger */
+.ledger{max-width:44rem;margin:0 auto;padding:0;list-style:none;border-block:3px double var(--gold)}
+.ledger li{display:grid;grid-template-columns:2.2rem 1fr;gap:6px;padding:14px 4px;border-bottom:1px solid var(--rule)}
+.ledger li:last-child{border-bottom:0}
+.ledger li::before{content:"";width:9px;height:9px;background:var(--madder);transform:rotate(45deg);margin:.62em 0 0 .4rem}
+.ledger strong{color:var(--ink)}
+.ledger span{color:var(--mut)}
+.subhead{max-width:44rem;margin:clamp(28px,5vw,48px) auto 14px;text-align:center;font-size:1.6rem}
+/* quotes */
+.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:clamp(14px,2.4vw,26px)}
+.quotes blockquote{margin:0;padding:22px 20px;background:var(--plate);border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:-6px}
+.quotes p{margin:0;font-style:italic}
+.quotes cite{display:block;margin-top:10px;font-size:.95rem;color:var(--mut);font-style:normal}
+/* faq */
+.faq{max-width:46rem;margin:0 auto;border-block:3px double var(--gold)}
+.faq details{border-bottom:1px solid var(--rule)}
+.faq details:last-child{border-bottom:0}
+.faq summary{cursor:pointer;list-style:none;padding:14px 4px 14px 2rem;position:relative;font-size:1.15rem}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::before{content:"";position:absolute;left:.5rem;top:1.3em;width:8px;height:8px;background:var(--madder);transform:rotate(45deg)}
+.faq details[open] summary::before{background:var(--gold);transform:rotate(45deg) scale(1.25)}
+.faq .a{padding:0 4px 16px 2rem;color:var(--mut);font-size:1.02rem;line-height:1.55}
+.faq .a a{color:var(--gold-ink)}
+/* install */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(14px,2.4vw,26px);counter-reset:s}
+.step{position:relative;min-width:0;padding:26px 20px 20px;background:var(--plate);border:1px solid var(--gold);outline:1px solid var(--gold);outline-offset:-6px;counter-increment:s}
+.step::before{content:counter(s,upper-roman);position:absolute;top:-1px;left:-1px;padding:2px 10px 3px;background:var(--madder);color:var(--gilt);font-size:1.1rem}
+.step h3{font-size:1.3rem;margin:.5rem 0 .4rem}
+.step p{margin:0;font-size:1rem;color:var(--mut);line-height:1.5}
+.src{display:flex;margin-top:12px;border:1px solid var(--gold)}
+.src code{flex:1;min-width:0;padding:8px 10px;font:500 .8rem/1.3 ui-monospace,Menlo,Consolas,monospace;overflow-x:auto;white-space:nowrap;background:var(--paper);color:var(--ink)}
+.src button{border:0;border-left:1px solid var(--gold);background:var(--btn);color:var(--gilt);font:inherit;font-size:.95rem;padding:0 14px;cursor:pointer}
+.src button:hover{background:var(--btn-h)}
+.trouble{max-width:46rem;margin:clamp(24px,4vw,40px) auto 0}
+.warn{max-width:44rem;margin:clamp(24px,4vw,40px) auto 0;padding:18px 22px;border:1px solid var(--madder);outline:1px solid var(--madder);outline-offset:-5px;background:var(--plate)}
+.warn strong{color:var(--madder);letter-spacing:.06em;font-variant:small-caps}
+.warn p{margin:.3rem 0 0;font-size:1rem;color:var(--mut);line-height:1.5}
+/* support */
+#latest{font-style:italic}
+.tip a.btn{margin-top:6px}
+footer{text-align:center;color:var(--mut);font-style:italic;font-size:1rem;padding:0 0 48px;max-width:42em;margin:0 auto}
+footer .fleuron{margin:0 auto 22px}
+footer p{margin:.3rem 0}
+footer a{color:var(--gold-ink)}
+/* mobile dock */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:6;display:none;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--plate);border-top:3px double var(--gold);visibility:hidden;transform:translateY(100%);transition:transform .2s}
+.dock.on{visibility:visible;transform:none}
+.dock .btn{display:block}
+@media (max-width:860px){.hero{grid-template-columns:1fr}.grid,.steps{grid-template-columns:1fr}.wide{grid-column:auto}.swatches{grid-template-columns:repeat(3,1fr)}.dock{display:block}body{padding-bottom:78px}.bar .in{justify-content:center}.bar b{display:none}}
+@media (max-width:520px){.swatches{grid-template-columns:repeat(2,1fr)}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.dock{transition:none}}
+</style>
+</head>
+<body>
+{{frieze}}
+<div class="bar"><div class="wrap in"><b>Nectar</b><nav aria-label="Sections">{{nav}}</nav></div></div>
+
+<main id="top" class="wrap">
+<div class="hero">
+<div>
+<p class="kick">An unofficial reader for Archive of Our Own</p>
+<h1>Nectar</h1>
+<p class="tag">Read fic the way you read a book. Keep your place, keep your library.</p>
+<p class="lede">Nectar is an iOS app that opens any AO3 work, saves your reading position and caches what you read, so a long fic is always waiting where you left it. It shows each work with its own author's styling, and adds notes, highlights, stats and themes on top.</p>
+<div class="cta" id="herocta">
+<a class="btn" href="{{alt_url}}">Add to AltStore</a>
+<a class="btn alt" href="{{repo_url}}">View on GitHub</a>
+</div>
+<p class="fine">{{hero_fine}}</p>
+</div>
+<div class="stage"><figure class="shot"><img src="{{shot1}}" alt="Nectar app screenshot 1 of {{shot_count}}" width="300" decoding="async" fetchpriority="high"></figure></div>
+</div>
+</main>
+
+<!--?demo_video-->
+<section id="demo">
+<div class="wrap">
+<div class="head"><h2>Watch it</h2><p>{{demo_caption}}</p></div>
+<div class="demo"><figure class="shot"><video controls playsinline preload="none" src="{{demo_video}}"<!--?demo_poster--> poster="{{demo_poster}}"<!--/?demo_poster-->></video></figure></div>
+</div>
+</section>
+<!--/?demo_video-->
+
+<section id="screens">
+<div class="wrap">
+<div class="head"><h2>See it</h2><p>Screenshots from the app.</p></div>
+<div class="reel">
+{{reel}}</div>
+</div>
+</section>
+
+<section id="features">
+<div class="wrap">
+<div class="head"><div class="fleuron" aria-hidden="true"><i></i></div><h2 style="margin-top:.6em">What it does</h2><p>Everything here is in the app today.</p></div>
+<div class="grid">
+<div class="card"><span class="n">I</span><h3>A timeline that knows fic</h3><p>Word count, chapters, completion, fandom, relationships, characters, ratings, warnings and series show on every card, with a progress bar drawn from how far you have scrolled.</p></div>
+<div class="card"><span class="n">II</span><h3>Reads like AO3</h3><p>Each work loads with the creator's own styling on, then adds saved position, offline-friendly caching and a distraction-free reader.</p></div>
+<div class="card"><span class="n">III</span><h3>One book, many copies</h3><p>The same work in two collections, or re-imported from Calibre, is recognised as one book. Mark it read, starred or loved once and it applies everywhere.</p></div>
+<div class="card"><span class="n">IV</span><h3>Live chapters</h3><p>Fetch new chapters of an in-progress work on demand, with rate-limit backoff and a guard that will not overwrite good text with a short or bad fetch.</p></div>
+<div class="card"><span class="n">V</span><h3>Notes and highlights</h3><p>Save quotes and write notes as you read. Fix typos and grammar with text replacement, or swap Y/N for a name.</p></div>
+<div class="card"><span class="n">VI</span><h3>Stats and Screen Time</h3><p>Track your reading habits, or set yourself a limit. Both are kept on your phone.</p></div>
+<div class="card wide"><span class="n">VII</span><h3>Bring your own library</h3><p>Filter works on AO3 in your browser, paste the search link as a feed, or load a list of links to import your open tabs. Nectar also works with Ambrosia, a local fanfiction library, including large collections over a dedicated sync route.</p></div>
+<div class="card"><span class="n">VIII</span><h3>Back up everything</h3><p>Export your library, settings and reading history to a .zip, then restore or merge it later on this device or another.</p></div>
+</div>
+</div>
+</section>
+
+<!--?testimonials-->
+<section id="words">
+<div class="wrap">
+<div class="head"><h2>Kind words</h2></div>
+<div class="quotes">
+{{testimonials}}</div>
+</div>
+</section>
+<!--/?testimonials-->
+
+<section class="themes" id="themes">
+<div class="wrap">
+<div class="head"><h2>Dress the page</h2><p>Retint the app with an accent colour and surface palette, and pick a reader theme.</p></div>
+<div class="swatches" aria-hidden="true">
+<div class="sw"><div style="background:#f8f1e3;color:#4f321c">Aa<i></i><i></i></div><span>Sepia</span></div>
+<div class="sw"><div style="background:#1d1d1d;color:#d3c5c8">Aa<i></i><i></i></div><span>Duskbloom</span></div>
+<div class="sw"><div style="background:#f7f6f5;color:#6c2d52">Aa<i></i><i></i></div><span>Powder Pink</span></div>
+<div class="sw"><div style="background:#1a2735;color:#b3b3b3">Aa<i></i><i></i></div><span>Tumblr Blue</span></div>
+<div class="sw"><div style="background:#fdfaec;color:#3b2a13">Aa<i></i><i></i></div><span>Vintage Letter Green</span></div>
+<div class="sw"><div style="background:#ffffff;color:#000000">Aa<i></i><i></i></div><span>Black &amp; White</span></div>
+</div>
+<p class="center" style="margin:0 0 20px">Themes are standard NetNewsWire <code style="font-size:.9em">.nnwtheme</code> bundles. Nineteen more live on the theme gallery, one tap to install.</p>
+<div class="center"><a class="btn" href="{{themes_url}}">Browse the theme gallery</a></div>
+</div>
+</section>
+
+<section id="trust">
+<div class="wrap">
+<div class="head"><h2>Fair dealing</h2><p>What Nectar promises, and what it will not do.</p></div>
+<ul class="ledger">
+<li><span><strong>Free and open source.</strong> Always. Read the code, or build the app yourself.</span></li>
+<li><span><strong>Does not distribute fics.</strong> Works are fetched from AO3 only when you open one.</span></li>
+<li><span><strong>Respects AO3.</strong> It does its best to honour AO3's terms of service, servers and policies.</span></li>
+<li><span><strong>Private by design.</strong> Sign-in happens in Safari and your login details stay on your phone. Your reading history never leaves it.</span></li>
+<li><span><strong>No account needed.</strong> You can read without ever logging in.</span></li>
+</ul>
+<h3 class="subhead">Good to know</h3>
+<ul class="ledger">
+<li><span><strong>Beta software.</strong> Expect rough edges while it is under active development.</span></li>
+<li><span><strong>Made for AO3 and Ambrosia.</strong> It should work with any RSS or JSON feed, but it is not a general feed reader.</span></li>
+<li><span><strong>It keeps what you open.</strong> The cache is archival and never cleans itself up, so subscribing to a busy news feed will fill your storage.</span></li>
+<li><span><strong>Sideloaded.</strong> It is not on the App Store, so installing takes a few extra steps.</span></li>
+</ul>
+</div>
+</section>
+
+<section id="faq">
+<div class="wrap">
+<div class="head"><h2>Questions</h2><p>The short answers.</p></div>
+<div class="faq">
+{{faq}}</div>
+</div>
+</section>
+
+<section id="install">
+<div class="wrap">
+<div class="head"><h2>Install</h2><p>{{install_sub}}</p></div>
+<div class="steps">
+<div class="step"><h3>Get AltStore</h3><p>Install AltStore or SideStore and pair it with your Apple ID. AltStore Classic needs a computer running AltServer.</p></div>
+<div class="step"><h3>Add the source</h3><p>Open AltStore, add Nectar's source, then install Nectar from it. New releases appear there automatically.</p>
+<div class="src"><code id="srcurl">{{source_url}}</code><button type="button" id="copy">Copy</button></div></div>
+<div class="step"><h3>Read</h3><p>Paste an AO3 search link as a feed and open a work.</p></div>
+</div>
+<!--?install_step_images-->
+<div class="reel" style="margin-top:22px">
+{{install_reel}}</div>
+<!--/?install_step_images-->
+<div class="cta" style="justify-content:center;margin-top:28px"><a class="btn" href="{{alt_url}}">Add to AltStore</a><a class="btn alt" href="{{repo_url}}/releases/latest">Download the IPA</a></div>
+<div class="trouble faq">
+<details><summary>It stopped opening after a week</summary><div class="a">With a free Apple ID, a sideloaded app's signature expires after about 7 days. If you installed with Sideloadly, reinstall the same IPA and it opens again, with no rebuild needed. A paid Apple Developer account extends this to a year.</div></details>
+<details><summary>I can't install a fourth sideloaded app</summary><div class="a">By default you can only install 3 sideloaded apps. <a href="https://github.com/LiveContainer/LiveContainer">LiveContainer</a> lets you install more.</div></details>
+<details><summary>I would rather not use AltStore</summary><div class="a">Sideloadly also works. Download <code>Nectar-unsigned.ipa</code> from the <a href="{{repo_url}}/releases/latest">latest release</a>, drag it into Sideloadly, and sign in with your Apple ID. You can also build it yourself from source; the README has the steps.</div></details>
+</div>
+<div class="warn"><strong>Read this first.</strong><p>Nectar is unofficial and not associated with Archive of Our Own. AO3 recommends using the site in your browser, and warns that a third-party app you sign in to could gain access to your username and password. Nectar does not require you to log in. Please read the AO3 post on why there is no official app before you decide.</p><p><a href="https://archiveofourown.org/admin_posts/35806">Why AO3 doesn't have an official app</a></p></div>
+</div>
+</section>
+
+<section id="support">
+<div class="wrap">
+<div class="head"><h2>Help and updates</h2><p>Nectar is still growing. Tell me what breaks.</p></div>
+<div class="grid">
+<div class="card"><span class="n">Bugs and feedback</span><h3>Report a problem</h3><p>Feedback goes through GitHub. It helps to include your Nectar version, your iOS version, and what you were doing when it went wrong.</p><p><a href="{{repo_url}}/issues">Open an issue</a></p></div>
+<div class="card"><span class="n">Releases</span><h3>What is new</h3><p id="latest" hidden></p><p><a href="{{repo_url}}/releases">All releases and release notes</a></p>
+<!--?changelog-->
+{{changelog}}
+<!--/?changelog-->
+</div>
+<div class="card"><span class="n">Your data</span><h3>Stays with you</h3><ul><li>Your reading history and progress stay on your device and are never shared.</li><li>Nectar signs you in through Safari, and your login details stay on your phone.</li><li>It contacts AO3's servers only when you open a work.</li><li>The only privacy permission it declares is adding images to your Photos, so you can save images from an article.</li></ul></div>
+<!--?community-->
+<div class="card"><span class="n">Community</span><h3>Find other readers</h3>{{community}}</div>
+<!--/?community-->
+<!--?tip_url-->
+<div class="card tip"><span class="n">Support</span><h3>Keep it going</h3><p>Nectar is free and always will be. If you want to help with the costs, you can chip in.</p><p><a class="btn" href="{{tip_url}}">{{tip_label}}</a></p></div>
+<!--/?tip_url-->
+</div>
+</div>
+</section>
+
+<div class="wrap"><footer>
+<div class="fleuron" aria-hidden="true"><i></i></div>
+<p>Set in Sorts Mill Goudy. Nectar is a fork of <a href="https://github.com/Ranchero-Software/NetNewsWire">NetNewsWire</a> and is not affiliated with or supported by that project.</p>
+<p>MIT licensed, with some Reading Stats files under GPL-3.0. <a href="{{repo_url}}">Source on GitHub</a></p>
+<p>Press assets: {{press}}</p>
+<!--?press_contact--><p>Press contact: <a href="mailto:{{press_contact}}">{{press_contact}}</a></p><!--/?press_contact-->
+</footer></div>
+
+<div class="dock" id="dock"><a class="btn" href="{{alt_url}}">Add to AltStore</a></div>
+
+<script>
+(function(){
+var b=document.getElementById("copy"),c=document.getElementById("srcurl");
+if(b&&c){b.addEventListener("click",function(){var t=c.textContent.trim();
+function done(ok){b.textContent=ok?"Copied":"Select and copy";setTimeout(function(){b.textContent="Copy"},1600)}
+function sel(){try{var r=document.createRange();r.selectNodeContents(c);var s=getSelection();s.removeAllRanges();s.addRange(r)}catch(e){}done(false)}
+try{navigator.clipboard.writeText(t).then(function(){done(true)},sel)}catch(e){sel()}});}
+var d=document.getElementById("dock"),h=document.getElementById("herocta");
+if(d&&h&&"IntersectionObserver"in window){new IntersectionObserver(function(e){d.classList.toggle("on",!e[0].isIntersecting&&e[0].boundingClientRect.top<0)}).observe(h)}
+var l=document.getElementById("latest");
+if(l&&window.fetch){fetch("https://api.github.com/repos/{{repo_slug}}/releases?per_page=1",{headers:{Accept:"application/vnd.github+json"}}).then(function(r){return r.ok?r.json():Promise.reject()}).then(function(j){
+var r=j&&j[0];if(!r||!r.tag_name)return;var a=document.createElement("a");a.href=r.html_url;a.textContent=r.tag_name;
+var when="";try{when=" ("+new Date(r.published_at).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})+")"}catch(e){}
+l.textContent="Latest release: ";l.appendChild(a);l.appendChild(document.createTextNode(when));l.hidden=false}).catch(function(){})}
+})();
+</script>
+</body>
+</html>
