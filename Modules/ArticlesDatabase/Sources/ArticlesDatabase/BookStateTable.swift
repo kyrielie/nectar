@@ -108,8 +108,14 @@ final class BookStateTable: DatabaseTable, Sendable {
 
 	// MARK: - Scroll position / reading progress
 
-	func scrollPosition(for bookKey: String, _ database: FMDatabase) -> Double {
-		state(for: [bookKey], database)[bookKey]?.scrollPosition ?? 0
+	/// nil when this bookKey has no row at all -- distinct from a row that
+	/// exists and holds 0 (top of document). Callers that need to fall back
+	/// to another store (see ArticlesTable.fetchScrollPosition) depend on
+	/// this distinction; collapsing "no row" to 0 here would make a missing
+	/// row indistinguishable from a real position of 0 and mask any
+	/// fallback value the caller could otherwise use.
+	func scrollPosition(for bookKey: String, _ database: FMDatabase) -> Double? {
+		state(for: [bookKey], database)[bookKey]?.scrollPosition
 	}
 
 	func setScrollPosition(_ value: Double, bookKey: String, _ database: FMDatabase) {
