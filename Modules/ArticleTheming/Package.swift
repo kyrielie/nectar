@@ -13,6 +13,7 @@ let package = Package(
 	dependencies: [
 		.package(path: "../RSCore"),
 		.package(path: "../HexColor"),
+		.package(path: "../AppChrome"),
 		.package(url: "https://github.com/marmelroy/Zip.git", revision: "059e7346082d02de16220cd79df7db18ddeba8c3")
 	],
 	targets: [
@@ -21,6 +22,7 @@ let package = Package(
 			dependencies: [
 				"RSCore",
 				"HexColor",
+				"AppChrome",
 				"Zip"
 			],
 			swiftSettings: [

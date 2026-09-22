@@ -30,6 +30,7 @@
 
 import UIKit
 import HexColor
+import AppChrome
 
 enum BadgeColorTable {
 

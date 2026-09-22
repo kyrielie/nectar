@@ -13,6 +13,7 @@ import RSCore
 import Account
 import Images
 import HexColor
+import AppChrome
 
 typealias RSColor = UIColor
 

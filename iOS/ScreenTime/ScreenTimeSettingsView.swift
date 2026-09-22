@@ -1,4 +1,5 @@
 import SwiftUI
+import ScreenTime
 import Account
 
 struct ScreenTimeSettingsView: View {

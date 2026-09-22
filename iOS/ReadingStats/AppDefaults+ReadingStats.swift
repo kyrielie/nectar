@@ -12,6 +12,7 @@
 
 import Foundation
 import Account
+import ReadingStats
 
 extension AppDefaults.Key {
 	static let readingStatsTrackingEnabled = "readingStatsTrackingEnabled"

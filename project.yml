@@ -70,6 +70,14 @@ packages:
     path: Modules/HexColor
   ArticleTheming:
     path: Modules/ArticleTheming
+  AppChrome:
+    path: Modules/AppChrome
+  BackupRestore:
+    path: Modules/BackupRestore
+  ReadingStats:
+    path: Modules/ReadingStats
+  ScreenTime:
+    path: Modules/ScreenTime
   Zip:
     url: https://github.com/marmelroy/Zip.git
     revision: 059e7346082d02de16220cd79df7db18ddeba8c3
@@ -118,6 +126,14 @@ targets:
         embed: true
       - package: ArticleTheming
         embed: true
+      - package: AppChrome
+        embed: true
+      - package: BackupRestore
+        embed: true
+      - package: ReadingStats
+        embed: true
+      - package: ScreenTime
+        embed: true
     attributes:
       SystemCapabilities:
         com.apple.BackgroundModes:
@@ -165,6 +181,10 @@ targets:
       - package: RSCore
       - package: HexColor
       - package: ArticleTheming
+      - package: AppChrome
+      - package: BackupRestore
+      - package: ReadingStats
+      - package: ScreenTime
     configFiles:
       Debug: xcconfig/NetNewsWire_iOSTests_target.xcconfig
       Release: xcconfig/NetNewsWire_iOSTests_target.xcconfig

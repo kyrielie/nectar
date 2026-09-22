@@ -16,7 +16,7 @@ and is itself MIT-licensed (see [`LICENSE`](./LICENSE)). This file aggregates at
 | --- | --- | --- |
 | [Aidoku/Aidoku](https://github.com/Aidoku/Aidoku) | GPL-3.0 | The Streaks section (current/longest streak platters and the year activity heatmap) and the Monthly section (words-per-month bar chart with year pills) of Reading Stats. Adapted from Aidoku's `Insights` feature: `HeatmapData.swift`, `YearlyMonthData.swift`, `HeatmapView.swift`, `InsightPlatterView.swift`, `InsightsView.swift` (streaks block), `StatsGridView.swift` (monthly chart card and year selector), `YearlyMonthChartView.swift`, and the `getStreakLengths`/`getReadingHeatmapData`/`getChapterYearlyReadingData` methods of `CoreDataManager+ReadingSession.swift`. Copyright (c) the Aidoku authors (those files' headers credit Skitty). |
 
-- `Modules/Account/Sources/Account/ReadingStats/ReadingStatsCalendar.swift` (the streak, heatmap and monthly-data types and functions)
+- `Modules/ReadingStats/Sources/ReadingStats/ReadingStatsCalendar.swift` (the streak, heatmap and monthly-data types and functions)
 - `iOS/ReadingStats/ReadingInsightPlatterView.swift`
 - `iOS/ReadingStats/ReadingHeatmapView.swift`
 - `iOS/ReadingStats/ReadingStreaksView.swift`
@@ -72,4 +72,3 @@ are bundled in this repository. NewsFax bundles the ModeSeven font directly —
 see `Themes/NewsFax.nnwtheme/License.md`. The theme gallery page (`gallery/`)
 loads Sorts Mill Goudy (SIL OFL) from Google Fonts the same way; the previously
 bundled woff2 copies and their license file were removed.
-

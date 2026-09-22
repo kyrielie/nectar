@@ -23,7 +23,7 @@
 import Testing
 import Foundation
 import Zip
-@testable import Nectar
+@testable import BackupRestore
 
 @Suite("BackupManager manifest handling")
 @MainActor

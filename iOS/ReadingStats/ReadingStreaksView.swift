@@ -18,6 +18,7 @@
 //
 
 import Account
+import ReadingStats
 import SwiftUI
 
 struct ReadingStreaksView: View {
