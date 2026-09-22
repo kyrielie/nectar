@@ -77,7 +77,14 @@ import Account
 		// *this* tick's prior state is already showing -- see the
 		// lockout-pause fix below. Read the flags before evaluate(at:)
 		// runs, since evaluate() is what would flip them for this tick.
-		let wasLockedBeforeThisTick = isLimitLockout || isBedtimeLockout
+		// Includes isRecurringBreakLockout alongside the daily-limit/bedtime
+		// flags: an active enforced break is exactly the same kind of
+		// "reading is already blocked" state as the other two, so it needs
+		// the same pause -- without it, screenTimeMinutesUsedTodaySeconds
+		// kept accruing (and .screenTimeUsageDidChange kept firing once a
+		// second) for the entire break-enforced window, even though the
+		// overlay was up and nothing was actually being read.
+		let wasLockedBeforeThisTick = isLimitLockout || isBedtimeLockout || isRecurringBreakLockout
 		if let elapsed = activeTime.tick(now: now) {
 			if !wasLockedBeforeThisTick {
 				AppDefaults.shared.screenTimeMinutesUsedTodaySeconds += elapsed
