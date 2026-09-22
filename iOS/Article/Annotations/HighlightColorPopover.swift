@@ -32,6 +32,7 @@
 
 import SwiftUI
 import Articles
+import AppChrome
 import HexColor
 
 struct HighlightColorPopover: View {

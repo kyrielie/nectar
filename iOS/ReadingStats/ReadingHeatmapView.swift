@@ -25,6 +25,7 @@
 //
 
 import Account
+import ReadingStats
 import SwiftUI
 
 struct ReadingHeatmapView: View {

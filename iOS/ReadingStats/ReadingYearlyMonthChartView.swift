@@ -23,6 +23,7 @@
 //
 
 import Account
+import ReadingStats
 import Charts
 import SwiftUI
 

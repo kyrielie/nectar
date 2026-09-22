@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import Account
+import ReadingStats
 
 @Suite struct ReadingStatsCalendarTests {
 	private var calendar: Calendar {

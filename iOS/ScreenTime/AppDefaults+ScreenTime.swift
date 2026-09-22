@@ -11,6 +11,7 @@
 //
 
 import Foundation
+import ScreenTime
 import Account
 
 extension AppDefaults.Key {

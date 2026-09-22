@@ -16,6 +16,7 @@
 import Testing
 import Foundation
 import Articles
+import ReadingStats
 @testable import Nectar
 @testable import Account
 

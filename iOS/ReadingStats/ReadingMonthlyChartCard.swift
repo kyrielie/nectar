@@ -22,6 +22,7 @@
 //
 
 import Account
+import ReadingStats
 import SwiftUI
 
 struct ReadingMonthlyChartCard: View {

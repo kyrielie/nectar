@@ -16,6 +16,7 @@ import Articles
 import ErrorLog
 import Images
 import ArticleTheming
+import BackupRestore
 
 @MainActor var appDelegate: AppDelegate!
 
@@ -116,6 +117,7 @@ import ArticleTheming
 		// would mean a person's saved theme choice stops loading with no
 		// crash to flag it. See ArticleThemesManager.swift.
 		ArticleThemesManager.nameStorage = AppDefaults.shared
+		BackupManager.settingsStore = AppDefaults.shared
 		ArticleThemesManager.shared.start()
 		NetworkMonitor.shared.start()
 

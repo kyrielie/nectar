@@ -14,6 +14,7 @@ import Account
 import ActivityLog
 import Articles
 import ArticleTheming
+import BackupRestore
 
 final class SettingsViewController: UITableViewController, SettingsPaletteBackgroundHosting {
 

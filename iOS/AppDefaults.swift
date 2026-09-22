@@ -12,6 +12,8 @@ import Account
 import Articles
 import Images
 import ArticleTheming
+import AppChrome
+import ReadingStats
 
 enum UserInterfaceColorPalette: Int, CustomStringConvertible, CaseIterable {
 	case automatic = 0
