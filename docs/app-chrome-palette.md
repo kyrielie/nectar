@@ -396,7 +396,7 @@ every palette (see `BadgeCategory`'s doc comment in
   literal-string lookup tables (rating/category/warning → hex) per
   `BadgeColorPalette` case, one set per case rather than a single
   hardcoded set. Built from hex via `UIColor(cssHex:)`
-  (`ArticleThemeColorExtractor.swift`) rather than `Assets.xcassets`
+  (`Modules/HexColor`) rather than `Assets.xcassets`
   colorset entries, since these are per-value lookup tables (five
   ratings, six categories, six warnings, per palette) that don't map
   cleanly onto one colorset per swatch — migrating to real colorset

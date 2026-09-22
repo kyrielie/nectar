@@ -7,6 +7,7 @@
 
 import Testing
 @testable import Nectar
+@testable import ArticleTheming
 
 @Suite struct CSSImportExtractorTests {
 

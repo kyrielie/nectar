@@ -93,6 +93,20 @@
         "identifier" : "FeedFinderTests",
         "name" : "FeedFinderTests"
       }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/HexColor",
+        "identifier" : "HexColorTests",
+        "name" : "HexColorTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/ArticleTheming",
+        "identifier" : "ArticleThemingTests",
+        "name" : "ArticleThemingTests"
+      }
     }
   ],
   "version" : 1

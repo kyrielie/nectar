@@ -8,51 +8,51 @@
 
 import Foundation
 
-struct ArticleTheme: Equatable, Sendable {
+public struct ArticleTheme: Equatable, Sendable {
 
-	static let defaultTheme = ArticleTheme()
-	static let nnwThemeSuffix = ".nnwtheme"
+	public static let defaultTheme = ArticleTheme()
+	public static let nnwThemeSuffix = ".nnwtheme"
 
 	private static let defaultThemeName = NSLocalizedString("Default", comment: "Default")
 	private static let unknownValue = NSLocalizedString("Unknown", comment: "Unknown Value")
 
-	let url: URL?
-	let template: String?
-	let importCSS: String?
-	let css: String?
-	let isAppTheme: Bool
+	public let url: URL?
+	public let template: String?
+	public let importCSS: String?
+	public let css: String?
+	public let isAppTheme: Bool
 
-	var name: String {
+	public var name: String {
 		guard let url else { return Self.defaultThemeName }
 		return Self.themeNameForPath(url.path)
 	}
 
-	var creatorHomePage: String {
+	public var creatorHomePage: String {
 		return info?.creatorHomePage ?? Self.unknownValue
 	}
 
-	var creatorName: String {
+	public var creatorName: String {
 		return info?.creatorName ?? Self.unknownValue
 	}
 
-	var version: String {
+	public var version: String {
 		return String(describing: info?.version ?? 0)
 	}
 
 	/// Purely presentational grouping for the theme gallery. nil for the large
 	/// majority of themes, which aren't part of a multi-variant family.
-	var family: String? {
+	public var family: String? {
 		info?.family
 	}
 
 	/// This bundle's variant label within `family`. Meaningless when `family` is nil.
-	var familyVariant: String? {
+	public var familyVariant: String? {
 		info?.familyVariant
 	}
 
 	private let info: ArticleThemePlist?
 
-	init() {
+	public init() {
 		self.url = nil
 		self.info = ArticleThemePlist(name: "Article Theme", themeIdentifier: "com.ranchero.netnewswire.theme.article", creatorHomePage: "https://netnewswire.com/", creatorName: "Ranchero Software", version: 1, family: nil, familyVariant: nil)
 
@@ -68,7 +68,7 @@ struct ArticleTheme: Equatable, Sendable {
 		self.isAppTheme = true
 	}
 
-	init(url: URL, isAppTheme: Bool) throws {
+	public init(url: URL, isAppTheme: Bool) throws {
 		_ = url.startAccessingSecurityScopedResource()
 		defer {
 			url.stopAccessingSecurityScopedResource()

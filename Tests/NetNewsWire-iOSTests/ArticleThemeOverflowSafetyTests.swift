@@ -11,7 +11,7 @@
 //  1. core.css's `html, body { overflow-x: hidden }` -- the single
 //     structural backstop, since core.css is prepended to every theme
 //     (ArticleTheme.init(url:isAppTheme:) always prepends it; see
-//     Shared/ArticleStyles/ArticleTheme.swift).
+//     Shared/ArticleStyles/ArticleTheme.swift, now Modules/ArticleTheming's).
 //  2. Every shipped theme's own `img, figure, video, div, object {
 //     max-width: 100% }`-equivalent rule, which is what makes oversized
 //     content actually *fit* rather than just get clipped. Most shipped
@@ -28,6 +28,7 @@
 import Testing
 import Foundation
 @testable import Nectar
+@testable import ArticleTheming
 
 @Suite struct ArticleThemeOverflowSafetyTests {
 

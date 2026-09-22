@@ -86,6 +86,22 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   (icon/favicon downloading, page metadata, feed autodiscovery, activity
   and error logging, CloudKit sync plumbing, NewsBlur API client, secrets
   storage). Not touched by the Ambrosia-specific work described below.
+- **Modules/HexColor** — `UIColor` <-> CSS hex string conversion and WCAG
+  contrast-ratio comparison, extracted from `ArticleThemeColorExtractor.swift`
+  (Modularization Stage 0a) because its reach turned out to span 14 files
+  across the Accent Color / Surface Palette / Badge Color / Highlight
+  Palette systems, not just that file's own CSS-stylesheet scanner.
+  Dependency-free beyond `UIKit`.
+- **Modules/ArticleTheming** — `.nnwtheme` bundle loading, the theme
+  registry (`ArticleThemesManager`), per-reader font/color overrides
+  (`ArticleThemeOverrides`), and CSS color extraction
+  (`ArticleThemeColorExtractor` / `ArticleResolvedColors`). Extracted from
+  `Shared/ArticleStyles/` (Modularization Stage 0b). Needs one piece of
+  app-target state it can't own itself (the persisted current theme name,
+  which is `AppDefaults`) -- see `ArticleThemeNameStoring` for the
+  protocol seam `AppDefaults` conforms to, injected by `AppDelegate.swift`
+  before `ArticleThemesManager.start()` is called. Depends on `RSCore`,
+  `HexColor`, and `Zip`.
 - **Shared/** — cross-platform (iOS/Mac target scaffolding, though only iOS
   is actually built — see below) formatting and rendering:
   `ArticleStringFormatter` (title/summary truncation and caching),

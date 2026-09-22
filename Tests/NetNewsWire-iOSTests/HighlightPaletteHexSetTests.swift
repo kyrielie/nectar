@@ -16,6 +16,7 @@ import Testing
 import UIKit
 import Articles
 @testable import Nectar
+@testable import HexColor
 
 @Suite struct HighlightPaletteHexSetTests {
 
