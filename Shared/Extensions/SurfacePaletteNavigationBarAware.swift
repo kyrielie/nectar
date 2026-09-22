@@ -16,6 +16,7 @@
 
 import UIKit
 import ArticleTheming
+import AppChrome
 
 @MainActor
 protocol SurfacePaletteNavigationBarAware: UIViewController {

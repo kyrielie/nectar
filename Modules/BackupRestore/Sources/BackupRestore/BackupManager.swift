@@ -20,29 +20,51 @@ import Account
 import Zip
 import ArticleTheming
 
+public protocol BackupSettingsStoring: AnyObject {
+	var eligibleKeys: [String] { get }
+	func object(forKey key: String) -> Any?
+	func set(_ value: Any, forKey key: String)
+}
+
+private final class InMemoryBackupSettingsStore: BackupSettingsStoring {
+	var values: [String: Any] = [:]
+	var eligibleKeys: [String] = []
+	func object(forKey key: String) -> Any? { values[key] }
+	func set(_ value: Any, forKey key: String) { values[key] = value }
+}
+
 /// `manifest.json`'s shape. `schemaVersion` is what makes a future
 /// additive change (e.g. the blacklist/mute feature noted in the plan)
 /// non-breaking -- a backup written before that field exists simply omits
 /// it, and any importer reading an older backup already has to treat
 /// "field absent" as a normal case.
-struct BackupManifest: Codable {
-	static let currentSchemaVersion = 1
+public struct BackupManifest: Codable, Sendable {
+	public static let currentSchemaVersion = 1
 
-	let schemaVersion: Int
-	let appVersion: String
-	let appBuild: String
-	let exportDate: Date
-	let accountFolderNames: [String]
-	let settingsIncluded: Bool
+	public let schemaVersion: Int
+	public let appVersion: String
+	public let appBuild: String
+	public let exportDate: Date
+	public let accountFolderNames: [String]
+	public let settingsIncluded: Bool
+
+	public init(schemaVersion: Int, appVersion: String, appBuild: String, exportDate: Date, accountFolderNames: [String], settingsIncluded: Bool) {
+		self.schemaVersion = schemaVersion
+		self.appVersion = appVersion
+		self.appBuild = appBuild
+		self.exportDate = exportDate
+		self.accountFolderNames = accountFolderNames
+		self.settingsIncluded = settingsIncluded
+	}
 }
 
-enum BackupManagerError: Error, CustomStringConvertible {
+public enum BackupManagerError: Error, CustomStringConvertible {
 	case noAccountsToBackUp
 	case zipFailed(String)
 	case unzipFailed(String)
 	case manifestMissingOrUnreadable
 
-	var description: String {
+	public var description: String {
 		switch self {
 		case .noAccountsToBackUp:
 			return "There are no accounts to back up."
@@ -63,17 +85,18 @@ enum BackupManagerError: Error, CustomStringConvertible {
 /// and whether the fixed AO3 sign-in-again notice should be shown (always, per
 /// Correction 5 -- included here so the caller doesn't have to duplicate that
 /// "always true" knowledge).
-struct BackupImportResult: Sendable {
-	let manifest: BackupManifest
-	let matchedAccountFolderNames: [String]
-	let unmatchedAccountFolderNames: [String]
-	let settingsApplied: Bool
-	let installedThemeFilenames: [String]
-	let skippedThemeFilenames: [String]
+public struct BackupImportResult: Sendable {
+	public let manifest: BackupManifest
+	public let matchedAccountFolderNames: [String]
+	public let unmatchedAccountFolderNames: [String]
+	public let settingsApplied: Bool
+	public let installedThemeFilenames: [String]
+	public let skippedThemeFilenames: [String]
 }
 
 @MainActor
-enum BackupManager {
+public enum BackupManager {
+	public static var settingsStore: BackupSettingsStoring = InMemoryBackupSettingsStore()
 
 	private static let logger = Logger(subsystem: "Nectar", category: "BackupManager")
 
@@ -88,7 +111,7 @@ enum BackupManager {
 	/// No credential of any kind is ever written into the zip (Correction
 	/// 5) -- AO3SessionStore/AO3ChallengeSessionStore are Keychain-backed
 	/// and never touched here.
-	static func exportBackup(includeSettings: Bool) throws -> URL {
+	public static func exportBackup(includeSettings: Bool) throws -> URL {
 		let accounts = AccountManager.shared.accounts
 		guard !accounts.isEmpty else {
 			throw BackupManagerError.noAccountsToBackUp
@@ -147,8 +170,8 @@ enum BackupManager {
 		// minus known system prefixes."
 		if includeSettings {
 			var settingsDictionary: [String: Any] = [:]
-			for key in AppDefaults.backupEligibleKeys {
-				if let value = AppDefaults.store.object(forKey: key) {
+			for key in settingsStore.eligibleKeys {
+				if let value = settingsStore.object(forKey: key) {
 					settingsDictionary[key] = value
 				}
 			}
@@ -220,7 +243,7 @@ enum BackupManager {
 	/// any failure here as "assume settings weren't included," matching
 	/// the plan's "should not show the toggle" default for anything short
 	/// of a confirmed settingsIncluded: true.
-	static func peekSettingsIncluded(zipURL: URL) throws -> Bool {
+	public static func peekSettingsIncluded(zipURL: URL) throws -> Bool {
 		let peekDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("NectarRestorePeek-\(UUID().uuidString)", isDirectory: true)
 		defer { try? FileManager.default.removeItem(at: peekDirectory) }
 
@@ -258,7 +281,7 @@ enum BackupManager {
 	/// `zipURL` is expected to already be a local file URL (the document
 	/// picker's `asCopy: true` copy, or the "Open in Nectar" extension point's
 	/// delivered file) -- this does not itself fetch or download anything.
-	static func importBackup(from zipURL: URL, includeSettings: Bool) async throws -> BackupImportResult {
+	public static func importBackup(from zipURL: URL, includeSettings: Bool) async throws -> BackupImportResult {
 		let workingDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("NectarRestore-\(UUID().uuidString)", isDirectory: true)
 		defer { try? FileManager.default.removeItem(at: workingDirectory) }
 
@@ -300,9 +323,9 @@ enum BackupManager {
 				// by an older app version can't smuggle in a key this
 				// version doesn't recognize as eligible, since the loop only
 				// ever reads keys the *current* app's allowlist names.
-				for key in AppDefaults.backupEligibleKeys {
+				for key in settingsStore.eligibleKeys {
 					if let value = settingsDictionary[key] {
-						AppDefaults.store.set(value, forKey: key)
+						settingsStore.set(value, forKey: key)
 					}
 				}
 			}

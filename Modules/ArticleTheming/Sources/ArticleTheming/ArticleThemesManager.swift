@@ -37,14 +37,14 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 	/// Set once, before `start()` is called -- see `AppDelegate.swift`. Defaults
 	/// to an in-memory fallback; the real app always overwrites this with
 	/// `AppDefaults.shared` before `start()`.
-	public static var nameStorage: ArticleThemeNameStoring = InMemoryThemeNameStorage()
+	nonisolated(unsafe) public static var nameStorage: ArticleThemeNameStoring = InMemoryThemeNameStorage()
 
 	public static let defaultThemeName = "Default"
 
 	public let folderPath: String
 
-	let presentedItemOperationQueue = OperationQueue.main // NSFilePresenter
-	let presentedItemURL: URL? // NSFilePresenter
+	public let presentedItemOperationQueue = OperationQueue.main // NSFilePresenter
+	public let presentedItemURL: URL? // NSFilePresenter
 
 	public var currentThemeName: String {
 		get {
@@ -120,7 +120,7 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 		NSFileCoordinator.addFilePresenter(self)
 	}
 
-	func presentedSubitemDidChange(at url: URL) {
+	public func presentedSubitemDidChange(at url: URL) {
 		updateThemeNames()
 		updateCurrentTheme()
 	}

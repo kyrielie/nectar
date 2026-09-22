@@ -7,6 +7,7 @@
 
 import UIKit
 import HexColor
+import AppChrome
 
 /// Extracts the effective text/background/link colors a theme's own stylesheet declares,
 /// so overrides and chrome (webview background, notch fill) can default to what the

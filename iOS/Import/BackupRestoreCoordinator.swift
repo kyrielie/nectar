@@ -17,6 +17,7 @@
 import UIKit
 import UniformTypeIdentifiers
 import ActivityLog
+import BackupRestore
 
 @MainActor
 final class BackupRestoreCoordinator: NSObject {
