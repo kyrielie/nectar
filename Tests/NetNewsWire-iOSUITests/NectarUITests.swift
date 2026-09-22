@@ -14,10 +14,10 @@ import XCTest
 // @MainActor class (see https://github.com/swiftlang/swift/issues/75815),
 // so they can't call the @MainActor XCUIApplication APIs directly. The
 // async throws overrides are MainActor-isolated and don't have that
-// problem. Sendable silences the "sending main actor-isolated value of
-// type 'XCTestCase'" warning that async setUp/tearDown otherwise produce.
+// problem. The class is @MainActor-isolated, which already implies
+// Sendable, so no explicit conformance is needed here.
 @MainActor
-final class NectarUITests: XCTestCase, Sendable {
+final class NectarUITests: XCTestCase {
 
 	override func setUp() async throws {
 		try await super.setUp()
