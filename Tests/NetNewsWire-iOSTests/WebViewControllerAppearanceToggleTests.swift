@@ -32,6 +32,8 @@
 import Testing
 import UIKit
 @testable import Nectar
+@testable import HexColor
+@testable import ArticleTheming
 
 @Suite struct WebViewControllerAppearanceToggleTests {
 

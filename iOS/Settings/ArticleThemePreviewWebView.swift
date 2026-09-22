@@ -9,6 +9,7 @@
 import SwiftUI
 import WebKit
 import RSCore
+import ArticleTheming
 
 /// Renders a small, scrollable sample article styled with real theme CSS, so the
 /// override screen's preview reflects the actual current theme (default or an imported

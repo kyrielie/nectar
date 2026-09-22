@@ -15,27 +15,51 @@ public extension Notification.Name {
 	static let CurrentArticleThemeDidChangeNotification = Notification.Name("CurrentArticleThemeDidChangeNotification")
 }
 
-final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
-	static let shared = ArticleThemesManager()
+/// The persisted-state seam `ArticleThemesManager` needs from the app target.
+/// `AppDefaults` (app-target-only -- see Modularization Stage 0b) conforms to
+/// this; nothing else about AppDefaults is exposed to this package.
+public protocol ArticleThemeNameStoring: AnyObject {
+	var currentThemeName: String? { get set }
+}
+
+/// Fallback storage so an accidental early touch of `ArticleThemesManager`
+/// (e.g. from this package's own tests, before the app target has injected
+/// its real storage) doesn't crash. The real app always overwrites
+/// `ArticleThemesManager.nameStorage` with `AppDefaults.shared` before
+/// `start()` is called -- see `AppDelegate.swift`.
+private final class InMemoryThemeNameStorage: ArticleThemeNameStoring, @unchecked Sendable {
+	var currentThemeName: String?
+}
+
+public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
+	public static let shared = ArticleThemesManager()
+
+	/// Set once, before `start()` is called -- see `AppDelegate.swift`. Defaults
+	/// to an in-memory fallback; the real app always overwrites this with
+	/// `AppDefaults.shared` before `start()`.
+	public static var nameStorage: ArticleThemeNameStoring = InMemoryThemeNameStorage()
+
+	public static let defaultThemeName = "Default"
+
 	public let folderPath: String
 
 	let presentedItemOperationQueue = OperationQueue.main // NSFilePresenter
 	let presentedItemURL: URL? // NSFilePresenter
 
-	var currentThemeName: String {
+	public var currentThemeName: String {
 		get {
-			AppDefaults.shared.currentThemeName ?? AppDefaults.defaultThemeName
+			Self.nameStorage.currentThemeName ?? Self.defaultThemeName
 		}
 		set {
 			if newValue != currentThemeName {
-				AppDefaults.shared.currentThemeName = newValue
+				Self.nameStorage.currentThemeName = newValue
 				updateThemeNames()
 				updateCurrentTheme()
 			}
 		}
 	}
 
-	var currentTheme: ArticleTheme {
+	public var currentTheme: ArticleTheme {
 		get {
 			state.withLock { $0.currentTheme }
 		}
@@ -45,7 +69,7 @@ final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 		}
 	}
 
-	var themeNames: [String] {
+	public var themeNames: [String] {
 		get {
 			state.withLock { $0.themeNames }
 		}
@@ -57,7 +81,7 @@ final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 
 	private struct State {
 		var currentTheme = ArticleTheme.defaultTheme
-		var themeNames = [AppDefaults.defaultThemeName]
+		var themeNames = [ArticleThemesManager.defaultThemeName]
 	}
 	private let state = OSAllocatedUnfairLock(initialState: State())
 
@@ -78,11 +102,16 @@ final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 		}
 	}
 
-	@MainActor func start() {
+	@MainActor public func start() {
 		guard !didStart else {
 			assertionFailure("ArticlesThemesManager.start called when already started.")
 			return
 		}
+		// Fails loudly in debug builds if nameStorage was never injected --
+		// silently falling back to the in-memory default would mean a
+		// person's saved theme choice stops loading, with no crash to flag
+		// it. See AppDelegate.swift's ordering requirement above nameStorage.
+		assert(!(Self.nameStorage is InMemoryThemeNameStorage), "ArticleThemesManager.nameStorage must be injected (see AppDelegate.swift) before start() is called.")
 		didStart = true
 
 		updateThemeNames()
@@ -98,13 +127,13 @@ final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 
 	// MARK: API
 
-	func themeExists(filename: String) -> Bool {
+	public func themeExists(filename: String) -> Bool {
 		let filenameLastPathComponent = (filename as NSString).lastPathComponent
 		let toFilename = (folderPath as NSString).appendingPathComponent(filenameLastPathComponent)
 		return FileManager.default.fileExists(atPath: toFilename)
 	}
 
-	func importTheme(filename: String) throws {
+	public func importTheme(filename: String) throws {
 		let filenameLastPathComponent = (filename as NSString).lastPathComponent
 		let toFilename = (folderPath as NSString).appendingPathComponent(filenameLastPathComponent)
 
@@ -124,7 +153,7 @@ final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 	/// Callers that perform a user-initiated import already report their own
 	/// failures at the call site.
 	func articleThemeWithThemeName(_ themeName: String) -> ArticleTheme? {
-		if themeName == AppDefaults.defaultThemeName {
+		if themeName == Self.defaultThemeName {
 			return ArticleTheme.defaultTheme
 		}
 
@@ -143,7 +172,7 @@ final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 		return try? ArticleTheme(url: url, isAppTheme: isAppTheme)
 	}
 
-	func deleteTheme(themeName: String) {
+	public func deleteTheme(themeName: String) {
 		if let filename = pathForThemeName(themeName, folder: folderPath) {
 			try? FileManager.default.removeItem(atPath: filename)
 		}
@@ -169,20 +198,20 @@ private extension ArticleThemesManager {
 	}
 
 	func defaultArticleTheme() -> ArticleTheme {
-		articleThemeWithThemeName(AppDefaults.defaultThemeName)!
+		articleThemeWithThemeName(Self.defaultThemeName)!
 	}
 
 	func updateCurrentTheme() {
 		var themeName = currentThemeName
 		if !themeNames.contains(themeName) {
-			themeName = AppDefaults.defaultThemeName
-			currentThemeName = AppDefaults.defaultThemeName
+			themeName = Self.defaultThemeName
+			currentThemeName = Self.defaultThemeName
 		}
 
 		var articleTheme = articleThemeWithThemeName(themeName)
 		if articleTheme == nil {
 			articleTheme = defaultArticleTheme()
-			currentThemeName = AppDefaults.defaultThemeName
+			currentThemeName = Self.defaultThemeName
 		}
 
 		if let articleTheme = articleTheme, articleTheme != currentTheme {

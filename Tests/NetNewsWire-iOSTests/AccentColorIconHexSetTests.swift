@@ -17,6 +17,7 @@
 import Testing
 import UIKit
 @testable import Nectar
+@testable import HexColor
 
 @Suite struct AccentColorIconHexSetTests {
 

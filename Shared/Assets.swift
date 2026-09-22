@@ -12,6 +12,7 @@ import UIKit
 import RSCore
 import Account
 import Images
+import HexColor
 
 typealias RSColor = UIColor
 

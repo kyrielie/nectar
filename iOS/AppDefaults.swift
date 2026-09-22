@@ -11,6 +11,7 @@ import os
 import Account
 import Articles
 import Images
+import ArticleTheming
 
 enum UserInterfaceColorPalette: Int, CustomStringConvertible, CaseIterable {
 	case automatic = 0
@@ -913,7 +914,7 @@ extension Notification.Name {
 
 final class AppDefaults: Sendable {
 	static let shared = AppDefaults()
-	static let defaultThemeName = "Default"
+	static let defaultThemeName = ArticleThemesManager.defaultThemeName
 	fileprivate static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AppDefaults")
 
 	/// Separator used when persisting a folder path (`[String]`) as a
@@ -2100,6 +2101,11 @@ final class AppDefaults: Sendable {
 
 	// MARK: - Current article theme
 
+	/// Satisfies `ArticleThemeNameStoring` (Modules/ArticleTheming,
+	/// Modularization Stage 0b) -- no body needed, this property already
+	/// matches the protocol's `var currentThemeName: String? { get set }`
+	/// exactly. See AppDelegate.swift for where `ArticleThemesManager.nameStorage`
+	/// is injected with `self`.
 	var currentThemeName: String? {
 		get {
 			return AppDefaults.string(for: Key.currentThemeName)
@@ -2373,6 +2379,11 @@ extension AppDefaults {
 		}
 	}
 }
+
+/// See ArticleThemeNameStoring's declaration (Modules/ArticleTheming) for
+/// why this seam exists -- AppDefaults stays app-target-only, so
+/// ArticleThemesManager can't import it directly.
+extension AppDefaults: ArticleThemeNameStoring {}
 
 struct StateRestorationInfo {
 	let hideReadFeeds: Bool

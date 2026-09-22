@@ -43,6 +43,7 @@
 //
 
 import UIKit
+import HexColor
 
 final class SurfacePalettePreviewCell: UITableViewCell {
 

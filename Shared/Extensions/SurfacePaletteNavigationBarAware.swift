@@ -15,6 +15,7 @@
 //
 
 import UIKit
+import ArticleTheming
 
 @MainActor
 protocol SurfacePaletteNavigationBarAware: UIViewController {

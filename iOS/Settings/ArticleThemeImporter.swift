@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import ArticleTheming
 
 @MainActor struct ArticleThemeImporter {
 

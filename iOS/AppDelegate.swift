@@ -15,6 +15,7 @@ import Account
 import Articles
 import ErrorLog
 import Images
+import ArticleTheming
 
 @MainActor var appDelegate: AppDelegate!
 
@@ -110,6 +111,11 @@ import Images
 		UNUserNotificationCenter.current().delegate = self
 		UserNotificationManager.shared.start()
 
+		// Must happen before start() -- start() asserts nameStorage was
+		// injected, since falling back silently to the in-memory default
+		// would mean a person's saved theme choice stops loading with no
+		// crash to flag it. See ArticleThemesManager.swift.
+		ArticleThemesManager.nameStorage = AppDefaults.shared
 		ArticleThemesManager.shared.start()
 		NetworkMonitor.shared.start()
 

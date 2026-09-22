@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import HexColor
 
 /// Extracts the effective text/background/link colors a theme's own stylesheet declares,
 /// so overrides and chrome (webview background, notch fill) can default to what the
@@ -31,8 +32,8 @@ import UIKit
 /// persisted override) and ArticleThemePreviewWebView.updateUIView() (Settings
 /// preview, reads in-progress unsaved override state) so both agree on the same
 /// precedence instead of the preview re-deriving it and risking drift.
-enum ArticleResolvedColors {
-	static func resolved(theme: ArticleTheme, isDark: Bool, overrideBackgroundColorHex: String?, overrideBackgroundColorDarkHex: String?) -> (background: UIColor, text: UIColor) {
+public enum ArticleResolvedColors {
+	public static func resolved(theme: ArticleTheme, isDark: Bool, overrideBackgroundColorHex: String?, overrideBackgroundColorDarkHex: String?) -> (background: UIColor, text: UIColor) {
 		let themeColors = ArticleThemeColorExtractor.colors(for: theme)
 		let background: UIColor
 		if isDark, let hex = overrideBackgroundColorDarkHex ?? overrideBackgroundColorHex, let overrideColor = UIColor(cssHex: hex) {
@@ -46,34 +47,22 @@ enum ArticleResolvedColors {
 		return (background, text)
 	}
 
-	/// Convenience over `resolved(theme:isDark:overrideBackgroundColorHex:overrideBackgroundColorDarkHex:)`
-	/// that reads the live globals (current theme, current overrides) itself,
-	/// rather than requiring every caller to look those up. Originally a
-	/// private wrapper local to `WebViewController`
-	/// (`resolvedArticleColors(isDark:)`); promoted here once
-	/// `SurfacePaletteNavigationBarAware`'s `.blend` toolbar style needed the
-	/// exact same computation -- one shared definition rather than a second
-	/// copy that can drift out of sync with the webview/notch-cover pipeline
-	/// (see `article-color-pipeline.md`). Callers should pass
-	/// `traitCollection.userInterfaceStyle == .dark` from their own real
-	/// view's trait collection, not `UITraitCollection.current` -- see
-	/// `app-chrome-palette.md`'s note on that distinction.
-	static func current(isDark: Bool) -> (background: UIColor, text: UIColor) {
-		let theme = ArticleThemesManager.shared.currentTheme
-		let overrides = AppDefaults.shared.articleThemeOverrides
-		return resolved(theme: theme, isDark: isDark, overrideBackgroundColorHex: overrides.backgroundColorHex, overrideBackgroundColorDarkHex: overrides.backgroundColorDarkHex)
-	}
+	// `current(isDark:)` (the AppDefaults-reading convenience wrapper) lives in
+	// the app target now, as an extension on this enum -- see
+	// iOS/Article/ArticleResolvedColors+Current.swift (Modularization Stage 0b).
+	// This package only owns the pure, parameterized computation; the app
+	// target supplies the live globals (current theme, current overrides).
 }
 
-enum ArticleThemeColorExtractor {
+public enum ArticleThemeColorExtractor {
 
-	struct ThemeColors {
-		var textColor: UIColor
-		var textColorDark: UIColor
-		var backgroundColor: UIColor
-		var backgroundColorDark: UIColor
-		var linkColor: UIColor
-		var linkColorDark: UIColor
+	public struct ThemeColors {
+		public var textColor: UIColor
+		public var textColorDark: UIColor
+		public var backgroundColor: UIColor
+		public var backgroundColorDark: UIColor
+		public var linkColor: UIColor
+		public var linkColorDark: UIColor
 
 		/// Whether the theme's own stylesheet declares an
 		/// `@media (prefers-color-scheme: dark)` block at all -- i.e. whether it
@@ -86,12 +75,12 @@ enum ArticleThemeColorExtractor {
 		/// the block but only overrides one property still counts as having a
 		/// dark variant, same as `darkTextFound`/`darkBackgroundFound`/etc. above
 		/// already treat it.
-		var hasDarkModeVariant: Bool
+		public var hasDarkModeVariant: Bool
 	}
 
 	/// Falls back to black-on-white (light) / white-on-black (dark) per selector,
 	/// independently, when a given property isn't found -- never fails outright.
-	static func colors(for theme: ArticleTheme) -> ThemeColors {
+	public static func colors(for theme: ArticleTheme) -> ThemeColors {
 		return colors(css: theme.css)
 	}
 
@@ -415,54 +404,9 @@ private extension UIColor {
 }
 
 // MARK: - Color <-> hex
-
-/// Shared with `ArticleThemeListView`'s color pickers, which also need hex parsing
-/// for round-tripping `Color` <-> hex string -- kept internal (not private) so both call
-/// sites can use it.
-extension UIColor {
-
-	convenience init?(cssHex: String) {
-		var hex = cssHex.trimmingCharacters(in: .whitespacesAndNewlines)
-		if hex.hasPrefix("#") {
-			hex.removeFirst()
-		}
-		if hex.count == 3 {
-			hex = hex.map { "\($0)\($0)" }.joined()
-		}
-		guard hex.count == 6, let rgbValue = UInt32(hex, radix: 16) else { return nil }
-		let red = CGFloat((rgbValue & 0xFF0000) >> 16) / 255.0
-		let green = CGFloat((rgbValue & 0x00FF00) >> 8) / 255.0
-		let blue = CGFloat(rgbValue & 0x0000FF) / 255.0
-		self.init(red: red, green: green, blue: blue, alpha: 1.0)
-	}
-
-	var cssHexString: String {
-		var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
-		getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-		return String(format: "#%02X%02X%02X", Int(red * 255), Int(green * 255), Int(blue * 255))
-	}
-
-	/// WCAG 2.x relative-luminance contrast ratio against another color,
-	/// per https://www.w3.org/TR/WCAG21/#dfn-contrast-ratio -- (L1+0.05)/(L2+0.05)
-	/// with L1 the lighter of the two relative luminances. Used by
-	/// HighlightPaletteHexSetTests to guard every HighlightPalette dark-mode
-	/// HexSet against the bug that motivated dark-mode-tuning them in the
-	/// first place: white article text on a highlight background that's
-	/// still a light-mode-style pastel is nearly unreadable. Order of the
-	/// two colors doesn't matter -- the ratio is symmetric by construction.
-	func contrastRatio(against other: UIColor) -> CGFloat {
-		func relativeLuminance(_ color: UIColor) -> CGFloat {
-			var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
-			color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-			func linearize(_ component: CGFloat) -> CGFloat {
-				component <= 0.03928 ? component / 12.92 : pow((component + 0.055) / 1.055, 2.4)
-			}
-			return 0.2126 * linearize(red) + 0.7152 * linearize(green) + 0.0722 * linearize(blue)
-		}
-		let l1 = relativeLuminance(self)
-		let l2 = relativeLuminance(other)
-		let lighter = max(l1, l2)
-		let darker = min(l1, l2)
-		return (lighter + 0.05) / (darker + 0.05)
-	}
-}
+//
+// `UIColor(cssHex:)` / `cssHexString` / `contrastRatio(against:)` moved to
+// Modules/HexColor (Modularization Stage 0a) -- see that package for the
+// public UIColor extension. This file's own `private extension UIColor`
+// above (the CSS-named-color table) is a genuinely file-scoped
+// implementation detail of this scanner and did not move.

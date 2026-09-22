@@ -14,6 +14,7 @@ import WebKit
 import RSCore
 import Account
 import Articles
+import ArticleTheming
 
 final class ArticleViewController: UIViewController, SurfacePaletteNavigationBarAware {
 

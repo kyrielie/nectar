@@ -17,6 +17,7 @@ import SafariServices
 import MessageUI
 import Images
 import os
+import ArticleTheming
 
 final class WebViewController: UIViewController {
 

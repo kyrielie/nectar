@@ -12,6 +12,8 @@
 import Testing
 import Foundation
 @testable import Nectar
+@testable import HexColor
+@testable import ArticleTheming
 
 @Suite struct ArticleThemeColorExtractorTests {
 
