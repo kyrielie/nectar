@@ -13,6 +13,7 @@
 		043291147B3052FD66395025 /* FindInArticleActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2594B99073E3744C3DCD2F2B /* FindInArticleActivity.swift */; };
 		047567E697676EC2560CA38A /* AddComboTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5EC3A464FBA86925E9E4C3C /* AddComboTableViewCell.swift */; };
 		051629DAC8490854B37312FB /* AO3AuthenticatedWebViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108C9610E408E3D80E40596C /* AO3AuthenticatedWebViewController.swift */; };
+		0547A062A0423489783B1B62 /* SnapshotHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC0BE1C5C4BD6CB71E66A150 /* SnapshotHelper.swift */; };
 		057BD9C465F313B558B6521C /* AddFeedSelectFolderTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = D9CF9FA05BD676DCDB04BB7D /* AddFeedSelectFolderTableViewCell.xib */; };
 		08BFA0E4BEC0ECAF6534281B /* OPMLImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E99DF16E2818DD03F982E08 /* OPMLImportCoordinator.swift */; };
 		09F915C31580999C48FF4096 /* AO3ChallengeSolverViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03FA655E91A7DA58F5D44E0 /* AO3ChallengeSolverViewController.swift */; };
@@ -113,6 +114,7 @@
 		566CF32D39E1EF9D5FCF70F4 /* MainTimelineCellData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06EBDDA41D63CE3D2FF87785 /* MainTimelineCellData.swift */; };
 		56C085BF505E0780B366E035 /* Account in Frameworks */ = {isa = PBXBuildFile; productRef = 48ED867E9337AD663BC9862D /* Account */; };
 		5762A9C29875C984347305CC /* TimelineCustomizerCellAccentTintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1131AC6CD60A71F96D32E15 /* TimelineCustomizerCellAccentTintTests.swift */; };
+		58214CA336CE310EA9612766 /* NectarUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2604518166799FE62EDB312D /* NectarUITests.swift */; };
 		59CACAE5E29C421D7155100F /* Zip in Frameworks */ = {isa = PBXBuildFile; productRef = FC961C02C6965BD8E499952A /* Zip */; };
 		59CE3F7B3C414E5FBC48B51D /* Account.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0105E54432062586CE9D28E3 /* Account.storyboard */; };
 		5A81DF1C837451235F5E5F28 /* DeleteCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0BB9366CA7F3C4F4A176DD5 /* DeleteCommand.swift */; };
@@ -314,6 +316,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		261BA7C8E664CA82F37E0E85 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 747B40C4C0277A7D6272F0F1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E918341AC3D5C53E25D90D02;
+			remoteInfo = "Nectar-iOS";
+		};
 		AAA1BF900D9467E9BE7A3B7F /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 747B40C4C0277A7D6272F0F1 /* Project object */;
@@ -391,6 +400,7 @@
 		239E3A2E214B7ADB1813F3F4 /* SettingsComboTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsComboTableViewCell.swift; sourceTree = "<group>"; };
 		2594B99073E3744C3DCD2F2B /* FindInArticleActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindInArticleActivity.swift; sourceTree = "<group>"; };
 		25A685AE31EF39317EC0558C /* BackupRestoreCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupRestoreCoordinator.swift; sourceTree = "<group>"; };
+		2604518166799FE62EDB312D /* NectarUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NectarUITests.swift; sourceTree = "<group>"; };
 		26B7C99C4ABA370226735E19 /* ArticleThemePlistFamilyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemePlistFamilyTests.swift; sourceTree = "<group>"; };
 		27851E2E06873247ED2B9272 /* ReadingHeatmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingHeatmapView.swift; sourceTree = "<group>"; };
 		284D7F04184ACFBB99984BDC /* IconImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconImageCache.swift; sourceTree = "<group>"; };
@@ -439,6 +449,7 @@
 		4BD14AFD73283E4A17F79029 /* ErrorLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorLogView.swift; sourceTree = "<group>"; };
 		4BD441DE55365D95E252A9CF /* AnnotationCSVExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationCSVExporterTests.swift; sourceTree = "<group>"; };
 		4C461FF055BF15DAFFC554BE /* Nectar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Nectar.entitlements; sourceTree = "<group>"; };
+		4D5739E369BB9D2D11BB5FCA /* NetNewsWire_iOSUITests_target.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = NetNewsWire_iOSUITests_target.xcconfig; sourceTree = "<group>"; };
 		4D98A966A81601E0BC186DB5 /* FolderPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderPickerView.swift; sourceTree = "<group>"; };
 		4EB78BFA707577156D4AAB9D /* NSAttributedString+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSAttributedString+Extensions.swift"; sourceTree = "<group>"; };
 		4EC8F675BDAC7097AD92EE79 /* SmallIconProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallIconProvider.swift; sourceTree = "<group>"; };
@@ -487,6 +498,7 @@
 		6BD16CAF251AF57E68B82168 /* Nectar-dev.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Nectar-dev.entitlements"; sourceTree = "<group>"; };
 		6C0207EAE7D9FA945B9C5FE0 /* SurfacePaletteHexSetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfacePaletteHexSetTests.swift; sourceTree = "<group>"; };
 		6C7B99107A73BC3141F4F0B9 /* CSSImportExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSSImportExtractorTests.swift; sourceTree = "<group>"; };
+		6CEB4B24C22250067B3D9463 /* Nectar-iOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "Nectar-iOSUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6DC22D7E9A6467F54770E524 /* HTMLMetadata */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HTMLMetadata; path = Modules/HTMLMetadata; sourceTree = SOURCE_ROOT; };
 		6DD2BC954F0CC18E69FE0F7B /* ArticleLogicalDatePublishedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleLogicalDatePublishedTests.swift; sourceTree = "<group>"; };
 		6E2F778291B96C0F1887747A /* ManageStorageViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageStorageViewModel.swift; sourceTree = "<group>"; };
@@ -641,6 +653,7 @@
 		F8E7A9D222B2E9794D52A03B /* AddFeedSelectFolderTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFeedSelectFolderTableViewCell.swift; sourceTree = "<group>"; };
 		F8F6B9E13A8B7BEF6317B054 /* ArticleThemeOverflowSafetyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeOverflowSafetyTests.swift; sourceTree = "<group>"; };
 		FA57DE7FC85F825E40E400F3 /* AlphabetIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlphabetIndexView.swift; sourceTree = "<group>"; };
+		FC0BE1C5C4BD6CB71E66A150 /* SnapshotHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotHelper.swift; sourceTree = "<group>"; };
 		FC610CDB8FEF65CD28CA49A8 /* ScreenTimeBreakView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeBreakView.swift; sourceTree = "<group>"; };
 		FC778ACAB880CE5CE33F581E /* CSSImportExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CSSImportExtractor.swift; sourceTree = "<group>"; };
 		FC9E92E117DFBD707EEB7DAD /* annotations.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = annotations.js; sourceTree = "<group>"; };
@@ -722,6 +735,7 @@
 			isa = PBXGroup;
 			children = (
 				4975B0AE7D89902E89753DDA /* NetNewsWire-iOSTests */,
+				6630093D51F470FBEB14014F /* NetNewsWire-iOSUITests */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -844,6 +858,7 @@
 			children = (
 				85804202280B7C468DCBA3E8 /* Nectar-iOS.app */,
 				8F85897E4F6D1161866E1071 /* Nectar-iOSTests.xctest */,
+				6CEB4B24C22250067B3D9463 /* Nectar-iOSUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -960,6 +975,15 @@
 				566733B2D147DFF3EF472230 /* ActivityType.swift */,
 			);
 			path = Activity;
+			sourceTree = "<group>";
+		};
+		6630093D51F470FBEB14014F /* NetNewsWire-iOSUITests */ = {
+			isa = PBXGroup;
+			children = (
+				2604518166799FE62EDB312D /* NectarUITests.swift */,
+				FC0BE1C5C4BD6CB71E66A150 /* SnapshotHelper.swift */,
+			);
+			path = "NetNewsWire-iOSUITests";
 			sourceTree = "<group>";
 		};
 		72B98B866191DA930B9FCEE3 /* Resources */ = {
@@ -1223,6 +1247,7 @@
 			children = (
 				F50CDE01CE4DEBC6423447C0 /* NetNewsWire_iOSapp_target.xcconfig */,
 				607005E5D40B83ABFA83A77B /* NetNewsWire_iOSTests_target.xcconfig */,
+				4D5739E369BB9D2D11BB5FCA /* NetNewsWire_iOSUITests_target.xcconfig */,
 				2958B2416F45CCEE57580A8E /* NetNewsWire_project_debug.xcconfig */,
 				A04CEC9F718C09D760AC7E40 /* NetNewsWire_project_release.xcconfig */,
 			);
@@ -1369,6 +1394,24 @@
 			productReference = 8F85897E4F6D1161866E1071 /* Nectar-iOSTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		7F4C68FB1F9E1D0EEED80FDF /* Nectar-iOSUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 23792989CB31F09D85D8D343 /* Build configuration list for PBXNativeTarget "Nectar-iOSUITests" */;
+			buildPhases = (
+				83DA8119A381B6F43CEE0FF5 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				18F7FBB0823D48006A542AC3 /* PBXTargetDependency */,
+			);
+			name = "Nectar-iOSUITests";
+			packageProductDependencies = (
+			);
+			productName = "Nectar-iOSUITests";
+			productReference = 6CEB4B24C22250067B3D9463 /* Nectar-iOSUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		E918341AC3D5C53E25D90D02 /* Nectar-iOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5E11B34511481F0B9433AE66 /* Build configuration list for PBXNativeTarget "Nectar-iOS" */;
@@ -1417,6 +1460,11 @@
 						DevelopmentTeam = S35M3D45Z9;
 						ProvisioningStyle = Automatic;
 					};
+					7F4C68FB1F9E1D0EEED80FDF = {
+						DevelopmentTeam = S35M3D45Z9;
+						ProvisioningStyle = Automatic;
+						TestTargetID = E918341AC3D5C53E25D90D02;
+					};
 					E918341AC3D5C53E25D90D02 = {
 						DevelopmentTeam = S35M3D45Z9;
 						ProvisioningStyle = Automatic;
@@ -1457,6 +1505,7 @@
 			targets = (
 				E918341AC3D5C53E25D90D02 /* Nectar-iOS */,
 				71E4DF0D7156CA167F27D7F2 /* Nectar-iOSTests */,
+				7F4C68FB1F9E1D0EEED80FDF /* Nectar-iOSUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -1732,6 +1781,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		83DA8119A381B6F43CEE0FF5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				58214CA336CE310EA9612766 /* NectarUITests.swift in Sources */,
+				0547A062A0423489783B1B62 /* SnapshotHelper.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9EADC35C3347BE5BC93CB802 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1785,6 +1843,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		18F7FBB0823D48006A542AC3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E918341AC3D5C53E25D90D02 /* Nectar-iOS */;
+			targetProxy = 261BA7C8E664CA82F37E0E85 /* PBXContainerItemProxy */;
+		};
 		5A9961AECCF6898560A66BB2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = E918341AC3D5C53E25D90D02 /* Nectar-iOS */;
@@ -1873,6 +1936,28 @@
 			};
 			name = Debug;
 		};
+		CC69FB43C711C6BDAA6BDF73 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4D5739E369BB9D2D11BB5FCA /* NetNewsWire_iOSUITests_target.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = S35M3D45Z9;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kyrielie.nectar.NectarUITests;
+				TEST_TARGET_NAME = "Nectar-iOS";
+			};
+			name = Debug;
+		};
+		F043EEDD9B3B0739AEEEFDC0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4D5739E369BB9D2D11BB5FCA /* NetNewsWire_iOSUITests_target.xcconfig */;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = S35M3D45Z9;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kyrielie.nectar.NectarUITests;
+				TEST_TARGET_NAME = "Nectar-iOS";
+			};
+			name = Release;
+		};
 		F199052A20BE1D29673400BC /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = F50CDE01CE4DEBC6423447C0 /* NetNewsWire_iOSapp_target.xcconfig */;
@@ -1889,6 +1974,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		23792989CB31F09D85D8D343 /* Build configuration list for PBXNativeTarget "Nectar-iOSUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC69FB43C711C6BDAA6BDF73 /* Debug */,
+				F043EEDD9B3B0739AEEEFDC0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		5E11B34511481F0B9433AE66 /* Build configuration list for PBXNativeTarget "Nectar-iOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
