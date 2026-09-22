@@ -167,6 +167,25 @@ targets:
           DEVELOPMENT_TEAM: S35M3D45Z9
           PRODUCT_BUNDLE_IDENTIFIER: com.kyrielie.nectar.NectarTests
 
+  Nectar-iOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/NetNewsWire-iOSUITests
+    dependencies:
+      - target: Nectar-iOS
+    configFiles:
+      Debug: xcconfig/NetNewsWire_iOSUITests_target.xcconfig
+      Release: xcconfig/NetNewsWire_iOSUITests_target.xcconfig
+    settings:
+      configs:
+        Debug:
+          DEVELOPMENT_TEAM: S35M3D45Z9
+          PRODUCT_BUNDLE_IDENTIFIER: com.kyrielie.nectar.NectarUITests
+        Release:
+          DEVELOPMENT_TEAM: S35M3D45Z9
+          PRODUCT_BUNDLE_IDENTIFIER: com.kyrielie.nectar.NectarUITests
+
 schemes:
   Nectar-iOS:
     build:
@@ -184,3 +203,18 @@ schemes:
       config: Debug
     archive:
       config: Release
+
+  # Dedicated scheme for fastlane snapshot / capture_screenshots. Kept
+  # separate from the Nectar-iOS scheme (which runs the unit test plan)
+  # so that `fastlane snapshot`'s scheme launches only the UI tests.
+  Nectar-iOSUITests:
+    build:
+      targets:
+        Nectar-iOS: all
+        Nectar-iOSUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - Nectar-iOSUITests
+    run:
+      config: Debug
