@@ -1,6 +1,7 @@
 Payload/
 examples/
 plans/
+fastlane/screenshots/
 
 # AI tool output / scratch dumps
 *repomix*

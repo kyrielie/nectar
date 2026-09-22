@@ -1,0 +1,13 @@
+#include "./common/NetNewsWire_ios_target_common.xcconfig"
+#include "./common/NetNewsWire_codesigning_common.xcconfig"
+
+// UI test bundles run out-of-process via XCTRunner (USES_XCTRUNNER=YES,
+// set automatically by Xcode for a UI testing bundle target). That is
+// incompatible with TEST_HOST/BUNDLE_LOADER, which are for unit test
+// bundles injected into a host app -- do not add them here.
+COMBINE_HIDPI_IMAGES = YES
+GENERATE_INFOPLIST_FILE = YES
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks @loader_path/../Frameworks
+PRODUCT_BUNDLE_IDENTIFIER = $(ORGANIZATION_IDENTIFIER).NectarUITests
+PRODUCT_NAME = $(TARGET_NAME)
+SUPPORTED_PLATFORMS = iphoneos iphonesimulator
