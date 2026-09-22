@@ -66,6 +66,10 @@ packages:
     path: Modules/Account
   FeedFinder:
     path: Modules/FeedFinder
+  HexColor:
+    path: Modules/HexColor
+  ArticleTheming:
+    path: Modules/ArticleTheming
   Zip:
     url: https://github.com/marmelroy/Zip.git
     revision: 059e7346082d02de16220cd79df7db18ddeba8c3
@@ -109,6 +113,10 @@ targets:
       - package: RSTree
         embed: true
       - package: RSDatabase
+        embed: true
+      - package: HexColor
+        embed: true
+      - package: ArticleTheming
         embed: true
     attributes:
       SystemCapabilities:
@@ -155,6 +163,8 @@ targets:
       - package: Articles
       - package: Account
       - package: RSCore
+      - package: HexColor
+      - package: ArticleTheming
     configFiles:
       Debug: xcconfig/NetNewsWire_iOSTests_target.xcconfig
       Release: xcconfig/NetNewsWire_iOSTests_target.xcconfig

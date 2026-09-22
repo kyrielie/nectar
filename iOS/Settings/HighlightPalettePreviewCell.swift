@@ -22,6 +22,7 @@
 
 import UIKit
 import Articles
+import HexColor
 
 final class HighlightPalettePreviewCell: UITableViewCell {
 

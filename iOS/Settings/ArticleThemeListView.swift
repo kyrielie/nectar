@@ -16,6 +16,8 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import RSCore
+import HexColor
+import ArticleTheming
 
 extension UTType {
 	static var netNewsWireTheme: UTType { UTType(importedAs: "com.ranchero.netnewswire.theme") }
@@ -780,7 +782,7 @@ private extension Color {
 	}
 }
 
-// `UIColor(cssHex:)` / `cssHexString` live in ArticleThemeColorExtractor.swift,
+// `UIColor(cssHex:)` / `cssHexString` live in Modules/HexColor,
 // shared with this file's color pickers.
 
 private extension UIApplication {

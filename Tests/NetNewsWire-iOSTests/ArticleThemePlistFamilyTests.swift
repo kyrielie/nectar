@@ -13,6 +13,7 @@
 import Testing
 import Foundation
 @testable import Nectar
+@testable import ArticleTheming
 
 @Suite struct ArticleThemePlistFamilyTests {
 

@@ -30,6 +30,7 @@
 
 import UIKit
 import Articles
+import HexColor
 
 final class AccentColorTableViewController: UITableViewController, SettingsPaletteBackgroundHosting {
 

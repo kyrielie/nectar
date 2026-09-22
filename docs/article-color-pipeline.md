@@ -36,7 +36,7 @@ exactly that form).
 
 **Precedence logic now lives in `ArticleResolvedColors.resolved(theme:
 isDark:overrideBackgroundColorHex:overrideBackgroundColorDarkHex:)`**
-(`Shared/ArticleStyles/ArticleThemeColorExtractor.swift`), not inline in
+(`Modules/ArticleTheming`'s `ArticleThemeColorExtractor.swift`), not inline in
 `WebViewController` — this doc's prose below describing the precedence
 order still holds, but treat `ArticleResolvedColors.resolved` as the
 single source of truth for it, since that's the actual code path now.

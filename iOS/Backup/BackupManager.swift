@@ -18,6 +18,7 @@ import Foundation
 import os
 import Account
 import Zip
+import ArticleTheming
 
 /// `manifest.json`'s shape. `schemaVersion` is what makes a future
 /// additive change (e.g. the blacklist/mute feature noted in the plan)

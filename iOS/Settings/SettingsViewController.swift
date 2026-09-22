@@ -13,6 +13,7 @@ import RSCore
 import Account
 import ActivityLog
 import Articles
+import ArticleTheming
 
 final class SettingsViewController: UITableViewController, SettingsPaletteBackgroundHosting {
 

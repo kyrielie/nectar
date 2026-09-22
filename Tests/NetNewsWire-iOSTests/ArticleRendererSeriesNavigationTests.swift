@@ -21,6 +21,7 @@ import Testing
 import Foundation
 import Articles
 @testable import Nectar
+@testable import ArticleTheming
 
 @MainActor @Suite struct ArticleRendererSeriesNavigationTests {
 

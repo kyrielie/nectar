@@ -7,14 +7,14 @@
 
 import Foundation
 
-struct CSSImportExtraction: Equatable {
-	let importCSS: String
-	let remainingCSS: String
+public struct CSSImportExtraction: Equatable {
+	public let importCSS: String
+	public let remainingCSS: String
 }
 
-enum CSSImportExtractor {
+public enum CSSImportExtractor {
 
-	static func extract(from css: String) -> CSSImportExtraction {
+	public static func extract(from css: String) -> CSSImportExtraction {
 		var index = css.startIndex
 		var importBlockEnd = css.startIndex
 		var foundImport = false

@@ -759,7 +759,7 @@ Pulled into `RSCore` (rather than left as a private method on
     light-mode-style dark-on-light presentation makes that text nearly
     unreadable. Every `HighlightPalette` case's `darkHexSet` is now
     verified (`UIColor.contrastRatio(against:)`,
-    `Shared/ArticleStyles/ArticleThemeColorExtractor.swift`) to clear
+    `Modules/HexColor`) to clear
     4.5:1 white-text contrast (WCAG AA for normal body text) for all five
     `Annotation.Color` slots — this previously only applied to
     `.default`/`.muted`/`.vivid`/`.sepia`'s hand-tuned dark values; the

@@ -68,7 +68,7 @@ build instead of shipping a silent regression.
 
 ## `ArticleTheme`
 
-`Shared/ArticleStyles/ArticleTheme.swift` is the runtime value type
+`Modules/ArticleTheming`'s `ArticleTheme.swift` is the runtime value type
 (`Equatable`, `Sendable`, a plain `struct`) representing a loaded theme:
 
 ```swift
@@ -108,7 +108,7 @@ a document picker).
 
 ## `ArticleThemesManager`
 
-`Shared/ArticleStyles/ArticleThemesManager.swift` is the singleton
+`Modules/ArticleTheming`'s `ArticleThemesManager.swift` is the singleton
 (`ArticleThemesManager.shared`) that owns theme discovery, selection, import,
 and deletion. It is an `NSFilePresenter` on the Themes folder
 (`Platform.dataSubfolder(..., "Themes")`, under Application Support), so
@@ -146,7 +146,7 @@ folder (overwriting any existing bundle with the same name).
 
 ## Third-party theme download and import
 
-`Shared/ArticleStyles/ArticleThemeDownloader.swift` handles the case of a
+`Modules/ArticleTheming`'s `ArticleThemeDownloader.swift` handles the case of a
 person downloading a `.zip`-wrapped theme from the web (e.g. from a browser
 "Open in Nectar" flow):
 
@@ -170,7 +170,7 @@ Notification names for the whole download → import flow live in
 
 ## `CSSImportExtractor`
 
-A small hand-rolled scanner (`Shared/ArticleStyles/CSSImportExtractor.swift`),
+A small hand-rolled scanner (`Modules/ArticleTheming`'s `CSSImportExtractor.swift`),
 not a regex, that walks a CSS string character-by-character from the start
 and peels off any leading run of whitespace, comments (`/* ... */`), and
 `@import` statements, stopping at the first token that's none of those three.
@@ -188,7 +188,7 @@ to a theme's stylesheet (which would otherwise push a theme's own leading
 
 ## `ArticleThemeColorExtractor`
 
-`Shared/ArticleStyles/ArticleThemeColorExtractor.swift` is a small,
+`Modules/ArticleTheming`'s `ArticleThemeColorExtractor.swift` is a small,
 deliberately non-general CSS color scanner (regex-based, not a real CSS
 parser) that reads a theme's *effective* text/background/link colors — both
 light- and dark-mode — directly out of its compiled `css` string. This is
@@ -221,7 +221,7 @@ white-on-black (dark) when a color can't be resolved — never fails outright.
 
 ## `ArticleThemeOverrides`
 
-`Shared/ArticleStyles/ArticleThemeOverrides.swift` is a `Codable`,
+`Modules/ArticleTheming`'s `ArticleThemeOverrides.swift` is a `Codable`,
 `Sendable` struct of entirely optional fields — font family (split into
 `serifFontFamilyName` for article prose and `sansFontFamilyName` for UI
 chrome text), font size, line height, paragraph spacing/indent, horizontal/

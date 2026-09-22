@@ -23,12 +23,12 @@ import Foundation
 /// keep behaving exactly as before rather than silently losing their color in dark
 /// mode. Font family/size/line height have no dark variant -- they're not
 /// appearance-dependent.
-struct ArticleThemeOverrides: Codable, Equatable, Sendable {
+public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 
 	/// Targets `.articleBody` prose specifically. Named `serifFontFamilyName` (rather
 	/// than the original single `fontFamilyName`) because the override now has two
 	/// independent font roles -- see `sansFontFamilyName` below for why.
-	var serifFontFamilyName: String?
+	public var serifFontFamilyName: String?
 
 	/// Targets UI chrome text (feedlink/byline/dateline/footer), not the fic prose.
 	/// Split out from the original single font override, whose `body, .articleBody`
@@ -37,31 +37,31 @@ struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 	/// by accident rather than by design. Making the two roles explicit means a person
 	/// can now choose them independently, which the old single property couldn't do at
 	/// all -- this is new capability, not just a rename.
-	var sansFontFamilyName: String?
+	public var sansFontFamilyName: String?
 
-	var fontSize: Double?
-	var lineHeight: Double?
-	var paragraphSpacing: Double?  // em
-	var paragraphIndent: Double?   // em
+	public var fontSize: Double?
+	public var lineHeight: Double?
+	public var paragraphSpacing: Double?  // em
+	public var paragraphIndent: Double?   // em
 
 	/// px. Left/right inset on `body` (see `cssOverrideBlock`'s comment on the
 	/// corrected selector -- `.articleContent`/`.barContent` don't exist in the
 	/// default template; only `body`'s own iOS-only padding rule does).
-	var marginHorizontal: Double?
+	public var marginHorizontal: Double?
 	/// px. Top inset on `#bodyContainer`.
-	var marginTop: Double?
+	public var marginTop: Double?
 
-	var justifyText: Bool?
-	var hyphenate: Bool?
+	public var justifyText: Bool?
+	public var hyphenate: Bool?
 
-	var textColorHex: String?
-	var textColorDarkHex: String?
-	var backgroundColorHex: String?
-	var backgroundColorDarkHex: String?
-	var linkColorHex: String?
-	var linkColorDarkHex: String?
+	public var textColorHex: String?
+	public var textColorDarkHex: String?
+	public var backgroundColorHex: String?
+	public var backgroundColorDarkHex: String?
+	public var linkColorHex: String?
+	public var linkColorDarkHex: String?
 
-	init(serifFontFamilyName: String? = nil, sansFontFamilyName: String? = nil, fontSize: Double? = nil, lineHeight: Double? = nil, paragraphSpacing: Double? = nil, paragraphIndent: Double? = nil, marginHorizontal: Double? = nil, marginTop: Double? = nil, justifyText: Bool? = nil, hyphenate: Bool? = nil, textColorHex: String? = nil, textColorDarkHex: String? = nil, backgroundColorHex: String? = nil, backgroundColorDarkHex: String? = nil, linkColorHex: String? = nil, linkColorDarkHex: String? = nil) {
+	public init(serifFontFamilyName: String? = nil, sansFontFamilyName: String? = nil, fontSize: Double? = nil, lineHeight: Double? = nil, paragraphSpacing: Double? = nil, paragraphIndent: Double? = nil, marginHorizontal: Double? = nil, marginTop: Double? = nil, justifyText: Bool? = nil, hyphenate: Bool? = nil, textColorHex: String? = nil, textColorDarkHex: String? = nil, backgroundColorHex: String? = nil, backgroundColorDarkHex: String? = nil, linkColorHex: String? = nil, linkColorDarkHex: String? = nil) {
 		self.serifFontFamilyName = serifFontFamilyName
 		self.sansFontFamilyName = sansFontFamilyName
 		self.fontSize = fontSize
@@ -104,7 +104,7 @@ struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		case linkColorDarkHex
 	}
 
-	var isEmpty: Bool {
+	public var isEmpty: Bool {
 		serifFontFamilyName == nil && sansFontFamilyName == nil
 			&& fontSize == nil && lineHeight == nil && paragraphSpacing == nil && paragraphIndent == nil
 			&& marginHorizontal == nil && marginTop == nil
@@ -116,12 +116,12 @@ struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 
 	/// Reasonable bounds for the Settings sliders. Below/above these the reader view
 	/// either becomes unreadable or the layout breaks down (long lines, clipped chrome).
-	static let fontSizeRange: ClosedRange<Double> = 12...32
-	static let lineHeightRange: ClosedRange<Double> = 1.0...2.2
-	static let paragraphSpacingRange: ClosedRange<Double> = 0...3.0
-	static let paragraphIndentRange: ClosedRange<Double> = 0...3.0
-	static let marginHorizontalRange: ClosedRange<Double> = 0...80
-	static let marginTopRange: ClosedRange<Double> = 0...80
+	public static let fontSizeRange: ClosedRange<Double> = 12...32
+	public static let lineHeightRange: ClosedRange<Double> = 1.0...2.2
+	public static let paragraphSpacingRange: ClosedRange<Double> = 0...3.0
+	public static let paragraphIndentRange: ClosedRange<Double> = 0...3.0
+	public static let marginHorizontalRange: ClosedRange<Double> = 0...80
+	public static let marginTopRange: ClosedRange<Double> = 0...80
 
 	/// Hand-maintained allowlist of chrome-text selectors, because class names for
 	/// chrome aren't standardized across the bundled themes: the default theme uses
@@ -166,7 +166,7 @@ struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 	/// Dark-mode color variants are emitted as a `@media (prefers-color-scheme: dark)`
 	/// block layered after the light-mode rules, so they react live to system
 	/// appearance changes without any Swift-side trait-collection plumbing.
-	var cssOverrideBlock: String {
+	public var cssOverrideBlock: String {
 		guard !isEmpty else { return "" }
 
 		var bodyDeclarations = [String]()
