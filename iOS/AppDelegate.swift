@@ -82,8 +82,25 @@ import BackupRestore
 			await WebViewConfiguration.compileContentBlockingRules()
 		}
 		AppDefaults.registerDefaults()
-		ScreenTimeTracker.shared.start()
-		ReadingStatsTracker.shared.start()
+		// Guarded the same way LocalAccountDelegate/Downloader/ErrorLogDatabase
+		// already guard their own real side effects during tests (see
+		// Platform.isRunningUnitTests). Without this, the test host's own
+		// launch wires up a real repeating Timer and real
+		// UIApplication.willResignActive/didBecomeActive observers on these
+		// two singletons -- the same singletons ScreenTimeTrackerTests and
+		// ReadingStatsTrackerAccountingTests directly drive and reset via
+		// resetForTesting(). ScreenTimeTrackerTests' resetState() does call
+		// resetForTesting() (which tears the real timer/observers back down),
+		// but only once the first test in that suite runs -- until then, the
+		// real timer is live and can fire tick() on the shared singleton
+		// concurrently with whatever this process happens to be doing,
+		// including another test suite's long-running, synchronous drive
+		// loop. Not starting it under tests at all removes that window
+		// entirely rather than relying on cleanup order.
+		if !Platform.isRunningUnitTests {
+			ScreenTimeTracker.shared.start()
+			ReadingStatsTracker.shared.start()
+		}
 
 		let isFirstRun = AppDefaults.shared.isFirstRun
 		if isFirstRun {
