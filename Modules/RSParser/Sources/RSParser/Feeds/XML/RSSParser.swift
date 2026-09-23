@@ -55,7 +55,7 @@ private final class RSSDelegate: XMLSAXParserDelegate {
 		// covers "don't show," "don't fetch," and "don't save" all at
 		// once. A no-op for anything not AO3-sourced or not matching an
 		// ignore rule.
-		let parsedItems = Set(items.map { $0.toParsedItem(feedURL: feedURLString) }.filter { !AO3IgnoreList.shouldExclude($0) })
+		let parsedItems = Set(items.map { $0.toParsedItem(feedURL: feedURLString) }.filter { !(AO3FeedExtensionPoint.provider?.shouldExclude($0) ?? false) })
 		return ParsedFeed(
 			type: .rss,
 			title: title,

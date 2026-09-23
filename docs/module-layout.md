@@ -6,6 +6,8 @@ you don't yet know which package/target a change belongs in.
 SPM packages live under `Modules/`. The ones with app-specific relevance:
 
 - **Modules/RSParser** — feed/OPML/HTML parsing, no app dependencies.
+- **Modules/AO3Kit** — AO3 HTML extraction, authenticated AO3 utilities,
+  preferences, and search-result import mechanics. It never depends on Account.
   `JSONFeedParser` reads the standard JSON Feed fields (`summary`,
   `content_html`/`content_text`) and separately reads the `_ambrosia`
   extension object, producing a `ParsedItem` with both the standard fields
@@ -71,6 +73,10 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   at all (see `refresh-throttling.md`). A
   feed's fetch address (the Ambrosia server's LAN IP) can change without
   changing its `feedID` — see `feed-repointing.md`.
+  Standalone Ambrosia identity, transfer-format, walk-state, and SQLite-fetch
+  utilities live under `Sources/Account/LocalAccount/Ambrosia/`. They remain in
+  Account because they orchestrate Account refreshes and database APIs; there
+  is intentionally no standalone Ambrosia package or shared identity package.
   `Account.isLibraryReachable` (backed by `AccountSettings`, defaulting to
   `true` when never set) tracks whether the paired Ambrosia server
   responded as of the last refresh; `LocalAccountRefresher` sets it false

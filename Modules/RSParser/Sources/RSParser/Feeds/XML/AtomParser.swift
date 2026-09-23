@@ -70,7 +70,7 @@ private final class AtomDelegate: XMLSAXParserDelegate {
 		let faviconURL = iconURLString
 		// Task 7 (ignore lists): see the matching comment in RSSParser --
 		// same single filtering call site, same reasoning.
-		let parsedItems = Set(items.map { $0.toParsedItem(feedURL: feedURLString) }.filter { !AO3IgnoreList.shouldExclude($0) })
+		let parsedItems = Set(items.map { $0.toParsedItem(feedURL: feedURLString) }.filter { !(AO3FeedExtensionPoint.provider?.shouldExclude($0) ?? false) })
 
 		return ParsedFeed(
 			type: .atom,

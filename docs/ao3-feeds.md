@@ -2,7 +2,7 @@
 
 This covers the pure-parsing side of Nectar's Archive of Our Own (AO3)
 support: a cluster of files under
-`Modules/RSParser/Sources/RSParser/Feeds/Extensions/` that turn AO3's HTML
+`Modules/AO3Kit/Sources/AO3Kit/` that turn AO3's HTML
 (work pages, search-results listings, series listings, tag/user Atom feed
 summaries) into structured data. Everything here is synchronous, has no
 network or database dependency, and lives in `RSParser` specifically so it

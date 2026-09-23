@@ -247,6 +247,8 @@ enum AmbrosiaSQLiteImportTable {
 	/// non-public `enum`, so this does not change the framework's public
 	/// API surface described at the top of ArticlesDatabase.swift.
 	static let bookKeySQLExpression = """
+	-- Required parity gate: BookKeySQLParityTests. Changes to this SQL
+	-- implementation require running that test.
 	CASE
 	  WHEN ao3_series_id IS NOT NULL AND ao3_series_id != '' THEN 'ao3-series:' || ao3_series_id
 	  WHEN is_anthology = 1 AND series_name IS NOT NULL THEN 'calibre-series:' || series_name

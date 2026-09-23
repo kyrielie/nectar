@@ -31,6 +31,7 @@
 
 import SwiftUI
 import Articles
+import AnnotationsKit
 
 struct TextReplacementPerWorkOverrideView: View {
 

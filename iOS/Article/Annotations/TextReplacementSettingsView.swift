@@ -28,6 +28,7 @@
 import SwiftUI
 import Account
 import Articles
+import AnnotationsKit
 
 struct TextReplacementSettingsView: View {
 

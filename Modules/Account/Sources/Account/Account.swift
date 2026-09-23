@@ -1,3 +1,4 @@
+import AO3Kit
 //
 //  Account.swift
 //  NetNewsWire
@@ -1114,7 +1115,7 @@ public enum FetchType {
 		return await updateAsync(feedID: feed.feedID, parsedItems: parsedItems, deleteOlder: !isPartial)
 	}
 
-	func updateAsync(feedID: String, parsedItems: Set<ParsedItem>, deleteOlder: Bool = true) async -> ArticleChanges {
+	public func updateAsync(feedID: String, parsedItems: Set<ParsedItem>, deleteOlder: Bool = true) async -> ArticleChanges {
 		precondition(Thread.isMainThread)
 
 		// AmbrosiaAO3NetworkPreference.updatesEnabled ("fetch AO3
@@ -1854,7 +1855,7 @@ private extension Account {
 
 extension Account {
 
-	func sendNotificationAbout(_ articleChanges: ArticleChanges) {
+	public func sendNotificationAbout(_ articleChanges: ArticleChanges) {
 		var feeds = Set<Feed>()
 
 		if let newArticles = articleChanges.new {
@@ -1917,3 +1918,5 @@ extension Account: OPMLRepresentable {
 		return s
 	}
 }
+
+extension Account: AO3ArticleUpdating {}

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import AO3Kit
 import UIKit
 import RSCore
 import RSParser

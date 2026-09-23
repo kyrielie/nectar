@@ -244,3 +244,5 @@ the `"ao3-work:"` prefix, not on `isAmbrosiaItem`), both are subject to
 `AO3RegressionThreshold`'s content-regression guard, and both render through
 the same AO3 preface-synthesis path in `ArticleRenderer`. See
 `ao3-integration.md` for that shared machinery.
+The AO3 network preference shared by Ambrosia-related behavior is owned by
+`Modules/AO3Kit`; Ambrosia model fields and database mirrors remain local.

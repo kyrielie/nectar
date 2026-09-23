@@ -172,3 +172,6 @@ This entire screen (and everything it exposes) is invisible to
 storyboard list, since it's a SwiftUI screen pushed from one row there
 rather than a row itself. Anyone auditing "what settings exist" needs to
 check both places.
+The reusable AO3 session, challenge, request, and preference utilities live
+in `Modules/AO3Kit`; Account-owned chapter-fetcher orchestration remains in
+`Modules/Account`.

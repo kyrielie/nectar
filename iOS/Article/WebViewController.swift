@@ -1,3 +1,4 @@
+import AO3Kit
 //
 //  WebViewController.swift
 //  NetNewsWire-iOS
@@ -13,6 +14,7 @@ import RSCore
 import RSWeb
 import Account
 import Articles
+import AnnotationsKit
 import SafariServices
 import MessageUI
 import Images
@@ -1791,6 +1793,16 @@ extension WebViewController {
 	}
 
 	private func deleteAnnotation(_ annotation: Annotation, account: Account) {
+		revertOrUnwrapAnnotationDOM(annotation)
+
+		Task {
+			await account.deleteAnnotation(annotationID: annotation.annotationID)
+		}
+	}
+
+	/// Reverts the live DOM only when the row belongs to this web view's
+	/// currently displayed article. Persistence remains owned by the caller.
+	func revertOrUnwrapAnnotationDOM(_ annotation: Annotation) {
 		if let originalText = annotation.originalText {
 			// This row carries a text edit (hasHighlight and/or
 			// originalText/replacementText set) -- applyTextEdit already
@@ -1819,9 +1831,6 @@ extension WebViewController {
 			}
 		}
 
-		Task {
-			await account.deleteAnnotation(annotationID: annotation.annotationID)
-		}
 	}
 
 }
