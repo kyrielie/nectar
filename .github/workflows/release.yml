@@ -17,6 +17,19 @@ name: Release IPA and Publish Source
 #     gh release create the dispatch flow already does, which would kick off
 #     a second, redundant publish-source run racing the first for the
 #     gh-pages push.
+#
+#     IMPORTANT: this trigger fires a brand-new workflow run, with its own
+#     GITHUB_RUN_NUMBER, distinct from the run that originally built the
+#     (untouched) IPA. The "Read build settings" step below recomputes
+#     buildVersion using *this* run's number, which will not match the
+#     CURRENT_PROJECT_VERSION actually embedded in the already-published IPA.
+#     The "Merge new version into source.json" step passes NOTES_ONLY_REFRESH
+#     to scripts/update_source.py specifically so that recomputed value (and
+#     downloadURL/size/minOSVersion/marketingVersion) are discarded in favor
+#     of whatever was already published for this version -- only the release
+#     date and notes are allowed to change on this trigger. Without that,
+#     editing a release's notes after the fact silently advances source.json's
+#     buildVersion past what AltStore/SideStore can actually find in the IPA.
 on:
   workflow_dispatch:
     inputs:
@@ -41,6 +54,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
+          # Explicit ref: workflow_dispatch's default checkout ref is
+          # whatever branch/tag was selected in the "Run workflow" dropdown,
+          # which is *not* guaranteed to be inputs.tag. Pin it explicitly so
+          # this job always archives the exact commit the tag points at --
+          # otherwise, if main has moved since the tag was cut (e.g. an
+          # xcconfig version bump), this job's CURRENT_PROJECT_VERSION could
+          # silently diverge from what publish-source computes below, which
+          # checks out inputs.tag explicitly.
+          ref: ${{ inputs.tag }}
           submodules: recursive
 
       - name: Select Xcode 26.3
@@ -314,6 +336,11 @@ jobs:
           SIZE_BYTES: ${{ steps.asset.outputs.size }}
           MIN_OS_VERSION: ${{ steps.settings.outputs.min_os_version }}
           MARKETING_VERSION_DISPLAY: ${{ steps.release.outputs.marketing_version_display }}
+          # true only on the release-edited trigger, where the IPA is not
+          # rebuilt -- see the comment at the top of this file. On
+          # workflow_dispatch, the build metadata below was just freshly
+          # computed to match the IPA this same run built, so it's trusted.
+          NOTES_ONLY_REFRESH: ${{ github.event_name == 'release' && 'true' || 'false' }}
         run: |
           set -euo pipefail
 
