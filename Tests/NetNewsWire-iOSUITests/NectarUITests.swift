@@ -28,8 +28,8 @@ final class NectarUITests: XCTestCase {
 	// Names/titles from iOS/UITestDemoData's seeded fixtures. Kept here
 	// rather than shared with the app target since this test target can't
 	// import app-target code -- see docs/ui-test-demo-data.md.
-	private static let timelineFeedName = "Star Trek: The Original Series (demo)"
-	private static let libraryFeedName = "My Library (demo)"
+	private static let timelineFeedName = "Star Trek: The Original Series"
+	private static let libraryFeedName = "My Library"
 	private static let timelineFeedSeededArticleCount = 7
 	private static let focusArticleTitle = "A Quiet Kind of Orbit"
 
