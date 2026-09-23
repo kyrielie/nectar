@@ -60,7 +60,16 @@ public extension Notification.Name {
 		guard let account else {
 			return
 		}
-		guard progressInfo.isComplete, !Platform.isRunningUnitTests else {
+		// isRunningUnitTests alone would also skip this during a
+		// -UITestSeedDemoData screenshot run: the app-under-test process for a
+		// UI test satisfies at least one of Platform's isRunningUnitTests checks
+		// (XCTest gets loaded into it for in-process automation support), even
+		// though it isn't the Nectar-iOSTests unit test host this guard exists
+		// for. Without the isUITestingWithSeedDemoData carve-out, importOPML's
+		// post-import refreshAll() (see Account.swift) silently no-ops, so the
+		// seeded feeds are added to the tree but never actually fetch articles
+		// -- see docs/ui-test-demo-data.md.
+		guard progressInfo.isComplete, !Platform.isRunningUnitTests || Platform.isUITestingWithSeedDemoData else {
 			return
 		}
 
