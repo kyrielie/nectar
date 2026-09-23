@@ -116,7 +116,7 @@ it's trusted by default. Specifically:
 | `BackupManager`, `BackupRestoreCoordinator`, the backup zip's file layout | `backup-restore.md` |
 | `GuideOverlayView`, `GuideContent`, `HelpRow.guide` | `guide.md` |
 | `HTMLMetadata`/favicon extraction | `metadata-extraction.md` |
-| `AnnotationsTable`, `Annotation`, `annotations.js`, the `textWasSelected`/`annotationWasTapped` message-handler cases, `AnnotationCSVExporter`, the `annotations` table in `ArticleSQLiteExportTable` | `annotations.md` |
+| `AnnotationsTable`, `Annotation`, `AnnotationsKit`, `annotations.js`, the `textWasSelected`/`annotationWasTapped` message-handler cases, `AnnotationCSVExporter`, the `annotations` table in `ArticleSQLiteExportTable` | `annotations.md` |
 | Anything you deliberately did differently from upstream NetNewsWire behavior | `upstream-drift.md` |
 | `Platform.isUITestingWithSeedDemoData`, `TestingURLProtocol` wiring in `DownloadSession`/`Downloader`/`URLSession+Webservice`, `iOS/UITestDemoData/`, `Tests/NetNewsWire-iOSUITests/NectarUITests.swift`, `fastlane/Fastfile`'s `screenshots` lane | `ui-test-demo-data.md` |
 

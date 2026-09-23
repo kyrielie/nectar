@@ -16,7 +16,6 @@ let package = Package(
 		.package(path: "../ArticlesDatabase"),
 		.package(path: "../FeedFinder"),
 		.package(path: "../ErrorLog"),
-		.package(path: "../SyncDatabase"),
 		.package(path: "../RSWeb"),
 		.package(path: "../RSParser"),
 		.package(path: "../RSCore"),
@@ -36,7 +35,6 @@ let package = Package(
 				"ArticlesDatabase",
 				"ErrorLog",
 				"FeedFinder",
-				"SyncDatabase",
 				"AO3Kit"
 			],
 			swiftSettings: [
