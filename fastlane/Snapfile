@@ -1,16 +1,19 @@
 # Uncomment the lines below you want to change by removing the # in the beginning
 
 # A list of devices you want to take the screenshots from
-# devices([
-#   "iPhone 8",
-#   "iPhone 8 Plus",
-#   "iPhone SE",
-#   "iPhone X",
-#   "iPad Pro (12.9-inch)",
-#   "iPad Pro (9.7-inch)",
-#   "Apple TV 1080p",
-#   "Apple Watch Series 6 - 44mm"
-# ])
+#
+# No iPad support yet -- RootSplitViewController's column-display-mode
+# handling isn't correct for iPad's uncollapsed split view (see the
+# testTakeScreenshots() investigation), and NectarUITests.tapBackButton()
+# assumes the single-nav-stack back button that only exists when the split
+# view is collapsed. Without an explicit devices() list here, fastlane
+# snapshot falls back to its own default device set, which includes iPads,
+# so this is pinned to iPhone only. "iPhone 17" is also what CI's own
+# xcodebuild -destination uses (.github/workflows/ci.yml), so it's a
+# confirmed-available simulator name in this environment.
+devices([
+  "iPhone 17"
+])
 
 # languages([
 #   "en-US",
