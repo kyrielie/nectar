@@ -94,6 +94,10 @@ struct HTTP4xxResponse {
 			sessionConfiguration.httpAdditionalHeaders = userAgentHeaders
 		}
 
+		if Platform.isRunningUnitTests || Platform.isUITestingWithSeedDemoData {
+			sessionConfiguration.protocolClasses = [TestingURLProtocol.self]
+		}
+
 		return URLSession(configuration: sessionConfiguration, delegate: self, delegateQueue: OperationQueue.main)
 	}
 

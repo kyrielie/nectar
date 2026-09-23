@@ -58,7 +58,7 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 		// AO3ChapterFetcher, among others) has no way to be exercised in
 		// tests except against the real archiveofourown.org, since it
 		// builds its own URLSession here rather than using .webservice.
-		if Platform.isRunningUnitTests {
+		if Platform.isRunningUnitTests || Platform.isUITestingWithSeedDemoData {
 			sessionConfiguration.protocolClasses = [TestingURLProtocol.self]
 		}
 
