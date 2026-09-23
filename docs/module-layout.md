@@ -87,11 +87,11 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   layers (AppKit/UIKit helpers, HTTP/download plumbing, SQLite wrapper,
   tree/outline data structure) carried over from NetNewsWire, largely
   unmodified by the Ambrosia work.
-- **Modules/Images, HTMLMetadata, FeedFinder, ActivityLog, ErrorLog,
-  CloudKitSync, SyncDatabase, NewsBlur, Secrets** — supporting services
-  (icon/favicon downloading, page metadata, feed autodiscovery, activity
-  and error logging, CloudKit sync plumbing, NewsBlur API client, secrets
-  storage). Not touched by the Ambrosia-specific work described below.
+- **Modules/Images, HTMLMetadata, FeedFinder, ActivityLog, ErrorLog** — supporting
+  services (icon/favicon downloading, page metadata, feed autodiscovery,
+  activity and error logging). Not touched by the Ambrosia-specific work
+  described below. CloudKitSync, NewsBlur, Secrets, and SyncDatabase are
+  deleted from this fork.
 - **Modules/HexColor** — `UIColor` <-> CSS hex string conversion and WCAG
   contrast-ratio comparison, extracted from `ArticleThemeColorExtractor.swift`
   (Modularization Stage 0a) because its reach turned out to span 14 files
@@ -155,7 +155,7 @@ to a failure, so each threshold must stay above the current worst file or
 it breaks the build.
 
 - `file_length` is set just above `iOS/Article/WebViewController.swift`
-  (3,135 lines as of this writing).
+  (3,148 lines as of this writing).
 - `type_body_length` (2600) was not measured against the real largest type
   body and is likely far too loose; measure with a local `swiftlint` run
   and lower it to just above the real maximum.

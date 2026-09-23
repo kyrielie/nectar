@@ -106,4 +106,14 @@ both are known fragility points if the UI changes.
 `fastlane/Fastfile`'s `screenshots` lane passes `-UITestSeedDemoData` (plus `-UITestReadingProfile
 personal` for two of them) on every one of 6 style combinations (light/dark × accent/surface/reading-
 theme variations), then runs `frame_screenshots` to add a framed copy of each screenshot alongside the
-raw one. `frame_screenshots` requires `imagemagick` on the machine running fastlane.
+raw one. Each launch configuration is passed as separate launch-argument tokens; combining a whole
+configuration into one string prevents the app from seeing `-UITestSeedDemoData` and the other flags.
+`frame_screenshots` requires `imagemagick` on the machine running fastlane.
+
+For local or CI validation of the same UI test without generating Fastlane artifacts, run:
+
+```sh
+./test.sh screenshots
+```
+
+Plain `./test.sh` continues to run the `Nectar-CI` unit/package test plan and does not launch UI tests.

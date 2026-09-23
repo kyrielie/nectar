@@ -18,23 +18,22 @@ default_platform(:ios)
 platform :ios do
   desc "Generate new localized screenshots"
   lane :screenshots do
-    capture_screenshots(
-      scheme: "Nectar-iOSUITests",
-      launch_arguments: [
-        # 1: light, default accent, default reading theme
-        "-UITestSeedDemoData -userInterfaceColorPalette 1 -accentColor 0 -currentThemeName Default",
-        # 2: dark, default accent, default reading theme
-        "-UITestSeedDemoData -userInterfaceColorPalette 2 -accentColor 0 -currentThemeName Default",
-        # 3: light, ocean accent, Sepia reading theme
-        "-UITestSeedDemoData -userInterfaceColorPalette 1 -accentColor 6 -currentThemeName Sepia",
-        # 4: dark, lavender accent, Biblioteca reading theme
-        "-UITestSeedDemoData -userInterfaceColorPalette 2 -accentColor 8 -currentThemeName Biblioteca",
-        # 5: dark, berry surface + accent, Duskbloom reading theme, personal font/line-height profile
-        "-UITestSeedDemoData -userInterfaceColorPalette 2 -surfaceTint 4 -accentColor 5 -currentThemeName Duskbloom -UITestReadingProfile personal",
-        # 6: light, berry surface + accent, Duskbloom reading theme, personal font/line-height profile
-        "-UITestSeedDemoData -userInterfaceColorPalette 1 -surfaceTint 4 -accentColor 5 -currentThemeName Duskbloom -UITestReadingProfile personal",
-      ]
-    )
+    variants = {
+      "01-light-default" => ["-UITestSeedDemoData", "-userInterfaceColorPalette", "1", "-accentColor", "0", "-currentThemeName", "Default"],
+      "02-dark-default" => ["-UITestSeedDemoData", "-userInterfaceColorPalette", "2", "-accentColor", "0", "-currentThemeName", "Default"],
+      "03-light-sepia" => ["-UITestSeedDemoData", "-userInterfaceColorPalette", "1", "-accentColor", "6", "-currentThemeName", "Sepia"],
+      "04-dark-biblioteca" => ["-UITestSeedDemoData", "-userInterfaceColorPalette", "2", "-accentColor", "8", "-currentThemeName", "Biblioteca"],
+      "05-dark-duskbloom" => ["-UITestSeedDemoData", "-userInterfaceColorPalette", "2", "-surfaceTint", "4", "-accentColor", "5", "-currentThemeName", "Duskbloom", "-UITestReadingProfile", "personal"],
+      "06-light-duskbloom" => ["-UITestSeedDemoData", "-userInterfaceColorPalette", "1", "-surfaceTint", "4", "-accentColor", "5", "-currentThemeName", "Duskbloom", "-UITestReadingProfile", "personal"]
+    }
+
+    variants.each do |name, launch_arguments|
+      capture_screenshots(
+        scheme: "Nectar-iOSUITests",
+        launch_arguments: launch_arguments,
+        output_directory: "./screenshots/#{name}"
+      )
+    end
 
     # Adds a framed copy of every screenshot alongside the raw ones (see
     # docs/ui-test-demo-data.md) rather than replacing them. Requires
