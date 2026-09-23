@@ -33,7 +33,7 @@ enum UITestDemoData {
 		"/tags/tos-academy-days/feed.atom",
 		"/tags/tng-diplomatic-corps/feed.atom",
 		"/tags/ds9-promenade-life/feed.atom",
-		"/feed/collection/demo-focus.json",
+		"/feed/collection/demo-focus.json"
 	]
 
 	/// Marked "Read Later" (ArticleStatus.Key.starred).
@@ -41,7 +41,7 @@ enum UITestDemoData {
 		"Letters Home",
 		"A Study in Empathy",
 		"Old Friends, New Symbiont",
-		"Letters from the Wormhole",
+		"Letters from the Wormhole"
 	]
 
 	/// Marked "Loved" (ArticleStatus.Key.loved). Deliberately overlaps
@@ -50,7 +50,7 @@ enum UITestDemoData {
 		"Letters Home",
 		"Shore Leave, Interrupted",
 		"The Long Way to Betazed",
-		"Dabo Night",
+		"Dabo Night"
 	]
 
 	/// Marked read, so the timeline shows a real read/unread mix rather
@@ -63,7 +63,7 @@ enum UITestDemoData {
 		"Ten Forward, After Hours",
 		"The Cartography Club",
 		"Promenade Hours",
-		"The Replimat Incident",
+		"The Replimat Incident"
 	]
 
 	/// Title of the one Ambrosia-sourced item, opened by the UI test for
