@@ -1,0 +1,264 @@
+--- a/iOS/MainFeed/MainFeedCollectionViewController.swift	2026-09-22 17:45:06.000000000 +0000
++++ b/iOS/MainFeed/MainFeedCollectionViewController.swift	2026-09-23 17:17:11.640013072 +0000
+@@ -171,26 +171,15 @@
+ 			self.isAnimating = false
+ 		}
+ 
+-		// Pro Max may have split view in landscape — give the device some
+-		// time to change its size class and then decide to deselect
++		// Rotating a Pro Max to landscape expands the split view -- wait for the transition to settle.
+ 		// <https://github.com/Ranchero-Software/NetNewsWire/issues/5043>
+-		DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: {
+-			// If the iPhone is in portrait, deselect.
+-			if UIDevice.current.orientation.isPortrait {
+-				if self.collectionView.indexPathsForSelectedItems != nil {
+-					self.coordinator.selectSidebarItem(indexPath: nil, animations: [.select])
+-				}
+-				return
++		DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
++			// Deselect only when the feeds list is full screen.
++			// <https://github.com/Ranchero-Software/NetNewsWire/issues/4691>
++			if self.coordinator.isRootSplitCollapsed, self.collectionView.indexPathsForSelectedItems?.first != nil {
++				self.coordinator.selectSidebarItem(indexPath: nil, animations: [.select])
+ 			}
+-
+-			// If the iPhone is in landscape, and the horizontal
+-			// size class is compact, deselect.
+-			if self.view.window?.traitCollection.horizontalSizeClass == .compact {
+-				if self.collectionView.indexPathsForSelectedItems != nil { self.coordinator.selectSidebarItem(indexPath: nil, animations: [.select])
+-				}
+-				return
+-			}
+-		})
++		}
+ 	}
+ 
+ 	func registerForNotifications() {
+--- a/Tests/NetNewsWire-iOSUITests/NectarUITests.swift	2026-09-23 05:29:36.000000000 +0000
++++ b/Tests/NetNewsWire-iOSUITests/NectarUITests.swift	2026-09-23 17:35:57.449056363 +0000
+@@ -39,9 +39,28 @@
+ 
+ 		let app = XCUIApplication()
+ 		setupSnapshot(app)
++		// fastlane's cache file is the only other source of this flag, and it
++		// only exists after a `fastlane snapshot` run. Add it here so a bare
++		// `xcodebuild test` (./test.sh screenshots) seeds deterministically.
++		// Platform.isUITestingWithSeedDemoData is a `contains` check, so a
++		// duplicate from the cache file is harmless.
++		if !app.launchArguments.contains("-UITestSeedDemoData") {
++			app.launchArguments.append("-UITestSeedDemoData")
++		}
+ 		app.launch()
+ 	}
+ 
++	/// On any failure, attach a screenshot and the full accessibility tree to the
++	/// result bundle so the failure is diagnosable from the .xcresult alone.
++	/// The hierarchy is also printed, so it lands in the xcodebuild log.
++	override func tearDown() async throws {
++		if testRun?.hasSucceeded == false {
++			let app = XCUIApplication()
++			attachDiagnostics(app, named: "final-failure-state")
++		}
++		try await super.tearDown()
++	}
++
+ 	func testTakeScreenshots() throws {
+ 		let app = XCUIApplication()
+ 
+@@ -58,7 +77,7 @@
+ 		// Main -> Timeline: open one of the seeded AO3-style feeds, which
+ 		// carries a full, varied 7-entry timeline (ratings/warnings/
+ 		// categories badge variety), for the Timeline screenshot.
+-		app.staticTexts[Self.timelineFeedName].firstMatch.tap()
++		cell(labeledPrefix: Self.timelineFeedName, in: app).tap()
+ 		XCTAssertTrue(waitForCellCount(atLeast: Self.timelineFeedSeededArticleCount, in: app, timeout: 20),
+ 					  "Timeline never reached the expected seeded article count.")
+ 
+@@ -69,15 +88,17 @@
+ 		// out to the sidebar and into the single-item Ambrosia "My
+ 		// Library" feed instead, which carries the one item with real,
+ 		// fully offline chapter content to actually read/scroll/highlight.
++		attachDiagnostics(app, named: "before-back-tap")
+ 		tapBackButton(in: app)
++		attachDiagnostics(app, named: "after-back-tap")
+ 		XCTAssertTrue(waitForCell(labeled: Self.libraryFeedName, in: app, timeout: 10),
+ 					  "Sidebar didn't return after navigating back from the timeline.")
+ 
+-		app.staticTexts[Self.libraryFeedName].firstMatch.tap()
++		cell(labeledPrefix: Self.libraryFeedName, in: app).tap()
+ 		XCTAssertTrue(waitForCell(labeled: Self.focusArticleTitle, in: app, timeout: 10),
+ 					  "Focus article \"\(Self.focusArticleTitle)\" never appeared in the library timeline.")
+ 
+-		app.staticTexts[Self.focusArticleTitle].firstMatch.tap()
++		cell(labeledPrefix: Self.focusArticleTitle, in: app).tap()
+ 
+ 		// Wait for the reader's webview to appear, then scroll past the
+ 		// short hand-authored AO3-style preface block into the actual
+@@ -92,8 +113,55 @@
+ 
+ 	// MARK: - Helpers
+ 
++	/// Sidebar and timeline rows are single accessibility elements: the cell is
++	/// an accessibility element and its child labels are not (see
++	/// MainFeedCollectionViewCell.awakeFromNib, MainTimelineCell). So rows are
++	/// exposed as `cells` whose label is the composed accessibilityLabel, e.g.
++	/// "<name>" or "<name> <n> unread". Match by label prefix, on cells, not by
++	/// `staticTexts`.
++	private func cell(labeledPrefix prefix: String, in app: XCUIApplication) -> XCUIElement {
++		app.cells.matching(NSPredicate(format: "label BEGINSWITH %@", prefix)).firstMatch
++	}
++
+ 	private func waitForCell(labeled label: String, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
+-		app.staticTexts[label].firstMatch.waitForExistence(timeout: timeout)
++		let found = cell(labeledPrefix: label, in: app).waitForExistence(timeout: timeout)
++		log("waitForCell(\"\(label)\") -> \(found); cells=\(cellLabels(in: app))")
++		return found
++	}
++
++	// MARK: - Diagnostics
++
++	/// Prefixed so it is easy to grep out of a noisy xcodebuild log:
++	/// `./test.sh screenshots 2>&1 | grep '\\[NectarUITest\\]'`
++	private func log(_ message: String) {
++		print("[NectarUITest] \(message)")
++	}
++
++	private func cellLabels(in app: XCUIApplication) -> [String] {
++		app.cells.allElementsBoundByIndex.map { $0.label }
++	}
++
++	private func navBarSummary(in app: XCUIApplication) -> String {
++		app.navigationBars.allElementsBoundByIndex.map { bar in
++			let buttons = bar.buttons.allElementsBoundByIndex.map { "\($0.label)|hittable=\($0.isHittable)|frame=\($0.frame)" }
++			return "bar[\(bar.identifier)] exists=\(bar.exists) hittable=\(bar.isHittable) frame=\(bar.frame) buttons=\(buttons)"
++		}.joined(separator: "; ")
++	}
++
++	/// Prints and attaches the accessibility tree and a screenshot.
++	/// Lifetime is `.keepAlways` so it survives in the xcresult even on pass.
++	private func attachDiagnostics(_ app: XCUIApplication, named name: String) {
++		log("--- \(name) ---")
++		log("navBars: \(navBarSummary(in: app))")
++		log("cells: \(cellLabels(in: app))")
++		let tree = XCTAttachment(string: app.debugDescription)
++		tree.name = "\(name)-hierarchy"
++		tree.lifetime = .keepAlways
++		add(tree)
++		let shot = XCTAttachment(screenshot: app.screenshot())
++		shot.name = "\(name)-screenshot"
++		shot.lifetime = .keepAlways
++		add(shot)
+ 	}
+ 
+ 	private func waitForCellCount(atLeast count: Int, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
+@@ -102,12 +170,22 @@
+ 		return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
+ 	}
+ 
+-	/// No accessibility identifiers exist anywhere in the sidebar/timeline/
+-	/// article UI today (see docs/ui-test-demo-data.md), so this matches
+-	/// the leading navigation-bar button the way most UINavigationController
+-	/// screens without a customized back button expose it. If a screen ever
+-	/// adds a second leading bar button, this needs a more specific match.
++	/// Taps the back button of the navigation bar that is currently on screen.
++	///
++	/// UISplitViewController can keep other columns' navigation controllers in the
++	/// accessibility hierarchy, so `navigationBars.buttons.element(boundBy: 0)` can
++	/// resolve to an off-screen bar (frame {-1,-1}). Instead, pick the first
++	/// hittable button and log every candidate so a wrong pick is visible in the log.
+ 	private func tapBackButton(in app: XCUIApplication) {
+-		app.navigationBars.buttons.element(boundBy: 0).tap()
++		let candidates = app.navigationBars.buttons.allElementsBoundByIndex
++		log("tapBackButton candidates: \(candidates.map { "\($0.label)|hittable=\($0.isHittable)|frame=\($0.frame)" })")
++
++		guard let backButton = candidates.first(where: { $0.exists && $0.isHittable }) else {
++			attachDiagnostics(app, named: "no-hittable-back-button")
++			XCTFail("No hittable navigation bar button found to go back.")
++			return
++		}
++		log("tapBackButton tapping: \(backButton.label) frame=\(backButton.frame)")
++		backButton.tap()
+ 	}
+ }
+--- a/test.sh	2026-09-23 15:29:01.000000000 +0000
++++ b/test.sh	2026-09-23 17:36:31.888245348 +0000
+@@ -17,8 +17,31 @@
+       -destination 'platform=iOS Simulator,name=iPhone 17' \
+       test
+     ;;
++  screenshots-debug)
++    # Same test, but with a fixed, freshly-cleared result bundle path and a
++    # full log saved to disk. Afterwards:
++    #   ./results.sh build/ui-test.xcresult
++    #   grep '\[NectarUITest\]' build/ui-test.log
++    mkdir -p build
++    rm -rf build/ui-test.xcresult
++    # No `pipefail` in POSIX sh, and `$?` after a pipe is tee's status, so
++    # write the log via redirection and tail it instead of piping.
++    set +e
++    xcodebuild -project NetNewsWire.xcodeproj -scheme Nectar-iOSUITests \
++      -only-testing:Nectar-iOSUITests/NectarUITests/testTakeScreenshots \
++      -xcconfig .github/ios-ci-no-signing.xcconfig \
++      -destination 'platform=iOS Simulator,name=iPhone 17' \
++      -resultBundlePath build/ui-test.xcresult \
++      test > build/ui-test.log 2>&1
++    status=$?
++    tail -n 40 build/ui-test.log
++    echo
++    echo "--- [NectarUITest] lines ---"
++    grep '\[NectarUITest\]' build/ui-test.log
++    exit "$status"
++    ;;
+   *)
+-    echo "Usage: $0 [screenshots]" >&2
++    echo "Usage: $0 [screenshots|screenshots-debug]" >&2
+     exit 2
+     ;;
+ esac
+--- a/results.sh	2026-08-10 16:03:59.000000000 +0000
++++ b/results.sh	2026-09-23 17:36:22.194454955 +0000
+@@ -1 +1,43 @@
+-xcrun xcresulttool get test-results summary --path "$1" > testresults.txt
++#!/bin/sh
++# Usage: ./results.sh <path-to.xcresult> [output-dir]
++#
++# Extracts everything useful from a test result bundle:
++#   summary.json       overall pass/fail and failure text (same as before)
++#   details.json       per-test detail including failure locations
++#   attachments/       screenshots and accessibility-hierarchy dumps that
++#                      NectarUITests attaches (before-back-tap, etc.)
++#
++# Only `get test-results summary` is exercised elsewhere in this repo
++# (ci.yml). `get test-results details` and `export attachments` are newer
++# xcresulttool subcommands; if your Xcode's flags differ, run
++#   xcrun xcresulttool get test-results --help
++#   xcrun xcresulttool export attachments --help
++# Each step below is allowed to fail without stopping the others.
++
++set -u
++
++if [ $# -lt 1 ]; then
++  echo "Usage: $0 <path-to.xcresult> [output-dir]" >&2
++  exit 2
++fi
++
++result="$1"
++out="${2:-testresults-out}"
++mkdir -p "$out"
++
++echo "==> summary"
++xcrun xcresulttool get test-results summary --path "$result" > "$out/summary.json" \
++  || echo "    summary failed"
++# Keep the old behaviour: results.sh used to write testresults.txt.
++cp "$out/summary.json" testresults.txt 2>/dev/null
++
++echo "==> details"
++xcrun xcresulttool get test-results details --path "$result" > "$out/details.json" \
++  || echo "    details failed (see: xcrun xcresulttool get test-results --help)"
++
++echo "==> attachments"
++xcrun xcresulttool export attachments --path "$result" --output-path "$out/attachments" \
++  || echo "    export failed (see: xcrun xcresulttool export attachments --help)"
++
++echo "==> done: $out"
++ls "$out" "$out/attachments" 2>/dev/null

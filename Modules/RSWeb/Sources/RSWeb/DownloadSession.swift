@@ -94,7 +94,10 @@ struct HTTP4xxResponse {
 			sessionConfiguration.httpAdditionalHeaders = userAgentHeaders
 		}
 
-		if Platform.isRunningUnitTests || Platform.isUITestingWithSeedDemoData {
+		// A `-UITestSeedDemoData` screenshot run fetches its demo feed for real
+		// (see docs/ui-test-demo-data.md), so it must not be intercepted even
+		// though the app-under-test can also read as "running unit tests".
+		if Platform.isRunningUnitTests && !Platform.isUITestingWithSeedDemoData {
 			sessionConfiguration.protocolClasses = [TestingURLProtocol.self]
 		}
 

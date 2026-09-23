@@ -18,19 +18,26 @@ default_platform(:ios)
 platform :ios do
   desc "Generate new localized screenshots"
   lane :screenshots do
+    # Each variant is ONE space-joined string. fastlane's snapshot treats every
+    # element of the `launch_arguments` array as a separate configuration and
+    # runs the whole UI test once per element, so passing the flags as separate
+    # array elements would run the test once per flag with a single flag each
+    # (snapshot/lib/snapshot/simulator_launchers/launcher_configuration.rb).
+    # SnapshotHelper splits the string back into tokens on the app side.
+    # -UITestSeedDemoData is added by NectarUITests.setUp(), so it isn't listed here.
     variants = {
-      "01-light-default" => ["-UITestSeedDemoData", "-userInterfaceColorPalette", "1", "-accentColor", "0", "-currentThemeName", "Default"],
-      "02-dark-default" => ["-UITestSeedDemoData", "-userInterfaceColorPalette", "2", "-accentColor", "0", "-currentThemeName", "Default"],
-      "03-light-sepia" => ["-UITestSeedDemoData", "-userInterfaceColorPalette", "1", "-accentColor", "6", "-currentThemeName", "Sepia"],
-      "04-dark-biblioteca" => ["-UITestSeedDemoData", "-userInterfaceColorPalette", "2", "-accentColor", "8", "-currentThemeName", "Biblioteca"],
-      "05-dark-duskbloom" => ["-UITestSeedDemoData", "-userInterfaceColorPalette", "2", "-surfaceTint", "4", "-accentColor", "5", "-currentThemeName", "Duskbloom", "-UITestReadingProfile", "personal"],
-      "06-light-duskbloom" => ["-UITestSeedDemoData", "-userInterfaceColorPalette", "1", "-surfaceTint", "4", "-accentColor", "5", "-currentThemeName", "Duskbloom", "-UITestReadingProfile", "personal"]
+      "01-light-default" => "-userInterfaceColorPalette 1 -accentColor 0 -currentThemeName Default",
+      "02-dark-default" => "-userInterfaceColorPalette 2 -accentColor 0 -currentThemeName Default",
+      "03-light-sepia" => "-userInterfaceColorPalette 1 -accentColor 6 -currentThemeName Sepia",
+      "04-dark-biblioteca" => "-userInterfaceColorPalette 2 -accentColor 8 -currentThemeName Biblioteca",
+      "05-dark-duskbloom" => "-userInterfaceColorPalette 2 -surfaceTint 4 -accentColor 5 -currentThemeName Duskbloom -UITestReadingProfile personal",
+      "06-light-duskbloom" => "-userInterfaceColorPalette 1 -surfaceTint 4 -accentColor 5 -currentThemeName Duskbloom -UITestReadingProfile personal"
     }
 
     variants.each do |name, launch_arguments|
       capture_screenshots(
         scheme: "Nectar-iOSUITests",
-        launch_arguments: launch_arguments,
+        launch_arguments: [launch_arguments],
         output_directory: "./screenshots/#{name}"
       )
     end

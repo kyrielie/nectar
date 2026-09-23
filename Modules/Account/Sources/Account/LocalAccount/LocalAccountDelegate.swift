@@ -67,7 +67,7 @@ public extension Notification.Name {
 		// though it isn't the Nectar-iOSTests unit test host this guard exists
 		// for. Without the isUITestingWithSeedDemoData carve-out, importOPML's
 		// post-import refreshAll() (see Account.swift) silently no-ops, so the
-		// seeded feeds are added to the tree but never actually fetch articles
+		// demo feed is added to the tree but never actually fetches articles
 		// -- see docs/ui-test-demo-data.md.
 		guard progressInfo.isComplete, !Platform.isRunningUnitTests || Platform.isUITestingWithSeedDemoData else {
 			return
