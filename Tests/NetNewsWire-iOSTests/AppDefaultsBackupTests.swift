@@ -137,4 +137,35 @@ import Testing
 		// No duplicates within backupEligibleKeys itself.
 		#expect(AppDefaults.backupEligibleKeys.count == Set(AppDefaults.backupEligibleKeys).count)
 	}
+
+	@Test func everyDeclaredKeyIsAccountedFor() throws {
+		let testsDirectory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+		let repositoryRoot = testsDirectory.deletingLastPathComponent().deletingLastPathComponent()
+		let sourceFiles = [
+			repositoryRoot.appendingPathComponent("iOS/AppDefaults.swift"),
+			repositoryRoot.appendingPathComponent("iOS/ReadingStats/AppDefaults+ReadingStats.swift"),
+			repositoryRoot.appendingPathComponent("iOS/ScreenTime/AppDefaults+ScreenTime.swift")
+		]
+		let pattern = try Regex(#"static let \w+ = "([^"]+)""#)
+		var declaredKeys = Set<String>()
+		for file in sourceFiles {
+			let source = try String(contentsOf: file, encoding: .utf8)
+			for match in source.matches(of: pattern) {
+				declaredKeys.insert(String(match.1))
+			}
+		}
+
+		let excluded: Set<String> = [
+			AppDefaults.Key.firstRunDate, AppDefaults.Key.lastImageCacheFlushDate,
+			AppDefaults.Key.lastRefresh, AppDefaults.Key.selectedArticle,
+			AppDefaults.Key.selectedSidebarItem, AppDefaults.Key.hideReadFeeds,
+			AppDefaults.Key.expandedContainers, AppDefaults.Key.smartFeedsHidingReadArticles,
+			AppDefaults.Key.feedsHidingReadArticles, AppDefaults.Key.foldersShowingReadArticles,
+			AppDefaults.Key.splitViewPreferredDisplayMode, AppDefaults.Key.articleFullscreenAvailable,
+			AppDefaults.Key.addFeedAccountID, AppDefaults.Key.addFeedFolderPath,
+			AppDefaults.Key.addFolderAccountID
+		]
+		let accountedFor = excluded.union(AppDefaults.backupEligibleKeys)
+		#expect(declaredKeys == accountedFor, "Every AppDefaults.Key must be explicitly included or excluded. Missing: \(declaredKeys.subtracting(accountedFor)); unexpected: \(accountedFor.subtracting(declaredKeys))")
+	}
 }

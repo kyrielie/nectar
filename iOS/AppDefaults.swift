@@ -1123,12 +1123,8 @@ final class AppDefaults: Sendable {
 	/// added to `Key` and forgotten here is simply never backed up, never
 	/// wrongly replayed onto a fresh install.
 	///
-	/// This array requires manual maintenance -- there is no compiler
-	/// check tying it to `Key`'s contents (146 keys as of this writing;
-	/// 119 included below, 27 excluded). `AppDefaultsBackupTests` has a named test
-	/// per excluded key below; adding a new `Key` entry without deciding
-	/// whether it belongs here is a review-time responsibility, not
-	/// something either the compiler or a generic test can catch.
+	/// This array requires manual maintenance. `AppDefaultsBackupTests` verifies
+	/// that every declared key is either included here or explicitly excluded.
 	///
 	/// Excluded, and why (not merely omitted -- see the corresponding
 	/// named test in AppDefaultsBackupTests for each):

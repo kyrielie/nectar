@@ -56,8 +56,6 @@ packages:
     path: Modules/ErrorLog
   Images:
     path: Modules/Images
-  SyncDatabase:
-    path: Modules/SyncDatabase
   Articles:
     path: Modules/Articles
   AnnotationsKit:
@@ -110,8 +108,6 @@ targets:
       - package: AO3Kit
         embed: true
       - package: ArticlesDatabase
-        embed: true
-      - package: SyncDatabase
         embed: true
       - package: Zip
       - package: RSWeb

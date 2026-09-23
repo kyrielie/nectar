@@ -128,7 +128,7 @@ which is only ever cleared by deleting the row entirely.
 ### Rule-driven replacement (categories 1 and 3)
 
 `TextReplacementRuleTable`/`TextReplacementRuleEngine`
-(`Modules/Articles/Sources/Articles/TextReplacementRuleTable.swift`) are
+(`Modules/AnnotationsKit/Sources/AnnotationsKit/TextReplacementRuleTable.swift`) are
 the shared matching engine behind two of the four edit categories the
 feature's own plan defines: automatic safe fixes (a shipped,
 person-editable typo table — `TextReplacementRuleTable.defaultTypoTable`)
@@ -186,7 +186,7 @@ fixed list re-applied on every launch regardless of a person's own edits.
 ### Quote conversion (category 2)
 
 `TextReplacementQuoteConversion`
-(`Modules/Articles/Sources/Articles/TextReplacementQuoteConversion.swift`)
+(`Modules/AnnotationsKit/Sources/AnnotationsKit/TextReplacementQuoteConversion.swift`)
 converts British-style single-quote dialogue (`'like this'`) to American
 double-quote dialogue (`"like this"`). Deliberately **not** built on
 `TextReplacementRuleTable`/`TextReplacementRuleEngine` — the `'` glyph is
