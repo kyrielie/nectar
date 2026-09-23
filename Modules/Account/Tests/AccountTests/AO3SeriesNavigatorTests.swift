@@ -40,6 +40,7 @@ import XCTest
 import RSParser
 import RSWeb
 import Articles
+import AO3Kit
 @testable import Account
 
 @MainActor final class AO3SeriesNavigatorTests: XCTestCase {

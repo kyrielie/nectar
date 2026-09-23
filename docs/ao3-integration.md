@@ -401,3 +401,5 @@ actually needs to read the preference (a fetcher/manager in `Account`)
 shouldn't have to depend on the iOS app target, and a later Settings UI
 should read/write the exact same key rather than risk a second UserDefaults
 suite drifting out of sync with it.
+The shared AO3 extraction and independent authenticated-request utilities are
+owned by `Modules/AO3Kit`. Account retains persistence-coupled orchestration.

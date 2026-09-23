@@ -130,6 +130,14 @@ rationale extensively in the source):
 | `lastOpenedAt` | statuses, bookState | backing the "Last Opened" smart feed |
 | `kudosAttemptedAt`, `kudosAttemptedAuthenticated` | bookState | kudos-on-like attempt tracking, forward-only |
 | `bookKey` | articles | book-level read-state identity key (see below) |
+| `additionalTags` | articles | structured AO3/JSON-feed tag metadata |
+| `dateBookmarked` | articles | AO3 bookmark-row date, distinct from work dates |
+| `ao3ConfirmedMissingAt` | articles | timestamp for confirmed missing AO3 works |
+
+The `articles_searchRowID` index was added alongside the search-row migration
+to keep article-to-FTS lookups indexed. The Swift `ParsedItem.bookKey` and SQL
+bulk-import expression are covered by `BookKeySQLParityTests`; changes to
+either implementation require running that test.
 
 A one-time, self-limiting `INSERT OR IGNORE` / `DELETE` / `UPDATE` sequence
 also runs on every launch to repoint `bookState` rows for AO3 series-group

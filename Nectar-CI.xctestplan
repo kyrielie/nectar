@@ -16,7 +16,21 @@
       "name" : "Nectar-iOS"
     }
   },
-  "testTargets" : [
+	"testTargets" : [
+		{
+			"target" : {
+				"containerPath" : "container:NetNewsWire.xcodeproj",
+				"identifier" : "AnnotationsKitTests",
+				"name" : "AnnotationsKitTests"
+			}
+		},
+		{
+			"target" : {
+				"containerPath" : "container:Modules/AO3Kit",
+				"identifier" : "AO3KitTests",
+				"name" : "AO3KitTests"
+			}
+		},
     {
       "target" : {
         "containerPath" : "container:NetNewsWire.xcodeproj",

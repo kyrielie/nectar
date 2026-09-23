@@ -1072,3 +1072,8 @@ in scope here — that's a change to a server not in this repository.
   unchanged. Extracted from `WebViewController`'s own private
   `clampedToBounds(_:bounds:)` specifically so this is testable without a
   `UIViewController`/`UIPopoverPresentationController` in the loop.
+# Test coverage
+
+The JavaScript bridge suite is also run headlessly in CI (`Tests/JS`). It
+exercises the shipped `annotations.js` directly, including anchor resolution,
+highlight rendering, and text-edit payloads.

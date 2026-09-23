@@ -4,8 +4,7 @@
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES"
-      runPostActionsOnFailure = "NO">
+      buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -16,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E918341AC3D5C53E25D90D02"
-               BuildableName = "Nectar-iOS.app"
+               BuildableName = "Nectar.app"
                BlueprintName = "Nectar-iOS"
                ReferencedContainer = "container:NetNewsWire.xcodeproj">
             </BuildableReference>
@@ -41,30 +40,25 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES"
-      onlyGenerateCoverageForSpecifiedTargets = "NO">
+      shouldUseLaunchSchemeArgsEnv = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "E918341AC3D5C53E25D90D02"
+            BuildableName = "Nectar.app"
+            BlueprintName = "Nectar-iOS"
+            ReferencedContainer = "container:NetNewsWire.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
       <TestPlans>
          <TestPlanReference
-            default = "YES"
-            reference = "container:NetNewsWire-iOS.xctestplan">
+            reference = "container:NetNewsWire-iOS.xctestplan"
+            default = "YES">
          </TestPlanReference>
          <TestPlanReference
             reference = "container:Nectar-CI.xctestplan">
          </TestPlanReference>
       </TestPlans>
-      <MacroExpansion>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "E918341AC3D5C53E25D90D02"
-            BuildableName = "Nectar-iOS.app"
-            BlueprintName = "Nectar-iOS"
-            ReferencedContainer = "container:NetNewsWire.xcodeproj">
-         </BuildableReference>
-      </MacroExpansion>
-      <Testables>
-      </Testables>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -81,13 +75,11 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E918341AC3D5C53E25D90D02"
-            BuildableName = "Nectar-iOS.app"
+            BuildableName = "Nectar.app"
             BlueprintName = "Nectar-iOS"
             ReferencedContainer = "container:NetNewsWire.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -100,7 +92,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E918341AC3D5C53E25D90D02"
-            BuildableName = "Nectar-iOS.app"
+            BuildableName = "Nectar.app"
             BlueprintName = "Nectar-iOS"
             ReferencedContainer = "container:NetNewsWire.xcodeproj">
          </BuildableReference>

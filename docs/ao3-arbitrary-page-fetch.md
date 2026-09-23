@@ -285,3 +285,5 @@ section, `AO3PagesInspectorCell`, `AO3FilterURLLength`,
 `AO3FilterFallbackPage`, `AO3SearchResultsFetchOutcome.filtersNotApplied`,
 `AccountError.ao3FiltersNotApplied`, `AddFeedViewController`'s long-URL
 warning (`userAcceptedLongAO3URL`).
+Search-result importing and pagination are implemented in `Modules/AO3Kit`
+behind `AO3ArticleUpdating` and `AO3SearchFeedPageTracking`.

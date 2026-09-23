@@ -10,6 +10,7 @@ import UIKit
 import os
 import Account
 import Articles
+import AnnotationsKit
 import Images
 import ArticleTheming
 import AppChrome
@@ -1199,6 +1200,14 @@ final class AppDefaults: Sendable {
 		Key.toolbarBottomUseOverflowMenu,
 		Key.defaultAnnotationColor,
 		Key.annotationCreationMethod,
+		Key.annotationsSortOrder,
+		Key.textReplacementApplyAutomatically,
+		Key.textReplacementTypoFixesEnabled,
+		Key.textReplacementQuoteConversionEnabled,
+		Key.textReplacementTypoTable,
+		Key.textReplacementReaderInsertTable,
+		Key.textReplacementCustomTable,
+		Key.textReplacementPerWorkOverride,
 		Key.hideNotchInFullScreen,
 		Key.pageCounterDisplayMode,
 		Key.disableArticleLinks,

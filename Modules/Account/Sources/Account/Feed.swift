@@ -10,6 +10,7 @@ import Foundation
 import RSCore
 import RSWeb
 import Articles
+import AO3Kit
 
 @MainActor public final class Feed: SidebarItem, Renamable, Hashable {
 	nonisolated public let feedID: String
@@ -376,3 +377,5 @@ extension Feed: OPMLRepresentable {
 		})
 	}
 }
+
+extension Feed: AO3SearchFeedPageTracking {}

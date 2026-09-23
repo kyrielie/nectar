@@ -23,6 +23,7 @@ import XCTest
 import RSParser
 import RSWeb
 import Articles
+import AO3Kit
 @testable import Account
 
 final class AO3ChapterFetcherTests: XCTestCase {

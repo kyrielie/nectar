@@ -41,3 +41,6 @@ code — these three additions are the only diff from upstream in any of
 them. In-code comments reference this as "Task 7"/"Task 9" of a `docs/`
 planning file; the planning file itself is out of scope, but the task
 numbers confirm this is a deliberate, planned feature, not incidental.
+AO3-specific summary extraction and ignore-list filtering are supplied to
+RSParser through `AO3FeedExtensionPoint`. RSParser remains independent of
+AO3Kit; the app registers `AO3FeedExtension` before the first refresh.
