@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Name</key>
+	<string>Perseus</string>
+	<key>ThemeIdentifier</key>
+	<string>com.nectar.themes.percyjackson</string>
+	<key>CreatorHomePage</key>
+	<string>https://github.com/nectar-app/gallery-themes</string>
+	<key>CreatorName</key>
+	<string>Original design for Nectar</string>
+	<key>Version</key>
+	<integer>1</integer>
+</dict>
+</plist>
