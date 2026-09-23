@@ -3,8 +3,9 @@ name: Publish site (landing page and theme gallery)
 # Builds landing/ and gallery/ and publishes them to the gh-pages branch:
 #   landing page  -> /index.html
 #   theme gallery -> /themes/
+#   demo feed     -> /demo-feeds/feed.json  (screenshots only, see docs/ui-test-demo-data.md)
 # alongside the AltStore source.json, icon.png and screenshots/ that release.yml
-# already publishes there. Only index.html and the themes/ folder are touched, so
+# already publishes there. Only index.html, themes/ and demo-feeds/ are touched, so
 # those other files are never clobbered.
 #
 # The file keeps its old name (gallery.yml) so existing references stay valid.
@@ -19,7 +20,14 @@ on:
       - "gallery-themes/**"
       - "Themes/**"
       - "Shared/Article Rendering/core.css"
+      - "demo-feeds/**"
       - ".github/workflows/gallery.yml"
+  # The demo feed's item dates are relative to publish time (demo-feeds/build.py)
+  # because the app ignores articles older than 90 days. Republish daily so the
+  # feed never ages out. This means one small commit to gh-pages per day (the
+  # dates change), while the landing page and themes stay unchanged.
+  schedule:
+    - cron: "17 6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -53,16 +61,22 @@ jobs:
       - name: Build gallery
         run: python3 main/gallery/build.py --out build
 
+      - name: Build demo feed
+        run: python3 main/demo-feeds/build.py --out build-demo-feeds
+
       - name: Publish to gh-pages
         run: |
           cp build-landing/index.html pages/index.html
           rm -rf pages/themes
           mkdir -p pages/themes
           cp -R build/. pages/themes/
+          rm -rf pages/demo-feeds
+          mkdir -p pages/demo-feeds
+          cp -R build-demo-feeds/. pages/demo-feeds/
           cd pages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html themes
+          git add index.html themes demo-feeds
           if git diff --cached --quiet; then
             echo "No site changes"
             exit 0

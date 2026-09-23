@@ -171,26 +171,17 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 			self.isAnimating = false
 		}
 
-		// Pro Max may have split view in landscape — give the device some
-		// time to change its size class and then decide to deselect
+		// Rotating a Pro Max to landscape expands the split view, so give the
+		// device time to settle before deciding whether to deselect.
 		// <https://github.com/Ranchero-Software/NetNewsWire/issues/5043>
-		DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: {
-			// If the iPhone is in portrait, deselect.
-			if UIDevice.current.orientation.isPortrait {
-				if self.collectionView.indexPathsForSelectedItems != nil {
-					self.coordinator.selectSidebarItem(indexPath: nil, animations: [.select])
-				}
-				return
+		DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+			// Deselect only when the feeds list is full screen (collapsed split view).
+			// This does not depend on UIDevice orientation, which is unreliable
+			// (.unknown / .faceUp) in the simulator.
+			if self.coordinator.isRootSplitCollapsed, self.collectionView.indexPathsForSelectedItems?.first != nil {
+				self.coordinator.selectSidebarItem(indexPath: nil, animations: [.select])
 			}
-
-			// If the iPhone is in landscape, and the horizontal
-			// size class is compact, deselect.
-			if self.view.window?.traitCollection.horizontalSizeClass == .compact {
-				if self.collectionView.indexPathsForSelectedItems != nil { self.coordinator.selectSidebarItem(indexPath: nil, animations: [.select])
-				}
-				return
-			}
-		})
+		}
 	}
 
 	func registerForNotifications() {
