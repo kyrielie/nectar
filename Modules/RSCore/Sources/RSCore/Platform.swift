@@ -56,11 +56,11 @@ public struct Platform {
 		return false
 	}()
 
-	/// Returns true if the app was launched with `-UITestSeedDemoData`, meaning a UI test wants
-	/// deterministic, offline demo content seeded and network requests intercepted by
-	/// `TestingURLProtocol`. This is intentionally separate from `isRunningUnitTests`, which also
-	/// gates unrelated behavior (error logging, author caching, local-account completion handling)
-	/// that should stay untouched during screenshot capture.
+	/// Returns true if the app was launched with `-UITestSeedDemoData`, meaning a screenshot UI
+	/// test wants the hosted demo feed subscribed (see `UITestDemoData`). Network requests are NOT
+	/// intercepted in this mode: the feed is fetched for real. This is intentionally separate from
+	/// `isRunningUnitTests`, which also gates unrelated behavior (error logging, author caching,
+	/// local-account completion handling) that should stay untouched during screenshot capture.
 	nonisolated public static var isUITestingWithSeedDemoData: Bool {
 		ProcessInfo.processInfo.arguments.contains("-UITestSeedDemoData")
 	}

@@ -2,16 +2,13 @@
 //  NectarUITests.swift
 //  Nectar-iOSUITests
 //
-//  UI test target that drives fastlane's `snapshot()` calls. This target
-//  did not exist before; without a UI test target actually launching the
-//  app and calling `snapshot(...)`, `fastlane snapshot` has nothing to
-//  photograph, so it builds and runs successfully but produces no images.
+//  UI test target that drives fastlane's `snapshot()` calls.
 //
-//  Each of fastlane's 6 style-combination launches runs this same test,
-//  which seeds deterministic offline demo data (-UITestSeedDemoData, see
-//  iOS/UITestDemoData/UITestDemoData.swift and docs/ui-test-demo-data.md)
-//  and walks Main -> Timeline -> Article, capturing a screenshot at each
-//  step.
+//  The app is launched with -UITestSeedDemoData, which subscribes it to a plain
+//  JSON Feed hosted on GitHub Pages (see iOS/UITestDemoData/UITestDemoData.swift
+//  and docs/ui-test-demo-data.md). This test therefore needs network access.
+//  It walks Main -> Timeline -> Article and captures a screenshot at each step.
+//  The demo feed is a single feed, so there is no back navigation.
 //
 
 import XCTest
@@ -25,13 +22,14 @@ import XCTest
 @MainActor
 final class NectarUITests: XCTestCase {
 
-	// Names/titles from iOS/UITestDemoData's seeded fixtures. Kept here
-	// rather than shared with the app target since this test target can't
-	// import app-target code -- see docs/ui-test-demo-data.md.
-	private static let timelineFeedName = "Star Trek: The Original Series"
-	private static let libraryFeedName = "My Library"
-	private static let timelineFeedSeededArticleCount = 7
-	private static let focusArticleTitle = "A Quiet Kind of Orbit"
+	// Must match iOS/UITestDemoData/DemoFeeds.opml and demo-feeds/feed.template.json.
+	// Kept here because this test target can't import app-target code.
+	private static let feedName = "Nectar Demo Reading List"
+	private static let feedItemCount = 8
+	private static let articleTitle = "A Quiet Kind of Orbit"
+
+	// The feed is fetched over the network on first launch.
+	private static let networkTimeout: TimeInterval = 45
 
 	override func setUp() async throws {
 		try await super.setUp()
@@ -39,75 +37,100 @@ final class NectarUITests: XCTestCase {
 
 		let app = XCUIApplication()
 		setupSnapshot(app)
+		// The flag is added here, not only via fastlane, so a bare
+		// `xcodebuild test` (./test.sh screenshots) behaves the same as
+		// `fastlane screenshots`. `contains` in Platform makes a duplicate harmless.
+		if !app.launchArguments.contains("-UITestSeedDemoData") {
+			app.launchArguments.append("-UITestSeedDemoData")
+		}
 		app.launch()
+	}
+
+	/// On any failure, attach a screenshot and the full accessibility tree to the
+	/// result bundle so the failure is diagnosable from the .xcresult alone.
+	override func tearDown() async throws {
+		if testRun?.hasSucceeded == false {
+			attachDiagnostics(XCUIApplication(), named: "final-failure-state")
+		}
+		try await super.tearDown()
 	}
 
 	func testTakeScreenshots() throws {
 		let app = XCUIApplication()
 
-		// Give the initial view controller hierarchy -- and, when
-		// -UITestSeedDemoData is set, the offline OPML import that
-		// populates the sidebar -- a moment to settle before the first
-		// capture.
 		_ = app.wait(for: .runningForeground, timeout: 10)
-		XCTAssertTrue(waitForCell(labeled: Self.timelineFeedName, in: app, timeout: 20),
-					  "Seeded feed \"\(Self.timelineFeedName)\" never appeared in the sidebar.")
 
+		// The feed's name comes from the bundled OPML, so it appears before any
+		// network request completes.
+		XCTAssertTrue(waitForCell(labeledPrefix: Self.feedName, in: app, timeout: 20),
+					  "Demo feed \"\(Self.feedName)\" never appeared in the sidebar.")
 		snapshot("01MainFeed")
 
-		// Main -> Timeline: open one of the seeded AO3-style feeds, which
-		// carries a full, varied 7-entry timeline (ratings/warnings/
-		// categories badge variety), for the Timeline screenshot.
-		app.staticTexts[Self.timelineFeedName].firstMatch.tap()
-		XCTAssertTrue(waitForCellCount(atLeast: Self.timelineFeedSeededArticleCount, in: app, timeout: 20),
-					  "Timeline never reached the expected seeded article count.")
+		cell(labeledPrefix: Self.feedName, in: app).tap()
 
+		// Articles only exist once the network fetch of the hosted feed completes.
+		XCTAssertTrue(waitForCellCount(atLeast: Self.feedItemCount, in: app, timeout: Self.networkTimeout),
+					  "Timeline never reached \(Self.feedItemCount) articles. The hosted demo feed may be unreachable or empty (check network, and that .github/workflows/gallery.yml has published demo-feeds/feed.json).")
 		snapshot("02Timeline")
 
-		// Timeline -> Article: this feed's items are AO3-metadata-only (no
-		// chapter body -- see docs/ui-test-demo-data.md on why), so back
-		// out to the sidebar and into the single-item Ambrosia "My
-		// Library" feed instead, which carries the one item with real,
-		// fully offline chapter content to actually read/scroll/highlight.
-		tapBackButton(in: app)
-		XCTAssertTrue(waitForCell(labeled: Self.libraryFeedName, in: app, timeout: 10),
-					  "Sidebar didn't return after navigating back from the timeline.")
+		XCTAssertTrue(waitForCell(labeledPrefix: Self.articleTitle, in: app, timeout: 10),
+					  "Article \"\(Self.articleTitle)\" not found in the timeline.")
+		cell(labeledPrefix: Self.articleTitle, in: app).tap()
 
-		app.staticTexts[Self.libraryFeedName].firstMatch.tap()
-		XCTAssertTrue(waitForCell(labeled: Self.focusArticleTitle, in: app, timeout: 10),
-					  "Focus article \"\(Self.focusArticleTitle)\" never appeared in the library timeline.")
-
-		app.staticTexts[Self.focusArticleTitle].firstMatch.tap()
-
-		// Wait for the reader's webview to appear, then scroll past the
-		// short hand-authored AO3-style preface block into the actual
-		// story prose, where the seeded highlight lives.
-		let webView = app.webViews.firstMatch
-		XCTAssertTrue(webView.waitForExistence(timeout: 10), "Article webview never appeared.")
-		webView.swipeUp()
-		webView.swipeUp()
-
+		XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout: 10), "Article webview never appeared.")
 		snapshot("03Article")
 	}
 
 	// MARK: - Helpers
 
-	private func waitForCell(labeled label: String, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
-		app.staticTexts[label].firstMatch.waitForExistence(timeout: timeout)
+	/// Sidebar and timeline rows are single accessibility elements: the cell is an
+	/// accessibility element and its child labels are not (see
+	/// MainFeedCollectionViewCell.awakeFromNib, MainTimelineCell). Rows are therefore
+	/// exposed as `cells` whose label is the composed accessibilityLabel, e.g.
+	/// "<name>" or "<name> <n> unread". Match by label prefix, on cells, not by
+	/// `staticTexts`.
+	private func cell(labeledPrefix prefix: String, in app: XCUIApplication) -> XCUIElement {
+		app.cells.matching(NSPredicate(format: "label BEGINSWITH %@", prefix)).firstMatch
+	}
+
+	private func waitForCell(labeledPrefix prefix: String, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
+		let found = cell(labeledPrefix: prefix, in: app).waitForExistence(timeout: timeout)
+		log("waitForCell(\"\(prefix)\") -> \(found); cells=\(cellLabels(in: app))")
+		return found
 	}
 
 	private func waitForCellCount(atLeast count: Int, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
 		let predicate = NSPredicate(format: "count >= %d", count)
 		let expectation = XCTNSPredicateExpectation(predicate: predicate, object: app.cells)
-		return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
+		let completed = XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
+		log("waitForCellCount(>= \(count)) -> \(completed); cells=\(cellLabels(in: app))")
+		return completed
 	}
 
-	/// No accessibility identifiers exist anywhere in the sidebar/timeline/
-	/// article UI today (see docs/ui-test-demo-data.md), so this matches
-	/// the leading navigation-bar button the way most UINavigationController
-	/// screens without a customized back button expose it. If a screen ever
-	/// adds a second leading bar button, this needs a more specific match.
-	private func tapBackButton(in app: XCUIApplication) {
-		app.navigationBars.buttons.element(boundBy: 0).tap()
+	// MARK: - Diagnostics
+
+	/// Prefixed so it is easy to grep out of a noisy xcodebuild log:
+	/// `grep '\[NectarUITest\]' build/ui-test.log`
+	private func log(_ message: String) {
+		print("[NectarUITest] \(message)")
+	}
+
+	private func cellLabels(in app: XCUIApplication) -> [String] {
+		app.cells.allElementsBoundByIndex.map { $0.label }
+	}
+
+	/// Prints and attaches the accessibility tree and a screenshot.
+	/// Lifetime is `.keepAlways` so it survives in the xcresult even on pass.
+	private func attachDiagnostics(_ app: XCUIApplication, named name: String) {
+		log("--- \(name) ---")
+		log("cells: \(cellLabels(in: app))")
+		let tree = XCTAttachment(string: app.debugDescription)
+		tree.name = "\(name)-hierarchy"
+		tree.lifetime = .keepAlways
+		add(tree)
+		let shot = XCTAttachment(screenshot: app.screenshot())
+		shot.name = "\(name)-screenshot"
+		shot.lifetime = .keepAlways
+		add(shot)
 	}
 }
