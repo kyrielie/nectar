@@ -1147,6 +1147,12 @@ final class AppDefaults: Sendable {
 	/// - `addFeedAccountID`, `addFeedFolderPath`, `addFolderAccountID`:
 	///   ephemeral last-used-account/folder state for the "Add Feed"
 	///   sheet, not something a person thinks of as a setting to back up.
+	/// - `screenTimeRecurringBreakEndDate`, `screenTimeSecondsSinceLastBreak`,
+	///   `screenTimeLastResignDate`: live Take a Break runtime state
+	///   (an in-progress enforced break, a running counter, a last-resign
+	///   timestamp). Replaying them onto another device could start or
+	///   end a lockout there for no reason the person chose. The Take a
+	///   Break settings themselves are included below.
 	static let backupEligibleKeys: [String] = [
 		Key.userInterfaceColorPalette,
 		Key.timelineGroupByFeed,
@@ -1194,6 +1200,8 @@ final class AppDefaults: Sendable {
 		Key.toolbarFnReadingStatsTop, Key.toolbarFnReadingStatsTopOverflow, Key.toolbarFnReadingStatsBottom, Key.toolbarFnReadingStatsBottomOverflow,
 		Key.toolbarTopUseOverflowMenu,
 		Key.toolbarBottomUseOverflowMenu,
+		Key.toolbarTopFunctionOrder,
+		Key.toolbarBottomFunctionOrder,
 		Key.defaultAnnotationColor,
 		Key.annotationCreationMethod,
 		Key.annotationsSortOrder,
@@ -1216,6 +1224,8 @@ final class AppDefaults: Sendable {
 		Key.screenTimeBedtimeEndMinutesFromMidnight, Key.screenTimeMinutesUsedTodaySeconds,
 		Key.screenTimeUsageDate, Key.screenTimeDailyUsageHistory,
 		Key.screenTimeIndicatorDisplayMode,
+		Key.screenTimeTakeABreakEnabled, Key.screenTimeTakeABreakMode,
+		Key.screenTimeBreakReadingMinutes, Key.screenTimeBreakEnforcedMinutes,
 		Key.readingStatsTrackingEnabled, Key.readingStatsDailyHistory, Key.readingStatsDailyWords,
 		Key.readingStatsProgressByBookKey, Key.readingStatsAllTimeWords,
 		Key.useSystemBrowser,
