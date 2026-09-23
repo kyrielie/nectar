@@ -115,6 +115,8 @@ import BackupRestore
 		initializeDownloaders()
 		initializeHomeScreenQuickActions()
 
+		UITestDemoData.seedIfNeeded()
+
 		DispatchQueue.main.async {
 			self.unreadCount = AccountManager.shared.unreadCount
 			// Force the badge to update on launch.

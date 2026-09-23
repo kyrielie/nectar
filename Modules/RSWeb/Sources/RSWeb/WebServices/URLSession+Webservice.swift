@@ -52,7 +52,7 @@ nonisolated extension URLSession {
 			sessionConfiguration.httpAdditionalHeaders = userAgentHeaders
 		}
 
-		if Platform.isRunningUnitTests {
+		if Platform.isRunningUnitTests || Platform.isUITestingWithSeedDemoData {
 			sessionConfiguration.protocolClasses = [TestingURLProtocol.self]
 		}
 
