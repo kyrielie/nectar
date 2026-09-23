@@ -27,13 +27,13 @@ import ArticleTheming
 @MainActor
 enum UITestDemoData {
 
-	private static let feedBaseURL = "https://nectar-demo.invalid"
+	private static let feedBaseURL = "https://starlog-archive.invalid"
 
 	private static let seededFeedPaths = [
 		"/tags/tos-academy-days/feed.atom",
 		"/tags/tng-diplomatic-corps/feed.atom",
 		"/tags/ds9-promenade-life/feed.atom",
-		"/feed/collection/demo-focus.json"
+		"/feed/collection/personal-shelf.json"
 	]
 
 	/// Marked "Read Later" (ArticleStatus.Key.starred).
@@ -136,7 +136,7 @@ enum UITestDemoData {
 			assertionFailure("UITestDemoData: missing fixture focus-work.json")
 			return
 		}
-		TestingURLProtocol.responses[feedBaseURL + "/feed/collection/demo-focus.json"] = TestingURLProtocol.Response(statusCode: 200, data: jsonData)
+		TestingURLProtocol.responses[feedBaseURL + "/feed/collection/personal-shelf.json"] = TestingURLProtocol.Response(statusCode: 200, data: jsonData)
 	}
 
 	private static func seededArticles(in account: Account) async -> Set<Article> {

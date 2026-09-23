@@ -12,8 +12,19 @@ offline, on-device, at launch — no real network request is made anywhere in th
 (`iOS/UITestDemoData/UITestDemoData.swift`), invoked from `AppDelegate.didFinishLaunchingWithOptions`.
 
 This is a separate flag from `Platform.isRunningUnitTests` on purpose: `isRunningUnitTests` also gates
-unrelated behavior (`ErrorLogDatabase`, `AuthorCache`, a completion-handling branch in
-`LocalAccountDelegate`) that shouldn't change just because a screenshot is being taken.
+unrelated behavior (`ErrorLogDatabase`, `AuthorCache`, the `ScreenTimeTracker`/`ReadingStatsTracker`
+`.start()` calls in `AppDelegate`) that shouldn't change just because a screenshot is being taken.
+
+One exception: `LocalAccountDelegate.refreshAll()` (called by `Account.importOPML(_:completion:)`
+immediately after the seeded feeds are added to the tree) is gated
+`!Platform.isRunningUnitTests || Platform.isUITestingWithSeedDemoData` rather than plain
+`!Platform.isRunningUnitTests`. This was a real bug, not a design choice: `isRunningUnitTests` reads
+`true` for the app-under-test process during a UI test too (XCTest gets loaded into it for in-process
+automation), so without the `isUITestingWithSeedDemoData` carve-out here, `refreshAll()` silently
+no-ops during every `-UITestSeedDemoData` launch -- the four seeded feeds land in the sidebar (their
+names come from `editedName`, set synchronously during `importOPML`, not from this refresh) but never
+actually fetch articles, so the Timeline/Article screenshots' cell-count/element waits time out
+identically on every device and every one of the `screenshots` lane's launch-argument variants.
 
 `-UITestReadingProfile personal` is a second, independent flag: it sets
 `AppDefaults.shared.articleThemeOverrides` directly in Swift (serif font "Iowan Old Style", line height
@@ -85,7 +96,7 @@ confirmed against a real render.
 `Tests/NetNewsWire-iOSUITests/NectarUITests.swift`: wait for the sidebar (Main screenshot) → open the
 TOS demo feed for a populated Timeline screenshot → back to the sidebar → open the single-item "My
 Library" feed → open the focus article, `swipeUp()` twice past the preface, Article screenshot. No
-accessibility identifiers exist anywhere in `iOS/MasterFeed`/`iOS/MainTimeline`/`iOS/Article`, so
+accessibility identifiers exist anywhere in `iOS/MainFeed`/`iOS/MainTimeline`/`iOS/Article`, so
 navigation matches on the seeded titles' static text, and the back button is matched as the leading
 navigation-bar button (`app.navigationBars.buttons.element(boundBy: 0)`) rather than by identifier —
 both are known fragility points if the UI changes.
