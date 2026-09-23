@@ -17,8 +17,8 @@ large_tuple:
   error: 6
 
 # Size signals (file_length / type_body_length). Both used to sit in
-# disabled_rules, which is how WebViewController.swift (3,135 lines),
-# SceneCoordinator.swift (2,786), and AppDefaults.swift (2,617) grew
+# disabled_rules, which is how WebViewController.swift (3,148 lines),
+# SceneCoordinator.swift (2,786), and AppDefaults.swift (2,436) grew
 # unopposed even though `swiftlint lint --strict` runs in CI
 # (.github/workflows/ci.yml).
 #
@@ -26,7 +26,7 @@ large_tuple:
 # into a CI failure, so each threshold has to sit above the current worst
 # offender or it breaks the build today.
 #
-# file_length: 3200 is just above WebViewController.swift (3,135 lines).
+# file_length: 3200 is just above WebViewController.swift (3,148 lines).
 # type_body_length: 2600 was set without measuring. SwiftLint counts
 # non-blank, non-comment lines inside a single type body, and the large
 # files here split their types across extensions, so the real maximum is
