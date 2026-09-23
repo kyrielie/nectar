@@ -56,6 +56,15 @@ public struct Platform {
 		return false
 	}()
 
+	/// Returns true if the app was launched with `-UITestSeedDemoData`, meaning a UI test wants
+	/// deterministic, offline demo content seeded and network requests intercepted by
+	/// `TestingURLProtocol`. This is intentionally separate from `isRunningUnitTests`, which also
+	/// gates unrelated behavior (error logging, author caching, local-account completion handling)
+	/// that should stay untouched during screenshot capture.
+	nonisolated public static var isUITestingWithSeedDemoData: Bool {
+		ProcessInfo.processInfo.arguments.contains("-UITestSeedDemoData")
+	}
+
 	/// Get the path to a subfolder of the application's data folder (often `Application Support`).
 	/// - Parameters:
 	///   - appName: The name of the application.

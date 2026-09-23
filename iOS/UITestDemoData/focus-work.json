@@ -1,0 +1,44 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "My Library (Nectar demo)",
+  "home_page_url": "https://nectar-demo.invalid",
+  "feed_url": "https://nectar-demo.invalid/feed/collection/demo-focus.json",
+  "items": [
+    {
+      "id": "ambrosia-book-1",
+      "url": "https://nectar-demo.invalid/works/90040001",
+      "title": "A Quiet Kind of Orbit",
+      "content_html": "<dl class=\"preface tags\"><dt>Rating:</dt><dd>Teen And Up Audiences</dd><dt>Warnings:</dt><dd>No Archive Warnings Apply</dd><dt>Fandom:</dt><dd>Star Trek: The Original Series</dd><dt>Relationship:</dt><dd>James T. Kirk &amp; Spock</dd><dt>Words:</dt><dd>1,830</dd><dt>Chapters:</dt><dd>1/1</dd></dl><h3>Chapter 1</h3><p>The night watch on Deck 5 was the quietest four hours of Kirk's week, and lately he'd started finding reasons to spend most of them in the observation lounge instead of his quarters, where the stars did the talking and he didn't have to.</p><p>Spock found him there more often than either of them ever planned. \"Command was easier,\" Spock had once told him, \"when you stopped mistaking silence for absence.\" Kirk hadn't understood it then. He was starting to now.</p><p>Tonight Spock arrived with two cups of something that was technically tea, set one down within Kirk's reach, and took the seat across from him without a word. Outside the viewport, a nebula unspooled itself in slow orange light, indifferent to rank or deadlines or anything else that mattered at 0300 hours.</p><p>\"You are off duty,\" Spock said eventually, not quite a question.</p><p>\"So are you.\"</p><p>\"Indeed.\" A pause, the kind Kirk had learned to wait out rather than fill. \"I find I prefer this particular use of the time.\"</p><p>Kirk looked over at him -- really looked, the way he rarely let himself in daylight, with a bridge full of witnesses -- and decided that whatever this was, he preferred it too. Some things didn't need a report filed. Some things just needed the room to keep happening.</p>",
+      "date_published": "2026-08-22T02:00:00Z",
+      "date_modified": "2026-08-22T02:00:00Z",
+      "author": {
+        "name": "graveyard_shift"
+      },
+      "_ambrosia": {
+        "word_count": 1830,
+        "chapter_current": 1,
+        "chapter_total": 1,
+        "is_complete": true,
+        "fandoms": [
+          "Star Trek: The Original Series"
+        ],
+        "relationships": [
+          "James T. Kirk & Spock"
+        ],
+        "characters": [
+          "James T. Kirk",
+          "Spock"
+        ],
+        "ratings": [
+          "Teen And Up Audiences"
+        ],
+        "warnings": [
+          "No Archive Warnings Apply"
+        ],
+        "categories": [
+          "Gen"
+        ]
+      }
+    }
+  ]
+}
