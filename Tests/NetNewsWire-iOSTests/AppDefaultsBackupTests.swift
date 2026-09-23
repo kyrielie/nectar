@@ -97,6 +97,22 @@ import Testing
 		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.addFolderAccountID))
 	}
 
+	// MARK: - Live Take a Break runtime state, not a preference
+	// Replaying these onto another device could start or end a lockout
+	// there. The Take a Break settings themselves are included.
+
+	@Test func screenTimeRecurringBreakEndDateIsExcluded() {
+		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.screenTimeRecurringBreakEndDate))
+	}
+
+	@Test func screenTimeSecondsSinceLastBreakIsExcluded() {
+		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.screenTimeSecondsSinceLastBreak))
+	}
+
+	@Test func screenTimeLastResignDateIsExcluded() {
+		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.screenTimeLastResignDate))
+	}
+
 	// MARK: - Sanity: the toggle counterpart to articleFullscreenAvailable
 	// IS included, so the exclusion above is a deliberate distinction,
 	// not a copy/paste of the wrong key name.
@@ -126,7 +142,10 @@ import Testing
 			AppDefaults.Key.articleFullscreenAvailable,
 			AppDefaults.Key.addFeedAccountID,
 			AppDefaults.Key.addFeedFolderPath,
-			AppDefaults.Key.addFolderAccountID
+			AppDefaults.Key.addFolderAccountID,
+			AppDefaults.Key.screenTimeRecurringBreakEndDate,
+			AppDefaults.Key.screenTimeSecondsSinceLastBreak,
+			AppDefaults.Key.screenTimeLastResignDate
 		]
 
 		// No overlap: nothing named as excluded above should also appear
@@ -146,7 +165,9 @@ import Testing
 			repositoryRoot.appendingPathComponent("iOS/ReadingStats/AppDefaults+ReadingStats.swift"),
 			repositoryRoot.appendingPathComponent("iOS/ScreenTime/AppDefaults+ScreenTime.swift")
 		]
-		let pattern = try Regex(#"static let \w+ = "([^"]+)""#)
+		// Regex literal (not `Regex(String)`) so the output is statically typed and
+		// `match.1` works. `\w+` excludes non-key constants such as `folderPathSeparator`.
+		let pattern = #/static let \w+ = "(\w+)"/#
 		var declaredKeys = Set<String>()
 		for file in sourceFiles {
 			let source = try String(contentsOf: file, encoding: .utf8)
@@ -163,7 +184,9 @@ import Testing
 			AppDefaults.Key.feedsHidingReadArticles, AppDefaults.Key.foldersShowingReadArticles,
 			AppDefaults.Key.splitViewPreferredDisplayMode, AppDefaults.Key.articleFullscreenAvailable,
 			AppDefaults.Key.addFeedAccountID, AppDefaults.Key.addFeedFolderPath,
-			AppDefaults.Key.addFolderAccountID
+			AppDefaults.Key.addFolderAccountID,
+			AppDefaults.Key.screenTimeRecurringBreakEndDate, AppDefaults.Key.screenTimeSecondsSinceLastBreak,
+			AppDefaults.Key.screenTimeLastResignDate
 		]
 		let accountedFor = excluded.union(AppDefaults.backupEligibleKeys)
 		#expect(declaredKeys == accountedFor, "Every AppDefaults.Key must be explicitly included or excluded. Missing: \(declaredKeys.subtracting(accountedFor)); unexpected: \(accountedFor.subtracting(declaredKeys))")
