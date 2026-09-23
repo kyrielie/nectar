@@ -10,6 +10,22 @@ Reads:
 Version fields come from environment variables, set by the workflow:
   VERSION, BUILD_VERSION, RELEASE_DATE, RELEASE_NOTES,
   DOWNLOAD_URL, SIZE_BYTES, MIN_OS_VERSION, MARKETING_VERSION_DISPLAY
+
+NOTES_ONLY_REFRESH ("true"/"false", default "false"): set by the workflow's
+`release` (edited) trigger, which re-runs this script without rebuilding the
+IPA. On that path, BUILD_VERSION/DOWNLOAD_URL/SIZE_BYTES/MIN_OS_VERSION/
+MARKETING_VERSION_DISPLAY are *recomputed* by the workflow from a fresh
+GITHUB_RUN_NUMBER and a fresh `xcodebuild -showBuildSettings`, but the IPA
+asset itself is untouched -- so trusting those recomputed values would let
+source.json's buildVersion drift past what's actually embedded in the
+already-published IPA (AltStore refuses to install when they disagree; see
+release.yml). When NOTES_ONLY_REFRESH is true and an existing entry for
+VERSION is already published, this script ignores the recomputed build
+metadata and carries the existing entry's buildVersion/downloadURL/size/
+minOSVersion/marketingVersion forward unchanged, updating only date and
+localizedDescription. If no existing entry for VERSION is found (first
+publish, or the tag's version genuinely changed), it falls back to the
+freshly computed values, since there is nothing yet to preserve.
 """
 import json
 import os
@@ -54,6 +70,7 @@ def main():
     # pair so releases are distinguishable in the AltStore/SideStore UI
     # without touching the shared NetNewsWire xcconfig.
     marketing_version_display = os.environ.get("MARKETING_VERSION_DISPLAY", "")
+    notes_only_refresh = os.environ.get("NOTES_ONLY_REFRESH", "false").lower() == "true"
 
     new_entry = {
         "version": version,
@@ -67,6 +84,33 @@ def main():
         new_entry["minOSVersion"] = min_os_version
     if marketing_version_display:
         new_entry["marketingVersion"] = marketing_version_display
+
+    if notes_only_refresh:
+        previous_entry = None
+        if existing is not None:
+            for app in existing.get("apps", []):
+                for v in app.get("versions", []):
+                    if v.get("version") == version:
+                        previous_entry = v
+                        break
+                if previous_entry is not None:
+                    break
+        if previous_entry is not None:
+            # A release-notes edit never rebuilds the IPA, so nothing about
+            # the shipped asset is allowed to change here -- only what a
+            # person actually edited (the notes) and when we noticed (date).
+            for key in ("buildVersion", "downloadURL", "size", "minOSVersion", "marketingVersion"):
+                if key in previous_entry:
+                    new_entry[key] = previous_entry[key]
+                else:
+                    new_entry.pop(key, None)
+        else:
+            print(
+                f"NOTES_ONLY_REFRESH=true but no existing published entry for version {version!r} "
+                "was found -- publishing freshly computed build metadata instead, since there is "
+                "nothing to preserve.",
+                file=sys.stderr,
+            )
 
     # Start from the existing published source (to keep version history),
     # falling back to the template on first publish.
