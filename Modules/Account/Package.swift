@@ -20,7 +20,8 @@ let package = Package(
 		.package(path: "../RSWeb"),
 		.package(path: "../RSParser"),
 		.package(path: "../RSCore"),
-		.package(path: "../RSDatabase")
+		.package(path: "../RSDatabase"),
+		.package(path: "../AO3Kit")
 	],
 	targets: [
 		.target(
@@ -35,7 +36,8 @@ let package = Package(
 				"ArticlesDatabase",
 				"ErrorLog",
 				"FeedFinder",
-				"SyncDatabase"
+				"SyncDatabase",
+				"AO3Kit"
 			],
 			swiftSettings: [
 				.enableUpcomingFeature("NonisolatedNonsendingByDefault"),

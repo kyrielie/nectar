@@ -1,3 +1,4 @@
+import AO3Kit
 //
 //  AO3ChallengeSolverViewController.swift
 //  NetNewsWire-iOS

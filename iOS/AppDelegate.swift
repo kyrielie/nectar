@@ -12,6 +12,8 @@ import os
 import RSCore
 import RSWeb
 import Account
+import AO3Kit
+import RSParser
 import Articles
 import ErrorLog
 import Images
@@ -82,6 +84,7 @@ import BackupRestore
 			await WebViewConfiguration.compileContentBlockingRules()
 		}
 		AppDefaults.registerDefaults()
+		AO3FeedExtensionPoint.provider = AO3FeedExtension()
 		// Guarded the same way LocalAccountDelegate/Downloader/ErrorLogDatabase
 		// already guard their own real side effects during tests (see
 		// Platform.isRunningUnitTests). Without this, the test host's own

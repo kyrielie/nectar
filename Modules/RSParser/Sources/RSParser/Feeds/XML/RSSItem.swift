@@ -78,7 +78,7 @@ final class RSSItem {
 		// `language` is nil for every real AO3 entry and this ordering never
 		// discards a value that would otherwise have been used -- it only
 		// matters for a hypothetical AO3 entry that also set xml:lang.
-		if let s = summary, !s.isEmpty, let result = AO3SummaryExtractor.extract(fromSummaryHTML: s) {
+		if let s = summary, !s.isEmpty, let result = AO3FeedExtensionPoint.provider?.extractedItem(fromSummaryHTML: s, permalink: permalink, language: language) {
 			return ParsedItem(
 				syncServiceID: nil,
 				uniqueID: uniqueID,
@@ -110,7 +110,7 @@ final class RSSItem {
 				warnings: result.warnings,
 				categories: result.categories,
 				series: result.series,
-				ao3WorkID: AO3SummaryExtractor.ao3WorkID(fromPermalink: permalink)
+				ao3WorkID: result.ao3WorkID
 			)
 		}
 

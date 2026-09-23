@@ -18,6 +18,8 @@ npm install
 npm test
 ```
 
+The same suite runs in CI on every pull request and push to `main`.
+
 ## What's here
 
 - `annotations/` — tests for `Shared/Article Rendering/annotations.js`,

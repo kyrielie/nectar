@@ -60,6 +60,10 @@ packages:
     path: Modules/SyncDatabase
   Articles:
     path: Modules/Articles
+  AnnotationsKit:
+    path: Modules/AnnotationsKit
+  AO3Kit:
+    path: Modules/AO3Kit
   ArticlesDatabase:
     path: Modules/ArticlesDatabase
   Account:
@@ -100,6 +104,10 @@ targets:
       - package: ErrorLog
         embed: true
       - package: Articles
+        embed: true
+      - package: AnnotationsKit
+        embed: true
+      - package: AO3Kit
         embed: true
       - package: ArticlesDatabase
         embed: true
@@ -177,6 +185,8 @@ targets:
     dependencies:
       - target: Nectar-iOS
       - package: Articles
+      - package: AnnotationsKit
+      - package: AO3Kit
       - package: Account
       - package: RSCore
       - package: HexColor

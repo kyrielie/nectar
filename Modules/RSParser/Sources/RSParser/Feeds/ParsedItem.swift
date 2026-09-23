@@ -119,6 +119,8 @@ public struct ParsedItem: Hashable, Sendable {
 	/// precedence exists specifically to survive Calibre re-imports and late
 	/// AO3 extraction without treating either as a new article.
 	public var bookKey: String {
+		// Required parity gate: BookKeySQLParityTests. Changes to this
+		// implementation require running that test.
 		// Routes on ao3SeriesID's presence, not isAnthology -- an
 		// Ambrosia series-group item (multiple Calibre books sharing an
 		// AO3 series, merged at request time) sets ao3SeriesID but never

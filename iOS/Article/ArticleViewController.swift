@@ -1177,6 +1177,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 
 		let listView = AnnotationsListView(account: account, scope: .everything, onClose: { [weak self] in
 			self?.navigationController?.popViewController(animated: true)
+		}, onDeleteAnnotation: { [weak self] annotation in
+			self?.revertAnnotationDOMIfCurrentlyOpen(annotation)
 		}, onNavigateToAnnotation: { [weak self] annotation in
 			self?.navigateToAnnotation(annotation, account: account)
 		})
@@ -1189,6 +1191,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 
 		let listView = AnnotationsListView(account: account, scope: .chapter(articleID: article.articleID, bookKey: article.bookKey), title: article.title, onClose: { [weak self] in
 			self?.navigationController?.popViewController(animated: true)
+		}, onDeleteAnnotation: { [weak self] annotation in
+			self?.revertAnnotationDOMIfCurrentlyOpen(annotation)
 		}, onNavigateToAnnotation: { [weak self] annotation in
 			self?.navigateToAnnotation(annotation, account: account)
 		})
@@ -1275,6 +1279,12 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			self.currentWebViewController?.scrollToAnnotation(annotationID: annotation.annotationID)
 			self.navigationController?.popViewController(animated: true)
 		}
+	}
+
+	func revertAnnotationDOMIfCurrentlyOpen(_ annotation: Annotation) {
+		guard let currentArticle = article,
+			currentArticle.articleID == annotation.articleID else { return }
+		currentWebViewController?.revertOrUnwrapAnnotationDOM(annotation)
 	}
 
 	/// Anchors the share popover to whichever UIBarButtonItem was

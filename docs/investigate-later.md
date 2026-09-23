@@ -120,3 +120,11 @@ and the Settings/MainFeed/MainTimeline/Article view controllers, since
 none of the current docs describe any iPad-specific layout path. If it's
 explicitly out of scope, consider setting `TARGETED_DEVICE_FAMILY = 1`
 so the build configuration matches reality.
+## Annotation offset drift after deletion
+
+Deleting an annotation reverts or unwraps its live DOM row before removing the
+database record. Existing later rows can still have offsets captured against
+the pre-deletion article text; re-rendering/re-anchoring handles many cases,
+but offset drift after a sequence of edits and deletions remains an open
+investigation. Do not treat the deletion callback as a complete offset-shift
+solution.
