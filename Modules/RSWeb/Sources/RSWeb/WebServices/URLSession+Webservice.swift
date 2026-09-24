@@ -52,8 +52,7 @@ nonisolated extension URLSession {
 			sessionConfiguration.httpAdditionalHeaders = userAgentHeaders
 		}
 
-		// Not intercepted during a `-UITestSeedDemoData` screenshot run (see DownloadSession).
-		if Platform.isRunningUnitTests && !Platform.isUITestingWithSeedDemoData {
+		if Platform.isRunningUnitTests || Platform.isUITestingWithSeedDemoData {
 			sessionConfiguration.protocolClasses = [TestingURLProtocol.self]
 		}
 

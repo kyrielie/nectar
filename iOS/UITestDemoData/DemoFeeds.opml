@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <opml version="1.1">
 <head>
-	<title>Nectar Screenshot Demo Feed</title>
+	<title>Nectar UI Test Demo Feeds</title>
 </head>
 <body>
-	<outline text="Nectar Demo Reading List" title="Nectar Demo Reading List" description="" type="rss" version="RSS" htmlUrl="https://kyrielie.github.io/nectar/" xmlUrl="https://kyrielie.github.io/nectar/demo-feeds/feed.json"/>
+	<outline text="Star Trek: The Original Series" title="Star Trek: The Original Series" description="" type="rss" version="RSS" htmlUrl="" xmlUrl="https://starlog-archive.invalid/tags/tos-academy-days/feed.atom"/>
+	<outline text="Star Trek: The Next Generation" title="Star Trek: The Next Generation" description="" type="rss" version="RSS" htmlUrl="" xmlUrl="https://starlog-archive.invalid/tags/tng-diplomatic-corps/feed.atom"/>
+	<outline text="Star Trek: Deep Space Nine" title="Star Trek: Deep Space Nine" description="" type="rss" version="RSS" htmlUrl="" xmlUrl="https://starlog-archive.invalid/tags/ds9-promenade-life/feed.atom"/>
+	<outline text="My Library" title="My Library" description="" type="rss" version="RSS" htmlUrl="" xmlUrl="https://starlog-archive.invalid/feed/collection/personal-shelf.json"/>
 </body>
 </opml>
