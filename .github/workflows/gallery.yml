@@ -3,7 +3,8 @@ name: Publish site (landing page and theme gallery)
 # Builds landing/ and gallery/ and publishes them to the gh-pages branch:
 #   landing page  -> /index.html
 #   theme gallery -> /themes/
-#   demo feed     -> /demo-feeds/feed.json  (screenshots only, see docs/ui-test-demo-data.md)
+#   demo feed     -> /demo-feeds/feed.json  (manually-added feed for Simulator use, not part of
+#                    the automated screenshot flow -- see docs/ui-test-demo-data.md)
 # alongside the AltStore source.json, icon.png and screenshots/ that release.yml
 # already publishes there. Only index.html, themes/ and demo-feeds/ are touched, so
 # those other files are never clobbered.
