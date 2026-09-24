@@ -44,7 +44,7 @@ task**, not this whole index cover-to-cover.
 - **Favicon / page metadata extraction** → `metadata-extraction.md`
 - **"What differs from upstream NetNewsWire"** → `upstream-drift.md`
 - **A recurring Auto Layout / UIKit console warning** (before re-investigating one from scratch) → `console-warnings.md`
-- **`fastlane snapshot` screenshots, hosted demo feed, `-UITestSeedDemoData`** → `ui-test-demo-data.md`
+- **`fastlane snapshot` screenshots, offline UI-test demo data, `-UITestSeedDemoData`** → `ui-test-demo-data.md`
 - **An open question that used to have temporary debug logging attached to it** → `investigate-later.md`
 
 If nothing above fits, grep the codebase before assuming it's
