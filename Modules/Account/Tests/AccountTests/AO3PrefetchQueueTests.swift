@@ -10,9 +10,11 @@
 //  AO3ChapterFetcher.shared -- every test calls resetForTesting() in
 //  setUp/tearDown so pending/countThisCycle/pacing don't leak between
 //  tests depending on run order, and every fixture Article below uses a
-//  unique workID per call for the same reason AO3ChapterFetcherTests'
-//  makeArticle does (AO3ChapterFetcher.shared.attemptDates is keyed by
-//  articleID and is itself a process-lifetime singleton).
+//  unique workID per call (see uniqueWorkID() -- digits-only, since
+//  AO3Link.workURL rejects anything else) for the same reason
+//  AO3ChapterFetcherTests' makeArticle does (AO3ChapterFetcher.shared.
+//  attemptDates is keyed by articleID and is itself a process-lifetime
+//  singleton).
 //
 //  Real pacing (AO3ChapterFetcher.secondsBetweenAO3PagedRequests, 5s)
 //  would make the budget-cap tests below take well over a minute, so
@@ -22,6 +24,7 @@
 //
 
 import XCTest
+import os
 import RSWeb
 import Articles
 @testable import Account
@@ -49,7 +52,7 @@ final class AO3PrefetchQueueTests: XCTestCase {
 	/// that a real request went out.
 	func testEnqueueFetchesEachArticle() async throws {
 		await AO3PrefetchQueue.shared.setPacingIntervalForTesting(0.01)
-		let workIDs = (1...3).map { _ in "prefetch-\(UUID().uuidString)" }
+		let workIDs = (1...3).map { _ in Self.uniqueWorkID() }
 		let articles = workIDs.map { Self.makeArticle(ao3WorkID: $0) }
 
 		await AO3PrefetchQueue.shared.enqueue(articles)
@@ -81,7 +84,7 @@ final class AO3PrefetchQueueTests: XCTestCase {
 
 	func testEnqueueBeyondBudgetDropsRemainderInSameCycle() async throws {
 		await AO3PrefetchQueue.shared.setPacingIntervalForTesting(0.001)
-		let articles = (1...25).map { _ in Self.makeArticle(ao3WorkID: "prefetch-\(UUID().uuidString)") }
+		let articles = (1...25).map { _ in Self.makeArticle(ao3WorkID: Self.uniqueWorkID()) }
 
 		await AO3PrefetchQueue.shared.enqueue(articles)
 		try await Self.waitUntilDrained()
@@ -94,14 +97,14 @@ final class AO3PrefetchQueueTests: XCTestCase {
 
 	func testResetForNewRefreshCycleRenewsBudget() async throws {
 		await AO3PrefetchQueue.shared.setPacingIntervalForTesting(0.001)
-		let firstBatch = (1...20).map { _ in Self.makeArticle(ao3WorkID: "prefetch-\(UUID().uuidString)") }
+		let firstBatch = (1...20).map { _ in Self.makeArticle(ao3WorkID: Self.uniqueWorkID()) }
 		await AO3PrefetchQueue.shared.enqueue(firstBatch)
 		try await Self.waitUntilDrained()
 		var count = await AO3PrefetchQueue.shared.countThisCycleForTesting()
 		XCTAssertEqual(count, 20)
 
 		// A 21st article in the same cycle should be dropped -- budget's exhausted.
-		let overflowArticle = Self.makeArticle(ao3WorkID: "prefetch-\(UUID().uuidString)")
+		let overflowArticle = Self.makeArticle(ao3WorkID: Self.uniqueWorkID())
 		await AO3PrefetchQueue.shared.enqueue([overflowArticle])
 		try await Self.waitUntilDrained()
 		XCTAssertFalse(TestingURLProtocol.requestedURLs.contains {
@@ -114,7 +117,7 @@ final class AO3PrefetchQueueTests: XCTestCase {
 		count = await AO3PrefetchQueue.shared.countThisCycleForTesting()
 		XCTAssertEqual(count, 0)
 
-		let secondCycleArticle = Self.makeArticle(ao3WorkID: "prefetch-\(UUID().uuidString)")
+		let secondCycleArticle = Self.makeArticle(ao3WorkID: Self.uniqueWorkID())
 		await AO3PrefetchQueue.shared.enqueue([secondCycleArticle])
 		try await Self.waitUntilDrained()
 		count = await AO3PrefetchQueue.shared.countThisCycleForTesting()
@@ -139,6 +142,25 @@ final class AO3PrefetchQueueTests: XCTestCase {
 			try await Task.sleep(nanoseconds: 5_000_000)
 		}
 		XCTFail("AO3PrefetchQueue did not finish draining within \(timeout)s")
+	}
+
+	/// AO3Link.workURL(id:...) requires an ASCII-digits-only id (see
+	/// AO3LinkTests.buildersRejectMalformedIDs) -- a bare UUID string won't
+	/// build a URL at all (its hyphens and hex letters fail the digits-only
+	/// guard), which silently short-circuits AO3ChapterFetcher.download
+	/// before any request goes out. A monotonically increasing counter
+	/// gives each fixture article a unique digits-only workID without
+	/// that problem; the counter isn't reset between tests, so ids stay
+	/// unique across this whole test run the same way the UUID-based
+	/// articleID/uniqueID fields above do.
+	private static let workIDCounter = OSAllocatedUnfairLock(initialState: 0)
+
+	private static func uniqueWorkID() -> String {
+		let next = workIDCounter.withLock { count -> Int in
+			count += 1
+			return count
+		}
+		return "900000\(next)"
 	}
 
 	private static func makeArticle(ao3WorkID: String?, bookKeyOverride: String? = nil) -> Article {

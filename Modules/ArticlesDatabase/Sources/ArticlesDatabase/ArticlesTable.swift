@@ -416,6 +416,10 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			// afterward for whichever articleIDs need it true).
 			var bookKeysByArticleID = [String: String]()
 			for parsedItem in parsedItems {
+				// TEMPORARY -- diagnostic instrumentation for the seeded-demo-data
+				// / starlog-archive.invalid AO3 fetch investigation. Remove once
+				// root cause is confirmed. See docs/ao3-link.md, ui-test-demo-data.md.
+				Self.logger.debug("writing bookKey=\(parsedItem.bookKey, privacy: .public) for uniqueID=\(parsedItem.uniqueID, privacy: .public) permalink=\(parsedItem.url ?? "nil", privacy: .public)")
 				bookKeysByArticleID[parsedItem.articleID(feedID: feedID)] = parsedItem.bookKey
 			}
 			let bookStateByBookKey = self.bookStateTable.state(for: Set(bookKeysByArticleID.values), database)
