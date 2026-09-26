@@ -145,7 +145,7 @@ extension AO3ChallengeSolverViewController: WKNavigationDelegate {
 				return
 			}
 
-			let ao3Cookies = cookies.filter { $0.domain.contains("archiveofourown.org") }
+			let ao3Cookies = cookies.filter { AO3Link.isAO3CookieDomain($0.domain) }
 			guard !ao3Cookies.isEmpty else {
 				// Landed on a non-challenge page but got no cookies at all
 				// -- treat as not actually cleared rather than storing an

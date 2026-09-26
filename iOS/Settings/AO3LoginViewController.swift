@@ -96,7 +96,7 @@ extension AO3LoginViewController: WKNavigationDelegate {
 		// on success. If AO3 ever keeps someone on /users/login after a
 		// genuinely successful sign-in (a client-side redirect, an
 		// interstitial page), this check needs revisiting.
-		guard url.host?.contains("archiveofourown.org") == true, url.path != "/users/login" else {
+		guard AO3Link.isAO3Host(url), url.path != "/users/login" else {
 			return
 		}
 
@@ -110,7 +110,7 @@ extension AO3LoginViewController: WKNavigationDelegate {
 				return
 			}
 
-			let ao3Cookies = cookies.filter { $0.domain.contains("archiveofourown.org") }
+			let ao3Cookies = cookies.filter { AO3Link.isAO3CookieDomain($0.domain) }
 			guard !ao3Cookies.isEmpty else {
 				// Reached a non-login-page URL but got no cookies at all --
 				// treat as not actually signed in rather than storing an

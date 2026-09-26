@@ -67,13 +67,13 @@ public enum AO3SeriesListingExtractor {
 		      let titleAnchor = firstDescendant(of: headingH4, where: { $0.tag == "a" }) else {
 			return nil
 		}
-		return absoluteURL(titleAnchor.attributes["href"])
+		return AO3Link.absoluteURL(titleAnchor.attributes["href"])
 	}
 
 	/// One entry per work row on this page, in document order (ascending
 	/// Part order -- see header comment), whether AO3's own `li.next`
 	/// pagination widget shows a further page, and the widget's total page
-	/// count when present. Reuses `isWorkRow`/`absoluteURL` above (same
+	/// count when present. Reuses `isWorkRow` above and `AO3Link.absoluteURL` (same
 	/// row/link shape `firstWorkPermalink` already validated) rather than
 	/// a separate selector, and reuses `AO3SearchResultsExtractor`'s own
 	/// row-metadata helpers for the richer fields below -- the two listing
@@ -88,7 +88,7 @@ public enum AO3SeriesListingExtractor {
 			guard let workID = workID(fromLI: li) else { return nil }
 			guard let headingH4 = firstDescendant(of: li, where: { $0.tag == "h4" && classTokens(of: $0).contains("heading") }),
 			      let titleAnchor = firstDescendant(of: headingH4, where: { $0.tag == "a" }),
-			      let permalink = absoluteURL(titleAnchor.attributes["href"]) else {
+			      let permalink = AO3Link.absoluteURL(titleAnchor.attributes["href"]) else {
 				return nil
 			}
 			let title = flattenedText(titleAnchor)
@@ -167,9 +167,5 @@ private extension AO3SeriesListingExtractor {
 
 	static func classTokens(of element: HTMLLiteElement) -> [String] {
 		AO3HTMLHelpers.classTokens(of: element)
-	}
-
-	static func absoluteURL(_ href: String?) -> String? {
-		AO3HTMLHelpers.absoluteURL(href)
 	}
 }

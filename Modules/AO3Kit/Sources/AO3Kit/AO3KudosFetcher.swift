@@ -27,6 +27,11 @@ public enum AO3KudosFetcher {
 	// pattern in the console, regardless of which code path fired it.
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Nectar", category: "AO3KudosFetcher")
 
+	/// Uses `URLSession(configuration:delegate:delegateQueue:)`, not the
+	/// plain `URLSession(configuration:)` this had before, so
+	/// `AO3CredentialRedirectGuard` can block a redirect off an AO3
+	/// credential host from resending the hand-attached Cookie header
+	/// (D6) -- see that type's own header comment.
 	private static func makeSession() -> URLSession {
 		let configuration = URLSessionConfiguration.ephemeral
 		configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
@@ -36,7 +41,7 @@ public enum AO3KudosFetcher {
 		if let userAgentHeaders = UserAgent.headers() {
 			configuration.httpAdditionalHeaders = userAgentHeaders
 		}
-		return URLSession(configuration: configuration)
+		return URLSession(configuration: configuration, delegate: AO3CredentialRedirectGuard(), delegateQueue: nil)
 	}
 
 	/// Posts a kudos for `workID` using `csrfToken`, attaching

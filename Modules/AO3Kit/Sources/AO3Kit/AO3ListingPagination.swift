@@ -1,6 +1,6 @@
 //
 //  AO3ListingPagination.swift
-//  RSParser
+//  AO3Kit
 //
 //  Inline-series-navigation plan, Phase 4a: `AO3SeriesListingExtractor`
 //  needs the same "is there another page?" check

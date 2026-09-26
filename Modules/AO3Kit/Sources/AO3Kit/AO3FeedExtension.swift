@@ -1,3 +1,4 @@
+import Foundation
 import RSParser
 
 public struct AO3FeedExtension: AO3FeedItemExtending {
@@ -20,7 +21,17 @@ public struct AO3FeedExtension: AO3FeedItemExtending {
 			relationships: result.relationships,
 			additionalTags: result.additionalTags,
 			series: result.series,
-			ao3WorkID: AO3SummaryExtractor.ao3WorkID(fromPermalink: permalink))
+			ao3WorkID: Self.ao3WorkID(fromPermalink: permalink))
+	}
+
+	/// The work id, but only when `permalink` is on one of AO3's own hosts
+	/// (`AO3Link.recognizedHosts`). A work id becomes an `ao3-work:` bookKey
+	/// that `AO3ChapterFetcher` turns into a live request to
+	/// archiveofourown.org. Without the host check, an AO3-shaped feed entry
+	/// from any other host (a mirror, a proxy, a test fixture) would trigger
+	/// a fetch of whichever real work happens to share that number.
+	private static func ao3WorkID(fromPermalink permalink: String?) -> String? {
+		AO3Link.workID(fromPermalink: permalink)
 	}
 
 	public func shouldExclude(_ item: ParsedItem) -> Bool {

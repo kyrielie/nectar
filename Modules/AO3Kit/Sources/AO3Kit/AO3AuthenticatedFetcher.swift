@@ -1,6 +1,6 @@
 //
 //  AO3AuthenticatedFetcher.swift
-//  Account
+//  AO3Kit
 //
 //  Nectar AO3 direct-reading support, Workstream 3 ("optional AO3 login").
 //
@@ -38,6 +38,11 @@ public enum AO3AuthenticatedFetcher {
 	/// Not a stored singleton -- this fetcher is used at most once per
 	/// AO3ChapterFetcher retry, so there's no benefit to keeping a
 	/// long-lived URLSession around between calls, unlike Downloader.
+	/// Uses `URLSession(configuration:delegate:delegateQueue:)`, not the
+	/// plain `URLSession(configuration:)` this had before, so
+	/// `AO3CredentialRedirectGuard` can block a redirect off an AO3
+	/// credential host from resending the hand-attached Cookie header
+	/// (D6) -- see that type's own header comment.
 	private static func makeSession() -> URLSession {
 		let configuration = URLSessionConfiguration.ephemeral
 		configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
@@ -47,7 +52,17 @@ public enum AO3AuthenticatedFetcher {
 		if let userAgentHeaders = UserAgent.headers() {
 			configuration.httpAdditionalHeaders = userAgentHeaders
 		}
-		return URLSession(configuration: configuration)
+		return URLSession(configuration: configuration, delegate: AO3CredentialRedirectGuard(), delegateQueue: nil)
+	}
+
+	/// Whether `url` may be sent the stored AO3 session's Cookie header --
+	/// the host/scheme gate half of D6, checked first in `fetch` so a
+	/// caller-supplied URL that somehow isn't a credential host never gets
+	/// this far. Separate, unit-testable function (no network needed) so
+	/// this and `AO3CredentialRedirectGuard`'s later per-redirect check are
+	/// provably the same decision.
+	public static func shouldSendSession(to url: URL) -> Bool {
+		AO3Link.mayReceiveSession(url)
 	}
 
 	/// Fetches `url` with the stored AO3 session's Cookie header attached.
@@ -55,6 +70,10 @@ public enum AO3AuthenticatedFetcher {
 	/// the same as any other unsatisfied `.registrationRequired`, not as an
 	/// error.
 	public static func fetch(_ url: URL) async throws -> (data: Data, response: HTTPURLResponse)? {
+		guard shouldSendSession(to: url) else {
+			logger.debug("Refusing to send AO3 session cookie: \(url.absoluteString, privacy: .public) is not a credential host")
+			return nil
+		}
 		guard let cookieHeaderValue = AO3SessionStore.cookieHeaderValue else {
 			return nil
 		}

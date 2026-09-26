@@ -221,7 +221,7 @@ public enum AO3SeriesNavigator {
 		case .first:
 			knownTargetWorkID = nil
 		case .previous, .next:
-			guard let targetWorkURL, let workID = AO3SummaryExtractor.ao3WorkID(fromPermalink: targetWorkURL) else {
+			guard let targetWorkURL, let workID = AO3Link.workID(fromPermalink: targetWorkURL) else {
 				return .failure(.noAdjacentWork)
 			}
 			knownTargetWorkID = workID
@@ -302,8 +302,8 @@ public enum AO3SeriesNavigator {
 		// lives under existingArticle.feedID, and the reader's "which
 		// feed is this series in" model assumes that) rather than
 		// navigating the reader to the other feed directly.
-		if let knownTargetWorkID, existingByWorkID[knownTargetWorkID] == nil {
-			let crossFeedMatches = await account.fetchArticlesAsync(bookKeys: [AO3ChapterFetcher.bookKey(forWorkID: knownTargetWorkID)])
+		if let knownTargetWorkID, existingByWorkID[knownTargetWorkID] == nil, let workBookKey = AO3Link.workBookKey(forWorkID: knownTargetWorkID) {
+			let crossFeedMatches = await account.fetchArticlesAsync(bookKeys: [workBookKey])
 			// Prefer whichever cross-feed copy actually has content, same
 			// self-healing precedent existingArticlesByWorkID's own dedup
 			// already uses for an in-feed duplicate.
@@ -551,11 +551,7 @@ private extension AO3SeriesNavigator {
 	/// it were real series-listing content for
 	/// `AO3SeriesListingExtractor` to misparse.
 	static func fetchListingPage(ao3SeriesID: String, page: Int) async -> String? {
-		var urlString = "https://archiveofourown.org/series/\(ao3SeriesID)"
-		if page > 1 {
-			urlString += "?page=\(page)"
-		}
-		guard let url = URL(string: urlString) else {
+		guard let url = AO3Link.seriesURL(id: ao3SeriesID, page: page) else {
 			return nil
 		}
 
@@ -781,6 +777,13 @@ private extension AO3SeriesNavigator {
 	/// re-querying the database afterward, since `articleID` is known
 	/// up front either way.
 	static func downloadAndAwait(workID: String, existingArticleID: String?, feedID: String, account: Account) async -> Result<String, AO3SeriesNavigationError> {
+		// AO3ChapterFetcher.download returns without posting either
+		// notification when it can't build a URL for the id, which would
+		// leave the continuation below waiting forever -- so refuse a
+		// malformed id up front.
+		guard let workURL = AO3Link.workURL(id: workID) else {
+			return .failure(.noAdjacentWork)
+		}
 		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: downloadAndAwait starting, workID=\(workID, privacy: .public) existingArticleID=\(existingArticleID ?? "nil", privacy: .public)")
 		let articleID: String
 		if let existingArticleID {
@@ -801,7 +804,7 @@ private extension AO3SeriesNavigator {
 			// irrelevant within moments anyway, since the real fetch this
 			// function awaits immediately overwrites both via
 			// rebuildParsedItem.
-			_ = await account.updateAsync(feedID: feedID, parsedItems: [placeholderStub(workID: workID, permalink: "https://archiveofourown.org/works/\(workID)", title: String(format: NSLocalizedString("AO3 Work %@", comment: "Series-navigation placeholder title, before the work is fetched"), workID), feedID: feedID)], deleteOlder: false)
+			_ = await account.updateAsync(feedID: feedID, parsedItems: [placeholderStub(workID: workID, permalink: workURL.absoluteString, title: String(format: NSLocalizedString("AO3 Work %@", comment: "Series-navigation placeholder title, before the work is fetched"), workID), feedID: feedID)], deleteOlder: false)
 		}
 
 		return await withCheckedContinuation { continuation in

@@ -588,7 +588,7 @@ private extension AO3ChapterHTMLExtractor {
 		return Set(authorAnchors.compactMap { anchor -> ParsedAuthor? in
 			let name = flattenedText(anchor).trimmingCharacters(in: .whitespacesAndNewlines)
 			guard !name.isEmpty else { return nil }
-			return ParsedAuthor(name: name, url: absoluteURL(anchor.attributes["href"]), avatarURL: nil, emailAddress: nil)
+			return ParsedAuthor(name: name, url: AO3Link.absoluteURL(anchor.attributes["href"]), avatarURL: nil, emailAddress: nil)
 		})
 	}
 
@@ -944,7 +944,7 @@ private extension AO3ChapterHTMLExtractor {
 				prefix = ""
 			}
 
-			let ao3ID = seriesID(fromHref: anchor.attributes["href"])
+			let ao3ID = AO3Link.seriesID(fromHref: anchor.attributes["href"])
 			// "Part <N> of " -- same regex-free digit scan as the prefix
 			// text itself, since fullText already has it isolated. A work
 			// reached only via a refetch of an *existing* article carries
@@ -960,10 +960,10 @@ private extension AO3ChapterHTMLExtractor {
 			var previousWorkURL: String?
 			var nextWorkURL: String?
 			if let previousAnchor = firstDescendant(of: span, where: { $0.tag == "a" && $0.attributes["class"] == "previous" }) {
-				previousWorkURL = absoluteURL(previousAnchor.attributes["href"])
+				previousWorkURL = AO3Link.absoluteURL(previousAnchor.attributes["href"])
 			}
 			if let nextAnchor = firstDescendant(of: span, where: { $0.tag == "a" && $0.attributes["class"] == "next" }) {
-				nextWorkURL = absoluteURL(nextAnchor.attributes["href"])
+				nextWorkURL = AO3Link.absoluteURL(nextAnchor.attributes["href"])
 			}
 
 			let entry = ParsedSeriesEntry(name: name, index: index, ao3ID: ao3ID, previousWorkURL: previousWorkURL, nextWorkURL: nextWorkURL)
@@ -987,18 +987,6 @@ private extension AO3ChapterHTMLExtractor {
 		let indexString = text[text.index(text.startIndex, offsetBy: "Part ".count)..<ofRange.lowerBound]
 			.trimmingCharacters(in: .whitespacesAndNewlines)
 		return Int(indexString)
-	}
-
-	/// Shared with `AO3SearchResultsExtractor`/`AO3SummaryExtractor` via
-	/// `AO3HTMLHelpers.seriesID(fromHref:)`.
-	static func seriesID(fromHref href: String?) -> String? {
-		AO3HTMLHelpers.seriesID(fromHref: href)
-	}
-
-	/// Shared with `AO3SearchResultsExtractor`/`AO3SeriesListingExtractor`
-	/// via `AO3HTMLHelpers.absoluteURL(_:)`.
-	static func absoluteURL(_ href: String?) -> String? {
-		AO3HTMLHelpers.absoluteURL(href)
 	}
 
 	/// `element.children` filtered down to just the `.element` nodes, in

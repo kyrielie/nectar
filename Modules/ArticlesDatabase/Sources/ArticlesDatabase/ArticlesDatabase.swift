@@ -339,7 +339,7 @@ public struct ArticleStorageInfo: Sendable {
 			let seriesGroupUniqueIDPrefix = "ambrosia-series-ao3:"
 			database.executeStatements("""
 				INSERT OR IGNORE INTO bookState (bookKey, read, starred, loved, scrollPosition, readingProgress, lastOpenedAt, updatedAt, kudosAttemptedAt, kudosAttemptedAuthenticated)
-				SELECT 'ao3-series:' || substr(a.uniqueID, \(seriesGroupUniqueIDPrefix.count + 1)), b.read, b.starred, b.loved, b.scrollPosition, b.readingProgress, b.lastOpenedAt, b.updatedAt, b.kudosAttemptedAt, b.kudosAttemptedAuthenticated
+				SELECT '\(BookKeyPrefix.ao3Series)' || substr(a.uniqueID, \(seriesGroupUniqueIDPrefix.count + 1)), b.read, b.starred, b.loved, b.scrollPosition, b.readingProgress, b.lastOpenedAt, b.updatedAt, b.kudosAttemptedAt, b.kudosAttemptedAuthenticated
 				FROM articles a
 				JOIN bookState b ON b.bookKey = a.uniqueID
 				WHERE a.isAmbrosiaItem = 1 AND a.bookKey = a.uniqueID AND a.uniqueID LIKE '\(seriesGroupUniqueIDPrefix)%';
@@ -349,7 +349,7 @@ public struct ArticleStorageInfo: Sendable {
 				  WHERE a.isAmbrosiaItem = 1 AND a.bookKey = a.uniqueID AND a.uniqueID LIKE '\(seriesGroupUniqueIDPrefix)%'
 				);
 
-				UPDATE articles SET bookKey = 'ao3-series:' || substr(uniqueID, \(seriesGroupUniqueIDPrefix.count + 1))
+				UPDATE articles SET bookKey = '\(BookKeyPrefix.ao3Series)' || substr(uniqueID, \(seriesGroupUniqueIDPrefix.count + 1))
 				WHERE isAmbrosiaItem = 1 AND bookKey = uniqueID AND uniqueID LIKE '\(seriesGroupUniqueIDPrefix)%';
 				""")
 
