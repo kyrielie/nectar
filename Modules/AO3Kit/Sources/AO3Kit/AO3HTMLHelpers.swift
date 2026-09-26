@@ -1,6 +1,6 @@
 //
 //  AO3HTMLHelpers.swift
-//  RSParser
+//  AO3Kit
 //
 //  Shared, non-public helpers for the AO3 HTML extractor cluster
 //  (AO3SearchResultsExtractor, AO3SeriesListingExtractor,
@@ -22,23 +22,6 @@ import Foundation
 import RSParser
 
 enum AO3HTMLHelpers {
-
-	static let baseURL = "https://archiveofourown.org"
-
-	/// Resolves a possibly-relative AO3 `href` to an absolute URL. Already
-	/// absolute (`http(s)://`) hrefs pass through unchanged.
-	static func absoluteURL(_ href: String?) -> String? {
-		guard let href, !href.isEmpty else {
-			return nil
-		}
-		if href.hasPrefix("http://") || href.hasPrefix("https://") {
-			return href
-		}
-		if href.hasPrefix("/") {
-			return baseURL + href
-		}
-		return baseURL + "/" + href
-	}
 
 	/// `element`'s `class` attribute split on whitespace into individual
 	/// class tokens.
@@ -82,20 +65,6 @@ enum AO3HTMLHelpers {
 			return false
 		}
 		return workID(fromLI: element) != nil
-	}
-
-	/// AO3's `<a href="/works/<id>">`-style permalink -> series id, used
-	/// for anthology/combined-series `bookKey` resolution. Shared across
-	/// all three sites that need to pull a series id off a link
-	/// (search-results author metadata, chapter-page series links, and
-	/// AO3SummaryExtractor's parsed `<dl>` fields).
-	static func seriesID(fromHref href: String?) -> String? {
-		guard let href, let range = href.range(of: "/series/") else {
-			return nil
-		}
-		let rest = href[range.upperBound...]
-		let digits = rest.prefix { $0.isNumber }
-		return digits.isEmpty ? nil : String(digits)
 	}
 
 	/// Registration-required login wall: `div#signin` present AND

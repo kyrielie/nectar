@@ -38,6 +38,17 @@ final class AO3KudosRequestTests: XCTestCase {
 		XCTAssertEqual(request.value(forHTTPHeaderField: "Cookie"), "_otwarchive_session=abc")
 	}
 
+	func testMakeRequestRefererComesFromAO3Link() {
+		let request = AO3KudosRequest.makeRequest(workID: "12345", csrfToken: "t", cookieHeaderValue: nil)
+		XCTAssertEqual(request.value(forHTTPHeaderField: "referer"), AO3Link.workReferer(id: "12345"))
+		XCTAssertEqual(request.url, AO3Link.kudosURL)
+	}
+
+	func testMakeRequestOmitsRefererForMalformedWorkID() {
+		let request = AO3KudosRequest.makeRequest(workID: "1?x=1", csrfToken: "t", cookieHeaderValue: nil)
+		XCTAssertNil(request.value(forHTTPHeaderField: "referer"))
+	}
+
 	// MARK: - outcome(statusCode:data:)
 
 	func testOutcomeSuccess() {

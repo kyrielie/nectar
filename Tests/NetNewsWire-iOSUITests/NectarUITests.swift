@@ -30,7 +30,9 @@ final class NectarUITests: XCTestCase {
 	// import app-target code -- see docs/ui-test-demo-data.md.
 	private static let timelineFeedName = "Star Trek: The Original Series"
 	private static let libraryFeedName = "My Library"
-	private static let timelineFeedSeededArticleCount = 7
+	// Sorts first in the timeline: highest `updated` timestamp among
+	// tos-academy-days.atom's 7 entries (see UITestDemoData.swift).
+	private static let timelineTopArticleTitle = "Letters Home"
 	private static let focusArticleTitle = "A Quiet Kind of Orbit"
 
 	override func setUp() async throws {
@@ -46,6 +48,7 @@ final class NectarUITests: XCTestCase {
 			app.launchArguments.append("-UITestSeedDemoData")
 		}
 		app.launch()
+		log("launched; app.state=\(app.state.rawValue)")
 	}
 
 	/// On any failure, attach a screenshot and the full accessibility tree to the
@@ -64,7 +67,7 @@ final class NectarUITests: XCTestCase {
 		// OPML import that populates the sidebar -- a moment to settle
 		// before the first capture.
 		_ = app.wait(for: .runningForeground, timeout: 10)
-		XCTAssertTrue(waitForCell(labeledPrefix: Self.timelineFeedName, in: app, timeout: 20),
+		XCTAssertTrue(waitForCell(labeledSubstring: Self.timelineFeedName, in: app, timeout: 20),
 					  "Seeded feed \"\(Self.timelineFeedName)\" never appeared in the sidebar.")
 
 		snapshot("01MainFeed")
@@ -73,9 +76,19 @@ final class NectarUITests: XCTestCase {
 		// carries a full, varied 7-entry timeline (ratings/warnings/
 		// categories badge variety, plus a read/unread/starred/loved mix),
 		// for the Timeline screenshot.
-		cell(labeledPrefix: Self.timelineFeedName, in: app).tap()
-		XCTAssertTrue(waitForCellCount(atLeast: Self.timelineFeedSeededArticleCount, in: app, timeout: 20),
-					  "Timeline never reached the expected seeded article count.")
+		//
+		// Not asserted by counting app.cells: rows are tall enough (full
+		// summary text in the label) that only some of the 7 fit in the
+		// viewport at once, and an unscrolled collection view never
+		// materializes off-screen cells as accessibility elements, so a
+		// >= 7 count can never be satisfied here regardless of timeout.
+		// Asserting on the newest-`updated` seeded title (sorts first)
+		// still catches the actual regression this guards against --
+		// LocalAccountDelegate's refreshAll() no-op leaving the timeline
+		// empty -- without depending on how many rows fit on screen.
+		cell(labeledSubstring: Self.timelineFeedName, in: app).tap()
+		XCTAssertTrue(waitForCell(labeledSubstring: Self.timelineTopArticleTitle, in: app, timeout: 20),
+					  "Timeline never populated with the seeded articles.")
 
 		snapshot("02Timeline")
 
@@ -84,15 +97,14 @@ final class NectarUITests: XCTestCase {
 		// out to the sidebar and into the single-item Ambrosia "My
 		// Library" feed instead, which carries the one item with real,
 		// fully offline chapter content to actually read/scroll/highlight.
-		tapBackButton(in: app)
-		XCTAssertTrue(waitForCell(labeledPrefix: Self.libraryFeedName, in: app, timeout: 10),
+		XCTAssertTrue(navigateBackToSidebar(in: app, expecting: Self.libraryFeedName),
 					  "Sidebar didn't return after navigating back from the timeline.")
 
-		cell(labeledPrefix: Self.libraryFeedName, in: app).tap()
-		XCTAssertTrue(waitForCell(labeledPrefix: Self.focusArticleTitle, in: app, timeout: 10),
+		cell(labeledSubstring: Self.libraryFeedName, in: app).tap()
+		XCTAssertTrue(waitForCell(labeledSubstring: Self.focusArticleTitle, in: app, timeout: 10),
 					  "Focus article \"\(Self.focusArticleTitle)\" never appeared in the library timeline.")
 
-		cell(labeledPrefix: Self.focusArticleTitle, in: app).tap()
+		cell(labeledSubstring: Self.focusArticleTitle, in: app).tap()
 
 		// Wait for the reader's webview to appear, then scroll past the
 		// short hand-authored AO3-style preface block into the actual
@@ -110,34 +122,61 @@ final class NectarUITests: XCTestCase {
 	/// Sidebar and timeline rows are single accessibility elements: the cell is an
 	/// accessibility element and its child labels are not (see
 	/// MainFeedCollectionViewCell.awakeFromNib, MainTimelineCell). Rows are therefore
-	/// exposed as `cells` whose label is the composed accessibilityLabel, e.g.
-	/// "<n>" or "<n> <n> unread". Match by label prefix, on cells, not by
-	/// `staticTexts`.
-	private func cell(labeledPrefix prefix: String, in app: XCUIApplication) -> XCUIElement {
-		app.cells.matching(NSPredicate(format: "label BEGINSWITH %@", prefix)).firstMatch
+	/// exposed as `cells` whose label is the composed accessibilityLabel -- for the
+	/// sidebar, "<n>" or "<n> <n> unread" (starts with the name); for the timeline,
+	/// "[status flags]<feedName>, <title>, <summary>, <date>" (the title is
+	/// mid-string, after any status flags and the feed name, not at the start).
+	/// Match by substring, on cells, not by `staticTexts` or `BEGINSWITH`.
+	private func cell(labeledSubstring substring: String, in app: XCUIApplication) -> XCUIElement {
+		app.cells.matching(NSPredicate(format: "label CONTAINS %@", substring)).firstMatch
 	}
 
-	private func waitForCell(labeledPrefix prefix: String, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
-		let found = cell(labeledPrefix: prefix, in: app).waitForExistence(timeout: timeout)
-		log("waitForCell(\"\(prefix)\") -> \(found); cells=\(cellLabels(in: app))")
+	private func waitForCell(labeledSubstring substring: String, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
+		let found = cell(labeledSubstring: substring, in: app).waitForExistence(timeout: timeout)
+		if !found {
+			// Querying cells of a dead app throws "Failed to resolve query:
+			// Application ... is not running", which hides the real cause.
+			// Report the crash explicitly instead.
+			requireAppRunning(app, during: "waitForCell(\"\(substring)\")")
+		}
+		log("waitForCell(\"\(substring)\") -> \(found); cells=\(cellLabels(in: app))")
 		return found
 	}
 
-	private func waitForCellCount(atLeast count: Int, in app: XCUIApplication, timeout: TimeInterval) -> Bool {
-		let predicate = NSPredicate(format: "count >= %d", count)
-		let expectation = XCTNSPredicateExpectation(predicate: predicate, object: app.cells)
-		let completed = XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
-		log("waitForCellCount(>= \(count)) -> \(completed); cells=\(cellLabels(in: app))")
-		return completed
-	}
+	/// Returns from the timeline to the sidebar and confirms the sidebar row
+	/// containing `substring` is reachable. Tries, in order:
+	/// 1. The leading navigation-bar button. No accessibility identifiers
+	///    exist in the sidebar/timeline/article UI today (see
+	///    docs/ui-test-demo-data.md), so this is a positional match, and it
+	///    only counts if the sidebar actually came back.
+	/// 2. The interactive-pop edge swipe, in case that button was not the
+	///    back button.
+	/// 3. Scrolling, since an unscrolled collection view does not
+	///    materialize off-screen cells as accessibility elements.
+	private func navigateBackToSidebar(in app: XCUIApplication, expecting substring: String) -> Bool {
+		requireAppRunning(app, during: "navigateBackToSidebar")
+		let row = cell(labeledSubstring: substring, in: app)
 
-	/// No accessibility identifiers exist anywhere in the sidebar/timeline/
-	/// article UI today (see docs/ui-test-demo-data.md), so this matches
-	/// the leading navigation-bar button the way most UINavigationController
-	/// screens without a customized back button expose it. If a screen ever
-	/// adds a second leading bar button, this needs a more specific match.
-	private func tapBackButton(in app: XCUIApplication) {
-		app.navigationBars.buttons.element(boundBy: 0).tap()
+		let leadingButton = app.navigationBars.buttons.element(boundBy: 0)
+		if leadingButton.exists && leadingButton.isHittable {
+			leadingButton.tap()
+			if row.waitForExistence(timeout: 4) { return true }
+			log("back button tap did not reveal \"\(substring)\"")
+		}
+
+		requireAppRunning(app, during: "navigateBackToSidebar (edge swipe)")
+		let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.0, dy: 0.5))
+		let across = app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))
+		edge.press(forDuration: 0.1, thenDragTo: across)
+		if row.waitForExistence(timeout: 4) { return true }
+		log("edge swipe did not reveal \"\(substring)\"")
+
+		for _ in 0..<3 {
+			app.swipeUp()
+			if row.waitForExistence(timeout: 1) { return true }
+		}
+		requireAppRunning(app, during: "navigateBackToSidebar (after scrolling)")
+		return false
 	}
 
 	// MARK: - Diagnostics
@@ -149,7 +188,19 @@ final class NectarUITests: XCTestCase {
 	}
 
 	private func cellLabels(in app: XCUIApplication) -> [String] {
-		app.cells.allElementsBoundByIndex.map { $0.label }
+		guard app.state != .notRunning else { return [] }
+		return app.cells.allElementsBoundByIndex.map { $0.label }
+	}
+
+	/// Fails the test with an explicit message if the app process is gone
+	/// (crashed or terminated), instead of surfacing it later as an
+	/// unrelated "Failed to resolve query" error.
+	private func requireAppRunning(_ app: XCUIApplication, during context: String) {
+		let state = app.state
+		log("app.state during \(context): \(state.rawValue)")
+		XCTAssertNotEqual(state, .notRunning,
+						  "App is not running during \(context); it most likely crashed. "
+						  + "Look for a Nectar-*.ips crash report in ~/Library/Logs/DiagnosticReports.")
 	}
 
 	/// Prints and attaches the accessibility tree and a screenshot.

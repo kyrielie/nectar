@@ -507,7 +507,20 @@ struct SidebarItemNode: Hashable, Sendable {
 				}
 			}
 		} else {
-			rootSplitViewController.show(.supplementary)
+			// Same fix as the selectArticle(article) call above, and for the same
+			// reason: this runs synchronously from
+			// SceneDelegate.scene(_:willConnectTo:options:), before the window is
+			// key/visible and before the split view's first layout pass. Calling
+			// show(.supplementary) here means it runs before the split view has
+			// ever resolved its own adaptive column layout -- when the window
+			// later actually becomes key and UIKit performs that real first
+			// layout, the split view's own internal _prepareTransitionToLayout:
+			// machinery collides with the already-in-flight state this early call
+			// left behind, causing the same "attempt to nest wrapped navigation
+			// controllers" crash as the article-restoration case.
+			DispatchQueue.main.async { [weak self] in
+				self?.rootSplitViewController.show(.supplementary)
+			}
 		}
 
 		// The timeline's row data is still fetched asynchronously here, same as before -- but it

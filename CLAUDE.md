@@ -19,6 +19,7 @@ task**, not this whole index cover-to-cover.
 - **AO3 HTML extraction internals** (summary/work-page/series parsing) → `ao3-feeds.md`
 - **AO3 login/session, kudos-on-like, the in-app AO3 browser** → `ao3-authenticated-reading.md`
 - **AO3 networking/session layer generally** → `ao3-integration.md`
+- **What counts as an AO3 URL (host lists, work/series id parsing, URL builders, which hosts may receive a cookie, listing-shape classifiers)** → `ao3-link.md`
 - **AO3 preface rendering or on-demand chapter fetch in the reader** → `ao3-preface-rendering.md`
 - **Article scroll position / reading progress** → `reading-progress.md`
 - **"Same book" identity across feeds/re-imports** (`bookKey`) → `book-identity.md`
@@ -100,6 +101,7 @@ it's trusted by default. Specifically:
 | `LocalAccountRefresher.feedShouldBeSkipped`, `BGTaskScheduler`/`backgroundRefreshDeadline`, `LastOpenedFeedDelegate` | `refresh-throttling.md` |
 | `WebViewController`'s scroll-position tracking, `ReadingProgressEvaluator`/`ReadingProgressSample`, the completion threshold, `BookStateTable` reading-progress fields, `articleWindowScrollY` | `reading-progress.md` |
 | `AO3ChapterFetcher`, `AO3ChapterHTMLExtractor`, `AO3PrefaceRenderer`, `Downloader`'s per-host 429 handling | `ao3-preface-rendering.md` |
+| `AO3Link`, or any AO3 host check, id parse, hand-built AO3 URL, or listing-shape classifier | `ao3-link.md` |
 | `AO3SessionStore`, `AO3AuthenticatedFetcher`, `AO3AuthenticatedWebViewController`, `AO3ChallengeSessionStore`, `AO3KudosManager`, `AO3AccountSettingsView`, or any `NectarAppGroupUserDefaults`-backed AO3 preference | `ao3-authenticated-reading.md` |
 | `ArticleThemeColorExtractor`, `ArticleResolvedColors`, `WebViewController.applyResolvedBackgroundColors`/`registerForTraitChanges` | `article-color-pipeline.md` |
 | `SurfacePalette`, `AccentColor`, `SurfacePaletteNavigationBarAware`, `ToolbarStyle`/`toolbarStyle`, `BadgeColorPalette`, `BadgeColorTable` | `app-chrome-palette.md` |

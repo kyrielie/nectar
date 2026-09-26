@@ -1,6 +1,6 @@
 //
 //  AO3FilterURLLength.swift
-//  Account
+//  AO3Kit
 //
 //  Length policy for filtered AO3 requests (a `work_search[...]`
 //  search or tag listing). AO3 doesn't error on a query it can't

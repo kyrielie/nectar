@@ -130,13 +130,13 @@ public struct ParsedItem: Hashable, Sendable {
 		// series id, not a fallback series-group items ever need, since a
 		// series group always has ao3SeriesID set from group.seriesKey.
 		if let sid = ao3SeriesID, !sid.isEmpty {
-			return "ao3-series:\(sid)"
+			return "\(BookKeyPrefix.ao3Series)\(sid)"
 		}
 		if isAnthology == true, let name = seriesName {
-			return "calibre-series:\(name)"
+			return "\(BookKeyPrefix.calibreSeries)\(name)"
 		}
 		if let wid = ao3WorkID, !wid.isEmpty {
-			return "ao3-work:\(wid)"
+			return "\(BookKeyPrefix.ao3Work)\(wid)"
 		}
 		return uniqueID
 	}

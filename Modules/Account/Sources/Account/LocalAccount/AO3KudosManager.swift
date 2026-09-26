@@ -116,7 +116,7 @@ private extension AO3KudosManager {
 	/// AO3SessionStore.isSignedIn at attempt time -- not from how this
 	/// token happened to be fetched.
 	static func attemptWithFreshFetch(article: Article, workID: String) async {
-		guard let url = URL(string: "https://archiveofourown.org/works/\(workID)") else { return }
+		guard let url = AO3Link.workURL(id: workID) else { return }
 
 		logger.debug("Requesting AO3: GET \(url.absoluteString, privacy: .public) (list-view kudos CSRF fetch, articleID=\(article.articleID, privacy: .public))")
 

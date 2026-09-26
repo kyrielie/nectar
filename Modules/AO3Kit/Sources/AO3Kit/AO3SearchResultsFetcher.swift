@@ -74,15 +74,15 @@ public enum AO3SearchResultsFetchError: Error {
 
 public enum AO3SearchResultsFetcher {
 
+	/// Forwards to `AO3Link.isAlwaysAuthenticatedListing(_:)`, kept under
+	/// this name since it's this file's own public API surface. Adds a
+	/// host check the old duplicate here didn't have -- see
+	/// `AO3Link.isAlwaysAuthenticatedListing`'s doc comment. `pageURL` at
+	/// this function's one call site is always an AO3-host URL already
+	/// (paginating a listing feed that was itself validated as AO3 to be
+	/// added), so this is not expected to change behavior in practice.
 	public static func isAlwaysAuthenticatedListingFeed(_ url: URL) -> Bool {
-		let path = url.path
-		guard path.hasPrefix("/users/") else { return false }
-		if path.hasSuffix("/readings") {
-			guard let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else { return false }
-			return queryItems.contains { $0.name == "show" && $0.value == "to-read" }
-		}
-		let trimmedPath = path.hasSuffix("/") ? String(path.dropLast()) : path
-		return trimmedPath.hasSuffix("/subscriptions")
+		AO3Link.isAlwaysAuthenticatedListing(url)
 	}
 
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AO3SearchResultsFetcher")

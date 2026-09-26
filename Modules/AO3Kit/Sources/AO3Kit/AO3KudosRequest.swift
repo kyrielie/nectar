@@ -48,7 +48,7 @@ public enum AO3KudosRequest {
 	/// `utils.kudos()`, as opposed to the plain `/kudos` redirect-based
 	/// endpoint AO3 also exposes for non-JS form submission (not what's
 	/// reverse-engineered here).
-	public static let url = URL(string: "https://archiveofourown.org/kudos.js")!
+	public static let url = AO3Link.kudosURL
 
 	/// Builds the POST request for leaving kudos on `workID`, using
 	/// `csrfToken` scraped from a real fetch of the work's own page (see
@@ -62,9 +62,15 @@ public enum AO3KudosRequest {
 		request.httpMethod = "POST"
 		request.setValue(csrfToken, forHTTPHeaderField: "x-csrf-token")
 		request.setValue("XMLHttpRequest", forHTTPHeaderField: "x-requested-with")
-		request.setValue("https://archiveofourown.org/works/\(workID)", forHTTPHeaderField: "referer")
+		if let referer = AO3Link.workReferer(id: workID) {
+			request.setValue(referer, forHTTPHeaderField: "referer")
+		}
 		request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 		if let cookieHeaderValue {
+			// `url` is the constant `AO3Link.kudosURL`, always on a
+			// credential host -- this is an invariant assertion (D6), not
+			// a behavior change: the guard should never actually trip.
+			assert(AO3Link.mayReceiveSession(url), "AO3KudosRequest.url is not a credential host")
 			request.setValue(cookieHeaderValue, forHTTPHeaderField: "Cookie")
 		}
 		if let userAgentHeaders = UserAgent.headers() {

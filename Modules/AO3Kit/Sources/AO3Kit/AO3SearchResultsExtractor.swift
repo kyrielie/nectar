@@ -226,7 +226,7 @@ private extension AO3SearchResultsExtractor {
 			return nil
 		}
 		let title = flattenedText(titleAnchor).trimmingCharacters(in: .whitespacesAndNewlines)
-		guard let permalink = absoluteURL(titleAnchor.attributes["href"]) else {
+		guard let permalink = AO3Link.absoluteURL(titleAnchor.attributes["href"]) else {
 			return nil
 		}
 
@@ -238,7 +238,7 @@ private extension AO3SearchResultsExtractor {
 			guard !name.isEmpty else {
 				return nil
 			}
-			return ParsedAuthor(name: name, url: absoluteURL(anchor.attributes["href"]), avatarURL: nil, emailAddress: nil)
+			return ParsedAuthor(name: name, url: AO3Link.absoluteURL(anchor.attributes["href"]), avatarURL: nil, emailAddress: nil)
 		})
 
 		let summary = summaryHTML(fromLI: li)
@@ -302,10 +302,6 @@ private extension AO3SearchResultsExtractor {
 			dateBookmarked: dateBookmarked,
 			ao3WorkID: workID
 		)
-	}
-
-	static func absoluteURL(_ href: String?) -> String? {
-		AO3HTMLHelpers.absoluteURL(href)
 	}
 }
 
@@ -558,11 +554,7 @@ private extension AO3SearchResultsExtractor {
 		guard !name.isEmpty else {
 			return nil
 		}
-		let ao3ID = seriesID(fromHref: anchor.attributes["href"])
+		let ao3ID = AO3Link.seriesID(fromHref: anchor.attributes["href"])
 		return ParsedSeriesEntry(name: name, index: index, ao3ID: ao3ID)
-	}
-
-	static func seriesID(fromHref href: String?) -> String? {
-		AO3HTMLHelpers.seriesID(fromHref: href)
 	}
 }

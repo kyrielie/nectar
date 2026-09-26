@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import AO3Kit
 import Articles
 import Account
 import RSCore
@@ -59,15 +60,23 @@ protocol SmallIconProvider {
 		return Self.archiveOfOurOwnIcon
 	}
 
-	/// Exact-match host check, deliberately narrower than
-	/// `AO3LinkListImporter.permittedHosts` (which also covers mirror/legacy
-	/// domains like archiveofourown.com/.net and the raw IP addresses) --
-	/// this only needs to catch the host a *feed* URL would actually use,
-	/// not every host a pasted permalink might use.
+	/// Any recognized AO3 host (`AO3Link.recognizedHosts`) on either
+	/// `homePageURL` or `url`. Previously an exact match on
+	/// `archiveofourown.org` plus a `*.archiveofourown.org` suffix rule,
+	/// deliberately narrower than `AO3Link.recognizedHosts` (which also
+	/// covers mirror/legacy domains like archiveofourown.com/.net and the
+	/// raw IP addresses) -- widened to the same allowlist every other AO3
+	/// host check in this codebase now uses, since there's no longer a
+	/// reason for a feed's icon rule to recognize a narrower set of AO3
+	/// hosts than everything else does. The suffix rule is dropped in
+	/// favor of the exact allowlist: a subdomain outside the AO3-declared
+	/// list (which `download.`/`insecure.`/`secure.` all already are, and
+	/// so already matched under the old suffix rule too) no longer
+	/// matches unless `AO3Link.recognizedHosts` is updated to include it.
 	private var isArchiveOfOurOwnFeed: Bool {
 		for candidate in [homePageURL, url] {
-			guard let candidate, let host = URL(string: candidate)?.host?.lowercased() else { continue }
-			if host == "archiveofourown.org" || host.hasSuffix(".archiveofourown.org") {
+			guard let candidate, let candidateURL = URL(string: candidate) else { continue }
+			if AO3Link.isAO3Host(candidateURL) {
 				return true
 			}
 		}

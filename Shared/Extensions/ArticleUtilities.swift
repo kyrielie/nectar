@@ -11,6 +11,7 @@ import os
 import RSCore
 import Articles
 import Account
+import AO3Kit
 import Images
 
 // These handle multiple accounts.
@@ -65,7 +66,7 @@ extension Article {
 		guard let ao3ID = series?.first?.ao3ID else {
 			return nil
 		}
-		return URL(string: "https://archiveofourown.org/series/\(ao3ID)")
+		return AO3Link.seriesURL(id: ao3ID)
 	}
 
 	var imageURL: URL? {

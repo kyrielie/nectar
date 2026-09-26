@@ -1,6 +1,6 @@
 //
 //  AO3LinkListImporter.swift
-//  Account
+//  AO3Kit
 //
 //  Nectar AO3 direct-reading support -- pasted-link-list import (one-time,
 //  no refreshable feed; Task 3).
@@ -28,23 +28,6 @@ public struct AO3ImportedLink: Hashable, Sendable {
 /// everything past that is host-allowlist + work-id extraction.
 public enum AO3LinkListImporter {
 
-	/// Sourced directly from AO3's own work-skin proxy-detection script and
-	/// cross-checked against AO3's public Accessing Fanworks FAQ. Exact-match
-	/// only (no subdomain/suffix matching) -- this is a short, finite,
-	/// AO3-controlled list, not an open-ended domain family the way Reddit's
-	/// blog hosting is elsewhere in this codebase. Deliberately excludes
-	/// mirror/proxy domains: AO3 itself disclaims responsibility for those.
-	public static let permittedHosts: Set<String> = [
-		"104.153.64.122", "208.85.241.152", "208.85.241.157",
-		"ao3.org", "www.ao3.org",
-		"archiveofourown.com", "www.archiveofourown.com",
-		"archiveofourown.net", "www.archiveofourown.net",
-		"archiveofourown.org", "www.archiveofourown.org",
-		"archiveofourown.gay",
-		"download.archiveofourown.org", "insecure.archiveofourown.org", "secure.archiveofourown.org",
-		"archive.transformativeworks.org"
-	]
-
 	/// Extracts every recognizable, deduped AO3 work link from `text`.
 	/// Order is stable (first occurrence wins on a duplicate work id) so a
 	/// re-paste of overlapping text doesn't reorder an existing import.
@@ -61,10 +44,7 @@ public enum AO3LinkListImporter {
 			guard let url = match.url else {
 				continue
 			}
-			guard isPermittedHost(url) else {
-				continue
-			}
-			guard let workID = AO3SummaryExtractor.ao3WorkID(fromPermalink: url.absoluteString) else {
+			guard let workID = AO3Link.workID(from: url) else {
 				continue
 			}
 			guard seenWorkIDs.insert(workID).inserted else {
@@ -74,23 +54,5 @@ public enum AO3LinkListImporter {
 		}
 
 		return results
-	}
-
-	private static func isPermittedHost(_ url: URL) -> Bool {
-		guard let host = url.host()?.lowercased() else {
-			return false
-		}
-		return permittedHosts.contains(host)
-	}
-
-	/// Public wrapper around `isPermittedHost(_:)` -- same allowlist, same
-	/// exact-match-only matching, exposed so other targets (the iOS app's
-	/// `WebViewController`, routing AO3 links to the in-app authenticated
-	/// browser vs. a regular in-app browser) can check against the same
-	/// list instead of maintaining a second, possibly-drifting one. Kept
-	/// as a single function rather than making `permittedHosts` itself
-	/// public, to keep the actual list single-sourced here.
-	public static func isAO3Host(_ url: URL) -> Bool {
-		isPermittedHost(url)
 	}
 }

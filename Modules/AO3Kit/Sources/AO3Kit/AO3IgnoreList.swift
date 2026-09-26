@@ -1,18 +1,19 @@
 //
 //  AO3IgnoreList.swift
-//  RSParser
+//  AO3Kit
 //
 //  Nectar AO3 direct-reading support, Task 7 ("Ignore lists (by work /
 //  by author)").
 //
-//  Lives in RSParser, not Account, so every AO3-sourced ingestion path can
-//  reach it without a dependency inversion: native AO3 tag/user RSS/Atom
-//  (RSSItem.toParsedItem, wired below), and -- in their own later
-//  checkpoints, not here -- Task 9's search extractor and Task 3's
-//  pasted-link-list import, both of which already depend on RSParser for
-//  AO3SummaryExtractor/AO3ChapterHTMLExtractor. Account depends on
-//  RSParser, never the other way around, so RSParser is the only shared
-//  home available.
+//  Lives in AO3Kit, not RSParser: RSParser can't depend on AO3Kit (the
+//  dependency points the other way), so RSParser reaches this indirectly
+//  through the AO3FeedExtending/AO3FeedExtensionPoint seam instead --
+//  RSSParser/AtomParser call AO3FeedExtensionPoint.provider?.shouldExclude(_:),
+//  and AO3FeedExtension (this module's conformer, registered as that
+//  provider) forwards to shouldExclude(_:) below. Native AO3 tag/user
+//  RSS/Atom reaches this that way; Task 9's search extractor
+//  (AO3SearchResultsExtractor, same module) calls shouldExclude(_:)
+//  directly.
 //
 //  Filtering happens at ParsedItem construction time -- see
 //  shouldExclude(_:), called from RSSParser/AtomParser right after mapping
@@ -54,7 +55,7 @@ public enum AO3IgnoreList {
 	}()
 
 	/// Bare AO3 work IDs (digits only, matching `ParsedItem.ao3WorkID`'s own
-	/// shape -- see `AO3SummaryExtractor.ao3WorkID(fromPermalink:)`), not
+	/// shape -- see `AO3Link.workID(fromPermalink:)`), not
 	/// full permalinks. Callers that only have a permalink or partial URL
 	/// (a future Settings UI, or an opened article's "block this work"
 	/// context menu action) are expected to normalize through that same
