@@ -20,6 +20,7 @@
 //
 
 import XCTest
+import os
 import RSParser
 import RSWeb
 import Articles
@@ -188,7 +189,7 @@ final class AO3ChapterFetcherTests: XCTestCase {
 	/// it) rather than asserting on the fetch's outcome, since this test
 	/// only cares whether a request was attempted at all.
 	func testFetchIfNeededStillFetchesReadArticle() {
-		let workID = "read-article-\(UUID().uuidString)"
+		let workID = Self.uniqueWorkID()
 		let article = Self.makeArticle(contentHTML: nil, chapterCurrent: 3, ao3WorkID: workID, read: true)
 		let expectation = XCTNSNotificationExpectation(name: .ao3ChapterFetchDidFail, object: nil, notificationCenter: .default)
 
@@ -561,6 +562,23 @@ final class AO3ChapterFetcherTests: XCTestCase {
 			"""
 		}.joined()
 		return "\(metaGroup)<div id=\"workskin\">\(preface)\(chapters)</div>"
+	}
+
+	/// AO3Link.workURL(id:...) requires an ASCII-digits-only id (see
+	/// AO3LinkTests.buildersRejectMalformedIDs) -- a bare UUID string
+	/// fails that guard and silently short-circuits
+	/// AO3ChapterFetcher.download before any request goes out. Used where
+	/// a test needs a workID distinct from the "999" default (e.g. so it
+	/// doesn't collide with Downloader's own URL-keyed request/response
+	/// cache across tests).
+	private static let workIDCounter = OSAllocatedUnfairLock(initialState: 0)
+
+	private static func uniqueWorkID() -> String {
+		let next = workIDCounter.withLock { count -> Int in
+			count += 1
+			return count
+		}
+		return "800000\(next)"
 	}
 
 	private static func makeArticle(contentHTML: String?, chapterCurrent: Int?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false, lastPrefaceFetchDate: Date? = nil, pendingUpdateContentHTML: String? = nil, wordCountRegressionFlaggedAt: Date? = nil, ao3ConfirmedMissingAt: Date? = nil, bookKeyOverride: String? = nil, summary: String? = "A test summary.", authors: Set<Author>? = nil, datePublished: Date? = nil, dateModified: Date? = nil, fandoms: [String]? = nil, additionalTags: [String]? = nil, read: Bool = false) -> Article {
