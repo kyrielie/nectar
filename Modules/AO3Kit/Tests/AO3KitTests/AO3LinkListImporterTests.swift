@@ -21,12 +21,19 @@ final class AO3LinkListImporterTests: XCTestCase {
 	}
 
 	func testChapterSpecificLinkStillExtractsWorkID() {
-		// AO3SummaryExtractor.ao3WorkID(fromPermalink:) already handles
-		// chapter-specific URLs -- reused here, not reimplemented.
+		// AO3Link.workID(from:) already handles chapter-specific URLs --
+		// reused here, not reimplemented.
 		let text = "https://archiveofourown.org/works/12345678/chapters/98765432"
 		let links = AO3LinkListImporter.importedLinks(fromPastedText: text)
 		XCTAssertEqual(links.count, 1)
 		XCTAssertEqual(links.first?.ao3WorkID, "12345678")
+	}
+
+	func testTrailingNonDigitTextAfterIDIsIgnored() {
+		let text = "https://archiveofourown.org/works/123abc"
+		let links = AO3LinkListImporter.importedLinks(fromPastedText: text)
+		XCTAssertEqual(links.count, 1)
+		XCTAssertEqual(links.first?.ao3WorkID, "123")
 	}
 
 	func testMultipleDistinctLinks() {
@@ -109,7 +116,7 @@ final class AO3LinkListImporterTests: XCTestCase {
 	// MARK: - Non-work links and junk
 
 	func testNonWorkAO3LinksAreIgnored() {
-		// A valid AO3 host, but no /works/ path -- ao3WorkID(fromPermalink:) returns nil.
+		// A valid AO3 host, but no /works/ path -- AO3Link.workID(from:) returns nil.
 		let text = "https://archiveofourown.org/users/someone/pseuds/someone"
 		let links = AO3LinkListImporter.importedLinks(fromPastedText: text)
 		XCTAssertTrue(links.isEmpty)

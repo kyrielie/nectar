@@ -1,6 +1,6 @@
 //
 //  AO3SearchResultsPaginator.swift
-//  Account
+//  AO3Kit
 //
 //  Nectar AO3 search-results refresh-cadence work, Workstream D
 //  ("Load more results" pagination).

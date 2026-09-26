@@ -681,7 +681,7 @@ public enum FetchType {
 	}
 
 	/// Scans `pastedText` for AO3 work links (known-host allowlist, work id
-	/// via the existing `AO3SummaryExtractor.ao3WorkID(fromPermalink:)`,
+	/// via `AO3Link.workID(fromPermalink:)`,
 	/// deduped within the paste) and adds each as a bare-link article under a
 	/// feed at `destination` (`.sharedTopLevel` by default, preserving this
 	/// method's original behavior for any existing caller) -- created on

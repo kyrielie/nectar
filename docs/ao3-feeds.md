@@ -21,20 +21,17 @@ cluster).
 
 ## Shared helpers: `AO3HTMLHelpers`
 
-A single home for logic that used to be duplicated (and had drifted, in two
+URL handling is not here: resolving a relative `href` (`absoluteURL(_:)`) and
+reading a series id off a link (`seriesID(fromHref:)`) live on `AO3Link`, see
+`ao3-link.md`. What remains is HTML-structure logic that used to be duplicated (and had drifted, in two
 cases, into actual behavioral disagreement) across the extractor files:
 
-- `absoluteURL(_:)` — resolves an AO3-relative `href` against
-  `https://archiveofourown.org`.
 - `classTokens(of:)` — splits an element's `class` attribute on whitespace.
 - `workID(fromLI:)` / `isWorkRow(_:)` — recognizes a work-listing row,
   `<li class="... work-<id> ...">`, by scanning class tokens for a
   `work-<digits>` token rather than a fixed-position string match (since the
   full class list also carries `work`/`blurb`/`group` tokens in
   unconfirmed order).
-- `seriesID(fromHref:)` — pulls a numeric series id out of an
-  `/series/<id>` link, shared by search-results author metadata, chapter-
-  page series links, and `AO3SummaryExtractor`'s parsed fields.
 - `isRegistrationRequired(_:)` — detects AO3's login wall: requires **both**
   a `div#signin` element **and** that div's text containing the specific
   string "This work is only available to registered users of the Archive."

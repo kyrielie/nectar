@@ -120,18 +120,6 @@ public enum AO3SummaryExtractor {
 		)
 	}
 
-	/// Parses the AO3 work ID out of a permalink like
-	/// `https://archiveofourown.org/works/12345678`. Kept separate from
-	/// `extract(fromSummaryHTML:)` since the work ID lives in the entry's
-	/// `<link>`, not its `<summary>`.
-	public static func ao3WorkID(fromPermalink permalink: String?) -> String? {
-		guard let permalink, let range = permalink.range(of: "/works/") else {
-			return nil
-		}
-		let rest = permalink[range.upperBound...]
-		let digits = rest.prefix { $0.isNumber }
-		return digits.isEmpty ? nil : String(digits)
-	}
 }
 
 // MARK: - Stats paragraph
@@ -225,14 +213,8 @@ private extension AO3SummaryExtractor {
 			return nil
 		}
 		let name = flattenedText(anchor).trimmingCharacters(in: .whitespacesAndNewlines)
-		let ao3ID = seriesID(fromHref: anchor.attributes["href"])
+		let ao3ID = AO3Link.seriesID(fromHref: anchor.attributes["href"])
 		return ParsedSeriesEntry(name: name, index: index, ao3ID: ao3ID)
-	}
-
-	/// Shared with `AO3SearchResultsExtractor`/`AO3ChapterHTMLExtractor`
-	/// via `AO3HTMLHelpers.seriesID(fromHref:)`.
-	static func seriesID(fromHref href: String?) -> String? {
-		AO3HTMLHelpers.seriesID(fromHref: href)
 	}
 }
 

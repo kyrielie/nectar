@@ -555,7 +555,7 @@ final class WebViewController: UIViewController {
 	/// itself can't easily be instantiated in the test target (see
 	/// WebViewControllerAppearanceToggleTests.swift's header comment).
 	static func isProvisionalAO3Stub(_ article: Article?) -> Bool {
-		guard let article, article.bookKey.hasPrefix("ao3-work:") else { return false }
+		guard let article, AO3Link.workID(fromBookKey: article.bookKey) != nil else { return false }
 		return (article.contentHTML?.isEmpty ?? true)
 	}
 
@@ -2958,7 +2958,7 @@ private extension WebViewController {
 	/// goes to the dedicated browser, whether or not a session exists
 	/// yet.
 	func openURLInAppBrowser(_ url: URL) {
-		if AO3LinkListImporter.isAO3Host(url) {
+		if AO3Link.isAO3Host(url) {
 			let ao3ViewController = AO3AuthenticatedWebViewController(url: url)
 			let navigationController = UINavigationController(rootViewController: ao3ViewController)
 			present(navigationController, animated: true)

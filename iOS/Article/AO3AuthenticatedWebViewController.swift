@@ -11,7 +11,7 @@ import AO3Kit
 //  AO3 session can never follow an in-app link tap into it. This is a
 //  small, dedicated WKWebView-based browser instead, scoped to AO3
 //  links opened in-app (WebViewController routes them here instead of
-//  SFSafariViewController -- see AO3LinkListImporter.isAO3Host(_:)).
+//  SFSafariViewController -- see AO3Link.isAO3Host(_:)).
 //
 //  Deliberately NOT wired to AO3SessionStore (the Settings > Sign In
 //  to AO3 flow's captured session -- see AO3LoginViewController): that

@@ -57,6 +57,17 @@ import Articles
 		#expect(WebViewController.isProvisionalAO3Stub(article) == true)
 	}
 
+	/// Documents a deliberate D7 behavior difference: the bare prefix with
+	/// no id is no longer treated as an AO3 bookKey (`AO3Link.workID(fromBookKey:)`
+	/// requires a non-empty id, unlike the old `hasPrefix("ao3-work:")`
+	/// check). `ParsedItem.bookKey` can never produce a bare prefix (it
+	/// requires a non-empty id to take the `ao3-work:` branch at all), so
+	/// no live article is expected to hit this case.
+	@Test func ao3ArticleWithBarePrefixAndNoID_isNotProvisional() {
+		let article = Self.makeArticle(bookKey: "ao3-work:", contentHTML: nil)
+		#expect(WebViewController.isProvisionalAO3Stub(article) == false)
+	}
+
 	@Test func ao3ArticleWithEmptyContent_isProvisional() {
 		let article = Self.makeArticle(bookKey: "ao3-work:12345", contentHTML: "")
 		#expect(WebViewController.isProvisionalAO3Stub(article) == true)

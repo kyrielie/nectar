@@ -64,14 +64,13 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	// from firing the same request twice, not to pace legitimate refetches
 	// (that's the cadence preference's job now).
 	private static let secondsBetweenAttempts: TimeInterval = 60
-	private static let ao3WorkIDBookKeyPrefix = "ao3-work:"
 
 	/// bookKey prefixes `ParsedItem.bookKey` uses for an anthology
 	/// (`isAnthology == true`) -- see the doc comment on `bookKey` there.
 	/// Neither ever resolves to an `ao3WorkID`, and never will: there's no
 	/// single AO3 work URL to fetch for a Calibre-merged compilation of
 	/// several separate works.
-	private static let anthologyBookKeyPrefixes = ["ao3-series:", "calibre-series:"]
+	private static let anthologyBookKeyPrefixes = [BookKeyPrefix.ao3Series, BookKeyPrefix.calibreSeries]
 
 	// internal, not private -- AO3SeriesNavigator's bounded two-fetch
 	// series-listing walk (Phase 4c of the inline series navigation plan)
@@ -273,11 +272,7 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 extension AO3ChapterFetcher {
 
 	static func ao3WorkID(fromBookKey bookKey: String) -> String? {
-		guard bookKey.hasPrefix(ao3WorkIDBookKeyPrefix) else {
-			return nil
-		}
-		let workID = String(bookKey.dropFirst(ao3WorkIDBookKeyPrefix.count))
-		return workID.isEmpty ? nil : workID
+		AO3Link.workID(fromBookKey: bookKey)
 	}
 
 	/// The reverse of `ao3WorkID(fromBookKey:)` -- `ParsedItem.bookKey`'s
@@ -285,10 +280,16 @@ extension AO3ChapterFetcher {
 	/// grouping (`ao3SeriesID`/`isAnthology` both nil), which is what
 	/// every AO3 series-navigation stub and fetch always is. Exists so
 	/// callers that need to go workID -> bookKey (cross-feed lookups, in
-	/// particular) don't hand-duplicate `ao3WorkIDBookKeyPrefix`
-	/// themselves.
+	/// particular) don't hand-duplicate the `ao3-work:` prefix
+	/// themselves. Kept non-optional, unlike `AO3Link.workBookKey(forWorkID:)`:
+	/// every caller already holds a digit-only id validated upstream (by
+	/// `AO3Link.workID`/`workID(fromBookKey:)` or `AO3Link.workURL`'s own
+	/// guard), so this stays the simple formula and the one caller that
+	/// needs the optional-id case (`AO3SeriesNavigator`'s cross-feed
+	/// lookup) calls `AO3Link.workBookKey(forWorkID:)` directly instead of
+	/// coming through here.
 	static func bookKey(forWorkID workID: String) -> String {
-		"\(ao3WorkIDBookKeyPrefix)\(workID)"
+		"\(BookKeyPrefix.ao3Work)\(workID)"
 	}
 
 	/// Logs the anthology/combined-series case to the Activity Log once
@@ -352,7 +353,7 @@ nonisolated extension AO3ChapterFetcher {
 	}
 
 	internal func download(workID: String, articleID: String, accountID: String, feedID: String) {
-		guard let url = URL(string: "https://archiveofourown.org/works/\(workID)?view_full_work=true&view_adult=true") else {
+		guard let url = AO3Link.workURL(id: workID, fullWork: true, adultView: true) else {
 			return
 		}
 

@@ -18,10 +18,10 @@
 //
 
 import Foundation
+import RSParser
 import os
 import RSDatabase
 import RSDatabaseObjC
-import RSParser
 
 /// Manifest describing one page's position within a paginated `.sqlite`
 /// transfer walk, read from the `transfer_manifest`
@@ -250,9 +250,9 @@ enum AmbrosiaSQLiteImportTable {
 	-- Required parity gate: BookKeySQLParityTests. Changes to this SQL
 	-- implementation require running that test.
 	CASE
-	  WHEN ao3_series_id IS NOT NULL AND ao3_series_id != '' THEN 'ao3-series:' || ao3_series_id
-	  WHEN is_anthology = 1 AND series_name IS NOT NULL THEN 'calibre-series:' || series_name
-	  WHEN ao3_work_id IS NOT NULL AND ao3_work_id != '' THEN 'ao3-work:' || ao3_work_id
+	  WHEN ao3_series_id IS NOT NULL AND ao3_series_id != '' THEN '\(BookKeyPrefix.ao3Series)' || ao3_series_id
+	  WHEN is_anthology = 1 AND series_name IS NOT NULL THEN '\(BookKeyPrefix.calibreSeries)' || series_name
+	  WHEN ao3_work_id IS NOT NULL AND ao3_work_id != '' THEN '\(BookKeyPrefix.ao3Work)' || ao3_work_id
 	  ELSE id
 	END
 	"""
