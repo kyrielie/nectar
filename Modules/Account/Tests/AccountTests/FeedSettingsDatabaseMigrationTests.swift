@@ -19,12 +19,12 @@ import RSDatabaseObjC
 
 	private var databasePath: String!
 
-	override func setUp() {
+	override func setUp() async throws {
 		let tempDirectory = FileManager.default.temporaryDirectory
 		databasePath = tempDirectory.appendingPathComponent("FeedSettingsDatabaseMigrationTests-\(UUID().uuidString).sqlite3").path
 	}
 
-	override func tearDown() {
+	override func tearDown() async throws {
 		try? FileManager.default.removeItem(atPath: databasePath)
 		databasePath = nil
 	}

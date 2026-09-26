@@ -82,7 +82,13 @@ import Foundation
 		let activityLog = ActivityLog()
 		let owner = ActivityOwner.account(accountID: "account1", displayName: "Account One")
 
+		// The work closure must be explicitly `async` here -- a plain `{ 42 }`
+		// has no async operations in its body, so Swift resolves it against
+		// logActivity's synchronous overload instead of the async one this
+		// test means to exercise, which then makes the `await` above a
+		// (warning-as-error) no-op.
 		let result = await activityLog.logActivity(owner: owner, kind: .sendArticleStatuses, successMessage: { "sent \($0)" }, {
+			() async -> Int in
 			42
 		})
 
@@ -106,6 +112,7 @@ import Foundation
 
 		await #expect(throws: TestError.self) {
 			try await activityLog.logActivity(owner: owner, kind: .refreshFeedList) {
+				() async throws -> Void in
 				throw TestError()
 			}
 		}
@@ -121,6 +128,7 @@ import Foundation
 		let owner = ActivityOwner.account(accountID: "account1", displayName: "Account One")
 
 		await activityLog.logActivity(owner: owner, kind: .sendArticleStatuses, durationIsSignificant: { _ in false }, {
+			() async -> Void in
 		})
 
 		let activity = activityLog.completedActivities[0]
