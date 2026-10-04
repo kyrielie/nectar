@@ -414,6 +414,19 @@ struct SidebarItemNode: Hashable, Sendable {
 	}
 
 	func restoreWindowState() {
+		if Platform.isUITestingWithSeedDemoData {
+			// Screenshot runs must start at the sidebar. The previous run ends
+			// inside the article reader, and UserDefaults-backed restoration
+			// would reopen it, leaving no sidebar for the UI test to find.
+			restoreWindowState(StateRestorationInfo(hideReadFeeds: false,
+													expandedContainers: AppDefaults.shared.expandedContainers,
+													selectedSidebarItem: nil,
+													smartFeedsHidingReadArticles: [],
+													feedsHidingReadArticles: [:],
+													foldersShowingReadArticles: [:],
+													selectedArticle: nil))
+			return
+		}
 		restoreWindowState(StateRestorationInfo())
 	}
 
