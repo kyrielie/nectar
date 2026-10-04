@@ -6,7 +6,8 @@ import AO3Kit
 //  Nectar AO3 direct-reading support, Workstream 2 ("On-demand chapter
 //  fetch and storage"). Workstream 3
 //  ("optional AO3 login") is layered on top of this file: see
-//  attemptAuthenticated(...) below and AO3AuthenticatedFetcher.
+//  the authenticated attempt in download(...) below and
+//  AO3AuthenticatedFetcher.
 //
 //  Fetches an AO3 work's live page (`?view_full_work=true&view_adult=true`)
 //  on demand and
@@ -15,15 +16,17 @@ import AO3Kit
 //  directly on HTMLMetadataDownloader: same anti-hammering attemptDates gate, same
 //  ActivityLog start/complete/fail calls, same "leave existing content alone
 //  on failure, don't retry aggressively" shape. When a session is stored
-//  (AO3SessionStore.isSignedIn), the primary fetch is now the authenticated
-//  one -- attemptAuthenticated(url:), which deliberately bypasses Downloader
-//  (see its doc comment for why) and attaches a Cookie header by hand --
-//  falling back to Downloader's anonymous path only on an
-//  authentication-shaped failure (a rejected/expired session or a network
-//  error on the authenticated attempt). When signed out, behavior is
-//  unchanged: straight to the anonymous path, no authenticated attempt at
-//  all. Downloader still forces httpShouldSetCookies = false / .never
-//  cookie policy app-wide for every anonymous request either way.
+//  (AO3SessionStore.isSignedIn), the primary fetch is the authenticated
+//  one (AO3AuthenticatedFetcher, which attaches a Cookie header by hand and
+//  shares Downloader's rate-limit cooldown), falling back to Downloader's
+//  anonymous path only for a network error, an unexpected HTTP status, an
+//  unrecognized page or a possibly-missing work. A rate limit, challenge,
+//  AO3 503 page, unrevealed work, permission wall or adult gate ends the
+//  fetch with no fallback, and a rejected session ends the session. Both
+//  attempts are classified by AO3WorkPageClassifier and, when interactive,
+//  retried once (AO3RetryPolicy). When signed out, the fetch goes straight
+//  to the anonymous path. Downloader still forces httpShouldSetCookies =
+//  false / .never cookie policy app-wide for every anonymous request.
 //
 //  ParsedItem reconstruction: Account.updateAsync(feedID:parsedItems:...) is
 //  the only write path for contentHTML (no single-field "update just this"
@@ -86,7 +89,7 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// success. Exists so a view showing the article can explain why full
 	/// text isn't loading (see `lastFetchFailureMessage(forArticleID:)`)
 	/// instead of the failure being visible only in the Activity Log.
-	private let failureMessages = OSAllocatedUnfairLock(initialState: [String: String]())
+	private let failures = OSAllocatedUnfairLock(initialState: [String: AO3FetchFailure]())
 
 	/// The reason the most recent fetch attempt for this article failed, if
 	/// any -- `nil` if the article has never had a failed fetch, or if its
@@ -94,7 +97,21 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// (rather than polling this after the fact) should observe
 	/// `.ao3ChapterFetchDidFail` instead, which carries the same message.
 	public func lastFetchFailureMessage(forArticleID articleID: String) -> String? {
-		failureMessages.withLock { $0[articleID] }
+		lastFetchFailure(forArticleID: articleID)?.localizedMessage
+	}
+
+	/// The typed reason the most recent fetch attempt for this article
+	/// failed, or nil under the same conditions as
+	/// `lastFetchFailureMessage(forArticleID:)`.
+	public func lastFetchFailure(forArticleID articleID: String) -> AO3FetchFailure? {
+		failures.withLock { $0[articleID] }
+	}
+
+	/// Who is waiting on a fetch. Only `.interactive` fetches retry (see
+	/// `AO3RetryPolicy`).
+	public enum Priority: Sendable {
+		case interactive
+		case background
 	}
 
 	/// Kicks off a fetch if `article` is an AO3-sourced article (per its
@@ -108,7 +125,7 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// WebViewController.setArticle, i.e. the user has this article open
 	/// right now, which is reason enough to honor the refetch cadence
 	/// (AO3PrefaceRefetchPreference) regardless of whether it was marked
-	/// read on a previous visit. `isStale` and the anti-hammering floor in
+	/// read on a previous visit. `AO3FetchPolicy.isStale` and the anti-hammering floor in
 	/// downloadIfNeeded are what actually decide whether a request goes out
 	/// -- this function's only job is "the user opened this."
 	///
@@ -123,30 +140,18 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// from "nothing needed checking" -- `noteAnthologyUnsupportedIfNeeded`
 	/// logs it once per article instead, so it shows up in the Activity
 	/// Log rather than silently doing nothing forever.
-	public func fetchIfNeeded(for article: Article) {
-		guard let workID = Self.ao3WorkID(fromBookKey: article.bookKey) else {
+	public func fetchIfNeeded(for article: Article, priority: Priority = .interactive) {
+		guard let workID = AO3FetchPolicy.workID(fromBookKey: article.bookKey) else {
 			noteAnthologyUnsupportedIfNeeded(for: article)
 			return
 		}
-		guard isStale(article: article) else {
+		guard AO3FetchPolicy.isStale(article) else {
 			return
 		}
-		guard Self.isAO3NetworkRequestAllowed(for: article) else {
+		guard AO3FetchPolicy.isNetworkRequestAllowed(for: article) else {
 			return
 		}
-		downloadIfNeeded(workID: workID, articleID: article.articleID, accountID: article.accountID, feedID: article.feedID)
-	}
-
-	/// True if `article` is a single AO3 work (not an anthology/combined-
-	/// series bookKey) that `checkForUpdates(for:)` could actually act on
-	/// right now -- i.e. no unresolved pending-update diff is blocking a
-	/// re-check. For UI use, to decide whether to show/enable the "Check
-	/// for updates" action at all.
-	public func canCheckForUpdates(for article: Article) -> Bool {
-		guard Self.ao3WorkID(fromBookKey: article.bookKey) != nil else {
-			return false
-		}
-		return article.pendingUpdateContentHTML == nil
+		downloadIfNeeded(workID: workID, articleID: article.articleID, accountID: article.accountID, feedID: article.feedID, priority: priority)
 	}
 
 	/// Explicit "Check for updates" action -- always available per-article
@@ -163,19 +168,23 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// silently overwrite the pending slot, so re-checking is blocked
 	/// entirely until the person resolves it (see
 	/// `Account.resolvePendingContentUpdateAsync`). Unlike `fetchIfNeeded`,
-	/// this does not consult `isStale`'s settled-cadence/regression-flag
+	/// this does not consult `AO3FetchPolicy.isStale`'s settled-cadence/regression-flag
 	/// checks -- the whole point of an explicit user action is to check
 	/// regardless of whether the article "looks" settled.
-	public func checkForUpdates(for article: Article) {
-		guard let workID = Self.ao3WorkID(fromBookKey: article.bookKey) else {
+	/// Returns whether a request started: false when the article is not an
+	/// individually refreshable AO3 work, a pending update is unresolved,
+	/// the network gate refused, or the 60-second floor swallowed it.
+	@discardableResult
+	public func checkForUpdates(for article: Article) -> Bool {
+		guard let workID = AO3FetchPolicy.workID(fromBookKey: article.bookKey) else {
 			noteAnthologyUnsupportedIfNeeded(for: article)
-			return
+			return false
 		}
 		guard article.pendingUpdateContentHTML == nil else {
-			return
+			return false
 		}
-		guard Self.isAO3NetworkRequestAllowed(for: article) else {
-			return
+		guard AO3FetchPolicy.isNetworkRequestAllowed(for: article) else {
+			return false
 		}
 		// This fetch is about to potentially change article's own chapter
 		// content, which can shift its position within any series it
@@ -192,111 +201,20 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 		if !ao3SeriesIDs.isEmpty {
 			AO3SeriesNavigator.invalidateWalk(feedID: article.feedID, ao3SeriesIDs: ao3SeriesIDs)
 		}
-		downloadIfNeeded(workID: workID, articleID: article.articleID, accountID: article.accountID, feedID: article.feedID)
+		return downloadIfNeeded(workID: workID, articleID: article.articleID, accountID: article.accountID, feedID: article.feedID, priority: .interactive)
 	}
 
-	/// True unless `article` is Ambrosia-sourced and both
-	/// `AmbrosiaAO3NetworkPreference` flags are off -- the pre-request guard
-	/// for keeping a local-archive-only reader off AO3 servers entirely. A
-	/// pre-request guard, not a post-fetch filter: when this is false, no
-	/// request is made at all, not just "result discarded." Native
-	/// (non-Ambrosia) AO3-RSS-sourced articles always return true here --
-	/// they have no other way to get content at all, so they're unaffected
-	/// by this flag. Public: WebViewController's checkForUpdatesAction()
-	/// uses this to decide whether to render the per-article action as
-	/// disabled with an explanatory label.
-	public static func isAO3NetworkRequestAllowed(for article: Article) -> Bool {
-		guard article.isAmbrosiaItem else {
-			return true
-		}
-		return AmbrosiaAO3NetworkPreference.updatesEnabled
-	}
-
-	/// True when the article has no stored content yet, or when it does but
-	/// the user's chosen refetch cadence (AO3PrefaceRefetchPreference) says
-	/// the last successful fetch through this mechanism is old enough to
-	/// check again -- otherwise a work's comments/kudos/hits/formatting
-	/// would never update again. Staleness here is cadence-only: this no
-	/// longer compares the stored content's chapter count against the
-	/// feed-reported `chapterCurrent` (Workstream 1's territory) -- ordinary
-	/// AO3 tag/user RSS/Atom feeds have no refresh throttle of their own
-	/// (see refresh-throttling.md's "open gap" section), so `chapterCurrent`
-	/// could be rewritten by an unrelated feed-summary reparse independent
-	/// of, and often out of step with, what this fetcher's own last
-	/// download actually wrote -- comparing against it made an unthrottled
-	/// feed refresh capable of forcing a content refetch it had no real
-	/// evidence for. A content-present article with no recorded
-	/// lastPrefaceFetchDate (an Ambrosia import, or any row never fetched
-	/// through this mechanism) is now treated as due rather than left
-	/// alone, since there's no prior fetch to have been "recent" -- actual
-	/// network access is still gated separately by
-	/// isAO3NetworkRequestAllowed at the call sites (fetchIfNeeded,
-	/// checkForUpdates), unaffected by this function. Exposed internally
-	/// for direct testing against fixtures.
-	func isStale(article: Article) -> Bool {
-		// Task 8: an unresolved pending-update diff or a metadata-level
-		// regression flag both mean "leave contentHTML exactly as
-		// archived until the person acts" -- skip on-open fetching for
-		// either state. checkForUpdates (the explicit per-article action)
-		// bypasses this function entirely for the flag case, but still
-		// separately blocks on pendingUpdateContentHTML itself -- see its
-		// own doc comment.
-		guard article.pendingUpdateContentHTML == nil else {
-			return false
-		}
-		guard article.wordCountRegressionFlaggedAt == nil else {
-			return false
-		}
-		// AO3 has confirmed this work is gone or inaccessible (see
-		// AO3ChapterFetcher.download's set/clear call sites) -- don't keep
-		// retrying it every cadence interval forever. Cleared automatically
-		// on a subsequent successful fetch, or when Manage Storage's "Clear
-		// Content" action clears contentHTML (see
-		// ArticlesTable.clearContentHTML), so this doesn't permanently lock
-		// a row out.
-		guard article.ao3ConfirmedMissingAt == nil else {
-			return false
-		}
-		guard let contentHTML = article.contentHTML, !contentHTML.isEmpty else {
-			return true
-		}
-		guard let lastPrefaceFetchDate = article.lastPrefaceFetchDate else {
-			return true
-		}
-		return Date().timeIntervalSince(lastPrefaceFetchDate) >= AO3PrefaceRefetchPreference.current.timeInterval
-	}
 }
 
 // MARK: - Internal, directly testable
 
 extension AO3ChapterFetcher {
 
-	static func ao3WorkID(fromBookKey bookKey: String) -> String? {
-		AO3Link.workID(fromBookKey: bookKey)
-	}
-
-	/// The reverse of `ao3WorkID(fromBookKey:)` -- `ParsedItem.bookKey`'s
-	/// own formula for a bare AO3 work id with no series/anthology
-	/// grouping (`ao3SeriesID`/`isAnthology` both nil), which is what
-	/// every AO3 series-navigation stub and fetch always is. Exists so
-	/// callers that need to go workID -> bookKey (cross-feed lookups, in
-	/// particular) don't hand-duplicate the `ao3-work:` prefix
-	/// themselves. Kept non-optional, unlike `AO3Link.workBookKey(forWorkID:)`:
-	/// every caller already holds a digit-only id validated upstream (by
-	/// `AO3Link.workID`/`workID(fromBookKey:)` or `AO3Link.workURL`'s own
-	/// guard), so this stays the simple formula and the one caller that
-	/// needs the optional-id case (`AO3SeriesNavigator`'s cross-feed
-	/// lookup) calls `AO3Link.workBookKey(forWorkID:)` directly instead of
-	/// coming through here.
-	static func bookKey(forWorkID workID: String) -> String {
-		"\(BookKeyPrefix.ao3Work)\(workID)"
-	}
-
 	/// Logs the anthology/combined-series case to the Activity Log once
 	/// per article (reusing `attemptDates` as the "already noted" gate, so
 	/// reopening the same article repeatedly doesn't spam the log) instead
 	/// of `fetchIfNeeded` silently doing nothing. Also records a
-	/// `failureMessages` entry for API consistency with the real-failure
+	/// `failures` entry for API consistency with the real-failure
 	/// path, though it currently has nowhere to surface in the reader:
 	/// `ArticleRenderer`'s inline notice only shows when `contentHTML ==
 	/// nil`, which is never true for an Ambrosia-sourced article (see
@@ -328,7 +246,7 @@ extension AO3ChapterFetcher {
 			let kind = ActivityKind.skipAO3SeriesFetch(bookKey: bookKey)
 			activityLog.createActivity(owner: .ao3ChapterFetcher, kind: kind, detail: nil)
 			activityLog.didStart(.ao3ChapterFetcher, kind: kind)
-			self.fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Combined AO3 series can't be refreshed individually -- showing imported content")
+			self.fail(articleID: articleID, kind: kind, activityLog: activityLog, failure: .anthologyNotRefreshable)
 		}
 	}
 }
@@ -337,7 +255,10 @@ extension AO3ChapterFetcher {
 
 nonisolated extension AO3ChapterFetcher {
 
-	private func downloadIfNeeded(workID: String, articleID: String, accountID: String, feedID: String) {
+	/// Returns whether a request actually started: false when the 60-second
+	/// floor swallowed the attempt.
+	@discardableResult
+	private func downloadIfNeeded(workID: String, articleID: String, accountID: String, feedID: String, priority: Priority) -> Bool {
 		let shouldDownload = attemptDates.withLock { dates in
 			let currentDate = Date()
 			if let attemptDate = dates[articleID], attemptDate > currentDate.addingTimeInterval(-Self.secondsBetweenAttempts) {
@@ -348,11 +269,20 @@ nonisolated extension AO3ChapterFetcher {
 		}
 
 		if shouldDownload {
-			download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID)
+			download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
 		}
+		return shouldDownload
 	}
 
-	internal func download(workID: String, articleID: String, accountID: String, feedID: String) {
+	/// The shared fetch flow. Signed in: an authenticated attempt first,
+	/// classified by `AO3WorkPageClassifier`. A rate limit, a Cloudflare
+	/// challenge, AO3's 503 page, an unrevealed work, a permission wall and
+	/// the adult gate end the fetch with no anonymous fallback; a rejected
+	/// session ends the session; anything else falls back to one anonymous
+	/// attempt. The missing flag is set only on positive evidence from the
+	/// anonymous attempt, plus the same evidence from the authenticated one
+	/// when signed in. Each attempt gets one retry when interactive.
+	internal func download(workID: String, articleID: String, accountID: String, feedID: String, priority: Priority = .interactive) {
 		guard let url = AO3Link.workURL(id: workID, fullWork: true, adultView: true) else {
 			return
 		}
@@ -360,138 +290,109 @@ nonisolated extension AO3ChapterFetcher {
 		Task { @MainActor in
 			let activityLog = ActivityLog.shared
 			let kind = ActivityKind.fetchAO3Chapter(workID: workID)
+			let interactive = priority == .interactive
 
 			activityLog.createActivity(owner: .ao3ChapterFetcher, kind: kind, detail: nil)
 			activityLog.didStart(.ao3ChapterFetcher, kind: kind)
 
-			// Authenticated-first: when a session is stored, try it before
-			// ever making an anonymous request. Falls through to the
-			// existing anonymous path below only on an authentication-shaped
-			// failure (session rejected/expired, or a network-level error on
-			// the authenticated attempt itself -- see attemptAuthenticated's
-			// own doc comment for why a transient network hiccup here
-			// shouldn't block the read). A .rateLimited/timeout on the
-			// *anonymous* Downloader path below is unrelated to this and
-			// still returned directly, unretried, same as before.
-			if AO3SessionStore.isSignedIn {
-				switch await attemptAuthenticated(url: url) {
-				case .success(let result, let data):
-					await self.finishSuccessfulFetch(extraction: result, workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, activityLog: activityLog, kind: kind, dataSizeMessage: ActivityLog.dataSizeMessage(data), returnedFromCache: false)
+			let signedIn = AO3SessionStore.isSignedIn
+			// True once an authenticated request actually went out. A
+			// signed-in fetch that found no session to send (concurrent
+			// sign-out) made no attempt, so it cannot be required to
+			// confirm a missing work.
+			var authenticatedAttemptMade = signedIn
+			var authenticatedAttemptSawMissing = false
+
+			if signedIn {
+				let attempt = await AO3RetryPolicy.perform(interactive: interactive, url: url) {
+					try await Self.authenticatedFetch(url: url)
+				}
+				switch attempt.result {
+				case .success(let extraction):
+					await self.finishSuccessfulFetch(extraction: extraction, workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, activityLog: activityLog, kind: kind, dataSizeMessage: ActivityLog.dataSizeMessage(attempt.data ?? Data()), returnedFromCache: false)
 					return
-				case .signedOut:
-					// The stored session itself is what's rejected --
-					// distinct from never having signed in at all.
-					// Clearing it means the next fetch attempt (and the
-					// Settings sign-in row) both reflect reality instead
-					// of claiming a session that AO3 no longer honors.
-					AO3SessionStore.clearSession()
-					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Signed out of AO3 -- sign in again in Settings to read this work")
-					return
-				case .notFoundOnRetry:
-					// Per the shared authenticated-first/anonymous-fallback
-					// policy (docs/ao3-integration.md, "Authenticated-first
-					// fetch, anonymous fallback"), a .notFound from the
-					// authenticated attempt is treated the same as
-					// .registrationRequired: an unsampled restricted-page
-					// shape can't be told apart from a real 404 here, so
-					// this alone isn't a strong enough signal to confirm
-					// the work missing. Fall back to the anonymous path
-					// below -- only if *that* also comes back .notFound
-					// (dual confirmation) does ao3ConfirmedMissingAt get
-					// set, in the anonymous-path .notFound case further
-					// down.
-					activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 authenticated fetch found nothing -- retrying anonymously before confirming missing")
-				case .otherFailure(let retryMessage):
-					// Network-level failure or an unexpected extraction
-					// shape on the authenticated attempt -- not a login
-					// problem, so the stored session is left alone. Fall
-					// back to the anonymous path below rather than failing
-					// outright, same as a .rateLimited/timeout fallback
-					// would for the anonymous fetch.
-					activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 authenticated fetch failed (\(retryMessage)) -- retrying anonymously")
-				case .notSignedIn:
-					// Unreachable here (isSignedIn was just checked), but
-					// treated the same as .otherFailure would be for
-					// exhaustiveness: fall through to the anonymous path,
-					// logged the same way for symmetry with the other
-					// fallback branches rather than a silent break.
-					activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 authenticated fetch reported no session unexpectedly -- retrying anonymously")
+				case .failure(let failure):
+					switch failure {
+					case .registrationRequired:
+						// The stored session itself is what AO3 rejected,
+						// which is distinct from never having signed in.
+						// Ending it makes the next fetch and the Settings
+						// sign-in row reflect reality, and records why.
+						AO3SessionStore.endSession(reason: .rejectedByAO3)
+						fail(articleID: articleID, kind: kind, activityLog: activityLog, failure: .sessionEnded)
+						return
+					case .rateLimited, .challenge, .serviceUnavailable, .hiddenUntilRevealed, .permissionDenied, .adultGate:
+						// Terminal: an anonymous request would meet the
+						// same limit, challenge or wall.
+						fail(articleID: articleID, kind: kind, activityLog: activityLog, failure: failure)
+						return
+					case .workMissing:
+						// Not enough alone to confirm the work is gone;
+						// remembered for the dual-confirmation rule below.
+						authenticatedAttemptSawMissing = true
+						activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 authenticated fetch found nothing -- retrying anonymously before confirming missing")
+					case .signInRequired:
+						// The session was cleared between the isSignedIn
+						// check and the request.
+						authenticatedAttemptMade = false
+						activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 authenticated fetch reported no session unexpectedly -- retrying anonymously")
+					default:
+						// Network error, unexpected HTTP status or an
+						// unrecognized page: not a login problem, so the
+						// session is left alone.
+						activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 authenticated fetch failed (\(failure.localizedMessage)) -- retrying anonymously")
+					}
 				}
 			}
 
-			do {
-				let downloadResponse = try await Downloader.shared.download(url)
-
-				guard let data = downloadResponse.data, !data.isEmpty, let response = downloadResponse.response, response.statusIsOK else {
-					// Bad response -- leave existing content alone. The
-					// attemptDates gate above already prevents
-					// hammering a gated/deleted/moved work; no further
-					// backoff bookkeeping needed here for this specific
-					// article. A 429 specifically also means Downloader
-					// itself has now started a per-host cooldown (see
-					// Downloader.retryAfterMessages) that holds off every
-					// other AO3 fetch, not just this one, until it
-					// expires -- called out distinctly here so it isn't
-					// read as an ordinary one-off failure.
-					let statusCode = downloadResponse.response?.forcedStatusCode ?? -1
-					let message = statusCode == HTTPResponseCode.tooManyRequests
-						? "AO3 rate limit hit -- backing off before retrying"
-						: "Could not reach AO3 (HTTP \(statusCode))"
-					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: message)
-					return
+			let anonymous = await AO3RetryPolicy.perform(interactive: interactive, url: url) {
+				try await Self.anonymousFetch(url: url)
+			}
+			switch anonymous.result {
+			case .success(let extraction):
+				await self.finishSuccessfulFetch(extraction: extraction, workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, activityLog: activityLog, kind: kind, dataSizeMessage: ActivityLog.dataSizeMessage(anonymous.data ?? Data()), returnedFromCache: anonymous.returnedFromCache)
+			case .failure(let failure):
+				// Only positive evidence (HTTP 404/410 or AO3's explicit
+				// not-found copy) sets ao3ConfirmedMissingAt, and when an
+				// authenticated attempt was made it must have seen the same
+				// evidence. Every other failure is transient.
+				if failure.evidencesMissing, !authenticatedAttemptMade || authenticatedAttemptSawMissing,
+				   let account = AccountManager.shared.existingAccount(accountID: accountID) {
+					await account.setAO3ConfirmedMissingAsync(forArticleID: articleID)
 				}
-
-				guard let html = String(data: data, encoding: .utf8) else {
-					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "No chapter content found (gated or removed work)")
-					return
+				if failure == .unrecognizedPage {
+					// Logged on its own so real deleted-work page shapes
+					// can be learned from the Activity Log.
+					activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 returned a page Nectar does not recognize -- not treating the work as missing")
 				}
-
-				let extraction: AO3ChapterExtractionResult
-				switch AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html) {
-				case .success(let result):
-					extraction = result
-				case .registrationRequired:
-					// Only reachable here when signed out (the signed-in
-					// case already attempted authenticated-first above and
-					// returned), so this is always the "never signed in"
-					// message, not a second authenticated retry.
-					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "This work is only available to registered AO3 users")
-					return
-				case .adultContentGate:
-					// Anomalous now that view_adult=true is sent
-					// unconditionally -- surfaced distinctly, not folded
-					// into .notFound, so it's easy to notice if it starts
-					// happening.
-					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Adult content gate encountered despite view_adult=true (unexpected)")
-					return
-				case .notFound:
-					// Genuinely ambiguous shape -- could be a real
-					// deleted/moved work, or a restricted-page shape (a
-					// collection- or series-level gate, for instance) this
-					// extractor doesn't yet recognize as
-					// .registrationRequired -- see
-					// AO3ChapterExtractionOutcome.notFound's own doc
-					// comment. Only reachable here when signed out (the
-					// signed-in case already tried the authenticated
-					// attempt above), so there's no session left to retry
-					// with -- this is AO3 confirming the work is gone or
-					// inaccessible by every means this fetcher has for a
-					// signed-out reader, so it sets ao3ConfirmedMissingAt.
-					if let account = AccountManager.shared.existingAccount(accountID: accountID) {
-						await account.setAO3ConfirmedMissingAsync(forArticleID: articleID)
-					}
-					fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "No chapter content found (gated or removed work)")
-					return
-				}
-
-				await self.finishSuccessfulFetch(extraction: extraction, workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, activityLog: activityLog, kind: kind, dataSizeMessage: ActivityLog.dataSizeMessage(data), returnedFromCache: downloadResponse.returnedFromCache)
-
-			} catch {
-				// Pre-response failure (DNS, TLS, network) -- same
-				// leave-it-alone handling.
-				fail(articleID: articleID, kind: kind, activityLog: activityLog, message: error.localizedDescription, error: error)
+				fail(articleID: articleID, kind: kind, activityLog: activityLog, failure: failure)
 			}
 		}
+	}
+
+	private static func authenticatedFetch(url: URL) async throws -> AO3WorkPageFetch {
+		switch try await AO3AuthenticatedFetcher.fetch(url) {
+		case .noSession:
+			return .failure(.signInRequired)
+		case .rateLimited(let until):
+			return .failure(.rateLimited(until: until))
+		case .response(let data, let response):
+			return AO3WorkPageFetch(result: AO3WorkPageClassifier.classify(data: data, statusCode: response.statusCode), data: data)
+		}
+	}
+
+	/// Goes through `Downloader`, which holds the shared per-host cooldown. An
+	/// interstitial body (Cloudflare challenge, AO3's 503 page) is vetoed from
+	/// its cache so a transient block is never replayed.
+	private static func anonymousFetch(url: URL) async throws -> AO3WorkPageFetch {
+		let downloadResponse = try await Downloader.shared.download(url, shouldCache: { data, _ in
+			guard let data, let html = String(data: data, encoding: .utf8) else {
+				return true
+			}
+			return !AO3WorkPageClassifier.isInterstitial(html)
+		})
+		let statusCode = downloadResponse.response?.forcedStatusCode
+		return AO3WorkPageFetch(result: AO3WorkPageClassifier.classify(data: downloadResponse.data, statusCode: statusCode), data: downloadResponse.data, returnedFromCache: downloadResponse.returnedFromCache)
 	}
 
 	/// Shared success tail for both the authenticated-first path and the
@@ -507,17 +408,17 @@ nonisolated extension AO3ChapterFetcher {
 	@MainActor
 	private func finishSuccessfulFetch(extraction: AO3ChapterExtractionResult, workID: String, articleID: String, accountID: String, feedID: String, activityLog: ActivityLog, kind: ActivityKind, dataSizeMessage: String, returnedFromCache: Bool) async {
 		guard let account = AccountManager.shared.existingAccount(accountID: accountID) else {
-			fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Account no longer exists")
+			fail(articleID: articleID, kind: kind, activityLog: activityLog, failure: .accountMissing)
 			return
 		}
 		let existingArticles = await account.fetchArticlesAsync(.articleIDs([articleID]))
 		guard let existingArticle = existingArticles.first else {
-			fail(articleID: articleID, kind: kind, activityLog: activityLog, message: "Article no longer exists")
+			fail(articleID: articleID, kind: kind, activityLog: activityLog, failure: .articleMissing)
 			return
 		}
 
 		// Task 8's Ambrosia local-only toggle: gates whether this
-		// fetch happened at all (isAO3NetworkRequestAllowed, above
+		// fetch happened at all (AO3FetchPolicy.isNetworkRequestAllowed, above
 		// download), not what gets applied from it -- content and
 		// stats are always applied together from a fetch that was
 		// allowed to happen. Always true for a non-Ambrosia
@@ -530,10 +431,10 @@ nonisolated extension AO3ChapterFetcher {
 		// silently, and don't discard the new fetch either -- keep
 		// the currently-stored content as canonical and stash the
 		// new fetch as a pending update for the reader to review.
-		if let regressionDescription = Self.detectRegression(existingArticle: existingArticle, extraction: extraction) {
+		if let regressionDescription = AO3FetchPolicy.detectRegression(existingArticle: existingArticle, extraction: extraction) {
 			await account.setPendingContentUpdateAsync(extraction.contentHTML, forArticleID: articleID)
 			activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: "Possible content regression detected (\(regressionDescription)) -- kept existing content, flagged for review", returnedFromCache: returnedFromCache)
-			failureMessages.withLock { $0[articleID] = nil }
+			failures.withLock { $0[articleID] = nil }
 			postNotification(name: .ao3ChapterFetchDidComplete, articleID: articleID)
 			// The CSRF token this fetch obtained is still good for a
 			// kudos attempt even though the content write itself was
@@ -543,17 +444,23 @@ nonisolated extension AO3ChapterFetcher {
 			return
 		}
 
-		let parsedItem = Self.rebuildParsedItem(from: existingArticle, workID: workID, extraction: extraction, applyStatsUpdate: applyStatsUpdate)
+		let parsedItem = AO3FetchPolicy.rebuildParsedItem(from: existingArticle, workID: workID, extraction: extraction, applyStatsUpdate: applyStatsUpdate)
 		_ = await account.updateAsync(feedID: feedID, parsedItems: [parsedItem], deleteOlder: false)
 
 		activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: dataSizeMessage, returnedFromCache: returnedFromCache)
-		failureMessages.withLock { $0[articleID] = nil }
+		failures.withLock { $0[articleID] = nil }
 		// A successful fetch means the work is reachable again --
 		// either it was a false-positive gate/404, or the author
-		// restored it. Clear so isStale can consider this article
+		// restored it. Clear so AO3FetchPolicy.isStale can consider this article
 		// for auto-fetch again instead of being permanently
 		// skipped from a stale confirmed-missing flag.
 		await account.clearAO3ConfirmedMissingAsync(forArticleID: articleID)
+		// Same reasoning for the feed-derived regression flag: this
+		// fetch passed the content-level guard, so the flag no longer
+		// has a reason to block auto-fetch. Not cleared on the
+		// regression path above -- that path stashes a pending update
+		// and the flag clears when the reader resolves it.
+		await account.clearWordCountRegressionFlagAsync(forArticleID: articleID)
 		postNotification(name: .ao3ChapterFetchDidComplete, articleID: articleID)
 
 		// Task 6 (kudos-on-like), piggyback path: this fetch's
@@ -570,284 +477,17 @@ nonisolated extension AO3ChapterFetcher {
 		AO3KudosManager.attemptKudosIfNeeded(article: existingArticle, workID: workID, csrfToken: extraction.csrfToken)
 	}
 
-	/// Result of the authenticated attempt -- now the primary path when
-	/// signed in, not just a retry on `.registrationRequired`. Distinct
-	/// from `AO3ChapterExtractionOutcome` because the failure modes that
-	/// matter here -- "session rejected" versus "AO3 confirms the work is
-	/// gone" versus "network/unexpected-shape failure" -- have no
-	/// counterpart in the anonymous-fetch outcome and need different
-	/// handling (only the first clears the stored session; only the
-	/// second sets ao3ConfirmedMissingAt).
-	enum AuthenticatedRetryResult {
-		/// Carries the raw response `Data` alongside the extraction, purely
-		/// so the caller can compute the same `ActivityLog.dataSizeMessage`
-		/// the anonymous path already logs on success.
-		case success(AO3ChapterExtractionResult, data: Data)
-		/// No session is stored at all. Unreachable from `download`'s
-		/// authenticated-first branch (which already checked
-		/// `AO3SessionStore.isSignedIn` before calling this), but kept for
-		/// callers that don't pre-check.
-		case notSignedIn
-		/// A session was stored and sent, and AO3 still returned
-		/// `.registrationRequired` -- the session is expired or otherwise
-		/// invalid. Caller clears it.
-		case signedOut
-		/// The authenticated attempt itself came back `.notFound`. Per the
-		/// shared authenticated-first/anonymous-fallback policy
-		/// (docs/ao3-integration.md), this is treated the same as
-		/// `.registrationRequired`/network failure: not strong enough on
-		/// its own to confirm deletion, since an unsampled restricted-page
-		/// shape can't be told apart from a real 404 here. The caller
-		/// falls back to the anonymous path on this outcome, same as
-		/// `.otherFailure`; only if the anonymous attempt *also* comes
-		/// back `.notFound` (dual confirmation) does `ao3ConfirmedMissingAt`
-		/// get set. Kept distinct from `.otherFailure` only so the caller's
-		/// progress-log message can be specific, not because it triggers
-		/// different fallback behavior.
-		case notFoundOnRetry
-		/// The attempt reached AO3 but hit a different outcome
-		/// (`.adultContentGate`) or a network-level failure -- not a login
-		/// problem and not a confirmed deletion, so the stored session is
-		/// left alone and no confirmed-missing flag is set. The caller
-		/// falls back to the anonymous path on this outcome.
-		case otherFailure(message: String)
-	}
-
-	/// Attempts `url` once with the stored AO3 session's Cookie header
-	/// attached. Called first, before any anonymous request, whenever
-	/// `AO3SessionStore.isSignedIn` -- see this file's header comment for
-	/// the overall authenticated-first/anonymous-fallback shape.
-	///
-	/// Deliberately bypasses `Downloader.shared` rather than adding a
-	/// Cookie header to a request routed through it: `Downloader`'s cache
-	/// is keyed on URL alone, and routing this through it would mean a
-	/// later anonymous fetch of the same URL could silently reuse a
-	/// cached authenticated (or vice versa) response. `AO3AuthenticatedFetcher`
-	/// uses its own cache-free ephemeral session instead. This also means
-	/// a `.rateLimited`(429)/timeout on this attempt specifically should
-	/// fall back to anonymous the same way `.otherFailure` does below,
-	/// since `AO3AuthenticatedFetcher` has no cooldown tracking of its own
-	/// and a transient hiccup on its ephemeral session shouldn't block the
-	/// read -- both are folded into `.otherFailure` here rather than a
-	/// separate case, since the caller's fallback behavior is identical
-	/// either way.
-	@MainActor
-	private func attemptAuthenticated(url: URL) async -> AuthenticatedRetryResult {
-		guard AO3SessionStore.isSignedIn else {
-			return .notSignedIn
-		}
-
-		do {
-			guard let (data, response) = try await AO3AuthenticatedFetcher.fetch(url) else {
-				return .notSignedIn
-			}
-			guard response.statusIsOK, !data.isEmpty, let html = String(data: data, encoding: .utf8) else {
-				return .otherFailure(message: "Could not reach AO3 (HTTP \(response.statusCode))")
-			}
-			switch AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html) {
-			case .success(let result):
-				return .success(result, data: data)
-			case .registrationRequired:
-				return .signedOut
-			case .adultContentGate:
-				return .otherFailure(message: "Adult content gate encountered despite view_adult=true (unexpected)")
-			case .notFound:
-				return .notFoundOnRetry
-			}
-		} catch {
-			// Network-level failure on the retry itself -- not a login
-			// problem, so the stored session is left alone; a future fetch
-			// attempt gets another chance.
-			return .otherFailure(message: error.localizedDescription)
-		}
-	}
-
-	/// Records `message` as the article's current failure reason, logs it to
-	/// the Activity Log (unchanged behavior), and posts
-	/// `.ao3ChapterFetchDidFail` so an already-visible article view can
+	/// Records `failure` as the article's current failure reason, logs it to
+	/// the Activity Log, and posts `.ao3ChapterFetchDidFail` (whose `message`
+	/// is the failure's localized text) so an already-visible article view can
 	/// react immediately rather than waiting for the next fetch attempt.
 	@MainActor
-	private func fail(articleID: String, kind: ActivityKind, activityLog: ActivityLog, message: String, error: Error? = nil) {
-		let loggedError = error ?? NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: message])
+	private func fail(articleID: String, kind: ActivityKind, activityLog: ActivityLog, failure: AO3FetchFailure) {
+		let message = failure.localizedMessage
+		let loggedError = NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: message])
 		activityLog.didFail(.ao3ChapterFetcher, kind: kind, error: loggedError)
-		failureMessages.withLock { $0[articleID] = message }
+		failures.withLock { $0[articleID] = failure }
 		postNotification(name: .ao3ChapterFetchDidFail, articleID: articleID, message: message)
-	}
-
-	/// Copies every field from `existingArticle` unchanged except
-	/// `contentHTML` (the freshly fetched, workskin-preserving HTML),
-	/// `chapterCurrent` (bumped to the chapter count actually found in this
-	/// fetch), and the four AO3 Work Header stats counts (commentCount/
-	/// kudosCount/bookmarkCount/hitCount, taken from this fetch's
-	/// extraction rather than the existing article, so they refresh on
-	/// every successful re-fetch the same way chapterCurrent does).
-	/// `chapterTotal`/`isComplete` are left as whatever the article
-	/// already has -- those are Workstream 1's (feed-derived) territory, and
-	/// a partial chapter fetch shouldn't be used to infer completion.
-	///
-	/// `tags` and `language` have no persisted home on `Article` at all (see
-	/// ParsedItem/Article field lists), so both are passed through as nil --
-	/// this doesn't blank anything that was ever actually stored.
-	/// Re-derives the currently stored content's chapter/word counts the
-	/// same way `isStale` re-derives chapter count -- walking the stored
-	/// `contentHTML`'s own `#workskin` wrapper back through
-	/// `AO3ChapterHTMLExtractor.extract`, since the stored contentHTML *is*
-	/// that wrapper -- and compares against this fetch's counts. Returns a
-	/// short human-readable description of what regressed (for the
-	/// Activity Log message), or nil if this fetch looks fine to write
-	/// through normally.
-	///
-	/// A fewer-chapters count is always a regression, independent of the
-	/// word-count threshold (full deletion is handled fine elsewhere --
-	/// `.notFound` leaves existing content alone -- this is specifically
-	/// for a legitimate-looking edit that shrinks a work). Word count only
-	/// counts as a regression once it clears `AO3RegressionThreshold`'s
-	/// 10%-and-300-word bar, using the identical threshold the metadata-
-	/// level watch in `Article+Database.changesFrom` uses.
-	private static func detectRegression(existingArticle: Article, extraction: AO3ChapterExtractionResult) -> String? {
-		guard let storedHTML = existingArticle.contentHTML, !storedHTML.isEmpty,
-			  case .success(let storedExtraction) = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: storedHTML) else {
-			// Nothing stored yet, or the stored content can't be
-			// re-parsed -- nothing to regress against, so the first
-			// successful fetch for an article always writes through.
-			return nil
-		}
-
-		let oldChapterCount = storedExtraction.chapters.count
-		let newChapterCount = extraction.chapters.count
-		if newChapterCount < oldChapterCount {
-			return "chapter count \(oldChapterCount) -> \(newChapterCount)"
-		}
-
-		if let oldWordCount = storedExtraction.wordCount, let newWordCount = extraction.wordCount,
-		   AO3RegressionThreshold.isRegression(from: oldWordCount, to: newWordCount) {
-			return "word count \(oldWordCount) -> \(newWordCount)"
-		}
-
-		return nil
-	}
-
-	/// `applyStatsUpdate` is Task 8's Ambrosia local-only toggle
-	/// (`AmbrosiaAO3NetworkPreference.updatesEnabled`) -- always true for
-	/// a non-Ambrosia article, since those have no other way to get
-	/// content at all. When false, the stats fields
-	/// (comment/kudos/bookmark/hit count) pass `existingArticle`'s own
-	/// current values through unchanged instead of this fetch's. There is
-	/// no equivalent content-side flag any more: content, chapter count,
-	/// and prev/next-work navigation are always taken from `extraction`
-	/// once a fetch has been allowed to happen at all, protected instead
-	/// by `Self.detectRegression` at the call site, before this function
-	/// is ever reached. `internal` rather than the enclosing `private
-	/// extension`'s default fileprivate -- AO3ChapterFetcherTests
-	/// exercises this directly (`@testable import Account` reaches
-	/// `internal`, not `fileprivate`, across file boundaries within the
-	/// same module). `detectRegression` above stays fileprivate; only
-	/// this one needs the wider access.
-	internal static func rebuildParsedItem(from existingArticle: Article, workID: String, extraction: AO3ChapterExtractionResult, applyStatsUpdate: Bool) -> ParsedItem {
-		// Metadata fields (author/summary/date/tag-groups): always prefer
-		// what this fetch's live page parsed (AO3ChapterHTMLExtractor's
-		// AO3WorkPageMetadata), falling back to existingArticle's own
-		// stored value only when the live page didn't have that field at
-		// all -- the metadata block being absent entirely (gated page, or
-		// a shape not yet sampled -- see parseWorkHeader's own doc
-		// comment on why it's optional), not merely empty. This is what
-		// fixes a series-nav stub (AO3SeriesNavigator.placeholderStub,
-		// summary/authors/date/tags all nil) never getting real metadata
-		// past the bare stub: previously every one of these fields below
-		// passed existingArticle's value straight through unchanged, which
-		// for a stub meant "nil forever." An article that already has real
-		// metadata (search-results/Ambrosia import) gets the same
-		// always-overwrite treatment on every refetch, so a Check-for-
-		// updates or open-time refetch can't get stuck on stale metadata
-		// either -- the live page is the source of truth, not whatever's
-		// already in the database.
-		let metadata = extraction.metadata
-		let authors: Set<ParsedAuthor>? = metadata.authors.isEmpty
-			? existingArticle.authors.map { authorSet in
-				Set(authorSet.map { ParsedAuthor(name: $0.name, url: $0.url, avatarURL: $0.avatarURL, emailAddress: $0.emailAddress) })
-			}
-			: metadata.authors
-		let summary = metadata.summary ?? existingArticle.summary
-		let datePublished = metadata.datePublished ?? existingArticle.datePublished
-		let dateModified = metadata.dateModified ?? existingArticle.dateModified
-		let fandoms = metadata.fandoms.isEmpty ? existingArticle.fandoms : metadata.fandoms
-		let relationships = metadata.relationships.isEmpty ? existingArticle.relationships : metadata.relationships
-		let characters = metadata.characters.isEmpty ? existingArticle.characters : metadata.characters
-		let ratings = metadata.ratings.isEmpty ? existingArticle.ratings : metadata.ratings
-		let warnings = metadata.warnings.isEmpty ? existingArticle.warnings : metadata.warnings
-		let categories = metadata.categories.isEmpty ? existingArticle.categories : metadata.categories
-		// Additional Tags (freeform): ParsedItem.tags is the only carrier
-		// today -- Article has no persisted field for it yet (see
-		// ParsedItem.tags's own doc comment). Passed through regardless,
-		// ready for that field once it exists; currently dropped
-		// downstream the same way every other source of ParsedItem.tags
-		// already is.
-		let additionalTags: Set<String>? = metadata.additionalTags.isEmpty ? nil : Set(metadata.additionalTags)
-
-		// Inline series navigation: prefer the existing article's own
-		// already-known series membership, carried through unchanged
-		// (name/index/ao3ID *and*, now, previousWorkURL/nextWorkURL --
-		// dropping the latter two here would silently discard per-series
-		// nav data on every refetch). Falls back to this fetch's freshly
-		// parsed seriesEntries only when there's no existing series at all
-		// to carry forward -- the first-ever fetch of a work reached via
-		// Phase 4's bulk series import, whose stub (AO3SeriesNavigator's
-		// stub builder) never sets `series`.
-		let series: [ParsedSeriesEntry]?
-		if let existingSeries = existingArticle.series, !existingSeries.isEmpty {
-			series = existingSeries.map { ParsedSeriesEntry(name: $0.name, index: $0.index, ao3ID: $0.ao3ID, previousWorkURL: $0.previousWorkURL, nextWorkURL: $0.nextWorkURL) }
-		} else {
-			series = extraction.seriesEntries.map(\.entry)
-		}
-
-		return ParsedItem(
-			syncServiceID: nil,
-			uniqueID: existingArticle.uniqueID,
-			feedURL: existingArticle.feedID,
-			url: existingArticle.rawLink,
-			externalURL: existingArticle.rawExternalLink,
-			title: extraction.title ?? existingArticle.title,
-			language: nil,
-			contentHTML: extraction.contentHTML,
-			contentText: existingArticle.contentText,
-			// existingArticle.markdown is expected nil for every AO3-sourced
-			// article (markdown is an Ambrosia/JSON-Feed-only concept, never
-			// populated from an AO3 Atom feed) -- passing it through as-is is
-			// still correct field-copying, but flag the interaction: if this
-			// were ever non-nil, ParsedItem's init would re-render markdown
-			// to HTML and discard the contentHTML fetched above entirely.
-			markdown: existingArticle.markdown,
-			summary: summary,
-			imageURL: existingArticle.rawImageLink,
-			bannerImageURL: nil,
-			datePublished: datePublished,
-			dateModified: dateModified,
-			authors: authors,
-			tags: additionalTags,
-			attachments: nil,
-			isAmbrosiaItem: existingArticle.isAmbrosiaItem,
-			wordCount: existingArticle.wordCount,
-			chapterCurrent: extraction.chapters.count,
-			chapterTotal: existingArticle.chapterTotal,
-			isComplete: existingArticle.isComplete,
-			fandoms: fandoms,
-			relationships: relationships,
-			characters: characters,
-			ratings: ratings,
-			warnings: warnings,
-			categories: categories,
-			series: series,
-			commentCount: applyStatsUpdate ? extraction.commentCount : existingArticle.commentCount,
-			kudosCount: applyStatsUpdate ? extraction.kudosCount : existingArticle.kudosCount,
-			bookmarkCount: applyStatsUpdate ? extraction.bookmarkCount : existingArticle.bookmarkCount,
-			hitCount: applyStatsUpdate ? extraction.hitCount : existingArticle.hitCount,
-			// rebuildParsedItem only runs on a successful extraction (it's
-			// handed the extraction.chapters/stats result), so "now" is
-			// correct here regardless of caller -- a failed fetch never
-			// reaches this function at all.
-			lastPrefaceFetchDate: Date(),
-			ao3WorkID: workID
-		)
 	}
 
 	private func postNotification(name: Notification.Name, articleID: String, message: String? = nil) {

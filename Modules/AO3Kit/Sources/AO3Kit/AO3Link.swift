@@ -23,6 +23,13 @@ public enum AO3Link {
 
 	private static let baseURLString = "https://archiveofourown.org"
 
+	/// AO3's sign-in page.
+	public static let loginURL = URL(string: "https://archiveofourown.org/users/login")!
+
+	/// AO3's site-wide works listing. Used as the generic page for
+	/// browser verification when no challenged URL is known.
+	public static let worksURL = URL(string: "https://archiveofourown.org/works")!
+
 	// MARK: - Hosts
 
 	/// Every host AO3 itself declares as "the Archive" (the

@@ -145,16 +145,14 @@ extension AO3ChallengeSolverViewController: WKNavigationDelegate {
 				return
 			}
 
-			let ao3Cookies = cookies.filter { AO3Link.isAO3CookieDomain($0.domain) }
-			guard !ao3Cookies.isEmpty else {
-				// Landed on a non-challenge page but got no cookies at all
+			guard let cookieHeaderValue = AO3CookieCapture.headerValue(from: cookies) else {
+				// Landed on a non-challenge page but got no AO3 cookies at all
 				// -- treat as not actually cleared rather than storing an
 				// empty session. Let the person try again.
 				self.didCaptureSession = false
 				return
 			}
 
-			let cookieHeaderValue = ao3Cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
 			AO3ChallengeSessionStore.saveSession(cookieHeaderValue: cookieHeaderValue)
 			self.onHTMLHarvested?(html)
 			self.delegate?.ao3ChallengeSolverViewControllerDidFinish(self)

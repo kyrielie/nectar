@@ -214,24 +214,22 @@ extension AO3SearchResultsFetcher {
 	/// primitive `AO3ChapterFetcher` uses for a single work page) against
 	/// this listing-page extraction/pagination path first, before ever
 	/// making an anonymous request. Called for every listing page once a
-	/// session exists (see the widened `isAlwaysAuthenticatedAO3ListingFeed(_:)
+	/// session exists (see the widened `AO3Link.isAlwaysAuthenticatedListing(_:)
 	/// || AO3SessionStore.isSignedIn` gate at each call site), and always
 	/// called -- session or not -- for the two listing types that are
 	/// always private to the signed-in account (subscriptions,
 	/// marked-for-later -- see
-	/// `LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(_:)`'s
+	/// `AO3Link.isAlwaysAuthenticatedListing(_:)`'s
 	/// own doc comment).
 	///
 	/// Falls back to the plain anonymous `fetch(url:feedURL:)` above --
 	/// with its own retry/backoff/Cloudflare handling, unchanged -- only
 	/// on an authentication-shaped failure: the authenticated attempt
 	/// comes back `.registrationRequired` (session rejected/expired), a
-	/// non-OK/empty response (folds in a 429 from this attempt -- unlike
-	/// the anonymous path, `AO3AuthenticatedFetcher` has no cooldown
-	/// tracking of its own, so a rate limit here is treated as a
-	/// transient hiccup worth falling back on, same as
-	/// `AO3ChapterFetcher.attemptAuthenticated`'s identical fold), or
-	/// throws (network error). A Cloudflare challenge detected on the
+	/// non-OK/empty response, or throws (network error). A rate limit is
+	/// not one of these: `AO3AuthenticatedFetcher` shares Downloader's
+	/// per-host cooldown, and `.rateLimited` is returned directly with no
+	/// anonymous fallback. A Cloudflare challenge detected on the
 	/// authenticated attempt's HTML *is* returned directly as
 	/// `.cloudflareChallenge` rather than falling back -- signing in
 	/// again anonymously wouldn't clear a Cloudflare wall. If no session
@@ -241,7 +239,7 @@ extension AO3SearchResultsFetcher {
 	///
 	/// Preserves the existing `.notSignedIn` translation, but scoped by
 	/// `isAlwaysAuthenticatedListing` (the caller already knows this from
-	/// its own `isAlwaysAuthenticatedAO3ListingFeed(_:)` check, so it's
+	/// its own `AO3Link.isAlwaysAuthenticatedListing(_:)` check, so it's
 	/// threaded through rather than re-derived here): a
 	/// `.registrationRequired` result -- whether from a rejected stored
 	/// session or from a signed-out anonymous fetch -- only becomes
@@ -266,7 +264,7 @@ extension AO3SearchResultsFetcher {
 	/// still always logged via `os.Logger` below regardless.
 	///
 	/// Callers must check
-	/// `AO3ChapterFetcher.isAO3NetworkRequestAllowed(for:)`-equivalent
+	/// `AO3FetchPolicy.isNetworkRequestAllowed(for:)`-equivalent
 	/// gating themselves before calling this, same as every other AO3
 	/// request path -- this function has no article to gate against, so
 	/// it can't check that itself.
@@ -280,7 +278,21 @@ extension AO3SearchResultsFetcher {
 
 		if AO3SessionStore.isSignedIn {
 			do {
-				if let (data, response) = try await AO3AuthenticatedFetcher.fetch(url) {
+				switch try await AO3AuthenticatedFetcher.fetch(url) {
+				case .rateLimited:
+					// A shared cooldown is active (or this request just
+					// started one). Never fall back to an anonymous
+					// request: it would hit the same host and the same
+					// limit.
+					return .rateLimited
+				case .noSession:
+					// No session after all -- AO3SessionStore.isSignedIn and
+					// AO3AuthenticatedFetcher.fetch both read the same
+					// stored cookie, so this is only reachable if it was
+					// cleared between the two checks (e.g. a concurrent
+					// sign-out). Fall through to the anonymous path below.
+					await logFallback("session cleared mid-fetch")
+				case .response(let data, let response):
 					guard response.statusIsOK, !data.isEmpty, let html = String(data: data, encoding: .utf8) else {
 						await logFallback("HTTP \(response.statusCode)")
 						return try await fetch(url: url, feedURL: feedURL)
@@ -309,11 +321,11 @@ extension AO3SearchResultsFetcher {
 					case .registrationRequired:
 						// The stored session itself is what's rejected --
 						// distinct from never having signed in at all.
-						// Cleared here: AO3SessionStore.clearSession() is
-						// just a Keychain SecItemDelete, which is harmless
-						// to call redundantly or concurrently (there's no
-						// actual race with a concurrent chapter-fetch
-						// retry against the same store), so there's no
+						// Ended here: AO3SessionStore.endSession(reason:)
+						// deletes the Keychain item (harmless to call
+						// redundantly or concurrently with a chapter-fetch
+						// retry against the same store) and records why,
+						// so Settings can say the session ended. There's no
 						// reason to leave a known-expired session in place
 						// and pay the doomed authenticated attempt on
 						// every listing fetch until the person happens to
@@ -327,7 +339,7 @@ extension AO3SearchResultsFetcher {
 						// in again" on this path. For a general listing
 						// page, the plain .registrationRequired is
 						// returned as-is instead.
-						AO3SessionStore.clearSession()
+						AO3SessionStore.endSession(reason: .rejectedByAO3)
 						await logFallback("session rejected")
 						let anonymousOutcome = try await fetch(url: url, feedURL: feedURL)
 						guard isAlwaysAuthenticatedListing, case .registrationRequired = anonymousOutcome else {
@@ -336,12 +348,6 @@ extension AO3SearchResultsFetcher {
 						return .notSignedIn
 					}
 				}
-				// No session after all -- AO3SessionStore.isSignedIn and
-				// AO3AuthenticatedFetcher.fetch both read the same stored
-				// cookie, so this is only reachable if it was cleared
-				// between the two checks (e.g. a concurrent sign-out).
-				// Fall through to the anonymous path below.
-				await logFallback("session cleared mid-fetch")
 			} catch {
 				// Network-level failure on the authenticated attempt --
 				// not a login problem, so the stored session is left
@@ -374,7 +380,7 @@ extension AO3SearchResultsFetcher {
 	/// True if `url`'s query carries at least one `work_search[...]`
 	/// parameter -- i.e. this was a filtered search/tag-listing request,
 	/// not a plain unfiltered one. Mirrors
-	/// `LocalAccountRefresher.isAO3ListingFeed`'s own `work_search[`-prefix
+	/// `AO3Link.isListingFeed`'s own `work_search[`-prefix
 	/// check so the two stay in sync; duplicated rather than shared
 	/// because that one also folds in host/path checks this call site
 	/// doesn't need (the URL reaching here has already been through that
@@ -399,42 +405,11 @@ extension AO3SearchResultsFetcher {
 
 private extension AO3SearchResultsFetcher {
 
-	/// Forwards to `AO3CloudflareChallenge.isChallengePage(_:)` below --
-	/// kept as a same-named private method here (rather than calling
-	/// `AO3CloudflareChallenge` directly at each call site above) so this
-	/// file's own two call sites didn't need to change.
+	/// Forwards to `AO3CloudflareChallenge.isChallengePage(_:)` (see
+	/// AO3CloudflareChallenge.swift) -- kept as a same-named private method
+	/// here so this file's own call sites didn't need to change.
 	static func isCloudflareChallenge(_ html: String) -> Bool {
 		AO3CloudflareChallenge.isChallengePage(html)
-	}
-}
-
-/// Public (AO3SearchResultsFetcher itself is internal to this module, so a
-/// `public` member on it wouldn't actually be reachable from outside it --
-/// this is the standalone equivalent, used by
-/// `AO3ChallengeSolverViewController` (iOS target) to sniff the same
-/// markers out of a live WKWebView's rendered HTML, to know when an
-/// interactive challenge has actually cleared rather than just that the
-/// page finished loading (the challenge page itself "finishes loading"
-/// too, before its own JS/redirect resolves). `AO3SearchResultsFetcher`'s
-/// own `isCloudflareChallenge(_:)` forwards here rather than the reverse,
-/// so there's exactly one copy of the marker list.
-public enum AO3CloudflareChallenge {
-
-	// "cdn-cgi/challenge-platform" was previously included here but was
-	// dropped: it's Cloudflare's routine bot-management/JS-challenge
-	// beacon, embedded on ordinary rendered pages under Bot Management,
-	// not just interstitials -- it false-positived on real, fully-rendered
-	// AO3 search-results pages (confirmed against a captured results page
-	// with no "Just a moment..." title and no #signin wall). Both markers
-	// below are specific to an actual interstitial: the literal title text
-	// Cloudflare's block page uses, and a challenge-bypass link.
-	private static let challengeMarkers = [
-		"Just a moment...",
-		"cf-chl-bypass"
-	]
-
-	public static func isChallengePage(_ html: String) -> Bool {
-		challengeMarkers.contains { html.contains($0) }
 	}
 }
 

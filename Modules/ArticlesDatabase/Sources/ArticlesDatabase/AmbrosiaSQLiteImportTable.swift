@@ -334,7 +334,7 @@ enum AmbrosiaSQLiteImportTable {
 		// column on the transfer file to read. Leaving this column out of the
 		// bulk INSERT is therefore not a gap to backfill here: an Ambrosia-
 		// imported article gets additionalTags populated the same way a
-		// native-AO3-feed stub does, from AO3ChapterFetcher.rebuildParsedItem's
+		// native-AO3-feed stub does, from AO3FetchPolicy.rebuildParsedItem's
 		// live-page metadata on its first successful chapter fetch (AO3 is
 		// already the source of truth there -- see AO3ChapterHTMLExtractor's
 		// AO3WorkPageMetadata and rebuildParsedItem's always-overwrite

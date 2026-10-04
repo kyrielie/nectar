@@ -521,8 +521,36 @@ function endFind() {
 // entry. Instead, entries are addressed by their position in document
 // order among all <h1>/<h2> heading elements combined ("tocIndex"); id is
 // still reported for display/debugging but must not be used for lookup.
+//
+// AO3-fetched works are the exception to "any h1/h2.heading is a TOC
+// entry": everything inside the work's own `#workskin` is author-written
+// except the chapter titles AO3ChapterHTMLExtractor rewrites to
+// `h2.heading` (each a direct child of `div.chapter.preface.group`).
+// Authors routinely write real `<h1>`s and `<h2 class="heading">`s of
+// their own in-story (fake headlines, section titles, ...), and matching
+// those flooded the TOC with rows that aren't chapters and, worse, made
+// every author <h1> look like a separate book, flipping the TOC into its
+// anthology layout. Author headings are left in the DOM untouched (a
+// work skin's `#workskin h1 { ... }` rules must keep applying) -- they're
+// just not navigable. Structural rather than marker-based, so articles
+// fetched before this rule existed are corrected without a refetch.
+// annotations.js keeps a copy of this predicate; keep the two in sync.
+function isAuthorContentHeading(h) {
+	if (!h.closest('#workskin')) {
+		return false;
+	}
+	const parent = h.parentElement;
+	const isExtractorChapterHeading = h.tagName === 'H2'
+		&& parent !== null
+		&& parent.classList.contains('chapter')
+		&& parent.classList.contains('preface')
+		&& parent.classList.contains('group');
+	return !isExtractorChapterHeading;
+}
+
 function tocNodes() {
-	return Array.from(document.querySelectorAll('h1, h2.heading, h2.toc-heading'));
+	return Array.from(document.querySelectorAll('h1, h2.heading, h2.toc-heading'))
+		.filter(h => !isAuthorContentHeading(h));
 }
 
 getTableOfContents = withEncodedArg(options => {

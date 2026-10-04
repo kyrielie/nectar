@@ -4,11 +4,12 @@
 //
 //  Shared app-group UserDefaults lookup for the AO3/Ambrosia preference
 //  types in this directory (AO3PrefaceRefetchPreference,
-//  AO3KudosOnLikePreference, AmbrosiaAO3NetworkPreference). Extracted from
-//  three byte-identical copies -- unlike the AO3 HTML extractor helpers in
-//  RSParser, there's no cross-module layering reason for these to be
-//  separate: all three preference types already live in this module and
-//  this directory, so sharing one lookup here adds no new coupling.
+//  AO3KudosOnLikePreference, AO3PrefetchNewWorksPreference,
+//  AmbrosiaAO3NetworkPreference) and AO3IgnoreList. Extracted from
+//  byte-identical copies -- there's no cross-module layering reason for
+//  these to be separate: every type that uses it lives in this module, so
+//  sharing one lookup here adds no new coupling. Also read by Account's
+//  Ambrosia transfer types.
 //
 import Foundation
 

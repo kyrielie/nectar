@@ -97,6 +97,25 @@
 	// toBase64/fromBase64 helpers below for the same reasoning).
 	var TOC_HEADING_SELECTOR = "h1, h2.heading, h2.toc-heading";
 
+	// Copy of main_ios.js's isAuthorContentHeading (see its comment for the
+	// full rationale; keep the two in sync). Inside an AO3 work's
+	// `#workskin`, only the extractor's own chapter headings (an h2 that's a
+	// direct child of div.chapter.preface.group) are chapters -- any other
+	// h1/h2.heading there is author content, and must not be reported as
+	// the annotation's chapterTitle.
+	function isAuthorContentHeading(h) {
+		if (!h.closest("#workskin")) {
+			return false;
+		}
+		var parent = h.parentElement;
+		var isExtractorChapterHeading = h.tagName === "H2"
+			&& parent !== null
+			&& parent.classList.contains("chapter")
+			&& parent.classList.contains("preface")
+			&& parent.classList.contains("group");
+		return !isExtractorChapterHeading;
+	}
+
 	// ---- Text extraction -----------------------------------------------
 	//
 	// Builds the root's full inner text in a single TreeWalker pass
@@ -137,7 +156,7 @@
 	// than needing to translate between a document-wide index and a
 	// root-scoped one.
 	function buildHeadingIndex(root, entries) {
-		var headings = Array.from(root.querySelectorAll(TOC_HEADING_SELECTOR));
+		var headings = Array.from(root.querySelectorAll(TOC_HEADING_SELECTOR)).filter(function (h) { return !isAuthorContentHeading(h); });
 		var index = [];
 		for (var i = 0; i < headings.length; i++) {
 			var heading = headings[i];

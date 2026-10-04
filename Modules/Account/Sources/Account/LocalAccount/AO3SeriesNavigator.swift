@@ -197,7 +197,7 @@ public enum AO3SeriesNavigator {
 	/// every-row pass would create a second row for it whenever its
 	/// existing `uniqueID` doesn't happen to equal its bare AO3 work id --
 	/// the normal case for an Ambrosia-synced article. `Article.bookKey`
-	/// (routed through `AO3ChapterFetcher.ao3WorkID(fromBookKey:)`) is a
+	/// (routed through `AO3FetchPolicy.workID(fromBookKey:)`) is a
 	/// reliable, already-existing cross-scheme identity key for "is this
 	/// AO3 work already in this feed," independent of whichever `uniqueID`
 	/// scheme produced the row -- see `existingArticlesByWorkID` below,
@@ -247,7 +247,7 @@ public enum AO3SeriesNavigator {
 			   article.series?.contains(where: { $0.ao3ID == ao3SeriesID && $0.index == 1 }) ?? false
 		   }) {
 			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork .first satisfied from recent walk, workID=\(firstEntry.bookKey, privacy: .public)")
-			let workID = AO3ChapterFetcher.ao3WorkID(fromBookKey: firstEntry.bookKey) ?? firstEntry.uniqueID
+			let workID = AO3FetchPolicy.workID(fromBookKey: firstEntry.bookKey) ?? firstEntry.uniqueID
 			return await downloadAndAwait(workID: workID, existingArticleID: firstEntry.articleID, feedID: existingArticle.feedID, account: account)
 		}
 
@@ -274,7 +274,7 @@ public enum AO3SeriesNavigator {
 			}
 
 			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork cache hit as stub without recent walk, attempting page-1 backfill, workID=\(knownTargetWorkID, privacy: .public) articleID=\(existing.articleID, privacy: .public)")
-			if let page1HTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: 1) {
+			if case .html(let page1HTML) = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: 1) {
 				let (page1Works, _, page1TotalPages) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: page1HTML)
 				let newPage1Works = page1Works.filter { existingByWorkID[$0.workID] == nil }
 				await stubImport(newPage1Works, feedID: existingArticle.feedID, account: account)
@@ -341,9 +341,10 @@ public enum AO3SeriesNavigator {
 		}
 
 		// Step 2: page 1, always (unless the shortcut above already returned).
-		guard let page1HTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: 1) else {
+		let page1Result = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: 1)
+		guard case .html(let page1HTML) = page1Result else {
 			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page 1 fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
-			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
+			return .failure(seriesPageLoadError(for: page1Result))
 		}
 		let (page1Works, _, page1TotalPages) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: page1HTML)
 		guard !page1Works.isEmpty else {
@@ -456,7 +457,7 @@ private extension AO3SeriesNavigator {
 	/// Existing articles under `feedID`, keyed by AO3 work id (recovered
 	/// from `bookKey` -- always present for AO3-sourced articles per
 	/// every producer in this codebase: `JSONFeedParser` for
-	/// Ambrosia-synced items, `AO3ChapterFetcher.rebuildParsedItem` for
+	/// Ambrosia-synced items, `AO3FetchPolicy.rebuildParsedItem` for
 	/// real-fetch refetches, and this navigator's own stubs). Fetched
 	/// once per `openSeriesWork` call and reused by the cache check,
 	/// `.first`'s target resolution, and both stub-import passes, so
@@ -472,7 +473,7 @@ private extension AO3SeriesNavigator {
 		let articles = await account.fetchArticlesAsync(.feed(feed))
 		var result: [String: Article] = [:]
 		for article in articles {
-			guard let workID = AO3ChapterFetcher.ao3WorkID(fromBookKey: article.bookKey) else { continue }
+			guard let workID = AO3FetchPolicy.workID(fromBookKey: article.bookKey) else { continue }
 			// If a pre-fix duplicate already exists for this workID,
 			// prefer whichever copy actually has content, self-healing
 			// old dupes rather than picking one arbitrarily.
@@ -501,9 +502,10 @@ private extension AO3SeriesNavigator {
 		ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork fetching computed page \(targetPage, privacy: .public) for workID=\(targetWorkID, privacy: .public)")
 		try? await Task.sleep(nanoseconds: UInt64(AO3ChapterFetcher.secondsBetweenAO3PagedRequests * 1_000_000_000))
 
-		guard let pageNHTML = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: targetPage) else {
+		let pageNResult = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: targetPage)
+		guard case .html(let pageNHTML) = pageNResult else {
 			ao3SeriesNavigatorLogger.debug("AO3SeriesNavigator: openSeriesWork page \(targetPage, privacy: .public) fetch failed, ao3SeriesID=\(ao3SeriesID, privacy: .public)")
-			return .failure(.networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error")))
+			return .failure(seriesPageLoadError(for: pageNResult))
 		}
 		let (pageNWorks, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: pageNHTML)
 		// Same filter as Step 2, against the same shared map -- page N is
@@ -538,61 +540,84 @@ private extension AO3SeriesNavigator {
 	/// back to the existing anonymous `Downloader.shared` path only on an
 	/// authentication-shaped failure (a non-OK/empty authenticated
 	/// response, a detected Cloudflare challenge, or a thrown network
-	/// error) -- callers only ever see the resulting HTML (or nil), so
-	/// which path succeeded is logged here, not surfaced through the
-	/// return type. Both the authenticated and anonymous branches check
+	/// error) -- callers only ever see the resulting HTML or a typed
+	/// failure, so which path succeeded is logged here, not surfaced
+	/// through the return type. A rate limit (shared cooldown, or a 429)
+	/// never falls back to the anonymous path. Both the authenticated and anonymous branches check
 	/// for a Cloudflare interstitial (`AO3CloudflareChallenge`, same
 	/// marker list `AO3SearchResultsFetcher` uses) before handing HTML
-	/// back to a caller -- this function has no result type to represent
-	/// "challenged" separately (unlike `AO3SearchResultsFetchOutcome`),
-	/// so a detected challenge is treated as a failed attempt: the
-	/// authenticated branch falls back to anonymous, and the anonymous
-	/// branch returns nil rather than returning interstitial HTML as if
-	/// it were real series-listing content for
-	/// `AO3SeriesListingExtractor` to misparse.
-	static func fetchListingPage(ao3SeriesID: String, page: Int) async -> String? {
+	/// back to a caller. A detected challenge is treated as a failed
+	/// attempt: the authenticated branch falls back to anonymous, and the
+	/// anonymous branch returns `.failure(.challenge)` rather than
+	/// returning interstitial HTML as if it were real series-listing
+	/// content for `AO3SeriesListingExtractor` to misparse.
+	/// The user-visible error for a listing page that did not load. Every
+	/// failure keeps the existing "Couldn't load the series page" copy
+	/// except a rate limit, which now says so.
+	static func seriesPageLoadError(for result: AO3ListingPageResult) -> AO3SeriesNavigationError {
+		if case .failure(let failure) = result, case .rateLimited = failure {
+			return .networkError(failure.localizedMessage)
+		}
+		return .networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error"))
+	}
+
+	static func fetchListingPage(ao3SeriesID: String, page: Int) async -> AO3ListingPageResult {
 		guard let url = AO3Link.seriesURL(id: ao3SeriesID, page: page) else {
-			return nil
+			return .failure(.unrecognizedPage)
 		}
 
 		if AO3SessionStore.isSignedIn {
 			do {
-				if let (data, response) = try await AO3AuthenticatedFetcher.fetch(url) {
+				switch try await AO3AuthenticatedFetcher.fetch(url) {
+				case .rateLimited(let until):
+					// Shared cooldown. No anonymous fallback: it would hit
+					// the same host and the same limit.
+					return .failure(.rateLimited(until: until))
+				case .noSession:
+					// The session was cleared between the isSignedIn check
+					// and the fetch (concurrent sign-out), or the host may
+					// not receive it -- fall through to the anonymous path.
+					break
+				case .response(let data, let response):
 					if response.statusIsOK, !data.isEmpty, let html = String(data: data, encoding: .utf8) {
 						if AO3CloudflareChallenge.isChallengePage(html) {
 							ao3SeriesNavigatorLogger.info("AO3SeriesNavigator: fetchListingPage authenticated attempt hit a Cloudflare challenge for \(url.absoluteString, privacy: .public) -- retrying anonymously")
 						} else {
-							return html
+							return .html(html)
 						}
 					} else {
 						ao3SeriesNavigatorLogger.info("AO3SeriesNavigator: fetchListingPage authenticated attempt got bad response for \(url.absoluteString, privacy: .public) -- retrying anonymously")
 					}
 				}
-				// A nil result means the session was cleared between the
-				// isSignedIn check and the fetch (concurrent sign-out) --
-				// fall through to the anonymous path below either way.
 			} catch {
 				// Network-level failure on the authenticated attempt --
 				// not a login problem, so the stored session is left
 				// alone; fall back to the anonymous path rather than
-				// returning nil outright.
+				// returning a failure outright.
 				ao3SeriesNavigatorLogger.info("AO3SeriesNavigator: fetchListingPage authenticated attempt threw (\(error.localizedDescription, privacy: .public)) for \(url.absoluteString, privacy: .public) -- retrying anonymously")
 			}
 		}
 
-		guard let downloadResponse = try? await Downloader.shared.download(url) else {
-			return nil
+		let downloadResponse: DownloadResponse
+		do {
+			downloadResponse = try await Downloader.shared.download(url)
+		} catch {
+			return .failure(.network(error.localizedDescription))
+		}
+		let statusCode = downloadResponse.response?.forcedStatusCode
+		if statusCode == HTTPResponseCode.tooManyRequests {
+			return .failure(.rateLimited(until: nil))
 		}
 		guard let data = downloadResponse.data, !data.isEmpty,
 		      let response = downloadResponse.response, response.statusIsOK,
 		      let html = String(data: data, encoding: .utf8) else {
-			return nil
+			return .failure(.http(statusCode ?? -1))
 		}
 		guard !AO3CloudflareChallenge.isChallengePage(html) else {
 			ao3SeriesNavigatorLogger.info("AO3SeriesNavigator: fetchListingPage anonymous attempt hit a Cloudflare challenge for \(url.absoluteString, privacy: .public)")
-			return nil
+			return .failure(.challenge)
 		}
-		return html
+		return .html(html)
 	}
 
 	/// Bug 3b (cross-feed reuse): builds a `ParsedItem` for
@@ -606,14 +631,14 @@ private extension AO3SeriesNavigator {
 	///
 	/// Authors/series need their own `Article` -> `Parsed*` conversions
 	/// (the reverse of `Article+Database.swift`'s `ParsedItem` -> ...
-	/// mapping) -- same shape `AO3ChapterFetcher.rebuildParsedItem`
+	/// mapping) -- same shape `AO3FetchPolicy.rebuildParsedItem`
 	/// already uses for its own existingArticle-carries-forward cases.
 	/// `lastPrefaceFetchDate` is carried forward too: the copy is exactly
 	/// as fresh as the source fetch was, not "just fetched now," so
-	/// `AO3ChapterFetcher.isStale` shouldn't treat it as newly-stale on
+	/// `AO3FetchPolicy.isStale` shouldn't treat it as newly-stale on
 	/// the next open.
 	static func copiedParsedItem(from sourceArticle: Article, feedID: String) -> ParsedItem {
-		let workID = AO3ChapterFetcher.ao3WorkID(fromBookKey: sourceArticle.bookKey) ?? sourceArticle.uniqueID
+		let workID = AO3FetchPolicy.workID(fromBookKey: sourceArticle.bookKey) ?? sourceArticle.uniqueID
 		let authors: Set<ParsedAuthor>? = sourceArticle.authors.map { authorSet in
 			Set(authorSet.map { ParsedAuthor(name: $0.name, url: $0.url, avatarURL: $0.avatarURL, emailAddress: $0.emailAddress) })
 		}
@@ -673,7 +698,7 @@ private extension AO3SeriesNavigator {
 	/// this app; only the placeholder's metadata is upgraded from the
 	/// bare generic defaults, since it's already sitting unused on the
 	/// row and costs nothing further to thread through. A later real
-	/// fetch still always wins: `AO3ChapterFetcher.rebuildParsedItem`
+	/// fetch still always wins: `AO3FetchPolicy.rebuildParsedItem`
 	/// prefers the live work page's own metadata over whatever's already
 	/// stored, falling back to the stored value only when the live page
 	/// didn't have that field at all -- so a listing-derived stub value

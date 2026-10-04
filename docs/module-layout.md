@@ -8,6 +8,10 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
 - **Modules/RSParser** — feed/OPML/HTML parsing, no app dependencies.
 - **Modules/AO3Kit** — AO3 HTML extraction, authenticated AO3 utilities,
   preferences, and search-result import mechanics. It never depends on Account.
+  `AO3FetchPolicy` holds the pure fetch decisions (which articles may touch
+  the network, `isStale`, `detectRegression`, `rebuildParsedItem`, workID/
+  bookKey mapping); Account's `AO3ChapterFetcher` keeps the orchestration.
+  Its tests are `AO3FetchPolicyTests` in AO3KitTests.
   `JSONFeedParser` reads the standard JSON Feed fields (`summary`,
   `content_html`/`content_text`) and separately reads the `_ambrosia`
   extension object, producing a `ParsedItem` with both the standard fields

@@ -391,7 +391,7 @@ private extension LocalAccountDelegate {
 
 		// Any AO3 listing page (search/tag results, author works,
 		// bookmarks, marked-for-later, subscriptions, a collection, or a
-		// series -- see isAO3ListingFeed's own doc comment) always serves
+		// series -- see AO3Link.isListingFeed's own doc comment) always serves
 		// a feed.atom `<link rel="alternate">` in their HTML head, same
 		// as any other AO3 page. Running these through FeedFinder would
 		// discover that unrelated feed.atom instead of the listing URL
@@ -399,9 +399,9 @@ private extension LocalAccountDelegate {
 		// to whatever feed.atom the account is already subscribed to and
 		// getting rejected below as a duplicate. Skip autodiscovery
 		// entirely for these and use the pasted URL verbatim -- see
-		// LocalAccountRefresher.isAO3ListingFeed(_:), which this reuses
+		// AO3Link.isListingFeed(_:), which this reuses
 		// so create-time detection and refresh-time routing stay in sync.
-		let isAO3ListingURL = LocalAccountRefresher.isAO3ListingFeed(url)
+		let isAO3ListingURL = AO3Link.isListingFeed(url)
 
 		let feedURLString: String
 		if isAO3ListingURL {
@@ -452,12 +452,12 @@ private extension LocalAccountDelegate {
 			await account.database.deduplicateArticlesAsync(feedID: feed.feedID)
 
 			// Subscriptions and marked-for-later are always-yours,
-			// always-private (see isAlwaysAuthenticatedAO3ListingFeed's
+			// always-private (see AO3Link.isAlwaysAuthenticatedListing's
 			// own doc comment) -- route through the authenticated-then-
 			// anonymous fetch so a signed-in person actually gets their
 			// feed, and a signed-out person gets a clearly-surfaced "sign
 			// in" state instead of a silently-empty feed. Widened beyond
-			// isAlwaysAuthenticatedAO3ListingFeed alone: any general
+			// AO3Link.isAlwaysAuthenticatedListing alone: any general
 			// search/tag page also routes through fetchRequiringSignIn
 			// once a session exists, so a signed-in person's add-time
 			// fetch for a general listing gets the authenticated-first
@@ -466,7 +466,7 @@ private extension LocalAccountDelegate {
 			// correct .notSignedIn surfaced when signed out. Every other
 			// listing type, when signed out, keeps using the plain
 			// anonymous fetch, unchanged.
-			let isAlwaysAuthenticatedListing = LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(url)
+			let isAlwaysAuthenticatedListing = AO3Link.isAlwaysAuthenticatedListing(url)
 			let requiresSignIn = isAlwaysAuthenticatedListing || AO3SessionStore.isSignedIn
 
 			do {

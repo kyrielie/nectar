@@ -35,20 +35,22 @@ others' storage or transport:
    request, at every AO3 HTML page-fetch call site — authenticated-first
    when a session is stored, falling back to the anonymous
    `Downloader.shared` path only on an authentication-shaped failure:
-   - `AO3ChapterFetcher.attemptAuthenticated(url:)` (work/chapter pages),
-     tried first whenever `AO3SessionStore.isSignedIn`. A rejected
+   - `AO3ChapterFetcher.download` (work/chapter pages), authenticated
+     attempt tried first whenever `AO3SessionStore.isSignedIn`. A rejected
      session (`.registrationRequired` from the authenticated attempt)
-     clears the stored session — this call site owns that decision.
+     ends the stored session with `AO3SessionStore.endSession(reason: .rejectedByAO3)`,
+     which records when and why and posts `.ao3SessionDidChange`.
    - `AO3SearchResultsFetcher.fetchRequiringSignIn(url:feedURL:isAlwaysAuthenticatedListing:activityContext:)`
      (see `ao3-feeds.md`, `nectar-toolbar-ao3-listing-feeds.md`), fired for
      any AO3 listing page when a session is stored, and always fired
      (session or not) for the two listing types that are always private
      to the signed-in account — subscriptions and marked-for-later
-     (`LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(_:)`).
-     Same authenticated-first shape as the chapter-fetch call site, but
-     does **not** clear `AO3SessionStore` on a rejected session, to avoid
-     racing a concurrent chapter-fetch attempt against the same store —
-     that remains solely `AO3ChapterFetcher`'s call site's responsibility.
+     (`AO3Link.isAlwaysAuthenticatedListing(_:)`).
+     Same authenticated-first shape as the chapter-fetch call site. A
+     rejected session also ends the session with
+     `endSession(reason: .rejectedByAO3)`; that is a Keychain delete plus
+     two defaults writes, safe to repeat or race with the chapter
+     fetcher's identical call.
      Returns a distinct `.notSignedIn` outcome (surfaced as
      `AccountError.ao3ListingRequiresSignIn`) only for the always-private
      listing types (`isAlwaysAuthenticatedListing == true`) when no
@@ -120,7 +122,7 @@ guest/authenticated distinction are backed by `BookStateTable`'s
 
 **Known gotcha, already fixed once, worth re-checking on any future
 change here:** the list-view path originally fired its dedicated AO3
-request without checking `AO3ChapterFetcher.isAO3NetworkRequestAllowed(for:)`
+request without checking `AO3FetchPolicy.isNetworkRequestAllowed(for:)`
 — the same local-only-reader gate (`AmbrosiaAO3NetworkPreference`, below)
 that the piggyback/chapter-fetch paths already respected. That let a
 swipe-love on an Ambrosia-sourced work reach AO3 even with the
@@ -152,7 +154,7 @@ pushed from a new row in `SettingsViewController`, following the same
   two separate flags (content updates / stats updates), collapsed to one
   since both come off the same HTTP fetch.
 - **`AO3PrefaceRefetchPreference`** — a refetch-cadence picker. Once a
-  work's chapter count matches `chapterCurrent`, `AO3ChapterFetcher.isStale`
+  work's chapter count matches `chapterCurrent`, `AO3FetchPolicy.isStale`
   goes false *permanently*, so nothing re-checks a "settled" work for new
   comments/kudos/hit-count changes or formatting fixes. This preference
   adds a second, independent staleness trigger: refetch if the last
@@ -175,3 +177,22 @@ check both places.
 The reusable AO3 session, challenge, request, and preference utilities live
 in `Modules/AO3Kit`; Account-owned chapter-fetcher orchestration remains in
 `Modules/Account`.
+
+## Session lifecycle and Settings
+
+`AO3SessionStore.saveSession`, `clearSession()` (explicit Sign Out) and
+`endSession(reason:)` (AO3 rejected the session) all post
+`.ao3SessionDidChange`. Only `endSession` records `lastEnded`, which
+`saveSession` clears. `AO3SettingsModel` (`iOS/Settings`) is the observable
+state behind `AO3AccountSettingsView`: it refreshes on
+`.ao3SessionDidChange`, `.hostRateLimitDidChange` and the app becoming
+active, shows a "session ended" section when `lastEnded` is set and the
+person is signed out, and shows a rate-limit section while
+`AO3RateLimit.activeResumeDate()` (the latest resume date across all
+recognized AO3 hosts) is in the future, clearing it with one sleep to that
+date. `AO3CookieCapture.headerValue(from:)` turns WKWebView cookies into the
+stored header for both the login screen and the Cloudflare solver.
+
+`AO3KudosManager` posts `.ao3KudosDidFail` (same userInfo keys as
+`.ao3KudosDidSucceed`) for the four failure outcomes. Nothing observes it
+yet.

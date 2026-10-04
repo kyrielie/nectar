@@ -28,26 +28,17 @@ import Account
 	enum Outcome {
 		case imported(newWorkCount: Int, hasNextPage: Bool, pageTitle: String?)
 		case noResults(pageTitle: String?)
-		case registrationRequired
-		case rateLimited
 		/// Headless fetch was Cloudflare-challenged. Caller should show an
 		/// opt-in prompt ("AO3 needs verification -- tap to continue");
 		/// if the person accepts, call `presentSolverAndRetry`.
 		case needsVerification(challengedURL: URL)
 		case cancelled          // person dismissed the WKWebView screen
-		case failed(String)
-		/// See `AO3SearchResultsFetchOutcome.notSignedIn`'s own doc
-		/// comment -- reachable here only if this coordinator is ever
-		/// pointed at an always-authenticated listing feed
-		/// (subscriptions, marked-for-later); today it's only used for
-		/// the Cloudflare-challenge retry path, which every listing type
-		/// can hit, so this case must still be handled even though the
-		/// headless `fetch(url:feedURL:)` this wraps doesn't do the
-		/// sign-in retry itself.
-		case notSignedIn
-		/// See `AO3SearchResultsFetchOutcome.filtersNotApplied`. Nothing
-		/// was imported.
-		case filtersNotApplied
+		/// Every other failure, typed. `failure.localizedMessage` is the
+		/// user-facing text. `.signInRequired` is reachable only if this
+		/// coordinator is pointed at an always-authenticated listing feed;
+		/// the headless `fetch(url:feedURL:)` it wraps does not retry with a
+		/// session itself.
+		case failed(AO3FetchFailure)
 	}
 
 	/// Tries the headless path only -- does not present anything. On a
@@ -55,24 +46,20 @@ import Account
 	/// can decide how to prompt, rather than presenting automatically.
 	func fetch(url: URL, feedURL: String) async -> Outcome {
 		do {
-			switch try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feedURL) {
+			let outcome = try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feedURL)
+			switch outcome {
 			case .success(let parsedItems, let hasNextPage, let pageTitle, _):
 				return .imported(newWorkCount: parsedItems.count, hasNextPage: hasNextPage, pageTitle: pageTitle)
 			case .noResults(let pageTitle, _):
 				return .noResults(pageTitle: pageTitle)
-			case .registrationRequired:
-				return .registrationRequired
-			case .rateLimited:
-				return .rateLimited
 			case .cloudflareChallenge(let challengedURL):
 				return .needsVerification(challengedURL: challengedURL)
-			case .notSignedIn:
-				return .notSignedIn
-			case .filtersNotApplied:
-				return .filtersNotApplied
+			case .registrationRequired, .rateLimited, .notSignedIn, .filtersNotApplied:
+				// `failure` is non-nil for every case listed here.
+				return .failed(outcome.failure ?? .unrecognizedPage)
 			}
 		} catch {
-			return .failed(error.localizedDescription)
+			return .failed(.network(error.localizedDescription))
 		}
 	}
 
@@ -143,10 +130,8 @@ import Account
 				feed.name = pageTitle
 			}
 			return .noResults(pageTitle: pageTitle)
-		case .registrationRequired:
-			return .registrationRequired
-		case .filtersNotApplied:
-			return .filtersNotApplied
+		case .registrationRequired, .filtersNotApplied:
+			return .failed(importOutcome.failure ?? .unrecognizedPage)
 		}
 	}
 }

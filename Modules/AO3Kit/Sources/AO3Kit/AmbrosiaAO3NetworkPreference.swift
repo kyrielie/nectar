@@ -27,7 +27,7 @@
 //  dropping both 10%+ and 300+ words), same as before -- that guard was
 //  never conditional on this flag and still isn't.
 //
-//  Lives in the Account module for the same reason
+//  Lives in AO3Kit for the same reason
 //  AO3PrefaceRefetchPreference does -- AO3ChapterFetcher is what actually
 //  needs to read this, and that shouldn't require depending on the iOS app
 //  target. Uses NectarAppGroupUserDefaults.store, same as

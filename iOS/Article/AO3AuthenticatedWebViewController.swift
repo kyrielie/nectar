@@ -32,6 +32,12 @@ import AO3Kit
 //  article HTML+JS. That content shouldn't be able to reach a signed-
 //  in AO3 session's cookies just by sharing a data store.
 //
+//  The one place the two sessions are tied together is an explicit
+//  "Sign Out" in AO3AccountSettingsView, which also calls
+//  clearBrowserData() below so signing out ends both. An automatic
+//  session-ended event (AO3 rejecting the stored Cookie header) does
+//  not touch this store, since that store holds its own session.
+//
 
 import UIKit
 import WebKit
@@ -46,6 +52,16 @@ final class AO3AuthenticatedWebViewController: UIViewController {
 	/// would create a new, empty store every time and defeat persistence
 	/// entirely -- this must never become `UUID()`.
 	private static let dataStoreIdentifier = UUID(uuidString: "8C6C7C7E-9A8B-4B2C-9C2E-2E6E9B7B9E4A")!
+
+	/// Removes everything this browser's persistent data store holds
+	/// (cookies, local storage, caches), which signs the in-app AO3
+	/// browser out. Called from AO3AccountSettingsView's explicit Sign Out.
+	/// Reaches the same store through the same identifier the web view
+	/// uses, so it works whether or not a browser screen is currently open.
+	static func clearBrowserData() async {
+		let dataStore = WKWebsiteDataStore(forIdentifier: dataStoreIdentifier)
+		await dataStore.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast)
+	}
 
 	private var webView: WKWebView!
 	private var progressObservation: NSKeyValueObservation?

@@ -212,13 +212,8 @@ import AO3Kit
 	/// Whether this feed's URL is any AO3 listing page (search/tag
 	/// results, author works, bookmarks, marked-for-later, subscriptions,
 	/// a collection, or a series -- see
-	/// `LocalAccountRefresher.isAO3ListingFeed(_:)`'s own doc comment for
-	/// the full shape list). Wraps that function, which stays `internal`
-	/// to `Account` -- exposed here the same way `ao3SearchFetchedPages`
-	/// above already crosses the module boundary, so the routing
-	/// predicate itself stays an implementation detail of `Account`
-	/// rather than becoming `public` on `LocalAccountRefresher`. Kept
-	/// under its original name (predates the broadening to non-search
+	/// `AO3Link.isListingFeed(_:)`'s own doc comment for
+	/// the full shape list). Kept under its original name (predates the broadening to non-search
 	/// listing types) since it's a public API surface iOS already depends
 	/// on for the "load more results" footer, which applies identically
 	/// to every listing shape this now matches, not just search/tag
@@ -228,7 +223,7 @@ import AO3Kit
 		guard let url = URL(string: url) else {
 			return false
 		}
-		return LocalAccountRefresher.isAO3ListingFeed(url)
+		return AO3Link.isListingFeed(url)
 	}
 
 	// MARK: - DisplayNameProvider

@@ -11,10 +11,10 @@ import Testing
 
 @Suite struct AO3ChapterHTMLExtractorTests {
 
-	@Test func nonAO3PageReturnsNotFound() {
+	@Test func nonAO3PageReturnsUnrecognizedPage() {
 		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: "<html><body><p>Not a work page.</p></body></html>")
-		guard case .notFound = outcome else {
-			Issue.record("Expected .notFound, got \(outcome)")
+		guard case .unrecognizedPage = outcome else {
+			Issue.record("Expected .unrecognizedPage, got \(outcome)")
 			return
 		}
 	}
@@ -173,7 +173,7 @@ import Testing
 		// This work ("Chapters: 1/1") carries no <div class="chapter"> at
 		// all -- AO3 renders a single-chapter work's body directly inside
 		// <div id="chapters" role="article">. Previously this fell through
-		// to .notFound and was misreported as gated/removed even though
+		// to the not-found fall-through and was misreported as gated/removed even though
 		// view_adult=true had already gotten past the real gate.
 		let html = htmlFixtureString("ao3-work-single-chapter.html")
 		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
@@ -498,6 +498,38 @@ import Testing
 		#expect(styleRange.lowerBound < workskinRange.lowerBound)
 	}
 
+	// MARK: - Work skin CSS fidelity
+
+	@Test func workSkinCSSIsNotEntityEscapedOnSerialization() throws {
+		// <style> contents are raw text: a browser does not decode `&gt;`
+		// there, so escaping a child combinator (`a>b`) on the way out
+		// invalidates the selector and drops the author's rule. Found in a
+		// real skin containing `#workskin .t_line>strong:after`.
+		let html = """
+		<html><head><meta name="csrf-token" content="x"></head><body><div id="main">
+		<div id="work-skin" class="wrapper">
+		<style type="text/css">
+		#workskin .t_line>strong:after { content: 'x'; }
+		#workskin p>em { color: red; }
+		</style>
+		<div id="workskin">
+		<div class="preface group"><h2 class="title heading">T</h2></div>
+		<div id="chapters" role="article"><h3 class="landmark heading" id="work">Work Text:</h3><p>a &amp; b</p></div>
+		</div></div></div></body></html>
+		"""
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		#expect(result.contentHTML.contains("#workskin .t_line>strong:after"))
+		#expect(result.contentHTML.contains("#workskin p>em"))
+		#expect(!result.contentHTML.contains("&gt;"))
+		// Ordinary text nodes must still be escaped.
+		#expect(result.contentHTML.contains("a &amp; b"))
+	}
+
 	// MARK: - TOC regression
 
 	@Test func workTitleIsNotAToCHeading() throws {
@@ -584,6 +616,47 @@ import Testing
 
 		#expect(tocHeadings.count == 1)
 		#expect(tocHeadings.first?.tag == "h1")
+	}
+
+	@Test(arguments: ["ao3-work-workskin.html", "ao3-work-multi-chapter.html"])
+	func everyChapterHeadingIsADirectChildOfItsChapterPrefaceGroup(fixture: String) throws {
+		// The contract main_ios.js's isAuthorContentHeading() (and its copy
+		// in annotations.js) relies on: inside #workskin, an h2 is a real
+		// chapter heading only if it is a direct child of a
+		// `div.chapter.preface.group`. Anything else in there -- notably an
+		// author's own <h1>/<h2 class="heading"> -- is excluded from the
+		// table of contents. If the extractor ever rewrites chapter titles
+		// into a different shape, the filter would silently drop every
+		// chapter, so pin the shape here (Tests/JS/toc covers the JS side
+		// of the same contract).
+		let html = htmlFixtureString(fixture)
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+
+		let root = parseHTMLLiteTree(result.contentHTML)
+		let chapterHeadings = descendants(of: root, where: {
+			$0.tag == "h2" && $0.attributes["class"] == "heading"
+		})
+		let prefaceGroups = descendants(of: root, where: {
+			$0.tag == "div" && $0.attributes["class"] == "chapter preface group"
+		})
+
+		#expect(!chapterHeadings.isEmpty)
+		#expect(chapterHeadings.count == result.chapters.count)
+		for heading in chapterHeadings {
+			let owner = prefaceGroups.first { group in
+				group.children.contains { child in
+					if case .element(let element) = child {
+						return element === heading
+					}
+					return false
+				}
+			}
+			#expect(owner != nil, "h2.heading \"\(flattenedText(heading))\" is not a direct child of a div.chapter.preface.group")
+		}
 	}
 
 	// MARK: - Work page metadata (byline/summary/tag-groups/dates)

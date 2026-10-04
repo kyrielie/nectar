@@ -297,16 +297,12 @@ private extension FeedInspectorViewController {
 			switch outcome {
 			case .loaded, .noResults:
 				break // feed.ao3SearchFetchedPages/.ao3SearchTotalPages already updated by the paginator; feedSettingDidChange refreshes the cell.
-			case .registrationRequired:
-				self.ao3PagesCell?.showValidationError(NSLocalizedString("Restricted to registered AO3 users", comment: "AO3 load more error"))
-			case .rateLimited:
-				self.ao3PagesCell?.showValidationError(NSLocalizedString("AO3 rate limit hit -- backing off before retrying", comment: "AO3 load more error"))
 			case .cloudflareChallenge(let challengedURL):
 				self.presentAO3FetchVerificationPrompt(challengedURL: challengedURL, page: page, account: account)
-			case .notSignedIn:
-				self.ao3PagesCell?.showValidationError(NSLocalizedString("This shelf requires a signed-in AO3 account", comment: "AO3 load more error"))
-			case .filtersNotApplied:
-				self.ao3PagesCell?.showValidationError(NSLocalizedString("AO3 ignored this search's filters (URL too long)", comment: "AO3 load more error"))
+			case .registrationRequired, .rateLimited, .notSignedIn, .filtersNotApplied:
+				if let failure = outcome.failure {
+					self.ao3PagesCell?.showValidationError(failure.localizedMessage)
+				}
 			}
 
 			self.ao3PagesCell?.configure(feed: self.feed, isFetchInFlight: self.isAO3FetchInFlight) { [weak self] page in
@@ -346,18 +342,10 @@ private extension FeedInspectorViewController {
 				switch outcome {
 				case .imported, .noResults:
 					break
-				case .registrationRequired:
-					self.ao3PagesCell?.showValidationError(NSLocalizedString("Restricted to registered AO3 users", comment: "AO3 load more error"))
-				case .rateLimited:
-					self.ao3PagesCell?.showValidationError(NSLocalizedString("AO3 rate limit hit -- backing off before retrying", comment: "AO3 load more error"))
 				case .needsVerification, .cancelled:
 					break
-				case .failed(let message):
-					self.ao3PagesCell?.showValidationError(message)
-				case .notSignedIn:
-					self.ao3PagesCell?.showValidationError(NSLocalizedString("This shelf requires a signed-in AO3 account", comment: "AO3 load more error"))
-				case .filtersNotApplied:
-					self.ao3PagesCell?.showValidationError(NSLocalizedString("AO3 ignored this search's filters (URL too long)", comment: "AO3 load more error"))
+				case .failed(let failure):
+					self.ao3PagesCell?.showValidationError(failure.localizedMessage)
 				}
 				self.ao3PagesCell?.configure(feed: self.feed, isFetchInFlight: self.isAO3FetchInFlight) { [weak self] page in
 					self?.fetchAO3Page(page)

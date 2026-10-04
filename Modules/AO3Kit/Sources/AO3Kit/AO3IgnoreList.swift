@@ -26,10 +26,8 @@
 //  rule was added -- nothing here touches already-stored Articles, and
 //  there's no cleanup path for existing matches by design.
 //
-//  Same app-group-suite-backed UserDefaults shape as
-//  AO3PrefaceRefetchPreference (Account) and AO3KudosOnLikePreference
-//  (Account) -- duplicated here rather than shared, since those live in
-//  Account and this can't depend on Account.
+//  Stored in NectarAppGroupUserDefaults.store, the same app-group suite
+//  AO3PrefaceRefetchPreference and AO3KudosOnLikePreference use.
 //
 import Foundation
 import RSParser
@@ -39,20 +37,7 @@ public enum AO3IgnoreList {
 	private static let workIDsKey = "ao3IgnoredWorkIDs"
 	private static let authorURLsKey = "ao3IgnoredAuthorURLs"
 
-	// UserDefaults is internally thread-safe but isn't marked Sendable, so a
-	// global `let` of it still trips the concurrency checker; nonisolated(unsafe)
-	// reflects the actual (safe) runtime behavior here.
-	private nonisolated(unsafe) static let store: UserDefaults = {
-		if let appIdentifierPrefix = Bundle.main.object(forInfoDictionaryKey: "AppIdentifierPrefix") as? String,
-		   let bundleIdentifier = Bundle.main.bundleIdentifier,
-		   let suiteDefaults = UserDefaults(suiteName: "\(appIdentifierPrefix)group.\(bundleIdentifier)") {
-			return suiteDefaults
-		}
-		// Fall back to .standard rather than force-unwrapping: this type is
-		// also reachable from non-app contexts (e.g. unit tests) where the
-		// AppIdentifierPrefix Info.plist key isn't present.
-		return .standard
-	}()
+	private static var store: UserDefaults { NectarAppGroupUserDefaults.store }
 
 	/// Bare AO3 work IDs (digits only, matching `ParsedItem.ao3WorkID`'s own
 	/// shape -- see `AO3Link.workID(fromPermalink:)`), not

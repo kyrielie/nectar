@@ -25,6 +25,14 @@ jobs, so there are two lists.
   arbitrary loads) and returns nil for everything else.
   `isAO3CookieDomain(_:)` ignores one leading dot and exact-matches
   `credentialHosts`.
+- `AO3CookieCapture.headerValue(from:)` (separate file) turns a
+  `[HTTPCookie]` from a WKWebView into the stored `name=value; ...` Cookie
+  header. It keeps only cookies for which `isAO3CookieDomain` is true and
+  returns nil when none remain. The login screen and the challenge solver
+  both use it.
+- `loginURL` and `worksURL` are fixed `https://archiveofourown.org` URLs
+  (`/users/login`, `/works`) for the login screen and the generic
+  browser-verification fallback.
 
 ## Ids and builders
 

@@ -4,15 +4,15 @@
 //
 //  Nectar AO3 direct-reading support -- refetch-cadence setting.
 //
-//  Once a work's chapter count matches chapterCurrent, AO3ChapterFetcher.isStale
+//  Once a work's chapter count matches chapterCurrent, AO3FetchPolicy.isStale
 //  goes false permanently: nothing re-checks a "settled" work for new
 //  comments/kudos/hits, or for formatting changes to an already-fetched
 //  chapter. This preference adds a second, independent trigger alongside the
 //  chapter-count check: refetch if the last successful preface fetch is older
 //  than the chosen interval, regardless of chapter count.
 //
-//  Lives in the Account module (not the iOS app's AppDefaults) for the same
-//  reason AmbrosiaTransferFormatPreference does -- AO3ChapterFetcher.isStale
+//  Lives in AO3Kit (not the iOS app's AppDefaults) for the same
+//  reason AmbrosiaTransferFormatPreference does -- AO3FetchPolicy.isStale
 //  is what actually needs to read it, and that shouldn't require depending on
 //  the iOS app target. Uses NectarAppGroupUserDefaults.store (same app-group
 //  suite AppDefaults.store uses), so the iOS-side picker

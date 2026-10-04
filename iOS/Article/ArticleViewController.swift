@@ -12,6 +12,7 @@ import os
 import SafariServices
 import WebKit
 import RSCore
+import AO3Kit
 import Account
 import Articles
 import ArticleTheming
@@ -70,7 +71,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// whatever's on screen in the reader, so safe to call regardless of
 	// the reader's own presentation state. See showSettingsFromToolbar(_:).
 	private lazy var settingsBarButtonItem = UIBarButtonItem(image: Assets.Images.settings, style: .plain, target: self, action: #selector(showSettingsFromToolbar(_:)))
-	// Per-article eligibility (AO3ChapterFetcher.canCheckForUpdates(for:))
+	// Per-article eligibility (AO3FetchPolicy.canCheckForUpdates(for:))
 	// is not evaluated here -- this item is always constructed; updateUI()
 	// toggles isEnabled per-article each time `article` changes. See
 	// updateUI()'s checkForUpdatesBarButtonItem handling.
@@ -575,7 +576,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		// button -- unlike the other top-toolbar toggles (theme/table of
 		// contents/find/prevNext/lock/annotations/settings), which only
 		// depend on a static AppDefaults toggle, this one also depends on
-		// AO3ChapterFetcher.canCheckForUpdates(for:), which varies per
+		// AO3FetchPolicy.canCheckForUpdates(for:), which varies per
 		// article and isn't re-evaluated by rightBarButtonItems() itself.
 		// Always-reserved-slot approach (shown, disabled, for an ineligible
 		// article) rather than vanishing entirely -- consistent with
@@ -583,8 +584,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		// keeps which icons occupy the top bar's slots stable article to
 		// article.
 		if AppDefaults.shared.isToolbarFunctionEnabled(.checkForUpdates, on: .top) || AppDefaults.shared.isToolbarFunctionEnabled(.checkForUpdates, on: .bottom) {
-			let eligible = AO3ChapterFetcher.shared.canCheckForUpdates(for: article)
-			allBarButtonItemInstances(for: .checkForUpdates).forEach { $0.isEnabled = eligible && AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article) }
+			let eligible = AO3FetchPolicy.canCheckForUpdates(for: article)
+			allBarButtonItemInstances(for: .checkForUpdates).forEach { $0.isEnabled = eligible && AO3FetchPolicy.isNetworkRequestAllowed(for: article) }
 		}
 
 		// .scrollBack's availability is session-live state (WebViewController.
@@ -736,8 +737,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		let defaults = AppDefaults.shared
 
 		if defaults.isToolbarFunctionEnabled(.checkForUpdates, on: .top), let article {
-			let eligible = AO3ChapterFetcher.shared.canCheckForUpdates(for: article)
-			checkForUpdatesBarButtonItem.isEnabled = eligible && AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article)
+			let eligible = AO3FetchPolicy.canCheckForUpdates(for: article)
+			checkForUpdatesBarButtonItem.isEnabled = eligible && AO3FetchPolicy.isNetworkRequestAllowed(for: article)
 			// checkForUpdatesBottomBarButtonItem's own isEnabled is kept in
 			// sync by updateUI()'s allBarButtonItemInstances(for: .checkForUpdates)
 			// sweep, not duplicated here -- this call site only special-cases
@@ -802,8 +803,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			}]
 		case .checkForUpdates:
 			guard let article else { return [] }
-			let eligible = AO3ChapterFetcher.shared.canCheckForUpdates(for: article)
-				&& AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article)
+			let eligible = AO3FetchPolicy.canCheckForUpdates(for: article)
+				&& AO3FetchPolicy.isNetworkRequestAllowed(for: article)
 			return [UIAction(title: function.title, image: function.icon, attributes: eligible ? [] : .disabled) { [weak self] _ in
 				self?.checkForUpdatesFromToolbar(self as Any)
 			}]
@@ -1222,7 +1223,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 
 	@objc private func checkForUpdatesFromToolbar(_ sender: Any) {
 		guard let article else { return }
-		guard AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article) else {
+		guard AO3FetchPolicy.isNetworkRequestAllowed(for: article) else {
 			// The button is disabled (see updateUI()) whenever this guard
 			// would fail, so this shouldn't normally fire -- no user-visible
 			// messaging here, unlike the context-menu version's disabled

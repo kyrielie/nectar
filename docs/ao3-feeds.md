@@ -85,7 +85,7 @@ same `.index.group` blurb-row markup and `ol.pagination` pager; the
 extractor selects `li.work-<id>` rows anywhere in the document rather
 than scoping to a page-type-specific container, so no page-type
 branching was needed to support the rest of AO3's listing types beyond
-the original two — only routing (`LocalAccountRefresher.isAO3ListingFeed(_:)`,
+the original two — only routing (`AO3Link.isListingFeed(_:)`,
 see `refresh-throttling.md`) needed broadening.
 
 For subscriptions specifically: the extractor currently recognizes work
@@ -121,7 +121,7 @@ private to the signed-in account, so a plain anonymous fetch of them is
 expected to always hit the registration wall. `AO3SearchResultsFetcher`'s
 `fetchRequiringSignIn(url:feedURL:)` (see that file) wraps `fetch(url:feedURL:)`
 with an anonymous-then-authenticated retry for exactly these two types,
-gated by `LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(_:)`
+gated by `AO3Link.isAlwaysAuthenticatedListing(_:)`
 — see `ao3-authenticated-reading.md` for the authenticated-fetch
 mechanism itself.
 
@@ -205,13 +205,26 @@ enum AO3ChapterExtractionOutcome {
     case success(AO3ChapterExtractionResult)
     case adultContentGate     // expected unreachable now that every fetch sends view_adult=true
     case registrationRequired
-    case notFound             // deleted/moved work, or any other unsampled gate shape
+    case cloudflareChallenge
+    case serviceUnavailable   // AO3's own "Error 503 - Service unavailable" page or its beta banner
+    case hiddenUntilRevealed  // unrevealed challenge work
+    case workNotFound         // AO3's explicit "couldn't find the work" copy
+    case permissionDenied     // AO3's explicit "no permission" copy
+    case unrecognizedPage     // nothing above matched; never evidence of a missing work
 }
 ```
 
-All four outcomes are distinguished purely by document shape — AO3 returns
-HTTP 200 for every one of them, including the gate pages, so there is no
-status-code signal to branch on.
+The extractor distinguishes every outcome by document shape alone. After
+the `#workskin` success branches, it tests in a fixed order: adult gate,
+registration required, Cloudflare challenge, AO3 503 page, hidden until
+revealed, not-found copy, permission-denied copy, then `.unrecognizedPage`.
+Copy matching folds the three apostrophe spellings (`'`, `&#x27;`, `&#39;`)
+and the typographic one first (`AO3HTMLHelpers.foldedForCopyMatching`). The
+copy strings come from FanFicFare's AO3 adapter; whether they appear on
+Nectar's `?view_full_work=true&view_adult=true` page has not been verified
+against live captures, and the test fixtures for these cases are synthetic.
+HTTP status is not visible here. `AO3WorkPageClassifier` (see
+`ao3-preface-rendering.md`) combines status and body.
 
 `AO3ChapterExtractionResult` carries: `contentHTML` (the merged
 metadata+workskin unit, ready to store/render), `chapters:

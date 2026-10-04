@@ -145,8 +145,21 @@ private func serializeHTMLLiteNode(_ node: HTMLLiteNode, into s: inout String) {
 			return
 		}
 		s += ">"
+		// <style> is a raw-text element: HTMLScanner.consumeRawText hands its
+		// contents over verbatim (no entity decoding), and a browser doesn't
+		// decode entities inside <style> either, so the only lossless round
+		// trip is to write that text back verbatim. Escaping it turned a work
+		// skin's child combinators (`a>b`) into `a&gt;b`, an invalid selector
+		// that silently dropped the author's rule. <script> is deliberately
+		// not treated the same way: emitting script text unescaped would
+		// widen what serialized feed/work content can execute.
+		let isStyleElement = element.tag == "style"
 		for child in element.children {
-			serializeHTMLLiteNode(child, into: &s)
+			if isStyleElement, case .text(let text) = child {
+				s += text
+			} else {
+				serializeHTMLLiteNode(child, into: &s)
+			}
 		}
 		s += "</\(element.tag)>"
 	}

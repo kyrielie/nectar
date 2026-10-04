@@ -153,7 +153,7 @@ import Articles
 			// fetch, or a signed-out person would see every page past 1
 			// silently fail registration instead of getting the same
 			// "sign in" state page 1 already surfaces. Widened beyond
-			// isAlwaysAuthenticatedAO3ListingFeed alone: any general
+			// AO3Link.isAlwaysAuthenticatedListing alone: any general
 			// search/tag page also routes through fetchRequiringSignIn
 			// once a session exists, matching the two add-time call
 			// sites above. Every other listing type, when signed out,

@@ -26,8 +26,8 @@ the full, current list.
 (off by default). A native AO3 tag/user RSS feed has no way to fetch
 content at listing time, so a work that's deleted, locked, or moved
 between being listed and the person opening it fails its one and only
-fetch attempt — `AO3ChapterFetcher` sets `ao3ConfirmedMissingAt` and
-never retries (see "Eligibility and staleness" below), and the work's
+fetch attempt — `AO3ChapterFetcher` sets `ao3ConfirmedMissingAt` (only
+on positive evidence, see `ao3-preface-rendering.md`) and never retries (see "Eligibility and staleness" below), and the work's
 text is gone for good, even though its metadata survived in the feed.
 With this preference on, a newly-discovered AO3-work article is handed to
 `AO3PrefetchQueue` at refresh time instead of waiting for the person to
@@ -57,7 +57,7 @@ alone on failure" philosophy.
 - Anthology/series-group book keys (`"ao3-series:"`, `"calibre-series:"`
   prefixes) are never eligible — there's no single AO3 work URL to fetch for
   a Calibre-merged compilation of several works.
-- `isStale` becomes permanently `false` once a work's stored chapter count
+- `AO3FetchPolicy.isStale` becomes permanently `false` once a work's stored chapter count
   matches `chapterCurrent` from the feed — a "settled," complete work stops
   being auto-rechecked based on chapter count alone. **`AO3PrefaceRefetchPreference`**
   (`.yearly`/`.monthly`/`.weekly`/`.daily`/`.always`, default `.monthly`)
@@ -78,7 +78,7 @@ triggers, philosophy" above. Concretely, that's:
 
 1. **Open-time, unconditionally**: `WebViewController.setArticle` calls
    `fetchIfNeeded(for:)` whenever an article is displayed, regardless of
-   read state. `isStale`'s cadence check and the anti-hammering floor in
+   read state. `AO3FetchPolicy.isStale`'s cadence check and the anti-hammering floor in
    `downloadIfNeeded` are what actually gate whether a request goes out —
    this is the only automatic-and-on-by-default AO3 fetch trigger in the
    app.
@@ -102,8 +102,8 @@ attempt with an anonymous fallback, not the reverse.
 
 ### Authenticated-first fetch, anonymous fallback
 
-When `AO3SessionStore.isSignedIn`, `attemptAuthenticated(url:)` is now
-tried **first**, before any anonymous request — a request with the
+When `AO3SessionStore.isSignedIn`, the authenticated attempt in
+`AO3ChapterFetcher.download` is tried **first**, before any anonymous request — a request with the
 stored session's Cookie header attached by hand, via
 `AO3AuthenticatedFetcher`. This deliberately bypasses `Downloader.shared`
 entirely: `Downloader`'s response cache is keyed on URL alone, and mixing
@@ -111,23 +111,48 @@ authenticated and anonymous responses for the same URL through one cache
 would risk silently handing back the wrong one on a later request.
 `AO3AuthenticatedFetcher` uses its own ephemeral, cache-free `URLSession`
 (mirroring `Downloader`'s own cookie-disabling configuration, so the
-*only* cookie ever sent is the one attached by hand) and is not a stored
-singleton, since it's used at most once per attempt.
+*only* cookie ever sent is the one attached by hand). It is one
+long-lived static session capped at one connection per host, so
+authenticated requests queue the way `Downloader`'s do, and under unit
+tests it routes through `TestingURLProtocol` as `Downloader` does.
 
-The anonymous `Downloader.shared` path (unchanged from before this
-inversion, including its own per-host 429/Retry-After cooldown) is used
-as a **fallback**, reached only on an authentication-shaped failure of
-the authenticated attempt: the session is rejected/expired
-(`.registrationRequired`, or a `.notFound` treated the same way — see
-`AO3ChapterExtractionOutcome.notFound`'s own doc comment for why that
-shape gets the same treatment), or the authenticated request itself
-throws (network error) or times out. A rejected session is treated as no
-longer valid and `AO3SessionStore.clearSession()` is called. When no
-session is stored at all, behavior is unchanged: straight to the
-anonymous path, no authenticated attempt is ever made. Every fallback is
-logged to the Activity Log via `updateProgress` (a progress note, not a
-failure — the overall operation isn't failing, it's degrading to
-anonymous) as well as `os.Logger`.
+It does share `Downloader`'s per-host rate-limit cooldown, through
+`AO3RateLimit`: while a cooldown is active the request is not sent, and a
+429 received here starts the same cooldown (`Downloader.recordRateLimit`).
+`fetch` returns `AO3AuthenticatedFetchResult` (`.noSession`,
+`.rateLimited(until:)`, `.response`), and a rate limit is never folded
+into the anonymous fallback, since that would hit the same host and the
+same limit. `AO3KudosFetcher` checks and records the same cooldown for its
+POST, and the list-view kudos CSRF fetch now goes through `Downloader`
+(cache vetoed) instead of a private session. A multi-select love now runs
+its CSRF fetches one at a time with `secondsBetweenAO3PagedRequests`
+between them, rather than all at once.
+
+The anonymous `Downloader.shared` path is the **fallback**. Both attempts
+are classified by `AO3WorkPageClassifier` and, for an interactive fetch,
+retried once (see below). After the authenticated attempt:
+
+| Authenticated result | What happens |
+|---|---|
+| success | stored, done |
+| `.registrationRequired` | session rejected: `AO3SessionStore.endSession(reason: .rejectedByAO3)`, fail with `.sessionEnded`, no fallback |
+| `.rateLimited`, `.challenge`, `.serviceUnavailable`, `.hiddenUntilRevealed`, `.permissionDenied`, `.adultGate` | terminal, no anonymous fallback |
+| `.workMissing` | remembered for dual confirmation, then fall back |
+| network error, `.http`, `.unrecognizedPage`, session cleared mid-flight | fall back |
+
+When no session is stored at all, the fetch goes straight to the anonymous
+path. Every fallback is logged to the Activity Log via `updateProgress` (a
+progress note, not a failure) as well as `os.Logger`. The anonymous
+download vetoes caching of an interstitial body
+(`AO3WorkPageClassifier.isInterstitial`), so a Cloudflare or 503 page is
+never replayed from `Downloader`'s cache.
+
+**Retry (`AO3RetryPolicy`).** An interactive fetch (a reader opened the
+article, or pressed Check for Updates) retries each attempt once, after 2
+seconds plus up to 1 second of jitter, on HTTP 502/503/504/525, AO3's own
+503 page, `URLError.timedOut` and `.networkConnectionLost`. A background
+fetch (`AO3PrefetchQueue` passes `priority: .background`) never retries. No
+retry happens if a shared cooldown became active in the meantime.
 
 This same authenticated-first/anonymous-fallback shape now also applies
 to `AO3SearchResultsFetcher.fetchRequiringSignIn(url:feedURL:)` (search/
@@ -218,7 +243,7 @@ attempt path:
   context menu) with no accompanying page fetch to piggyback a token off
   of. This dispatches its own dedicated, token-only fetch, since waiting
   for the next natural chapter refetch could mean never (once
-  `AO3ChapterFetcher.isStale` goes permanently false).
+  `AO3FetchPolicy.isStale` goes permanently false).
 
 Both paths share one eligibility gate: feature enabled, book loved, a CSRF
 token available, and no already-authenticated kudos attempt on record for
@@ -346,7 +371,7 @@ cost of the two-page cap, not an incomplete-import bug.
 person is currently reading. A naive stub-every-row pass would create a
 duplicate row for it whenever its existing `uniqueID` doesn't equal its
 bare AO3 work id (the normal case for an Ambrosia-synced article).
-`Article.bookKey` — resolved through `AO3ChapterFetcher.ao3WorkID(fromBookKey:)`
+`Article.bookKey` — resolved through `AO3FetchPolicy.workID(fromBookKey:)`
 — is used as a scheme-independent identity key to both skip re-stubbing an
 already-present work and resolve which existing `articleID` a target should
 be refetched under.
@@ -403,3 +428,16 @@ should read/write the exact same key rather than risk a second UserDefaults
 suite drifting out of sync with it.
 The shared AO3 extraction and independent authenticated-request utilities are
 owned by `Modules/AO3Kit`. Account retains persistence-coupled orchestration.
+
+## Schema 6: confirmed-missing reset
+
+`ArticlesDatabase` schema version 6 runs
+`UPDATE articles SET ao3ConfirmedMissingAt = NULL` once. Values written
+before interstitial classification existed cannot be told apart from false
+ones (a Cloudflare or 503 page used to read as "work missing"), so all are
+cleared; a work that is really gone is re-flagged on its next fetch.
+Restoring an older backup can reintroduce stale flags.
+
+The reader's Check for Updates menu item becomes "Review Pending Update"
+when a fetched update is waiting (`pendingUpdateContentHTML != nil`), since
+re-checking is blocked in that state.

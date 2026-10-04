@@ -416,10 +416,6 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			// afterward for whichever articleIDs need it true).
 			var bookKeysByArticleID = [String: String]()
 			for parsedItem in parsedItems {
-				// TEMPORARY -- diagnostic instrumentation for the seeded-demo-data
-				// / starlog-archive.invalid AO3 fetch investigation. Remove once
-				// root cause is confirmed. See docs/ao3-link.md, ui-test-demo-data.md.
-				Self.logger.debug("writing bookKey=\(parsedItem.bookKey, privacy: .public) for uniqueID=\(parsedItem.uniqueID, privacy: .public) permalink=\(parsedItem.url ?? "nil", privacy: .public)")
 				bookKeysByArticleID[parsedItem.articleID(feedID: feedID)] = parsedItem.bookKey
 			}
 			let bookStateByBookKey = self.bookStateTable.state(for: Set(bookKeysByArticleID.values), database)
@@ -1176,8 +1172,9 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	/// Resolving either promotes the pending copy to contentHTML (`accept
 	/// == true`) or discards it (`accept == false`) -- both clear the
-	/// pending slot back to nil/nil either way, which is what unblocks
-	/// AO3ChapterFetcher.isStale from treating the article as settled
+	/// pending slot back to nil/nil either way, and also clear
+	/// wordCountRegressionFlaggedAt, which is what unblocks
+	/// AO3FetchPolicy.isStale from treating the article as settled
 	/// again.
 	func resolvePendingContentUpdate(articleID: String, accept: Bool, _ completion: @escaping DatabaseCompletionBlock) {
 		queue.runInTransaction { database in
@@ -1185,7 +1182,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				let d: DatabaseDictionary = [DatabaseKey.contentHTML: pendingHTML]
 				self.updateRowsWithDictionary(d, whereKey: DatabaseKey.articleID, matches: articleID, database: database)
 			}
-			database.executeUpdate("update articles set pendingUpdateContentHTML = NULL, pendingUpdateDetectedAt = NULL where articleID = ?", withArgumentsIn: [articleID])
+			database.executeUpdate("update articles set pendingUpdateContentHTML = NULL, pendingUpdateDetectedAt = NULL, wordCountRegressionFlaggedAt = NULL where articleID = ?", withArgumentsIn: [articleID])
 			self.removeArticleIDsFromCache(Set([articleID]))
 			DispatchQueue.main.async {
 				completion()
@@ -1198,7 +1195,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	// Set once AO3ChapterFetcher.download has exhausted both anonymous and
 	// authenticated retry and gotten a confirmed `.notFound` back -- see
 	// AO3ChapterFetcher's own set/clear call sites for which branches
-	// qualify. Checked by AO3ChapterFetcher.isStale before contentHTML's
+	// qualify. Checked by AO3FetchPolicy.isStale before contentHTML's
 	// nil-check, same guard style as wordCountRegressionFlaggedAt above.
 
 	func setAO3ConfirmedMissing(detectedAt: Date, articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
@@ -1215,6 +1212,16 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	func clearAO3ConfirmedMissing(articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
 		queue.runInTransaction { database in
 			database.executeUpdate("update articles set ao3ConfirmedMissingAt = NULL where articleID = ?", withArgumentsIn: [articleID])
+			self.removeArticleIDsFromCache(Set([articleID]))
+			DispatchQueue.main.async {
+				completion()
+			}
+		}
+	}
+
+	func clearWordCountRegressionFlag(articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
+		queue.runInTransaction { database in
+			database.executeUpdate("update articles set wordCountRegressionFlaggedAt = NULL where articleID = ?", withArgumentsIn: [articleID])
 			self.removeArticleIDsFromCache(Set([articleID]))
 			DispatchQueue.main.async {
 				completion()
@@ -1267,7 +1274,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	// MARK: - Kudos-on-like (Task 6)
 	//
 	// Unlike recordBookOpened/saveReadingProgress above, callers here already
-	// have a resolved bookKey in hand (AO3ChapterFetcher.ao3WorkID(fromBookKey:)
+	// have a resolved bookKey in hand (AO3FetchPolicy.workID(fromBookKey:)
 	// is the gate that produces it -- these are the same nil-for-anthology
 	// semantics reused, not re-derived here), so there's no articleID ->
 	// bookKey resolution step and no statuses-table fallback/propagation:
@@ -2029,7 +2036,7 @@ nonisolated private extension ArticlesTable {
 	/// for status propagation, which must cover every article ever
 	/// persisted. Every AO3 series-navigation stub/fetch always sets
 	/// `ao3WorkID` (this navigator's own `placeholderStub`, plus
-	/// `AO3ChapterFetcher.rebuildParsedItem` and `JSONFeedParser` for
+	/// `AO3FetchPolicy.rebuildParsedItem` and `JSONFeedParser` for
 	/// Ambrosia-synced items -- see `AO3SeriesNavigator`'s own
 	/// `existingArticlesByWorkID` doc comment), so `bookKey` is always
 	/// populated (`"ao3-work:<id>"`) for the rows this call cares about;

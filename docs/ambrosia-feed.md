@@ -63,7 +63,7 @@ table (see `database.md`).
 Two independent sources can populate the AO3 stats fields
 (`commentCount`/`kudosCount`/`bookmarkCount`/`hitCount`): a self-hosted
 Ambrosia server publishing its own already-scraped numbers under
-`_ambrosia`, or `AO3ChapterFetcher.rebuildParsedItem` populating them from a
+`_ambrosia`, or `AO3FetchPolicy.rebuildParsedItem` populating them from a
 live AO3 chapter fetch. Neither source is gated by
 `AmbrosiaAO3NetworkPreference.updatesEnabled` once the data is already in
 hand — that preference only controls whether a *new* live AO3 network

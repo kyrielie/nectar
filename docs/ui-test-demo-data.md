@@ -80,7 +80,7 @@ exactly one item, `"A Quiet Kind of Orbit"`. Ambrosia items carry `content_html`
 `ArticleRenderer` never synthesizes a preface over that content, so this item's `content_html` is
 hand-authored: a short AO3-style preface block plus real prose. Its JSON deliberately omits
 `_ambrosia.ao3_work_id`, so per `book-identity.md`'s `bookKey` precedence, `bookKey` falls back to the
-bare `uniqueID` (not `ao3-work:`-prefixed) — `AO3ChapterFetcher.ao3WorkID(fromBookKey:)` returns nil and
+bare `uniqueID` (not `ao3-work:`-prefixed) — `AO3FetchPolicy.workID(fromBookKey:)` returns nil and
 `fetchIfNeeded` no-ops. This is the only seeded article the UI test opens.
 
 A person manually opening one of the three AO3-Atom items outside the automated screenshot flow will

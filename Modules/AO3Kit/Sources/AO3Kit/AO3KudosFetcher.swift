@@ -52,6 +52,13 @@ public enum AO3KudosFetcher {
 	public static func leaveKudos(workID: String, csrfToken: String, cookieHeaderValue: String?) async throws -> AO3KudosOutcome {
 		let request = AO3KudosRequest.makeRequest(workID: workID, csrfToken: csrfToken, cookieHeaderValue: cookieHeaderValue)
 
+		// Shares Downloader's per-host cooldown: not sent while one is
+		// active, and a 429 here starts one for every other AO3 transport.
+		if await AO3RateLimit.resumeDate(for: AO3KudosRequest.url) != nil {
+			logger.info("Not requesting AO3: kudos endpoint is rate-limited")
+			return .rateLimited
+		}
+
 		logger.debug("Requesting AO3: POST \(AO3KudosRequest.url.absoluteString, privacy: .public) for workID=\(workID, privacy: .public) authenticated=\(cookieHeaderValue != nil, privacy: .public)")
 
 		let session = makeSession()
@@ -60,6 +67,9 @@ public enum AO3KudosFetcher {
 		let (data, response) = try await session.data(for: request)
 		guard let httpResponse = response as? HTTPURLResponse else {
 			throw URLError(.badServerResponse)
+		}
+		if httpResponse.statusCode == HTTPResponseCode.tooManyRequests {
+			_ = await AO3RateLimit.record(url: AO3KudosRequest.url, response: httpResponse)
 		}
 		return AO3KudosRequest.outcome(statusCode: httpResponse.statusCode, data: data)
 	}

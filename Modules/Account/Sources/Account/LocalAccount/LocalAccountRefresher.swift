@@ -203,7 +203,7 @@ import os
 		// AO3 listing feeds (search/tag results, author works, bookmarks,
 		// marked-for-later, subscriptions, collections, series) are a third
 		// bucket alongside sqliteFeeds/downloadFeeds, matched on host + path,
-		// not extension -- see Self.isAO3ListingFeed(_:). Like sqliteFeeds,
+		// not extension -- see AO3Link.isListingFeed(_:). Like sqliteFeeds,
 		// these bypass DownloadSession entirely: they go through
 		// Downloader.shared, the same one-shot path AO3ChapterFetcher already
 		// uses, since a listing page is a single GET, not something
@@ -219,7 +219,7 @@ import os
 			}
 			if url.pathExtension.lowercased() == "sqlite" {
 				sqliteFeeds.insert(feed)
-			} else if Self.isAO3ListingFeed(url) {
+			} else if AO3Link.isListingFeed(url) {
 				ao3SearchResultFeeds.insert(feed)
 			} else {
 				downloadFeeds.insert(feed)
@@ -353,99 +353,16 @@ import os
 
 			feed.lastCheckDate = Date()
 
-			// Subscriptions and marked-for-later are always-yours,
-			// always-private (see isAlwaysAuthenticatedAO3ListingFeed's own
-			// doc comment) -- route through the authenticated-then-anonymous
-			// fetch here too, mirroring
-			// LocalAccountDelegate.createFeed's identical branch, since this
-			// function is reachable for those feed types on their add-time
-			// fetch (feedShouldBeSkippedForAO3SearchResultsReasons lets
-			// lastCheckDate == nil through). Widened beyond
-			// isAlwaysAuthenticatedAO3ListingFeed alone: any general
-			// search/tag page also routes through fetchRequiringSignIn once
-			// a session exists, so a signed-in person gets the
-			// authenticated-first attempt there too, not just on the
-			// always-private listing types. A subscriptions/marked-for-later
-			// page still always routes through it (session or not) to get
-			// the correct .notSignedIn surfaced when signed out. Every
-			// other listing type, when signed out, keeps using the plain
-			// anonymous fetch, unchanged.
-			let isAlwaysAuthenticatedListing = Self.isAlwaysAuthenticatedAO3ListingFeed(url)
-			let requiresSignIn = isAlwaysAuthenticatedListing || AO3SessionStore.isSignedIn
+			let result = await AO3SearchFeedRefresher.refresh(url: url, feedURL: feed.url, feedID: feed.feedID, tracker: feed, updater: account, activity: activityOwner.map { ($0, activityKind) })
 
-			do {
-				let outcome: AO3SearchResultsFetchOutcome
-				if requiresSignIn {
-					outcome = try await AO3SearchResultsFetcher.fetchRequiringSignIn(url: url, feedURL: feed.url, isAlwaysAuthenticatedListing: isAlwaysAuthenticatedListing, activityContext: activityOwner.map { ($0, activityKind) })
-				} else {
-					outcome = try await AO3SearchResultsFetcher.fetch(url: url, feedURL: feed.url)
+			switch result {
+			case .imported, .noResults:
+				break
+			case .failure(let failure):
+				if case .network = failure {
+					Self.logger.error("LocalAccountRefresher: AO3 search-results fetch failed for \(url.absoluteString): \(failure.localizedMessage)")
 				}
-
-				switch outcome {
-				case .success(let parsedItems, let hasNextPage, _, let totalPages):
-					// hasNextPage isn't consumed here -- a routine/add-time
-					// fetch always writes page 1 (below) regardless; only
-					// AO3SearchResultsPaginator's "load more" UI needs the
-					// signal, and it calls AO3SearchResultsFetcher directly.
-					// pageTitle also unused: this is a routine background
-					// refresh of an already-named feed, not the
-					// LocalAccountDelegate.createFeed add-time path -- a
-					// refresh must never overwrite a name the person may
-					// have hand-edited since the feed was created.
-					_ = hasNextPage
-					let articleChanges = await account.updateAsync(feedID: feed.feedID, parsedItems: Set(parsedItems), deleteOlder: false)
-					account.sendNotificationAbout(articleChanges)
-					feed.ao3SearchFetchedPages = [1]
-					feed.ao3SearchTotalPages = totalPages
-					if let activityOwner {
-						ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "\(parsedItems.count) work\(parsedItems.count == 1 ? "" : "s") found")
-					}
-				case .noResults(_, let totalPages):
-					if let totalPages {
-						feed.ao3SearchTotalPages = totalPages
-					}
-					if let activityOwner {
-						ActivityLog.shared.didComplete(activityOwner, kind: activityKind, message: "No results")
-					}
-				case .registrationRequired:
-					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "Restricted to registered AO3 users"]), activityKind: activityKind)
-				case .rateLimited:
-					// Distinct message, not the generic catch-all below --
-					// Downloader.shared has already started its own per-host
-					// cooldown by the time this returns (see
-					// AO3SearchResultsFetcher's doc comment).
-					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "AO3 rate limit hit -- backing off before retrying"]), activityKind: activityKind)
-				case .cloudflareChallenge(let challengedURL):
-					// Also distinct: this
-					// isn't AO3's own rate limit and shouldn't be read as one,
-					// nor folded into the generic parse-failure case, since a
-					// real markup change looks identical otherwise.
-					//
-					// Recorded so Settings' "Verify Browser Access" solver
-					// (AO3ChallengeSolverViewController) can default to the
-					// actual URL that got challenged, rather than a generic
-					// AO3 page that may not exercise the same gate -- see
-					// AO3ChallengeSessionStore.lastChallengedURL's doc comment.
-					AO3ChallengeSessionStore.lastChallengedURL = challengedURL
-					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "Blocked by a Cloudflare challenge -- try again later"]), activityKind: activityKind)
-				case .notSignedIn:
-					// Reachable here on a background/scheduled refresh of an
-					// always-authenticated listing feed whose stored AO3
-					// session is missing or was rejected -- e.g. signed out
-					// in Settings after the feed was added. Distinct
-					// messaging from .registrationRequired above, matching
-					// AccountError.ao3ListingRequiresSignIn's copy.
-					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "This feed requires a signed-in AO3 account"]), activityKind: activityKind)
-				case .filtersNotApplied:
-					// Only reachable for a filtered URL at or past
-					// AO3FilterURLLength.limit. Nothing is imported --
-					// AO3's unfiltered "Latest Works" listing isn't the
-					// search this feed subscribes to.
-					self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: "AO3 ignored this search's filters because its URL is too long"]), activityKind: activityKind)
-				}
-			} catch {
-				Self.logger.error("LocalAccountRefresher: AO3 search-results fetch failed for \(url.absoluteString): \(error.localizedDescription)")
-				self.reportFeedRefreshError(feed: feed, error: error, activityKind: activityKind)
+				self.reportFeedRefreshError(feed: feed, error: NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: failure.localizedMessage]), activityKind: activityKind)
 			}
 		}
 	}
@@ -711,8 +628,8 @@ import os
 				// [Article], so this needs an explicit Array(...) conversion
 				// rather than relying on filter's return type.
 				let candidates: [Article] = Array(newArticles).filter { article in
-					AO3ChapterFetcher.ao3WorkID(fromBookKey: article.bookKey) != nil
-						&& AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article)
+					AO3FetchPolicy.workID(fromBookKey: article.bookKey) != nil
+						&& AO3FetchPolicy.isNetworkRequestAllowed(for: article)
 				}
 				if !candidates.isEmpty {
 					Task {
@@ -1065,7 +982,7 @@ extension LocalAccountRefresher {
 
 	/// AO3 listing feeds (search/tag results, author works, bookmarks,
 	/// marked-for-later, subscriptions, collections, series -- see
-	/// `isAO3ListingFeed(_:)`) are a deliberate, permanent exception to
+	/// `AO3Link.isListingFeed(_:)`) are a deliberate, permanent exception to
 	/// this file's stated "no minimum time between checks" design (see this
 	/// function's siblings below, and the `nectar-import://` scheme's
 	/// permanent exclusion in feedShouldBeSkippedForDisallowedHostReasons,
@@ -1075,7 +992,7 @@ extension LocalAccountRefresher {
 	/// explicit "load more" / future "check for new results" paths
 	/// (AO3SearchResultsPaginator) touch it after that.
 	private static func feedShouldBeSkippedForAO3SearchResultsReasons(_ feed: Feed) -> (Bool, String?) {
-		guard let url = url(for: feed), Self.isAO3ListingFeed(url) else {
+		guard let url = url(for: feed), AO3Link.isListingFeed(url) else {
 			return (false, nil)
 		}
 		guard feed.lastCheckDate != nil else {
@@ -1144,33 +1061,6 @@ extension LocalAccountRefresher {
 	/// `.sqlite`-vs-`.json` handling (decompression, import) happens where
 	/// callers act on the fetched feed URL for Ambrosia-identified accounts,
 	/// not inside DownloadSession.
-	/// Forwards to `AO3Link.isListingFeed(_:)` -- see its doc comment for
-	/// the full shape list. Kept under this name (and internal, not
-	/// public) since callers throughout this file and
-	/// `LocalAccountDelegate` already use it. Originally named
-	/// `isAO3SearchResultsFeed` when it matched only search/tag results;
-	/// renamed once it grew to cover the rest (see
-	/// `nectar-toolbar-ao3-listing-feeds.md`'s broadening item) --
-	/// `Feed.isAO3SearchResultsFeed`'s public wrapper keeps its old name
-	/// for now since it's a public API surface iOS depends on for the
-	/// "load more results" footer, which applies identically to every
-	/// shape matched here, not just search/tag results.
-	internal static func isAO3ListingFeed(_ url: URL) -> Bool {
-		AO3Link.isListingFeed(url)
-	}
-
-	/// Forwards to `AO3Link.isAlwaysAuthenticatedListing(_:)` -- see its
-	/// doc comment for the full explanation of why this is a static,
-	/// page-type-level property rather than something detected from the
-	/// fetch response, and why bookmarks are deliberately excluded.
-	/// Unlike this function's old standalone implementation, the
-	/// forwarded one checks the host itself, so it no longer depends on
-	/// the caller having confirmed `isAO3ListingFeed(url)` first --
-	/// harmless here since every existing call site already does anyway.
-	internal static func isAlwaysAuthenticatedAO3ListingFeed(_ url: URL) -> Bool {
-		AO3Link.isAlwaysAuthenticatedListing(url)
-	}
-
 	private static func url(for feed: Feed) -> URL? {
 		guard let url = URL(string: feed.url) else {
 			return nil
