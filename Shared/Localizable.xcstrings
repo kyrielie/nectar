@@ -28,17 +28,50 @@
     "Could not reach AO3 (HTTP %d)" : {
       "comment" : "AO3 fetch failure: unexpected HTTP status"
     },
+    "Flagged after a smaller-than-expected feed report" : {
+      "comment" : "Works Needing Attention: a feed reported far fewer words than the stored text"
+    },
     "Full text unavailable: %@" : {
       "comment" : "Inline notice in the reader when AO3 full text could not be loaded; the placeholder is the reason"
+    },
+    "Nectar is checking AO3 for this work now." : {
+      "comment" : "Works Needing Attention: retry started"
     },
     "No chapter content found (gated or removed work)" : {
       "comment" : "AO3 fetch failure: page shape not recognized"
     },
+    "Not found on AO3" : {
+      "comment" : "Works Needing Attention: AO3 confirmed the work is missing"
+    },
+    "Nothing Needs Attention" : {
+      "comment" : "Works Needing Attention: empty state title"
+    },
+    "Nothing was started. Nectar may have already checked this work in the last minute, or it isn't set to fetch updates from AO3. Try again shortly." : {
+      "comment" : "Works Needing Attention: retry did not start"
+    },
+    "Pending update" : {
+      "comment" : "Works Needing Attention: a changed version is waiting for review"
+    },
+    "Retry" : {
+      "comment" : "Works Needing Attention: retry alert title"
+    },
+    "Retry Now" : {
+      "comment" : "Works Needing Attention: check AO3 for this work again"
+    },
+    "Retry Now checks AO3 again right away. Clear Content removes a work's stored text but keeps its title, status and notes." : {
+      "comment" : "Works Needing Attention footer"
+    },
     "Review Pending Update" : {
       "comment" : "Command: a fetched AO3 update is waiting for the person to accept or keep"
     },
+    "Review Update" : {
+      "comment" : "Works Needing Attention: open the work to review its pending update"
+    },
     "Signed out of AO3 -- sign in again in Settings to read this work" : {
       "comment" : "AO3 fetch failure: stored session rejected"
+    },
+    "This work is no longer available." : {
+      "comment" : "Works Needing Attention: account or article is gone"
     },
     "This work is only available to registered AO3 users" : {
       "comment" : "AO3 fetch failure: work restricted to registered users"
@@ -48,6 +81,15 @@
     },
     "This work was not found on AO3. It may have been deleted or moved." : {
       "comment" : "AO3 fetch failure: work not found"
+    },
+    "Works Needing Attention" : {
+      "comment" : "AO3 settings: works needing attention row title and screen title"
+    },
+    "Works with an update waiting for review, or that Nectar could not refresh from AO3, show up here." : {
+      "comment" : "Works Needing Attention: empty state description"
+    },
+    "Works with an update waiting for your review, and works Nectar could not refresh from AO3." : {
+      "comment" : "AO3 settings: works needing attention row footer"
     },
     "“%@” has separate light and dark mode colors and follows your system appearance setting." : {
       "comment" : "Theme appearance footer, light+dark theme"

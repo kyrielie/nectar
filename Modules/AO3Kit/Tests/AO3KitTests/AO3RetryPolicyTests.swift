@@ -41,10 +41,10 @@ import Testing
 
 	@Test func interactiveRetriesOnceThenReturnsTheSecondResult() async {
 		let counter = Counter()
-		let result = await AO3RetryPolicy.perform(interactive: true, url: Self.url, sleep: { counter.sleeps.append($0) }) {
+		let result = await AO3RetryPolicy.perform(interactive: true, url: Self.url, sleep: { counter.sleeps.append($0) }, attempt: {
 			counter.attempts += 1
 			return counter.attempts == 1 ? Self.fetch(.http(503)) : Self.fetch(.http(502))
-		}
+		})
 
 		#expect(counter.attempts == 2)
 		#expect(counter.sleeps.count == 1)
@@ -60,10 +60,10 @@ import Testing
 
 	@Test func backgroundNeverRetries() async {
 		let counter = Counter()
-		_ = await AO3RetryPolicy.perform(interactive: false, url: Self.url, sleep: { counter.sleeps.append($0) }) {
+		_ = await AO3RetryPolicy.perform(interactive: false, url: Self.url, sleep: { counter.sleeps.append($0) }, attempt: {
 			counter.attempts += 1
 			return Self.fetch(.http(503))
-		}
+		})
 
 		#expect(counter.attempts == 1)
 		#expect(counter.sleeps.isEmpty)
@@ -71,23 +71,23 @@ import Testing
 
 	@Test func nonRetryableFailureIsNotRetried() async {
 		let counter = Counter()
-		_ = await AO3RetryPolicy.perform(interactive: true, url: Self.url, sleep: { counter.sleeps.append($0) }) {
+		_ = await AO3RetryPolicy.perform(interactive: true, url: Self.url, sleep: { counter.sleeps.append($0) }, attempt: {
 			counter.attempts += 1
 			return Self.fetch(.http(403))
-		}
+		})
 
 		#expect(counter.attempts == 1)
 	}
 
 	@Test func timeoutIsRetriedAndRecoversOnTheSecondAttempt() async {
 		let counter = Counter()
-		let result = await AO3RetryPolicy.perform(interactive: true, url: Self.url, sleep: { counter.sleeps.append($0) }) {
+		let result = await AO3RetryPolicy.perform(interactive: true, url: Self.url, sleep: { counter.sleeps.append($0) }, attempt: {
 			counter.attempts += 1
 			if counter.attempts == 1 {
 				throw URLError(.timedOut)
 			}
 			return Self.fetch(.unrecognizedPage)
-		}
+		})
 
 		#expect(counter.attempts == 2)
 		if case .failure(let failure) = result.result {
@@ -99,10 +99,10 @@ import Testing
 
 	@Test func nonRetryableThrownErrorBecomesNetworkFailure() async {
 		let counter = Counter()
-		let result = await AO3RetryPolicy.perform(interactive: true, url: Self.url, sleep: { counter.sleeps.append($0) }) {
+		let result = await AO3RetryPolicy.perform(interactive: true, url: Self.url, sleep: { counter.sleeps.append($0) }, attempt: {
 			counter.attempts += 1
 			throw URLError(.notConnectedToInternet)
-		}
+		})
 
 		#expect(counter.attempts == 1)
 		if case .failure(.network) = result.result {

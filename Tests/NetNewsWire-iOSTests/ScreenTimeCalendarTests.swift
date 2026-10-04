@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import ScreenTime
+import ReadingTime
 
 @Suite struct ScreenTimeCalendarTests {
 	private var calendar: Calendar {

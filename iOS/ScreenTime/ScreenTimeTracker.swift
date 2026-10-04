@@ -1,5 +1,5 @@
 import Foundation
-import ScreenTime
+import ReadingTime
 import UIKit
 import Account
 

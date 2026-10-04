@@ -78,8 +78,8 @@ packages:
     path: Modules/BackupRestore
   ReadingStats:
     path: Modules/ReadingStats
-  ScreenTime:
-    path: Modules/ScreenTime
+  ReadingTime:
+    path: Modules/ReadingTime
   Zip:
     url: https://github.com/marmelroy/Zip.git
     revision: 059e7346082d02de16220cd79df7db18ddeba8c3
@@ -136,7 +136,7 @@ targets:
         embed: true
       - package: ReadingStats
         embed: true
-      - package: ScreenTime
+      - package: ReadingTime
         embed: true
     attributes:
       SystemCapabilities:
@@ -181,16 +181,18 @@ targets:
     dependencies:
       - target: Nectar-iOS
       - package: Articles
+      - package: ArticlesDatabase
       - package: AnnotationsKit
       - package: AO3Kit
       - package: Account
       - package: RSCore
+      - package: RSWeb
       - package: HexColor
       - package: ArticleTheming
       - package: AppChrome
       - package: BackupRestore
       - package: ReadingStats
-      - package: ScreenTime
+      - package: ReadingTime
     configFiles:
       Debug: xcconfig/NetNewsWire_iOSTests_target.xcconfig
       Release: xcconfig/NetNewsWire_iOSTests_target.xcconfig

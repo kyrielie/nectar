@@ -1,5 +1,5 @@
 import SwiftUI
-import ScreenTime
+import ReadingTime
 import Account
 
 struct ScreenTimeSettingsView: View {

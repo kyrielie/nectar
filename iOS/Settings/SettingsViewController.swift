@@ -391,7 +391,11 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 				break
 			}
 		case .ao3Account:
-			let hosting = Self.makeSurfacePaletteAwareHostingController(rootView: AO3AccountSettingsView())
+			let hosting = Self.makeSurfacePaletteAwareHostingController(rootView: AO3AccountSettingsView(
+				onShowWorksNeedingAttention: { [weak self] in
+					self?.pushWorksNeedingAttention()
+				}
+			))
 			self.navigationController?.pushViewController(hosting, animated: true)
 		case .backup:
 			switch BackupRow(rawValue: indexPath.row) {
@@ -927,6 +931,33 @@ private extension SettingsViewController {
 			return nil
 		}
 		return (bookKey: article.bookKey, title: article.title ?? "")
+	}
+
+	func pushWorksNeedingAttention() {
+		let view = AO3WorksNeedingAttentionView(onReviewUpdate: { [weak self] accountID, articleID in
+			self?.openArticleFromSettings(articleID: articleID, accountID: accountID)
+		})
+		let hosting = Self.makeSurfacePaletteAwareHostingController(rootView: view)
+		self.navigationController?.pushViewController(hosting, animated: true)
+	}
+
+	/// Dismisses Settings, then selects the article directly, the same
+	/// sequence `navigateToAnnotationFromSettings` uses without the scroll.
+	/// Opening a work with a pending update shows the review alert, because
+	/// `WebViewController.setArticle` calls
+	/// `presentPendingContentUpdateAlertIfNeeded()`.
+	func openArticleFromSettings(articleID: String, accountID: String) {
+		guard let rootSplit = presentingParentController as? RootSplitViewController,
+			  let account = AccountManager.shared.existingAccount(accountID: accountID) else {
+			return
+		}
+		let coordinator = rootSplit.coordinator
+
+		self.dismiss(animated: true) {
+			Task {
+				await coordinator?.selectArticleDirectly(articleID, account: account)
+			}
+		}
 	}
 
 	func navigateToAnnotationFromSettings(_ annotation: Annotation, account: Account) {

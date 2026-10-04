@@ -196,3 +196,7 @@ stored header for both the login screen and the Cloudflare solver.
 `AO3KudosManager` posts `.ao3KudosDidFail` (same userInfo keys as
 `.ao3KudosDidSucceed`) for the four failure outcomes. Nothing observes it
 yet.
+
+The screen's "Works Needing Attention" row pushes a separate list of works
+with a pending update, a regression flag or a missing flag; see
+`ao3-works-needing-attention.md`.

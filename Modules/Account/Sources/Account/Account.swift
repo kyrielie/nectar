@@ -1017,6 +1017,13 @@ public enum FetchType {
 		await database.fetchArticleStorageInfo(limit: limit)
 	}
 
+	/// Articles needing attention on the AO3 Works Needing Attention
+	/// screen: a pending update, a word-count regression flag or a
+	/// confirmed-missing flag. Newest first.
+	public func fetchAO3AttentionInfo(limit: Int) async -> [ArticleAttentionInfo] {
+		await database.fetchAO3AttentionInfo(limit: limit)
+	}
+
 	/// Total stored `contentHTML` size across all of this account's
 	/// articles, for the Manage Storage screen's total-size figure.
 	public func fetchTotalContentHTMLSize() async -> Int {
