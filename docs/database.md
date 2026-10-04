@@ -296,8 +296,13 @@ internal implementation reached only through this `@MainActor final class`.
 Key public value types: `ArticleChanges` (new/updated/deleted sets from a
 feed update), `ArticleCounts` (aggregate total/unread/starred/statuses
 counts), `ArticleStorageInfo` (per-article compressed `contentHTML` size,
-for the Manage Storage screen), and `RetentionStyle` (`.feedBased` for
-Local/iCloud accounts vs. `.syncSystem` for accounts whose sync service
+for the Manage Storage screen), `ArticleAttentionInfo` (an article with a
+pending update, a word-count regression flag or a confirmed-missing flag,
+for the AO3 Works Needing Attention screen; returned newest first by
+`fetchAO3AttentionInfo(limit:)`, which selects only `hasPending` and never
+loads `pendingUpdateContentHTML`, and unlike the storage query it includes
+articles with no stored `contentHTML`), and `RetentionStyle` (`.feedBased`
+for Local/iCloud accounts vs. `.syncSystem` for accounts whose sync service
 defines retention).
 
 ## Other databases

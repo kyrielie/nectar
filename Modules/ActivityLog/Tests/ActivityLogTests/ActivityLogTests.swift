@@ -111,10 +111,7 @@ import Foundation
 		struct TestError: Error {}
 
 		await #expect(throws: TestError.self) {
-			try await activityLog.logActivity(owner: owner, kind: .refreshFeedList) {
-				() async throws -> Void in
-				throw TestError()
-			}
+			try await activityLog.logActivity(owner: owner, kind: .refreshFeedList, { throw TestError() } as () async throws -> Void)
 		}
 
 		#expect(activityLog.runningActivities.isEmpty)
@@ -127,9 +124,7 @@ import Foundation
 		let activityLog = ActivityLog()
 		let owner = ActivityOwner.account(accountID: "account1", displayName: "Account One")
 
-		await activityLog.logActivity(owner: owner, kind: .sendArticleStatuses, durationIsSignificant: { _ in false }, {
-			() async -> Void in
-		})
+		await activityLog.logActivity(owner: owner, kind: .sendArticleStatuses, durationIsSignificant: { _ in false }, {} as () async -> Void)
 
 		let activity = activityLog.completedActivities[0]
 		#expect(activity.state == .completed)

@@ -266,6 +266,53 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		return result
 	}
 
+	// MARK: - Fetching AO3 attention info (Works Needing Attention screen)
+
+	func fetchAO3AttentionInfoAsync(limit: Int, _ completion: @escaping @Sendable ([ArticleAttentionInfo]) -> Void) {
+		queue.runInDatabase { database in
+			let info = self.fetchAO3AttentionInfo(limit: limit, database)
+			DispatchQueue.main.async {
+				completion(info)
+			}
+		}
+	}
+
+	func fetchAO3AttentionInfo(limit: Int, _ database: FMDatabase) -> [ArticleAttentionInfo] {
+		// pendingUpdateContentHTML is only tested for null, never selected,
+		// so a large pending body is not read into memory for the list.
+		let query = """
+		select articleID, title, bookKey, pendingUpdateDetectedAt, wordCountRegressionFlaggedAt, ao3ConfirmedMissingAt, \
+		(pendingUpdateContentHTML is not null) as hasPending \
+		from articles \
+		where pendingUpdateContentHTML is not null or wordCountRegressionFlaggedAt is not null or ao3ConfirmedMissingAt is not null \
+		order by coalesce(pendingUpdateDetectedAt, wordCountRegressionFlaggedAt, ao3ConfirmedMissingAt) desc \
+		limit ?;
+		"""
+		guard let resultSet = database.executeQuery(query, withArgumentsIn: [limit]) else {
+			return []
+		}
+		defer {
+			resultSet.close()
+		}
+
+		var result = [ArticleAttentionInfo]()
+		while resultSet.next() {
+			guard let articleID = resultSet.string(forColumn: DatabaseKey.articleID) else {
+				continue
+			}
+			result.append(ArticleAttentionInfo(
+				articleID: articleID,
+				title: resultSet.string(forColumn: DatabaseKey.title),
+				bookKey: resultSet.string(forColumn: DatabaseKey.bookKey),
+				pendingUpdateDetectedAt: resultSet.date(forColumn: DatabaseKey.pendingUpdateDetectedAt),
+				wordCountRegressionFlaggedAt: resultSet.date(forColumn: DatabaseKey.wordCountRegressionFlaggedAt),
+				ao3ConfirmedMissingAt: resultSet.date(forColumn: DatabaseKey.ao3ConfirmedMissingAt),
+				hasPendingUpdate: resultSet.int(forColumn: "hasPending") != 0
+			))
+		}
+		return result
+	}
+
 	func fetchTotalContentHTMLSizeAsync(_ completion: @escaping @Sendable (Int) -> Void) {
 		queue.runInDatabase { database in
 			let size = self.fetchTotalContentHTMLSize(database)

@@ -57,6 +57,33 @@ public struct ArticleStorageInfo: Sendable {
 	public let storedContentHTMLSize: Int
 }
 
+/// One article that needs the person's attention on the AO3 "Works Needing
+/// Attention" screen: it has an unresolved pending content update, a
+/// feed-derived word-count regression flag, or a confirmed-missing flag.
+/// Unlike `ArticleStorageInfo`, it includes articles with no stored
+/// `contentHTML`, since a work flagged missing may never have had any.
+public struct ArticleAttentionInfo: Sendable {
+	public let articleID: String
+	public let title: String?
+	public let bookKey: String?
+	public let pendingUpdateDetectedAt: Date?
+	public let wordCountRegressionFlaggedAt: Date?
+	public let ao3ConfirmedMissingAt: Date?
+	/// Whether `pendingUpdateContentHTML` is set. The HTML itself is not
+	/// loaded: it can be large and the list does not need it.
+	public let hasPendingUpdate: Bool
+
+	public init(articleID: String, title: String?, bookKey: String?, pendingUpdateDetectedAt: Date?, wordCountRegressionFlaggedAt: Date?, ao3ConfirmedMissingAt: Date?, hasPendingUpdate: Bool) {
+		self.articleID = articleID
+		self.title = title
+		self.bookKey = bookKey
+		self.pendingUpdateDetectedAt = pendingUpdateDetectedAt
+		self.wordCountRegressionFlaggedAt = wordCountRegressionFlaggedAt
+		self.ao3ConfirmedMissingAt = ao3ConfirmedMissingAt
+		self.hasPendingUpdate = hasPendingUpdate
+	}
+}
+
 @MainActor public final class ArticlesDatabase {
 	public enum RetentionStyle: Sendable {
 		case feedBased // Local and iCloud: article retention is defined by contents of feed
@@ -645,6 +672,18 @@ public struct ArticleStorageInfo: Sendable {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		return await withCheckedContinuation { continuation in
 			articlesTable.fetchArticleStorageInfoAsync(limit: limit) { info in
+				continuation.resume(returning: info)
+			}
+		}
+	}
+
+	/// Newest-first articles with a pending update, a word-count regression
+	/// flag or a confirmed-missing flag -- backs the AO3 Works Needing
+	/// Attention screen.
+	public func fetchAO3AttentionInfo(limit: Int) async -> [ArticleAttentionInfo] {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		return await withCheckedContinuation { continuation in
+			articlesTable.fetchAO3AttentionInfoAsync(limit: limit) { info in
 				continuation.resume(returning: info)
 			}
 		}

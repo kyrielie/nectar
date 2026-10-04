@@ -44,7 +44,7 @@ let package = Package(
 		),
 		.testTarget(
 			name: "AccountTests",
-			dependencies: ["Account", "RSParser", "RSWeb", "Articles"],
+			dependencies: ["Account", "RSParser", "RSWeb", "Articles", "ArticlesDatabase"],
 			resources: [
 				.copy("Resources")
 			],

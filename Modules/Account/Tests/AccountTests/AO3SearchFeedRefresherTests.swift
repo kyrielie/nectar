@@ -8,6 +8,7 @@
 
 import XCTest
 import Articles
+import ArticlesDatabase
 import RSParser
 import RSWeb
 import AO3Kit
@@ -141,6 +142,10 @@ final class AO3SearchFeedRefresherTests: XCTestCase {
 		let feed = FakeFeed()
 		let updater = FakeUpdater()
 		let url = URL(string: "https://archiveofourown.org/users/someone/subscriptions")!
+		// Signed out, an always-private listing still goes out anonymously
+		// (see AO3SearchResultsFetcher.fetchRequiringSignIn); AO3 answers
+		// with its registered-users wall, which maps to .notSignedIn.
+		TestingURLProtocol.responses["archiveofourown.org/users/someone/subscriptions"] = TestingURLProtocol.Response(statusCode: 200, data: Data("<html><body><div id=\"signin\"><h3 class=\"heading\">Sorry!</h3><p>This work is only available to registered users of the Archive.</p></div></body></html>".utf8))
 
 		let result = await refresh(feed: feed, updater: updater, url: url)
 
@@ -149,6 +154,5 @@ final class AO3SearchFeedRefresherTests: XCTestCase {
 		}
 		XCTAssertEqual(failure, .signInRequired)
 		XCTAssertEqual(updater.updateCount, 0)
-		XCTAssertTrue(TestingURLProtocol.requestedURLs.isEmpty, "signed out, an always-private listing must not hit the network")
 	}
 }

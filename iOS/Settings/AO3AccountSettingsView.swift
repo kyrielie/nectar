@@ -25,6 +25,11 @@ struct AO3AccountSettingsView: View {
 	@State private var isAmbrosiaUpdatesEnabled = AmbrosiaAO3NetworkPreference.updatesEnabled
 	@State private var isPrefetchNewWorksEnabled = AO3PrefetchNewWorksPreference.isEnabled
 
+	/// Pushes the Works Needing Attention screen. A closure, because this
+	/// view is hosted in a UIHostingController pushed on Settings'
+	/// UINavigationController, so the push belongs to SettingsViewController.
+	var onShowWorksNeedingAttention: () -> Void = {}
+
 	var body: some View {
 		List {
 			if let sessionEnded = model.sessionEnded, !model.isSignedIn {
@@ -116,6 +121,23 @@ struct AO3AccountSettingsView: View {
 				Text(model.isSignedIn
 					 ? NSLocalizedString("When you love a work in Nectar, it also leaves a kudos on that work on AO3, using your signed-in AO3 account.", comment: "AO3 kudos-on-like footer, signed in")
 					 : NSLocalizedString("When you love a work in Nectar, it also leaves a kudos on that work on AO3. You're not signed in, so it's left as a guest kudos -- sign in above to leave it as yourself instead.", comment: "AO3 kudos-on-like footer, signed out"))
+			}
+
+			Section {
+				Button {
+					onShowWorksNeedingAttention()
+				} label: {
+					HStack {
+						Text(NSLocalizedString("Works Needing Attention", comment: "AO3 settings: works needing attention row title"))
+							.foregroundStyle(.primary)
+						Spacer()
+						Image(systemName: "chevron.right")
+							.font(.footnote.weight(.semibold))
+							.foregroundStyle(.tertiary)
+					}
+				}
+			} footer: {
+				Text(NSLocalizedString("Works with an update waiting for your review, and works Nectar could not refresh from AO3.", comment: "AO3 settings: works needing attention row footer"))
 			}
 
 			Section {
