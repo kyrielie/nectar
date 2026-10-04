@@ -37,6 +37,8 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 	// called from the URLSession dataTask completion handler, off the
 	// main actor. Safe: an immutable TimeInterval needs no isolation.
 	nonisolated private static let defaultRetryAfter: TimeInterval = 10 * 60
+	nonisolated private static let minimumRetryAfter: TimeInterval = 1
+	nonisolated private static let maximumRetryAfter: TimeInterval = 60 * 60
 
 	nonisolated private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "Downloader")
 
@@ -67,6 +69,63 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 
 	deinit {
 		urlSession.invalidateAndCancel()
+	}
+
+	/// The date at which requests to `host` may resume, or nil when no
+	/// cooldown is active. An expired cooldown is purged here (and
+	/// announced with `.hostRateLimitDidChange`) so callers never see a
+	/// date in the past. `host` is lowercased before lookup.
+	public func cooldownResumeDate(forHost host: String) -> Date? {
+		let key = host.lowercased()
+		guard let message = retryAfterMessages[key] else {
+			return nil
+		}
+		if Date() >= message.resumeDate {
+			retryAfterMessages[key] = nil
+			postRateLimitDidChange(host: key, resumeDate: nil)
+			return nil
+		}
+		return message.resumeDate
+	}
+
+	/// Ends any cooldown for `host` immediately and announces the change.
+	/// Exists so a test that provokes a 429 can restore the shared
+	/// Downloader to its starting state; nothing in the app calls it.
+	public func clearCooldown(forHost host: String) {
+		let key = host.lowercased()
+		guard retryAfterMessages[key] != nil else {
+			return
+		}
+		retryAfterMessages[key] = nil
+		postRateLimitDidChange(host: key, resumeDate: nil)
+	}
+
+	/// Records a rate limit for `url`'s host from a response that did not
+	/// come through `download`, such as a 429 seen by an AO3 transport
+	/// with its own URLSession. Parses Retry-After the same way
+	/// `download` does (seconds or an HTTP date, clamped, 10 minutes when
+	/// absent). The caller is asserting that the response was a 429;
+	/// this does not check the status code.
+	public func recordRateLimit(url: URL, response: HTTPURLResponse?) {
+		let headerValue = response?.value(forHTTPHeaderField: HTTPResponseHeader.retryAfter)
+		guard let response429 = HTTPResponse429(url: url, retryAfter: Self.clampedRetryAfter(headerValue: headerValue)) else {
+			return
+		}
+		store(response429)
+	}
+
+	private func store(_ response429: HTTPResponse429) {
+		Self.logger.info("Downloader: recording 429 for \(response429.host), retrying no earlier than \(response429.resumeDate)")
+		retryAfterMessages[response429.host] = response429
+		postRateLimitDidChange(host: response429.host, resumeDate: response429.resumeDate)
+	}
+
+	private func postRateLimitDidChange(host: String, resumeDate: Date?) {
+		var userInfo: [AnyHashable: Any] = [HostRateLimitUserInfoKey.host: host]
+		if let resumeDate {
+			userInfo[HostRateLimitUserInfoKey.resumeDate] = resumeDate
+		}
+		NotificationCenter.default.post(name: .hostRateLimitDidChange, object: self, userInfo: userInfo)
 	}
 
 	public func download(_ url: URL, shouldCache: (@Sendable (Data?, URLResponse?) -> Bool)? = nil) async throws -> DownloadResponse {
@@ -123,17 +182,11 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 			return
 		}
 
-		if let host = url.host()?.lowercased() {
-			if let retryAfterMessage = retryAfterMessages[host] {
-				if Date() >= retryAfterMessage.resumeDate {
-					retryAfterMessages[host] = nil
-				} else {
-					Self.logger.info("Downloader: skipping \(url) — rate-limited by \(host) until \(retryAfterMessage.resumeDate)")
-					let syntheticResponse = HTTPURLResponse(url: url, statusCode: HTTPResponseCode.tooManyRequests, httpVersion: nil, headerFields: nil)
-					callback(DownloadResponse(data: nil, response: syntheticResponse, returnedFromCache: false), nil)
-					return
-				}
-			}
+		if let host = url.host()?.lowercased(), let resumeDate = cooldownResumeDate(forHost: host) {
+			Self.logger.info("Downloader: skipping \(url) — rate-limited by \(host) until \(resumeDate)")
+			let syntheticResponse = HTTPURLResponse(url: url, statusCode: HTTPResponseCode.tooManyRequests, httpVersion: nil, headerFields: nil)
+			callback(DownloadResponse(data: nil, response: syntheticResponse, returnedFromCache: false), nil)
+			return
 		}
 
 		let isCacheableRequest = urlRequest.httpMethod == HTTPMethod.get
@@ -190,8 +243,7 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 
 			Task { @MainActor in
 				if let response429 {
-					Self.logger.info("Downloader: recording 429 for \(response429.host), retrying no earlier than \(response429.resumeDate)")
-					self.retryAfterMessages[response429.host] = response429
+					self.store(response429)
 				}
 				self.callAndReleaseCallbacks(url, data, response, error)
 			}
@@ -211,16 +263,18 @@ private extension Downloader {
 			return nil
 		}
 
-		let parsedRetryAfter: TimeInterval? = {
-			if let retryAfterValue = httpResponse.value(forHTTPHeaderField: HTTPResponseHeader.retryAfter),
-			   let parsed = TimeInterval(retryAfterValue),
-			   parsed > 0 {
-				return parsed
-			}
-			return nil
-		}()
+		let retryAfterValue = httpResponse.value(forHTTPHeaderField: HTTPResponseHeader.retryAfter)
+		return HTTPResponse429(url: url, retryAfter: clampedRetryAfter(headerValue: retryAfterValue))
+	}
 
-		return HTTPResponse429(url: url, retryAfter: parsedRetryAfter ?? defaultRetryAfter)
+	/// Retry-After as seconds or an HTTP date, clamped to 1...3600 so a
+	/// bogus header cannot lock a host out for hours or days. Falls back
+	/// to `defaultRetryAfter` when the header is absent or unparseable.
+	nonisolated static func clampedRetryAfter(headerValue: String?) -> TimeInterval {
+		guard let headerValue, let parsed = HTTPRetryAfter.seconds(from: headerValue) else {
+			return defaultRetryAfter
+		}
+		return min(max(parsed, minimumRetryAfter), maximumRetryAfter)
 	}
 }
 
@@ -251,4 +305,19 @@ private extension Downloader {
 			entry.callback(downloadResponse, error)
 		}
 	}
+}
+
+public extension Notification.Name {
+
+	/// Posted on the main actor when a host's rate-limit cooldown starts or
+	/// is purged after expiring. userInfo carries `HostRateLimitUserInfoKey.host`
+	/// (lowercased String) and, while a cooldown is active,
+	/// `HostRateLimitUserInfoKey.resumeDate` (Date). The resume date key is
+	/// absent when the cooldown was cleared.
+	static let hostRateLimitDidChange = Notification.Name("HostRateLimitDidChange")
+}
+
+public enum HostRateLimitUserInfoKey {
+	public static let host = "host"
+	public static let resumeDate = "resumeDate"
 }

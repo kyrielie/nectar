@@ -35,7 +35,7 @@ import Testing
 	/// dedicated series extractor. This confirms that claim against the
 	/// real captured fixture rather than leaving it asserted-but-untested:
 	/// if this ever regresses, subscribing to a series URL as a feed
-	/// (`isAO3ListingFeed`'s `/series/<digits>` case) silently starts
+	/// (`AO3Link.isListingFeed`'s `/series/<digits>` case) silently starts
 	/// returning zero items instead of failing loudly, so this is worth
 	/// pinning down explicitly.
 	@Test func searchResultsExtractorParsesAllTenRowsFromSeriesListingFixture() throws {

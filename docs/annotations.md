@@ -532,6 +532,15 @@ concern.
    against, and `nearestChapterTitle` picks the last heading at or before
    a given offset.
 
+   Inside an AO3 work's `#workskin`, only the extractor's own chapter
+   headings count (an `h2` that is a direct child of
+   `div.chapter.preface.group`); every other `h1`/`h2.heading` there is
+   author-written content and is skipped, via a local copy of
+   `main_ios.js`'s `isAuthorContentHeading` (keep the two in sync; see
+   `ao3-preface-rendering.md`, "Table of contents and author headings").
+   Without this, an author's in-story `<h1>` headline became the
+   `chapterTitle` of every annotation after it.
+
    This is deliberately scoped to `rootSelector` (default `.articleBody`),
    not `document`: `template.html` renders a separate, chrome-level
    `<h1>` inside `.articleTitle` (the feed-item title link), *outside*

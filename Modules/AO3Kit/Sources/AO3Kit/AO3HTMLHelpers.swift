@@ -88,4 +88,29 @@ enum AO3HTMLHelpers {
 		}
 		return flattenedText(signinDiv).contains("This work is only available to registered users of the Archive.")
 	}
+
+	// MARK: - Page copy matching
+
+	/// `html` with the three apostrophe spellings AO3 pages can carry
+	/// (`'`, `&#x27;`, `&#39;`) plus the typographic one folded to a plain
+	/// `'`, so copy such as "couldn't" can be matched with one literal.
+	static func foldedForCopyMatching(_ html: String) -> String {
+		html
+			.replacingOccurrences(of: "&#x27;", with: "'")
+			.replacingOccurrences(of: "&#39;", with: "'")
+			.replacingOccurrences(of: "\u{2019}", with: "'")
+	}
+
+	/// Copy AO3 shows when it serves its error page. Matched against text
+	/// from `foldedForCopyMatching`.
+	static let serviceUnavailableHeading = "Error 503 - Service unavailable"
+	static let betaBannerCopy = "This site is in beta. Things may break or crash without notice."
+	static let hiddenUntilRevealedCopy = "This work is part of an ongoing challenge and will be revealed soon!"
+	static let workNotFoundCopy = "Sorry, we couldn't find the work you were looking for."
+	static let permissionDeniedCopy = "Sorry, you don't have permission to access the page you were trying to reach."
+
+	/// AO3's own 503 page, which it can serve with a non-503 status.
+	static func isServiceUnavailablePage(foldedHTML: String) -> Bool {
+		foldedHTML.contains(serviceUnavailableHeading) || foldedHTML.contains(betaBannerCopy)
+	}
 }

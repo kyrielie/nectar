@@ -91,14 +91,14 @@ public final class Article: Hashable, Sendable {
 	// intentionally a no-op write under changesFrom's "only write non-nil"
 	// rule rather than a silent clear). A non-nil value here also means
 	// "don't auto-fetch this article again" -- see
-	// AO3ChapterFetcher.isStale.
+	// AO3FetchPolicy.isStale.
 	public let pendingUpdateContentHTML: String?
 	public let pendingUpdateDetectedAt: Date?
 	// Task 8's cheaper, separate metadata-only watch: set by
 	// Article+Database.changesFrom when an incoming feed-reported
 	// wordCount alone looks like a regression against the previously
 	// stored wordCount, with no contentHTML fetch involved. Checked by
-	// AO3ChapterFetcher.isStale before the on-open fetch,
+	// AO3FetchPolicy.isStale before the on-open fetch,
 	// same as pendingUpdateContentHTML above.
 	public let wordCountRegressionFlaggedAt: Date?
 	// Set only through a dedicated Account call (AO3ChapterFetcher.download's
@@ -106,7 +106,7 @@ public final class Article: Hashable, Sendable {
 	// diff -- a fetch that hits .notFound never reaches
 	// rebuildParsedItem/updateAsync at all, so there's no diff path to hook
 	// into even if we wanted one. A non-nil value here also means "don't
-	// auto-fetch this article again" -- see AO3ChapterFetcher.isStale.
+	// auto-fetch this article again" -- see AO3FetchPolicy.isStale.
 	public let ao3ConfirmedMissingAt: Date?
 	// True whenever this article's originating ParsedItem carried an
 	// `_ambrosia` extension object at all (regardless of which fields

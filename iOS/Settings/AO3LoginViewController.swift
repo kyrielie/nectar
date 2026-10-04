@@ -40,8 +40,6 @@ final class AO3LoginViewController: UIViewController {
 	private var webView: WKWebView!
 	private var didCaptureSession = false
 
-	private let loginURL = URL(string: "https://archiveofourown.org/users/login")!
-
 	override func viewDidLoad() {
 		super.viewDidLoad()
 
@@ -70,7 +68,7 @@ final class AO3LoginViewController: UIViewController {
 			webView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
 		])
 
-		webView.load(URLRequest(url: loginURL))
+		webView.load(URLRequest(url: AO3Link.loginURL))
 	}
 
 	@objc private func cancelTapped() {
@@ -110,9 +108,8 @@ extension AO3LoginViewController: WKNavigationDelegate {
 				return
 			}
 
-			let ao3Cookies = cookies.filter { AO3Link.isAO3CookieDomain($0.domain) }
-			guard !ao3Cookies.isEmpty else {
-				// Reached a non-login-page URL but got no cookies at all --
+			guard let cookieHeaderValue = AO3CookieCapture.headerValue(from: cookies) else {
+				// Reached a non-login-page URL but got no AO3 cookies at all --
 				// treat as not actually signed in rather than storing an
 				// empty session. Let the person try again rather than
 				// silently finishing.
@@ -120,7 +117,6 @@ extension AO3LoginViewController: WKNavigationDelegate {
 				return
 			}
 
-			let cookieHeaderValue = ao3Cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
 			AO3SessionStore.saveSession(cookieHeaderValue: cookieHeaderValue)
 			self.delegate?.ao3LoginViewControllerDidFinish(self)
 		}

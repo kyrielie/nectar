@@ -21,7 +21,7 @@ import AO3Kit
 //    dispatches its own dedicated, token-only fetch of the work's page --
 //    unlike the piggyback path, it can't wait for the next natural
 //    chapter-content refetch, since that could be arbitrarily far in the
-//    future (or never, once AO3ChapterFetcher.isStale goes permanently
+//    future (or never, once AO3FetchPolicy.isStale goes permanently
 //    false) and the person just loved this from the list expecting the
 //    kudos-on-like behavior (once enabled) to fire close to when they
 //    tapped, not on some later, unrelated refresh.
@@ -83,9 +83,10 @@ public enum AO3KudosManager {
 	public static func attemptImmediateKudosIfNeeded(for articles: [Article]) {
 		guard AO3KudosOnLikePreference.isEnabled else { return }
 
+		var eligible = [(article: Article, workID: String)]()
 		for article in articles {
 			guard article.status.loved else { continue }
-			guard let workID = AO3ChapterFetcher.ao3WorkID(fromBookKey: article.bookKey) else { continue }
+			guard let workID = AO3FetchPolicy.workID(fromBookKey: article.bookKey) else { continue }
 			// Bug fix (Task 8 audit): this path fires its own dedicated request to
 			// AO3 (see attemptWithFreshFetch below) rather than piggybacking on an
 			// existing fetch, so it must independently respect the same
@@ -93,10 +94,20 @@ public enum AO3KudosManager {
 			// checkForUpdates already apply -- this was missing entirely, letting
 			// a swipe/context-menu love on an Ambrosia-sourced work reach AO3
 			// regardless of AmbrosiaAO3NetworkPreference.updatesEnabled being off.
-			guard AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article) else { continue }
+			guard AO3FetchPolicy.isNetworkRequestAllowed(for: article) else { continue }
+			eligible.append((article, workID))
+		}
+		guard !eligible.isEmpty else { return }
 
-			Task {
-				await attemptWithFreshFetch(article: article, workID: workID)
+		// One task, one article at a time, with the same pause AO3's paged
+		// requests use between them. A multi-select love used to start one
+		// concurrent request per article.
+		Task {
+			for (index, item) in eligible.enumerated() {
+				if index > 0 {
+					try? await Task.sleep(nanoseconds: UInt64(AO3ChapterFetcher.secondsBetweenAO3PagedRequests * 1_000_000_000))
+				}
+				await attemptWithFreshFetch(article: item.article, workID: item.workID)
 			}
 		}
 	}
@@ -108,7 +119,8 @@ private extension AO3KudosManager {
 
 	/// List-view path's dedicated fetch -- gets a page load purely for its
 	/// CSRF token (see this file's header comment for why the piggyback
-	/// path's token isn't available here). Deliberately anonymous, same as
+	/// path's token isn't available here). Goes through `Downloader.shared`
+	/// with caching vetoed. Deliberately anonymous, same as
 	/// AO3ChapterFetcher's primary fetch: the CSRF token itself doesn't
 	/// depend on being signed in (see AO3ChapterHTMLExtractor.csrfToken's
 	/// doc comment), and whether the actual kudos POST goes out
@@ -120,18 +132,13 @@ private extension AO3KudosManager {
 
 		logger.debug("Requesting AO3: GET \(url.absoluteString, privacy: .public) (list-view kudos CSRF fetch, articleID=\(article.articleID, privacy: .public))")
 
-		let request = URLRequest(url: url)
-		let configuration = URLSessionConfiguration.ephemeral
-		configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-		configuration.httpShouldSetCookies = false
-		configuration.httpCookieAcceptPolicy = .never
-		configuration.httpCookieStorage = nil
-		let session = URLSession(configuration: configuration)
-		defer { session.invalidateAndCancel() }
-
-		guard let (data, response) = try? await session.data(for: request),
-			  let httpResponse = response as? HTTPURLResponse,
-			  httpResponse.statusIsOK,
+		// Routed through Downloader so this request shares its per-host
+		// cooldown, User-Agent, redirect handling and one-connection-per-host
+		// cap with every other AO3 fetch. Never cached: a CSRF token is tied
+		// to a session and goes stale.
+		guard let downloadResponse = try? await Downloader.shared.download(url, shouldCache: { _, _ in false }),
+			  let data = downloadResponse.data,
+			  let response = downloadResponse.response, response.statusIsOK,
 			  let html = String(data: data, encoding: .utf8) else {
 			return
 		}
@@ -181,6 +188,10 @@ private extension AO3KudosManager {
 				// gets another chance rather than being permanently
 				// blocked by this one failure.
 				fail(kind: kind, activityLog: activityLog, message: message(for: outcome))
+				NotificationCenter.default.post(name: .ao3KudosDidFail, object: nil, userInfo: [
+					AO3KudosUserInfoKey.articleID: article.articleID,
+					AO3KudosUserInfoKey.workID: workID
+				])
 			}
 		} catch {
 			fail(kind: kind, activityLog: activityLog, message: error.localizedDescription, error: error)

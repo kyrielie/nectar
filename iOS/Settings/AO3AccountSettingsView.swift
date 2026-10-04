@@ -16,10 +16,9 @@ import Account
 
 struct AO3AccountSettingsView: View {
 
-	@State private var isSignedIn = AO3SessionStore.isSignedIn
+	@State private var model = AO3SettingsModel()
 	@State private var isShowingLogin = false
 	@State private var isShowingSignOutConfirmation = false
-	@State private var challengeCapturedAt = AO3ChallengeSessionStore.capturedAt
 	@State private var isShowingChallengeSolver = false
 	@State private var refetchInterval = AO3PrefaceRefetchPreference.current
 	@State private var isKudosOnLikeEnabled = AO3KudosOnLikePreference.isEnabled
@@ -28,11 +27,29 @@ struct AO3AccountSettingsView: View {
 
 	var body: some View {
 		List {
+			if let sessionEnded = model.sessionEnded, !model.isSignedIn {
+				Section {
+					Text(sessionEndedText(date: sessionEnded.date))
+					Button {
+						isShowingLogin = true
+					} label: {
+						Text(NSLocalizedString("Sign In to AO3", comment: "AO3 sign in button"))
+							.frame(maxWidth: .infinity)
+					}
+				}
+			}
+
+			if let resumeDate = model.rateLimitResumeDate {
+				Section {
+					Text(rateLimitText(resumeDate: resumeDate))
+				}
+			}
+
 			Section {
 				HStack {
 					Text(NSLocalizedString("Status", comment: "AO3 sign-in status row label"))
 					Spacer()
-					Text(isSignedIn
+					Text(model.isSignedIn
 						 ? NSLocalizedString("Signed In", comment: "AO3 signed-in status")
 						 : NSLocalizedString("Not Signed In", comment: "AO3 signed-out status"))
 						.foregroundStyle(.secondary)
@@ -54,12 +71,11 @@ struct AO3AccountSettingsView: View {
 						Text(interval.description).tag(interval)
 					}
 				}
-				.disabled(!isAmbrosiaUpdatesEnabled)
 				.onChange(of: refetchInterval) { _, newValue in
 					AO3PrefaceRefetchPreference.current = newValue
 				}
 			} footer: {
-				Text(NSLocalizedString("How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes.", comment: "AO3 preface refetch cadence footer"))
+				Text(NSLocalizedString("How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes. Works from AO3 feeds always follow this. Works in your library follow it only when Fetch AO3 Updates for Library Works is turned on above.", comment: "AO3 preface refetch cadence footer"))
 			}
 
 			Section {
@@ -72,7 +88,7 @@ struct AO3AccountSettingsView: View {
 			}
 
 			Section {
-				if isSignedIn {
+				if model.isSignedIn {
 					Button(role: .destructive) {
 						isShowingSignOutConfirmation = true
 					} label: {
@@ -88,7 +104,7 @@ struct AO3AccountSettingsView: View {
 					}
 				}
 			} footer: {
-				Text(NSLocalizedString("Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Nectar can leave kudos on your behalf if you turn that on below -- it still can't subscribe, bookmark, or comment.", comment: "AO3 account section footer"))
+				Text(NSLocalizedString("Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Nectar can leave kudos on your behalf if you turn that on below -- it still can't subscribe, bookmark, or comment. Signing out also signs you out of Nectar's in-app AO3 browser.", comment: "AO3 account section footer"))
 			}
 
 			Section {
@@ -97,7 +113,7 @@ struct AO3AccountSettingsView: View {
 						AO3KudosOnLikePreference.isEnabled = newValue
 					}
 			} footer: {
-				Text(isSignedIn
+				Text(model.isSignedIn
 					 ? NSLocalizedString("When you love a work in Nectar, it also leaves a kudos on that work on AO3, using your signed-in AO3 account.", comment: "AO3 kudos-on-like footer, signed in")
 					 : NSLocalizedString("When you love a work in Nectar, it also leaves a kudos on that work on AO3. You're not signed in, so it's left as a guest kudos -- sign in above to leave it as yourself instead.", comment: "AO3 kudos-on-like footer, signed out"))
 			}
@@ -137,7 +153,7 @@ struct AO3AccountSettingsView: View {
 			// flag threaded back through the sheet keeps this in sync even
 			// if AO3SessionStore changed for some other reason while the
 			// sheet was up.
-			isSignedIn = AO3SessionStore.isSignedIn
+			model.refresh()
 		}, content: {
 			AO3LoginRepresentable()
 		})
@@ -148,17 +164,36 @@ struct AO3AccountSettingsView: View {
 		) {
 			Button(NSLocalizedString("Sign Out", comment: "AO3 sign out button"), role: .destructive) {
 				AO3SessionStore.clearSession()
-				isSignedIn = false
+				model.refresh()
+				Task {
+					await AO3AuthenticatedWebViewController.clearBrowserData()
+				}
 			}
 			Button(NSLocalizedString("Cancel", comment: "Cancel button"), role: .cancel) {}
 		}
 		.sheet(isPresented: $isShowingChallengeSolver, onDismiss: {
 			// Covers both outcomes (cleared, or cancelled), same reasoning
 			// as the login sheet's onDismiss above.
-			challengeCapturedAt = AO3ChallengeSessionStore.capturedAt
+			model.refresh()
 		}, content: {
 			AO3ChallengeSolverRepresentable()
 		})
+		.onAppear {
+			model.refresh()
+		}
+		.onDisappear {
+			model.stop()
+		}
+	}
+
+	private func sessionEndedText(date: Date) -> String {
+		let format = NSLocalizedString("Your AO3 session ended on %@. Sign in again to read restricted works.", comment: "AO3 settings: session ended notice; %@ is a date")
+		return String(format: format, date.formatted(date: .abbreviated, time: .omitted))
+	}
+
+	private func rateLimitText(resumeDate: Date) -> String {
+		let format = NSLocalizedString("AO3 asked Nectar to slow down. Requests resume at %@.", comment: "AO3 settings: rate limit notice; %@ is a time")
+		return String(format: format, resumeDate.formatted(date: .omitted, time: .shortened))
 	}
 
 	/// "Not yet verified" / "Verified just now" / "Verified 12 minutes ago"
@@ -168,7 +203,7 @@ struct AO3AccountSettingsView: View {
 	/// internal implementation detail, not something worth surfacing as a
 	/// countdown.
 	private var challengeStatusText: String {
-		guard let challengeCapturedAt else {
+		guard let challengeCapturedAt = model.challengeCapturedAt else {
 			return NSLocalizedString("Not Verified", comment: "AO3 Cloudflare challenge status: never verified")
 		}
 		let formatter = RelativeDateTimeFormatter()
@@ -176,83 +211,6 @@ struct AO3AccountSettingsView: View {
 		let relative = formatter.localizedString(for: challengeCapturedAt, relativeTo: Date())
 		let format = NSLocalizedString("Verified %@", comment: "AO3 Cloudflare challenge status: verified some time ago")
 		return String(format: format, relative)
-	}
-}
-
-/// Bridges AO3LoginViewController (UIKit, WKWebView-based) into the sheet
-/// above. Wrapped in its own UINavigationController here so the login
-/// screen's title and Cancel button have somewhere to render -- the
-/// presented sheet has no navigation chrome of its own otherwise.
-private struct AO3LoginRepresentable: UIViewControllerRepresentable {
-
-	@Environment(\.dismiss) private var dismiss
-
-	func makeUIViewController(context: Context) -> UINavigationController {
-		let loginViewController = AO3LoginViewController()
-		loginViewController.delegate = context.coordinator
-		return UINavigationController(rootViewController: loginViewController)
-	}
-
-	func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
-
-	func makeCoordinator() -> Coordinator {
-		Coordinator(dismiss: dismiss)
-	}
-
-	final class Coordinator: AO3LoginViewControllerDelegate {
-		private let dismiss: DismissAction
-
-		init(dismiss: DismissAction) {
-			self.dismiss = dismiss
-		}
-
-		func ao3LoginViewControllerDidFinish(_ viewController: AO3LoginViewController) {
-			dismiss()
-		}
-	}
-}
-
-/// Bridges AO3ChallengeSolverViewController into the sheet above, same
-/// wrapping-in-a-UINavigationController reasoning as AO3LoginRepresentable.
-///
-/// Defaults to `AO3ChallengeSessionStore.lastChallengedURL` -- the actual
-/// URL a feed most recently got challenged on -- falling back to AO3's
-/// general works listing only if no challenge has been recorded yet (e.g.
-/// the very first time someone opens this screen before ever seeing the
-/// error). Confirmed necessary, not just theoretical: the generic listing
-/// loaded fine with no challenge at all in testing, while the specific
-/// `work_search[...]` query for the same account kept getting one -- so a
-/// fixed generic URL here could report "cleared" without ever having
-/// exercised the gate that actually matters.
-private struct AO3ChallengeSolverRepresentable: UIViewControllerRepresentable {
-
-	@Environment(\.dismiss) private var dismiss
-
-	private static let fallbackChallengeURL = URL(string: "https://archiveofourown.org/works")!
-
-	func makeUIViewController(context: Context) -> UINavigationController {
-		let challengeURL = AO3ChallengeSessionStore.lastChallengedURL ?? Self.fallbackChallengeURL
-		let solverViewController = AO3ChallengeSolverViewController(challengeURL: challengeURL)
-		solverViewController.delegate = context.coordinator
-		return UINavigationController(rootViewController: solverViewController)
-	}
-
-	func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
-
-	func makeCoordinator() -> Coordinator {
-		Coordinator(dismiss: dismiss)
-	}
-
-	final class Coordinator: AO3ChallengeSolverViewControllerDelegate {
-		private let dismiss: DismissAction
-
-		init(dismiss: DismissAction) {
-			self.dismiss = dismiss
-		}
-
-		func ao3ChallengeSolverViewControllerDidFinish(_ viewController: AO3ChallengeSolverViewController) {
-			dismiss()
-		}
 	}
 }
 

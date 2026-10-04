@@ -20,7 +20,7 @@ three independent reasons in order:
    provides feeds). Both are inherited NetNewsWire behavior, not
    Nectar-specific.
 2. **AO3 listing feeds** (`feedShouldBeSkippedForAO3SearchResultsReasons`,
-   `isAO3ListingFeed` — renamed from `isAO3SearchResultsFeed` once it
+   `AO3Link.isListingFeed` — renamed from `isAO3SearchResultsFeed` once it
    broadened past search/tag results, see `ao3-feeds.md`'s
    `AO3SearchResultsExtractor` section and
    `nectar-toolbar-ao3-listing-feeds.md`) — a normal
@@ -38,7 +38,7 @@ three independent reasons in order:
    the signed-in account and route through
    `AO3SearchResultsFetcher.fetchRequiringSignIn(url:feedURL:)` rather
    than the plain anonymous fetch — see
-   `LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(_:)` and
+   `AO3Link.isAlwaysAuthenticatedListing(_:)` and
    `ao3-authenticated-reading.md`.
 3. **Reddit** (`feedShouldBeSkippedForRedditReasons`) — Reddit allows one
    feed fetch per minute, so at most one Reddit feed refreshes per pass
@@ -55,7 +55,7 @@ to."
 
 **Open gap, not yet resolved:** that removal comment is incomplete. AO3
 tag/user RSS/Atom feeds (see `ao3-direct-feed-ingestion.md`) *are* a
-public, non-Ambrosia site, and `isAO3ListingFeed`'s matching only
+public, non-Ambrosia site, and `AO3Link.isListingFeed`'s matching only
 covers AO3's HTML listing *pages* — not AO3's native
 `.atom`/RSS feed URLs, which is the actual direct-subscription route. A
 regular AO3 tag/user Atom feed subscription has no proactive

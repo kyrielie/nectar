@@ -1,14 +1,7 @@
 import Foundation
-import os
 import RSParser
 
 public struct AO3FeedExtension: AO3FeedItemExtending {
-
-	// TEMPORARY -- diagnostic instrumentation for the seeded-demo-data /
-	// starlog-archive.invalid AO3 fetch investigation. Remove once the
-	// root cause of bookKey resolving to "ao3-work:<id>" for a non-AO3
-	// host is confirmed. See docs/ao3-link.md, ui-test-demo-data.md.
-	private static let diagnosticLogger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Nectar", category: "AO3FeedExtension.diagnostic")
 
 	public init() {}
 
@@ -39,9 +32,7 @@ public struct AO3FeedExtension: AO3FeedItemExtending {
 	/// from any other host (a mirror, a proxy, a test fixture) would trigger
 	/// a fetch of whichever real work happens to share that number.
 	private static func ao3WorkID(fromPermalink permalink: String?) -> String? {
-		let result = AO3Link.workID(fromPermalink: permalink)
-		diagnosticLogger.debug("ao3WorkID(fromPermalink: \(permalink ?? "nil", privacy: .public)) -> \(result ?? "nil", privacy: .public)")
-		return result
+		AO3Link.workID(fromPermalink: permalink)
 	}
 
 	public func shouldExclude(_ item: ParsedItem) -> Bool {

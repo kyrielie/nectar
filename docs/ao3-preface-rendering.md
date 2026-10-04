@@ -55,15 +55,15 @@ Next links need the same full-width treatment regardless of entry count.
 `WebViewController.setArticle(_:updateView:)` (i.e. whenever an
 article is opened in the reader), regardless of the article's read
 state. It requires `article.bookKey` to have the
-`ao3-work:` prefix (`AO3ChapterFetcher.ao3WorkID(fromBookKey:)` returns
+`ao3-work:` prefix (`AO3FetchPolicy.workID(fromBookKey:)` returns
 `nil` otherwise):
 
 - **Anthology/combined-series articles still can't be individually
   refetched, but this is no longer a silent no-op.** `ParsedItem.bookKey`
   resolves anthologies (`isAnthology == true`) to `ao3-series:<id>` or
   `calibre-series:<name>`, never `ao3-work:<id>`, so
-  `ao3WorkID(fromBookKey:)` still returns `nil` immediately
-  (`AO3ChapterFetcherTests` asserts this directly — deliberate scope, not
+  `AO3FetchPolicy.workID(fromBookKey:)` still returns `nil` immediately
+  (`AO3FetchPolicyTests` asserts this directly — deliberate scope, not
   an oversight, since there's no single AO3 URL a Calibre-merged
   compilation could fetch from; fetching+merging every member work was
   explicitly deferred in `ao3-merged-plan.md` — cited in-code but, like
@@ -91,7 +91,7 @@ state. It requires `article.bookKey` to have the
   current again is the person opening it (which runs `fetchIfNeeded`
   above, regardless of read state) or tapping "Check for updates"
   (`checkForUpdates(for:)`, unconditional on read state and on
-  `isStale`'s cadence check). This applies equally to read and unread
+  `AO3FetchPolicy.isStale`'s cadence check). This applies equally to read and unread
   articles — there is no read-state distinction anywhere in this path.
   This is specifically about *updates* to a work already fetched at
   least once — a brand-new article with no `contentHTML` yet can still
@@ -134,8 +134,96 @@ expires. This is a genuine behavior change from `AO3ChapterFetcher`'s own
 unrelated: a rate-limit response for one AO3 article's fetch now also
 pauses `Downloader`-routed fetches for *other* AO3 articles (or anything
 else on the same host) opened in the same window, via the new per-host
-cooldown, in addition to that article's own 60-second floor. A Cloudflare
-challenge or other non-429 failure still just fails `response.statusIsOK`
-and produces a generic "Could not reach AO3 (HTTP `<code>`)" message; only
-the 429 case gets the distinct "AO3 rate limit hit — backing off before
-retrying" message and the per-host cooldown.
+cooldown, in addition to that article's own 60-second floor.
+
+### Work-page classification and the missing flag
+
+`AO3WorkPageClassifier.classify(data:statusCode:)` (AO3Kit) turns a fetched
+work page into content or one typed `AO3FetchFailure`, and both the
+anonymous and the authenticated paths in `AO3ChapterFetcher` use it. Order:
+429 gives `.rateLimited`; 404 or 410 gives `.workMissing`; a Cloudflare
+challenge on a non-2xx status gives `.challenge` (so a 403 challenge page
+is not reported as `.http(403)`); a 5xx gives `.http`, or
+`.serviceUnavailable` when the body is AO3's 503 page; other non-2xx gives
+`.http`; an empty body gives `.http`; otherwise the extractor outcome is
+mapped (see `ao3-feeds.md`). A 2xx body is deliberately left to the
+extractor, which tests for a real work first, so story text that happens to
+contain a challenge marker phrase is not read as an interstitial.
+`AO3WorkPageClassifier.isInterstitial(_:)` is the predicate meant for a
+caching veto.
+
+`ao3ConfirmedMissingAt` is set only on positive evidence
+(`AO3FetchFailure.evidencesMissing`, which is true only for
+`.workMissing`: HTTP 404/410 or AO3's explicit not-found copy). When signed
+in, the authenticated attempt must also have reported `.workMissing`
+(dual confirmation). An unrecognized page, a Cloudflare page, AO3's 503 page
+and every other failure are transient and set no flag. Each failure's
+message comes from `AO3FetchFailure.localizedMessage`, which reuses the
+earlier English strings, so a generic non-429 failure still reads "Could not
+reach AO3 (HTTP `<code>`)" and a 429 still reads "AO3 rate limit hit --
+backing off before retrying".
+
+Typed failures are kept per article: `AO3ChapterFetcher.lastFetchFailure(forArticleID:)`
+returns the `AO3FetchFailure`, and `lastFetchFailureMessage(forArticleID:)`
+returns its `localizedMessage`, which is what `ArticleRenderer` and the
+`.ao3ChapterFetchDidFail` notification's `message` key carry. A failure
+that Nectar does not recognize (`.unrecognizedPage`) is logged to the
+Activity Log with its own message so real deleted-work page shapes can be
+learned.
+
+Not yet changed: existing `ao3ConfirmedMissingAt` values written before
+this classification are not cleared until the schema 6 migration (T11).
+
+## Table of contents and author headings
+
+`main_ios.js`'s `tocNodes()` (document-wide `h1, h2.heading,
+h2.toc-heading`) drives the table of contents, and `annotations.js`'s
+`buildHeadingIndex` keeps a copy of the same selector for `chapterTitle`.
+For AO3-fetched works both now skip everything inside `#workskin` except
+the extractor's own chapter headings, via `isAuthorContentHeading` (defined
+in `main_ios.js`, copied into `annotations.js`; keep the two in sync).
+
+The contract between the two sides: `AO3ChapterHTMLExtractor.extractedChapter`
+rewrites each chapter's `h3.title` into `h2.heading`, and that `h2` stays a
+direct child of its `div.chapter.preface.group`. The JS treats exactly that
+shape as a chapter and everything else under `#workskin` as author content.
+`AO3ChapterHTMLExtractorTests.everyChapterHeadingIsADirectChildOfItsChapterPrefaceGroup`
+pins the Swift half; `Tests/JS/toc/toc-nodes.test.js` pins the JS half. If
+the extractor's chapter-heading shape changes, both must change together, or
+the TOC silently loses every chapter.
+
+Why this exists: authors write their own `<h1>`s (and occasionally
+`<h2 class="heading">`s) inside chapters, e.g. a work styled as a
+news feed with dozens of headlines. Every `h1` counts as a "book" in
+`TableOfContentsViewController`, so one such work flipped the TOC into its
+anthology layout with dozens of bogus books and chapters nested under the
+wrong ones (a real 32-chapter work produced 72 entries instead of 33).
+Author markup is deliberately left in the DOM untouched, because a work skin's
+own `#workskin h1 { ... }` rules must keep applying; the headings just aren't
+navigable. The rule is structural, not marker-based, so works fetched before
+it existed are corrected without a refetch. Non-AO3 content (Calibre/Ambrosia
+anthologies) has no `#workskin` and is unaffected.
+
+Consequence for single-chapter works: an author's own `h2.heading` sections
+inside a one-chapter work are no longer TOC rows; the TOC shows the lone
+template `<h1>` row, same as any other single-chapter work.
+
+Not covered: `Shared/Article Rendering/main.js`'s theme-opt-in
+`applyChapterDividers`/`applyVersalCaps` select `h2.heading, h3.title`
+independently, so an author-written `<h2 class="heading">` inside a work can
+still receive a chapter divider under a theme that enables them.
+
+## Work skin CSS round trip
+
+The author's `<style>` block is captured by `precedingStyleElement` and
+re-serialized through `HTMLLiteTree.swift`'s `serializeHTMLLiteNodes`. The
+scanner delivers `<style>` contents verbatim (raw text, no entity decoding),
+so the serializer writes `<style>` text back verbatim too. Escaping it, as
+every other text node is, turned CSS child combinators (`a>b`) into
+`a&gt;b`, which a browser does not decode inside `<style>`; the selector
+became invalid and the author's rule was silently dropped.
+`<script>` text is intentionally still escaped. Comments between the skin's
+`</style>` and `<div id="workskin">` (AO3 emits two) do not break
+`precedingStyleElement`, because `HTMLScanner` discards comments before the
+tree builder sees them.
+

@@ -7,6 +7,48 @@
     " → " : {
 
     },
+    "Account no longer exists" : {
+      "comment" : "AO3 fetch failure: account removed mid-fetch"
+    },
+    "Adult content gate encountered despite view_adult=true (unexpected)" : {
+      "comment" : "AO3 fetch failure: adult content gate"
+    },
+    "AO3 is temporarily unavailable -- try again later" : {
+      "comment" : "AO3 fetch failure: AO3 served its service-unavailable page"
+    },
+    "AO3 says you don't have permission to view this work" : {
+      "comment" : "AO3 fetch failure: permission denied"
+    },
+    "Article no longer exists" : {
+      "comment" : "AO3 fetch failure: article removed mid-fetch"
+    },
+    "Combined AO3 series can't be refreshed individually -- showing imported content" : {
+      "comment" : "AO3 fetch failure: anthology has no single work page"
+    },
+    "Could not reach AO3 (HTTP %d)" : {
+      "comment" : "AO3 fetch failure: unexpected HTTP status"
+    },
+    "Full text unavailable: %@" : {
+      "comment" : "Inline notice in the reader when AO3 full text could not be loaded; the placeholder is the reason"
+    },
+    "No chapter content found (gated or removed work)" : {
+      "comment" : "AO3 fetch failure: page shape not recognized"
+    },
+    "Review Pending Update" : {
+      "comment" : "Command: a fetched AO3 update is waiting for the person to accept or keep"
+    },
+    "Signed out of AO3 -- sign in again in Settings to read this work" : {
+      "comment" : "AO3 fetch failure: stored session rejected"
+    },
+    "This work is only available to registered AO3 users" : {
+      "comment" : "AO3 fetch failure: work restricted to registered users"
+    },
+    "This work is part of an AO3 challenge and hasn't been revealed yet" : {
+      "comment" : "AO3 fetch failure: unrevealed challenge work"
+    },
+    "This work was not found on AO3. It may have been deleted or moved." : {
+      "comment" : "AO3 fetch failure: work not found"
+    },
     "“%@” has separate light and dark mode colors and follows your system appearance setting." : {
       "comment" : "Theme appearance footer, light+dark theme"
     },
@@ -180,6 +222,9 @@
     },
     "AO3" : {
       "comment" : "AO3 in-app browser fallback title"
+    },
+    "AO3 asked Nectar to slow down. Requests resume at %@." : {
+      "comment" : "AO3 settings: rate limit notice; %@ is a time"
     },
     "AO3 Filters Not Applied" : {
       "comment" : "AO3 filters not applied alert title"
@@ -773,7 +818,7 @@
     "Hits" : {
       "comment" : "Sort field"
     },
-    "How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes." : {
+    "How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes. Works from AO3 feeds always follow this. Works in your library follow it only when Fetch AO3 Updates for Library Works is turned on above." : {
       "comment" : "AO3 preface refetch cadence footer"
     },
     "Hyphenate" : {
@@ -1503,7 +1548,7 @@
     "Signed In" : {
       "comment" : "AO3 signed-in status"
     },
-    "Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Nectar can leave kudos on your behalf if you turn that on below -- it still can't subscribe, bookmark, or comment." : {
+    "Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Nectar can leave kudos on your behalf if you turn that on below -- it still can't subscribe, bookmark, or comment. Signing out also signs you out of Nectar's in-app AO3 browser." : {
       "comment" : "AO3 account section footer"
     },
     "Slate" : {
@@ -1809,6 +1854,9 @@
     },
     "You must have at least one active account." : {
       "comment" : "Missing active account"
+    },
+    "Your AO3 session ended on %@. Sign in again to read restricted works." : {
+      "comment" : "AO3 settings: session ended notice; %@ is a date"
     },
     "Your own find-and-replace pairs, for anything the typo table above doesn't cover." : {
       "comment" : "Text replacement settings: custom rules section footer"

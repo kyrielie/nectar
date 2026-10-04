@@ -123,7 +123,7 @@ rationale extensively in the source):
 | `commentCount`, `kudosCount`, `bookmarkCount`, `hitCount` | articles | AO3 work-header stats, read from `dl.stats` on each live chapter fetch |
 | `previousWorkURL`, `nextWorkURL` | articles | superseded by per-series navigation; columns kept reserved, no longer read/written |
 | `lastPrefaceFetchDate`, `isAmbrosiaItem` | articles | preface refetch bookkeeping / Ambrosia-vs-native-AO3 marker |
-| `pendingUpdateContentHTML`, `pendingUpdateDetectedAt`, `wordCountRegressionFlaggedAt` | articles | pending-content-update diff/regression guard |
+| `pendingUpdateContentHTML`, `pendingUpdateDetectedAt`, `wordCountRegressionFlaggedAt` | articles | pending-content-update diff/regression guard. `wordCountRegressionFlaggedAt` is set by a feed-derived word count drop (`Article+Database.changesFrom`) and blocks `AO3FetchPolicy.isStale` auto-fetch. It is cleared by `resolvePendingContentUpdate` (accept or keep, same statement as the pending columns), by `clearWordCountRegressionFlagAsync` (called from `AO3ChapterFetcher.finishSuccessfulFetch` on the non-regression path only), and by Clear Content |
 | `scrollPosition` | statuses | per-article scroll position, replacing a single global default |
 | `readingProgress` | statuses | nullable fraction (0...1); `NULL` means "never computed," distinct from `0` |
 | `loved` | statuses | second independent boolean status alongside `starred` |

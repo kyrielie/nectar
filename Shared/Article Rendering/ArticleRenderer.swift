@@ -146,7 +146,8 @@ import ArticleTheming
 				.replacingOccurrences(of: "&", with: "&amp;")
 				.replacingOccurrences(of: "<", with: "&lt;")
 				.replacingOccurrences(of: ">", with: "&gt;")
-			bodyPrefix += "<p class='ao3ChapterFetchNotice'>Full text unavailable: \(escapedMessage)</p>"
+			let notice = String(format: NSLocalizedString("Full text unavailable: %@", comment: "Inline notice in the reader when AO3 full text could not be loaded; the placeholder is the reason"), escapedMessage)
+			bodyPrefix += "<p class='ao3ChapterFetchNotice'>\(notice)</p>"
 		}
 		self.body = Self.stripFakeParagraphIndents(bodyPrefix + (article?.body ?? "") + bodySuffix)
 		self.baseURL = article?.baseURL?.absoluteString

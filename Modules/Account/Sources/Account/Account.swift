@@ -1125,7 +1125,7 @@ public enum FetchType {
 		// feed came from Ambrosia's own LocalFeedServer, or from an
 		// AO3-native RSS/Atom/search-results source that this preference
 		// doesn't gate at all -- see AmbrosiaAO3NetworkPreference's own
-		// doc comment and AO3ChapterFetcher.isAO3NetworkRequestAllowed),
+		// doc comment and AO3FetchPolicy.isNetworkRequestAllowed),
 		// so there is no request here to withhold, and stripping
 		// comment/kudos/bookmark/hit counts the feed already sent us
 		// doesn't stop any traffic -- it only hides data Nectar already
@@ -1266,7 +1266,7 @@ public enum FetchType {
 	/// Resolves an article's pending content update: `accept == true`
 	/// promotes the pending copy to contentHTML, `accept == false` discards
 	/// it. Either way clears the pending slot, unblocking
-	/// AO3ChapterFetcher.isStale's auto-fetch gate for this article again.
+	/// AO3FetchPolicy.isStale's auto-fetch gate for this article again.
 	public func resolvePendingContentUpdateAsync(forArticleID articleID: String, accept: Bool) async {
 		await database.resolvePendingContentUpdateAsync(articleID: articleID, accept: accept)
 	}
@@ -1274,8 +1274,8 @@ public enum FetchType {
 	// MARK: - AO3 confirmed-missing
 
 	/// Marks an article's AO3 work as confirmed gone -- called by
-	/// AO3ChapterFetcher.download once both anonymous and authenticated
-	/// retry have exhausted with a `.notFound` response. See
+	/// AO3ChapterFetcher.download only on positive evidence
+	/// (`AO3FetchFailure.workMissing`), and from both attempts when signed in. See
 	/// ArticlesTable.setAO3ConfirmedMissing.
 	public func setAO3ConfirmedMissingAsync(forArticleID articleID: String) async {
 		await database.setAO3ConfirmedMissingAsync(articleID: articleID)
@@ -1283,10 +1283,18 @@ public enum FetchType {
 
 	/// Clears a previously-set confirmed-missing flag -- called on a
 	/// successful fetch (author restored the work, or an earlier gate was a
-	/// false positive), unblocking AO3ChapterFetcher.isStale's auto-fetch
+	/// false positive), unblocking AO3FetchPolicy.isStale's auto-fetch
 	/// gate for this article again.
 	public func clearAO3ConfirmedMissingAsync(forArticleID articleID: String) async {
 		await database.clearAO3ConfirmedMissingAsync(articleID: articleID)
+	}
+
+	/// Clears the feed-derived word-count regression flag -- called on a
+	/// successful non-regression fetch, which proves the stored content is
+	/// not being threatened. Resolving a pending update clears it too, in
+	/// the same statement.
+	public func clearWordCountRegressionFlagAsync(forArticleID articleID: String) async {
+		await database.clearWordCountRegressionFlagAsync(articleID: articleID)
 	}
 
 	// MARK: - Last Opened (Last Opened smart feed)

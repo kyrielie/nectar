@@ -96,7 +96,7 @@ public struct ArticleStorageInfo: Sendable {
 	/// schema change; a fresh install starts at user_version 0 and runs
 	/// every step up to currentSchemaVersion in one pass, same as an
 	/// existing install catching up.
-	nonisolated private static let currentSchemaVersion: UInt32 = 5
+	nonisolated private static let currentSchemaVersion: UInt32 = 6
 
 	public init(databaseFilePath: String, accountID: String, retentionStyle: RetentionStyle) {
 		Self.logger.debug("Articles Database init \(accountID, privacy: .public)")
@@ -410,6 +410,14 @@ public struct ArticleStorageInfo: Sendable {
 
 			database.executeStatements("CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);")
 			database.executeStatements("DROP TABLE if EXISTS tags;DROP INDEX if EXISTS tags_tagName_index;DROP INDEX if EXISTS articles_feedID_index;DROP INDEX if EXISTS statuses_read_index;DROP TABLE if EXISTS attachments;DROP TABLE if EXISTS attachmentsLookup;")
+
+			// Schema 6: clear every existing ao3ConfirmedMissingAt. Those
+			// values predate classification of interstitials (Cloudflare
+			// challenge and AO3 503 pages were once treated as "work
+			// missing"), so a real flag cannot be told apart from a false
+			// one. A work that is genuinely gone is re-flagged on its next
+			// fetch. Restoring a backup can reintroduce old flags; accepted.
+			database.executeStatements("UPDATE articles SET ao3ConfirmedMissingAt = NULL WHERE ao3ConfirmedMissingAt IS NOT NULL;")
 
 			database.setUserVersion(Self.currentSchemaVersion)
 		}
@@ -1196,6 +1204,14 @@ public struct ArticleStorageInfo: Sendable {
 		}
 	}
 
+	public func clearWordCountRegressionFlagAsync(articleID: String) async {
+		await withCheckedContinuation { continuation in
+			_clearWordCountRegressionFlag(articleID: articleID) {
+				continuation.resume()
+			}
+		}
+	}
+
 	// MARK: - Caches
 
 	/// Call to free up some memory. Should be done when the app is backgrounded, for instance.
@@ -1441,6 +1457,11 @@ private extension ArticlesDatabase {
 	func _clearAO3ConfirmedMissing(articleID: String, completion: @escaping DatabaseCompletionBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.clearAO3ConfirmedMissing(articleID: articleID, completion)
+	}
+
+	func _clearWordCountRegressionFlag(articleID: String, completion: @escaping DatabaseCompletionBlock) {
+		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
+		articlesTable.clearWordCountRegressionFlag(articleID: articleID, completion)
 	}
 
 	func _recordBookOpened(articleID: String, completion: @escaping DatabaseCompletionBlock) {

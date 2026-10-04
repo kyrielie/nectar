@@ -720,7 +720,7 @@ final class WebViewController: UIViewController {
 	/// accept/keep/later choice rather than an inline diff view --
 	/// resolving either promotes the pending copy to contentHTML or
 	/// discards it, both via Account.resolvePendingContentUpdateAsync,
-	/// which also unblocks AO3ChapterFetcher.isStale's auto-fetch gate for
+	/// which also unblocks AO3FetchPolicy.isStale's auto-fetch gate for
 	/// this article again.
 	func presentPendingContentUpdateAlertIfNeeded() {
 		guard let article, article.pendingUpdateContentHTML != nil, let account = article.account else {
@@ -2754,8 +2754,18 @@ private extension WebViewController {
 	/// stays present and tells the person why it's inert instead of
 	/// silently vanishing.
 	func checkForUpdatesAction() -> UIAction? {
-		guard let article, AO3ChapterFetcher.shared.canCheckForUpdates(for: article) else { return nil }
-		guard AO3ChapterFetcher.isAO3NetworkRequestAllowed(for: article) else {
+		// A pending update blocks re-checking (canCheckForUpdates is false
+		// for it), so without this branch the menu would show nothing for
+		// the very state the person most needs to act on. Offer the review
+		// alert instead.
+		if let article, article.pendingUpdateContentHTML != nil, article.account != nil {
+			let title = NSLocalizedString("Review Pending Update", comment: "Command: a fetched AO3 update is waiting for the person to accept or keep")
+			return UIAction(title: title, image: Assets.Images.checkForUpdates) { [weak self] _ in
+				self?.presentPendingContentUpdateAlertIfNeeded()
+			}
+		}
+		guard let article, AO3FetchPolicy.canCheckForUpdates(for: article) else { return nil }
+		guard AO3FetchPolicy.isNetworkRequestAllowed(for: article) else {
 			let title = NSLocalizedString("Check for Updates (Enable AO3 Updates in Settings)", comment: "Command, disabled: Ambrosia article with the AO3 network toggle off")
 			return UIAction(title: title, image: Assets.Images.checkForUpdates, attributes: .disabled) { _ in }
 		}

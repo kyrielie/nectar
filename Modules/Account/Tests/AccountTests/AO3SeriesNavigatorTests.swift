@@ -180,7 +180,7 @@ import AO3Kit
 		XCTAssertGreaterThan(newWorkCount, 0)
 
 		let seededArticles = await account.fetchArticlesAsync(.feed(searchFeed))
-		let seededStub = try XCTUnwrap(seededArticles.first { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) == "779835" })
+		let seededStub = try XCTUnwrap(seededArticles.first { AO3FetchPolicy.workID(fromBookKey: $0.bookKey) == "779835" })
 		XCTAssertNil(seededStub.contentHTML)
 
 		TestingURLProtocol.setResponse("archiveofourown.org/series/43794", file: "ao3-series-nav-43794-page1.html")
@@ -196,9 +196,9 @@ import AO3Kit
 		XCTAssertTrue(TestingURLProtocol.requestedURLs.contains { $0.absoluteString == "https://archiveofourown.org/series/43794" })
 
 		let articles = await account.fetchArticlesAsync(.feed(searchFeed))
-		let workIDs = Set(articles.compactMap { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) })
+		let workIDs = Set(articles.compactMap { AO3FetchPolicy.workID(fromBookKey: $0.bookKey) })
 		XCTAssertTrue(workIDs.isSuperset(of: ["779826", "779835", "779840", "1836235", "2085420"]))
-		XCTAssertEqual(articles.filter { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) == "779835" }.count, 1)
+		XCTAssertEqual(articles.filter { AO3FetchPolicy.workID(fromBookKey: $0.bookKey) == "779835" }.count, 1)
 	}
 
 	func testNextStubHitWithMissingBackfillStillFetchesKnownTarget() async {
@@ -397,7 +397,7 @@ import AO3Kit
 		// filtered it out of page1Works before handing anything to
 		// updateAsync.
 		let articles = await account.fetchArticlesAsync(.feed(account.existingFeed(withFeedID: existingArticle.feedID)!))
-		let matchingArticles = articles.filter { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) == "87955346" }
+		let matchingArticles = articles.filter { AO3FetchPolicy.workID(fromBookKey: $0.bookKey) == "87955346" }
 		XCTAssertEqual(matchingArticles.count, 1)
 		XCTAssertEqual(matchingArticles.first?.articleID, ambrosiaArticleID)
 	}
@@ -419,7 +419,7 @@ import AO3Kit
 		XCTAssertEqual(result, .success(Article.calculatedArticleID(feedID: existingArticle.feedID, uniqueID: "22222")))
 
 		let articles = await account.fetchArticlesAsync(.feed(account.existingFeed(withFeedID: existingArticle.feedID)!))
-		let matchingArticles = articles.filter { AO3ChapterFetcher.ao3WorkID(fromBookKey: $0.bookKey) == "1" }
+		let matchingArticles = articles.filter { AO3FetchPolicy.workID(fromBookKey: $0.bookKey) == "1" }
 		XCTAssertEqual(matchingArticles.count, 1)
 		XCTAssertEqual(matchingArticles.first?.articleID, existingArticle.articleID)
 	}

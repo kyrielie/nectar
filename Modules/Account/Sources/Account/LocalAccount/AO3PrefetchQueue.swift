@@ -103,7 +103,7 @@ actor AO3PrefetchQueue {
 		}
 		while !pending.isEmpty, countThisCycle < Self.maxArticlesPerRefreshCycle {
 			let article = pending.removeFirst()
-			AO3ChapterFetcher.shared.fetchIfNeeded(for: article)
+			AO3ChapterFetcher.shared.fetchIfNeeded(for: article, priority: .background)
 			countThisCycle += 1
 			try? await Task.sleep(nanoseconds: UInt64(pacingInterval * 1_000_000_000))
 		}

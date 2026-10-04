@@ -25,16 +25,33 @@
 import Foundation
 import Security
 
+/// Why a stored session was ended without the person asking. An explicit
+/// Sign Out records no reason.
+public enum AO3SessionEndReason: String, Sendable {
+	/// AO3 returned its registered-users-only wall to a request that
+	/// carried the stored session.
+	case rejectedByAO3
+}
+
+public extension Notification.Name {
+	/// Posted after the stored session is saved, cleared, or ended. Posted
+	/// on the calling thread.
+	static let ao3SessionDidChange = Notification.Name("AO3SessionDidChange")
+}
+
 public enum AO3SessionStore {
+
+	private static let lastEndedDateKey = "ao3SessionLastEndedDate"
+	private static let lastEndedReasonKey = "ao3SessionLastEndedReason"
 
 	private static let service = "com.ranchero.Nectar.AO3Session"
 	private static let account = "AO3SessionCookie"
 
 	/// The Cookie header value to send with an authenticated AO3 request
 	/// (see `AO3AuthenticatedFetcher`), or `nil` if no session is stored --
-	/// either the person has never signed in, or `clearSession()` was
-	/// called after a rejected authenticated attempt (see
-	/// `AO3ChapterFetcher.attemptAuthenticated(url:)`).
+	/// either the person has never signed in, or the session was cleared
+	/// (`clearSession()`) or ended after AO3 rejected it
+	/// (`endSession(reason:)`).
 	public static var cookieHeaderValue: String? {
 		guard let data = readKeychainData() else {
 			return nil
@@ -44,8 +61,8 @@ public enum AO3SessionStore {
 
 	/// Whether a session is currently stored. Doesn't verify the session is
 	/// still valid with AO3 -- that's only discoverable by actually making
-	/// a request; see `AO3ChapterFetcher.attemptAuthenticated(url:)`, which
-	/// clears the session itself if AO3 rejects it.
+	/// a request; `AO3ChapterFetcher` and `AO3SearchResultsFetcher` end the
+	/// session themselves (`endSession(reason:)`) if AO3 rejects it.
 	public static var isSignedIn: Bool {
 		cookieHeaderValue != nil
 	}
@@ -58,6 +75,7 @@ public enum AO3SessionStore {
 			return
 		}
 		deleteKeychainItem()
+		clearLastEnded()
 		let query: [String: Any] = [
 			kSecClass as String: kSecClassGenericPassword,
 			kSecAttrService as String: service,
@@ -70,15 +88,46 @@ public enum AO3SessionStore {
 			kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
 		]
 		SecItemAdd(query as CFDictionary, nil)
+		NotificationCenter.default.post(name: .ao3SessionDidChange, object: nil)
 	}
 
-	/// Clears the stored session. Called both from an explicit "Sign Out"
-	/// action (`AO3AccountSettingsView`) and from
-	/// `AO3ChapterFetcher.attemptAuthenticated(url:)` when an authenticated
-	/// attempt itself comes back `.registrationRequired` -- the stored
-	/// session is no longer valid (expired, or was revoked).
+	/// Clears the stored session on an explicit "Sign Out"
+	/// (`AO3AccountSettingsView`). Records no `lastEnded`, since the person
+	/// asked for it. A session AO3 rejected goes through
+	/// `endSession(reason:)` instead.
 	public static func clearSession() {
 		deleteKeychainItem()
+		NotificationCenter.default.post(name: .ao3SessionDidChange, object: nil)
+	}
+
+	/// Ends the stored session because AO3 rejected it: deletes the Keychain
+	/// item, records when and why in the app-group defaults so a banner can
+	/// survive a relaunch, and posts `.ao3SessionDidChange`. Cleared by the
+	/// next `saveSession`.
+	public static func endSession(reason: AO3SessionEndReason) {
+		deleteKeychainItem()
+		let store = NectarAppGroupUserDefaults.store
+		store.set(Date(), forKey: lastEndedDateKey)
+		store.set(reason.rawValue, forKey: lastEndedReasonKey)
+		NotificationCenter.default.post(name: .ao3SessionDidChange, object: nil)
+	}
+
+	/// When and why the session last ended without the person asking, or nil
+	/// if it has not, or a later sign-in cleared it.
+	public static var lastEnded: (date: Date, reason: AO3SessionEndReason)? {
+		let store = NectarAppGroupUserDefaults.store
+		guard let date = store.object(forKey: lastEndedDateKey) as? Date,
+		      let rawReason = store.string(forKey: lastEndedReasonKey),
+		      let reason = AO3SessionEndReason(rawValue: rawReason) else {
+			return nil
+		}
+		return (date, reason)
+	}
+
+	private static func clearLastEnded() {
+		let store = NectarAppGroupUserDefaults.store
+		store.removeObject(forKey: lastEndedDateKey)
+		store.removeObject(forKey: lastEndedReasonKey)
 	}
 
 	private static func readKeychainData() -> Data? {

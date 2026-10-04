@@ -62,12 +62,12 @@ public struct ParsedItem: Hashable, Sendable {
 	// live dl.stats block. Two independent sources populate these: a
 	// friend's self-hosted Ambrosia server can publish its own
 	// already-scraped stats under `_ambrosia` (JSONFeedParser), and
-	// AO3ChapterFetcher.rebuildParsedItem populates them from a live
+	// AO3FetchPolicy.rebuildParsedItem populates them from a live
 	// chapter fetch's AO3ChapterExtractionResult. Neither source is
 	// gated by AmbrosiaAO3NetworkPreference.updatesEnabled once the data
 	// is already in hand -- that preference only controls whether a live
 	// AO3 request happens at all (see its own doc comment and
-	// AO3ChapterFetcher.isAO3NetworkRequestAllowed); it was never meant
+	// AO3FetchPolicy.isNetworkRequestAllowed); it was never meant
 	// to hide already-downloaded metadata from display.
 	public let commentCount: Int?
 	public let kudosCount: Int?
@@ -87,7 +87,7 @@ public struct ParsedItem: Hashable, Sendable {
 	// Completion time of the AO3ChapterFetcher fetch that produced this
 	// ParsedItem, for the refetch-cadence setting. Same "fetcher-only,
 	// never feed-derived" precedent as the stats above: set only by
-	// AO3ChapterFetcher.rebuildParsedItem on success, nil otherwise, and
+	// AO3FetchPolicy.rebuildParsedItem on success, nil otherwise, and
 	// threaded straight through to Article.lastPrefaceFetchDate.
 	public let lastPrefaceFetchDate: Date?
 

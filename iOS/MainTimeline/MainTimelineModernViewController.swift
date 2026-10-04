@@ -1241,19 +1241,15 @@ extension MainTimelineModernViewController {
 				self.ao3LoadMoreState = hasNextPage ? .loadMore : .noMoreResults
 			case .noResults:
 				self.ao3LoadMoreState = .noMoreResults
-			case .registrationRequired:
-				self.ao3LoadMoreState = .error(NSLocalizedString("Restricted to registered AO3 users", comment: "AO3 load more error"))
-			case .rateLimited:
-				self.ao3LoadMoreState = .error(NSLocalizedString("AO3 rate limit hit -- backing off before retrying", comment: "AO3 load more error"))
 			case .cloudflareChallenge(let challengedURL):
 				// Opt-in prompt (Workstream C), same as the add-feed flow --
 				// never presents the WKWebView automatically.
 				self.presentAO3LoadMoreVerificationPrompt(challengedURL: challengedURL, feed: feed, account: account)
-				self.ao3LoadMoreState = .error(NSLocalizedString("Blocked by a Cloudflare challenge -- try again later", comment: "AO3 load more error"))
-			case .notSignedIn:
-				self.ao3LoadMoreState = .error(NSLocalizedString("This shelf requires a signed-in AO3 account", comment: "AO3 load more error"))
-			case .filtersNotApplied:
-				self.ao3LoadMoreState = .error(NSLocalizedString("AO3 ignored this search's filters (URL too long)", comment: "AO3 load more error"))
+				self.ao3LoadMoreState = .error(AO3FetchFailure.challenge.localizedMessage)
+			case .registrationRequired, .rateLimited, .notSignedIn, .filtersNotApplied:
+				if let failure = outcome.failure {
+					self.ao3LoadMoreState = .error(failure.localizedMessage)
+				}
 			}
 			self.ao3LoadMoreFooterView?.state = self.ao3LoadMoreState
 		}
@@ -1281,18 +1277,10 @@ extension MainTimelineModernViewController {
 					self.ao3LoadMoreState = hasNextPage ? .loadMore : .noMoreResults
 				case .noResults:
 					self.ao3LoadMoreState = .noMoreResults
-				case .registrationRequired:
-					self.ao3LoadMoreState = .error(NSLocalizedString("Restricted to registered AO3 users", comment: "AO3 load more error"))
-				case .rateLimited:
-					self.ao3LoadMoreState = .error(NSLocalizedString("AO3 rate limit hit -- backing off before retrying", comment: "AO3 load more error"))
 				case .needsVerification, .cancelled:
 					self.ao3LoadMoreState = .loadMore
-				case .failed(let message):
-					self.ao3LoadMoreState = .error(message)
-				case .notSignedIn:
-					self.ao3LoadMoreState = .error(NSLocalizedString("This shelf requires a signed-in AO3 account", comment: "AO3 load more error"))
-				case .filtersNotApplied:
-					self.ao3LoadMoreState = .error(NSLocalizedString("AO3 ignored this search's filters (URL too long)", comment: "AO3 load more error"))
+				case .failed(let failure):
+					self.ao3LoadMoreState = .error(failure.localizedMessage)
 				}
 				self.ao3LoadMoreFooterView?.state = self.ao3LoadMoreState
 			}

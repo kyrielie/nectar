@@ -52,10 +52,10 @@ public struct AO3ChapterExtractionResult: Sendable {
 	/// The Work Header stats block's Words count, read the same way as the
 	/// four counts above. Distinct from `Article.wordCount`, which stays
 	/// Workstream 1's (feed-derived) territory and is never overwritten by
-	/// a chapter fetch (see `AO3ChapterFetcher.rebuildParsedItem`, which
+	/// a chapter fetch (see `AO3FetchPolicy.rebuildParsedItem`, which
 	/// always passes `existingArticle.wordCount` through unchanged) --
 	/// this field exists purely for Task 8's content-regression guard
-	/// (`AO3ChapterFetcher.detectRegression`), which needs the fetched
+	/// (`AO3FetchPolicy.detectRegression`), which needs the fetched
 	/// page's own word count to compare against the stored content's
 	/// re-derived one, independent of whatever the feed last reported.
 	public let wordCount: Int?
@@ -86,7 +86,7 @@ public struct AO3ChapterExtractionResult: Sendable {
 	/// it's mutated. Separate from `AO3WorkPageMetadata` (which lives in
 	/// the Work Header's `dl.stats` block) since the title itself lives in
 	/// a different part of the page -- the work-level `div.preface.group`,
-	/// not the metadata table. Used by `AO3ChapterFetcher.rebuildParsedItem`
+	/// not the metadata table. Used by `AO3FetchPolicy.rebuildParsedItem`
 	/// to correct a series-nav stub's placeholder "AO3 Work N" title (or
 	/// refresh any existingArticle's title on an ordinary refetch) with
 	/// the real one, matching every other field's live-wins policy in that
@@ -95,7 +95,7 @@ public struct AO3ChapterExtractionResult: Sendable {
 
 	/// Structured metadata read off the live work page, surfaced here (not
 	/// just rendered into `contentHTML`'s preface) so
-	/// `AO3ChapterFetcher.rebuildParsedItem` can populate `Article`'s own
+	/// `AO3FetchPolicy.rebuildParsedItem` can populate `Article`'s own
 	/// summary/authors/date/tag-group fields for a work reached only
 	/// through `AO3SeriesNavigator`'s stub-then-fetch flow, whose stub
 	/// never has this data (see that type's doc comment on why series-
@@ -179,9 +179,11 @@ public struct AO3WorkPageMetadata: Sendable {
 	}
 }
 
-/// The four ways a fetched AO3 work page can come back, distinguished by
-/// document shape alone -- there is no HTTP-status-level signal for any of
-/// the three failure cases; AO3 returns 200 for all of them.
+/// The ways a fetched AO3 work page can come back, distinguished by
+/// document shape alone. HTTP status is handled one layer up, in
+/// `AO3WorkPageClassifier`; whether AO3 really returns 200 for each gate
+/// shape below has not been verified against live captures, so every case is
+/// matched on page content only.
 public enum AO3ChapterExtractionOutcome: Sendable {
 	/// `#workskin` plus at least one `.chapter` div were found -- the normal
 	/// case.
@@ -194,17 +196,26 @@ public enum AO3ChapterExtractionOutcome: Sendable {
 	case adultContentGate
 	/// AO3's "restricted to registered users" login wall
 	/// (`div#signin`, "This work is only available to registered users of
-	/// the Archive."). Distinct from `.notFound` -- Workstream 3's
-	/// authenticated retry fires specifically on this outcome.
+	/// the Archive."). Authenticated retry fires specifically on this
+	/// outcome.
 	case registrationRequired
-	/// Neither `#workskin`+`.chapter` divs, nor either known gate page, was
-	/// found. Catch-all for a genuinely deleted/moved work, or any other
-	/// shape not yet sampled (a collection- or series-level gate, for
-	/// instance) -- since an unsampled restricted-page shape can't be told
-	/// apart from a real 404 here, `AO3ChapterFetcher.download` retries
-	/// authenticated on this outcome the same as `.registrationRequired`,
-	/// rather than treating it as definitively unretryable.
-	case notFound
+	/// A Cloudflare interstitial served in place of the page.
+	case cloudflareChallenge
+	/// AO3's own 503 page ("Error 503 - Service unavailable", or the beta
+	/// banner it carries).
+	case serviceUnavailable
+	/// "This work is part of an ongoing challenge and will be revealed
+	/// soon!"
+	case hiddenUntilRevealed
+	/// AO3's explicit "Sorry, we couldn't find the work you were looking
+	/// for." copy. Positive evidence the work is gone.
+	case workNotFound
+	/// AO3's explicit "you don't have permission to access the page" copy.
+	case permissionDenied
+	/// Nothing above matched. A deleted work with a page shape not sampled
+	/// yet lands here, and so does any other unseen interstitial, so this
+	/// is never evidence that a work is missing.
+	case unrecognizedPage
 }
 
 /// Extracts storable article content from a fetched AO3 work page
@@ -229,9 +240,11 @@ public enum AO3ChapterExtractionOutcome: Sendable {
 /// positionally to the style+workskin capture.
 public enum AO3ChapterHTMLExtractor {
 
-	/// See `AO3ChapterExtractionOutcome` for what each case means and when
-	/// callers should treat it as retryable (`.registrationRequired`, via
-	/// Workstream 3) versus not (`.adultContentGate`, `.notFound`).
+	/// See `AO3ChapterExtractionOutcome` for what each case means. The
+	/// failure cases are tested in a fixed order after the success branches:
+	/// adult gate, registration required, Cloudflare challenge, AO3 503
+	/// page, hidden until revealed, not found, permission denied, then
+	/// `.unrecognizedPage`.
 	public static func extract(fromWorkPageHTML html: String) -> AO3ChapterExtractionOutcome {
 		let root = parseHTMLLiteTree(html)
 
@@ -300,7 +313,23 @@ public enum AO3ChapterHTMLExtractor {
 		if isRegistrationRequired(root) {
 			return .registrationRequired
 		}
-		return .notFound
+		if AO3CloudflareChallenge.isChallengePage(html) {
+			return .cloudflareChallenge
+		}
+		let folded = AO3HTMLHelpers.foldedForCopyMatching(html)
+		if AO3HTMLHelpers.isServiceUnavailablePage(foldedHTML: folded) {
+			return .serviceUnavailable
+		}
+		if folded.contains(AO3HTMLHelpers.hiddenUntilRevealedCopy) {
+			return .hiddenUntilRevealed
+		}
+		if folded.contains(AO3HTMLHelpers.workNotFoundCopy) {
+			return .workNotFound
+		}
+		if folded.contains(AO3HTMLHelpers.permissionDeniedCopy) {
+			return .permissionDenied
+		}
+		return .unrecognizedPage
 	}
 }
 
@@ -631,7 +660,7 @@ struct AO3WorkHeaderExtraction {
 	let wordCount: Int?
 	let seriesEntries: [AO3SeriesSpanResult]
 	// Tag-group rows, discrete text values (not display-formatted
-	// AO3TagEntry) -- for AO3ChapterFetcher.rebuildParsedItem to populate
+	// AO3TagEntry) -- for AO3FetchPolicy.rebuildParsedItem to populate
 	// Article's own fandoms/relationships/etc fields, independent of
 	// whatever the generic AO3PrefaceRow rendering above does with the
 	// same rows.
@@ -746,7 +775,7 @@ private extension AO3ChapterHTMLExtractor {
 				rows.append(AO3PrefaceRow(label: label, values: entries, isWide: isWide))
 
 				// Same rows, discrete text values -- for
-				// AO3ChapterFetcher.rebuildParsedItem, independent of the
+				// AO3FetchPolicy.rebuildParsedItem, independent of the
 				// AO3PrefaceRow rendering above. Keyed on class the same
 				// way the row-shape switch above already is, not label
 				// text (see parseWorkHeader's own doc comment on "Rating:"
@@ -846,7 +875,7 @@ private extension AO3ChapterHTMLExtractor {
 		// Words is still part of statsRows' display text regardless (nothing
 		// is lost visually), and Article.wordCount itself stays Workstream
 		// 1's (feed-derived) territory, same as chapterTotal/isComplete --
-		// AO3ChapterFetcher.rebuildParsedItem always passes
+		// AO3FetchPolicy.rebuildParsedItem always passes
 		// existingArticle.wordCount through unchanged, so this parsed value
 		// never silently overrides what the feed parser already owns. It's
 		// surfaced on AO3WorkHeaderExtraction/AO3ChapterExtractionResult
@@ -949,7 +978,7 @@ private extension AO3ChapterHTMLExtractor {
 			// text itself, since fullText already has it isolated. A work
 			// reached only via a refetch of an *existing* article carries
 			// its already-known index straight through unchanged
-			// (AO3ChapterFetcher.rebuildParsedItem maps existingArticle.series
+			// (AO3FetchPolicy.rebuildParsedItem maps existingArticle.series
 			// through as-is); this parse only matters for a work with no
 			// prior ArticleSeriesEntry to carry forward from (first-ever
 			// import via Phase 4's bulk series import) -- treat a failed

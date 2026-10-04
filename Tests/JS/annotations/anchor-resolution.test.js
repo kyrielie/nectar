@@ -306,6 +306,26 @@ test("buildHeadingIndex is scoped to root, not document -- a heading outside .ar
 	assert.equal(headingIndex[0].title, "Chapter 1");
 });
 
+test("buildHeadingIndex ignores author-written headings inside an AO3 #workskin, so chapterTitle is the real chapter", () => {
+	// Same rule as main_ios.js's tocNodes(): inside #workskin only the
+	// extractor's own chapter heading (h2, direct child of
+	// div.chapter.preface.group) counts. An in-story <h1> headline must not
+	// become the annotation's chapterTitle.
+	const { Annotations, document } = loadAnnotations(
+		'<div class="articleBody"><div id="workskin">'
+		+ '<div class="chapter" id="chapter-1">'
+		+ '<div class="chapter preface group"><h2 class="heading">Chapter 1: Detection</h2></div>'
+		+ '<div class="userstuff module" role="article"><h1>BREAKING: Probe Found</h1><p>Body text.</p></div>'
+		+ '</div></div></div>'
+	);
+	const root = document.querySelector(".articleBody");
+	const index = Annotations._internal.buildTextIndex(root);
+	const headingIndex = Annotations._internal.buildHeadingIndex(root, index.entries);
+
+	assert.deepEqual(headingIndex.map((h) => h.title), ["Chapter 1: Detection"]);
+	assert.equal(Annotations._internal.nearestChapterTitle(headingIndex, index.text.indexOf("Body text")), "Chapter 1: Detection");
+});
+
 test("renderAnnotations includes chapterTitle in a reanchored annotation's report entry", () => {
 	const { Annotations } = loadAnnotations(
 		'<div class="articleBody">'

@@ -67,8 +67,8 @@ only on an authentication-shaped failure. See `ao3-integration.md` and
 means an arbitrary-page fetch (this doc) for a signed-in person now goes
 through the authenticated path by default for every AO3 listing page, not
 just subscriptions/marked-for-later — the three call sites that gate on
-`LocalAccountRefresher.isAlwaysAuthenticatedAO3ListingFeed(_:)` widen that
-check to `isAlwaysAuthenticatedAO3ListingFeed(_:) || AO3SessionStore.isSignedIn`.
+`AO3Link.isAlwaysAuthenticatedListing(_:)` widen that
+check to `AO3Link.isAlwaysAuthenticatedListing(_:) || AO3SessionStore.isSignedIn`.
 
 ## Validation against a known total
 
@@ -125,7 +125,7 @@ one bookkeeping contract:
 | Site | When it runs |
 | --- | --- |
 | `LocalAccountDelegate.createFeed`'s AO3 branch | Manual Add Feed, page-1 add-time fetch |
-| `LocalAccountRefresher.fetchAndImportAO3SearchResults` | OPML-import add-time fetch |
+| `AO3SearchFeedRefresher.refresh` (AO3Kit), called from `LocalAccountRefresher` | Routine refresh and OPML-import add-time fetch of a listing feed's page 1 |
 | `AO3SearchResultsPaginator.fetchPage` | Shared by `loadNextPage`, `refreshFirstPage`, `fetchSpecificPage` |
 | `AO3SearchResultsImporter.importFetchedPage` | Cloudflare-WKWebView-harvest bookkeeping, shared by the create-time and load-more/arbitrary-fetch challenge retries |
 
@@ -191,8 +191,7 @@ What each caller does with it:
   Both show an alert containing the error description and recovery
   suggestion (`presentError(_:)` alone would drop the suggestion).
 - **Refresh:** reported through `reportFeedRefreshError`; nothing imported.
-  `LocalAccountRefresher.fetchAndImportAO3SearchResults` — the OPML-import
-  add-time fetch, per the call-site table above — handles
+  `AO3SearchFeedRefresher.refresh` — called from `LocalAccountRefresher`, per the call-site table above — handles
   `.filtersNotApplied` the identical way: `reportFeedRefreshError`,
   nothing imported, feed kept. This is the same routine-Refresh behavior,
   not a separate code path; it's distinct from manual Add Feed's
@@ -204,8 +203,7 @@ What each caller does with it:
 
 **Known test gap:** no tests currently exist for `AO3SearchResultsFetcher`'s
 `.filtersNotApplied` outcome itself, `LocalAccountDelegate.createFeed`'s
-feed-removal-on-failure branch, `LocalAccountRefresher.fetchAndImportAO3SearchResults`'s
-handling of it, or `AddFeedViewController`'s long-URL warning UI — only
+feed-removal-on-failure branch, `AO3SearchFeedRefresher`'s handling of it, or `AddFeedViewController`'s long-URL warning UI — only
 `AO3FilterURLLengthTests` (URL-length tiers) and one importer-test outcome
 exist today.
 
@@ -287,3 +285,23 @@ section, `AO3PagesInspectorCell`, `AO3FilterURLLength`,
 warning (`userAcceptedLongAO3URL`).
 Search-result importing and pagination are implemented in `Modules/AO3Kit`
 behind `AO3ArticleUpdating` and `AO3SearchFeedPageTracking`.
+
+## Typed failures and the refresher
+
+`AO3SearchFeedRefresher.refresh(url:feedURL:feedID:tracker:updater:activity:)`
+(AO3Kit) owns the page-1 fetch and import for a listing feed. It chooses
+`fetchRequiringSignIn` for always-private listings (and for any listing once
+a session exists) and the plain anonymous `fetch` otherwise, imports with
+`deleteOlder: false` (page 1 is a partial view of a lazily paginated
+search), writes `ao3SearchFetchedPages = [1]` and `ao3SearchTotalPages`, and
+records `AO3ChallengeSessionStore.lastChallengedURL` on a Cloudflare
+challenge. It returns `.imported(workCount:)`, `.noResults`, or
+`.failure(AO3FetchFailure)`; the caller keeps `lastCheckDate`, task
+accounting and error reporting.
+
+`AO3SearchResultsFetchOutcome`, `AO3SearchResultsPaginator.PageOutcome` and
+`AO3SearchResultsImporter.ImportOutcome` each expose `failure:
+AO3FetchFailure?`. `AO3SearchResultsFetchCoordinator.Outcome` is
+`imported`, `noResults`, `needsVerification`, `cancelled` or
+`failed(AO3FetchFailure)`, so the Feed Inspector, timeline load-more row and
+Add Feed all show `failure.localizedMessage` instead of hand-written text.

@@ -12,8 +12,8 @@
 //  native AO3 tag/user RSS feeds: a work can be deleted, locked, or moved
 //  any time between being listed in the feed and the person actually
 //  opening it, and AO3ChapterFetcher.fetchIfNeeded only ever runs at
-//  open time. Once that first attempt comes back .notFound on both
-//  retries, ao3ConfirmedMissingAt is set and isStale stops trying
+//  open time. Once that first attempt comes back with positive missing evidence
+//  (HTTP 404/410 or AO3's not-found copy, see AO3FetchFailure.workMissing), ao3ConfirmedMissingAt is set and isStale stops trying
 //  forever (AO3ChapterFetcher.swift) -- there is no second chance.
 //
 //  This preference is the explicit, opt-in exception: with it on,
@@ -24,7 +24,7 @@
 //  exactly what the philosophy section otherwise rules out, so it needs
 //  a deliberate opt-in rather than a silent default-on behavior change.
 //
-//  Lives in the Account module for the same reason
+//  Lives in AO3Kit for the same reason
 //  AO3PrefaceRefetchPreference/AmbrosiaAO3NetworkPreference do --
 //  LocalAccountRefresher is what actually needs to read this, and that
 //  shouldn't require depending on the iOS app target. Uses

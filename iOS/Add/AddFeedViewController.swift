@@ -185,7 +185,7 @@ final class AddFeedViewController: UITableViewController {
 				// out to be AO3's unfiltered listing is not kept. Unlike that
 				// path the feed already exists in the tree here, so it is
 				// removed now, and the sheet stays open with the error.
-				if case .filtersNotApplied = outcome {
+				if case .failed(.filtersNotApplied) = outcome {
 					if let container = self.container {
 						account.removeFeed(feed, from: container) { _ in }
 					}

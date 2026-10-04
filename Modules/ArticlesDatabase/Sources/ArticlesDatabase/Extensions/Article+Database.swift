@@ -214,7 +214,7 @@ extension Article {
 		// wordCount through -- it's the best number the feed currently
 		// reports, and nothing is destroyed by writing a number -- but
 		// additionally flags wordCountRegressionFlaggedAt so
-		// AO3ChapterFetcher.isStale leaves contentHTML alone (skips
+		// AO3FetchPolicy.isStale leaves contentHTML alone (skips
 		// on-open fetching) until "Check for updates" runs the real fetch
 		// through the content-level guard. Scoped to this diff path
 		// only -- it does not extend to the search-extractor/link-import
