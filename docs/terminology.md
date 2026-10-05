@@ -112,8 +112,9 @@ and network requests. Confirmed by reading the code:
 - **Raw strings that only reach logs**, such as the `NSError` description
   built in `LocalAccountRefresher` for a listing that needs sign-in. The
   reader-facing twin of that message says "shelf".
-- **AO3's own RSS feeds.** "About Tag & User Feeds" and its body describe
-  what AO3 publishes, not a shelf, so they still say "feed".
+- **AO3's own RSS feeds.** Text that describes what AO3 publishes, not a
+  shelf, still says "feed". (The AO3 settings screen no longer carries
+  such a section; that explanation lives on the wiki.)
 - **"OPML"**, a real file-format standard: "Import OPML File",
   "Export OPML File".
 - **Export filenames on disk**: `Subscriptions-<AccountName>.opml`,

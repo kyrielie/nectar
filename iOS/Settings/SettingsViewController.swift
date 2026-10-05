@@ -394,6 +394,9 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 			let hosting = Self.makeSurfacePaletteAwareHostingController(rootView: AO3AccountSettingsView(
 				onShowWorksNeedingAttention: { [weak self] in
 					self?.pushWorksNeedingAttention()
+				},
+				onShowIgnoreList: { [weak self] in
+					self?.pushIgnoreList()
 				}
 			))
 			self.navigationController?.pushViewController(hosting, animated: true)
@@ -931,6 +934,11 @@ private extension SettingsViewController {
 			return nil
 		}
 		return (bookKey: article.bookKey, title: article.title ?? "")
+	}
+
+	func pushIgnoreList() {
+		let hosting = Self.makeSurfacePaletteAwareHostingController(rootView: AO3IgnoreListView())
+		self.navigationController?.pushViewController(hosting, animated: true)
 	}
 
 	func pushWorksNeedingAttention() {

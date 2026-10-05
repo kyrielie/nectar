@@ -95,7 +95,7 @@ it's trusted by default. Specifically:
 | `AmbrosiaSQLiteImportTable`, `AmbrosiaSQLiteTransferFetcher`, the `.sqlite` route | `sqlite-transfer.md` |
 | `OrderedSet<Feed>`, `Container.topLevelFeeds`, `addFeedToTreeAtTopLevel(_:at:)`, `AccountDelegate.moveFeed`'s `targetIndex` parameter | `feed-reordering.md` |
 | `OrderedSet<Folder>`, `Container.folders`, `Folder.parent`/`.pathNames`, `addFolderToTree(_:at:)`, `AccountDelegate.moveFolder`, `ContainerIdentifier.folder`/`SidebarItemIdentifier.folder`'s path encoding, `OPMLNormalizer`'s nesting behavior, the depth-3 cap | `nested-folders.md` |
-| `AO3IgnoreList`, `AO3SummaryExtractor` call sites in `RSSItem`/`AtomParser`, AO3 RSS/Atom subscription wiring | `ao3-direct-feed-ingestion.md` |
+| `AO3IgnoreList` (including its labels), `AO3IgnoreListView`, the reader's "Ignore This Work"/"Ignore Author" actions, `AO3SummaryExtractor` call sites in `RSSItem`/`AtomParser`, AO3 RSS/Atom subscription wiring | `ao3-direct-feed-ingestion.md` |
 | `FeedSettings.ao3SearchFetchedPages`/`.ao3SearchTotalPages`, `AO3SearchResultsPaginator.nextPageToFetch`/`.validate`/`.fetchSpecificPage`, `AO3SearchResultsImporter.importFetchedPage`, `AO3FilterURLLength`, `AO3FilterFallbackPage`, `AddFeedViewController`'s long-URL warning, `AO3SearchResultsFetchCoordinator.presentSolverAndRetry`'s `updatesFeedName` parameter, `FeedInspectorViewController`'s AO3 Pages section | `ao3-arbitrary-page-fetch.md` |
 | The AO3 HTML extractors themselves (`Modules/RSParser/.../Feeds/Extensions/`) | `ao3-feeds.md` |
 | `Feed.repoint(to:)`, `collectionKeyIndex`, `rewriteAmbrosiaJSONFeedURLs` | `feed-repointing.md` |

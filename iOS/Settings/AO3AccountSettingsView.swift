@@ -30,17 +30,14 @@ struct AO3AccountSettingsView: View {
 	/// UINavigationController, so the push belongs to SettingsViewController.
 	var onShowWorksNeedingAttention: () -> Void = {}
 
+	/// Pushes the ignore list manager, same reason as above.
+	var onShowIgnoreList: () -> Void = {}
+
 	var body: some View {
 		List {
 			if let sessionEnded = model.sessionEnded, !model.isSignedIn {
 				Section {
 					Text(sessionEndedText(date: sessionEnded.date))
-					Button {
-						isShowingLogin = true
-					} label: {
-						Text(NSLocalizedString("Sign In to AO3", comment: "AO3 sign in button"))
-							.frame(maxWidth: .infinity)
-					}
 				}
 			}
 
@@ -59,40 +56,6 @@ struct AO3AccountSettingsView: View {
 						 : NSLocalizedString("Not Signed In", comment: "AO3 signed-out status"))
 						.foregroundStyle(.secondary)
 				}
-			}
-
-			Section {
-				Toggle(NSLocalizedString("Fetch AO3 Updates for Library Works", comment: "Ambrosia AO3 updates toggle label"), isOn: $isAmbrosiaUpdatesEnabled)
-					.onChange(of: isAmbrosiaUpdatesEnabled) { _, newValue in
-						AmbrosiaAO3NetworkPreference.updatesEnabled = newValue
-					}
-			} footer: {
-				Text(NSLocalizedString("Only affects works added to your library from Ambrosia/Calibre. Off by default so Nectar makes no AO3 requests for a purely local archive unless you turn this on. When on, both chapter text and stats (kudos/comments/hits) stay in sync with the live AO3 version; a fetch that looks like it removed chapters or lost a large amount of text is held back for review instead of applied automatically. Works imported directly from an AO3 RSS feed always fetch live content -- there's no other way for them to get it.", comment: "Ambrosia AO3 network toggle footer"))
-			}
-
-			Section {
-				Picker(NSLocalizedString("Check for Updates", comment: "AO3 preface refetch cadence picker label"), selection: $refetchInterval) {
-					ForEach(AO3PrefaceRefetchInterval.allCases, id: \.self) { interval in
-						Text(interval.description).tag(interval)
-					}
-				}
-				.onChange(of: refetchInterval) { _, newValue in
-					AO3PrefaceRefetchPreference.current = newValue
-				}
-			} footer: {
-				Text(NSLocalizedString("How often Nectar rechecks an already-read-up-to-date AO3 work for new comments, kudos, hits, or formatting changes. Works from AO3 feeds always follow this. Works in your library follow it only when Fetch AO3 Updates for Library Works is turned on above.", comment: "AO3 preface refetch cadence footer"))
-			}
-
-			Section {
-				Toggle(NSLocalizedString("Fetch New Works Immediately", comment: "AO3 prefetch-on-arrival toggle label"), isOn: $isPrefetchNewWorksEnabled)
-					.onChange(of: isPrefetchNewWorksEnabled) { _, newValue in
-						AO3PrefetchNewWorksPreference.isEnabled = newValue
-					}
-			} footer: {
-				Text(NSLocalizedString("Downloads a work's text as soon as it appears in your tag and user shelves, instead of waiting until you open it. Uses more AO3 requests, but protects against a work being deleted or locked before you get to it. Off by default. Doesn't apply to AO3 search results, which never fetch content automatically.", comment: "AO3 prefetch-on-arrival toggle footer"))
-			}
-
-			Section {
 				if model.isSignedIn {
 					Button(role: .destructive) {
 						isShowingSignOutConfirmation = true
@@ -108,8 +71,33 @@ struct AO3AccountSettingsView: View {
 							.frame(maxWidth: .infinity)
 					}
 				}
+			} header: {
+				Text(NSLocalizedString("AO3 Account", comment: "AO3 settings: account section header"))
 			} footer: {
-				Text(NSLocalizedString("Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Nectar can leave kudos on your behalf if you turn that on below -- it still can't subscribe, bookmark, or comment. Signing out also signs you out of Nectar's in-app AO3 browser.", comment: "AO3 account section footer"))
+				Text(NSLocalizedString("Lets Nectar read works restricted to registered AO3 users. Nectar never sees your password.", comment: "AO3 account section footer"))
+			}
+
+			Section {
+				Toggle(NSLocalizedString("Fetch AO3 Updates for Library Works", comment: "Ambrosia AO3 updates toggle label"), isOn: $isAmbrosiaUpdatesEnabled)
+					.onChange(of: isAmbrosiaUpdatesEnabled) { _, newValue in
+						AmbrosiaAO3NetworkPreference.updatesEnabled = newValue
+					}
+				Picker(NSLocalizedString("Check for Updates", comment: "AO3 preface refetch cadence picker label"), selection: $refetchInterval) {
+					ForEach(AO3PrefaceRefetchInterval.allCases, id: \.self) { interval in
+						Text(interval.description).tag(interval)
+					}
+				}
+				.onChange(of: refetchInterval) { _, newValue in
+					AO3PrefaceRefetchPreference.current = newValue
+				}
+				Toggle(NSLocalizedString("Fetch New Works Immediately", comment: "AO3 prefetch-on-arrival toggle label"), isOn: $isPrefetchNewWorksEnabled)
+					.onChange(of: isPrefetchNewWorksEnabled) { _, newValue in
+						AO3PrefetchNewWorksPreference.isEnabled = newValue
+					}
+			} header: {
+				Text(NSLocalizedString("Updates", comment: "AO3 settings: updates section header"))
+			} footer: {
+				Text(NSLocalizedString("Fetch New Works Immediately downloads each work as it arrives. AO3 limits how fast apps can request pages, so Nectar paces downloads and pauses if AO3 asks it to slow down.", comment: "AO3 prefetch-on-arrival toggle footer"))
 			}
 
 			Section {
@@ -117,10 +105,12 @@ struct AO3AccountSettingsView: View {
 					.onChange(of: isKudosOnLikeEnabled) { _, newValue in
 						AO3KudosOnLikePreference.isEnabled = newValue
 					}
+			} header: {
+				Text(NSLocalizedString("Kudos on AO3", comment: "AO3 settings: kudos section header"))
 			} footer: {
 				Text(model.isSignedIn
-					 ? NSLocalizedString("When you love a work in Nectar, it also leaves a kudos on that work on AO3, using your signed-in AO3 account.", comment: "AO3 kudos-on-like footer, signed in")
-					 : NSLocalizedString("When you love a work in Nectar, it also leaves a kudos on that work on AO3. You're not signed in, so it's left as a guest kudos -- sign in above to leave it as yourself instead.", comment: "AO3 kudos-on-like footer, signed out"))
+					 ? NSLocalizedString("Also leaves kudos on AO3 from your account.", comment: "AO3 kudos-on-like footer, signed in")
+					 : NSLocalizedString("Also leaves kudos on AO3 as a guest. Sign in to use your account.", comment: "AO3 kudos-on-like footer, signed out"))
 			}
 
 			Section {
@@ -136,19 +126,20 @@ struct AO3AccountSettingsView: View {
 							.foregroundStyle(.tertiary)
 					}
 				}
-			} footer: {
-				Text(NSLocalizedString("Works with an update waiting for your review, and works Nectar could not refresh from AO3.", comment: "AO3 settings: works needing attention row footer"))
-			}
-
-			Section {
-				Text(NSLocalizedString("About Tag & User Feeds", comment: "AO3 RSS limitations info row title"))
-					.font(.headline)
-				Text(NSLocalizedString("AO3's tag and user RSS feeds only cover canonical tags -- a feed for a synonym or an uncommonly-spelled tag will come back empty even if the tag itself has works. Feeds can't combine multiple tags the way AO3's own filtered search results can.", comment: "AO3 RSS limitations: canonical tags and combining"))
-					.foregroundStyle(.secondary)
-				Text(NSLocalizedString("Works an author has archive-locked to registered users never appear in RSS at all, signed in or not -- RSS has no concept of an authenticated request. Nectar's AO3 sign-in above only helps once a locked work's link reaches Nectar some other way.", comment: "AO3 RSS limitations: archive-locked works"))
-					.foregroundStyle(.secondary)
-			} footer: {
-				Text(NSLocalizedString("These are limits of AO3's existing RSS mechanism itself, not of Nectar.", comment: "AO3 RSS limitations section footer"))
+				Button {
+					onShowIgnoreList()
+				} label: {
+					HStack {
+						Text(NSLocalizedString("Ignored Works and Authors", comment: "AO3 settings: ignore list row title"))
+							.foregroundStyle(.primary)
+						Spacer()
+						Image(systemName: "chevron.right")
+							.font(.footnote.weight(.semibold))
+							.foregroundStyle(.tertiary)
+					}
+				}
+			} header: {
+				Text(NSLocalizedString("Works and Authors", comment: "AO3 settings: works and authors section header"))
 			}
 
 			Section {
@@ -164,8 +155,10 @@ struct AO3AccountSettingsView: View {
 					Text(NSLocalizedString("Verify Browser Access", comment: "AO3 Cloudflare challenge button"))
 						.frame(maxWidth: .infinity)
 				}
+			} header: {
+				Text(NSLocalizedString("Troubleshooting", comment: "AO3 settings: troubleshooting section header"))
 			} footer: {
-				Text(NSLocalizedString("If an AO3 search-results shelf reports a Cloudflare challenge, use this to prove to Cloudflare that Nectar is being used by a real person -- the same check AO3 shows in a regular browser sometimes. This isn't tied to your AO3 account and doesn't require being signed in; it usually needs re-doing periodically.", comment: "AO3 Cloudflare challenge section footer"))
+				Text(NSLocalizedString("Use this if AO3 shows a Cloudflare challenge. Not tied to your account.", comment: "AO3 Cloudflare challenge section footer"))
 			}
 		}
 		.navigationTitle(Text(verbatim: "Archive of Our Own"))

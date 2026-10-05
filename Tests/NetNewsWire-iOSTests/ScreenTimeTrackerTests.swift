@@ -53,6 +53,24 @@ import Foundation
 		ScreenTimeTracker.now = { Date() }
 	}
 
+	/// Teardown counterpart to `resetState()`. These tests run inside the
+	/// Nectar.app host and write to its real UserDefaults, so ending on
+	/// `resetState()` (which turns Screen Time on) would leave it on for the
+	/// next launch of the app on the same simulator. Removing the keys lets
+	/// the registered defaults (Screen Time off) apply again.
+	private func cleanupState() {
+		resetState()
+		for key in [
+			AppDefaults.Key.screenTimeEnabled, AppDefaults.Key.screenTimeDailyLimitEnabled,
+			AppDefaults.Key.screenTimeBedtimeEnabled, AppDefaults.Key.screenTimeDailyLimitMinutesByWeekday,
+			AppDefaults.Key.screenTimeMinutesUsedTodaySeconds, AppDefaults.Key.screenTimeUsageDate,
+			AppDefaults.Key.screenTimeDailyUsageHistory, AppDefaults.Key.screenTimeTakeABreakMode,
+			AppDefaults.Key.screenTimeBreakReadingMinutes, AppDefaults.Key.screenTimeBreakEnforcedMinutes
+		] {
+			AppDefaults.store.removeObject(forKey: key)
+		}
+	}
+
 	/// Sets the same limit for every weekday, bypassing the >=60 floor
 	/// enforced by `setScreenTimeDailyLimitMinutes` -- these tests need
 	/// short limits to run fast, and go directly through the raw
@@ -98,7 +116,7 @@ import Foundation
 
 	@Test func limitLockout_bedtimeEndingDoesNotClearIt() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0))!
@@ -132,7 +150,7 @@ import Foundation
 
 	@Test func bedtimeLockout_dayRolloverDoesNotAffectIt_ifStillWithinWindow() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		let calendar = testCalendar()
 
@@ -157,7 +175,7 @@ import Foundation
 
 	@Test func limitLockout_clearsOnDayRollover_andPostsNotification() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
@@ -181,7 +199,7 @@ import Foundation
 
 	@Test func limitLockout_clearsOnDayRollover_evenWhenElapsedIsZero() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
@@ -210,7 +228,7 @@ import Foundation
 
 	@Test func bothLockoutsActiveSimultaneously_clearingOneLeavesOtherActive() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 21, minute: 58))!
@@ -246,7 +264,7 @@ import Foundation
 
 	@Test func freshRollover_withNoPriorLockout_postsNoNotifications() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
@@ -275,7 +293,7 @@ import Foundation
 
 	@Test func breakReminder_firesAfter15MinutesOfContinuousUse() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		AppDefaults.shared.screenTimeTakeABreakMode = .reminder
 		let calendar = testCalendar()
@@ -293,7 +311,7 @@ import Foundation
 
 	@Test func breakReminder_resetsCountdownOnDismiss() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		AppDefaults.shared.screenTimeTakeABreakMode = .reminder
 		let calendar = testCalendar()
@@ -320,7 +338,7 @@ import Foundation
 
 	@Test func breakReminder_suppressedDuringLockout() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		AppDefaults.shared.screenTimeTakeABreakMode = .reminder
 		setDailyLimit(1) // 60s limit, reached well before the 15-minute break mark
@@ -340,7 +358,7 @@ import Foundation
 
 	@Test func breakReminder_disabledByDefault() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 		// screenTimeTakeABreakMode left at its default (.off).
 
 		let calendar = testCalendar()
@@ -357,7 +375,7 @@ import Foundation
 
 	@Test func breakEnforced_locksOutAfterReadingIntervalAndClearsAfterBreakDuration() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		AppDefaults.shared.screenTimeTakeABreakMode = .enforced
 		AppDefaults.shared.screenTimeBreakReadingMinutes = 15
@@ -387,7 +405,7 @@ import Foundation
 
 	@Test func breakEnforced_doesNotStartUnderAnExistingLimitLockout() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		AppDefaults.shared.screenTimeTakeABreakMode = .enforced
 		AppDefaults.shared.screenTimeBreakReadingMinutes = 15
@@ -406,7 +424,7 @@ import Foundation
 
 	@Test func suspendedBackgroundTime_isNotCredited() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
@@ -425,7 +443,7 @@ import Foundation
 
 	@Test func forwardClockJumpMidForeground_isCappedPerTick() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
@@ -443,7 +461,7 @@ import Foundation
 
 	@Test func lockoutPause_usageDoesNotAccrueWhileLockedOut() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
@@ -458,7 +476,7 @@ import Foundation
 
 	@Test func breakPersistence_survivesForceQuit_expiredBreakClearsOnRelaunch() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		let calendar = testCalendar()
 		let past = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
@@ -473,7 +491,7 @@ import Foundation
 
 	@Test func breakPersistence_survivesForceQuit_activeBreakStaysLockedOnRelaunch() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		let calendar = testCalendar()
 		let now = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
@@ -487,7 +505,7 @@ import Foundation
 
 	@Test func awayReset_clearsSecondsSinceLastBreakAfterLongEnoughAway() {
 		resetState()
-		defer { resetState() }
+		defer { cleanupState() }
 
 		AppDefaults.shared.screenTimeBreakEnforcedMinutes = 5
 		let calendar = testCalendar()

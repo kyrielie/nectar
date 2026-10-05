@@ -19,7 +19,21 @@ construction site in both parsers:
 - **`AO3IgnoreList.shouldExclude(_:)`** filters out items from
   blocked works/authors before they're ever turned into a `ParsedItem` —
   one choke point that covers show/fetch/save at once, so a blocked
-  work never reaches the database, the timeline, or search.
+  work never reaches the database, the timeline, or search. Rules carry
+  optional display labels (work title, author name) in two separate
+  dictionaries (`ao3IgnoredWorkLabels`, `ao3IgnoredAuthorLabels`) beside
+  the original id and URL sets, whose keys and shape are unchanged.
+  `ignoreWork(id:label:)` and `ignoreAuthor(url:label:)` store a non-blank
+  label (re-ignoring without one keeps the stored label), `unignore*`
+  removes it, and a rule without a label displays as its id or URL
+  (`workDisplayName(id:)`, `authorDisplayName(url:)`). Labels never affect
+  matching. Rules are not retroactive: nothing already stored is touched.
+  The person manages them in AO3 settings under Ignored Works and Authors
+  (`AO3IgnoreListView`, swipe to remove), and adds them from the reader's
+  context menu ("Ignore This Work", and "Ignore Author" when the article's
+  author has an AO3 URL; one row per author when there are several), each
+  behind a confirmation alert. The menu rows are hidden for anything that
+  is not a single AO3 work (`AO3FetchPolicy.workID(fromBookKey:)` is nil).
 - **`AO3SummaryExtractor.extract(fromSummaryHTML:)`** (`RSSItem.toParsedItem`
   only — Atom items don't carry AO3's summary HTML in the same shape) tries
   to parse AO3's machine-generated summary HTML into structured fields

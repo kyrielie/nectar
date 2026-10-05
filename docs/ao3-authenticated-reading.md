@@ -200,3 +200,34 @@ yet.
 The screen's "Works Needing Attention" row pushes a separate list of works
 with a pending update, a regression flag or a missing flag; see
 `ao3-works-needing-attention.md`.
+
+The same screen has an "Ignored Works and Authors" row that pushes
+`AO3IgnoreListView`, wired like the attention row through an
+`onShowIgnoreList` closure so `SettingsViewController` does the push. See
+`ao3-direct-feed-ingestion.md` for what the list stores.
+
+### Screen layout
+
+`AO3AccountSettingsView` is a single `List`. Section order, top to bottom
+(confirmed by reading the view): an optional "session ended" notice, an
+optional rate-limit notice, then:
+
+1. **AO3 Account**: the Status row and the Sign In or Sign Out button in
+   one section, so the state and its action sit together.
+2. **Updates**: Fetch AO3 Updates for Library Works, Check for Updates
+   (cadence), Fetch New Works Immediately. The only footer is the
+   Fetch New Works Immediately note that AO3 rate-limits requests and that
+   Nectar paces downloads and pauses when AO3 asks it to slow down. No
+   request rate is quoted there.
+3. **Kudos on AO3**: the kudos-on-like toggle, with a one-line footer that
+   depends on sign-in state.
+4. **Works and Authors**: the Works Needing Attention and Ignored Works and
+   Authors rows.
+5. **Troubleshooting**: Browser Verification status and the Verify Browser
+   Access button.
+
+Footers are deliberately one or two sentences. The longer explanations
+(what the library-works toggle gates, how the cadence applies, what signing
+out also clears, RSS and archive-locked limits) are not in the app; they
+are meant to live on the project wiki. The former "About Tag & User Feeds"
+section was removed from this screen along with its strings.

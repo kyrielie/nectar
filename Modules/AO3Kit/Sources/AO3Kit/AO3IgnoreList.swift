@@ -29,6 +29,13 @@
 //  Stored in NectarAppGroupUserDefaults.store, the same app-group suite
 //  AO3PrefaceRefetchPreference and AO3KudosOnLikePreference use.
 //
+//  Labels: each rule may carry a display label (a work title, an author
+//  name) kept in two separate dictionaries under their own keys, so the
+//  original id/url keys and their stored shape are unchanged and rules
+//  made before labels existed keep working. A rule without a label
+//  displays as its id or URL (`workDisplayName(id:)`,
+//  `authorDisplayName(url:)`). Labels never affect matching.
+//
 import Foundation
 import RSParser
 
@@ -36,6 +43,8 @@ public enum AO3IgnoreList {
 
 	private static let workIDsKey = "ao3IgnoredWorkIDs"
 	private static let authorURLsKey = "ao3IgnoredAuthorURLs"
+	private static let workLabelsKey = "ao3IgnoredWorkLabels"
+	private static let authorLabelsKey = "ao3IgnoredAuthorLabels"
 
 	private static var store: UserDefaults { NectarAppGroupUserDefaults.store }
 
@@ -61,28 +70,84 @@ public enum AO3IgnoreList {
 		set { store.set(Array(newValue), forKey: authorURLsKey) }
 	}
 
-	public static func ignoreWork(id: String) {
+	/// Display labels for ignored works, keyed by work id. May hold fewer
+	/// entries than `ignoredWorkIDs` (rules made without a label).
+	public static var ignoredWorkLabels: [String: String] {
+		get { store.dictionary(forKey: workLabelsKey) as? [String: String] ?? [:] }
+		set { store.set(newValue, forKey: workLabelsKey) }
+	}
+
+	/// Display labels for ignored authors, keyed by author URL.
+	public static var ignoredAuthorLabels: [String: String] {
+		get { store.dictionary(forKey: authorLabelsKey) as? [String: String] ?? [:] }
+		set { store.set(newValue, forKey: authorLabelsKey) }
+	}
+
+	/// Adds the work to the ignore list. A non-empty `label` is stored for
+	/// display; calling again without one keeps any label already stored.
+	public static func ignoreWork(id: String, label: String? = nil) {
 		var ids = ignoredWorkIDs
 		ids.insert(id)
 		ignoredWorkIDs = ids
+		if let label = trimmedLabel(label) {
+			var labels = ignoredWorkLabels
+			labels[id] = label
+			ignoredWorkLabels = labels
+		}
 	}
 
+	/// Removes the work and its label.
 	public static func unignoreWork(id: String) {
 		var ids = ignoredWorkIDs
 		ids.remove(id)
 		ignoredWorkIDs = ids
+		var labels = ignoredWorkLabels
+		if labels.removeValue(forKey: id) != nil {
+			ignoredWorkLabels = labels
+		}
 	}
 
-	public static func ignoreAuthor(url: String) {
+	/// Adds the author to the ignore list. A non-empty `label` is stored for
+	/// display; calling again without one keeps any label already stored.
+	public static func ignoreAuthor(url: String, label: String? = nil) {
 		var urls = ignoredAuthorURLs
 		urls.insert(url)
 		ignoredAuthorURLs = urls
+		if let label = trimmedLabel(label) {
+			var labels = ignoredAuthorLabels
+			labels[url] = label
+			ignoredAuthorLabels = labels
+		}
 	}
 
+	/// Removes the author and its label.
 	public static func unignoreAuthor(url: String) {
 		var urls = ignoredAuthorURLs
 		urls.remove(url)
 		ignoredAuthorURLs = urls
+		var labels = ignoredAuthorLabels
+		if labels.removeValue(forKey: url) != nil {
+			ignoredAuthorLabels = labels
+		}
+	}
+
+	/// What to show for an ignored work: its label, or the bare id for a
+	/// rule made without one.
+	public static func workDisplayName(id: String) -> String {
+		ignoredWorkLabels[id] ?? id
+	}
+
+	/// What to show for an ignored author: its label, or the URL for a rule
+	/// made without one.
+	public static func authorDisplayName(url: String) -> String {
+		ignoredAuthorLabels[url] ?? url
+	}
+
+	private static func trimmedLabel(_ label: String?) -> String? {
+		guard let label = label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty else {
+			return nil
+		}
+		return label
 	}
 
 	/// Whether `item` should be dropped before it's ever turned into a
