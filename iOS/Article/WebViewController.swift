@@ -35,10 +35,9 @@ final class WebViewController: UIViewController {
 		static let annotationWasTapped = "annotationWasTapped"
 	}
 
-	// Inline series navigation (see docs/ao3-feeds.md) -- the private, non-web URL scheme
-	// AO3PrefaceRenderer's First/Previous/Next links use
-	// (`nectar-series:<direction>?ao3id=...&workurl=...`), recognized in
-	// decidePolicyFor navigationAction below.
+	// Private scheme for AO3PrefaceRenderer's inline series nav links
+	// (`nectar-series:<direction>?ao3id=...&workurl=...`), handled in
+	// decidePolicyFor navigationAction. See docs/ao3-feeds.md.
 	private static let nectarSeriesScheme = "nectar-series"
 
 	private var topShowBarsView: UIView!
@@ -46,58 +45,34 @@ final class WebViewController: UIViewController {
 	private var topShowBarsViewConstraint: NSLayoutConstraint!
 	private var bottomShowBarsViewConstraint: NSLayoutConstraint!
 
-	// §6/§7: persistent notch mask + page counter, both only ever visible
-	// while fullscreen reading mode is actually active (bars hidden) -- see
-	// updateNotchAndPageCounterVisibility(), called from showBars()/hideBars().
-	// Distinct from topShowBarsView above: that view is an invisible tap
-	// target that's pulled off-screen while fullscreen, not a persistent
-	// mask over the notch itself.
+	// Notch mask and page counter for fullscreen reading (see
+	// updateNotchAndPageCounterVisibility for the visibility rules). Unlike
+	// topShowBarsView, an invisible tap target moved off-screen in fullscreen,
+	// the cover is a persistent mask over the notch itself.
 	private var notchCoverView: UIView!
 	private var notchCoverViewHeightConstraint: NSLayoutConstraint!
 	private var pageCounterLabel: UILabel!
 	private var screenTimePieIndicatorView: ScreenTimePieIndicatorView!
 
-	// The only authoritative reference to "the" current webview. Previously this was
-	// a computed property returning view.subviews[0], which silently returned whichever
-	// PreloadedWebView happened to be backmost if more than one was ever inserted --
-	// see loadWebViewGeneration below for why that could happen, and why subviews[0]
-	// is not a safe way to identify it.
+	// The single authoritative reference to the current webview. Not derived from
+	// view.subviews[0], which could return the wrong view if two were ever
+	// inserted (see loadWebViewGeneration).
 	private var webView: PreloadedWebView?
 
-	/// Remembered so the popover's note-icon button (which creates a
-	/// highlight without the person picking a color first) has a
-	/// reasonable default rather than always falling back to yellow.
-	/// Non-nil (in view-coordinate space) exactly when annotationCreationMethod
-	/// is .nativeMenu and there's currently a live, non-empty text selection
-	/// -- i.e. a highlight *could* be created right now. Set/cleared from
-	/// textWasSelected(body:) based on annotations.js's `cleared` signal;
-	/// backs PreloadedWebViewAnnotationDelegate.isSelectionHighlightable
-	/// below, which buildMenu(with:) consults to decide whether to offer a
-	/// "Highlight" action in the system selection menu. Unused (stays nil)
-	/// in .popup/.off modes, since only .nativeMenu needs to answer "is
-	/// there a highlightable selection" without a rect to act on -- the
-	/// rect itself isn't needed for this mode (unlike .popup, which needs
-	/// it as the popover's sourceRect), only its presence/absence.
+	/// Non-nil (view coordinates) only in .nativeMenu mode while a live, non-empty
+	/// selection exists. Set/cleared in textWasSelected(body:); backs
+	/// isSelectionHighlightable, which buildMenu(with:) uses to decide whether to
+	/// offer "Highlight". Stays nil in .popup/.off.
 	private var currentSelectionRect: CGRect?
 
-	/// Backing storage for awaitNextPageLoad(), resumed from
-	/// webView(_:didFinish:). An array, not a single optional, since more
-	/// than one caller could in principle await concurrently -- a single
-	/// continuation would silently drop a second awaiter rather than
-	/// resuming it.
+	/// Backing storage for awaitNextPageLoad(), resumed from webView(_:didFinish:).
+	/// An array so concurrent awaiters are all resumed rather than one dropped.
 	private var nextPageLoadContinuations: [CheckedContinuation<Void, Never>] = []
 
-	// Inline series navigation (see docs/ao3-feeds.md). Per-(series, direction)
-	// in-flight/failure state for the links AO3PrefaceRenderer renders
-	// directly into the article -- replaces an earlier single-slot
-	// `seriesNavigationInFlight`/
-	// `isFetchingFirstWorkInSeries`/`seriesNavigationFailureMessage`
-	// (deleted along with the context-menu actions they backed, see
-	// handleNectarSeriesLink below). Two different series' Previous
-	// links (or the same series' Previous and Next) must be able to be
-	// in-flight/failed independently, hence a dictionary keyed on
-	// `SeriesNavKey` rather than one shared flag. Reset whenever
-	// `article` changes -- see `article` didSet.
+	// Per-(series, direction) in-flight/failure state for the inline series nav
+	// links. Keyed on SeriesNavKey so different series' links (or one series'
+	// Previous and Next) can be in flight or failed independently. Reset when
+	// `article` changes. See docs/ao3-feeds.md and handleNectarSeriesLink.
 	private struct SeriesNavKey: Hashable {
 		let ao3SeriesID: String
 		let direction: AO3SeriesNavigator.Direction
@@ -108,17 +83,12 @@ final class WebViewController: UIViewController {
 	}
 	private var seriesNavState: [SeriesNavKey: SeriesNavState] = [:]
 
-	// Bumped at the top of every loadWebView() call. Captured by value into each
-	// dequeueWebView/ready completion so that a completion arriving after a newer
-	// loadWebView() call has started can recognize it's stale and bail out instead
-	// of inserting a second, competing PreloadedWebView into the view hierarchy.
-	// This closes the race where viewDidLoad's unconditional loadWebView(reason:
-	// "viewDidLoad") (windowScrollY still 0, since setArticle's async scroll-position
-	// fetch hasn't resolved yet) and setArticle's own loadWebView(reason: "setArticle
-	// ... after scroll fetch") (windowScrollY now the restored value) each see
-	// webView == nil and each independently dequeue+insert their own webview --
-	// whichever of the two ends up on top of the view stack is timing-dependent,
-	// and it is not necessarily the one that captured the correct scroll position.
+	// Bumped on every loadWebView() call and captured by each dequeue/ready
+	// completion, so a completion arriving after a newer call can detect it is
+	// stale and bail out. Closes a race where viewDidLoad's loadWebView
+	// (windowScrollY still 0) and setArticle's post-scroll-fetch loadWebView each
+	// saw webView == nil and each inserted a webview; which one ended up on top
+	// was timing-dependent.
 	private var loadWebViewGeneration = 0
 
 	private lazy var contextMenuInteraction = UIContextMenuInteraction(delegate: self)
@@ -131,18 +101,10 @@ final class WebViewController: UIViewController {
 
 	weak var coordinator: SceneCoordinator!
 
-	/// Fired once per successful auto-apply pass (see
-	/// applyTextReplacementRulesIfNeeded below) with the number of rows
-	/// written, so the owning ArticleViewController can surface the
-	/// plan's one-time summary banner. Set by
-	/// ArticleViewController.createWebViewController -- a plain closure,
-	/// not a delegate protocol, matching how every other WebViewController
-	/// -> ArticleViewController callback in this feature (onSave/onDelete
-	/// on AnnotationEditorView, onNavigateToAnnotation on AnnotationsListView)
-	/// is already shaped in this codebase. nil is a legitimate value (e.g.
-	/// a preview/test context with no banner host), in which case this
-	/// pass simply has no visible summary, same as before this hook
-	/// existed.
+	/// Fired once per successful auto-apply pass (see applyTextReplacementRulesIfNeeded)
+	/// with the number of rows written, so ArticleViewController can show the summary
+	/// banner. A plain closure, matching the other WebViewController callbacks in
+	/// this feature. nil means no banner host, so the pass has no visible summary.
 	var onTextReplacementReplacementsApplied: ((Int) -> Void)?
 
 	private(set) var article: Article? {
@@ -157,73 +119,49 @@ final class WebViewController: UIViewController {
 
 	let scrollPositionQueue = CoalescingQueue(name: "Article Scroll Position", interval: 0.3, maxInterval: 0.3)
 
-	// Mirrors of the last scroll position / reading progress actually confirmed via the
-	// JS bridge in scrollPositionDidChange(). Kept as plain properties (not re-derived
-	// via a fresh evaluateJavaScript call) so viewWillDisappear can flush a final save
-	// synchronously without an async JS round trip racing the view's teardown -- see
-	// viewWillDisappear for why that race was a real, reproducible bug.
+	// Last scroll position / reading progress confirmed via the JS bridge in
+	// scrollPositionDidChange(). Plain properties so viewWillDisappear can flush a
+	// final save synchronously, without an async JS round trip racing teardown.
 	private var lastKnownReadingProgress: Double?
-	// Diagnostic only, for tracing the duplicate-renderPage-call reports -- not
-	// used for any behavior decision. (loadWebViewGeneration, below webView, is
-	// the counter that actually gates behavior.)
+	// Diagnostic only (traces duplicate renderPage reports); loadWebViewGeneration gates behavior.
 	private var loadWebViewCallCount = 0
-	// True from the start of a renderPage() call until page.html's JS confirms
-	// (via the scrollRestoreComplete message) that its own multi-point scroll
-	// restore (DOMContentLoaded / load / fonts.ready / ResizeObserver-driven
-	// reflows) has settled. While true, scrollPositionDidChange's samples are
-	// noise -- either WKWebView's native post-loadHTMLString reset to (0,0), or
-	// one of page.html's own restore attempts sampled before the document has
-	// reached its final height -- and must not be written to windowScrollY or
-	// persisted. See scrollRestoreComplete(generation:scrollY:scrollHeight:).
+	// True from the start of renderPage() until page.html reports
+	// (scrollRestoreComplete) that its multi-point scroll restore has settled.
+	// While true, scroll samples are noise (WKWebView's native reset to (0,0), or
+	// restore attempts before the document reaches final height) and must not be
+	// written to windowScrollY or persisted.
 	private var isRestoringScrollPosition = false
 
-	// True while the currently-rendered content is a not-yet-fetched AO3
-	// stub (see isProvisionalAO3Stub(_:)) or, briefly, while a fetched
-	// chapter's content is being swapped in. Scroll/progress samples taken
-	// while this is true don't reflect the real document and must not be
-	// recorded as reading progress or Reading Stats credit -- see the
-	// guard in scrollPositionDidChange's message handler.
+	// True while the rendered content is a not-yet-fetched AO3 stub (see
+	// isProvisionalAO3Stub) or a fetched chapter is being swapped in. Scroll
+	// samples then don't reflect the real document and must not be recorded as
+	// progress or Reading Stats credit; see scrollPositionDidChange.
 	private var isContentProvisional = false
 
-	// Safety net: if page.html's completion message never arrives (JS error,
-	// ResizeObserver unsupported and load/fonts.ready somehow never fire,
-	// print preview, etc.), don't block real scroll saves forever.
+	// Safety net so scroll saves aren't blocked forever if page.html's completion
+	// message never arrives (JS error, print preview, etc.).
 	private var scrollRestoreFailsafeWorkItem: DispatchWorkItem?
 
-	// Per-load high-water mark for document height, used as a defense-in-depth
-	// guard against persisting a sample taken against a shorter-than-final
-	// document even if it arrives after isRestoringScrollPosition is cleared
-	// (e.g. a late-loading embed that reflows after the settle/hard-cap signal
-	// already fired). Reset at the top of renderPage. See scrollPositionDidChange.
+	// Per-load high-water mark of document height. Defense in depth against
+	// persisting a sample taken against a shorter-than-final document after
+	// isRestoringScrollPosition clears (e.g. a late embed reflow). Reset in renderPage.
 	private var maxObservedScrollHeight: Double = 0
 
-	// Set by setArticle just before it kicks off its async scroll-position fetch,
-	// and cleared right before that Task calls loadWebView (both on the success
-	// path and the "article changed, discard" early-return path). While true,
-	// viewDidLoad's unconditional loadWebView(reason: "viewDidLoad") is skipped
-	// so the first render to actually happen is the one with the correct
-	// windowScrollY, instead of a render-at-0 followed by a second corrective
-	// render whose reset-suppression could race and let 0 get saved over the
-	// real position.
+	// Set by setArticle before its async scroll-position fetch and cleared just
+	// before that Task calls loadWebView. While true, viewDidLoad skips its own
+	// loadWebView so the first render uses the restored windowScrollY, instead of
+	// rendering at 0 and then re-rendering (where reset suppression could race and
+	// save 0 over the real position).
 	private var isAwaitingInitialScrollFetch = false
 
-	/// Session-only (not persisted -- doesn't need to survive relaunch) stack
-	/// of pre-jump windowScrollY values, pushed immediately before each
-	/// programmatic "scroll to X" call (scrollToHeading, scrollToAnnotation).
-	/// See scrollBack() below. Option A scope per docs/reading-progress.md: only
-	/// these explicit JS-bridge jumps push here -- large manual scroll deltas
-	/// are not detected as jumps (see docs/reading-progress.md).
+	/// Session-only stack of pre-jump windowScrollY values, pushed before each
+	/// programmatic jump (scrollToHeading, scrollToAnnotation); see scrollBack().
+	/// Large manual scroll deltas are not detected as jumps (docs/reading-progress.md).
 	private var scrollJumpHistory: [Double] = []
 
 	var windowScrollY = 0 {
 		didSet {
-			// Per-article persistence (Phase 2). The single-global AppDefaults
-			// write that used to sit here has been removed -- see the comments
-			// on ArticleViewController.setScrollPosition(articleWindowScrollY:)
-			// and AppDefaults.articleWindowScrollY, now also deleted: relaunch
-			// and Handoff restore were already migrated to this per-book path
-			// (SceneCoordinator.restoreSelectedSidebarItemAndArticle/selectArticle),
-			// leaving the global write with zero readers.
+			// Persists per article (relaunch and Handoff restore read this per-book value).
 			if let article = article, let account = article.account {
 				let articleID = article.articleID
 				let scrollY = windowScrollY
@@ -249,14 +187,10 @@ final class WebViewController: UIViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(highlightPaletteDidChange(_:)), name: .highlightPaletteDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeUsageDidChange(_:)), name: .screenTimeUsageDidChange, object: nil)
 
-		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,
-		// IPHONEOS_DEPLOYMENT_TARGET = 17.0), so use registerForTraitChanges rather
-		// than the traitCollectionDidChange override it deprecated. Without this,
-		// webView.backgroundColor / notchCoverView / pageCounterLabel stay resolved
-		// off a stale trait snapshot when the person flips Settings -> Appearance (or
-		// the system auto-switches) while an article is open -- the article body's
-		// own CSS repaints live via @media prefers-color-scheme, but these native
-		// colors previously only re-resolved on the next full renderPage.
+		// Re-resolve the native colors (webView background, notchCoverView,
+		// pageCounterLabel) on an Appearance change while an article is open. The
+		// article CSS repaints itself via prefers-color-scheme, but these colors
+		// otherwise only re-resolved on the next renderPage.
 		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: WebViewController, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else {
 				return
@@ -268,27 +202,15 @@ final class WebViewController: UIViewController {
 		configureTopShowBarsView()
 		configureBottomShowBarsView()
 		configureNotchCoverView()
-		// Without this, notchCoverView stays at its configureNotchCoverView() default
-		// (isHidden = true) until the first showBars()/hideBars() call -- which, for a
-		// freshly-paged-in article in the fullscreen pager, can land a frame or more
-		// after this view is already on screen, showing a real flash of the bare notch
-		// on every page turn. renderPage() below will refresh the color/text again once
-		// the theme is known; this just gets visibility correct immediately.
+		// Without this, notchCoverView stays hidden (its default) until the first
+		// showBars()/hideBars(), which for a freshly paged-in article can land a frame
+		// or more after the view is on screen, flashing the bare notch on every page turn.
 		//
-		// Resolve the theme colors ourselves here rather than calling
-		// updateNotchAndPageCounterVisibility() bare: at this point renderPage()
-		// hasn't run yet and webView is still nil (it's only assigned inside
-		// loadWebView()'s async dequeue completion), so updateNotchAndPageCounterVisibility's
-		// own "reuse webView.backgroundColor" fallback has nothing to reuse. If
-		// shouldHideNotch is on, notchCoverView can go visible right here, with no
-		// background color ever set on it -- it shows whatever's behind it (this
-		// controller's own view, i.e. the surrounding chrome) instead of the
-		// article's theme background, until the async renderPage() catches up a
-		// frame or more later. Passing the resolved colors explicitly closes that
-		// window. self.traitCollection is safe to read here (unlike the bare
-		// Assets.Colors namespace -- see article-color-pipeline.md): the
-		// view is already loaded, so this is a real view's own trait
-		// collection, not the ambient current one.
+		// Pass the resolved colors explicitly: renderPage() hasn't run and webView is
+		// still nil, so updateNotchAndPageCounterVisibility has nothing to reuse and
+		// the cover would show the surrounding chrome instead of the theme background.
+		// Reading self.traitCollection is safe here since the view is loaded (see
+		// article-color-pipeline.md).
 		let initialColors = Self.resolvedArticleColors(isDark: traitCollection.userInterfaceStyle == .dark)
 		updateNotchAndPageCounterVisibility(resolvedBackground: initialColors.background, resolvedText: initialColors.text)
 
@@ -300,58 +222,29 @@ final class WebViewController: UIViewController {
 		}
 	}
 
-	// §1b. Self-heals the "background-inversion on cold launch" bug: viewDidLoad's
-	// own initialColors read (above) and applyResolvedBackgroundColors() (called
-	// from renderPage() once webView is dequeued) both resolve against
-	// traitCollection.userInterfaceStyle (self's own, not webView's -- see the
-	// BUG FIX note on applyResolvedBackgroundColors() for why webView's own
-	// trait collection isn't a safe read here) at whatever moment they happen
-	// to run. During state restoration,
-	// SceneCoordinator.restoreSelectedSidebarItemAndArticle pushes the restored
-	// article before the first frame is ever drawn, and that whole path runs from
-	// SceneDelegate.scene(_:willConnectTo:options:) -- before the window is
-	// key/visible. If the trait environment hasn't settled by the time either read
-	// happens, the resolved color can disagree with what WKWebView's own CSS
-	// engine resolves independently (driven by the real system
-	// prefers-color-scheme), and nothing corrects it afterward:
-	// registerForTraitChanges only fires on a *change* event, not on "the initial
-	// read was wrong." This is most visible on themes with no body/.articleBody
-	// color or background-color of their own (e.g. Broadsheet) -- see
-	// docs/article-color-pipeline.md -- since ArticleThemeColorExtractor's
-	// light/dark fallback values are genuine opposites (black-on-white vs
-	// white-on-black) for those themes, rather than falling back to the same
-	// light-mode value in both appearances the way a theme like Black & White
-	// (which declares an explicit, appearance-invariant body background/color)
-	// does.
+	// Self-heals a cold-launch background inversion. viewDidLoad's initialColors
+	// read and applyResolvedBackgroundColors() (from renderPage) both resolve
+	// against self's traitCollection, which during state restoration may not have
+	// settled: the restored article is pushed from
+	// SceneDelegate.scene(_:willConnectTo:options:) before the window is key. A wrong
+	// read disagrees with WKWebView's own prefers-color-scheme and nothing corrects
+	// it, since registerForTraitChanges only fires on a change. Most visible on
+	// themes with no explicit body background (e.g. Broadsheet), whose light and
+	// dark fallbacks are opposites; see article-color-pipeline.md.
 	//
-	// viewDidAppear is the first point in the view controller lifecycle
-	// guaranteed to run only once this view is actually on screen in a real,
-	// key window -- unlike viewDidLoad, its timing doesn't depend on
-	// SceneCoordinator's own restore-path scheduling. Re-running the same
-	// resolution here costs nothing when the initial read was already correct
-	// (applyResolvedBackgroundColors() just reapplies the same colors), and
-	// self-heals the narrow cold-launch-restore race when it wasn't -- no new
-	// trait-change event required.
+	// viewDidAppear is the first point guaranteed to run with the view on screen in
+	// a key window. Re-resolving here is a no-op when the earlier read was right.
 	override func viewDidAppear(_ animated: Bool) {
 		super.viewDidAppear(animated)
 		applyResolvedBackgroundColors()
 	}
 
-	// Bug fix: notchCoverView's height used to be derived from
-	// view.safeAreaLayoutGuide.topAnchor, which hideBars()'s
-	// updateTopSafeAreaForFullScreen() deliberately zeroes out (via
-	// additionalSafeAreaInsets.top) so the webview's own content can flow
-	// edge-to-edge under the physical notch during fullscreen reading. Since
-	// notchCoverView's height constraint was pinned to that same guide, it
-	// permanently collapsed to 0pt the instant fullscreen engaged -- not just
-	// for the duration of the hide-bars animation, but for good, since the
-	// guide itself stayed zeroed afterward. Subtracting additionalSafeAreaInsets.top
-	// back out of view.safeAreaInsets.top recovers the raw, physical device
-	// inset regardless of that adjustment -- same "raw inset" formula
-	// updateTopSafeAreaForFullScreen()/updateBottomSafeAreaForFullScreen()
-	// already use for the same reason. UIKit calls this on the view's first
-	// real safe-area establishment as well as later changes, so no separate
-	// call is needed from viewDidLoad.
+	// notchCoverView's height is the raw physical top inset. It can't be pinned to
+	// safeAreaLayoutGuide: hideBars() zeroes that guide via additionalSafeAreaInsets.top
+	// (so content flows under the notch), which would collapse the cover to 0pt for
+	// good. Subtracting additionalSafeAreaInsets.top recovers the raw inset, the same
+	// formula updateTopSafeAreaForFullScreen() uses. UIKit also calls this on the
+	// first safe-area establishment, so viewDidLoad needs no separate call.
 	override func viewSafeAreaInsetsDidChange() {
 		super.viewSafeAreaInsetsDidChange()
 		let rawTop = view.safeAreaInsets.top - additionalSafeAreaInsets.top
@@ -360,41 +253,27 @@ final class WebViewController: UIViewController {
 
 	override func viewWillDisappear(_ animated: Bool) {
 		super.viewWillDisappear(animated)
-		// Flush the final scroll position/reading progress before the view (and its
-		// webView) goes away.
-		//
-		// This used to call scrollPositionQueue.performCallsImmediately() to force any
-		// coalesced-but-not-yet-fired update to run early. That only fires the *timer*
-		// early -- the selector it invokes, scrollPositionDidChange(), still does an
-		// async evaluateJavaScript round trip to the WebContent process before it reads
-		// window.scrollY and saves anything. viewWillDisappear returned immediately
-		// after kicking that off, so if the article was popped quickly (or `webView`,
-		// a pooled PreloadedWebView, got dequeued for the next article before the
-		// completion handler ran), the save could be dropped or land on the wrong
-		// article -- reproducing "exit fast, come back, not at your last position."
-		//
-		// Fix: don't re-enter the JS bridge here at all. windowScrollY and
-		// lastKnownReadingProgress already hold the last values confirmed by the JS
-		// bridge in scrollPositionDidChange(), so save those synchronously (no JS call,
-		// nothing to race) and drop whatever's still pending in the coalescing queue.
+		// Flush the final scroll position/reading progress before the view goes away.
+		// Don't re-enter the JS bridge: performCallsImmediately() only fires the timer
+		// early, and scrollPositionDidChange() still does an async evaluateJavaScript,
+		// so a fast pop (or the pooled webView being dequeued for the next article)
+		// could drop the save or land it on the wrong article. windowScrollY and
+		// lastKnownReadingProgress already hold the last confirmed values, so save
+		// those synchronously and drop whatever is pending in the queue.
 		scrollPositionQueue.cancelPendingCalls()
 		flushLastKnownScrollState()
-		// Pause in-flight media before the view goes away. Leaving a video playing during
-		// dismissal lets WebKit's full-screen entry continuation fire on a stale view
-		// hierarchy and trip a RELEASE_ASSERT in WebFullScreenManagerProxy on iOS 26.
+		// Pause media before dismissal: a playing video can trigger a RELEASE_ASSERT in
+		// WebFullScreenManagerProxy on iOS 26 when full-screen entry fires on a stale hierarchy.
 		stopWebViewActivity()
-		// Leaving the reader shouldn't leave secondsActive accruing against
-		// the last-viewed book while the person is elsewhere in the app
-		// (timeline, settings, etc.) -- clear the tracker's snapshot.
+		// Stop Reading Stats accruing against this book while the person is elsewhere in the app.
 		ReadingStatsTracker.shared.setArticle(nil)
 	}
 
 	// MARK: Notifications
 
 	@objc func handleSceneDidEnterBackground(_ notification: Notification) {
-		// The share sheet is a popover on iPad. Opening the article in another browser
-		// from it backgrounds NetNewsWire mid-presentation, orphaning the popover so it
-		// can't be dismissed by tapping outside on return. Dismiss it on backgrounding. (#4269)
+		// A share sheet popover on iPad is orphaned if opening another browser
+		// backgrounds the app mid-presentation; dismiss it on backgrounding. (#4269)
 		if presentedViewController is UIActivityViewController {
 			dismiss(animated: false)
 		}
@@ -426,67 +305,38 @@ final class WebViewController: UIViewController {
 			return
 		}
 		Task {
-			// Re-fetch the Article rather than mutating in place -- contentHTML
-			// (and chapterCurrent) just changed underneath the copy this view
-			// controller is holding, and Article's stored properties are
-			// immutable (see Article.swift).
+			// Re-fetch rather than mutate: Article's stored properties are immutable.
 			let refetchedArticles = await account.fetchArticlesAsync(.articleIDs([fetchedArticleID]))
 			guard let refetchedArticle = refetchedArticles.first, self.article?.articleID == fetchedArticleID else {
 				return
 			}
 			self.article = refetchedArticle
-			// Makes the provisional window explicit around the content swap
-			// itself (it already was true if the article started as a stub) --
-			// cleared once scrollRestoreComplete confirms the new content has
-			// settled, see the scrollRestoreComplete case below.
+			// Provisional until scrollRestoreComplete confirms the new content settled.
 			self.isContentProvisional = true
 			self.loadWebView(reason: "ao3ChapterFetchDidComplete(\(fetchedArticleID))")
-			// Task 8: this notification also fires when the fetch's result
-			// was a detected regression stashed as a pending update rather
-			// than written to contentHTML -- offer the "view what changed?"
-			// prompt in that case.
+			// Also fires when the result was a regression stashed as a pending update;
+			// offer the review prompt in that case.
 			self.presentPendingContentUpdateAlertIfNeeded()
 		}
 	}
 
-	/// Re-anchoring's second hook point (the first is
-	/// resolvePendingContentUpdate/ao3ChapterFetchDidComplete above, for
-	/// the AO3-pending-diff path specifically): any *ordinary* content
-	/// update -- a regular feed refresh, an Ambrosia re-export, an
-	/// AO3ChapterFetcher fetch that didn't trip the regression guard --
-	/// goes through Account.updateAsync -> ArticlesTable.saveUpdatedArticle,
-	/// which isn't gated behind the pending-confirmation UI at all and so
-	/// carries no notification of its own to this view controller. Every
-	/// such update fires AccountDidDownloadArticles regardless of source
-	/// (see Account.sendNotificationAbout), so that's the one place this
-	/// can be caught generically rather than adding a new notification
-	/// per content-update call site.
+	/// Re-anchoring's second hook point (the first is ao3ChapterFetchDidComplete).
+	/// Any ordinary content update (feed refresh, Ambrosia re-export, a chapter fetch
+	/// that didn't trip the regression guard) skips the pending-confirmation UI and
+	/// carries no notification of its own. All of them fire AccountDidDownloadArticles,
+	/// so this catches them generically.
 	///
-	/// Re-anchoring itself still runs entirely inside loadAndRenderAnnotations's
-	/// existing JS round trip once loadWebView triggers a fresh render --
-	/// this handler's only job is noticing that the currently-displayed
-	/// article's contentHTML just changed underneath it and re-fetching/
-	/// reloading, the same shape ao3ChapterFetchDidComplete already uses.
-	/// If this article isn't currently open in this WebViewController (or
-	/// contentHTML didn't actually change -- e.g. only kudosCount did),
-	/// there's nothing to do here: annotations for articles not currently
-	/// rendered anywhere re-anchor for free the next time they *are*
-	/// opened, since loadAndRenderAnnotations's re-anchor pass isn't
-	/// gated on "did content just change," only on "did a render just
-	/// happen."
+	/// Re-anchoring itself runs in loadAndRenderAnnotations once loadWebView
+	/// re-renders. This only notices that the displayed article's contentHTML changed
+	/// and reloads it. Articles not currently open re-anchor the next time they open.
 	@objc func accountDidDownloadArticles(_ note: Notification) {
 		guard let article, let updatedArticles = note.userInfo?[Account.UserInfoKey.updatedArticles] as? Set<Article>,
 		      let updatedArticle = updatedArticles.first(where: { $0.articleID == article.articleID }) else {
 			return
 		}
-		// updatedArticle is the incoming Article built from whatever
-		// ParsedItem/AO3 extraction triggered this update, which can
-		// carry a nil contentHTML for an update that didn't touch it
-		// (changesFrom's own "only write when non-nil" guard -- see
-		// Article+Database.swift) -- only reload if it actually differs
-		// from what's currently on screen, not on every unrelated field
-		// change (kudos/comment/bookmark counts, etc.) this same
-		// notification also covers.
+		// The incoming article can carry nil contentHTML for an update that didn't touch
+		// it (changesFrom only writes non-nil). Reload only on a real difference, not on
+		// unrelated changes (kudos/comment/bookmark counts) this notification also covers.
 		guard let newContentHTML = updatedArticle.contentHTML, newContentHTML != article.contentHTML else {
 			return
 		}
@@ -502,16 +352,10 @@ final class WebViewController: UIViewController {
 		}
 	}
 
-	/// The loved/starred/read toggle actions in the full-screen press-and-hold
-	/// context menu call `coordinator.toggle...ForCurrentArticle()`, which
-	/// persists the change asynchronously (`markArticlesWithUndo` ->
-	/// `MarkStatusCommand` -> `markArticleIDs`, which is a `Task { await
-	/// account.markArticles(...) }`). Rebuilding the menu synchronously right
-	/// after firing that call -- the previous approach -- reads `self.article`
-	/// before the write has actually landed, so the row's icon/title still
-	/// showed the pre-toggle state. `ArticleViewController`'s own toolbar
-	/// avoids this by rebuilding from `.StatusesDidChange`, which only fires
-	/// once the write is done; mirror that here instead of racing it.
+	/// The full-screen context menu's toggle actions persist asynchronously, so
+	/// rebuilding the menu right after firing them would read `self.article` before
+	/// the write lands and show the pre-toggle state. Rebuild from .StatusesDidChange,
+	/// which fires once the write is done (as ArticleViewController's toolbar does).
 	@objc func statusesDidChange(_ note: Notification) {
 		guard let articleIDs = note.userInfo?[Account.UserInfoKey.articleIDs] as? Set<String> else {
 			return
@@ -525,12 +369,8 @@ final class WebViewController: UIViewController {
 	}
 
 	@objc func ao3ChapterFetchDidFail(_ note: Notification) {
-		// Unlike the success path, the Article itself hasn't changed --
-		// contentHTML is deliberately left alone on failure (see
-		// AO3ChapterFetcher's header comment) -- so there's nothing to
-		// re-fetch. Just re-render in place: ArticleRenderer reads the
-		// new failure message straight from AO3ChapterFetcher's own
-		// storage, keyed by articleID, the next time it builds the body.
+		// The Article itself hasn't changed (contentHTML is left alone on failure), so
+		// just re-render; ArticleRenderer reads the failure message from AO3ChapterFetcher.
 		guard let fetchedArticleID = note.userInfo?[AO3ChapterFetchUserInfoKey.articleID] as? String,
 		      let article, article.articleID == fetchedArticleID else {
 			return
@@ -546,14 +386,10 @@ final class WebViewController: UIViewController {
 
 	// MARK: API
 
-	/// True for an AO3-sourced article whose real chapter content hasn't
-	/// been fetched yet -- an RSS/Atom-imported stub, still on `contentHTML
-	/// == nil`/empty. Scroll/progress samples against a stub don't reflect
-	/// the actual work, so they must be withheld until the real content
-	/// swaps in (see ao3ChapterFetchDidComplete(_:)). Internal, not
-	/// private, so it can be exercised directly in tests -- WebViewController
-	/// itself can't easily be instantiated in the test target (see
-	/// WebViewControllerAppearanceToggleTests.swift's header comment).
+	/// True for an AO3-sourced article still on an RSS/Atom stub (`contentHTML`
+	/// nil/empty). Scroll/progress samples are withheld until the real content swaps
+	/// in (see ao3ChapterFetchDidComplete). Internal for direct testing; see
+	/// WebViewControllerAppearanceToggleTests.swift.
 	static func isProvisionalAO3Stub(_ article: Article?) -> Bool {
 		guard let article, AO3Link.workID(fromBookKey: article.bookKey) != nil else { return false }
 		return (article.contentHTML?.isEmpty ?? true)
@@ -570,8 +406,6 @@ final class WebViewController: UIViewController {
 					loadWebView(reason: "setArticle(nil)")
 					return
 				}
-				// Real per-article scroll position (Phase 2), replacing the old
-				// unconditional reset to 0 on every article switch.
 				let articleID = article.articleID
 				// Tell viewDidLoad not to render at windowScrollY == 0 while this
 				// fetch is in flight -- see isAwaitingInitialScrollFetch.
@@ -589,15 +423,9 @@ final class WebViewController: UIViewController {
 					self.windowScrollY = Int(scrollPosition)
 					self.isAwaitingInitialScrollFetch = false
 					self.loadWebView(reason: "setArticle(\(articleID)) after scroll fetch")
-					// Fire-and-forget: no-op for anything but an AO3-sourced
-					// article whose stored content looks stale. See
-					// AO3ChapterFetcher.fetchIfNeeded and
-					// ao3ChapterFetchDidComplete(_:) above for the reload path.
+					// Fire-and-forget; no-op unless this is an AO3 article with stale content.
 					AO3ChapterFetcher.shared.fetchIfNeeded(for: article)
-					// Task 8: if a prior fetch already flagged a pending
-					// content update for this article, offer the "view what
-					// changed?" prompt on open too, not just right after a
-					// fresh fetch completes.
+					// Also offer the pending-update prompt on open, not just after a fresh fetch.
 					self.presentPendingContentUpdateAlertIfNeeded()
 				}
 			}
@@ -670,10 +498,8 @@ final class WebViewController: UIViewController {
 		configureContextMenuInteraction()
 		updateNotchAndPageCounterVisibility()
 		updateScrollbarVisibility()
-		// setNavigationBarHidden/setToolbarHidden reset interactivePopGestureRecognizer's
-		// (and interactiveContentPopGestureRecognizer's) isEnabled back to true as a
-		// side effect, which silently overrides articleBackSwipeEnabled = false. Re-apply
-		// the gate immediately after so showing the bars doesn't re-enable back-swipe.
+		// setNavigationBarHidden/setToolbarHidden reset the pop gesture recognizers'
+		// isEnabled to true, overriding articleBackSwipeEnabled = false; re-apply the gate.
 		coordinator.applyArticleBackSwipeGating()
 	}
 
@@ -685,19 +511,13 @@ final class WebViewController: UIViewController {
 			bottomShowBarsViewConstraint?.constant = 44.0
 			navigationController?.setNavigationBarHidden(true, animated: true)
 			navigationController?.setToolbarHidden(true, animated: true)
-			// showBars() resets additionalSafeAreaInsets.bottom synchronously; do the
-			// equivalent here rather than relying solely on the reactive
-			// viewSafeAreaInsetsDidChange -> updateBottomSafeAreaForFullScreen() path.
-			// Leaving this asymmetric meant the webview's adjustedContentInset.bottom
-			// could still reflect the pre-fullscreen inset for a beat after hideBars()
-			// returns, shifting the visible scroll position relative to where it
-			// settles once the deferred update finally runs.
+			// Mirror showBars()'s synchronous inset reset instead of relying on the reactive
+			// viewSafeAreaInsetsDidChange path; otherwise adjustedContentInset.bottom can stay
+			// stale for a beat and shift the visible scroll position.
 			updateBottomSafeAreaForFullScreen()
-			// Same reasoning, top side: without this, webView.safeAreaInsets.top
-			// (read synchronously in textWasSelected(body:)) can be stale while in
-			// fullscreen, shifting HighlightColorPopover's sourceRect away from the
-			// actual selection -- see presentHighlightColorPopover's defensive
-			// clamp below for the second half of this fix.
+			// Same, top side: a stale webView.safeAreaInsets.top (read in textWasSelected)
+			// shifts HighlightColorPopover's sourceRect away from the selection; see also the
+			// clamp in presentHighlightColorPopover.
 			updateTopSafeAreaForFullScreen()
 			setBottomScrollEdgeEffectHidden(true)
 			configureContextMenuInteraction()
@@ -714,14 +534,10 @@ final class WebViewController: UIViewController {
 		}
 	}
 
-	/// Task 8's "a newer version exists and looks smaller -- view what
-	/// changed?" prompt, shown whenever the current article has an
-	/// unresolved pendingUpdateContentHTML diff. Deliberately a lightweight
-	/// accept/keep/later choice rather than an inline diff view --
-	/// resolving either promotes the pending copy to contentHTML or
-	/// discards it, both via Account.resolvePendingContentUpdateAsync,
-	/// which also unblocks AO3FetchPolicy.isStale's auto-fetch gate for
-	/// this article again.
+	/// Prompt shown when the article has an unresolved pendingUpdateContentHTML (a newer
+	/// version that looks smaller). Accepting promotes it to contentHTML, keeping discards
+	/// it, both via Account.resolvePendingContentUpdateAsync, which also re-enables the
+	/// AO3FetchPolicy.isStale auto-fetch gate.
 	func presentPendingContentUpdateAlertIfNeeded() {
 		guard let article, article.pendingUpdateContentHTML != nil, let account = article.account else {
 			return
@@ -785,12 +601,8 @@ extension WebViewController: UIContextMenuInteractionDelegate {
 		coordinator.showBrowserForCurrentArticle()
 	}
 
-	/// Builds the full press-and-hold context menu, including the
-	/// loved/starred/read toggle row. Also called from those toggle
-	/// actions' own handlers (via `refreshVisibleContextMenu`) to rebuild
-	/// the menu in place after a tap -- extracted out of
-	/// `configurationForMenuAtLocation`'s elementsProvider closure so both
-	/// call sites build the exact same menu.
+	/// Builds the full press-and-hold context menu. Shared by the elements provider
+	/// and refreshVisibleContextMenu so both build the same menu.
 	private func buildContextMenu() -> UIMenu {
 		var menus = [UIMenu]()
 
@@ -826,24 +638,14 @@ extension WebViewController: UIContextMenuInteractionDelegate {
 			menus.append(UIMenu(title: "", options: .displayInline, children: ignoreMenuActions))
 		}
 
-		// Previous/Next/First Work in Series used to be here as
-		// context-menu actions (Task 10) -- superseded by the inline
-		// "First · Previous · Next" links AO3PrefaceRenderer now
-		// renders directly in the article (inline-series-navigation
-		// plan, Phase 3/4). See handleNectarSeriesLink below.
-
 		menus.append(UIMenu(title: "", options: .displayInline, children: [shareAction()]))
 
 		return UIMenu(title: "", children: menus)
 	}
 
-	/// Rebuilds the currently-presented context menu in place after a
-	/// loved/starred/read toggle tap. Those three actions set
-	/// `keepsMenuPresented = true` (iOS 16+) so the tap doesn't dismiss the
-	/// menu, but UIKit doesn't re-invoke `configurationForMenuAtLocation`'s
-	/// elementsProvider closure on its own -- `updateVisibleMenu` is the
-	/// supported way to swap the presented menu's contents in place, so the
-	/// tapped row's icon/title reflect the new state immediately.
+	/// Rebuilds the presented menu in place after a toggle tap. The toggles set
+	/// `keepsMenuPresented`, but UIKit doesn't re-run the elements provider on its
+	/// own; `updateVisibleMenu` swaps the contents so icons/titles show the new state.
 	private func refreshVisibleContextMenu() {
 		contextMenuInteraction.updateVisibleMenu { [weak self] _ in
 			self?.buildContextMenu() ?? UIMenu(title: "")
@@ -885,11 +687,8 @@ extension WebViewController: WKNavigationDelegate {
 		if navigationAction.navigationType == .linkActivated {
 			let url = navigationAction.request.url
 
-			// nectar-series: links (inline series navigation) are
-			// app-internal navigation, not the external-link case
-			// AppDefaults.shared.disableArticleLinks exists to guard --
-			// checked before that early-return so the toggle can't
-			// silently break this feature.
+			// nectar-series: links are app-internal navigation, not what disableArticleLinks
+			// guards, so handle them before that early return.
 			if url?.scheme == Self.nectarSeriesScheme {
 				decisionHandler(.cancel)
 				if let url {
@@ -962,18 +761,14 @@ extension WebViewController: WKNavigationDelegate {
 extension WebViewController: WKUIDelegate {
 
 	func webView(_ webView: WKWebView, contextMenuForElement elementInfo: WKContextMenuElementInfo, willCommitWithAnimator animator: UIContextMenuInteractionCommitAnimating) {
-		// We need to have at least an unimplemented WKUIDelegate assigned to the WKWebView.  This makes the
-		// link preview launch Safari when the link preview is tapped.  In theory, you should be able to get
-		// the link from the elementInfo above and transition to SFSafariViewController instead of launching
-		// Safari.  As the time of this writing, the link in elementInfo is always nil.  ¯\_(ツ)_/¯
+		// An unimplemented WKUIDelegate must be assigned so tapping a link preview
+		// launches Safari. elementInfo's link is always nil, so SFSafariViewController
+		// isn't an option.
 	}
 
 	func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-		// nectar-series: links are never rendered with target="_blank", so
-		// this path shouldn't be reachable for them -- but block rather
-		// than assume. No navigation
-		// side-effect here either way: decidePolicyFor navigationAction
-		// above is the one and only place a tap is actually handled.
+		// nectar-series: links are never target="_blank", so this shouldn't be reachable;
+		// block anyway. Taps are handled only in decidePolicyFor navigationAction.
 		if navigationAction.request.url?.scheme == Self.nectarSeriesScheme {
 			return nil
 		}
@@ -1007,9 +802,7 @@ extension WebViewController: WKScriptMessageHandler {
 				coordinator.showFeedInspector(for: feed)
 			}
 		case MessageName.debugLog:
-			// Bridges page.html's scroll-restoration console output to the same
-			// os.Logger stream as the rest of the app's debug logging, since raw
-			// console.log in WKWebView doesn't show up there on its own.
+			// Bridges page.html's console output to os.Logger, which console.log doesn't reach.
 			Self.logger.debug("page.html: \(message.body as? String ?? "", privacy: .public)")
 		case MessageName.scrollRestoreComplete:
 			guard let body = message.body as? [String: Any],
@@ -1024,16 +817,12 @@ extension WebViewController: WKScriptMessageHandler {
 			scrollRestoreFailsafeWorkItem?.cancel()
 			isRestoringScrollPosition = false
 			Self.logger.debug("scrollRestoreComplete: settled scrollY=\(reportedScrollY, privacy: .public) articleID=\(self.article?.articleID ?? "nil", privacy: .public)")
-			// Reconcile in-memory/DB state with what the page actually settled at,
-			// in case it differs from the value we asked it to restore to (e.g. the
-			// article got shorter than the saved position, so the browser clamped
-			// to max scroll).
+			// Reconcile with where the page settled (e.g. clamped to max scroll if the
+			// article got shorter than the saved position).
 			windowScrollY = reportedScrollY
-			// The real content has settled -- clear the provisional guard and,
-			// if this was an AO3 stub-to-fetched-content swap, refresh Reading
-			// Stats' snapshot so it reflects the real word count/fandoms/tags
-			// instead of the stub's, and restarts the session from the
-			// restored position rather than the stub's.
+			// Content settled: clear the provisional guard and refresh Reading Stats' snapshot
+			// so an AO3 stub-to-chapter swap uses the real word count/tags and restarts the
+			// session from the restored position.
 			isContentProvisional = false
 			if let article {
 				ReadingStatsTracker.shared.setArticle(article)
@@ -1053,22 +842,14 @@ extension WebViewController: WKScriptMessageHandler {
 
 extension WebViewController {
 
-	/// Wires annotations.js's `selectionchange`/tap listeners for the
-	/// document that just finished loading, so a new text selection can
-	/// post `textWasSelected` and tapping an existing `<mark>` can post
-	/// `annotationWasTapped`. Must run on every navigation regardless of
-	/// whether this article has any saved annotations yet -- unlike
-	/// loadAndRenderAnnotations() below, this isn't gated on a non-empty
-	/// fetch, since a chapter with zero highlights still needs to support
-	/// creating its first one.
+	/// Wires annotations.js's `selectionchange`/tap listeners for the loaded document,
+	/// so selections post `textWasSelected` and taps on a `<mark>` post
+	/// `annotationWasTapped`. Runs on every navigation, not only when annotations
+	/// exist, since a chapter with none still needs to support creating its first.
 	///
-	/// Reads AppDefaults.shared.annotationCreationMethod fresh on every
-	/// call (not cached) -- same "reasserted on every dequeue" convention
-	/// WebViewConfiguration/loadWebView already use for
-	/// showArticleScrollbar/pinchGestureRecognizer.isEnabled on this
-	/// pooled webview, so a Settings change takes effect the next time an
-	/// article loads rather than needing a relaunch, but doesn't apply
-	/// retroactively to whatever's already on screen.
+	/// Reads annotationCreationMethod fresh each call (not cached), like the other
+	/// per-dequeue settings, so a change applies on the next article load but not
+	/// retroactively to what's on screen.
 	func initAnnotations() {
 		let mode = AppDefaults.shared.annotationCreationMethod
 		guard let argsJSON = try? JSONSerialization.data(withJSONObject: ["mode": mode.rawValue]) else { return }
@@ -1081,37 +862,16 @@ extension WebViewController {
 		}
 	}
 
-	/// Sets the ten --nnw-highlight-* CSS custom properties (light+dark pair
-	/// per Annotation.Color case) on the document root from
-	/// AppDefaults.shared.highlightPalette, so core.css's
-	/// mark.nnw-highlight[data-annotation-color="..."] rules resolve
-	/// against the selected palette instead of falling through to their
-	/// own hardcoded @media-branched fallback hex. There is no existing
-	/// "set a CSS custom property at render time" mechanism elsewhere in
-	/// this file to hook into -- see docs/annotations.md's "Color palette"
-	/// section -- so this is new plumbing, not a reuse of
-	/// applyResolvedBackgroundColors()'s pattern.
+	/// Sets the ten --nnw-highlight-* CSS custom properties (light + dark per
+	/// Annotation.Color) on the document root from AppDefaults.shared.highlightPalette,
+	/// so core.css's mark.nnw-highlight rules resolve against the selected palette
+	/// instead of their hardcoded fallback hex. See docs/annotations.md, "Color palette".
 	///
-	/// Sets both the light and dark values every time, rather than only
-	/// the currently-resolved appearance's five: core.css's own
-	/// `@media (prefers-color-scheme: dark)` block is what actually
-	/// switches between them live on a system/app appearance change,
-	/// the same mechanism applyResolvedBackgroundColors()'s doc comment
-	/// describes for the article-background pipeline -- setting only one
-	/// appearance's values here would leave the other appearance's
-	/// fallback CSS literal in effect until the next full injection.
-	///
-	/// Called from webView(_:didFinish:) on every render (so a freshly
-	/// loaded document always has the current palette applied before any
-	/// highlight is drawn) and again from highlightPaletteDidChange(_:)
-	/// (so a live in-app palette switch repaints an already-open
-	/// article's existing <mark> elements for free, since they read the
-	/// custom property rather than a baked-in color -- no re-render
-	/// needed). Does not need a registerForTraitChanges hook the way
-	/// applyResolvedBackgroundColors() does: these ten properties don't
-	/// themselves branch on light/dark (both are always set together,
-	/// above), so a system/app appearance change is handled entirely by
-	/// core.css's own @media block without any native-side re-injection.
+	/// Both light and dark values are always set; core.css's own
+	/// `@media (prefers-color-scheme: dark)` block switches between them live, so no
+	/// registerForTraitChanges hook is needed. Called from webView(_:didFinish:) on
+	/// every render and from highlightPaletteDidChange(_:), where existing <mark>s
+	/// repaint for free because they read the custom property.
 	func applyHighlightPaletteColors() {
 		let palette = AppDefaults.shared.highlightPalette
 		let light = palette.lightHexSet
@@ -1134,25 +894,16 @@ extension WebViewController {
 		applyHighlightPaletteColors()
 	}
 
-	/// First-run rule-driven text replacement (categories 1 and 3 -- see
-	/// docs/annotations.md's "Storage shape" and the feature's own
-	/// implementation plan, "Confirmation policy"): applies the typo
-	/// table, the reader-insert table, and any custom rules against this
-	/// article's canonical text the first time it's opened, writing one
-	/// edit row per match through the same pipeline saveTextEdit uses.
-	/// Always `hasHighlight = false` for these rows, per "Categorizing
-	/// the edit types."
+	/// First-run rule-driven text replacement (categories 1 and 3; see
+	/// docs/annotations.md, "Storage shape"). Applies the typo table, reader-insert
+	/// table and custom rules to the article's canonical text, writing one edit row
+	/// (`hasHighlight = false`) per match through the same pipeline saveTextEdit uses.
 	///
-	/// "First time" is detected by absence, not a separate marker: if
-	/// this article already has any edit row with `hasHighlight == false`
-	/// and a non-nil `originalText`, rule-driven replacement has already
-	/// run for it (either on a prior open, or because a person reverted
-	/// one and it's still present as a reviewable row in Edit History --
-	/// either way, re-running the table now would either duplicate a
-	/// match already represented or silently resurrect a deliberately
-	/// reverted one, so this only ever runs when that set is empty).
-	/// Called before loadAndRenderAnnotations() on every page load so a
-	/// freshly written match is rendered on the same load, not the next.
+	/// "First time" is detected by absence: if any edit row with `hasHighlight == false`
+	/// and a non-nil `originalText` exists, this already ran (or a person reverted a row
+	/// that is still reviewable in Edit History). Re-running would duplicate matches or
+	/// resurrect a reverted one, so it only runs when that set is empty. Called before
+	/// loadAndRenderAnnotations() on every load so new matches render the same load.
 	@MainActor
 	func applyTextReplacementRulesIfNeeded() async {
 		guard AppDefaults.shared.textReplacementApplyAutomatically else { return }
@@ -1167,16 +918,10 @@ extension WebViewController {
 		if AppDefaults.shared.textReplacementTypoFixesEnabled {
 			table.rules.append(contentsOf: AppDefaults.shared.textReplacementTypoTable.rules)
 		}
-		// Per-work override (step 7) takes precedence over the global
-		// reader-insert table for this article's own bookKey -- see
-		// TextReplacementPerWorkOverride.mergedReaderInsertTable's doc
-		// comment for why prepending its rules is sufficient to make that
-		// happen, relying on TextReplacementRuleEngine's existing
-		// "earlier rule wins" overlap rule rather than a second precedence
-		// mechanism. A nil bookKey (unresolvable, same rare case
-		// book-identity.md describes) falls through to the global table
-		// unchanged, same as every other bookKey-scoped feature in this
-		// codebase.
+		// A per-work override takes precedence over the global reader-insert table:
+		// prepending its rules suffices because TextReplacementRuleEngine lets the earlier
+		// rule win an overlap (see TextReplacementPerWorkOverride.mergedReaderInsertTable).
+		// A nil bookKey falls through to the global table.
 		let mergedReaderInsertTable = AppDefaults.shared.textReplacementPerWorkOverride.mergedReaderInsertTable(
 			forBookKey: article.bookKey,
 			global: AppDefaults.shared.textReplacementReaderInsertTable
@@ -1191,18 +936,10 @@ extension WebViewController {
 			return
 		}
 
-		// Categories 1/3 (rule-table) and category 2 (quote conversion,
-		// see TextReplacementQuoteConversion) are found independently --
-		// per the plan, quote conversion is a deliberately separate
-		// transform from the shared rule engine, not conflated with it.
-		// Where the two disagree on the same span (rare, but possible if
-		// a custom rule happens to touch a `'`-delimited phrase), the
-		// rule-table match wins and the overlapping quote-conversion
-		// candidate is dropped -- a rule-table entry is a correction a
-		// person explicitly configured, while quote conversion is a
-		// blanket style pass, so the more specific/intentional match
-		// takes priority, same reasoning TextReplacementRuleEngine
-		// itself uses for cross-rule overlaps.
+		// Rule-table matches (categories 1/3) and quote conversion (category 2) are found
+		// independently. On an overlapping span the rule-table match wins and the quote
+		// candidate is dropped: a rule is an explicit correction, quote conversion a
+		// blanket style pass.
 		var matches = TextReplacementRuleEngine.findMatches(applying: table, to: text)
 		if quoteConversionEnabled {
 			let ruleRanges = matches.map { NSRange(location: $0.startOffset, length: $0.endOffset - $0.startOffset) }
@@ -1214,19 +951,14 @@ extension WebViewController {
 		}
 		guard !matches.isEmpty else { return }
 
-		// Prefix/suffix captured the same way selectorForRange does on
-		// the JS side (CONTEXT_CHARS = 200) -- populated here in Swift,
-		// against the same `text` the offsets were found in, rather than
-		// leaving them empty: an empty quotePrefix/quoteSuffix would
-		// starve resolveAnnotation's disambiguation (scoreCandidate) if
-		// this quote ever needs multi-match resolution on a later render.
+		// Capture prefix/suffix as selectorForRange does in JS (CONTEXT_CHARS = 200). Empty
+		// values would starve resolveAnnotation's disambiguation (scoreCandidate) if this
+		// quote later needs multi-match resolution.
 		let nsText = text as NSString
 		let contextChars = 200
 
-		// Apply in descending offset order, same reasoning as manual
-		// edits and TextReplacementOffsetShift.descendingApplicationOrder:
-		// processing right-to-left means an earlier match's offset is
-		// never invalidated by a later match's own length delta.
+		// Apply in descending offset order (as for manual edits) so an earlier match's
+		// offset is never invalidated by a later match's length delta.
 		let descending = matches.sorted { $0.startOffset > $1.startOffset }
 		var appliedCount = 0
 		for match in descending {
@@ -1260,29 +992,18 @@ extension WebViewController {
 
 		if appliedCount > 0 {
 			Self.logger.debug("applyTextReplacementRulesIfNeeded: applied \(appliedCount, privacy: .public) rule-driven replacements for articleID=\(articleID, privacy: .public)")
-			// One-time, non-blocking summary -- "N replacements made --
-			// review in Edit History," per the plan's "Confirmation
-			// policy." The debug log above is kept (cheap, and useful for
-			// diagnosing a report of unexpected replacements even when the
-			// banner itself was dismissed/missed), but is no longer the
-			// only trace: onTextReplacementReplacementsApplied surfaces
-			// TextReplacementSummaryBannerView via ArticleViewController
-			// (see that closure's own doc comment). A nil closure (no
-			// host to present into) just means no visible banner, same as
-			// before this hook existed -- this pass has already fully
-			// completed and persisted regardless.
+			// Surface a one-time summary banner via ArticleViewController. The debug log above
+			// is kept for diagnosing reports of unexpected replacements. A nil closure just
+			// means no visible banner; the pass has already completed and persisted.
 			onTextReplacementReplacementsApplied?(appliedCount)
 		}
 	}
 
-	/// Fetches this article's saved annotations and hands them to
-	/// annotations.js's renderAnnotationsEncoded, which resolves each one
-	/// against the freshly rendered DOM and draws its highlight. Any
-	/// annotation renderAnnotationsEncoded reports as "moved" gets its
-	/// stored anchor updated to match (so the next render's stored-offset
-	/// fast path hits instead of re-searching every time); anything
-	/// reported "orphaned" is marked as such, not deleted, so a note is
-	/// never silently lost -- see Annotation.orphanedAt.
+	/// Fetches saved annotations and hands them to annotations.js's
+	/// renderAnnotationsEncoded, which resolves each against the fresh DOM and draws it.
+	/// "Moved" annotations get their stored anchor updated so the next render hits the
+	/// stored-offset fast path; "orphaned" ones are marked (Annotation.orphanedAt),
+	/// never deleted, so a note is not silently lost.
 	func loadAndRenderAnnotations() {
 		guard let article, let account = article.account else { return }
 		let articleID = article.articleID
@@ -1291,9 +1012,7 @@ extension WebViewController {
 			let annotations = await account.fetchAnnotations(forArticleID: articleID)
 			guard !annotations.isEmpty else { return }
 
-			// Guard against the person navigating to a different article
-			// before this fetch resolves -- same shape as setArticle's
-			// scrollPosition-fetch guard just above it in this file.
+			// Discard if the person navigated to a different article during the fetch.
 			guard self.article?.articleID == articleID else {
 				Self.logger.debug("loadAndRenderAnnotations: articleID changed before annotation fetch resolved, discarding for articleID=\(articleID, privacy: .public)")
 				return
@@ -1338,15 +1057,10 @@ extension WebViewController {
 		}
 	}
 
-	/// Scrolls to and briefly flashes the given annotation's highlight in
-	/// the currently loaded page, via annotations.js's scrollToAnnotation.
-	/// Unlike scrollToHeading (main_ios.js, iOS-only, uses the
-	/// withEncodedArg base64-JSON convention), annotations.js is
-	/// cross-platform and exposes its functions directly off the global
-	/// Annotations object with plain arguments -- no base64 encoding
-	/// needed for a single string ID. Fire-and-forget, same as
-	/// scrollToHeading; no-op if the annotation's mark isn't in the
-	/// rendered DOM (e.g. orphaned).
+	/// Scrolls to and briefly flashes the annotation's highlight via annotations.js.
+	/// That file is cross-platform and exposes plain-argument functions on the global
+	/// `Annotations` object, so no base64 encoding is needed for a single ID (unlike
+	/// main_ios.js's scrollToHeading). Fire-and-forget; no-op if the mark isn't in the DOM.
 	func scrollToAnnotation(annotationID: String) {
 		scrollJumpHistory.append(Double(windowScrollY))
 		let escaped = annotationID.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
@@ -1357,27 +1071,19 @@ extension WebViewController {
 		}
 	}
 
-	/// Resolves once this WebViewController's webpage has finished
-	/// loading -- used by ArticleViewController.navigateToAnnotation to
-	/// wait past selectArticleDirectly's article-selection resolution
-	/// (which fires well before the new WebViewController's own didFinish
-	/// navigation callback) before calling scrollToAnnotation, since the
-	/// mark it needs to scroll to doesn't exist in the DOM until then.
-	/// If a load is already in flight, waits for that one; if the page
-	/// has already finished loading, resolves on the next load instead
-	/// of hanging forever, on the assumption that a caller awaiting this
-	/// wants the *result of a navigation*, not "has ever loaded."
+	/// Resolves when this controller's page finishes loading. Used by
+	/// ArticleViewController.navigateToAnnotation: article selection resolves well
+	/// before the new controller's didFinish, and the mark to scroll to doesn't exist
+	/// until then. If the page already loaded, this waits for the next load rather
+	/// than hanging, since callers want the result of a navigation.
 	func awaitNextPageLoad() async {
 		await withCheckedContinuation { continuation in
 			nextPageLoadContinuations.append(continuation)
 		}
 	}
 
-	/// Resumes every pending awaitNextPageLoad() caller. Called from
-	/// webView(_:didFinish:) in the WKNavigationDelegate extension below.
-	/// Backing storage is nextPageLoadContinuations, declared as a real
-	/// stored property near the top of the class (extensions can't add
-	/// stored properties).
+	/// Resumes every pending awaitNextPageLoad() caller; called from webView(_:didFinish:).
+	/// Storage is a stored property on the class, since extensions can't add them.
 	fileprivate func resumeAwaitingPageLoads() {
 		let continuations = nextPageLoadContinuations
 		nextPageLoadContinuations = []
@@ -1386,28 +1092,15 @@ extension WebViewController {
 		}
 	}
 
-	/// annotations.js reports both new selections (with a rect) and
-	/// selection-cleared events (`{cleared: true}`, no rect) through this
-	/// same handler -- see the `cleared` doc comment on
-	/// handleSelectionChange's postMessage calls in annotations.js.
-	///
-	/// What this does with either kind of message depends on
-	/// AppDefaults.shared.annotationCreationMethod, read fresh here rather
-	/// than cached, matching initAnnotations()'s doc comment above:
-	///  - .popup: a non-empty selection presents HighlightColorPopover, as
-	///    before. `cleared` payloads are ignored -- the popover, once
-	///    presented, has nothing left to dismiss based on this signal;
-	///    tapping a swatch or dismissing the popover already handles that.
-	///  - .nativeMenu: never presents the popover. Instead this just tracks
-	///    whether a highlightable selection currently exists
-	///    (currentSelectionRect), which PreloadedWebViewAnnotationDelegate's
-	///    isSelectionHighlightable exposes to buildMenu(with:) so it knows
-	///    whether to offer a "Highlight" action. A `cleared` payload resets
-	///    that back to nil.
-	///  - .off: this handler shouldn't fire at all, since annotations.js
-	///    skips wiring selectionchange entirely in that mode -- but if a
-	///    stale message arrives anyway (e.g. mode changed mid-session, see
-	///    initAnnotations()'s "next load" caveat), do nothing either way.
+	/// annotations.js reports new selections (with a rect) and selection-cleared events
+	/// (`{cleared: true}`) through this handler. Behavior depends on
+	/// annotationCreationMethod, read fresh (see initAnnotations()):
+	///  - .popup: a non-empty selection presents HighlightColorPopover; `cleared` is ignored.
+	///  - .nativeMenu: never presents the popover. Tracks whether a highlightable
+	///    selection exists (currentSelectionRect), exposed via isSelectionHighlightable
+	///    so buildMenu(with:) knows whether to offer "Highlight". `cleared` resets it to nil.
+	///  - .off: shouldn't fire (annotations.js doesn't wire selectionchange), but a stale
+	///    message after a mid-session mode change is ignored.
 	func textWasSelected(body: [String: Any]?) {
 		guard let body else { return }
 
@@ -1424,10 +1117,8 @@ extension WebViewController {
 			return
 		}
 
-		// Same webview-safe-area-offset + coordinate-conversion shape
-		// showFullScreenImage uses just above, for the same reason: the
-		// rect JS reports is in the web content's own coordinate space, not
-		// this view controller's.
+		// Same safe-area offset and conversion as showFullScreenImage: the JS rect is in
+		// web content coordinates, not this controller's.
 		let adjustedY = CGFloat(y) + webView.safeAreaInsets.top
 		let rect = CGRect(x: CGFloat(x), y: adjustedY, width: CGFloat(width), height: CGFloat(height))
 		let convertedRect = webView.convert(rect, to: view)
@@ -1436,10 +1127,8 @@ extension WebViewController {
 		case .popup:
 			presentHighlightColorPopover(sourceRect: convertedRect)
 		case .nativeMenu:
-			// No popover -- just remember that a highlightable selection
-			// exists. buildMenu(with:) reads isSelectionHighlightable the
-			// next time the system rebuilds its selection menu, which
-			// happens on its own without any push needed from here.
+			// No popover; just record that a highlightable selection exists. buildMenu(with:)
+			// reads isSelectionHighlightable when the system next rebuilds its menu.
 			currentSelectionRect = convertedRect
 		case .off:
 			break
@@ -1456,22 +1145,15 @@ extension WebViewController {
 
 		let hostingController = UIHostingController(rootView: popover)
 		hostingController.modalPresentationStyle = .popover
-		// Sized for up to 3 swatches (28pt each, 14pt spacing, 16pt
-		// horizontal padding): 3*28 + 2*14 + 2*16 = 144. Fewer swatches
-		// (default color collides with blue/red) just leave the popover
-		// slightly wider than its content rather than needing a second
-		// size -- SwiftUI centers the HStack's content within it.
+		// Sized for 3 swatches (3*28 + 2*14 + 2*16 = 144); fewer just leave it slightly
+		// wider than its content, since SwiftUI centers the HStack.
 		hostingController.preferredContentSize = CGSize(width: 144, height: 56)
 		if let presentationController = hostingController.popoverPresentationController {
 			presentationController.sourceView = view
-			// Defensive clamp, independent of updateTopSafeAreaForFullScreen()
-			// above: if sourceRect ever ends up outside view.bounds anyway (a
-			// short selection's small bounding rect is the case that actually
-			// triggered this fix, but any future drift in this class would
-			// reproduce the same silent-non-presentation symptom),
-			// UIPopoverPresentationController has nothing valid to anchor to
-			// and simply never presents, with no error. Clamping degrades to
-			// "anchors at the nearest valid edge" instead.
+			// Defensive clamp: if sourceRect falls outside view.bounds (a short selection's
+			// small rect triggered this), UIPopoverPresentationController silently never
+			// presents. Clamping anchors at the nearest valid edge instead. Independent of
+			// updateTopSafeAreaForFullScreen().
 			presentationController.sourceRect = sourceRect.intersects(view.bounds)
 				? sourceRect
 				: sourceRect.clamped(toBounds: view.bounds)
@@ -1481,20 +1163,13 @@ extension WebViewController {
 		present(hostingController, animated: true)
 	}
 
-	/// Calls annotations.js's addHighlightFromSelection to resolve the
-	/// still-live selection into a selector and draw the highlight
-	/// immediately, then persists the result. If the selection didn't
-	/// survive (the person dismissed the popover, scrolled, etc.) this
-	/// does nothing -- there's no stale selector to fall back to, since
-	/// the whole point of resolving against the live selection rather than
-	/// capturing it earlier is that it's still authoritative at this exact
-	/// moment.
+	/// Calls annotations.js's addHighlightFromSelection to resolve the live selection
+	/// into a selector and draw the highlight, then persists it. Does nothing if the
+	/// selection didn't survive (popover dismissed, scrolled, etc.); there is no stale
+	/// selector to fall back on, since the live selection is the only authority.
 	///
-	/// Always saves-only now, for both callers (the popup's swatch tap and
-	/// the native menu's "Highlight" action): neither has a note-entry
-	/// exit any more. A note is added afterward by tapping the resulting
-	/// mark, which routes to annotationWasTapped -> AnnotationEditorView,
-	/// unchanged.
+	/// Save-only for both callers (popup swatch tap, native menu "Highlight"). A note
+	/// is added later by tapping the mark, which routes to annotationWasTapped.
 	private func saveHighlightFromSelection(color: Annotation.Color) {
 		guard let article, let account = article.account else { return }
 
@@ -1558,24 +1233,16 @@ extension WebViewController {
 		}
 	}
 
-	/// The person chose "Highlight" from the system's native selection
-	/// menu (annotationCreationMethod == .nativeMenu). Reuses the exact
-	/// same save path the popup's swatch tap uses, resolving against
-	/// whatever selection is still live at the moment this fires -- the
-	/// system edit menu doesn't clear the underlying selection while it's
-	/// showing, so this is the same "still-authoritative live selection"
-	/// case saveHighlightFromSelection's doc comment describes, just
-	/// reached from a different UI. Uses the default color directly --
-	/// there's no color picker in this mode, per the plan, so this is
-	/// the native menu's single unconditional "Highlight" action -- see
+	/// "Highlight" chosen from the native selection menu (.nativeMenu mode). Reuses
+	/// the popup's save path against the still-live selection (the system menu doesn't
+	/// clear it), with the default color since there is no picker in this mode. See
 	/// PreloadedWebView.buildMenu.
 	func nativeMenuHighlightWasTapped() {
 		saveHighlightFromSelection(color: AppDefaults.shared.defaultAnnotationColor)
 	}
 
-	/// Presents the note-editor half-sheet for one annotation. Both entry
-	/// points (a fresh highlight, once its mark is tapped, and tapping an
-	/// existing <mark>) converge here.
+	/// Presents the note-editor half-sheet; a fresh highlight's mark tap and an
+	/// existing <mark> tap both converge here.
 	private func openNoteEditor(for annotation: Annotation) {
 		guard let article, let account = article.account else { return }
 
@@ -1586,24 +1253,12 @@ extension WebViewController {
 				if let editedText {
 					self?.saveTextEdit(annotation: annotation, replacementText: editedText, keepHighlight: keepHighlight, account: account)
 				} else if keepHighlight != annotation.hasHighlight, annotation.originalText != nil {
-					// Text unchanged, but the "keep highlight" toggle
-					// still moved on a row that already has an edit --
-					// this has no offset shift or overlap to compute (the
-					// row's anchor hasn't moved), so it bypasses
-					// saveTextEdit's full edit-plan pipeline and persists
-					// hasHighlight directly.
-					//
-					// The `annotation.originalText != nil` guard matters:
-					// unchecking this on a row with no edit at all (never
-					// edited, text field left untouched) would produce
-					// hasHighlight == false with originalText == nil,
-					// which violates the Validity rule in
-					// docs/annotations.md's "Storage shape" -- that case
-					// is documented as "delete the row instead," which is
-					// separate, unrequested behavior this fix doesn't
-					// add. It's left a no-op here rather than either
-					// silently deleting the highlight or writing an
-					// invalid row.
+					// Text unchanged but "keep highlight" moved on a row that already has an edit.
+					// No offset shift or overlap is possible, so skip saveTextEdit's pipeline and
+					// persist hasHighlight directly. The `originalText != nil` guard matters:
+					// unchecking on a never-edited row would write hasHighlight == false with
+					// originalText == nil, violating the Validity rule (docs/annotations.md, "Storage
+					// shape"). That case is a no-op here rather than a silent delete or invalid row.
 					self?.saveHasHighlightChange(annotation: annotation, hasHighlight: keepHighlight, account: account)
 				}
 			},
@@ -1642,46 +1297,28 @@ extension WebViewController {
 		}
 	}
 
-	/// Handles the "Edit text" field/"Keep highlight" checkbox from
-	/// AnnotationEditorView (docs/annotations.md, "Manual edit UI").
-	/// Called only when the field actually changed from the row's current
-	/// text -- AnnotationEditorView itself decides that and passes nil
-	/// otherwise, so by the time this runs there is definitely an edit to
-	/// apply.
+	/// Handles the "Edit text" field and "Keep highlight" checkbox from
+	/// AnnotationEditorView (docs/annotations.md, "Manual edit UI"). Called only when
+	/// the text actually changed.
 	///
-	/// Pipeline (see docs/annotations.md's "Applying edits"): fetch every
-	/// other annotation in this article, ask annotations.js to check the
-	/// edit's span for overlap against them and compute the shifted
-	/// anchors for every row after it -- entirely against the live,
-	/// already-rendered DOM, non-mutating (computeTextEditPlan) -- then
-	/// persist: this row's own edit fields via
-	/// account.setAnnotationEditFields, and every shifted row's new
-	/// anchor via account.reanchorAnnotation, in descending-offset order
-	/// so an earlier row's write is never computed relative to a
-	/// not-yet-applied later shift (TextReplacementOffsetShift's ordering
-	/// requirement, mirrored here even though the actual shift math ran
-	/// in JS -- the write order still matters for the same reason). Once
-	/// every row is persisted, loadAndRenderAnnotations() is called again
-	/// to re-render: the actual DOM mutation (applyTextEdit) happens
-	/// there, not here -- this function only computes and persists.
+	/// Pipeline (docs/annotations.md, "Applying edits"): fetch the other annotations,
+	/// ask annotations.js (computeTextEditPlan, non-mutating, against the live DOM) to
+	/// check for overlap and compute shifted anchors, then persist this row's edit
+	/// fields and each shifted row's new anchor via account.reanchorAnnotation in
+	/// descending-offset order (write order matters for the same reason as
+	/// TextReplacementOffsetShift). Finally loadAndRenderAnnotations() re-renders; the
+	/// DOM mutation (applyTextEdit) happens there, not here.
 	///
-	/// An overlap is surfaced as a blocking alert, per "Applying edits":
-	/// "can't edit text that's part of an existing highlight or another
-	/// edit -- remove or resize it first." Nothing is written in that case.
+	/// An overlap shows a blocking alert and writes nothing.
 	private func saveTextEdit(annotation: Annotation, replacementText: String, keepHighlight: Bool, account: Account) {
 		guard let article else { return }
 		let articleID = article.articleID
 		let originalText = annotation.replacementText ?? annotation.quoteExact
 		let replacementLength = replacementText.count
 
-		// Validity rule (docs/annotations.md, "Storage shape"): a row
-		// needs hasHighlight == true OR originalText != nil. If the
-		// person unchecks "keep highlight" while also reverting the text
-		// edit back to nothing meaningful, that's not reachable here --
-		// replacementText != originalEditableText is already guaranteed
-		// by AnnotationEditorView before this is called -- but a
-		// same-text edit is impossible to reach this function, so no
-		// extra guard is needed for that case specifically.
+		// Validity rule (docs/annotations.md, "Storage shape"): hasHighlight == true OR
+		// originalText != nil. AnnotationEditorView only calls this for a real text
+		// change, so no extra guard is needed here.
 
 		Task {
 			let allAnnotations = await account.fetchAnnotations(forArticleID: articleID)
@@ -1729,10 +1366,7 @@ extension WebViewController {
 				return
 			}
 
-			// Write this row's own edit fields first -- its offsets
-			// don't change (an edit's own span is the highlight's own
-			// span it was created against, per "Applying edits"), only
-			// hasHighlight/originalText/replacementText.
+			// Write this row's edit fields first; its offsets don't change.
 			await account.setAnnotationEditFields(
 				annotationID: annotation.annotationID,
 				hasHighlight: keepHighlight,
@@ -1740,9 +1374,7 @@ extension WebViewController {
 				replacementText: replacementText
 			)
 
-			// Persist every shifted row, descending by (new) offset --
-			// same ordering requirement as applying edits generally, see
-			// TextReplacementOffsetShift.descendingApplicationOrder.
+			// Persist shifted rows in descending offset order (see TextReplacementOffsetShift).
 			let shiftedDescending = plan.shifted.sorted { $0.startOffset > $1.startOffset }
 			for shifted in shiftedDescending {
 				await account.reanchorAnnotation(
@@ -1760,18 +1392,11 @@ extension WebViewController {
 		}
 	}
 
-	/// Persists a `hasHighlight`-only change (the "Keep highlight on the
-	/// corrected text" checkbox flipped with the edit text field left
-	/// alone). Deliberately bypasses saveTextEdit's computeTextEditPlan
-	/// pipeline entirely -- this row's own anchor doesn't move (nothing
-	/// shifted its start/end offsets), so there's no overlap to check and
-	/// no other row's anchor to reanchor. originalText/replacementText
-	/// are carried through unchanged; only hasHighlight differs.
-	/// loadAndRenderAnnotations() re-renders afterward the same way
-	/// saveTextEdit does -- renderAnnotations (annotations.js) already
-	/// re-evaluates hasHighlight per row on every render (see
-	/// docs/annotations.md, "Storage shape"), so this alone wraps/unwraps
-	/// the <mark> correctly with no new JS needed.
+	/// Persists a `hasHighlight`-only change (checkbox flipped, text untouched).
+	/// Bypasses saveTextEdit's plan pipeline: this row's anchor doesn't move, so there
+	/// is no overlap to check and nothing to reanchor. originalText/replacementText
+	/// carry through. The re-render wraps/unwraps the <mark> since renderAnnotations
+	/// re-evaluates hasHighlight per row (docs/annotations.md, "Storage shape").
 	private func saveHasHighlightChange(annotation: Annotation, hasHighlight: Bool, account: Account) {
 		Task {
 			await account.setAnnotationEditFields(
@@ -1784,9 +1409,7 @@ extension WebViewController {
 		}
 	}
 
-	/// Blocking alert for the overlap case described in
-	/// docs/annotations.md's "Applying edits" -- shown instead of
-	/// silently applying or silently orphaning the conflicting row.
+	/// Blocking alert for the overlap case (docs/annotations.md, "Applying edits").
 	private func presentTextEditOverlapAlert() {
 		let alert = UIAlertController(
 			title: NSLocalizedString("Can’t Edit This Text", comment: "Text-edit overlap alert title"),
@@ -1809,13 +1432,9 @@ extension WebViewController {
 	/// currently displayed article. Persistence remains owned by the caller.
 	func revertOrUnwrapAnnotationDOM(_ annotation: Annotation) {
 		if let originalText = annotation.originalText {
-			// This row carries a text edit (hasHighlight and/or
-			// originalText/replacementText set) -- applyTextEdit already
-			// mutated the DOM to replacementText at render time, so
-			// unwrapping alone (removeAnnotationHighlight's path, below)
-			// would leave the replacement text stuck in the document even
-			// after the row itself is deleted. revertTextEdit puts
-			// originalText back first, then unwraps -- see annotations.js.
+			// A text-edit row: applyTextEdit already mutated the DOM at render time, so
+			// unwrapping alone would leave the replacement text. revertTextEdit restores
+			// originalText first, then unwraps (see annotations.js).
 			let args: [String: String] = ["annotationID": annotation.annotationID, "originalText": originalText]
 			guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else { return }
 			let encodedArgs = argsJSON.base64EncodedString()
@@ -1826,9 +1445,8 @@ extension WebViewController {
 				}
 			}
 		} else {
-			// Highlight-only row -- the DOM text was never touched, so
-			// unwrapping the <mark> and normalizing the affected text
-			// nodes back together is sufficient. See annotations.js.
+			// Highlight-only row: the text was never touched, so unwrap the <mark> and
+			// normalize the text nodes (see annotations.js).
 			webView?.evaluateJavaScript("Annotations.removeAnnotationHighlight(\"\(annotation.annotationID)\")") { _, error in
 				if let error {
 					Self.logger.error("deleteAnnotation: Annotations.removeAnnotationHighlight() JS call failed: \(error.localizedDescription, privacy: .public)")
@@ -1843,10 +1461,7 @@ extension WebViewController {
 extension WebViewController: UIPopoverPresentationControllerDelegate {
 
 	func adaptivePresentationStyle(for controller: UIPresentationController) -> UIModalPresentationStyle {
-		// Force true popover presentation even on compact-width (iPhone)
-		// size classes, where UIKit would otherwise adapt this to a full
-		// sheet -- a full sheet is the wrong weight for "pick one of five
-		// colors."
+		// Force a true popover on compact width, where UIKit would adapt to a sheet.
 		.none
 	}
 
@@ -1856,10 +1471,8 @@ extension WebViewController: UIPopoverPresentationControllerDelegate {
 
 extension WebViewController: PreloadedWebViewAnnotationDelegate {
 
-	/// Backed by currentSelectionRect, which only ever gets set in
-	/// .nativeMenu mode (see textWasSelected(body:)) -- so this is false by
-	/// construction in .popup/.off, without needing to re-check the mode
-	/// here too.
+	/// Backed by currentSelectionRect, which is only set in .nativeMenu mode, so this
+	/// is false by construction in .popup/.off.
 	var isSelectionHighlightable: Bool {
 		currentSelectionRect != nil
 	}
@@ -1912,25 +1525,16 @@ extension WebViewController: UIScrollViewDelegate {
 				}
 				self.maxObservedScrollHeight = max(self.maxObservedScrollHeight, scrollHeight)
 			}
-			// The rendered content is a not-yet-fetched AO3 stub, or a fetched
-			// chapter still settling in after a swap -- none of these samples
-			// reflect the real document, so don't write back position, credit
-			// Reading Stats, mark read, or persist anything from them.
+			// Stub or still-settling provisional content: don't write position, credit
+			// Reading Stats, mark read, or persist.
 			guard !self.isContentProvisional else {
 				Self.logger.debug("scrollPositionDidChange: discarding sample, content is provisional (scrollY=\(javascriptScrollY, privacy: .public))")
 				return
 			}
 			self.windowScrollY = javascriptScrollY
-			// (Routine per-sample log removed -- this fires on every scroll tick and
-			// was the single largest noise source in the console during normal
-			// reading. The three guards above still log the anomaly cases, which is
-			// where the diagnostic value actually is.)
 
-			// Scroll-percentage-gated read marking (Phase 2). scrollHeight includes the
-			// full document; innerHeight is the viewport. Once the bottom of the viewport
-			// has reached the completion threshold (ReadingProgressEvaluator.completionThreshold,
-			// shared with ReadingStatsTracker), treat the article as read. The math itself
-			// lives in ReadingProgressEvaluator so it can be tested without a WKWebView.
+			// Mark read once the viewport bottom reaches ReadingProgressEvaluator.completionThreshold
+			// (shared with ReadingStatsTracker). The math lives there so it is testable without a WKWebView.
 			if let scrollHeight = result["scrollHeight"] as? Double,
 			   let innerHeight = result["innerHeight"] as? Double,
 			   let sample = ReadingProgressEvaluator.sample(scrollY: Double(javascriptScrollY), scrollHeight: scrollHeight, viewportHeight: innerHeight) {
@@ -1939,9 +1543,7 @@ extension WebViewController: UIScrollViewDelegate {
 					self.coordinator.markCurrentArticleAsReadFromScrollCompletion()
 				}
 
-				// Page counter (§7). Reuses this same JS bridge payload rather than
-				// adding a second round trip -- the sample already carries exactly
-				// what's needed.
+				// Page counter; reuses this JS payload rather than a second round trip.
 				switch AppDefaults.shared.pageCounterDisplayMode {
 				case .off:
 					break
@@ -1955,9 +1557,7 @@ extension WebViewController: UIScrollViewDelegate {
 					}
 				}
 
-				// Visible reading progress (Phase A1). Reuses this same JS bridge payload
-				// rather than adding a second round trip -- the sample's clamped fraction
-				// is already the 0...1 value the card wants.
+				// Visible reading progress; reuses the same payload (sample.fraction is the 0...1 value).
 				if let article = self.article, let account = article.account {
 					let articleID = article.articleID
 					let readingProgress = sample.fraction
@@ -1982,11 +1582,9 @@ private struct ImageClickMessage: Codable {
 	let imageURL: String
 }
 
-/// The shape annotations.js's renderAnnotationsEncoded/addHighlightFromSelection
-/// return over the evaluateJavaScript base64-JSON bridge. `AnnotationSelector`
-/// mirrors the plain-object shape addHighlightFromSelection resolves a live
-/// selection down to; ReanchorReport mirrors renderAnnotations' per-render
-/// {moved, orphanedIDs} report.
+/// Shapes returned by annotations.js (renderAnnotationsEncoded/addHighlightFromSelection)
+/// over the base64-JSON bridge: `AnnotationSelector` is a live selection resolved to a
+/// selector; `ReanchorReport` is a render's {moved, orphanedIDs} report.
 private struct AnnotationSelector: Codable {
 	let annotationID: String
 	let color: String
@@ -1996,9 +1594,7 @@ private struct AnnotationSelector: Codable {
 	let rootSelector: String
 	let startOffset: Int
 	let endOffset: Int
-	/// See Annotation.chapterTitle -- computed by annotations.js's
-	/// nearestChapterTitle against the same root the rest of this
-	/// selector was resolved against.
+	/// See Annotation.chapterTitle; computed by annotations.js's nearestChapterTitle.
 	let chapterTitle: String?
 }
 
@@ -2016,11 +1612,10 @@ private struct ReanchorReport: Codable {
 	let orphanedIDs: [String]
 }
 
-/// The shape annotations.js's computeTextEditPlanEncoded returns --
-/// either an overlap conflict or the set of other rows an edit's
-/// length-delta shifts, each with its re-sliced quote/prefix/suffix/
-/// chapterTitle already computed against the simulated post-edit text.
-/// See docs/annotations.md's "Applying edits" and saveTextEdit(_:) above.
+/// Shape returned by annotations.js's computeTextEditPlanEncoded: an overlap
+/// conflict, or the other rows an edit's length delta shifts, with
+/// quote/prefix/suffix/chapterTitle already recomputed against the simulated
+/// post-edit text. See docs/annotations.md, "Applying edits".
 private struct TextEditPlan: Codable {
 	struct Shifted: Codable {
 		let annotationID: String
@@ -2053,9 +1648,8 @@ private struct TextEditPlan: Codable {
 
 private extension WebViewController {
 
-	/// Synchronously persists the last scroll position / reading progress values this
-	/// controller already has in hand -- no JS evaluation, so nothing to race against
-	/// the view tearing down. See viewWillDisappear.
+	/// Synchronously persists the last known scroll position/progress (no JS evaluation,
+	/// so nothing races view teardown). See viewWillDisappear.
 	func flushLastKnownScrollState() {
 		guard let article, let account = article.account else { return }
 		let articleID = article.articleID
@@ -2089,19 +1683,15 @@ private extension WebViewController {
 
 			webView.ready {
 
-				// A newer loadWebView() call has started since this one was issued --
-				// most commonly viewDidLoad's initial call losing the race against
-				// setArticle's post-scroll-fetch call, or vice versa. Discard this
-				// webview rather than inserting a second one into the view hierarchy;
-				// the winning generation's own completion will render the page.
+				// A newer loadWebView() has started (typically viewDidLoad's call losing the race
+				// with setArticle's post-scroll-fetch call): discard this webview rather than
+				// insert a second one. The winning generation's completion renders the page.
 				guard generation == self.loadWebViewGeneration else {
 					Self.logger.debug("loadWebView: discarding stale completion, generation=\(generation, privacy: .public) currentGeneration=\(self.loadWebViewGeneration, privacy: .public) reason=\(reason, privacy: .public)")
 					return
 				}
 
-				// If an older webview is still around (e.g. this is a replaceExistingWebView
-				// reload), remove it now so we never have more than one PreloadedWebView
-				// in the view hierarchy at a time.
+				// Remove any older webview (e.g. replaceExistingWebView) so only one is ever in the hierarchy.
 				if let previousWebView = self.webView, previousWebView !== webView {
 					previousWebView.removeFromSuperview()
 				}
@@ -2117,34 +1707,23 @@ private extension WebViewController {
 					self.view.bottomAnchor.constraint(equalTo: webView.bottomAnchor)
 				])
 
-				// UISplitViewController reports the wrong size to WKWebView which can cause horizontal
-				// rubberbanding on the iPad.  This interferes with our UIPageViewController preventing
-				// us from easily swiping between WKWebViews.  This hack fixes that.
+				// UISplitViewController reports the wrong size to WKWebView, causing horizontal
+				// rubberbanding on iPad that interferes with the UIPageViewController swipe.
 				webView.scrollView.contentInset = UIEdgeInsets(top: 0, left: -1, bottom: 0, right: 0)
 
 				webView.scrollView.setZoomScale(1.0, animated: false)
 
-				// Tapping the status bar performs scrollsToTop on the first eligible
-				// scroll view, which jumps the article back to its beginning and
-				// discards the reader's place. PreloadedWebView instances are pooled
-				// and reused (see loadWebViewGeneration above), so this must be set
-				// on every dequeue rather than once at creation.
+				// Tapping the status bar would scrollsToTop and discard the reader's place. The
+				// webview is pooled, so this is reasserted on every dequeue, as are the settings below.
 				webView.scrollView.scrollsToTop = false
 
-				// Same pooling concern as scrollsToTop above: reasserted on every
-				// dequeue rather than once at creation. updateScrollbarVisibility()
-				// (below) reads AppDefaults.shared.articleScrollbarVisibility fresh
-				// (not cached) each time it's called, so a Settings change takes
-				// effect on the next article open, and .whenNotFullScreen also
-				// re-evaluates live as showBars()/hideBars() are called, without
-				// needing a relaunch or a fresh load.
+				// updateScrollbarVisibility() reads articleScrollbarVisibility fresh, so a Settings
+				// change applies on the next open, and .whenNotFullScreen re-evaluates live in
+				// showBars()/hideBars().
 				self.updateScrollbarVisibility()
 
-				// Belt-and-suspenders alongside the page.html viewport meta zoom
-				// restriction (viewport-meta zoom blocking is sometimes inconsistent
-				// across WKWebView versions/content types). Same pooling concern as
-				// scrollsToTop/showsVerticalScrollIndicator above: reasserted on
-				// every dequeue rather than once at creation.
+				// Belt-and-suspenders alongside page.html's viewport-meta zoom restriction, which
+				// is inconsistent across WKWebView versions/content types.
 				webView.scrollView.pinchGestureRecognizer?.isEnabled = false
 
 				self.view.setNeedsLayout()
@@ -2154,11 +1733,8 @@ private extension WebViewController {
 				webView.navigationDelegate = self
 				webView.uiDelegate = self
 				webView.scrollView.delegate = self
-				// Same pooling concern as the three delegates just above:
-				// PreloadedWebView instances are reused across different
-				// WebViewControllers, so this must be reasserted on every
-				// dequeue rather than set once. Backs buildMenu(with:)'s
-				// native-menu "Highlight" action -- see PreloadedWebView.swift.
+				// Reasserted per dequeue (the webview is shared across controllers). Backs
+				// buildMenu(with:)'s native-menu "Highlight" action; see PreloadedWebView.swift.
 				webView.annotationMenuDelegate = self
 				self.configureContextMenuInteraction()
 
@@ -2188,13 +1764,8 @@ private extension WebViewController {
 	func renderPage(_ webView: PreloadedWebView?) {
 		guard let webView = webView else { return }
 
-		// A fresh document load means whatever selection currentSelectionRect
-		// was tracking, if any, no longer exists -- new HTML means no
-		// selection at all until the person makes a new one. Without this,
-		// a stale non-nil rect could momentarily make
-		// isSelectionHighlightable report true for a page that was just
-		// loaded and has no selection yet, offering "Highlight" with
-		// nothing live to resolve it against.
+		// New HTML means no selection: clear any tracked rect so a stale one doesn't make
+		// isSelectionHighlightable offer "Highlight" with nothing live to resolve against.
 		currentSelectionRect = nil
 
 		let theme = ArticleThemesManager.shared.currentTheme
@@ -2212,31 +1783,19 @@ private extension WebViewController {
 			"importStyle": rendering.importStyle,
 			"style": rendering.style,
 			"body": rendering.html,
-			// Device-locale fallback, not per-article language -- no per-feed/
-			// per-article language field exists anywhere in Modules/Articles or
-			// Modules/Account today (RSS/JSON Feed language isn't parsed), so this
-			// is the best available value without a separate, larger feed-parsing
-			// change. Needed for hyphens: auto (see ArticleThemeOverrides.hyphenate)
-			// to pick the correct hyphenation dictionary in WebKit, which is
-			// unreliable without a lang attribute on <html> -- confirmed
-			// page.html shipped with none before this change (dir="auto" only).
+			// Device-locale fallback (no per-feed/article language is parsed). Needed so
+			// `hyphens: auto` picks the right WebKit hyphenation dictionary; page.html had no
+			// lang attribute before.
 			"lang": Locale.current.language.languageCode?.identifier ?? "en"
 		]
 		Self.logger.debug("renderPage: articleID=\(self.article?.articleID ?? "nil", privacy: .public) windowScrollY=\(self.windowScrollY, privacy: .public) bodyLength=\(rendering.html.count, privacy: .public)")
-		// WKWebView fires a scrollViewDidScroll with contentOffset reset to (0,0)
-		// as part of committing a fresh loadHTMLString, before the injected
-		// scroll-restore script (see WebViewConfiguration.installArticleScripts)
-		// has had a chance to run or settle. Without this guard, that native
-		// reset (or one of the restore script's own attempts sampled before the
-		// document has reached its final height) gets picked up by
-		// scrollPositionDidChange as if it were a real scroll and immediately
-		// overwrites the just-restored position -- confirmed in device logs as
-		// the actual mechanism behind "reopening resets to the top." Discard all
-		// scrollPositionDidChange samples until the scrollRestoreComplete
-		// message confirms the restore script's own multi-point restore
-		// (DOMContentLoaded / load / fonts.ready / ResizeObserver-driven
-		// reflows) has settled; a failsafe timer below clears this if that
-		// message never arrives.
+		// WKWebView fires scrollViewDidScroll with contentOffset reset to (0,0) while
+		// committing loadHTMLString, before the scroll-restore script
+		// (WebViewConfiguration.installArticleScripts) settles. Without this guard that
+		// reset, or a restore attempt sampled before the document reaches final height,
+		// overwrites the restored position (the cause of "reopening resets to the top").
+		// Discard samples until scrollRestoreComplete arrives; the failsafe below clears
+		// it if that message never does.
 		isRestoringScrollPosition = true
 		maxObservedScrollHeight = 0
 		scrollRestoreFailsafeWorkItem?.cancel()
@@ -2251,12 +1810,7 @@ private extension WebViewController {
 		var html = try! MacroProcessor.renderedText(withTemplate: ArticleRenderer.page.html, substitutions: substitutions)
 		html = ArticleRenderingSpecialCases.filterHTMLIfNeeded(baseURL: rendering.baseURL, html: html)
 
-		// Uncomment when you want to debug HTML and CSS for an article.
-		// If you’re running in the simulator, this will write the file to a location on your Mac.
-//		let debugFolderURL = AppConfig.dataSubfolder(named: "debug")
-//		let fileURL = debugFolderURL.appendingPathComponent("article.html")
-//		try? html.write(to: fileURL, atomically: true, encoding: .utf8)
-//		print("article.html written to \(fileURL.path)")
+		// To debug article HTML/CSS, write `html` to a file (e.g. under AppConfig.dataSubfolder(named: "debug")).
 
 		WebViewConfiguration.addContentBlockingRules(to: webView)
 		WebViewConfiguration.installArticleScripts(in: webView, windowScrollY: windowScrollY, generation: loadWebViewGeneration)
@@ -2266,69 +1820,42 @@ private extension WebViewController {
 		webView.loadHTMLString(html, baseURL: URL(string: rendering.baseURL))
 	}
 
-	// §1a. WKWebView defaults to .systemBackground (see PreloadedWebView.init) until
-	// this runs, which is near-black in dark mode -- resolve the theme's actual
-	// background before loadHTMLString commits the navigation, so there's no flash
-	// of the wrong color. Precedence: override background (if set) -> theme's own
-	// background -> ArticleThemeColorExtractor's black/white fallback.
+	// Resolve the theme's background before loadHTMLString commits, so there is no
+	// flash of the default .systemBackground (near-black in dark mode; see
+	// PreloadedWebView.init). Precedence: override background, then theme background,
+	// then ArticleThemeColorExtractor's black/white fallback.
 	//
-	// Also re-run on its own, without a full renderPage/HTML reload, from the
-	// registerForTraitChanges handler installed in viewDidLoad: the webview's own
-	// CSS already updates live via @media prefers-color-scheme when the app's
-	// Appearance setting or the system trait changes, but these native UIKit-side
-	// colors were previously only resolved once per renderPage call and went stale
-	// until the article was reopened or the theme changed. See
-	// article-color-pipeline.md.
+	// Also re-run on its own (no reload) from the registerForTraitChanges handler in
+	// viewDidLoad, since these native colors otherwise go stale until the next
+	// renderPage. See article-color-pipeline.md.
 	private func applyResolvedBackgroundColors() {
 		guard let webView else { return }
 
-		// BUG FIX: was webView.traitCollection.userInterfaceStyle -- webView
-		// is a pooled PreloadedWebView (see coordinator.webViewProvider.
-		// dequeueWebView / removeFromSuperview() call sites above), reused
-		// and reattached across articles/pages outside plain UIKit view
-		// lifecycle, so its own traitCollection can lag one trait-change
-		// cycle behind this view controller's. registerForTraitChanges's
-		// handler in viewDidLoad already confirms self.traitCollection.
-		// userInterfaceStyle is fresh (it's exactly what that handler's own
-		// guard just compared) before calling this function, so read isDark
-		// from self here instead of re-deriving it from a different object
-		// that may not have caught up yet. The stale read otherwise applies
-		// exactly one appearance-toggle behind: e.g. toggling dark -> light
-		// resolves against webView's still-dark trait collection (shows the
-		// dark override color), and toggling back light -> dark then
-		// resolves against webView's now-stale-light collection (shows the
-		// light override color) -- always one step behind, never correct
-		// until a third toggle happens to land the read back in sync.
+		// Read isDark from self, not webView: the pooled PreloadedWebView is reused and
+		// reattached outside the normal lifecycle, so its traitCollection can lag one
+		// trait-change cycle behind. The registerForTraitChanges handler has already
+		// confirmed self's is fresh. A stale read applies exactly one toggle behind (dark
+		// to light shows the dark override, then back shows the light one) until a third
+		// toggle resyncs.
 		let isDark = Self.isDarkForColorResolution(selfTraitCollection: traitCollection, webViewTraitCollection: webView.traitCollection)
 		let colors = Self.resolvedArticleColors(isDark: isDark)
 		webView.backgroundColor = colors.background
 		webView.underPageBackgroundColor = colors.background
 		webView.scrollView.backgroundColor = colors.background
 
-		// BUG FIX: indicatorStyle previously went unset, so it stayed on
-		// UIScrollView's own default, which tracks the *system* trait
-		// (traitCollection.userInterfaceStyle) -- not the *theme's*
-		// resolved background above. A dark-background theme read in
-		// Light Mode (or a light-background theme read in Dark Mode, e.g.
-		// via a per-theme override) got a same-tone indicator that was
-		// effectively invisible against its own track. Derive the
-		// indicator color from the actual resolved background luminance
-		// instead, so it always contrasts with what's on screen
-		// regardless of the system trait.
+		// Derive indicatorStyle from the resolved background's luminance. Left at its
+		// default it tracks the system trait, so a dark theme in Light Mode (or a light
+		// theme in Dark Mode via a per-theme override) got an indicator invisible
+		// against its own track.
 		webView.scrollView.indicatorStyle = Self.isPerceptuallyDark(colors.background) ? .white : .black
 
 		updateScrollbarVisibility()
 
-		// Keep the notch cover / page counter in sync with the same resolved color and
-		// text color on every render, not just on the next bars-toggle -- otherwise they
-		// keep showing whatever was last set, stale, through an article/theme change.
+		// Keep the notch cover/page counter in sync on every render, not just the next bars toggle.
 		updateNotchAndPageCounterVisibility(resolvedBackground: colors.background, resolvedText: colors.text)
 	}
 
-	/// Same 0.299/0.587/0.114 relative-luminance weighting
-	/// BadgeColorTable.textColor(against:) already uses elsewhere in
-	/// this app, reused here rather than a third slightly-different
-	/// formula.
+	/// Same 0.299/0.587/0.114 luminance weighting as BadgeColorTable.textColor(against:).
 	private static func isPerceptuallyDark(_ color: UIColor) -> Bool {
 		var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
 		color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
@@ -2336,13 +1863,9 @@ private extension WebViewController {
 		return luminance <= 0.6
 	}
 
-	/// Applies AppDefaults.shared.articleScrollbarVisibility to the live
-	/// webview's scroll indicator. Called from
-	/// applyResolvedBackgroundColors() (covers a fresh load/dequeue) and
-	/// from showBars()/hideBars() (covers .whenNotFullScreen
-	/// re-evaluating live as fullscreen is entered/exited, without a
-	/// reload) so all three settings-screen options (Off/Only Outside
-	/// Full Screen/Always) take effect promptly.
+	/// Applies articleScrollbarVisibility to the live webview. Called from
+	/// applyResolvedBackgroundColors() (fresh load/dequeue) and showBars()/hideBars()
+	/// (so .whenNotFullScreen re-evaluates live).
 	func updateScrollbarVisibility() {
 		guard let webView else { return }
 		switch AppDefaults.shared.articleScrollbarVisibility {
@@ -2355,14 +1878,11 @@ private extension WebViewController {
 		}
 	}
 
-	/// Precedence: override background (if set) -> theme's own background ->
-	/// ArticleThemeColorExtractor's black/white fallback -- shared by
-	/// applyResolvedBackgroundColors() (once webView exists) and viewDidLoad's
-	/// own initial notch-cover resolution (before webView exists), so both
-	/// paths agree instead of one of them falling back to whatever's currently
-	/// on screen. Static/no webView dependency deliberately: the caller
-	/// supplies isDark from whichever trait collection is actually valid at
-	/// its own call site.
+	/// Precedence: override background, then theme background, then
+	/// ArticleThemeColorExtractor's black/white fallback. Shared by
+	/// applyResolvedBackgroundColors() and viewDidLoad's initial notch-cover resolution
+	/// (before webView exists) so both agree. Static; the caller supplies isDark from
+	/// whichever trait collection is valid at its call site.
 	private static func resolvedArticleColors(isDark: Bool) -> (background: UIColor, text: UIColor) {
 		return ArticleResolvedColors.current(isDark: isDark)
 	}
@@ -2473,29 +1993,18 @@ private extension WebViewController {
 		bottomShowBarsView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(showBars(_:))))
 	}
 
-	// §6/§7. notchCoverView spans the top safe-area inset (the notch/Dynamic
-	// Island's own footprint) -- pinned view.topAnchor to
-	// view.safeAreaLayoutGuide.topAnchor rather than a fixed height, so it
-	// tracks whatever that inset actually is on the current device without
-	// needing to recompute anything when it changes. pageCounterLabel sits
-	// on top of it, leading-aligned per the current design (a single label,
-	// not mirrored on both sides).
+	// notchCoverView spans the top safe-area inset (the notch/Dynamic Island footprint).
+	// pageCounterLabel sits on it, leading-aligned (one label, not mirrored).
 	func configureNotchCoverView() {
 		notchCoverView = UIView()
 		notchCoverView.isHidden = true
 		notchCoverView.translatesAutoresizingMaskIntoConstraints = false
 		view.addSubview(notchCoverView)
 
-		// Deliberately NOT view.safeAreaLayoutGuide.topAnchor: hideBars() ->
-		// updateTopSafeAreaForFullScreen() sets additionalSafeAreaInsets.top to
-		// exactly cancel view.safeAreaInsets.top (so webview content flows edge-
-		// to-edge under the physical notch during fullscreen reading). Pinning
-		// this view's bottom to that same safe-area guide meant its height
-		// collapsed to 0pt the instant fullscreen engaged -- permanently, not
-		// just for the duration of the hide-bars animation, since the guide
-		// itself had been zeroed. A fixed-height constraint, kept in sync with
-		// the raw (physical) inset via viewSafeAreaInsetsDidChange below, is
-		// immune to that self-inflicted zeroing.
+		// Deliberately not safeAreaLayoutGuide.topAnchor: hideBars() zeroes that guide via
+		// additionalSafeAreaInsets.top, which collapsed the cover to 0pt permanently once
+		// fullscreen engaged. A fixed height kept in sync with the raw inset in
+		// viewSafeAreaInsetsDidChange is immune.
 		notchCoverViewHeightConstraint = notchCoverView.heightAnchor.constraint(equalToConstant: view.safeAreaInsets.top)
 		NSLayoutConstraint.activate([
 			notchCoverView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -2504,11 +2013,8 @@ private extension WebViewController {
 			notchCoverView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
 		])
 
-		// notchCoverView overlaps topShowBarsView's tap zone whenever the notch is
-		// hidden, silently swallowing the tap meant to bring the bars back (it's an
-		// opaque UIView added after topShowBarsView, so it sits on top in z-order).
-		// Rather than making it pass-through, fold it into the same reveal gesture --
-		// the whole masked strip is a reasonable extension of the tap-to-reveal zone.
+		// The cover sits above topShowBarsView's tap zone and would swallow the tap that
+		// brings the bars back, so give it the same reveal gesture.
 		notchCoverView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(showBars(_:))))
 
 		pageCounterLabel = UILabel()
@@ -2520,17 +2026,14 @@ private extension WebViewController {
 
 		NSLayoutConstraint.activate([
 			pageCounterLabel.centerYAnchor.constraint(equalTo: notchCoverView.centerYAnchor),
-			// NOTE: was 20pt, reported as still clipped by the corner curvature on
-			// iPhone 17 in the simulator -- bumped to Self.pageCounterLeadingInset as a
-			// starting point (topShowBarsView's own 44pt tap-zone height, not a fresh
-			// guess), but this needs re-checking against an iPhone 17 simulator/device
-			// before treating it as correct. Do not further adjust this blind.
+			// NOTE: the old 20pt inset was still clipped by corner curvature on iPhone 17 in the
+			// simulator; pageCounterLeadingInset (44pt, topShowBarsView's tap-zone height) is a
+			// starting point. Re-check on an iPhone 17 simulator/device; don't adjust blind.
 			pageCounterLabel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: Self.pageCounterLeadingInset)
 		])
 
-		// Trailing-side counterpart to pageCounterLabel above -- same
-		// vertical placement, mirrored inset, sized to roughly match the
-		// label's cap-height rather than guessed independently.
+		// Trailing counterpart to pageCounterLabel: same vertical placement, mirrored
+		// inset, sized to roughly match the label's cap height.
 		screenTimePieIndicatorView = ScreenTimePieIndicatorView()
 		screenTimePieIndicatorView.tintColor = pageCounterLabel.textColor
 		screenTimePieIndicatorView.isHidden = true
@@ -2547,34 +2050,21 @@ private extension WebViewController {
 
 	private static let pageCounterLeadingInset: CGFloat = 44
 
-	/// Called from showBars()/hideBars() (no args -- reuses whatever color was last
-	/// resolved by renderPage()) and from renderPage() itself (explicit args, so the
-	/// notch cover/label track the theme's actual color on every render instead of
-	/// only refreshing on the next bars-toggle).
+	/// Called from showBars()/hideBars() (no args: reuses the last resolved color) and
+	/// from renderPage() (explicit args, so the cover/label track the theme on every render).
 	///
-	/// notchCoverView's visibility is gated on isFullScreenAvailable (device +
-	/// the general "Enable Full Screen Articles" setting) rather than the
-	/// momentary articleFullscreenEnabled flag that showBars()/hideBars() flip
-	/// on every tap-to-reveal -- the notch cover sits entirely above where a
-	/// revealed nav bar renders, so there's no visual conflict with keeping it
-	/// up while bars are momentarily peeked at, and tying it to the peek state
-	/// was what made it flicker in and out during ordinary reading/scrolling.
-	///
-	/// pageCounterLabel does NOT share that reasoning -- it reads as
-	/// fullscreen-reading chrome, not permanent chrome, so it's additionally
-	/// gated on articleFullscreenEnabled: hidden whenever the bars are
-	/// actually showing, even if fullscreen is available/enabled as a setting.
+	/// notchCoverView is gated on isFullScreenAvailable (device + "Enable Full Screen
+	/// Articles"), not the momentary articleFullscreenEnabled flag: the cover sits above a
+	/// revealed nav bar, so keeping it up while peeking causes no conflict, and tying it
+	/// to the peek state made it flicker. pageCounterLabel is fullscreen-reading chrome,
+	/// so it is additionally gated on articleFullscreenEnabled.
 	func updateNotchAndPageCounterVisibility(resolvedBackground: UIColor? = nil, resolvedText: UIColor? = nil) {
 		let pageCounterOn = AppDefaults.shared.pageCounterDisplayMode != .off
-		// The page counter implies notch-hiding on its own -- a visible
-		// counter over a still-visible notch would look broken -- without
-		// requiring hideNotchInFullScreen to also be switched on.
+		// A visible page counter implies hiding the notch, without needing hideNotchInFullScreen.
 		let shouldHideNotch = AppDefaults.shared.hideNotchInFullScreen || pageCounterOn
 
-		// Prefer the just-resolved theme color (renderPage's call); otherwise reuse
-		// webView.backgroundColor, which renderPage's §1a fix keeps theme-accurate
-		// between renders, rather than falling back to .systemBackground (the stale,
-		// often near-black-in-dark-mode default this used to fall back to).
+		// Prefer the just-resolved theme color; else reuse webView.backgroundColor (kept
+		// theme-accurate between renders) rather than the stale .systemBackground default.
 		if let resolvedBackground {
 			notchCoverView.backgroundColor = resolvedBackground
 		} else if let webViewBackground = webView?.backgroundColor {
@@ -2584,20 +2074,13 @@ private extension WebViewController {
 			pageCounterLabel.textColor = resolvedText
 		}
 		notchCoverView.isHidden = !(shouldHideNotch && isFullScreenAvailable)
-		// Unlike notchCoverView above, the page counter is meant to read as
-		// fullscreen-reading chrome, not permanent chrome -- gate it on the
-		// actual current bars-hidden state (articleFullscreenEnabled, flipped
-		// by showBars()/hideBars()) rather than just isFullScreenAvailable's
-		// device/setting eligibility, or it stayed visible even with the bars
-		// showing.
+		// Page counter is fullscreen-reading chrome: also gate on the bars actually being hidden.
 		pageCounterLabel.isHidden = !(pageCounterOn && isFullScreenAvailable && AppDefaults.shared.articleFullscreenEnabled)
 		updateScreenTimePieIndicatorView(resolvedText: resolvedText)
 	}
 
-	/// Shares pageCounterLabel's own visibility rule (same fullscreen-chrome
-	/// gating, computed just above) rather than a second copy of it, so the
-	/// two can't independently drift out of sync -- additionally hidden
-	/// whenever there's no active daily limit to show progress against.
+	/// Shares pageCounterLabel's fullscreen-chrome visibility rule so the two can't drift;
+	/// additionally hidden when there is no active daily limit to show progress against.
 	private func updateScreenTimePieIndicatorView(resolvedText: UIColor? = nil) {
 		if let resolvedText {
 			screenTimePieIndicatorView.tintColor = resolvedText
@@ -2610,10 +2093,7 @@ private extension WebViewController {
 		let limitSeconds = AppDefaults.shared.screenTimeDailyLimitMinutes(for: weekday) * 60
 		let usedSeconds = AppDefaults.shared.screenTimeMinutesUsedTodaySeconds
 		screenTimePieIndicatorView.fraction = limitSeconds > 0 ? CGFloat(usedSeconds) / CGFloat(limitSeconds) : 0
-		// Own display-mode toggle (independent of pageCounterDisplayMode),
-		// gated the same way pageCounterLabel is above -- same fullscreen-
-		// chrome visibility rule, just keyed off the indicator's own mode
-		// instead of the page counter's.
+		// Own display-mode toggle, gated like pageCounterLabel above.
 		let indicatorModeOn = AppDefaults.shared.screenTimeIndicatorDisplayMode != .off
 		screenTimePieIndicatorView.isHidden = !(indicatorModeOn && isFullScreenAvailable && AppDefaults.shared.articleFullscreenEnabled)
 	}
@@ -2627,24 +2107,17 @@ private extension WebViewController {
 		additionalSafeAreaInsets.bottom = -rawBottom
 	}
 
-	/// Top-side equivalent of updateBottomSafeAreaForFullScreen(), called
-	/// from hideBars() for the same reason: relying solely on the reactive
-	/// viewSafeAreaInsetsDidChange path left webView.safeAreaInsets.top
-	/// stale for a beat after entering fullscreen reading mode, which
-	/// textWasSelected(body:) reads synchronously to position
-	/// HighlightColorPopover's sourceRect. showBars() resets
-	/// additionalSafeAreaInsets.top = 0 synchronously the same way it
-	/// already did for .bottom, so the two insets stay symmetric across
-	/// both transitions.
+	/// Top-side counterpart of updateBottomSafeAreaForFullScreen(), called from hideBars().
+	/// Relying on the reactive viewSafeAreaInsetsDidChange path left webView.safeAreaInsets.top
+	/// stale for a beat, which textWasSelected(body:) reads to position the popover's
+	/// sourceRect. showBars() resets the top inset synchronously, as it does the bottom.
 	func updateTopSafeAreaForFullScreen() {
 		let rawTop = view.safeAreaInsets.top - additionalSafeAreaInsets.top
 		additionalSafeAreaInsets.top = -rawTop
 	}
 
-	/// Hide or show the toolbar scroll edge effect at the bottom of the web view.
-	///
-	/// Hidden when entering fullscreen so a residual effect doesn't obscure the
-	/// bottom of the article.
+	/// Hides or shows the toolbar scroll edge effect at the bottom of the web view;
+	/// hidden in fullscreen so a residual effect doesn't obscure the article.
 	///
 	/// <https://github.com/Ranchero-Software/NetNewsWire/issues/5298>
 	func setBottomScrollEdgeEffectHidden(_ hidden: Bool) {
@@ -2697,9 +2170,7 @@ private extension WebViewController {
 		guard let article = article, !article.status.read || article.isAvailableToMarkUnread else { return nil }
 
 		let title = article.status.read ? NSLocalizedString("Mark as Unread", comment: "Command") : NSLocalizedString("Mark as Read", comment: "Command")
-		// circleOpen/circleClosed match ArticleViewController's own toolbar
-		// convention (updateUI(): read -> circleOpen, unread -> circleClosed) --
-		// this was previously inverted here.
+		// Icons match ArticleViewController's toolbar convention (read: circleOpen).
 		let readImage = article.status.read ? Assets.Images.circleOpen : Assets.Images.circleClosed
 		let action = UIAction(title: title, image: readImage, attributes: .keepsMenuPresented) { [weak self] _ in
 			// Menu rebuild happens from statusesDidChange(_:) once the toggle's
@@ -2712,9 +2183,7 @@ private extension WebViewController {
 	func toggleStarredAction() -> UIAction {
 		let starred = article?.status.starred ?? false
 		let title = starred ? NSLocalizedString("Remove from Read Later", comment: "Command") : NSLocalizedString("Add to Read Later", comment: "Command")
-		// starClosed/starOpen match ArticleViewController's own toolbar
-		// convention (updateUI(): starred -> starClosed, not starred ->
-		// starOpen) -- this was previously inverted here.
+		// Icons match ArticleViewController's toolbar convention (starred: starClosed).
 		let starredImage = starred ? Assets.Images.starClosed : Assets.Images.starOpen
 		let action = UIAction(title: title, image: starredImage, attributes: .keepsMenuPresented) { [weak self] _ in
 			// Menu rebuild happens from statusesDidChange(_:) once the toggle's
@@ -2727,9 +2196,7 @@ private extension WebViewController {
 	func toggleLovedAction() -> UIAction {
 		let loved = article?.status.loved ?? false
 		let title = loved ? NSLocalizedString("Remove from Loved", comment: "Command") : NSLocalizedString("Add to Loved", comment: "Command")
-		// heartClosed/heartOpen match ArticleViewController's own toolbar
-		// convention (updateUI(): loved -> heartClosed, not loved ->
-		// heartOpen) -- this was previously inverted here.
+		// Icons match ArticleViewController's toolbar convention (loved: heartClosed).
 		let lovedImage = loved ? Assets.Images.heartClosed : Assets.Images.heartOpen
 		let action = UIAction(title: title, image: lovedImage, attributes: .keepsMenuPresented) { [weak self] _ in
 			// Menu rebuild happens from statusesDidChange(_:) once the toggle's
@@ -2747,22 +2214,16 @@ private extension WebViewController {
 		}
 	}
 
-	/// Task 8's explicit per-article "Check for updates" action --
-	/// available for any single-AO3-work article (not an anthology/
-	/// combined-series bookKey) with no unresolved pending-update diff,
-	/// regardless of read state or how "settled" the article currently
-	/// looks. Deliberately no bulk "check all" equivalent.
+	/// Explicit per-article "Check for updates" for a single AO3 work (not an anthology
+	/// or combined-series bookKey) with no unresolved pending update. Deliberately no
+	/// bulk equivalent.
 	///
-	/// For an Ambrosia-sourced article with `AmbrosiaAO3NetworkPreference.updatesEnabled`
-	/// off, this still returns an action -- disabled with
-	/// an explanatory label, not removed -- rather than nil, so the menu row
-	/// stays present and tells the person why it's inert instead of
-	/// silently vanishing.
+	/// For an Ambrosia article with `AmbrosiaAO3NetworkPreference.updatesEnabled` off,
+	/// the action is returned disabled with an explanatory label rather than nil, so the
+	/// row explains why it's inert instead of vanishing.
 	func checkForUpdatesAction() -> UIAction? {
-		// A pending update blocks re-checking (canCheckForUpdates is false
-		// for it), so without this branch the menu would show nothing for
-		// the very state the person most needs to act on. Offer the review
-		// alert instead.
+		// A pending update blocks re-checking, which would leave the menu empty for the
+		// state that most needs action; offer the review alert instead.
 		if let article, article.pendingUpdateContentHTML != nil, article.account != nil {
 			let title = NSLocalizedString("Review Pending Update", comment: "Command: a fetched AO3 update is waiting for the person to accept or keep")
 			return UIAction(title: title, image: Assets.Images.checkForUpdates) { [weak self] _ in
@@ -2781,14 +2242,10 @@ private extension WebViewController {
 		}
 	}
 
-	/// "Ignore This Work" and "Ignore Author" for an AO3 work. Empty for
-	/// anything that is not a single AO3 work (an anthology, a non-AO3
-	/// article). Ignoring hides future feed items only, so each action
-	/// confirms first; see `AO3IgnoreList` for why it is not retroactive.
-	///
-	/// An author is offered only when the stored author has an AO3 URL,
-	/// because rules match by exact URL and a name alone cannot be matched.
-	/// With several authors, each gets its own row named after them.
+	/// "Ignore This Work" and "Ignore Author" for an AO3 work; empty for anything else.
+	/// Ignoring hides future feed items only (see `AO3IgnoreList`), so each action
+	/// confirms. An author is offered only with an AO3 URL, since rules match by exact
+	/// URL. With several authors, each gets a row named after them.
 	func ignoreActions() -> [UIAction] {
 		guard let article, let workID = AO3FetchPolicy.workID(fromBookKey: article.bookKey) else {
 			return []
@@ -2843,27 +2300,15 @@ private extension WebViewController {
 		present(alert, animated: true)
 	}
 
-	/// Handles a tap on one of the `nectar-series:` links `AO3PrefaceRenderer`
-	/// builds into the preface's Series row and the "This work is part
-	/// of" footer (plan Phase 3a/3b) -- `first?ao3id=<id>`,
-	/// `previous?ao3id=<id>&workurl=<permalink>`, or
-	/// `next?ao3id=<id>&workurl=<permalink>`. `url.path` carries the
-	/// direction: for a non-hierarchical URI like
-	/// `nectar-series:previous?...` (no `//` authority), `URLComponents`
-	/// parses everything between the scheme colon and the query string
-	/// as `path`, not `host` -- there is no `nectar-series://previous`
-	/// form here.
+	/// Handles a tap on a `nectar-series:` link that `AO3PrefaceRenderer` builds into the
+	/// preface Series row and footer: `first?ao3id=<id>` or
+	/// `previous|next?ao3id=<id>&workurl=<permalink>`. For a non-hierarchical URI (no
+	/// `//`), `URLComponents` puts the direction in `path`, not `host`.
 	///
-	/// Replaces Task 10's `previousWorkAction`/`nextWorkAction`/
-	/// `firstWorkInSeriesAction` context-menu trio and the interim
-	/// single-work `handleNectarSeriesLink` shim that called
-	/// `AO3SeriesNavigator.fetchAdjacentWork`/`fetchFirstWorkInSeries` --
-	/// both deleted. This is the current series-navigation flow: bounded
-	/// two-page series-listing walk via `AO3SeriesNavigator.openSeriesWork`,
-	/// direct selection via `SceneCoordinator.selectArticleDirectly` (stays
-	/// in the reader the whole time, no detour through the timeline), and a
-	/// JS repaint of the tapped link's own text/disabled state via
-	/// `updateNectarSeriesLink` while the fetch is in flight.
+	/// Flow: bounded two-page series-listing walk via `AO3SeriesNavigator.openSeriesWork`,
+	/// direct selection via `SceneCoordinator.selectArticleDirectly` (stays in the
+	/// reader), and a JS repaint of the tapped link's text/disabled state
+	/// (`updateNectarSeriesLink`) while the fetch is in flight.
 	private func handleNectarSeriesLink(_ url: URL) {
 		guard let article, let account = article.account else { return }
 		guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
@@ -2905,14 +2350,10 @@ private extension WebViewController {
 			return
 		}
 
-		// targetIndex (Phase 4c): only meaningful for .previous/.next,
-		// derived from this article's own matching series entry's index
-		// +/- 1 -- used to compute which listing page the target falls
-		// on if openSeriesWork doesn't find it on page 1. Left nil for
-		// .first (unused there) and for a series entry that, for
-		// whatever reason, isn't present on this article (openSeriesWork
-		// then has no page-fetch fallback and reports
-		// .seriesListingMismatch instead of guessing a page).
+		// targetIndex only matters for .previous/.next: this article's series entry index
+		// +/- 1, used to pick the listing page if openSeriesWork doesn't find it on page 1.
+		// nil for .first, or if no entry matches (openSeriesWork then reports
+		// .seriesListingMismatch rather than guessing a page).
 		var targetIndex: Int?
 		if direction != .first, let matchingEntry = article.series?.first(where: { $0.ao3ID == ao3ID }) {
 			targetIndex = direction == .previous ? matchingEntry.index - 1 : matchingEntry.index + 1
@@ -2933,10 +2374,7 @@ private extension WebViewController {
 				account: account
 			)
 
-			// The person may have navigated to a different article while
-			// this was in flight -- state and on-page repaint both
-			// belong to whichever article originated the tap, which may
-			// no longer be the one showing now.
+			// The person may have navigated away; state and repaint belong to the originating article.
 			guard self.article?.articleID == article.articleID else { return }
 
 			switch result {
@@ -2954,12 +2392,8 @@ private extension WebViewController {
 		}
 	}
 
-	/// The label AO3PrefaceRenderer originally rendered for this
-	/// direction ("First"/"Previous"/"Next") -- what the link's text is
-	/// restored to once its fetch finishes, success or failure alike.
-	/// Failure is surfaced via `UIAccessibility.post` above, not by
-	/// changing this label, since `updateNectarSeriesLink`'s JS side
-	/// only swaps text/disabled state, not styling per-error-message.
+	/// The label AO3PrefaceRenderer rendered for this direction, restored when the
+	/// fetch ends. Failure is announced via `UIAccessibility.post`, not the label.
 	private func seriesNavLabel(for direction: AO3SeriesNavigator.Direction) -> String {
 		switch direction {
 		case .first: return NSLocalizedString("First", comment: "Inline series navigation link")
@@ -2968,14 +2402,10 @@ private extension WebViewController {
 		}
 	}
 
-	/// Repaints every on-page occurrence of `key`'s link (Phase 4e) --
-	/// `main_ios.js`'s `updateNectarSeriesLink` is `querySelectorAll`-shaped
-	/// since the same series' link can appear twice (preface row and
-	/// footer). `seriesKey` here must match the `data-nectar-series-key`
+	/// Repaints every on-page occurrence of `key`'s link (it can appear in both the
+	/// preface row and the footer). `seriesKey` must match the `data-nectar-series-key`
 	/// format `AO3PrefaceRenderer.seriesNavKey(ao3ID:direction:)` stamps
-	/// onto the rendered `<a>` (`"<ao3ID>|<direction>"`, lowercase
-	/// direction string) -- kept in sync by hand since one side is Swift
-	/// and the other is the renderer's own string building.
+	/// (`"<ao3ID>|<direction>"`, lowercase); kept in sync by hand.
 	private struct UpdateNectarSeriesLinkOptions: Encodable {
 		let seriesKey: String
 		let label: String
@@ -3017,23 +2447,12 @@ private extension WebViewController {
 		}
 	}
 
-	/// Routes an in-app link open through the AO3-authenticated browser
-	/// (see AO3AuthenticatedWebViewController) when the URL is an AO3
-	/// domain, or SFSafariViewController otherwise -- the common case is
-	/// unchanged. Every in-app "open this URL" path in this file should
-	/// call this rather than openURLInSafariViewController(_:) directly,
-	/// so AO3 links get the persistent-session browser regardless of
-	/// which path (link tap, share sheet, showActivityDialog) they came
-	/// through.
+	/// Routes an in-app link open to the AO3-authenticated browser for AO3 domains, or
+	/// SFSafariViewController otherwise. Every in-app "open this URL" path in this file
+	/// should call this rather than openURLInSafariViewController(_:) directly.
 	///
-	/// No AO3SessionStore.isSignedIn check here.
-	/// AO3AuthenticatedWebViewController's own
-	/// persistent WKWebsiteDataStore remembers a sign-in performed
-	/// directly inside it (WebKit's normal cookie persistence, nothing
-	/// this code needs to manage), so there's no "signed out" case that
-	/// needs to fall back to a different browser -- an AO3 link always
-	/// goes to the dedicated browser, whether or not a session exists
-	/// yet.
+	/// No AO3SessionStore.isSignedIn check: the browser's persistent WKWebsiteDataStore
+	/// remembers a sign-in made inside it, so there is no signed-out case to fall back from.
 	func openURLInAppBrowser(_ url: URL) {
 		if AO3Link.isAO3Host(url) {
 			let ao3ViewController = AO3AuthenticatedWebViewController(url: url)
@@ -3082,22 +2501,15 @@ internal struct FindInArticleState: Codable {
 
 extension WebViewController {
 
-	/// Isolates the "which trait collection is authoritative" decision behind the
-	/// BUG FIX note on applyResolvedBackgroundColors() above, as a small, dependency-free
-	/// function tests can call directly with two independently-constructed
-	/// UITraitCollections -- no live view hierarchy or window needed to reproduce the
-	/// self-vs-webView divergence that bug depended on. Deliberately ignores
-	/// webViewTraitCollection entirely; it's still a parameter so a test (or a future
-	/// reader of a call site) can see explicitly which value was considered and
-	/// rejected, rather than that context only existing in a comment. Lives in this
-	/// (internal-default) extension rather than the private extension above --
-	/// applyResolvedBackgroundColors() calls it -- because a `private extension`'s
-	/// members can't be individually marked more accessible than the extension
-	/// itself. See docs/article-color-pipeline.md.
-	/// `nonisolated` because it touches no actor-isolated state (just the two
-	/// passed-in UITraitCollections) -- without this it inherits WebViewController's
-	/// (a UIViewController subclass) implicit @MainActor isolation, which blocks
-	/// calling it from a plain synchronous test context.
+	/// Isolates the "which trait collection is authoritative" decision behind
+	/// applyResolvedBackgroundColors() as a dependency-free function, so tests can
+	/// reproduce the self-vs-webView divergence without a live view hierarchy. Ignores
+	/// webViewTraitCollection on purpose; it stays a parameter so call sites show which
+	/// value was considered and rejected. Lives in this internal extension, not the
+	/// private one, because members of a `private extension` can't be more accessible
+	/// than it. `nonisolated` because it touches no actor-isolated state; otherwise it
+	/// inherits @MainActor and can't be called from a synchronous test. See
+	/// article-color-pipeline.md.
 	nonisolated static func isDarkForColorResolution(selfTraitCollection: UITraitCollection, webViewTraitCollection: UITraitCollection) -> Bool {
 		return selfTraitCollection.userInterfaceStyle == .dark
 	}
@@ -3139,11 +2551,9 @@ struct TableOfContentsEntry: Codable, Hashable {
 	let id: String
 	let text: String
 	let tagName: String
-	/// True for Calibre's "Afterword" closer and a one-shot's repeated title
-	/// heading. Not used for book/chapter grouping (tagName does that job —
-	/// see TableOfContentsViewController.chaptersByBook); kept as a signal
-	/// for possible future UI treatment (e.g. visually de-emphasizing these
-	/// rows), currently unread elsewhere.
+	/// True for Calibre's "Afterword" closer and a one-shot's repeated title heading. Not
+	/// used for book/chapter grouping (tagName does that; see
+	/// TableOfContentsViewController.chaptersByBook); currently unread elsewhere.
 	let isTocHeading: Bool
 }
 
@@ -3154,19 +2564,15 @@ private struct TableOfContentsResponse: Codable {
 
 extension WebViewController {
 
-	/// Entries are addressed by `tocIndex` (position among all h1/h2.heading/
-	/// h2.toc-heading elements in document order), not `id` — anthology content
-	/// reuses the same id (e.g. "calibre_toc_3") across separate concatenated
-	/// books, so `id` alone can't distinguish "chapter 3 of book 1" from
-	/// "chapter 3 of book 2." See main_ios.js's tocNodes()/getTableOfContents/
-	/// scrollToHeading.
+	/// Entries are addressed by `tocIndex` (position among all h1/h2.heading/h2.toc-heading
+	/// elements in document order), not `id`: anthology content reuses ids (e.g.
+	/// "calibre_toc_3") across concatenated books. See main_ios.js's tocNodes()/
+	/// getTableOfContents/scrollToHeading.
 	///
-	/// `currentTocIndex` is the entry nearest the current scroll position
-	/// (the last heading scrolled past the viewport's top edge), computed
-	/// fresh in the same JS call rather than derived from `windowScrollY` —
-	/// see `getTableOfContents`'s own comment in main_ios.js. `nil` means
-	/// scrolled above the first heading (e.g. still in a preface), so
-	/// nothing should be highlighted.
+	/// `currentTocIndex` is the entry nearest the current scroll position (last heading
+	/// scrolled past the top edge), computed in the same JS call rather than from
+	/// `windowScrollY`. `nil` means above the first heading (e.g. in a preface), so
+	/// nothing is highlighted.
 	func fetchTableOfContents(completionHandler: @escaping ([TableOfContentsEntry], _ currentTocIndex: Int?) -> Void) {
 		webView?.evaluateJavaScript("getTableOfContents(\"e30=\")") { result, error in   // "e30=" == base64("{}")
 			if let error {
@@ -3195,13 +2601,9 @@ extension WebViewController {
 		webView?.evaluateJavaScript("scrollToHeading(\"\(encoded)\")")
 	}
 
-	/// Pops the most recent pre-jump position pushed by scrollToHeading/
-	/// scrollToAnnotation and scrolls back to it. No-op if nothing's been
-	/// pushed (e.g. no jump has happened yet this session) -- callers
-	/// wiring this to a toolbar/overflow item should hide or disable it
-	/// based on scrollJumpHistory.isEmpty, matching how ArticleViewController
-	/// already handles other session-live-state functions like .prevNext
-	/// (see its overflowActions(for:) doc comment).
+	/// Pops the most recent pre-jump position (pushed by scrollToHeading/scrollToAnnotation)
+	/// and scrolls back to it; no-op if none. Callers wiring this to a toolbar item should
+	/// hide or disable it based on scrollJumpHistory.isEmpty.
 	func scrollBack() {
 		guard let previousY = scrollJumpHistory.popLast() else { return }
 		let payload = ["y": previousY]
