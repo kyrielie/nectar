@@ -36,7 +36,7 @@
                     "version": "0.2.0",
                     "buildVersion": "7108.58",
                     "date": "2026-10-05T02:13:37Z",
-                    "localizedDescription": "Release 0.2.0",
+                    "localizedDescription": "**Full Changelog:** [v0.1.9...v0.2.0](https://github.com/kyrielie/nectar/compare/v0.1.9...v0.2.0)\r\n\r\n- Refactored modules\r\n- Fixed reading stats bug\r\n- Removed some themes, moved to themes gallery site\r\n- Updated ao3 settings menu",
                     "downloadURL": "https://github.com/kyrielie/nectar/releases/download/v0.2.0/Nectar-unsigned.ipa",
                     "size": 5308342,
                     "minOSVersion": "17.0",
