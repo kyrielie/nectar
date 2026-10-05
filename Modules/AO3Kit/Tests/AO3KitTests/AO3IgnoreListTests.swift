@@ -20,6 +20,8 @@ import Testing
 	init() {
 		AO3IgnoreList.ignoredWorkIDs = []
 		AO3IgnoreList.ignoredAuthorURLs = []
+		AO3IgnoreList.ignoredWorkLabels = [:]
+		AO3IgnoreList.ignoredAuthorLabels = [:]
 	}
 
 	// MARK: - Storage
@@ -39,6 +41,65 @@ import Testing
 
 		AO3IgnoreList.unignoreAuthor(url: url)
 		#expect(!AO3IgnoreList.ignoredAuthorURLs.contains(url))
+	}
+
+	// MARK: - Labels
+
+	@Test func workLabelRoundTrips() {
+		AO3IgnoreList.ignoreWork(id: "12345", label: "A Fine Title")
+		#expect(AO3IgnoreList.ignoredWorkIDs.contains("12345"))
+		#expect(AO3IgnoreList.ignoredWorkLabels["12345"] == "A Fine Title")
+		#expect(AO3IgnoreList.workDisplayName(id: "12345") == "A Fine Title")
+	}
+
+	@Test func authorLabelRoundTrips() {
+		let url = "https://archiveofourown.org/users/someone/pseuds/someone"
+		AO3IgnoreList.ignoreAuthor(url: url, label: "someone")
+		#expect(AO3IgnoreList.ignoredAuthorLabels[url] == "someone")
+		#expect(AO3IgnoreList.authorDisplayName(url: url) == "someone")
+	}
+
+	@Test func unignoreRemovesLabels() {
+		let url = "https://archiveofourown.org/users/someone/pseuds/someone"
+		AO3IgnoreList.ignoreWork(id: "12345", label: "A Fine Title")
+		AO3IgnoreList.ignoreAuthor(url: url, label: "someone")
+
+		AO3IgnoreList.unignoreWork(id: "12345")
+		AO3IgnoreList.unignoreAuthor(url: url)
+
+		#expect(AO3IgnoreList.ignoredWorkLabels["12345"] == nil)
+		#expect(AO3IgnoreList.ignoredAuthorLabels[url] == nil)
+		#expect(AO3IgnoreList.ignoredWorkIDs.isEmpty)
+		#expect(AO3IgnoreList.ignoredAuthorURLs.isEmpty)
+	}
+
+	@Test func legacyRulesWithoutLabelsDisplayIDAndURL() {
+		let url = "https://archiveofourown.org/users/someone/pseuds/someone"
+		// The pre-label setters are the only thing legacy rules ever used.
+		AO3IgnoreList.ignoredWorkIDs = ["12345"]
+		AO3IgnoreList.ignoredAuthorURLs = [url]
+
+		#expect(AO3IgnoreList.workDisplayName(id: "12345") == "12345")
+		#expect(AO3IgnoreList.authorDisplayName(url: url) == url)
+		#expect(AO3IgnoreList.shouldExclude(Self.makeItem(ao3WorkID: "12345")))
+	}
+
+	@Test func ignoringAgainWithoutLabelKeepsExistingLabel() {
+		AO3IgnoreList.ignoreWork(id: "12345", label: "A Fine Title")
+		AO3IgnoreList.ignoreWork(id: "12345")
+		#expect(AO3IgnoreList.ignoredWorkLabels["12345"] == "A Fine Title")
+	}
+
+	@Test func blankLabelIsNotStored() {
+		AO3IgnoreList.ignoreWork(id: "12345", label: "   ")
+		#expect(AO3IgnoreList.ignoredWorkLabels["12345"] == nil)
+		#expect(AO3IgnoreList.workDisplayName(id: "12345") == "12345")
+	}
+
+	@Test func labelsDoNotChangeMatching() {
+		AO3IgnoreList.ignoreWork(id: "12345", label: "A Fine Title")
+		#expect(AO3IgnoreList.shouldExclude(Self.makeItem(ao3WorkID: "12345")))
+		#expect(!AO3IgnoreList.shouldExclude(Self.makeItem(ao3WorkID: "A Fine Title")))
 	}
 
 	// MARK: - shouldExclude(_:) -- by work

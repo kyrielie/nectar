@@ -7,90 +7,6 @@
     " → " : {
 
     },
-    "Account no longer exists" : {
-      "comment" : "AO3 fetch failure: account removed mid-fetch"
-    },
-    "Adult content gate encountered despite view_adult=true (unexpected)" : {
-      "comment" : "AO3 fetch failure: adult content gate"
-    },
-    "AO3 is temporarily unavailable -- try again later" : {
-      "comment" : "AO3 fetch failure: AO3 served its service-unavailable page"
-    },
-    "AO3 says you don't have permission to view this work" : {
-      "comment" : "AO3 fetch failure: permission denied"
-    },
-    "Article no longer exists" : {
-      "comment" : "AO3 fetch failure: article removed mid-fetch"
-    },
-    "Combined AO3 series can't be refreshed individually -- showing imported content" : {
-      "comment" : "AO3 fetch failure: anthology has no single work page"
-    },
-    "Could not reach AO3 (HTTP %d)" : {
-      "comment" : "AO3 fetch failure: unexpected HTTP status"
-    },
-    "Flagged after a smaller-than-expected feed report" : {
-      "comment" : "Works Needing Attention: a feed reported far fewer words than the stored text"
-    },
-    "Full text unavailable: %@" : {
-      "comment" : "Inline notice in the reader when AO3 full text could not be loaded; the placeholder is the reason"
-    },
-    "Nectar is checking AO3 for this work now." : {
-      "comment" : "Works Needing Attention: retry started"
-    },
-    "No chapter content found (gated or removed work)" : {
-      "comment" : "AO3 fetch failure: page shape not recognized"
-    },
-    "Not found on AO3" : {
-      "comment" : "Works Needing Attention: AO3 confirmed the work is missing"
-    },
-    "Nothing Needs Attention" : {
-      "comment" : "Works Needing Attention: empty state title"
-    },
-    "Nothing was started. Nectar may have already checked this work in the last minute, or it isn't set to fetch updates from AO3. Try again shortly." : {
-      "comment" : "Works Needing Attention: retry did not start"
-    },
-    "Pending update" : {
-      "comment" : "Works Needing Attention: a changed version is waiting for review"
-    },
-    "Retry" : {
-      "comment" : "Works Needing Attention: retry alert title"
-    },
-    "Retry Now" : {
-      "comment" : "Works Needing Attention: check AO3 for this work again"
-    },
-    "Retry Now checks AO3 again right away. Clear Content removes a work's stored text but keeps its title, status and notes." : {
-      "comment" : "Works Needing Attention footer"
-    },
-    "Review Pending Update" : {
-      "comment" : "Command: a fetched AO3 update is waiting for the person to accept or keep"
-    },
-    "Review Update" : {
-      "comment" : "Works Needing Attention: open the work to review its pending update"
-    },
-    "Signed out of AO3 -- sign in again in Settings to read this work" : {
-      "comment" : "AO3 fetch failure: stored session rejected"
-    },
-    "This work is no longer available." : {
-      "comment" : "Works Needing Attention: account or article is gone"
-    },
-    "This work is only available to registered AO3 users" : {
-      "comment" : "AO3 fetch failure: work restricted to registered users"
-    },
-    "This work is part of an AO3 challenge and hasn't been revealed yet" : {
-      "comment" : "AO3 fetch failure: unrevealed challenge work"
-    },
-    "This work was not found on AO3. It may have been deleted or moved." : {
-      "comment" : "AO3 fetch failure: work not found"
-    },
-    "Works Needing Attention" : {
-      "comment" : "AO3 settings: works needing attention row title and screen title"
-    },
-    "Works with an update waiting for review, or that Nectar could not refresh from AO3, show up here." : {
-      "comment" : "Works Needing Attention: empty state description"
-    },
-    "Works with an update waiting for your review, and works Nectar could not refresh from AO3." : {
-      "comment" : "AO3 settings: works needing attention row footer"
-    },
     "“%@” has separate light and dark mode colors and follows your system appearance setting." : {
       "comment" : "Theme appearance footer, light+dark theme"
     },
@@ -190,9 +106,6 @@
     "A work's full word count counts toward every tag it carries, so this can add up to more than total words read." : {
 
     },
-    "About Tag & User Feeds" : {
-      "comment" : "AO3 RSS limitations info row title"
-    },
     "Accent" : {
       "comment" : "Accent-following badge color palette"
     },
@@ -271,9 +184,6 @@
     "AO3 Filters Not Applied" : {
       "comment" : "AO3 filters not applied alert title"
     },
-    "AO3 ignored this search's filters (URL too long)" : {
-      "comment" : "AO3 load more error"
-    },
     "AO3 Needs Verification" : {
       "comment" : "AO3 Cloudflare challenge prompt title"
     },
@@ -286,9 +196,6 @@
     "AO3 Pages" : {
       "comment" : "AO3 arbitrary-page-fetch inspector section header"
     },
-    "AO3 rate limit hit -- backing off before retrying" : {
-      "comment" : "AO3 load more error"
-    },
     "AO3 reports %d pages for this search." : {
       "comment" : "AO3 arbitrary-page-fetch: page out of range"
     },
@@ -300,9 +207,6 @@
     },
     "AO3 sign-in isn't included in backups — you'll need to sign in again." : {
       "comment" : "AO3 sign-in-again notice, restore summary"
-    },
-    "AO3's tag and user RSS feeds only cover canonical tags -- a feed for a synonym or an uncommonly-spelled tag will come back empty even if the tag itself has works. Feeds can't combine multiple tags the way AO3's own filtered search results can." : {
-      "comment" : "AO3 RSS limitations: canonical tags and combining"
     },
     "Apply Automatically on Open" : {
       "comment" : "Text replacement settings: master toggle label"
@@ -327,6 +231,9 @@
     },
     "Author’s website:\n%@" : {
       "comment" : "Authors website"
+    },
+    "Authors" : {
+      "comment" : "AO3 ignore list: authors section header"
     },
     "Automatic" : {
       "comment" : "Automatic"
@@ -357,9 +264,6 @@
     },
     "Blend" : {
       "comment" : "Blend toolbar style"
-    },
-    "Blocked by a Cloudflare challenge -- try again later" : {
-      "comment" : "AO3 load more error"
     },
     "Blocks reading for %@ every %@ of continuous reading." : {
       "localizations" : {
@@ -638,9 +542,6 @@
     "Downloading metadata" : {
       "comment" : "Downloading metadata"
     },
-    "Downloads a work's text as soon as it appears in your tag and user shelves, instead of waiting until you open it. Uses more AO3 requests, but protects against a work being deleted or locked before you get to it. Off by default. Doesn't apply to AO3 search results, which never fetch content automatically." : {
-      "comment" : "AO3 prefetch-on-arrival toggle footer"
-    },
     "Duplicate Theme" : {
       "comment" : "Duplicate Theme"
     },
@@ -779,6 +680,9 @@
     "First Unread" : {
       "comment" : "First Unread"
     },
+    "Flagged after a smaller-than-expected feed report" : {
+      "comment" : "Works Needing Attention: a feed reported far fewer words than the stored text"
+    },
     "Flourescent" : {
       "comment" : "Flourescent highlight palette"
     },
@@ -805,6 +709,9 @@
     },
     "Full Screen" : {
       "comment" : "Surface palette preview: full screen swatch caption"
+    },
+    "Full text unavailable: %@" : {
+      "comment" : "Inline notice in the reader when AO3 full text could not be loaded; the placeholder is the reason"
     },
     "Get Info" : {
       "comment" : "Get Info"
@@ -868,6 +775,27 @@
     },
     "If an AO3 search-results shelf reports a Cloudflare challenge, use this to prove to Cloudflare that Nectar is being used by a real person -- the same check AO3 shows in a regular browser sometimes. This isn't tied to your AO3 account and doesn't require being signed in; it usually needs re-doing periodically." : {
       "comment" : "AO3 Cloudflare challenge section footer"
+    },
+    "Ignore Author" : {
+      "comment" : "Command\nCommand: hide future feed items by this AO3 author"
+    },
+    "Ignore Author: %@" : {
+      "comment" : "Command: hide future feed items by this AO3 author; %@ is the author's name"
+    },
+    "Ignore This Author?" : {
+      "comment" : "Ignore author confirmation title"
+    },
+    "Ignore This Work" : {
+      "comment" : "Command: hide future feed items for this AO3 work"
+    },
+    "Ignore This Work?" : {
+      "comment" : "Ignore work confirmation title"
+    },
+    "Ignore Work" : {
+      "comment" : "Command"
+    },
+    "Ignored Works and Authors" : {
+      "comment" : "AO3 settings: ignore list row title"
     },
     "Import" : {
       "comment" : "Import AO3 links button"
@@ -1126,6 +1054,9 @@
     "Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) (MIT) and is the companion app for [Ambrosia](https://github.com/kyrielie/ambrosia) (MIT). Thanks also to the [Organization for Transformative Works](https://github.com/otwcode/otwarchive) (GPL-2.0-or-later), nianeyna's [ao3downloader](https://github.com/nianeyna/ao3downloader) (GPL-3.0), and ArmindoFlores's [ao3_api](https://github.com/ArmindoFlores/ao3_api) (MIT), for AO3 parsing reference. The Streaks and Monthly sections of Reading Stats are adapted from [Aidoku](https://github.com/Aidoku/Aidoku) (GPL-3.0). Several bundled article themes are inspired by community AO3 workskins, including work by [ZerafinaCSS](https://github.com/ZerafinaCSS/neos), the [Dracula Theme](https://github.com/dracula/archive-of-our-own) project, and [BlackBatCat](https://github.com/Wolfbatcat/ao3-rose-pine), among others. Full attribution for every theme and third-party code reference is in [`THIRD-PARTY-NOTICES.md`](https://github.com/kyrielie/nectar/blob/main/THIRD-PARTY-NOTICES.md) in the source repository. Broadsheet theme from [here](https://github.com/stuartbreckenridge/NNWThemesBroadsheet)." : {
 
     },
+    "Nectar is checking AO3 for this work now." : {
+      "comment" : "Works Needing Attention: retry started"
+    },
     "NetNewsWire 7 is dedicated to everyone working to save democracy in the United States and around the world." : {
       "comment" : "A dedication to those working to save democracy.",
       "isCommentAutoGenerated" : true
@@ -1135,6 +1066,12 @@
     },
     "Neutral" : {
       "comment" : "Neutral highlight palette"
+    },
+    "New feed items by this author will be hidden. Their works already in your library stay, and you can undo this in AO3 settings under Ignored Works and Authors." : {
+      "comment" : "Ignore author confirmation message"
+    },
+    "New feed items for this work will be hidden. It stays in your library, and you can undo this in AO3 settings under Ignored Works and Authors." : {
+      "comment" : "Ignore work confirmation message"
     },
     "New Folder" : {
       "comment" : "Command"
@@ -1181,6 +1118,9 @@
     "No Highlights" : {
       "comment" : "Annotations list empty state title"
     },
+    "No ignored works or authors." : {
+      "comment" : "AO3 ignore list: empty state"
+    },
     "No library connected yet." : {
       "comment" : "Empty state message"
     },
@@ -1196,6 +1136,9 @@
     "No Screen Time history yet." : {
 
     },
+    "Not found on AO3" : {
+      "comment" : "Works Needing Attention: AO3 confirmed the work is missing"
+    },
     "Not Now" : {
       "comment" : "Decline AO3 verification"
     },
@@ -1207,6 +1150,12 @@
     },
     "Note" : {
       "comment" : "Annotation editor: note field section header"
+    },
+    "Nothing Needs Attention" : {
+      "comment" : "Works Needing Attention: empty state title"
+    },
+    "Nothing was started. Nectar may have already checked this work in the last minute, or it isn't set to fetch updates from AO3. Try again shortly." : {
+      "comment" : "Works Needing Attention: retry did not start"
     },
     "Notifications" : {
       "comment" : "Notifications"
@@ -1232,9 +1181,6 @@
     },
     "Oldest First" : {
       "comment" : "Ascending sort direction — date"
-    },
-    "Only affects works added to your library from Ambrosia/Calibre. Off by default so Nectar makes no AO3 requests for a purely local archive unless you turn this on. When on, both chapter text and stats (kudos/comments/hits) stay in sync with the live AO3 version; a fetch that looks like it removed chapters or lost a large amount of text is held back for review instead of applied automatically. Works imported directly from an AO3 RSS feed always fetch live content -- there's no other way for them to get it." : {
-      "comment" : "Ambrosia AO3 network toggle footer"
     },
     "Only applies when sorted by Date" : {
       "comment" : "Group by Feed inapplicable reason"
@@ -1313,6 +1259,9 @@
     },
     "Pending" : {
       "comment" : "Pending"
+    },
+    "Pending update" : {
+      "comment" : "Works Needing Attention: a changed version is waiting for review"
     },
     "Percentage" : {
       "comment" : "Page counter percentage"
@@ -1393,7 +1342,7 @@
 
     },
     "Remove" : {
-      "comment" : "Remove\nRemove from Read Later"
+      "comment" : "Remove\nRemove button\nRemove from Read Later"
     },
     "Remove Account" : {
       "comment" : "Remove Account"
@@ -1455,11 +1404,26 @@
     "Restored %d account(s)." : {
       "comment" : "Restore summary — accounts restored"
     },
-    "Restricted to registered AO3 users" : {
-      "comment" : "AO3 load more error"
+    "Retry" : {
+      "comment" : "Works Needing Attention: retry alert title"
+    },
+    "Retry Now" : {
+      "comment" : "Works Needing Attention: check AO3 for this work again"
+    },
+    "Retry Now checks AO3 again right away. Clear Content removes a work's stored text but keeps its title, status and notes." : {
+      "comment" : "Works Needing Attention footer"
+    },
+    "Review Pending Update" : {
+      "comment" : "Command: a fetched AO3 update is waiting for the person to accept or keep"
+    },
+    "Review Update" : {
+      "comment" : "Works Needing Attention: open the work to review its pending update"
     },
     "Rosé Pine" : {
       "comment" : "Rosé Pine accent color"
+    },
+    "Rules apply to new feed items only. Works already in your library stay, and removing a rule does not bring back items that were skipped while it was active." : {
+      "comment" : "AO3 ignore list: footer explaining rules are not retroactive"
     },
     "Running" : {
       "comment" : "Running"
@@ -1590,9 +1554,6 @@
     "Signed In" : {
       "comment" : "AO3 signed-in status"
     },
-    "Signing in lets Nectar read works restricted to registered AO3 users. Nectar never sees your password, only the resulting session. Nectar can leave kudos on your behalf if you turn that on below -- it still can't subscribe, bookmark, or comment. Signing out also signs you out of Nectar's in-app AO3 browser." : {
-      "comment" : "AO3 account section footer"
-    },
     "Slate" : {
       "comment" : "Slate accent color\nSlate surface palette"
     },
@@ -1687,9 +1648,6 @@
     "Theme installed" : {
       "comment" : "Theme installed"
     },
-    "These are limits of AO3's existing RSS mechanism itself, not of Nectar." : {
-      "comment" : "AO3 RSS limitations section footer"
-    },
     "These rules apply only to %@ and take precedence over your Reader-Insert Names table above for any token they cover. Tokens not listed here still use the table above." : {
       "comment" : "Per-work override: scope-clarifying footer"
     },
@@ -1704,9 +1662,6 @@
     },
     "This permanently deletes all recorded reading history, per-work progress, and the all-time word count. This can't be undone." : {
 
-    },
-    "This shelf requires a signed-in AO3 account" : {
-      "comment" : "AO3 load more error"
     },
     "This shelf's account is unavailable" : {
       "comment" : "AO3 arbitrary-page-fetch: missing account"
@@ -1731,6 +1686,9 @@
     },
     "This Work" : {
       "comment" : "Annotations list navigation title: whole book, title unavailable\nAnnotations list tab: current book, every chapter"
+    },
+    "This work is no longer available." : {
+      "comment" : "Works Needing Attention: account or article is gone"
     },
     "Timeline Layout" : {
       "comment" : "Timeline Layout"
@@ -1855,12 +1813,6 @@
     "When off, no new reading activity is recorded. Existing history is kept." : {
 
     },
-    "When you love a work in Nectar, it also leaves a kudos on that work on AO3, using your signed-in AO3 account." : {
-      "comment" : "AO3 kudos-on-like footer, signed in"
-    },
-    "When you love a work in Nectar, it also leaves a kudos on that work on AO3. You're not signed in, so it's left as a guest kudos -- sign in above to leave it as yourself instead." : {
-      "comment" : "AO3 kudos-on-like footer, signed out"
-    },
     "Which Functions Appear" : {
       "comment" : "Toolbars screen: functions section header"
     },
@@ -1886,10 +1838,22 @@
       "comment" : "Article Search"
     },
     "Works" : {
-      "comment" : "Articles"
+      "comment" : "AO3 ignore list: works section header\nArticles"
     },
     "Works an author has archive-locked to registered users never appear in RSS at all, signed in or not -- RSS has no concept of an authenticated request. Nectar's AO3 sign-in above only helps once a locked work's link reaches Nectar some other way." : {
       "comment" : "AO3 RSS limitations: archive-locked works"
+    },
+    "Works and authors you have chosen to hide from new feed items." : {
+      "comment" : "AO3 settings: ignore list row footer"
+    },
+    "Works Needing Attention" : {
+      "comment" : "AO3 settings: works needing attention row title\nAO3 settings: works needing attention screen title"
+    },
+    "Works with an update waiting for review, or that Nectar could not refresh from AO3, show up here." : {
+      "comment" : "Works Needing Attention: empty state description"
+    },
+    "Works with an update waiting for your review, and works Nectar could not refresh from AO3." : {
+      "comment" : "AO3 settings: works needing attention row footer"
     },
     "Yellow" : {
       "comment" : "Highlight color"

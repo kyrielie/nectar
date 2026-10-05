@@ -821,6 +821,11 @@ extension WebViewController: UIContextMenuInteractionDelegate {
 			menus.append(UIMenu(title: "", options: .displayInline, children: [action]))
 		}
 
+		let ignoreMenuActions = ignoreActions()
+		if !ignoreMenuActions.isEmpty {
+			menus.append(UIMenu(title: "", options: .displayInline, children: ignoreMenuActions))
+		}
+
 		// Previous/Next/First Work in Series used to be here as
 		// context-menu actions (Task 10) -- superseded by the inline
 		// "First · Previous · Next" links AO3PrefaceRenderer now
@@ -2774,6 +2779,68 @@ private extension WebViewController {
 			guard let article = self?.article else { return }
 			AO3ChapterFetcher.shared.checkForUpdates(for: article)
 		}
+	}
+
+	/// "Ignore This Work" and "Ignore Author" for an AO3 work. Empty for
+	/// anything that is not a single AO3 work (an anthology, a non-AO3
+	/// article). Ignoring hides future feed items only, so each action
+	/// confirms first; see `AO3IgnoreList` for why it is not retroactive.
+	///
+	/// An author is offered only when the stored author has an AO3 URL,
+	/// because rules match by exact URL and a name alone cannot be matched.
+	/// With several authors, each gets its own row named after them.
+	func ignoreActions() -> [UIAction] {
+		guard let article, let workID = AO3FetchPolicy.workID(fromBookKey: article.bookKey) else {
+			return []
+		}
+
+		var actions = [UIAction]()
+		let workTitle = article.title
+		actions.append(UIAction(title: NSLocalizedString("Ignore This Work", comment: "Command: hide future feed items for this AO3 work"), image: UIImage(systemName: "eye.slash")) { [weak self] _ in
+			self?.confirmIgnoreWork(id: workID, title: workTitle)
+		})
+
+		let authorsWithURLs = (article.authors ?? [])
+			.compactMap { author -> (url: String, name: String?)? in
+				guard let urlString = author.url, let url = URL(string: urlString), AO3Link.isAO3Host(url) else {
+					return nil
+				}
+				return (urlString, author.name)
+			}
+			.sorted { ($0.name ?? $0.url) < ($1.name ?? $1.url) }
+
+		for author in authorsWithURLs {
+			let title: String
+			if authorsWithURLs.count > 1, let name = author.name, !name.isEmpty {
+				title = String(format: NSLocalizedString("Ignore Author: %@", comment: "Command: hide future feed items by this AO3 author; %@ is the author's name"), name)
+			} else {
+				title = NSLocalizedString("Ignore Author", comment: "Command: hide future feed items by this AO3 author")
+			}
+			actions.append(UIAction(title: title, image: UIImage(systemName: "person.crop.circle.badge.xmark")) { [weak self] _ in
+				self?.confirmIgnoreAuthor(url: author.url, name: author.name)
+			})
+		}
+		return actions
+	}
+
+	private func confirmIgnoreWork(id: String, title: String?) {
+		let message = NSLocalizedString("New feed items for this work will be hidden. It stays in your library, and you can undo this in AO3 settings under Ignored Works and Authors.", comment: "Ignore work confirmation message")
+		let alert = UIAlertController(title: NSLocalizedString("Ignore This Work?", comment: "Ignore work confirmation title"), message: message, preferredStyle: .alert)
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Ignore Work", comment: "Command"), style: .destructive) { _ in
+			AO3IgnoreList.ignoreWork(id: id, label: title)
+		})
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel button"), style: .cancel))
+		present(alert, animated: true)
+	}
+
+	private func confirmIgnoreAuthor(url: String, name: String?) {
+		let message = NSLocalizedString("New feed items by this author will be hidden. Their works already in your library stay, and you can undo this in AO3 settings under Ignored Works and Authors.", comment: "Ignore author confirmation message")
+		let alert = UIAlertController(title: NSLocalizedString("Ignore This Author?", comment: "Ignore author confirmation title"), message: message, preferredStyle: .alert)
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Ignore Author", comment: "Command"), style: .destructive) { _ in
+			AO3IgnoreList.ignoreAuthor(url: url, label: name)
+		})
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel button"), style: .cancel))
+		present(alert, animated: true)
 	}
 
 	/// Handles a tap on one of the `nectar-series:` links `AO3PrefaceRenderer`

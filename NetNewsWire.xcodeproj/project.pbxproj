@@ -118,6 +118,7 @@
 		52EF752E6D9F8D1036C0C39A /* AO3SearchResultsFetchCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2DF249B398D8ED1527BA9FE /* AO3SearchResultsFetchCoordinator.swift */; };
 		5359FE92B04870B0444E56BA /* ArticleRendererStripFakeParagraphIndentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BD2C21916AA07DB85053663 /* ArticleRendererStripFakeParagraphIndentsTests.swift */; };
 		5434B26FC005C3ABF52FE77D /* AnnotationsKit in Embed Frameworks */ = {isa = PBXBuildFile; productRef = AF4478058D2F2CB0CA3B1DC4 /* AnnotationsKit */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		54D0C28B9DB2568E2C3311B0 /* AO3IgnoreListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B95EB39DA894D001E2DBC5B /* AO3IgnoreListView.swift */; };
 		552B82F21BD112138E8EAA63 /* AO3Kit in Frameworks */ = {isa = PBXBuildFile; productRef = 5F4C0852D0E91F5C04D5CDB8 /* AO3Kit */; };
 		5623CC063ADFC775FA3A1B4E /* Articles in Frameworks */ = {isa = PBXBuildFile; productRef = D34FA5E60B8151B92073CAE0 /* Articles */; };
 		566CF32D39E1EF9D5FCF70F4 /* MainTimelineCellData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06EBDDA41D63CE3D2FF87785 /* MainTimelineCellData.swift */; };
@@ -425,6 +426,7 @@
 		18BE7D20FC2E7C29F28A0762 /* WebViewControllerAppearanceToggleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewControllerAppearanceToggleTests.swift; sourceTree = "<group>"; };
 		1A13AEFC9D91E846755FB351 /* OPMLExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OPMLExporter.swift; sourceTree = "<group>"; };
 		1A60F843E719676D26795458 /* HidingReadArticlesState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HidingReadArticlesState.swift; sourceTree = "<group>"; };
+		1B95EB39DA894D001E2DBC5B /* AO3IgnoreListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3IgnoreListView.swift; sourceTree = "<group>"; };
 		1C6886F8AED5C85B61CAA6E8 /* ArticleTheming */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ArticleTheming; path = Modules/ArticleTheming; sourceTree = SOURCE_ROOT; };
 		1DC9E81A26EF709D33F254C6 /* SettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewController.swift; sourceTree = "<group>"; };
 		1FA4BD9EA0D4C56F2106407A /* ArticleSorterCountTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleSorterCountTests.swift; sourceTree = "<group>"; };
@@ -1136,6 +1138,7 @@
 				F85C7DC635C150B413C205B0 /* AO3AccountSettingsRepresentables.swift */,
 				A4FD081876054F057E1DFF4F /* AO3AccountSettingsView.swift */,
 				D03FA655E91A7DA58F5D44E0 /* AO3ChallengeSolverViewController.swift */,
+				1B95EB39DA894D001E2DBC5B /* AO3IgnoreListView.swift */,
 				E6F8CE2122A7A758C4A2F187 /* AO3LoginViewController.swift */,
 				B2DF249B398D8ED1527BA9FE /* AO3SearchResultsFetchCoordinator.swift */,
 				8F808BD1BB3D3D09DAA7D140 /* AO3SettingsModel.swift */,
@@ -1687,6 +1690,7 @@
 				BE43C5ED1F77EEF08E709078 /* AO3AccountSettingsView.swift in Sources */,
 				051629DAC8490854B37312FB /* AO3AuthenticatedWebViewController.swift in Sources */,
 				09F915C31580999C48FF4096 /* AO3ChallengeSolverViewController.swift in Sources */,
+				54D0C28B9DB2568E2C3311B0 /* AO3IgnoreListView.swift in Sources */,
 				9B0C9B5A28FAA99197FF0CE2 /* AO3LinkListImportView.swift in Sources */,
 				3DA20BFB7C763BE1E5A29D1E /* AO3LoginViewController.swift in Sources */,
 				52EF752E6D9F8D1036C0C39A /* AO3SearchResultsFetchCoordinator.swift in Sources */,

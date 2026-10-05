@@ -92,6 +92,16 @@ and unreachable while Screen Time was off; both modifiers were removed
 since nothing about setting a limit or bedtime window actually depends on
 the feature being enabled.
 
+`screenTimeEnabled` is registered as `false`, so a fresh install has Screen
+Time off. `ScreenTimeTrackerTests` run inside the Nectar.app host and write
+to its real `UserDefaults`; they turn the feature on to drive the tracker,
+so each test ends with `cleanupState()`, which removes the Screen Time keys
+and lets the registered defaults apply again. Before that, the teardown
+re-ran the setup and left Screen Time on in the simulator's app container
+(inferred from reading the tests; not reproduced). A test that crashes
+before its `defer` runs can still leave state behind; uninstalling the app
+from the simulator clears it.
+
 The "Daily limits" section has its own "Enable daily limit" toggle
 (`AppDefaults.screenTimeDailyLimitEnabled`), independent of the per-weekday
 minutes so the limit can be turned off without losing the configured values,
