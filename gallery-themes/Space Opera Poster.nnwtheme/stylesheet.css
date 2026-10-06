@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Libre+Franklin:wght@400;700&family=Orbitron:wght@900&display=swap');
+/* Space Opera Poster -- original CSS design for Nectar, converted from the approved
+   mockup. Palette/vars live in :root (light) with a prefers-color-scheme: dark
+   override; markup maps onto real AO3 blocks (dl.tags preface, .summary.module,
+   .notes.module, h2.heading chapter headings, versal caps + chapter dividers via
+   main.js data attributes). */
+:root{--fh:'Archivo Black',sans-serif;--fb:'Libre Franklin',sans-serif;--bg:#f6f6f4;--ink:#0a0a0a;--a:#3b5b9a;--ln:#000}
+
+/* ---- structural base shared by every converted mockup theme ---- */
+:root{--font-main:var(--fh);--font-body:var(--fb);--font-code:'Courier New',Courier,monospace}
+html{background-color:var(--bg)}
+body{margin:0 auto;max-width:44em;background-color:var(--bg);color:var(--ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--ink)}
+a,.articleBody a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--a);text-decoration-thickness:2px;text-underline-offset:2px}
+.hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
+body > .systemMessage{color:var(--ink)}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
+.dv{display:block;margin:18px 0 8px}
+.articleBody blockquote{border-left:3px solid var(--a);margin-left:0;padding:.1em 1em}
+.articleBody pre,.articleBody code{font-family:var(--font-code)}
+.articleBody pre{overflow-x:auto}
+.articleBody table{border-collapse:collapse}
+.articleBody td,.articleBody th{border:1px solid var(--a);padding:.4em .6em}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+.t{padding:22px 20px 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+.t h1{margin:0;font-family:var(--fh);font-weight:400}
+.t h2.heading, .t h3.title{margin:0;font-family:var(--fh);font-weight:400}
+.t h3.heading{margin:0;font-family:var(--fh);font-weight:400}
+.t h1{font-size:calc(var(--u) * 30);line-height:1.05}
+.t h2.heading, .t h3.title{font-size:calc(var(--u) * 21);margin-bottom:8px}
+.t h3.heading{font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:16px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12);letter-spacing:.05em}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12)}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.summary.module blockquote.userstuff{margin:0}
+.notes.module, .end.notes.module{font-size:calc(var(--u) * 13);opacity:.8;border-left:2px solid var(--a);padding-left:10px;margin-top:12px}
+.dv{display:block;margin:18px 0 8px}
+p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;font-size:2.7em;line-height:.85;padding:.05em .1em 0 0;color:var(--a)}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+.t9{padding:10px;container-type:inline-size}
+.t9 .hd{margin:0 0 14px;padding:0}
+.t9 .hd::before{content:"";display:block;height:230px;border:2px solid #000;outline:1px solid var(--ink);outline-offset:3px;background:
+  radial-gradient(circle at 62% 42%,#fff 0 3px,rgba(190,210,255,.85) 7px,transparent 46px),
+  linear-gradient(#fff,#fff) 62% 0/3px 42% no-repeat,
+  linear-gradient(90deg,transparent,#fff 15%,#fff 85%,transparent) 0 42%/100% 3px no-repeat,
+  radial-gradient(ellipse 52% 90% at 50% 18%,#1d2748 0 62%,transparent 63%),
+  radial-gradient(#fff 1px,transparent 1.5px) 0 0/37px 41px,
+  radial-gradient(#fff .8px,transparent 1.3px) 15px 20px/53px 47px,
+  linear-gradient(#05060f,#11183a 60%,#2a2f45)}
+.t9 .hd::after{content:"Beyond the last light, a tide that keeps its own time...";position:absolute;top:16px;left:16px;right:16px;color:#fff;font:italic 12px var(--fb)}
+.t9 h1{margin-top:14px;font:italic 900 clamp(18px,8.5cqi,30px)/1 'Orbitron',var(--fh);text-transform:uppercase;letter-spacing:.03em;text-align:center;color:transparent;background:radial-gradient(#fff .7px,transparent 1.2px) 0 0/8px 8px,linear-gradient(#a9bbe0,#3a4f86);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(2px 0 0 var(--ln)) drop-shadow(-2px 0 0 var(--ln)) drop-shadow(0 2px 0 var(--ln)) drop-shadow(0 -2px 0 var(--ln)) drop-shadow(0 3px 0 var(--ln))}
+.t9 .by{text-align:center;color:var(--ink)}
+.t9 #bodyContainer dl.tags{display:block;text-align:center;font-variant:small-caps;letter-spacing:.08em;line-height:1.7}
+.t9 #bodyContainer dl.tags dt{display:inline;color:var(--a)}
+.t9 #bodyContainer dl.tags dd{display:inline;margin:0 10px 0 4px}
+.t9 .dv::before{content:"\2605 \2605 \2605";color:var(--a)}
+.t9 h2.heading, .t9 h3.title{text-transform:uppercase;letter-spacing:.06em;font-size:calc(var(--u) * 19)}
+.t9 .summary.module{border-top:4px solid var(--ink);border-bottom:1px solid var(--ink)}
+@media (prefers-color-scheme: dark) {
+	:root{--bg:#0b0b0d;--ink:#ececf1;--a:#8aa5dd;--ln:#ececf1}
+
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
+	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; --u: 1px; }
+	body { margin-top: 20px; margin-bottom: 64px; }
+}
