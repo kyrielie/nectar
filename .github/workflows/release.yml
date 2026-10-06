@@ -30,13 +30,27 @@ name: Release IPA and Publish Source
 #     date and notes are allowed to change on this trigger. Without that,
 #     editing a release's notes after the fact silently advances source.json's
 #     buildVersion past what AltStore/SideStore can actually find in the IPA.
+#
+# workflow_dispatch now also creates the tag when it does not exist yet (the
+# prepare-tag job): enter a new vX.Y.Z and optionally a source_ref to cut it
+# from. See docs/release-pipeline.md.
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to create/attach the IPA to (e.g. v0.1.1)"
+        description: "Release tag to create/attach the IPA to (e.g. v0.1.1). Created automatically if it does not exist."
         required: true
         type: string
+      source_ref:
+        description: "Branch, tag or SHA to cut a NEW tag from. Ignored when the tag already exists."
+        required: false
+        default: main
+        type: string
+      prerelease:
+        description: "Mark a newly created GitHub release as a pre-release"
+        required: false
+        default: false
+        type: boolean
   release:
     types: [edited]
 
@@ -44,8 +58,57 @@ permissions:
   contents: write
 
 jobs:
+  prepare-tag:
+    name: Resolve or create tag
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.tag.outputs.sha }}
+    steps:
+      # Without this job the tag had to exist before the workflow ran, because
+      # build-ipa-release checks out inputs.tag before anything creates it
+      # (gh release create only runs at the very end). Creating the tag here,
+      # first, removes the "create an empty release to mint a tag" workaround.
+      - name: Checkout (full history and tags)
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Resolve or create tag
+        id: tag
+        env:
+          TAG: ${{ inputs.tag }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # X.Y.Z only: the tag minus its "v" becomes MARKETING_VERSION
+          # (CFBundleShortVersionString) in build-ipa-release, so a suffix
+          # like -beta would end up in the shipped Info.plist. Relax this
+          # regex deliberately if pre-release version strings are wanted.
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '$TAG' must look like v1.2.3"
+            exit 1
+          fi
+
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            sha=$(git rev-parse "refs/tags/$TAG^{commit}")
+            echo "::notice::Tag $TAG already exists at $sha; reusing it (source_ref is ignored)."
+          else
+            sha=$(git rev-parse --verify "${SOURCE_REF}^{commit}" 2>/dev/null \
+              || git rev-parse --verify "origin/${SOURCE_REF}^{commit}")
+            git tag "$TAG" "$sha"
+            git push origin "refs/tags/$TAG"
+            echo "::notice::Created tag $TAG at $sha (from $SOURCE_REF)."
+          fi
+
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
   build-ipa-release:
     name: Build and Release Unsigned IPA
+    needs: prepare-tag
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-26
     outputs:
@@ -54,15 +117,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          # Explicit ref: workflow_dispatch's default checkout ref is
-          # whatever branch/tag was selected in the "Run workflow" dropdown,
-          # which is *not* guaranteed to be inputs.tag. Pin it explicitly so
-          # this job always archives the exact commit the tag points at --
-          # otherwise, if main has moved since the tag was cut (e.g. an
-          # xcconfig version bump), this job's CURRENT_PROJECT_VERSION could
-          # silently diverge from what publish-source computes below, which
-          # checks out inputs.tag explicitly.
-          ref: ${{ inputs.tag }}
+          # Pinned to the commit prepare-tag resolved (the tag's commit), not
+          # to the tag name and not to the "Run workflow" dropdown branch.
+          # That keeps this job's CURRENT_PROJECT_VERSION from silently
+          # diverging from what publish-source computes below, which checks
+          # out the same tag.
+          ref: ${{ needs.prepare-tag.outputs.sha }}
           submodules: recursive
 
       - name: Select Xcode 26.3
@@ -152,18 +212,30 @@ jobs:
       - name: Attach IPA to release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          PRERELEASE: ${{ inputs.prerelease }}
         run: |
           set -euo pipefail
 
-          tag="${{ inputs.tag }}"
+          tag="$TAG"
+          # A plain string, not an array: macOS's default bash 3.2 treats an
+          # empty array expansion as unbound under `set -u`.
+          prerelease_flag=""
+          if [ "$PRERELEASE" = "true" ]; then
+            prerelease_flag="--prerelease"
+          fi
 
           if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             gh release upload "$tag" "$IPA_PATH" --repo "${{ github.repository }}" --clobber
           else
+            # --verify-tag aborts instead of letting gh mint a tag at the
+            # default branch head; prepare-tag already created it.
             gh release create "$tag" "$IPA_PATH" \
               --repo "${{ github.repository }}" \
               --title "$tag" \
-              --generate-notes
+              --generate-notes \
+              --verify-tag \
+              $prerelease_flag
           fi
 
   publish-source:
@@ -351,6 +423,7 @@ jobs:
 
           python3 main/scripts/update_source.py \
             --template=main/appstore/source.template.json \
+            --screenshots-dir=main/appstore/screenshots \
             $existing_arg \
             --output=pages/source.json
 
@@ -365,6 +438,13 @@ jobs:
           cp main/appstore/icon.png pages/icon.png
           rm -rf pages/screenshots
           if [ -d main/appstore/screenshots ] && [ "$(ls -A main/appstore/screenshots 2>/dev/null)" ]; then
+            # Symlinks (for example into fastlane's output directory) would be
+            # copied as symlinks and dangle on gh-pages. Fail loudly instead.
+            if [ -n "$(find main/appstore/screenshots -type l)" ]; then
+              echo "::error::main/appstore/screenshots contains symlinks; commit real PNG copies (run: bundle exec fastlane appstore_screenshots)." >&2
+              find main/appstore/screenshots -type l >&2
+              exit 1
+            fi
             cp -R main/appstore/screenshots pages/screenshots
           fi
 
@@ -382,4 +462,17 @@ jobs:
           fi
           git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" 2>/dev/null || true
           git commit -m "Publish ${{ steps.release.outputs.tag_name }} to source.json"
-          git push origin HEAD:gh-pages
+          # gallery.yml also pushes to gh-pages (daily, plus on path changes),
+          # so a release can race it. Same rebase-and-retry loop as gallery.yml.
+          # Deliberately not a `concurrency:` group: with cancel-in-progress
+          # false GitHub still replaces a *pending* run with a newer one,
+          # which could silently drop a release publish.
+          for attempt in 1 2 3; do
+            if git push origin HEAD:gh-pages; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt); rebasing onto gh-pages"
+            git pull --rebase origin gh-pages
+          done
+          echo "::error::Could not push to gh-pages after 3 attempts"
+          exit 1

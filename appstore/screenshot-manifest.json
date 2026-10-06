@@ -1,0 +1,12 @@
+{
+    "device": "iPhone 17",
+    "language": "en-US",
+    "slots": [
+        { "directory": "01-light-default", "shot": "01MainFeed" },
+        { "directory": "02-dark-default", "shot": "02Timeline" },
+        { "directory": "05-dark-duskbloom", "shot": "03Article" },
+        { "directory": "03-light-sepia", "shot": "03Article" },
+        { "directory": "04-dark-biblioteca", "shot": "03Article" },
+        { "directory": "06-light-duskbloom", "shot": "03Article" }
+    ]
+}

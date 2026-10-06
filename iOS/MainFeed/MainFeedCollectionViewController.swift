@@ -102,6 +102,9 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
     }
 
 	func configureCurrentActivityButton() {
+		// Stable handle on the gear button for NectarUITests (the sidebar has no
+		// other accessibility identifiers; see docs/ui-test-demo-data.md).
+		toolbarItems?.first { $0.action == #selector(settings(_:)) }?.accessibilityIdentifier = "settingsButton"
 		if #available(iOS 26, *) {
 			// Toolbar button to open Current Activity. It lights up while activity is happening.
 			let settingsButtonIndex = 0

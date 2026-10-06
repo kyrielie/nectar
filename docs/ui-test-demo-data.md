@@ -123,8 +123,46 @@ The project is generated, so run `xcodegen generate` first (`brew install xcodeg
 checked-in `NetNewsWire.xcodeproj`.
 
 ```sh
-bundle exec fastlane screenshots
+bundle exec fastlane screenshots            # Main, Timeline, Article for all 6 variants
+bundle exec fastlane settings_screenshots   # Settings screens, light and dark only
+bundle exec fastlane appstore_screenshots   # copy the chosen shots into appstore/screenshots
 ```
+
+All three work from the repo root or from inside `fastlane/`: every path in the `Fastfile` is derived
+from `FastlaneCore::FastlaneFolder.path`, and the project is passed explicitly. Raw output goes to
+`build/screenshots/<variant>/en-US/` (gitignored). Running fastlane from the wrong directory used to
+leave a stray `screenshots/` at the repo root; `/screenshots/` is now ignored as well.
+
+Text size has two independent controls:
+
+- **Article text** is set by the article font size override, `ArticleThemeOverrides.fontSize` (the
+  Settings slider, range 12 to 32). `UITestDemoData.applyArticleFontSize()` sets it to **26** on every
+  seeded run, after `-UITestReadingProfile` is applied (that flag replaces the whole overrides value).
+  It is done in Swift, not as a fastlane argument, so `./test.sh screenshots` matches
+  `fastlane screenshots`. `-UITestArticleFontSize <n>` overrides it for experiments. The CSS it
+  produces is `font-size: <n>px !important` (`ArticleThemeOverrides.cssOverrideBlock`), so it wins over
+  the theme and over Dynamic Type.
+- **App chrome** follows Dynamic Type. Both capture lanes take `text_size:` (`XS`, `S`, `M`, `L`, `XL`,
+  `XXL`; default `L`, the system default) and pass
+  `-UIPreferredContentSizeCategoryName UICTContentSizeCategory<size>`, so runs do not depend on the
+  simulator's own setting. Stay below the accessibility categories; `MainTimelineCell` switches layout
+  there.
+
+`settings_screenshots` runs only `NectarUITests/testTakeSettingsScreenshots` (`only_testing`), and
+`screenshots` only `testTakeScreenshots`; without that every variant would run every test. The Settings
+test is best effort per screen (a missing row is logged and skipped) and asserts only that Settings
+opens. The gear button has the accessibility identifier `settingsButton` (set in
+`MainFeedCollectionViewController.configureCurrentActivityButton`); Settings rows are matched by label
+substring from `Settings.storyboard`. Reading Stats and Screen Time show their empty states, since no
+usage data is seeded.
+
+### App Store screenshots
+
+`appstore/screenshot-manifest.json` maps store slots (1..N) to `<variant directory>` + `<snapshot name>`
+for one device. `appstore_screenshots` checks every source exists, clears `appstore/screenshots`, and
+copies real files (never symlinks). `scripts/update_source.py --screenshots-dir` builds the published
+`screenshots` list from whatever is in that folder, so the template's hardcoded list is only a fallback.
+`release.yml` and the CI job `appstore-assets` both fail on symlinks.
 
 Each entry in the `variants` hash in `fastlane/Fastfile` is **one space-joined string** passed as
 `launch_arguments: [string]`. fastlane snapshot runs the whole UI test once per element of that array
