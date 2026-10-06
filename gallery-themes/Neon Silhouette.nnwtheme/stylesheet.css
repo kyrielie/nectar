@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@500;700&display=swap');
+/* Neon Silhouette -- original CSS design for Nectar, converted from the approved
+   mockup. Palette/vars live in :root (light) with a prefers-color-scheme: dark
+   override; markup maps onto real AO3 blocks (dl.tags preface, .summary.module,
+   .notes.module, h2.heading chapter headings, versal caps + chapter dividers via
+   main.js data attributes). */
+:root{--fh:'Rubik',sans-serif;--fb:'Rubik',sans-serif;--bg:#fff7ee;--ink:#151515;--a:#ff3d81}
+
+/* ---- structural base shared by every converted mockup theme ---- */
+:root{--font-main:var(--fh);--font-body:var(--fb);--font-code:'Courier New',Courier,monospace}
+html{background-color:var(--bg)}
+body{margin:0 auto;max-width:44em;background-color:var(--bg);color:var(--ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--ink)}
+a,.articleBody a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--a);text-decoration-thickness:2px;text-underline-offset:2px}
+.hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
+body > .systemMessage{color:var(--ink)}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
+.dv{display:block;margin:18px 0 8px}
+.articleBody blockquote{border-left:3px solid var(--a);margin-left:0;padding:.1em 1em}
+.articleBody pre,.articleBody code{font-family:var(--font-code)}
+.articleBody pre{overflow-x:auto}
+.articleBody table{border-collapse:collapse}
+.articleBody td,.articleBody th{border:1px solid var(--a);padding:.4em .6em}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+.t{padding:22px 20px 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+.t h1{margin:0;font-family:var(--fh);font-weight:400}
+.t h2.heading, .t h3.title{margin:0;font-family:var(--fh);font-weight:400}
+.t h3.heading{margin:0;font-family:var(--fh);font-weight:400}
+.t h1{font-size:calc(var(--u) * 30);line-height:1.05}
+.t h2.heading, .t h3.title{font-size:calc(var(--u) * 21);margin-bottom:8px}
+.t h3.heading{font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:16px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12);letter-spacing:.05em}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12)}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.summary.module blockquote.userstuff{margin:0}
+.notes.module, .end.notes.module{font-size:calc(var(--u) * 13);opacity:.8;border-left:2px solid var(--a);padding-left:10px;margin-top:12px}
+.dv{display:block;margin:18px 0 8px}
+p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;font-size:2.7em;line-height:.85;padding:.05em .1em 0 0;color:var(--a)}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+.t33 .hd{margin:-22px calc(var(--gx) * -1) 14px;padding:24px 20px 70px;background:var(--a);color:#151515}
+.t33 .hd::after{content:"";position:absolute;left:0;right:0;bottom:0;height:46px;background:#151515;clip-path:polygon(0 100%,0 55%,8% 55%,8% 20%,18% 20%,18% 60%,30% 60%,30% 0,44% 0,44% 45%,56% 45%,56% 30%,70% 30%,70% 65%,84% 65%,84% 10%,94% 10%,94% 50%,100% 50%,100% 100%)}
+.t33 h1{font-weight:700;font-size:calc(var(--u) * 38)}
+.t33 #bodyContainer dl.tags{counter-reset:c;gap:0 12px}
+.t33 #bodyContainer dl.tags dt{counter-increment:c}
+.t33 #bodyContainer dl.tags dt::before{content:counter(c,decimal-leading-zero) "  ";color:var(--a)}
+.t33 #bodyContainer dl.tags dt{border-bottom:1px solid #8886;padding:3px 0}
+.t33 #bodyContainer dl.tags dd{border-bottom:1px solid #8886;padding:3px 0}
+.t33 #bodyContainer dl.tags dd{text-align:right}
+.t33 .dv{width:50px;height:14px;background:var(--ink);clip-path:polygon(0 100%,0 40%,15% 40%,15% 0,35% 0,35% 60%,55% 60%,55% 20%,75% 20%,75% 70%,100% 70%,100% 100%)}
+.t33 h2.heading, .t33 h3.title{font-weight:700}
+.t33 .summary.module{border-left:6px solid var(--a)}
+@media (prefers-color-scheme: dark) {
+	:root{--bg:#121212;--ink:#f6f1ea}
+
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
+	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; --u: 1px; }
+	body { margin-top: 20px; margin-bottom: 64px; }
+}

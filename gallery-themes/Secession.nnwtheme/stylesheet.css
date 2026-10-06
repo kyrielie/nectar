@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Federo&family=Lora&display=swap');
+/* Secession -- original CSS design for Nectar, converted from the approved
+   mockup. Palette/vars live in :root (light) with a prefers-color-scheme: dark
+   override; markup maps onto real AO3 blocks (dl.tags preface, .summary.module,
+   .notes.module, h2.heading chapter headings, versal caps + chapter dividers via
+   main.js data attributes). */
+:root{--fh:'Federo',serif;--fb:'Lora',serif;--bg:#f1ead6;--ink:#1c1b22;--a:#b8913a}
+
+/* ---- structural base shared by every converted mockup theme ---- */
+:root{--font-main:var(--fh);--font-body:var(--fb);--font-code:'Courier New',Courier,monospace}
+html{background-color:var(--bg)}
+body{margin:0 auto;max-width:44em;background-color:var(--bg);color:var(--ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--ink)}
+a,.articleBody a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--a);text-decoration-thickness:2px;text-underline-offset:2px}
+.hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
+body > .systemMessage{color:var(--ink)}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
+.dv{display:block;margin:18px 0 8px}
+.articleBody blockquote{border-left:3px solid var(--a);margin-left:0;padding:.1em 1em}
+.articleBody pre,.articleBody code{font-family:var(--font-code)}
+.articleBody pre{overflow-x:auto}
+.articleBody table{border-collapse:collapse}
+.articleBody td,.articleBody th{border:1px solid var(--a);padding:.4em .6em}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+.t{padding:22px 20px 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+.t h1{margin:0;font-family:var(--fh);font-weight:400}
+.t h2.heading, .t h3.title{margin:0;font-family:var(--fh);font-weight:400}
+.t h3.heading{margin:0;font-family:var(--fh);font-weight:400}
+.t h1{font-size:calc(var(--u) * 30);line-height:1.05}
+.t h2.heading, .t h3.title{font-size:calc(var(--u) * 21);margin-bottom:8px}
+.t h3.heading{font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:16px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12);letter-spacing:.05em}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12)}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.summary.module blockquote.userstuff{margin:0}
+.notes.module, .end.notes.module{font-size:calc(var(--u) * 13);opacity:.8;border-left:2px solid var(--a);padding-left:10px;margin-top:12px}
+.dv{display:block;margin:18px 0 8px}
+p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;font-size:2.7em;line-height:.85;padding:.05em .1em 0 0;color:var(--a)}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+.t1 .hd{border:3px double var(--a);padding:14px;text-align:center}
+.t1 .hd::before{content:"";display:block;height:8px;margin-bottom:12px;background:repeating-linear-gradient(90deg,var(--a) 0 8px,transparent 8px 16px)}
+.t1 h1{font-size:calc(var(--u) * 24);letter-spacing:.16em}
+.t1 #bodyContainer dl.tags{border-block:2px solid var(--a);padding:8px 2px}
+.t1 #bodyContainer dl.tags dt::before{content:"\25A0 ";color:var(--a)}
+.t1 .dv::before{content:"\25A0  \25A0  \25A0";color:var(--a);font-size:calc(var(--u) * 10);letter-spacing:.3em}
+.t1 h2.heading, .t1 h3.title{letter-spacing:.1em;font-size:calc(var(--u) * 18)}
+.t1 p:has(> .versalCap:first-child)::first-letter{border:1px solid var(--a);padding:.02em .1em;margin-right:.12em}
+.t1 .summary.module{border:1px solid var(--a);box-shadow:inset 0 0 0 3px var(--bg),inset 0 0 0 4px var(--a);padding:14px}
+@media (prefers-color-scheme: dark) {
+	:root{--bg:#1d1722;--ink:#eee3c8;--a:#d4ae55}
+
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
+	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; --u: 1px; }
+	body { margin-top: 20px; margin-bottom: 64px; }
+}
