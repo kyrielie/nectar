@@ -2,6 +2,7 @@ Payload/
 examples/
 plans/
 fastlane/screenshots/
+/screenshots/
 testresults-out/
 
 # AI tool output / scratch dumps

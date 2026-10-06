@@ -46,7 +46,8 @@ task**, not this whole index cover-to-cover.
 - **Favicon / page metadata extraction** → `metadata-extraction.md`
 - **"What differs from upstream NetNewsWire"** → `upstream-drift.md`
 - **A recurring Auto Layout / UIKit console warning** (before re-investigating one from scratch) → `console-warnings.md`
-- **`fastlane snapshot` screenshots, offline UI-test demo data, `-UITestSeedDemoData`** → `ui-test-demo-data.md`
+- **`fastlane snapshot` screenshots, offline UI-test demo data, `-UITestSeedDemoData`, `appstore/screenshots`** → `ui-test-demo-data.md`
+- **Cutting a release: `release.yml`, tag creation, `source.json`, `scripts/update_source.py`, `ci.yml`'s App Store assets check** → `release-pipeline.md`
 - **An open question that used to have temporary debug logging attached to it** → `investigate-later.md`
 
 If nothing above fits, grep the codebase before assuming it's
@@ -122,7 +123,8 @@ it's trusted by default. Specifically:
 | `HTMLMetadata`/favicon extraction | `metadata-extraction.md` |
 | `AnnotationsTable`, `Annotation`, `AnnotationsKit`, `annotations.js`, the `textWasSelected`/`annotationWasTapped` message-handler cases, `AnnotationCSVExporter`, the `annotations` table in `ArticleSQLiteExportTable` | `annotations.md` |
 | Anything you deliberately did differently from upstream NetNewsWire behavior | `upstream-drift.md` |
-| `Platform.isUITestingWithSeedDemoData`, `TestingURLProtocol` wiring in `DownloadSession`/`Downloader`/`URLSession+Webservice`, `iOS/UITestDemoData/`, `demo-feeds/`, `Tests/NetNewsWire-iOSUITests/NectarUITests.swift`, `fastlane/Fastfile`'s `screenshots` lane | `ui-test-demo-data.md` |
+| `Platform.isUITestingWithSeedDemoData`, `TestingURLProtocol` wiring in `DownloadSession`/`Downloader`/`URLSession+Webservice`, `iOS/UITestDemoData/`, `demo-feeds/`, `Tests/NetNewsWire-iOSUITests/NectarUITests.swift`, `fastlane/Fastfile` (all lanes), `appstore/screenshot-manifest.json` | `ui-test-demo-data.md` |
+| `.github/workflows/release.yml`, `scripts/update_source.py`, `appstore/source.template.json`, the `appstore-assets` job in `.github/workflows/ci.yml` | `release-pipeline.md` |
 
 If a change doesn't fit any row above — new system, new cross-cutting
 concern, or something genuinely new — **add a new doc** rather than

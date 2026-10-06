@@ -11,7 +11,9 @@
 //  which seeds deterministic offline demo data (-UITestSeedDemoData, see
 //  iOS/UITestDemoData/UITestDemoData.swift and docs/ui-test-demo-data.md)
 //  and walks Main -> Timeline -> Article, capturing a screenshot at each
-//  step.
+//  step. testTakeSettingsScreenshots is a separate test (run by the
+//  `settings_screenshots` lane via only_testing) that walks the Settings
+//  screens. Row titles below come from iOS/Settings/Settings.storyboard.
 //
 
 import XCTest
@@ -117,7 +119,92 @@ final class NectarUITests: XCTestCase {
 		snapshot("03Article")
 	}
 
+	/// Settings screens. Best effort per screen: a row that cannot be found is
+	/// logged and skipped rather than failing the run, so one renamed row does not
+	/// lose every other capture. Only getting into Settings is asserted.
+	/// (substring of the row title, snapshot name). Order is top to bottom of the
+	/// Settings list.
+	private static let settingsScreens: [(row: String, name: String)] = [
+		("Color Palette", "03ColorPalette"),
+		("Timeline Layout", "04TimelineLayout"),
+		("Reading Gestures", "05ReadingGesturesAndLayout"),
+		("Toolbars", "06Toolbars"),
+		("Highlights", "07HighlightsAndNotes"),
+		("Text Replacement", "08TextReplacement"),
+		("Screen Time", "09ScreenTime"),
+		("Reading Stats", "10ReadingStats"),
+		("Archive of Our Own", "11AO3Account")
+	]
+
+	func testTakeSettingsScreenshots() throws {
+		let app = XCUIApplication()
+		_ = app.wait(for: .runningForeground, timeout: 10)
+		XCTAssertTrue(waitForCell(labeledSubstring: Self.timelineFeedName, in: app, timeout: 20),
+					  "Seeded feed \"\(Self.timelineFeedName)\" never appeared in the sidebar.")
+
+		// "settingsButton" is set in MainFeedCollectionViewController; the
+		// title fallback covers the storyboard's "Settings" bar button.
+		let byIdentifier = app.buttons["settingsButton"]
+		let byTitle = app.toolbars.buttons["Settings"]
+		let settingsButton = byIdentifier.waitForExistence(timeout: 10) ? byIdentifier : byTitle
+		XCTAssertTrue(settingsButton.waitForExistence(timeout: 5), "Settings button not found.")
+		settingsButton.tap()
+
+		XCTAssertTrue(waitForCell(labeledSubstring: "Color Palette", in: app, timeout: 10),
+					  "Settings list never appeared.")
+		snapshot("01SettingsTop")
+
+		app.swipeUp()
+		snapshot("02SettingsMore")
+
+		for screen in Self.settingsScreens {
+			guard revealRow(labeledSubstring: screen.row, in: app) else {
+				log("settings row \"\(screen.row)\" not found; skipping \(screen.name)")
+				continue
+			}
+			cell(labeledSubstring: screen.row, in: app).tap()
+			settle()
+			snapshot(screen.name)
+			popToSettingsList(in: app)
+		}
+	}
+
 	// MARK: - Helpers
+
+	private func settle() {
+		Thread.sleep(forTimeInterval: 0.8)
+	}
+
+	/// Scrolls the Settings table until the row is on screen: first as-is, then
+	/// down the list, then back up (popping a pushed screen keeps the scroll
+	/// position, so the next row may be above or below).
+	private func revealRow(labeledSubstring substring: String, in app: XCUIApplication) -> Bool {
+		let row = cell(labeledSubstring: substring, in: app)
+		if row.exists && row.isHittable { return true }
+		let table = app.tables.firstMatch
+		for _ in 0..<10 {
+			table.swipeUp()
+			if row.exists && row.isHittable { return true }
+		}
+		for _ in 0..<20 {
+			table.swipeDown()
+			if row.exists && row.isHittable { return true }
+		}
+		return false
+	}
+
+	/// Settings is a navigation stack; the leading navigation-bar button on a
+	/// pushed screen is Back. Positional, like navigateBackToSidebar, because
+	/// the Settings screens have no accessibility identifiers.
+	private func popToSettingsList(in app: XCUIApplication) {
+		let back = app.navigationBars.buttons.element(boundBy: 0)
+		if back.exists && back.isHittable {
+			back.tap()
+		} else {
+			log("no hittable back button after settings screen")
+		}
+		settle()
+	}
 
 	/// Sidebar and timeline rows are single accessibility elements: the cell is an
 	/// accessibility element and its child labels are not (see

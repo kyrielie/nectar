@@ -6,6 +6,12 @@ Reads:
   --template   path to appstore/source.template.json (static, hand-edited metadata)
   --existing   path to the current gh-pages source.json, if any (pass "" if none yet)
   --output     path to write the merged source.json
+  --screenshots-dir  optional path to appstore/screenshots. When it contains
+               image files, the app's "screenshots" list is generated from
+               them (natural filename order, 2.png before 10.png) instead of
+               the hardcoded list in the template, so adding or removing a
+               committed screenshot needs no template edit. URLs are rooted at
+               the template iconURL's directory (the gh-pages site root).
 
 Version fields come from environment variables, set by the workflow:
   VERSION, BUILD_VERSION, RELEASE_DATE, RELEASE_NOTES,
@@ -29,7 +35,27 @@ freshly computed values, since there is nothing yet to preserve.
 """
 import json
 import os
+import re
 import sys
+
+IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg")
+
+
+def natural_key(name):
+    return [int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", name)]
+
+
+def screenshot_urls(directory, base_url):
+    """Image URLs for the files in `directory`, or None if there are none."""
+    if not directory or not os.path.isdir(directory):
+        return None
+    names = sorted(
+        (n for n in os.listdir(directory) if n.lower().endswith(IMAGE_EXTENSIONS)),
+        key=natural_key,
+    )
+    if not names:
+        return None
+    return [f"{base_url}/screenshots/{n}" for n in names]
 
 
 def load_json(path):
@@ -46,6 +72,7 @@ def main():
     template_path = args.get("--template")
     existing_path = args.get("--existing")
     output_path = args.get("--output")
+    screenshots_dir = args.get("--screenshots-dir")
 
     if not template_path or not output_path:
         print("usage: update_source.py --template=PATH --existing=PATH_OR_EMPTY --output=PATH", file=sys.stderr)
@@ -138,6 +165,13 @@ def main():
 
     template_app = template["apps"][0]
     bundle_id = template_app["bundleIdentifier"]
+
+    # Generate the screenshots list from the committed files when available.
+    icon_url = template_app.get("iconURL", "")
+    if "/" in icon_url:
+        generated = screenshot_urls(screenshots_dir, icon_url.rsplit("/", 1)[0])
+        if generated:
+            template_app["screenshots"] = generated
 
     existing_app = None
     for app in merged["apps"]:

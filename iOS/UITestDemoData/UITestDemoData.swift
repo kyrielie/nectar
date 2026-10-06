@@ -85,6 +85,7 @@ enum UITestDemoData {
 		AmbrosiaTransferFormatPreference.current = .json
 
 		applyReadingProfileIfRequested()
+		applyArticleFontSize()
 		registerCannedResponses()
 
 		guard let opmlURL = Bundle.main.url(forResource: "DemoFeeds", withExtension: "opml") else {
@@ -119,6 +120,28 @@ enum UITestDemoData {
 			return
 		}
 		AppDefaults.shared.articleThemeOverrides = ArticleThemeOverrides(serifFontFamilyName: "Iowan Old Style", lineHeight: 1.2)
+	}
+
+	/// Article font size override (Settings, the same `ArticleThemeOverrides.fontSize`
+	/// the slider edits) used for every seeded run, so Article screenshots read
+	/// larger than the 17 pt Dynamic Type default. Applied after
+	/// applyReadingProfileIfRequested() because that replaces the whole
+	/// overrides value, and set in Swift rather than only in fastlane so a bare
+	/// `./test.sh screenshots` matches `fastlane screenshots`. `-UITestArticleFontSize <n>`
+	/// overrides it for experiments; the value is clamped to the slider's range.
+	private static let defaultArticleFontSize: Double = 26
+
+	private static func applyArticleFontSize() {
+		var size = defaultArticleFontSize
+		let arguments = ProcessInfo.processInfo.arguments
+		if let flagIndex = arguments.firstIndex(of: "-UITestArticleFontSize"),
+		   arguments.indices.contains(flagIndex + 1),
+		   let requested = Double(arguments[flagIndex + 1]) {
+			size = requested
+		}
+		var overrides = AppDefaults.shared.articleThemeOverrides
+		overrides.fontSize = min(max(size, ArticleThemeOverrides.fontSizeRange.lowerBound), ArticleThemeOverrides.fontSizeRange.upperBound)
+		AppDefaults.shared.articleThemeOverrides = overrides
 	}
 
 	private static func registerCannedResponses() {

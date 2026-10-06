@@ -13,38 +13,121 @@
 # Uncomment the line if you want fastlane to automatically update itself
 # update_fastlane
 
+require "fileutils"
+require "json"
+
 default_platform(:ios)
 
 platform :ios do
-  desc "Generate new localized screenshots"
-  lane :screenshots do
-    # Each variant is ONE space-joined string. fastlane's snapshot treats every
-    # element of the `launch_arguments` array as a separate configuration and
-    # runs the whole UI test once per element, so passing the flags as separate
-    # array elements would run the test once per flag with a single flag each
-    # (snapshot/lib/snapshot/simulator_launchers/launcher_configuration.rb).
-    # SnapshotHelper splits the string back into tokens on the app side.
-    # -UITestSeedDemoData is added by NectarUITests.setUp(), so it isn't listed here.
-    variants = {
-      "01-light-default" => "-userInterfaceColorPalette 1 -accentColor 0 -currentThemeName Default",
-      "02-dark-default" => "-userInterfaceColorPalette 2 -accentColor 0 -currentThemeName Default",
-      "03-light-sepia" => "-userInterfaceColorPalette 1 -accentColor 6 -currentThemeName Sepia",
-      "04-dark-biblioteca" => "-userInterfaceColorPalette 2 -accentColor 8 -currentThemeName Biblioteca",
-      "05-dark-duskbloom" => "-userInterfaceColorPalette 2 -surfaceTint 4 -accentColor 5 -currentThemeName Duskbloom -UITestReadingProfile personal",
-      "06-light-duskbloom" => "-userInterfaceColorPalette 1 -surfaceTint 4 -accentColor 5 -currentThemeName Duskbloom -UITestReadingProfile personal"
-    }
+  # Every path below is resolved from the fastlane folder, so the lanes behave
+  # the same whether invoked from the repo root or from inside fastlane/.
+  # FastlaneCore::FastlaneFolder.path is "./fastlane/" from the root and "./"
+  # from inside the folder.
+  repo_root = File.expand_path("..", FastlaneCore::FastlaneFolder.path)
+  xcode_project = File.join(repo_root, "NetNewsWire.xcodeproj")
+  # All raw output goes here. build/ is gitignored; only appstore/screenshots
+  # (written by the appstore_screenshots lane) is committed.
+  output_root = File.join(repo_root, "build", "screenshots")
+  ui_test_class = "Nectar-iOSUITests/NectarUITests"
+
+  # Each variant is ONE space-joined string. fastlane's snapshot treats every
+  # element of the `launch_arguments` array as a separate configuration and
+  # runs the whole UI test once per element, so passing the flags as separate
+  # array elements would run the test once per flag with a single flag each
+  # (snapshot/lib/snapshot/simulator_launchers/launcher_configuration.rb).
+  # SnapshotHelper splits the string back into tokens on the app side.
+  # -UITestSeedDemoData is added by NectarUITests.setUp(), so it isn't listed here.
+  variants = {
+    "01-light-default" => "-userInterfaceColorPalette 1 -accentColor 0 -currentThemeName Default",
+    "02-dark-default" => "-userInterfaceColorPalette 2 -accentColor 0 -currentThemeName Default",
+    "03-light-sepia" => "-userInterfaceColorPalette 1 -accentColor 6 -currentThemeName Sepia",
+    "04-dark-biblioteca" => "-userInterfaceColorPalette 2 -accentColor 8 -currentThemeName Biblioteca",
+    "05-dark-duskbloom" => "-userInterfaceColorPalette 2 -surfaceTint 4 -accentColor 5 -currentThemeName Duskbloom -UITestReadingProfile personal",
+    "06-light-duskbloom" => "-userInterfaceColorPalette 1 -surfaceTint 4 -accentColor 5 -currentThemeName Duskbloom -UITestReadingProfile personal"
+  }
+
+  # The Settings screens only need a light and a dark capture.
+  settings_variant_names = %w[01-light-default 02-dark-default]
+
+  # Dynamic Type category for the app chrome, passed as the standard
+  # -UIPreferredContentSizeCategoryName launch argument. Pinned to L (the
+  # system default) so runs are identical regardless of the simulator's own
+  # setting. This does NOT make article text bigger: seeded runs set the
+  # article font size override (ArticleThemeOverrides.fontSize) to 26 in
+  # UITestDemoData.applyArticleFontSize(). Stay below the accessibility
+  # categories, where MainTimelineCell switches layout.
+  allowed_text_sizes = %w[XS S M L XL XXL]
+  text_size_arguments = lambda do |options|
+    text_size = (options[:text_size] || "L").to_s.upcase
+    unless allowed_text_sizes.include?(text_size)
+      UI.user_error!("text_size must be one of: #{allowed_text_sizes.join(', ')} (got #{text_size})")
+    end
+    "-UIPreferredContentSizeCategoryName UICTContentSizeCategory#{text_size}"
+  end
+
+  desc "Generate new localized screenshots (Main, Timeline, Article) for every style variant. Option: text_size:L (XS, S, M, L, XL, XXL), the Dynamic Type category of the app chrome"
+  lane :screenshots do |options|
+    size_arguments = text_size_arguments.call(options)
 
     variants.each do |name, launch_arguments|
       capture_screenshots(
+        project: xcode_project,
         scheme: "Nectar-iOSUITests",
-        launch_arguments: [launch_arguments],
-        output_directory: "./screenshots/#{name}"
+        only_testing: ["#{ui_test_class}/testTakeScreenshots"],
+        launch_arguments: ["#{launch_arguments} #{size_arguments}"],
+        output_directory: File.join(output_root, name),
+        clear_previous_screenshots: true,
+        override_status_bar: true,
+        skip_open_summary: true
       )
     end
 
     # Adds a framed copy of every screenshot alongside the raw ones (see
     # docs/ui-test-demo-data.md) rather than replacing them. Requires
     # imagemagick on the machine running fastlane.
-    frame_screenshots(path: "./screenshots")
+    frame_screenshots(path: output_root)
+  end
+
+  desc "Generate Settings screen screenshots (light and dark). Option: text_size:L"
+  lane :settings_screenshots do |options|
+    size_arguments = text_size_arguments.call(options)
+
+    variants.select { |name, _| settings_variant_names.include?(name) }.each do |name, launch_arguments|
+      capture_screenshots(
+        project: xcode_project,
+        scheme: "Nectar-iOSUITests",
+        only_testing: ["#{ui_test_class}/testTakeSettingsScreenshots"],
+        launch_arguments: ["#{launch_arguments} #{size_arguments}"],
+        output_directory: File.join(output_root, "settings-#{name}"),
+        clear_previous_screenshots: true,
+        override_status_bar: true,
+        skip_open_summary: true
+      )
+    end
+  end
+
+  desc "Copy the screenshots named in appstore/screenshot-manifest.json to appstore/screenshots/N.png (real copies, never symlinks)"
+  lane :appstore_screenshots do
+    manifest = JSON.parse(File.read(File.join(repo_root, "appstore", "screenshot-manifest.json")))
+    device = manifest.fetch("device")
+    language = manifest.fetch("language", "en-US")
+    destination = File.join(repo_root, "appstore", "screenshots")
+
+    # Resolve and check every source before touching the destination.
+    copies = manifest.fetch("slots").each_with_index.map do |slot, index|
+      # snapshot writes "<device>-<name>.png" under <output>/<language>/
+      # (SnapshotHelper.swift), where <name> is the snapshot("...") argument.
+      source = File.join(output_root, slot.fetch("directory"), language, "#{device}-#{slot.fetch("shot")}.png")
+      UI.user_error!("Missing #{source}. Run the lane that produces it first.") unless File.file?(source)
+      [source, File.join(destination, "#{index + 1}.png")]
+    end
+
+    FileUtils.mkdir_p(destination)
+    # The published source.json lists whatever is in this folder
+    # (scripts/update_source.py --screenshots-dir), so clear stale files.
+    Dir.glob(File.join(destination, "*.{png,jpg,jpeg}")).each { |path| FileUtils.rm_f(path) }
+    copies.each { |source, target| FileUtils.cp(source, target) }
+
+    UI.success("Copied #{copies.length} screenshots into #{destination}")
   end
 end

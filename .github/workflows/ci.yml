@@ -34,6 +34,44 @@ jobs:
       - name: Run tests
         run: npm test
 
+  appstore-assets:
+    name: App Store Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # release.yml publishes appstore/screenshots to gh-pages with cp -R, so a
+      # symlink (for example into fastlane's output) would dangle there. Catch
+      # it here instead of at release time.
+      - name: Check committed screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir=appstore/screenshots
+          if [ ! -d "$dir" ]; then
+            echo "No $dir; nothing to check."
+            exit 0
+          fi
+          status=0
+          if [ -n "$(find "$dir" -type l)" ]; then
+            echo "::error::$dir contains symlinks; commit real PNG copies (bundle exec fastlane appstore_screenshots)."
+            find "$dir" -type l
+            status=1
+          fi
+          for f in "$dir"/*.png; do
+            [ -e "$f" ] || continue
+            magic=$(head -c 8 "$f" | od -An -tx1 | tr -d ' \n')
+            if [ "$magic" != "89504e470d0a1a0a" ]; then
+              echo "::error file=$f::not a PNG file"
+              status=1
+            fi
+          done
+          if [ ! -f appstore/icon.png ]; then
+            echo "::warning::appstore/icon.png is missing; release.yml will fail without it."
+          fi
+          exit $status
+
   swiftlint:
     name: SwiftLint
     runs-on: macos-26
