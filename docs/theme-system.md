@@ -28,30 +28,44 @@ Application Support Themes folder (imported) contains:
   | `Name` | String | |
   | `ThemeIdentifier` | String | reverse-DNS-style identifier |
   | `CreatorHomePage` | String | |
-  | `CreatorName` | String | |
+  | `CreatorName` | String | the creator's name only; description, attribution and license text go in `License.md` (see `nnwtheme-format.md`) |
   | `Version` | Int | |
   | `Family` | String? | optional; groups sibling bundles that are the same design with different palettes (e.g. "Rosé Pine" has Main/Moon/Dawn variants) for gallery display. Omitted for the large majority of themes. |
   | `FamilyVariant` | String? | this bundle's label within `Family`; meaningless without `Family`. |
 
-- An optional `License.md` for themes ported from a licensed source (e.g.
-  NewsFax, Ember).
+- An optional `License.md`: the theme's description, its attribution, and its
+  license status (e.g. NewsFax, Ember). Nothing in Swift reads it; format and
+  expected contents are in `nnwtheme-format.md`.
 
 Nectar ships 14 themes in `Themes/`: the eight NetNewsWire-origin themes
 (Appanoose, Biblioteca, Hyperlegible, NewsFax, Promenade, Sepia, Tiqoe Dark,
 Verdana Revival) plus six Nectar customs (Black & White, Duskbloom, Ember,
 Powder Pink, Tumblr Blue, Vintage Letter Green). Only `Themes/` is copied into
-the app bundle (`project.yml`). The other 26 authored themes live in
+the app bundle (`project.yml`). Every other authored theme (85 at last count; this drifts) lives in
 `gallery-themes/`, are not in the app, and are published only on the theme
 gallery (`gallery/build.py`), from which a person installs them via the
 `nectar://theme/add` URL scheme. See `nnwtheme-format.md` for the
 directory rules and `docs/theme-gallery.md` for the gallery page itself.
-Most themes are **generated**: produced
-from a single Python script, `buildscripts/theme-generation/generate_ported_themes.py`,
-which fills a shared structural CSS/HTML template with per-theme palette and
-font data so that structural rules (header table, footnote popovers, table
-borders, overflow handling) stay byte-identical across themes and can be
-batch-audited. A minority are **hand-written**, used only when a source
-theme's structure can't be expressed as a recolor of the shared template.
+Only a minority of themes are **generated** now. The single generator,
+`buildscripts/theme-generation/generate_ported_themes.py`, fills a shared
+structural CSS/HTML template with per-theme palette and font data. Its theme
+table covers 13 entries (the Rosé Pine Moon/Dawn ports, the ZerafinaCSS "neos"
+recolors Black & White, Charcoal Rose, Dusky Purple, Midnight Teal, Powder Pink
+and Tumblr Blue, Constellations, Dracula, Moonlit Wisteria, Pastel Whimsy and
+Poudre et Plume), and only three of those are in `SHIPPED` (so written to
+`Themes/`); the rest go to `gallery-themes/`. Everything it emits uses the
+NetNewsWire header-table template shape ("shape A" in `nnwtheme-format.md`).
+Beacon, Beetlejuice, Mystery, Perseus, Pinerose, Rosé Pine, and Twilight use that
+same shape but are not in the generator's table; where they came from was not
+determined.
+
+The 52 "shape B" themes (compact running head, `nnwtheme-format.md`) were converted from
+CSS mockups by a separate script (`convert_mockups.py`, "Route A" in `nnwtheme-format.md`
+under "Converting mockups"). That script is not in this repo (it lives in the v4 theme
+set's `tools/` directory), so a structural fix has to be applied to each bundle, not
+regenerated. The mockup side is in the repo: `buildscripts/theme-mockups/` holds the review
+page builder, the full-screen title check and the 65 mockups of batches 3 to 8, none of
+which exists as a bundle yet.
 
 Horizontal overflow (an oversized fic image forcing the whole article page
 to scroll sideways) is guarded at two layers: every theme is expected to

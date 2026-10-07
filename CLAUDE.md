@@ -33,7 +33,7 @@ task**, not this whole index cover-to-cover.
 - **Accent Color / Surface Palette / nav bar tinting (app chrome)** → `app-chrome-palette.md`
 - **Badge Colors (timeline rating/category/warning pill tinting)** → `app-chrome-palette.md`
 - **Article theme (`.nnwtheme`) system itself** → `theme-system.md`
-- **`.nnwtheme` bundle format / authoring / theme families** → `nnwtheme-format.md`
+- **`.nnwtheme` bundle format / authoring / theme families / theme mockups and the mockup-to-bundle conversion** → `nnwtheme-format.md`
 - **The theme gallery (`gallery/`), its build pipeline, or the install deep link** → `theme-gallery.md`
 - **Landing page (`landing/`), its `site.json` config and optional sections** → `landing-page.md`
 - **Database schema / SQLite storage layer** → `database.md`
@@ -109,7 +109,7 @@ it's trusted by default. Specifically:
 | `ArticleThemeColorExtractor`, `ArticleResolvedColors`, `WebViewController.applyResolvedBackgroundColors`/`registerForTraitChanges` | `article-color-pipeline.md` |
 | `SurfacePalette`, `AccentColor`, `SurfacePaletteNavigationBarAware`, `ToolbarStyle`/`toolbarStyle`, `BadgeColorPalette`, `BadgeColorTable` | `app-chrome-palette.md` |
 | `.nnwtheme` bundles, `ArticleTheme`, `ArticleThemesManager`, `core.css`/`stylesheet.css` structure | `theme-system.md` |
-| `.nnwtheme` bundle-file layout, per-theme fonts, theme families, `template.html` conventions, AO3 preface styling variables | `nnwtheme-format.md` |
+| `.nnwtheme` bundle-file layout, `Info.plist` `CreatorName`/`License.md` (description, attribution), per-theme fonts, theme families, `template.html` conventions, styleable blocks and ornament placement, full-screen title spacing, AO3 preface styling variables, theme mockups (fixed page layout, sample text, review page, title check, mockup-to-bundle conversion), `buildscripts/theme-mockups/` | `nnwtheme-format.md` |
 | `gallery/build.py`, `gallery/index.template.html`, `BUNDLED`/`BUNDLED_ID_PREFIXES`, `.github/workflows/gallery.yml` | `theme-gallery.md` |
 | `landing/` (`build.py`, `template.html`, `site.json`), the optional-section rules, `gallery.yml` (publishes landing page and gallery) | `landing-page.md` |
 | `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |
