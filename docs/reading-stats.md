@@ -226,3 +226,7 @@ the retained 371 days, not ever. This replaced the earlier
 `currentStreak(history:asOf:)`, which counted a lone day as a streak and,
 when today was empty, counted back from the most recent active day however
 long ago it was.
+
+The persisted key strings and the `ReadingStatsDailyEntry` JSON shape are
+pinned by `ReadingTimePersistedContractTests`; see `screen-time.md`,
+"Persisted contract and test locations".

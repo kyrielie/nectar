@@ -11,7 +11,7 @@ let package = Package(
 		.package(path: "../Articles")
 	],
 	targets: [
-		.target(name: "AnnotationsKit", dependencies: ["Articles"]),
+		.target(name: "AnnotationsKit", dependencies: ["Articles"], swiftSettings: [.enableUpcomingFeature("NonisolatedNonsendingByDefault"), .enableUpcomingFeature("InferIsolatedConformances")]),
 		.testTarget(name: "AnnotationsKitTests", dependencies: ["AnnotationsKit"])
 	]
 )

@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap');
+/* Heist Night -- the title is dealt as a playing card: a sharp-cornered gilt frame,
+   a VI index in two corners (the second one upside down, as on a real card), red
+   diamond pips. The preface is a thieves' ledger (ruled rows, double rule on top),
+   the summary hangs from a gold tab like a job ticket, notes are a red-ruled slip,
+   and every chapter break deals six diamonds -- five gold, one blood-red.
+   Dark = a city after midnight, lamp-lit gold on black. Light = the same job
+   pasted up as a bone-paper wall bill, ink and oath-red.
+   Fonts: Bebas Neue, Spectral (SIL OFL). Zero border-radius throughout. */
+
+:root{--bg:#e9ddc3;--bg2:#f2e9d5;--ink:#1a1410;--muted:#574934;--rule:#b9a67e;--a:#8a6a1f;--at:#6f5210;--a2:#8e1f1f;--link:#8e1f1f;--pop:#f2e9d5;--pop-in:#dfd2b4;--fh:'Bebas Neue','Arial Narrow',Impact,sans-serif;--fb:Spectral,Georgia,serif;--font-main:var(--fh);--font-body:var(--fb);--font-code:'Courier New',Courier,monospace;--dv:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 144 14'%3E%3Cpath fill='%238a6a1f' d='M12 1l6 6-6 6-6-6z'/%3E%3Cpath fill='%238a6a1f' d='M36 1l6 6-6 6-6-6z'/%3E%3Cpath fill='%238a6a1f' d='M60 1l6 6-6 6-6-6z'/%3E%3Cpath fill='%238a6a1f' d='M84 1l6 6-6 6-6-6z'/%3E%3Cpath fill='%238a6a1f' d='M108 1l6 6-6 6-6-6z'/%3E%3Cpath fill='%238e1f1f' d='M132 1l6 6-6 6-6-6z'/%3E%3C/svg%3E");--on-a:#fffaf0}
+@media (prefers-color-scheme: dark){:root{--bg:#14110f;--bg2:#1b1713;--ink:#dbd0bb;--muted:#a09279;--rule:#3a2e20;--a:#b8892f;--at:#d4a448;--a2:#a02a2a;--link:#d9ad55;--pop:#1c1712;--pop-in:#100d0a;--dv:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 144 14'%3E%3Cpath fill='%23b8892f' d='M12 1l6 6-6 6-6-6z'/%3E%3Cpath fill='%23b8892f' d='M36 1l6 6-6 6-6-6z'/%3E%3Cpath fill='%23b8892f' d='M60 1l6 6-6 6-6-6z'/%3E%3Cpath fill='%23b8892f' d='M84 1l6 6-6 6-6-6z'/%3E%3Cpath fill='%23b8892f' d='M108 1l6 6-6 6-6-6z'/%3E%3Cpath fill='%23c23a3a' d='M132 1l6 6-6 6-6-6z'/%3E%3C/svg%3E");--on-a:#14110f}}
+
+body{background-color:var(--bg);color:var(--ink);font-family:var(--fb);max-width:44em}
+a{color:var(--link)}
+.articleBody a{color:var(--link)}
+.articleBody{color:var(--ink);font-family:var(--fb);font-size:1.07em;line-height:1.72;-webkit-hyphens:auto;hyphens:auto}
+.articleBody p{margin-top:0;margin-bottom:var(--paragraph-spacing,1em);text-indent:var(--paragraph-indent,0)}
+.articleBody a{text-decoration:underline;text-decoration-color:var(--a2);text-decoration-thickness:1.5px;text-underline-offset:.18em}
+.articleBody a:hover{color:var(--ink)}
+
+html{background-color:var(--bg)}
+.systemMessage{position:absolute;top:45%;left:50%;transform:translateX(-55%) translateY(-50%);-webkit-user-select:none;cursor:default}
+body > .systemMessage{color:var(--muted)}
+pre{max-width:100%;margin:0;overflow:auto;overflow-y:hidden;word-wrap:normal;word-break:normal;line-height:1.43;-webkit-hyphens:none}
+code,pre{font-family:var(--font-code);-webkit-hyphens:none}
+code{font-size:.9em}
+pre{font-size:.85em}
+.nnw-overflow{overflow-x:auto}
+.nnw-overflow table{margin-bottom:1px;border-spacing:0;border:1px solid var(--rule);font-size:inherit}
+.nnw-overflow table table{margin-bottom:0;border:none}
+.nnw-overflow td,.nnw-overflow th{-webkit-hyphens:none;word-break:normal;border:1px solid var(--rule);border-top:none;border-left:none;padding:5px}
+.nnw-overflow td pre{border:none;padding:0}
+.nnw-overflow table[border="0"]{border-width:0}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+iframe{max-width:100%;margin:0 auto}
+iframe.nnw-constrained{max-height:50vw}
+figure{margin:1em 0}
+figcaption{font-size:14px;line-height:1.3;color:var(--muted)}
+sup{vertical-align:top;position:relative;bottom:.2rem}
+sub{vertical-align:bottom;position:relative;top:.2rem}
+.iframeWrap{position:relative;display:block;padding-top:56.25%}
+.iframeWrap iframe{position:absolute;top:0;left:0;height:100% !important;width:100% !important}
+.ao3ChapterFetchNotice{margin:0 0 1em 0;padding:.6em .8em;border-left:3px solid var(--rule);font-size:.9em;color:var(--muted)}
+.newsfoot-footnote-popover{background:var(--pop);box-shadow:0 2px 6px rgba(0,0,0,.28);color:var(--ink);padding:1px}
+.newsfoot-footnote-popover-arrow{background:var(--pop-in);border:1px solid var(--rule)}
+.newsfoot-footnote-popover-inner{background:var(--pop-in)}
+body a.footnote,body a.footnote:visited,.newsfoot-footnote-popover + a.footnote:hover{background:var(--rule);color:var(--ink);transition:background-color 200ms ease-out}
+a.footnote:hover,.newsfoot-footnote-popover + a.footnote{background:var(--a);color:var(--bg);transition:background-color 200ms ease-out}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p,.end.notes.module blockquote.userstuff p{margin:0 0 .6em}
+.summary.module blockquote.userstuff p:last-child,.notes.module blockquote.userstuff p:last-child,.end.notes.module blockquote.userstuff p:last-child{margin-bottom:0}
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+
+
+.sc-page{position:relative;padding-top:0}
+/* running head: absorbs the notch zone in full-screen reading (app zeroes the top safe area) */
+.sc-top{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 1.2em;padding-bottom:.5em;border-bottom:3px double var(--a);font-family:var(--fh);font-size:1.02em;letter-spacing:.2em;color:var(--at)}
+.sc-top a,.sc-top a:visited{color:inherit;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.sc-top time{flex:none;white-space:nowrap}
+.sc-page::before{content:"";position:absolute;top:-2em;height:26em;left:calc(var(--gx) * -1);right:calc(var(--gx) * -1);pointer-events:none;background:radial-gradient(ellipse at 50% 0,rgba(184,137,47,.13),transparent 62%)}
+.sc-page > *{position:relative}
+
+/* the card */
+.sc-card{text-align:center;margin:0 0 2.2em;padding:2.9em 2.2em 2.6em;background:var(--bg2);border:2px solid var(--a);border-radius:0;box-shadow:inset 0 0 0 5px var(--bg2),inset 0 0 0 6px var(--a)}
+.sc-corner{position:absolute;display:flex;flex-direction:column;align-items:center;line-height:1;font-family:var(--fh);color:var(--at);pointer-events:none}
+.sc-corner b{font-weight:400;font-size:1.35em;letter-spacing:.04em}
+.sc-corner i{font-style:normal;font-size:.9em;color:var(--a2);margin-top:.08em}
+.sc-corner--tl{top:.95em;left:.95em}
+.sc-corner--br{bottom:.95em;right:.95em;transform:rotate(180deg)}
+.sc-title{margin:0;font-family:var(--fh);font-weight:400;font-size:2.5em;line-height:.98;letter-spacing:.05em;text-transform:uppercase;text-wrap:balance}
+.sc-title a,.sc-title a:visited{color:var(--ink);text-decoration:none}
+.sc-by{margin:1.1em 0 0;font-style:italic;font-size:1.02em;color:var(--muted)}
+.sc-by::before{content:"";display:block;width:2.6em;height:3px;margin:0 auto .8em;background:var(--a2)}
+.sc-date{display:block;margin-top:.15em;font-family:var(--fh);font-size:.95em;letter-spacing:.16em;color:var(--at)}
+
+/* ledger */
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;column-gap:1.3em;row-gap:0;margin:0 0 2.1em;padding:0;font-size:.92em;border-top:3px double var(--a)}
+#bodyContainer dl.tags dt,#bodyContainer dl.tags dd{margin:0;padding:.42em 0;border-bottom:1px solid var(--rule)}
+#bodyContainer dl.tags dt{font-family:var(--fh);font-weight:400;font-size:1.12em;letter-spacing:.12em;color:var(--at);line-height:1.35;padding-top:.5em}
+#bodyContainer dl.tags dd a{color:var(--ink)}
+
+/* job ticket */
+.summary.module{margin:0 0 2.1em;border-top:3px solid var(--a)}
+.summary.module h3.heading{display:inline-block;margin:0 0 1em;padding:.18em 1.5em .08em .85em;background:var(--a);color:var(--on-a);font-family:var(--fh);font-weight:400;font-size:1.08em;letter-spacing:.16em;line-height:1.3;clip-path:polygon(0 0,100% 0,calc(100% - .65em) 100%,0 100%)}
+.summary.module blockquote.userstuff{padding-left:1.1em;border-left:2px solid var(--a2);font-size:1.1em;line-height:1.6}
+/* light: a rubber-stamped slip */
+.notes.module,.end.notes.module{position:relative;margin:2.3em 0 1.9em;padding:1.15em 1em .8em;border:2px dashed var(--a)}
+.notes.module h3.heading,.end.notes.module h3.heading{position:absolute;top:-.95em;right:1em;margin:0;padding:.04em .75em;background:var(--bg);border:2px solid var(--a2);color:var(--a2);font-family:var(--fh);font-weight:400;font-size:1.05em;letter-spacing:.2em;line-height:1.35;transform:rotate(3deg)}
+.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{font-style:italic;font-size:.94em;color:var(--muted)}
+
+/* six diamonds, one red */
+.dv{display:block;font-size:0;height:14px;margin:2.6em 0 .7em;background:var(--dv) 50%/144px 14px no-repeat,linear-gradient(90deg,transparent,var(--a)) 0 50%/calc(50% - 86px) 1px no-repeat,linear-gradient(270deg,transparent,var(--a)) 100% 50%/calc(50% - 86px) 1px no-repeat}
+.articleBody h2.heading,.articleBody h3.title{margin:0 0 .8em;font-family:var(--fh);font-weight:400;font-size:1.9em;letter-spacing:.08em;line-height:1.1;color:var(--at)}
+.articleBody h2.heading::after,.articleBody h3.title::after{content:"";display:block;width:2.4rem;height:3px;margin-top:.28em;background:var(--a2)}
+.articleBody h2.heading a,.articleBody h3.title a{color:var(--at);text-decoration:none}
+
+.sc-body p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);font-weight:400;font-size:4.3em;line-height:.76;float:left;padding:.06em .1em 0 0;color:var(--at)}
+.versalCap{font-variant:small-caps;letter-spacing:.06em}
+.articleBody blockquote{margin:1em 0 1em .5em;padding:.2em 1em;border-left:3px solid var(--a);background:rgba(184,137,47,.07);font-style:italic}
+hr{border:0;height:1px;background:linear-gradient(90deg,var(--a),transparent)}
+/* dark: two diagonal gold corner brackets instead of the stamp */
+@media (prefers-color-scheme: dark){
+	.notes.module,.end.notes.module{margin:2em 0;padding:1.2em 1.5em;border:0;background:linear-gradient(var(--a),var(--a)) top left/16px 2px no-repeat,linear-gradient(var(--a),var(--a)) top left/2px 16px no-repeat,linear-gradient(var(--a),var(--a)) bottom right/16px 2px no-repeat,linear-gradient(var(--a),var(--a)) bottom right/2px 16px no-repeat}
+	.notes.module h3.heading,.end.notes.module h3.heading{position:static;display:block;margin:0 0 .2em;padding:0;background:none;border:0;transform:none;color:var(--at);font-size:.98em}
+}
+
+body{margin-left:auto;margin-right:auto;padding-left:var(--gx);padding-right:var(--gx);word-wrap:break-word}
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; }
+	body { margin-top: 3px; margin-bottom: 20px; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; }
+	body { margin-top: 20px; margin-bottom: 64px; }
+}
+

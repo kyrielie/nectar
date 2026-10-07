@@ -13,6 +13,7 @@
 
 import Testing
 @testable import Nectar
+import AppChrome
 
 @Suite struct BadgeColorPaletteMigrationTests {
 

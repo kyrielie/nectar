@@ -4,7 +4,7 @@
    override; markup maps onto real AO3 blocks (dl.tags preface, .summary.module,
    .notes.module, h2.heading chapter headings, versal caps + chapter dividers via
    main.js data attributes). */
-:root{--fh:'Permanent Marker',cursive;--fb:'Roboto Condensed',sans-serif;--bg:#f3efe2;--ink:#111;--a:#e4202a;--b:#ffd400}
+:root{--fh:'Permanent Marker',cursive;--fb:'Roboto Condensed',sans-serif;--bg:#f3efe2;--ink:#111;--a:#e4202a;--b:#ffd400;--r:2px}
 
 /* ---- structural base shared by every converted mockup theme ---- */
 :root{--font-main:var(--fh);--font-body:var(--fb);--font-code:'Courier New',Courier,monospace}
@@ -26,7 +26,18 @@ body > .systemMessage{color:var(--ink)}
 img, figure, video, div, object { max-width: 100%; }
 img, video { height: auto; }
 .smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
-.t{padding:22px 20px 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+
+/* running head: in full-screen reading the app zeroes the top safe area, so page content
+   starts under the notch/Dynamic Island. This band (feed name + date, bottom-aligned,
+   >= 56px) absorbs that zone so the title always starts clear of it. */
+.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--fb);font-size:calc(var(--u) * 11);line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--rule-rh,currentColor);box-sizing:border-box}
+.rh a,.rh a:visited{color:inherit;text-decoration:none;opacity:.78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rh time{flex:none;opacity:.78;white-space:nowrap}
+/* notes: sticky */
+:is(.notes.module,.end.notes.module){position:relative;margin:2.3em 0 1.9em 1em;padding:1.1em 1.1em 1em;background:var(--bg);background:color-mix(in srgb,var(--a) 26%,var(--bg));color:var(--ink);transform:rotate(-.9deg);border-radius:2px 2px 2px 16px/2px 2px 2px 16px;box-shadow:0 7px 10px -7px rgba(0,0,0,.5),0 1px 0 rgba(0,0,0,.08)}
+:is(.notes.module,.end.notes.module)::before{content:"";position:absolute;top:-.75em;left:50%;width:4.4em;height:1.4em;margin-left:-2.2em;background:rgba(255,255,255,.5);box-shadow:0 0 0 1px rgba(0,0,0,.06);transform:rotate(2.5deg)}
+:is(.notes.module,.end.notes.module) h3.heading{margin:0 0 .3em;font:700 .75em/1.5 var(--fb);letter-spacing:.14em;text-transform:uppercase}
+.t{padding:10px var(--gx) 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
 .t h1{margin:0;font-family:var(--fh);font-weight:400}
 .t h2.heading, .t h3.title{margin:0;font-family:var(--fh);font-weight:400}
 .t h3.heading{margin:0;font-family:var(--fh);font-weight:400}
@@ -41,12 +52,11 @@ img, video { height: auto; }
 .summary.module{margin:0 0 14px;padding:10px 12px}
 .summary.module h3.heading{margin-bottom:4px}
 .summary.module blockquote.userstuff{margin:0}
-.notes.module, .end.notes.module{font-size:calc(var(--u) * 13);opacity:.8;border-left:2px solid var(--a);padding-left:10px;margin-top:12px}
 .dv{display:block;margin:18px 0 8px}
 p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;font-size:2.7em;line-height:.85;padding:.05em .1em 0 0;color:var(--a)}
 .versalCap{font-variant:small-caps;letter-spacing:.03em}
 .t6{font-size:calc(var(--u) * 16)}
-.t6 .hd{margin:-22px calc(var(--gx) * -1) 14px;padding:26px 20px 38px;background:#111;color:#ffd400;clip-path:polygon(0 0,100% 0,100% 88%,92% 100%,84% 90%,76% 100%,68% 90%,60% 100%,52% 90%,44% 100%,36% 90%,28% 100%,20% 90%,12% 100%,4% 90%,0 100%)}
+.t6 .hd{margin:-10px calc(var(--gx) * -1) 14px;padding:26px 20px 38px;background:#111;color:#ffd400;clip-path:polygon(0 0,100% 0,100% 88%,92% 100%,84% 90%,76% 100%,68% 90%,60% 100%,52% 90%,44% 100%,36% 90%,28% 100%,20% 90%,12% 100%,4% 90%,0 100%)}
 .t6 .hd::before{content:"";display:block;height:12px;margin:-10px 0 12px;background:repeating-conic-gradient(#ffd400 0 25%,#111 0 50%) 0 0/12px 12px}
 .t6 h1{font-size:calc(var(--u) * 38);line-height:1}
 .t6 .by{color:#f4f1e6;font:400 13px/1.2 'Questrial',sans-serif;letter-spacing:.14em;text-transform:uppercase}

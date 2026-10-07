@@ -9,9 +9,11 @@
 //  handed back as a URL for UIDocumentPickerViewController(forExporting:),
 //  matching every existing export action in this codebase (Correction 1).
 //
-//  App-target-only (iOS/Backup), not a module -- nothing outside
-//  iOS/Settings needs this, same reasoning as the rest of Settings'
-//  export flows living directly in the app target.
+//  Lives in the BackupRestore package (Modules/BackupRestore), not the app
+//  target, so BackupRestoreTests can exercise export and import without an
+//  app host. It cannot see AppDefaults, so settings go through the
+//  BackupSettingsStoring protocol below; the app side of that protocol is
+//  iOS/Backup/BackupSettingsStore.swift. See docs/backup-restore.md.
 //
 
 import Foundation

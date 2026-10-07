@@ -161,3 +161,24 @@ generic wrapper around the same `CountDownTimerPicker` wheel
 `screenTimeTakeABreakEnabled` bool set to `true` are read as `.reminder`
 on first access after upgrade (see `screenTimeTakeABreakMode`'s getter);
 there's no reverse migration path back to the bool.
+
+## Persisted contract and test locations
+
+Screen Time and Reading Stats keep their data in `UserDefaults` under the
+key strings declared in `AppDefaults+ScreenTime.swift` (17 keys) and
+`AppDefaults+ReadingStats.swift` (5 keys), with `TakeABreakMode` and
+`ScreenTimeIndicatorDisplayMode` stored by raw value and
+`ReadingStatsDailyEntry` stored as JSON. `ReadingTimePersistedContractTests`
+(`Tests/NetNewsWire-iOSTests`) pins all of those against literals and never
+touches `UserDefaults`, so a renamed key or raw value fails a test instead
+of silently orphaning stored data. Changing one needs a migration and an
+update to that file in the same commit.
+
+The pure calendar math is tested in the packages that own it:
+`ScreenTimeCalendarTests` in `Modules/ReadingTime/Tests/ReadingTimeTests`
+and `ReadingStatsCalendarTests` in
+`Modules/ReadingStats/Tests/ReadingStatsTests`. Both package test targets
+run in CI through `Nectar-CI.xctestplan` (see `module-layout.md`, "Test
+plans"). The tracker tests (`ScreenTimeTrackerTests`,
+`ReadingStatsTrackerAccountingTests`) stay in the app test target because
+they use `AppDefaults` and the tracker singletons.

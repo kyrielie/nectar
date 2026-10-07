@@ -17,31 +17,33 @@ large_tuple:
   error: 6
 
 # Size signals (file_length / type_body_length). Both used to sit in
-# disabled_rules, which is how WebViewController.swift (3,148 lines),
-# SceneCoordinator.swift (2,786), and AppDefaults.swift (2,436) grew
-# unopposed even though `swiftlint lint --strict` runs in CI
-# (.github/workflows/ci.yml).
+# disabled_rules, which is how the largest app files grew unopposed even
+# though `swiftlint lint --strict` runs in CI (.github/workflows/ci.yml).
 #
 # Warnings only (no `error:` key). --strict still turns a reported warning
 # into a CI failure, so each threshold has to sit above the current worst
-# offender or it breaks the build today.
+# offender or it breaks the build.
 #
-# file_length: 3200 is just above WebViewController.swift (3,148 lines).
-# type_body_length: 2600 was set without measuring. SwiftLint counts
-# non-blank, non-comment lines inside a single type body, and the large
-# files here split their types across extensions, so the real maximum is
-# likely far lower. Measure it (run swiftlint with the threshold
-# temporarily lowered) and set it just above the real number.
+# Measured with SwiftLint 0.65.1 by running with both thresholds set to 1
+# and reading the reported sizes:
+#   file_length max       2,812  iOS/SceneCoordinator.swift
+#                         2,627  iOS/Article/WebViewController.swift
+#   type_body_length max  1,322  SceneCoordinator (class body)
+#                           925  AppDefaults (class body)
+# file_length matches `wc -l` for these files; type_body_length counts
+# non-blank, non-comment lines inside one type body.
+# The thresholds below sit about 3% (file) and 6% (type body) above those
+# maxima so a SwiftLint version difference in counting does not break CI.
 #
-# Ratchet both numbers down as the large files shrink. Do not jump to
-# SwiftLint's defaults (400 / 250): that flags most of the largest files
-# at once and gets reverted instead of fixed. See docs/module-layout.md,
-# "Lint size ratchet".
+# Ratchet both numbers down as the large files shrink, re-measuring the
+# same way. Do not jump to SwiftLint's defaults (400 / 250): that flags
+# most of the largest files at once and gets reverted instead of fixed. See
+# docs/module-layout.md, "Lint size ratchet".
 file_length:
-  warning: 3200
+  warning: 2900
 
 type_body_length:
-  warning: 2600
+  warning: 1400
 
 disabled_rules:
   - todo

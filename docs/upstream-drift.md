@@ -254,7 +254,7 @@ existing upstream files. Grouped by top-level directory.
 
 ### `Tests/` (16 files)
 
-- `Tests/NetNewsWire-iOSTests/AccentColorIconHexSetTests.swift`
+- `Tests/NetNewsWire-iOSTests/AccentColorAssetsResolutionTests.swift`
 - `Tests/NetNewsWire-iOSTests/AccentColorTableViewControllerSelectionTests.swift`
 - `Tests/NetNewsWire-iOSTests/ArticleCSVExporterTests.swift`
 - `Tests/NetNewsWire-iOSTests/ArticleRendererSeriesNavigationTests.swift`
@@ -268,7 +268,7 @@ existing upstream files. Grouped by top-level directory.
 - `Tests/NetNewsWire-iOSTests/CSSImportExtractorTests.swift`
 - `Tests/NetNewsWire-iOSTests/SettingsAccentColorLiveUpdateTests.swift`
 - `Tests/NetNewsWire-iOSTests/SettingsCellBackgroundHostingTests.swift`
-- `Tests/NetNewsWire-iOSTests/SurfacePaletteHexSetTests.swift`
+- `Tests/NetNewsWire-iOSTests/SurfacePaletteAssetsResolutionTests.swift`
 - `Tests/NetNewsWire-iOSTests/TimelineCustomizerCellAccentTintTests.swift`
 
 ### `Themes/` (73 files)
@@ -531,7 +531,7 @@ rule against asserting things that haven't been verified by reading the code.
 - `iOS/AccountStats/AccountStatsView.swift`
 - `iOS/Add/AddComboTableViewCell.swift`
 - `iOS/Add/AddFeedViewController.swift`
-- `iOS/AppDefaults.swift` -- AccentColor/SurfacePalette/BadgeColorPalette enums added (see app-chrome-palette.md)
+- `Modules/AppChrome/Sources/AppChrome/Palettes.swift` -- AccentColor/SurfacePalette/BadgeColorPalette/HighlightPalette enums (see app-chrome-palette.md); `iOS/AppDefaults.swift` only stores the selections
 - `iOS/AppDelegate.swift`
 - `iOS/Article/ArticleSearchBar.swift`
 - `iOS/Article/ArticleViewController.swift`

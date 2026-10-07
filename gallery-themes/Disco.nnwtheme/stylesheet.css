@@ -4,7 +4,7 @@
    override; markup maps onto real AO3 blocks (dl.tags preface, .summary.module,
    .notes.module, h2.heading chapter headings, versal caps + chapter dividers via
    main.js data attributes). */
-:root{--fh:'Righteous',sans-serif;--fb:'DM Sans',sans-serif;--bg:#f7e9f6;--ink:#2a0f36;--a:#c4118a;--b:#8a5d00}
+:root{--fh:'Righteous',sans-serif;--fb:'DM Sans',sans-serif;--bg:#f7e9f6;--ink:#2a0f36;--a:#c4118a;--b:#8a5d00;--r:0}
 
 /* ---- structural base shared by every converted mockup theme ---- */
 :root{--font-main:var(--fh);--font-body:var(--fb);--font-code:'Courier New',Courier,monospace}
@@ -26,7 +26,17 @@ body > .systemMessage{color:var(--ink)}
 img, figure, video, div, object { max-width: 100%; }
 img, video { height: auto; }
 .smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
-.t{padding:22px 20px 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+
+/* running head: in full-screen reading the app zeroes the top safe area, so page content
+   starts under the notch/Dynamic Island. This band (feed name + date, bottom-aligned,
+   >= 56px) absorbs that zone so the title always starts clear of it. */
+.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--fb);font-size:calc(var(--u) * 11);line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--rule-rh,currentColor);box-sizing:border-box}
+.rh a,.rh a:visited{color:inherit;text-decoration:none;opacity:.78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rh time{flex:none;opacity:.78;white-space:nowrap}
+/* notes: tape */
+:is(.notes.module,.end.notes.module){text-align:center;margin:2.2em 0 1.8em}
+:is(.notes.module,.end.notes.module) h3.heading{display:inline-block;margin:0 0 .7em;padding:.2em 1.5em;background:var(--bg);background:color-mix(in srgb,var(--a) 40%,var(--bg));color:var(--ink);font:700 .74em/1.5 var(--fb);letter-spacing:.2em;text-transform:uppercase;transform:rotate(-1.5deg);clip-path:polygon(0 0,2.5% 25%,0 50%,2.5% 75%,0 100%,100% 100%,97.5% 75%,100% 50%,97.5% 25%,100% 0)}
+.t{padding:10px var(--gx) 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
 .t h1{margin:0;font-family:var(--fh);font-weight:400}
 .t h2.heading, .t h3.title{margin:0;font-family:var(--fh);font-weight:400}
 .t h3.heading{margin:0;font-family:var(--fh);font-weight:400}
@@ -41,11 +51,10 @@ img, video { height: auto; }
 .summary.module{margin:0 0 14px;padding:10px 12px}
 .summary.module h3.heading{margin-bottom:4px}
 .summary.module blockquote.userstuff{margin:0}
-.notes.module, .end.notes.module{font-size:calc(var(--u) * 13);opacity:.8;border-left:2px solid var(--a);padding-left:10px;margin-top:12px}
 .dv{display:block;margin:18px 0 8px}
 p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;font-size:2.7em;line-height:.85;padding:.05em .1em 0 0;color:var(--a)}
 .versalCap{font-variant:small-caps;letter-spacing:.03em}
-.t24 .hd{margin:-22px calc(var(--gx) * -1) 14px;padding:26px 20px;background:radial-gradient(circle,rgba(255,255,255,.45) 1.5px,transparent 2px) 0 0/9px 9px,radial-gradient(circle at 85% 30%,#c4118a,transparent 60%),#1a0a24}
+.t24 .hd{margin:-10px calc(var(--gx) * -1) 14px;padding:26px 20px;background:radial-gradient(circle,rgba(255,255,255,.45) 1.5px,transparent 2px) 0 0/9px 9px,radial-gradient(circle at 85% 30%,#c4118a,transparent 60%),#1a0a24}
 .t24 h1{font-size:calc(var(--u) * 32);color:#ffc83d;text-shadow:0 0 10px #ff2fb3}
 .t24 .by{color:#fbeaff}
 .t24 #bodyContainer dl.tags{padding:8px 12px;border-left:4px double var(--b);background:linear-gradient(90deg,rgba(196,17,138,.2),transparent)}

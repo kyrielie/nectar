@@ -121,6 +121,34 @@
         "identifier" : "ArticleThemingTests",
         "name" : "ArticleThemingTests"
       }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/AppChrome",
+        "identifier" : "AppChromeTests",
+        "name" : "AppChromeTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/BackupRestore",
+        "identifier" : "BackupRestoreTests",
+        "name" : "BackupRestoreTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/ReadingStats",
+        "identifier" : "ReadingStatsTests",
+        "name" : "ReadingStatsTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:Modules/ReadingTime",
+        "identifier" : "ReadingTimeTests",
+        "name" : "ReadingTimeTests"
+      }
     }
   ],
   "version" : 1

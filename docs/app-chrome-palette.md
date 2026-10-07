@@ -379,7 +379,7 @@ timeline rows render with their own tint. Fandom pills stay neutral in
 every palette (see `BadgeCategory`'s doc comment in
 `MainTimelineCellData.swift`).
 
-- **`BadgeColorPalette`** (`iOS/AppDefaults.swift`) — renamed from
+- **`BadgeColorPalette`** (`Modules/AppChrome/Sources/AppChrome/Palettes.swift`) — renamed from
   `BadgeColorMode`, growing from a plain on/off into a real five-case
   palette the same incremental way `AccentColor`/`SurfacePalette` did:
   `.monochrome` (renamed from `.neutral`, same behavior — no-hue
@@ -418,7 +418,7 @@ every palette (see `BadgeCategory`'s doc comment in
   per `AccentColor` case, delivered by adding more complete `AccentColor`
   cases (`.ocean`, `.sunset`, ...) rather than building a per-icon
   override UI; see
-  `Tests/NetNewsWire-iOSTests/AccentColorIconHexSetTests.swift` for the
+  `Modules/AppChrome/Tests/AppChromeTests/AccentColorIconHexSetTests.swift` for the
   `.default`-must-be-unchanged and every-case-has-a-complete-hex-set
   guards.
 - **`BadgeColorPalettePreviewCell`** — live preview of the selected
@@ -438,7 +438,7 @@ every palette (see `BadgeCategory`'s doc comment in
 A fourth axis alongside Accent Color/Surface Palette/Badge Colors, living
 in the same `AccentColorTableViewController` screen rather than a new
 picker screen — see `annotations.md`'s "Color palette" section for the
-full type shape (`HighlightPalette`, `iOS/AppDefaults.swift`) and how it
+full type shape (`HighlightPalette`, `Modules/AppChrome/Sources/AppChrome/Palettes.swift`) and how it
 resolves an `Annotation.Color` key to a hex value. Summary of what's
 specific to this screen and to the article-rendering pipeline (as opposed
 to the annotation UI proper, covered in `annotations.md`):
