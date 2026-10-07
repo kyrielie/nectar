@@ -43,11 +43,18 @@ that directory has no other purpose. Moving a theme between `Themes/` and
 `gallery-themes/` means updating `BUNDLED` here in the same change (see
 `nnwtheme-format.md`'s "Where a theme lives" section).
 
-As of this writing there are 26 gallery-only themes under `gallery-themes/`
+As of this writing there are 85 gallery-only themes under `gallery-themes/`
 and 14 bundled themes under `Themes/` (8 NetNewsWire-origin + 6 Nectar
 customs) -- see `theme-system.md` for the itemized lists. This count drifts
 as themes are added; don't treat it as load-bearing anywhere outside this
 doc.
+
+### Family metadata
+
+`load_theme` copies `Family` and `FamilyVariant` from `Info.plist` into each
+theme's data blob (`family`, `variant`). `index.template.html` does not use
+either field, so the page still shows every bundle as its own card with no
+grouping.
 
 ### Tone classification
 
@@ -163,7 +170,10 @@ have changed since the page was first built:
   `by` in the theme data) as a byline paragraph under the theme name, with a
   hover tooltip and a click/keyboard handler that opened the detail dialog.
   That paragraph, its CSS, and its handlers are gone -- `CreatorName` now
-  surfaces only inside the detail dialog's text. Clicking the preview
+  surfaces only inside the detail dialog's text. Under the convention in
+  `nnwtheme-format.md`, a theme's description belongs in `License.md`, not
+  `CreatorName`; `gallery/build.py` does not read `License.md` yet (confirmed),
+  so the dialog still shows whatever `CreatorName` holds. Clicking the preview
   thumbnail is the only way to open the dialog now; there is no separate
   "Details" affordance next to Zip/Copy link.
 - **Banner background is transparent.** `.band` (the frieze banner behind
