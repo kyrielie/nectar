@@ -723,7 +723,7 @@ Pulled into `RSCore` (rather than left as a private method on
     `WebViewController.applyHighlightPaletteColors()` sets all ten custom
     properties directly, so the fallback only matters before that first
     injection lands.
-  - **`HighlightPalette`** (`iOS/AppDefaults.swift`, `AppDefaults.shared.highlightPalette`,
+  - **`HighlightPalette`** (`Modules/AppChrome/Sources/AppChrome/Palettes.swift`, `AppDefaults.shared.highlightPalette`,
     `.highlightPaletteDidChange` notification) — which set of five hex
     values (one `HexSet` per light/dark appearance, same shape
     `SurfacePalette.HexSet` established) an annotation's color *key*
@@ -962,7 +962,7 @@ in scope here — that's a change to a server not in this repository.
 - `Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/ArticleSQLiteExportTableTests.swift`
   covers the annotations-export join scoping alongside the pre-existing
   feedID/statuses-join/destination-exists cases.
-- `Tests/NetNewsWire-iOSTests/HighlightPaletteHexSetTests.swift`: coverage
+- `Modules/AppChrome/Tests/AppChromeTests/HighlightPaletteHexSetTests.swift`: coverage
   for `HighlightPalette`'s `HexSet`s across all nine cases and both
   appearances — completeness/parseability, distinctness between cases,
   every case's dark/light `HexSet`s being distinct (including the five

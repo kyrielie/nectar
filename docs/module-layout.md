@@ -112,6 +112,26 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   protocol seam `AppDefaults` conforms to, injected by `AppDelegate.swift`
   before `ArticleThemesManager.start()` is called. Depends on `RSCore`,
   `HexColor`, and `Zip`.
+- **Modules/AppChrome** — the four public palette value types,
+  `BadgeColorPalette`, `AccentColor`, `HighlightPalette` and
+  `SurfacePalette`, with their `HexSet` / `IconHexSet` shapes
+  (`Palettes.swift`). They were once duplicated as internal copies in
+  `iOS/AppDefaults.swift`, which shadowed this module; that duplicate is
+  gone, and `AppDefaults` now only stores the person's selection. Depends on
+  `Articles` (for `Annotation.Color`); the pure HexSet tests live in
+  `AppChromeTests` and use `HexColor`. See `app-chrome-palette.md`.
+- **Modules/BackupRestore** — `BackupManager` (backup zip export and
+  non-destructive merge import) and the `BackupSettingsStoring` protocol it
+  reads settings through. The app side of that protocol is
+  `iOS/Backup/BackupSettingsStore.swift` (`extension AppDefaults:
+  BackupSettingsStoring`). Depends on `Account`, `ArticleTheming` and the
+  `Zip` package. See `backup-restore.md`.
+- **Modules/ReadingStats, Modules/ReadingTime** — only the pure calendar
+  and value types so far: `ReadingStatsCalendar.swift` (including the
+  persisted `ReadingStatsDailyEntry`) and `ScreenTimeCalendar` (usage-day
+  and bedtime-window math). The trackers, settings extensions on
+  `AppDefaults`, and views remain in `iOS/ReadingStats` and
+  `iOS/ScreenTime`. See `screen-time.md`.
 - **Shared/** — cross-platform (iOS/Mac target scaffolding, though only iOS
   is actually built — see below) formatting and rendering:
   `ArticleStringFormatter` (title/summary truncation and caching),
@@ -158,20 +178,26 @@ runs in CI (`.github/workflows/ci.yml`) and promotes any reported warning
 to a failure, so each threshold must stay above the current worst file or
 it breaks the build.
 
-- `file_length` is set just above `iOS/Article/WebViewController.swift`
-  (3,148 lines as of this writing).
-- `type_body_length` (2600) was not measured against the real largest type
-  body and is likely far too loose; measure with a local `swiftlint` run
-  and lower it to just above the real maximum.
-- Lower both numbers as the large files shrink. Do not jump to SwiftLint's
-  defaults (400 / 250), which would flag most of the largest files at once.
+- `file_length` is 2900, about 3% above the largest file
+  (`iOS/SceneCoordinator.swift`, 2,812 lines; `WebViewController.swift` is
+  2,627).
+- `type_body_length` is 1400, about 6% above the largest type body
+  (`SceneCoordinator`, 1,322; `AppDefaults` is 925). Both numbers were
+  measured with SwiftLint 0.65.1 by running with each threshold set to 1
+  and reading the reported sizes; earlier values (3200 and 2600) were
+  stale or unmeasured.
+- Lower both numbers as the large files shrink, re-measuring the same way.
+  Do not jump to SwiftLint's defaults (400 / 250), which would flag most of
+  the largest files at once.
 
 The files this is aimed at are the ones over 1,000 lines in `iOS/`, all of
 which are view controllers, a coordinator, or a settings singleton:
 `WebViewController`, `SceneCoordinator`, `AppDefaults`,
 `MainTimelineModernViewController`, `MainFeedCollectionViewController`,
 `ArticleViewController`, `AnnotationsListView`, `SettingsViewController`.
-`Shared/` and `Modules/` have essentially none. The pattern that keeps
+`Shared/` has none. Two files under `Modules/` are also large
+(`ArticlesTable.swift`, 2,391 lines; `Account.swift`, 1,937), and the
+ratchet covers them too. The pattern that keeps
 them from growing further is to extract logic downward into plain
 value types or the owning package (e.g. `Shared/`, `ArticlesDatabase`) and
 test it there, rather than adding more to the view controller; see
@@ -186,6 +212,14 @@ CI runs `Nectar-CI.xctestplan` (`-testPlan Nectar-CI` in
 the default plan and runs only `Nectar-iOSTests`. A package's test target
 only runs in CI if it is listed in `Nectar-CI.xctestplan`: having a
 `.testTarget` in a package's `Package.swift` is not enough. When adding a
-package test target, add its entry there too. Both plans have
+package test target, add its entry there too. `scripts/check-test-plan.sh`
+enforces this: it reads every `Modules/*/Package.swift`, and exits 1 naming
+any `.testTarget` that `Nectar-CI.xctestplan` does not list. CI runs it in
+the `swiftlint` job (it needs no Xcode), so a new package test target that
+is not added to the plan fails the build. Both plans have
 `codeCoverage` enabled so coverage of the large `iOS/` files can be tracked
 over time; it does not change test behavior.
+
+Packages with no test target today: `Images`, `HTMLMetadata`, `RSTree`.
+The `AppChrome`, `ReadingStats` and `ReadingTime` targets each hold only a
+small smoke test, so a green run there says little about the moved code.

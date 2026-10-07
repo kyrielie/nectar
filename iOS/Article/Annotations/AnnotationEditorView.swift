@@ -41,6 +41,7 @@
 
 import SwiftUI
 import Articles
+import AppChrome
 
 struct AnnotationEditorView: View {
 

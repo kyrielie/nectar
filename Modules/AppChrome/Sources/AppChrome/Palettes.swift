@@ -2,6 +2,31 @@ import Foundation
 import UIKit
 import Articles
 
+/// Whether, and how, `.badges` mode's rating/warning/category pills render
+/// with their own tint. Fandom pills stay neutral in every palette -- see
+/// MainTimelineCellData's BadgeCategory doc comment for why.
+///
+/// Renamed from `BadgeColorMode` (see docs/app-chrome-palette.md, "Badge Colors") -- what used to be a plain on/off is now a real palette,
+/// grown the same incremental way `AccentColor`/`SurfacePalette` did.
+///
+/// Five cases, two tiers:
+///  - Fixed-palette tier (`.default`, `.semantic`, `.monochrome`,
+///    `.transparent`): hue/no-hue choice is baked into the case itself,
+///    independent of whatever `AccentColor` is active.
+///  - Accent-following tier (`.accent`): rating/category/warning colors
+///    are derived at read time from `AppDefaults.shared.accentColor`, so
+///    this one case's rendered colors change whenever the person's accent
+///    choice changes, without a badge-specific setting change.
+///
+/// `.monochrome` is a rename of the original `.neutral` case, not a new
+/// one -- it keeps raw value `1` so this rename needs no `UserDefaults`
+/// migration; anyone with `badgeColorMode == 1` already saved keeps
+/// exactly the palette they had, now spelled `.monochrome` because that
+/// name describes what it actually renders (`.tertiarySystemFill`
+/// background / `.secondaryLabel` text, no hue at all) instead of reading
+/// like "off" or "muted-but-still-tinted." `.default`/`.semantic` keep
+/// their original raw values (2/3) unchanged. `.transparent` and
+/// `.accent` are genuinely new and take the next free raw values (4/5).
 public enum BadgeColorPalette: Int, CaseIterable, Sendable {
 	case monochrome = 1
 	case `default` = 2
@@ -24,6 +49,23 @@ public enum BadgeColorPalette: Int, CaseIterable, Sendable {
 		}
 	}
 }
+/// App-wide accent hue (Settings → Appearance), independent of light/dark.
+/// `.default` preserves today's fixed primaryAccentColor/secondaryAccentColor
+/// asset-catalog values exactly; the other cases are a fixed palette rather
+/// than a free color picker, so every choice stays legible against both
+/// .label/.secondaryLabel text and system backgrounds in both appearances.
+///
+/// Scope note: `Assets.Colors.primaryAccent`/`.secondaryAccent` are read live
+/// by most call sites (tintColor assignments, updateColors()-style methods),
+/// so those repaint immediately via `accentColorDidChange`. The
+/// `Assets.Images` entries this used to warn about (mainFolder, unreadFeed,
+/// readFeed, lastOpenedFeed, unreadCellIndicator) were `static let
+/// IconImage`s that captured `preferredColor` once at process launch -- see
+/// `Assets.swift`'s own comment on those properties, which were converted to
+/// `static var`s (recomputed per access) to fix exactly this. That fix is
+/// why this note used to describe a launch-time-only limitation that no
+/// longer applies; kept here in case any *new* `Assets.Images` entry
+/// reintroduces the same `static let` pattern.
 public enum AccentColor: Int, CaseIterable, Sendable {
 	case `default` = 0
 	case rosePine = 1
@@ -205,6 +247,26 @@ public enum AccentColor: Int, CaseIterable, Sendable {
 		}
 	}
 }
+/// Which set of five hex values (yellow/red/green/blue/purple, matching
+/// Annotation.Color.allCases 1:1) an annotation's fixed color *key*
+/// resolves to at render/display time -- a person's saved
+/// Annotation.color is always one of the five case names, never a hex
+/// value, so switching palettes here re-tints every existing highlight
+/// without touching a single row of annotation data. See
+/// docs/annotations.md's "Color palette" section.
+///
+/// Same two-appearance HexSet shape SurfacePalette established just above
+/// (lightHexSet/darkHexSet, .default meaning "fall back to the existing
+/// fixed hex", one HexSet struct rather than a bare tuple so each field
+/// stays named and matched to its Annotation.Color case by name, not
+/// position). `.default`'s own light/dark values are *not* nil the way
+/// SurfacePalette.default's are, though -- unlike SurfacePalette, there is
+/// no pre-existing asset-catalog colorset for highlight colors to fall
+/// back to (core.css's mark.nnw-highlight rules previously had only a
+/// single hardcoded fallback hex per color, applied unconditionally in
+/// both appearances); .default's HexSets below are what that single
+/// fallback becomes once it's split into a real light/dark pair, so they
+/// carry real values rather than nil.
 public enum HighlightPalette: Int, CaseIterable, Sendable {
 	case `default` = 0
 	/// Softer, lower-saturation tones for long reading sessions --
@@ -282,7 +344,7 @@ public enum HighlightPalette: Int, CaseIterable, Sendable {
 		/// same way, so WebViewController's injection call site can build
 		/// the custom-property name/value pairs from one dictionary
 		/// instead of a five-way switch.
-		var byColorKey: [String: String] {
+		public var byColorKey: [String: String] {
 			[
 				Annotation.Color.yellow.rawValue: yellow,
 				Annotation.Color.red.rawValue: red,
@@ -292,7 +354,7 @@ public enum HighlightPalette: Int, CaseIterable, Sendable {
 			]
 		}
 
-		subscript(_ color: Annotation.Color) -> String {
+		public subscript(_ color: Annotation.Color) -> String {
 			switch color {
 			case .yellow: return yellow
 			case .red: return red
@@ -375,6 +437,31 @@ public enum HighlightPalette: Int, CaseIterable, Sendable {
 		isDark ? darkHexSet : lightHexSet
 	}
 }
+/// Tints the native-chrome surface colors (bar backgrounds, nav bar, and the
+/// vibrant-text tint) as a set, independent of AccentColor -- this affects
+/// UIKit chrome backgrounds, never the WKWebView article content, and
+/// deliberately stays a separate picker rather than merging into AccentColor's
+/// contract (which today only tints icons/progress fill, never backgrounds).
+/// Also independent of the light/dark/automatic `UserInterfaceColorPalette`
+/// setting: a palette tints chrome colors on top of whichever mode is
+/// active, and does not itself force a mode. See docs/nnwtheme-format.md's
+/// native-surface-color section for the reasoning.
+///
+/// Named `SurfacePalette`, not `ColorPalette` -- `UserInterfaceColorPalette`
+/// (and its `ColorPaletteTableViewController` / `AppearanceRow.colorPalette`)
+/// already exist and mean something unrelated: the light/dark/automatic
+/// appearance picker above. This type keeps the `surfaceTint` name at the
+/// `AppDefaults.shared` property, `UserDefaults` key, and notification-name
+/// level (all unchanged below) purely to avoid a migration -- only the
+/// Swift-level type name changes, from `SurfaceTint` to `SurfacePalette`.
+///
+/// `.default` preserves the existing colorset values unchanged, same contract as
+/// AccentColor.default. Started with a single alternative (.slate); grown here
+/// to four the same incremental way AccentColor grew from its own starting set,
+/// now that there's more than one real design to validate against. `.sepia`,
+/// `.forest`, and `.berry` are genuinely new and take the next free raw values
+/// after `.slate` (2/3/4) -- same "append, never renumber" contract `.slate`
+/// itself already established relative to `.default`.
 public enum SurfacePalette: Int, CaseIterable, Sendable {
 	case `default` = 0
 	case slate = 1

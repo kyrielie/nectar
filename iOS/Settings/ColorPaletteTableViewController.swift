@@ -27,6 +27,7 @@
 //
 
 import UIKit
+import AppChrome
 
 final class ColorPaletteTableViewController: UITableViewController, SettingsPaletteBackgroundHosting {
 

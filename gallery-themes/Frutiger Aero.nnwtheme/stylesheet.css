@@ -4,7 +4,7 @@
    override; markup maps onto real AO3 blocks (dl.tags preface, .summary.module,
    .notes.module, h2.heading chapter headings, versal caps + chapter dividers via
    main.js data attributes). */
-:root{--fh:'Open Sans',sans-serif;--fb:'Open Sans',sans-serif;--bg:linear-gradient(#cfeeff,#f4fbff 45%,#e3f6d8);--ink:#12384f;--a:#1796cc;--gl:rgba(255,255,255,.55)}
+:root{--fh:'Open Sans',sans-serif;--fb:'Open Sans',sans-serif;--bg:linear-gradient(#cfeeff,#f4fbff 45%,#e3f6d8);--ink:#12384f;--a:#1796cc;--gl:rgba(255,255,255,.55);--r:1.2em}
 
 /* ---- structural base shared by every converted mockup theme ---- */
 :root{--font-main:var(--fh);--font-body:var(--fb);--font-code:'Courier New',Courier,monospace}
@@ -26,7 +26,19 @@ body > .systemMessage{color:var(--ink)}
 img, figure, video, div, object { max-width: 100%; }
 img, video { height: auto; }
 .smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
-.t{padding:22px 20px 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+
+/* running head: in full-screen reading the app zeroes the top safe area, so page content
+   starts under the notch/Dynamic Island. This band (feed name + date, bottom-aligned,
+   >= 56px) absorbs that zone so the title always starts clear of it. */
+.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--fb);font-size:calc(var(--u) * 11);line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--rule-rh,currentColor);box-sizing:border-box}
+.rh a,.rh a:visited{color:inherit;text-decoration:none;opacity:.78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rh time{flex:none;opacity:.78;white-space:nowrap}
+/* notes: bubble */
+:is(.notes.module,.end.notes.module){position:relative;margin:2em 0 2.4em;padding:.9em 1.15em;border:2px solid var(--ink);border-radius:var(--r);background:var(--bg);background:color-mix(in srgb,var(--a) 8%,var(--bg))}
+:is(.notes.module,.end.notes.module)::after{content:"";position:absolute;left:1.7em;bottom:-.72em;width:1em;height:1em;background:var(--bg);border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(45deg)}
+:is(.notes.module,.end.notes.module) h3.heading{display:inline;margin:0 .45em 0 0;font:inherit;font-weight:700}
+:is(.notes.module,.end.notes.module) blockquote.userstuff,:is(.notes.module,.end.notes.module) blockquote.userstuff p{display:inline}
+.t{padding:10px var(--gx) 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
 .t h1{margin:0;font-family:var(--fh);font-weight:400}
 .t h2.heading, .t h3.title{margin:0;font-family:var(--fh);font-weight:400}
 .t h3.heading{margin:0;font-family:var(--fh);font-weight:400}
@@ -41,7 +53,6 @@ img, video { height: auto; }
 .summary.module{margin:0 0 14px;padding:10px 12px}
 .summary.module h3.heading{margin-bottom:4px}
 .summary.module blockquote.userstuff{margin:0}
-.notes.module, .end.notes.module{font-size:calc(var(--u) * 13);opacity:.8;border-left:2px solid var(--a);padding-left:10px;margin-top:12px}
 .dv{display:block;margin:18px 0 8px}
 p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;font-size:2.7em;line-height:.85;padding:.05em .1em 0 0;color:var(--a)}
 .versalCap{font-variant:small-caps;letter-spacing:.03em}

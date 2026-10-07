@@ -85,6 +85,9 @@ jobs:
       - name: Run SwiftLint
         run: swiftlint lint --strict --reporter github-actions-logging
 
+      - name: Check test plan covers every package test target
+        run: scripts/check-test-plan.sh
+
   ios-simulator-test:
     name: iOS Simulator Test
     runs-on: macos-26

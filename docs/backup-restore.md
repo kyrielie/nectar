@@ -2,7 +2,9 @@
 
 Full device backup and non-destructive restore, driven from a new
 **Backup** section in Settings (`settings-screen.md`). Implemented by
-`BackupManager` (`iOS/Backup/BackupManager.swift`, app-target-only) and
+`BackupManager` (`Modules/BackupRestore`, a package so its tests run without an
+app host; the app supplies settings through `BackupSettingsStoring`, adapted in
+`iOS/Backup/BackupSettingsStore.swift`) and
 `BackupRestoreCoordinator` (`iOS/Import/BackupRestoreCoordinator.swift`,
 the restore-side document-picker → merge-options → import flow).
 

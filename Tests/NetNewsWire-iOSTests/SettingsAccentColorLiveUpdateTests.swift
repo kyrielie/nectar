@@ -26,6 +26,7 @@
 import Testing
 import UIKit
 @testable import Nectar
+import AppChrome
 
 @Suite struct SettingsAccentColorLiveUpdateTests {
 

@@ -27,6 +27,7 @@
 import SwiftUI
 import Account
 import Articles
+import AppChrome
 
 struct AnnotationsSettingsView: View {
 
