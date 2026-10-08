@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
+/* Symmetry Pastel Hotel: converted from the Nectar mockup review page (shape B, test conversion). */
+:root{--fh:'Josefin Sans',sans-serif;--fb:'Libre Baskerville',serif;--bg:#fff4e0;--ink:#4a2f56;--a:#b83d65;--pk:#f6c1cc;--tl:#5e9a97;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;padding:0;background:var(--bg);color:var(--ink)}
+a{color:var(--a)}
+a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.articleBody{color:var(--ink)}
+img,video,iframe,embed,object,svg{max-width:100%}
+img,video{height:auto}
+table{max-width:100%}
+pre,code{white-space:pre-wrap;word-wrap:break-word}
+.t{word-wrap:break-word}
+.t h1 a,.t h1 a:visited{color:inherit;text-decoration:none}
+#bodyContainer dl.tags a,#bodyContainer dl.tags a:visited{color:inherit;text-decoration:none}
+#bodyContainer blockquote.userstuff{margin:0;padding:0;border:0}
+#bodyContainer blockquote.userstuff p{margin:0}
+.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--fb);font-size:calc(var(--u) * 11);line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid currentColor}
+.rh a,.rh a:visited{color:inherit;text-decoration:none;opacity:.78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.rh time{flex:none;opacity:.78;white-space:nowrap}
+.t{padding:10px var(--gx) 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+.t h1,.t h2.heading,.t h3.title,.t h3.heading{margin:0;font-family:var(--fh);font-weight:400}
+.t h1{font-size:calc(var(--u) * 30);line-height:1.05}
+.t h2.heading,.t h3.title{font-size:calc(var(--u) * 21);margin-bottom:8px}
+.t h3.heading{font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:16px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12);letter-spacing:.05em}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12)}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.summary.module blockquote.userstuff{margin:0}
+.notes.module{font-size:calc(var(--u) * 13);opacity:.8;border-left:2px solid var(--a);padding-left:10px;margin-top:12px}
+.dv{display:block;margin:18px 0 8px}
+p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;font-size:2.7em;line-height:.85;padding:.05em .1em 0 0;color:var(--a)}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+.t11{font-size:calc(var(--u) * 14);line-height:1.8;text-align:center}
+.t11 .hd{margin:-10px calc(var(--gx) * -1) 22px;padding:36px 20px 22px;background:var(--pk);color:#4a2f56;border-bottom:6px double #b83d65;clip-path:polygon(0 18px,22% 18px,22% 8px,38% 8px,38% 0,62% 0,62% 8px,78% 8px,78% 18px,100% 18px,100% 100%,0 100%)}
+.t11 h1{font-size:calc(var(--u) * 24);font-weight:600;letter-spacing:.18em;text-transform:uppercase;line-height:1.35}
+.t11 .by{font-size:calc(var(--u) * 11);letter-spacing:.2em}
+.t11 .by::before{content:"\25C7  "}
+.t11 .by::after{content:"  \25C7"}
+.t11 #bodyContainer dl.tags{grid-template-columns:1fr;gap:0;padding:10px 0;border-block:1px solid var(--tl)}
+.t11 #bodyContainer dl.tags dt{font:600 calc(var(--u) * 10) 'Josefin Sans',sans-serif;letter-spacing:.24em;text-transform:uppercase;color:var(--a)}
+.t11 #bodyContainer dl.tags dd{margin-bottom:6px}
+.t11 .dv{color:var(--tl)}
+.t11 .dv::before{content:"\25C6  \25C6  \25C6"}
+.t11 h2.heading,.t11 h3.title{font:600 calc(var(--u) * 15) 'Josefin Sans',sans-serif;letter-spacing:.24em;text-transform:uppercase;color:var(--a)}
+.t11 .summary.module{padding:14px 18px;background:var(--pk);color:#4a2f56;font-style:italic;clip-path:polygon(0 10px,10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px))}
+.t11 .summary.module h3.heading{font:600 calc(var(--u) * 10) 'Josefin Sans',sans-serif;font-style:normal;letter-spacing:.24em;text-transform:uppercase}
+.t11 .notes.module{border:0;border-top:1px solid var(--tl);padding:8px 0 0;font-style:italic;opacity:1}
+.t11 p:has(> .versalCap:first-child)::first-letter{font:600 2.8em 'Josefin Sans',sans-serif;color:var(--a)}
+.t11 p:has(> .versalCap:first-child)::first-letter{float:none!important;font:inherit!important;padding:0!important;margin:0!important;color:inherit!important;background:none!important;border:0!important;text-shadow:none!important;border-radius:0!important;line-height:inherit!important}
+.t11 .versalCap{font-variant:normal!important;letter-spacing:normal!important;text-transform:none!important}
+.t11 #bodyContainer dl.tags dt.wide,.t11 #bodyContainer dl.tags dd.wide{grid-column:1/-1!important}
+.t11 .ao3SeriesPrefaceEntry{margin-right:.5em}
+.t11 .ao3SeriesPrefaceLinks{display:block;margin-top:.2em;font-size:.95em}
+.t11 .ao3SeriesNavDisabled{opacity:.45}
+.t11 #bodyContainer [role="article"] a{background:#f7c6d4;color:#4a2f56;text-decoration:none;padding:0 .35em;padding:0 .3em}
+@media (prefers-color-scheme: dark){
+:root{--bg:#2a1a30;--ink:#f6e6ea;--a:#f08aa8;--tl:#78b3b0}
+}
+@supports (-webkit-touch-callout: none){
+:root{--gx:20px;--u:calc(1rem / 15)}
+html{font:-apple-system-body}
+}
+@supports not (-webkit-touch-callout: none){
+:root{--gx:48px;--u:1px}
+}
