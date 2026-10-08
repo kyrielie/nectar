@@ -9,7 +9,7 @@
 	<key>CreatorHomePage</key>
 	<string>https://github.com/intothisshadow/AO3-SiteSkin_PeacockFlare</string>
 	<key>CreatorName</key>
-	<string>Palette inspired by intothisshadow's "Poudre et Plume" recolor of their Peacock Flare AO3 site skin (no LICENSE file in source repo -- values reimplemented independently from the published :root palette, not copied verbatim; credited by name/repo rather than relying on a license grant)</string>
+	<string>kyrielie</string>
 	<key>Version</key>
 	<integer>1</integer>
 </dict>

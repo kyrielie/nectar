@@ -5,11 +5,11 @@
 	<key>CreatorHomePage</key>
 	<string>https://github.com/kyrielie/nectar</string>
 	<key>CreatorName</key>
-	<string>Nectar</string>
+	<string>kyrielie</string>
 	<key>Name</key>
 	<string>Night Amber</string>
 	<key>ThemeIdentifier</key>
-	<string>com.nectar.theme.night-amber</string>
+	<string>com.nectar.themes.night-amber</string>
 	<key>Version</key>
 	<integer>1</integer>
 </dict>

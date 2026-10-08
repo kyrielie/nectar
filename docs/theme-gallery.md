@@ -43,7 +43,7 @@ that directory has no other purpose. Moving a theme between `Themes/` and
 `gallery-themes/` means updating `BUNDLED` here in the same change (see
 `nnwtheme-format.md`'s "Where a theme lives" section).
 
-As of this writing there are 85 gallery-only themes under `gallery-themes/`
+As of this writing there are 150 gallery-only themes under `gallery-themes/`
 and 14 bundled themes under `Themes/` (8 NetNewsWire-origin + 6 Nectar
 customs) -- see `theme-system.md` for the itemized lists. This count drifts
 as themes are added; don't treat it as load-bearing anywhere outside this
@@ -173,7 +173,8 @@ have changed since the page was first built:
   surfaces only inside the detail dialog's text. Under the convention in
   `nnwtheme-format.md`, a theme's description belongs in `License.md`, not
   `CreatorName`; `gallery/build.py` does not read `License.md` yet (confirmed),
-  so the dialog still shows whatever `CreatorName` holds. Clicking the preview
+  so the dialog shows only `CreatorName`, which is now just the creator name
+  (`kyrielie`) for every bundle except the NetNewsWire-origin ones. Clicking the preview
   thumbnail is the only way to open the dialog now; there is no separate
   "Details" affordance next to Zip/Copy link.
 - **Banner background is transparent.** `.band` (the frieze banner behind

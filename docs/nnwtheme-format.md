@@ -17,11 +17,11 @@ The `Info.plist` requires the following keys/types:
 
 |Key|Type|Notes|
 |---|---|---|
-|`ThemeIdentifier`|`String`|Unique identifier for the theme, e.g. using reverse domain name.|
+|`ThemeIdentifier`|`String`|Unique identifier for the theme, e.g. using reverse domain name. Nectar bundles use `com.nectar.themes.<slug>` (plural `themes`; 156 bundles). The slug is usually the lower-cased name, but a few older bundles keep ids from earlier names (Beacon `teenwolf`, Mystery `gravityfalls`, Perseus `percyjackson`, Black & White `blackandwhite`) and were not renamed, since changing an identifier would make an installed copy look like a different theme (inferred; not checked in code). The NetNewsWire-origin bundles keep their upstream ids. The 65 batch 3 to 8 conversions were `com.nectar.theme.<slug>` (singular) and have been changed to match.|
 |`Name`|`String`|Theme name|
 |`CreatorHomePage`|`String`||
-|`CreatorName`|`String`|The creator's name (a person or organization), and nothing else. **Do not put the theme's description, attribution prose, or license status here** -- those go in `License.md` (see below). Current state, confirmed by reading `gallery/build.py`: the gallery still copies this key into its `by` field and shows it in the detail dialog, and does not read `License.md` at all. Many existing bundles (and the `creator=` strings in `buildscripts/theme-generation/generate_ported_themes.py`) predate this convention and still carry attribution/description text here; they have not been migrated. The gallery grid card shows only the theme name -- see `docs/theme-gallery.md`.|
-|`Version`|`Integer`||
+|`CreatorName`|`String`|The creator's name (a person or organization), and nothing else. **Do not put the theme's description, attribution prose, or license status here** -- those go in `License.md` (see below). Migrated: every bundle except the eight NetNewsWire-origin ones (which keep their upstream creators and are left alone) now has `CreatorName` `kyrielie`, and the text that used to sit here is in its `License.md`. `gallery/build.py` still copies this key into its `by` field and does not read `License.md` (confirmed by reading it), so the gallery's detail dialog shows only the creator name for migrated bundles until the build reads `License.md`. `buildscripts/theme-generation/generate_ported_themes.py` now writes `kyrielie` here and puts its `creator=` text in a new `License.md` only when the bundle has none. The gallery grid card shows only the theme name -- see `docs/theme-gallery.md`.|
+|`Version`|`Integer`|Leave at `1` while Nectar is in development; do not bump it for edits. Found as-is and left alone: seven gallery bundles at `2`, and two bundles in `Themes/` at `3` and `14`.|
 |`Family`|`String`|Optional. Groups sibling bundles that are the same design with different accents/palettes (e.g. "Rosé Pine"). Omit unless there are genuinely 2+ sibling bundles -- a family of one adds nothing, and isn't how any single-variant theme (including Dracula, reduced to one accent) is set up. `gallery/build.py` copies it into each theme's data, but the gallery page does not use it yet (see "Theme families" below).|
 |`FamilyVariant`|`String`|Optional. This bundle's variant label within `Family` (e.g. "Moon", "Purple"). Meaningless without `Family` also being set.|
 
@@ -47,11 +47,16 @@ A `License.md` is plain Markdown, a few short paragraphs, in this order:
 
 `Themes/*/License.md` already follow this shape informally (Black & White,
 Powder Pink and Tumblr Blue each lead with attribution and then describe the
-look). Not yet true: no code reads `License.md` -- `gallery/build.py` and
-`ArticleThemePlist` use only `Info.plist`. Moving the gallery's detail dialog
-text from `CreatorName` to `License.md`, and migrating existing bundles'
-`CreatorName` values and the generator's `creator=` strings, is follow-up work
-this doc does not describe as done.
+look). Current state: all 150 gallery bundles and 7 of the 14 bundled ones have a
+`License.md`; the seven without are NetNewsWire-origin bundles, left unchanged.
+When `CreatorName` was migrated, bundles that had no `License.md` got a short one
+holding the old text plus `License: not yet decided; set one before publishing.`;
+the 65 batch 3 to 8 conversions carry the same line, and their font licenses were
+not checked. Where a bundle's `License.md` did not already credit the source, the
+old `CreatorName` text was added at its top (Beetlejuice and Constellations).
+No code reads `License.md` -- `gallery/build.py` and `ArticleThemePlist` use only
+`Info.plist` -- so making the gallery's detail dialog show `License.md` instead of
+`CreatorName` is still follow-up work.
 
 ### template.html
 This provides a starting point for editing the structure of the page. Theme variables are documented in the header.
@@ -78,21 +83,31 @@ decorative markup, alternate class names on non-`articleBody` elements -- is fai
 #### Template shapes in `gallery-themes/`
 
 Surveyed by reading every `gallery-themes/*/template.html` (85 bundles at the
-time; `Themes/` was not surveyed). Counts drift; the shapes are what matter.
+time; `Themes/` was not surveyed). The 65 batch 3 to 8 mockup conversions added
+since (150 bundles now) were classified by matching `class="rh"` in their
+templates, not by reading each one, and are all shape B. Counts drift; the
+shapes are what matter.
 
 | Shape | Count | Markup | Examples |
 |---|---|---|---|
 | A. NetNewsWire header table | 17 | `header.headerContainer > table.headerTable` (feed link and byline left, avatar right), then title, `[[dateline_style]]`, external link, body. Stock NetNewsWire structure. | Beacon, Dracula, Twilight, Rosé Pine (all four variants) |
-| B. Compact running head | 52 | Converted from mockups (see "Theme mockups"). 8 lines: `div.rh` (feed link left, date right), then `div.t.tNN > header.hd` (title, byline), then body. `tNN` (t1 to t38) is a per-theme variant class, so the design lives in the CSS. No avatar, no `[[dateline_style]]`, no external-link line. | Swiss International, Disco, Bauhaus, Birdsite, Bridge Command |
+| B. Compact running head | 117 (52 earlier, 65 mockup conversions) | Converted from mockups (see "Theme mockups"). 8 lines: `div.rh` (feed link left, date right), then `div.t.tNN > header.hd` (title, byline), then body. `tNN` (t1 to t38) is a per-theme variant class, so the design lives in the CSS. No avatar, no `[[dateline_style]]`, no external-link line. | Swiss International, Disco, Bauhaus, Birdsite, Bridge Command |
 | C. Custom wrapper | 13 | `div.fontSize` wrapper, external-link line, and `#nnwFooter`. The six older themes (Aldine, Deco Line, Kelmscott, Kennerley, Marigold Press, Rosarivo) keep header bars with feed link and avatar; the seven newer ones (Craft Table, Didone Editorial, Four Nations, Illuminated Codex, Mid-century Jost, Screenplay, Sticker Pop) have no feed link or avatar and open with the title. | Craft Table, Illuminated Codex |
 | D. Outliers | 3 | Broadsheet is the stock layout plus a live inline `<script>` (blocked in the real reader). Heist Night and Undercity Dusk are hand-built (Route B in "Converting mockups"), B-like with their own class prefixes (`sc-`, `ar-`). | |
 
 Behavior differs by shape too. A has no versal and no chapter dividers, and
 only Pinerose has a `prefers-color-scheme: dark` block, so the other 16 are
-single-mode. B opts into the divider mechanism in all 52 (zero-width glyph,
-styled through CSS) and into versal in 47 (Birdsite, Upvote, Watch Later,
-Galactic Matinee and Matisse Paper Cutouts skip it), and every B theme has a dark
-block. C is mixed: nine use versal, six of the older ones have no divider
+single-mode. B opts into the divider mechanism in all 117 (zero-width glyph,
+styled through CSS) and into versal in 84. The 33 that skip versal are Birdsite,
+Upvote, Watch Later, Galactic Matinee and Matisse Paper Cutouts, plus 28 mockup
+conversions whose drop cap and small-caps opening words were removed by decision
+(Green Phosphor, 1-Bit Desktop, Night Amber, Cassette Futurism, Catppuccin,
+Symmetry Pastel Hotel, Wiener Werkstätte, Futurism, Suprematism, Papel Picado,
+Atomic Age Populuxe, Mid-Century Modern, Underground Comix, Nordic Folk, Papercut
+Layers, Giallo, Large Print, OLED Black, Gruvbox, Game Boy Green, Commodore 64,
+Bento Grid, Park Service Brochure, Library Card Catalog, Tokyo Night, Solarized,
+Subway Diagram, E-Ink); their stylesheets keep `.versalCap` and
+`::first-letter` rules that can no longer match. Every B theme has a dark block. C is mixed: nine use versal, six of the older ones have no divider
 attributes at all, and the newer ones use visible dividers (a diamond, a fleuron,
 kanji, `CUT TO:`, `/`). Kelmscott's template mentions an inline script only in a
 comment explaining why it was removed; it ships none.
@@ -122,9 +137,10 @@ its running head clears the 68px rule by arithmetic. Two templates are kept in t
 ```
 
 (This is Swiss International's `template.html` with its `t16` replaced by `tN`. Checked
-across `gallery-themes/`: 46 of the 52 shape B templates are identical to it apart from
-that class number, five (Birdsite, Galactic Matinee, Matisse Paper Cutouts, Upvote, Watch
-Later) omit `data-versal-target`, and Bridge Command adds a nav strip and a credit line.)
+across `gallery-themes/`: 83 of the 117 shape B templates are identical to it apart from
+that class number, 33 omit `data-versal-target` (the five earlier ones above and 28 converted
+mockups), and Bridge Command adds a nav strip and a credit line. Counts were taken by script
+over `gallery-themes/`.)
 Drop `data-versal-target` for a theme with no drop cap. The layout it renders is the fixed order under "Page layout".
 
 Not added as starters:
@@ -408,6 +424,14 @@ Rules for any ornament:
    caps / versal treatments").
 5. **Nothing decorative at the very top of the page may reduce the space above
    the title** -- see the next section.
+6. **A page frame belongs to the article, not the viewport.** A border that is
+   meant to enclose the article must be anchored to a wrapper that scrolls with
+   it (Illuminated Codex: `.codexPage` is `position: relative`, and the frame is
+   its pseudo-elements and those of `.codexHeader` and `.codexFooter`). A
+   `position: fixed` frame floats over the text at the screen edges instead.
+   Do not run an SVG filter on a box as tall as the article; filter only short
+   edge strips and leave the long edges as plain borders. Verified by reading the
+   CSS, not on a device.
 
 ## Full-screen reading: space above the title
 
@@ -465,9 +489,11 @@ review page are in `buildscripts/theme-mockups/`:
 | File | Purpose |
 |---|---|
 | `build_mockup_page.py` | Builds the review page from `themes.json`. Holds the sample text and the page shell, so the page is rebuilt without regenerating anything. |
-| `themes.json` | The 65 mockups of batches 3 to 8 (`id`, `cat`, `name`, `n`, `css`, `lk`). No entry has an exact-name match in `Themes/` or `gallery-themes/`, so this file is the only copy of those designs. |
+| `themes.json` | The 65 mockups of batches 3 to 8 (`id`, `cat`, `name`, `n`, `css`, `lk`). All 65 now also exist as converted bundles in `gallery-themes/` (matched by name; they were not there when this section was first written), so this file is the source of the mockups rather than the only copy of the designs. |
 | `fonts.html` | The Google Fonts `<link>` tags (91 families) the mockups load. The builder writes them into the page head. Add a family here when a mockup uses a new one, or the preview silently falls back to system fonts. |
 | `check_fullscreen_titles.py` | Full-screen title check in headless Chromium (needs Playwright). |
+
+These files are not in the checkout this doc was last revised against: `buildscripts/` there has only `theme-generation/` among the theme tools, so confirm they exist before relying on the commands below.
 
 The built review page (about 220KB) is not committed. `python3 build_mockup_page.py
 themes.json out.html` regenerates it, byte for byte identical to the page it was first
@@ -694,15 +720,18 @@ prints WCAG contrast for the text pairs and marks any under 4.5. In the tree, He
 and Undercity Dusk (shape D) match this route: both are `Version` 2 with homepage
 `https://github.com/nectar-app/gallery-themes` and both put a 56px-minimum running head first.
 
-**Info.plist fingerprints, checked across `gallery-themes/`:** 48 of the 52 shape B bundles
-are `Version` 1 with homepage `https://github.com/kyrielie/nectar` (the other four are
-`Version` 2 with the same homepage; why was not determined).
+**Info.plist fingerprints, checked across `gallery-themes/` by script:** all 117 shape B
+bundles have homepage `https://github.com/kyrielie/nectar` and `CreatorName` `kyrielie`;
+113 are `Version` 1 and four are `Version` 2 (why was not determined). Every one has a
+`License.md`. How the 65 batch 3 to 8 bundles were converted is not recorded in this
+repo; their `License.md` only says "converted to this bundle by script".
 
 **After either route.**
 
 1. `finalize_credits.py <dir>` sets `CreatorName` to just the creator name and moves the
    descriptive text into `License.md` (CC0 unless the bundle already ships another license).
-   All 52 shape B bundles have a `License.md`.
+   All 117 shape B bundles have a `License.md`; the 65 mockup conversions carry the placeholder described under "License.md".
+   Leave `Version` at 1.
 2. Put the bundle in `Themes/` or `gallery-themes/` (see below) and update `BUNDLED` if needed.
 3. Run the theme tests named below, which scan both directories.
 4. Check full-screen reading on a device, as described above.

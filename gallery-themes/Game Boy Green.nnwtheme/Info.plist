@@ -5,11 +5,11 @@
 	<key>CreatorHomePage</key>
 	<string>https://github.com/kyrielie/nectar</string>
 	<key>CreatorName</key>
-	<string>Nectar</string>
+	<string>kyrielie</string>
 	<key>Name</key>
 	<string>Game Boy Green</string>
 	<key>ThemeIdentifier</key>
-	<string>com.nectar.theme.game-boy-green</string>
+	<string>com.nectar.themes.game-boy-green</string>
 	<key>Version</key>
 	<integer>1</integer>
 </dict>
