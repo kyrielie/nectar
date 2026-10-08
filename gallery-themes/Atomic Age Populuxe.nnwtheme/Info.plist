@@ -5,11 +5,11 @@
 	<key>CreatorHomePage</key>
 	<string>https://github.com/kyrielie/nectar</string>
 	<key>CreatorName</key>
-	<string>Nectar</string>
+	<string>kyrielie</string>
 	<key>Name</key>
 	<string>Atomic Age Populuxe</string>
 	<key>ThemeIdentifier</key>
-	<string>com.nectar.theme.atomic-age-populuxe</string>
+	<string>com.nectar.themes.atomic-age-populuxe</string>
 	<key>Version</key>
 	<integer>1</integer>
 </dict>

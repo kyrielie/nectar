@@ -5,11 +5,11 @@
 	<key>CreatorHomePage</key>
 	<string>https://github.com/kyrielie/nectar</string>
 	<key>CreatorName</key>
-	<string>Nectar</string>
+	<string>kyrielie</string>
 	<key>Name</key>
 	<string>Ship's Log</string>
 	<key>ThemeIdentifier</key>
-	<string>com.nectar.theme.ship-s-log</string>
+	<string>com.nectar.themes.ship-s-log</string>
 	<key>Version</key>
 	<integer>1</integer>
 </dict>

@@ -5,11 +5,11 @@
 	<key>CreatorHomePage</key>
 	<string>https://github.com/kyrielie/nectar</string>
 	<key>CreatorName</key>
-	<string>Nectar</string>
+	<string>kyrielie</string>
 	<key>Name</key>
 	<string>Denim and Rivets</string>
 	<key>ThemeIdentifier</key>
-	<string>com.nectar.theme.denim-and-rivets</string>
+	<string>com.nectar.themes.denim-and-rivets</string>
 	<key>Version</key>
 	<integer>1</integer>
 </dict>

@@ -906,12 +906,20 @@ for t in themes:
     def xml_escape(s):
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
+    # CreatorName is the creator's name only. The `creator` field in `themes` is
+    # the source credit / license-status prose, so it goes in License.md (see
+    # docs/nnwtheme-format.md), and only when the bundle has none yet: an existing
+    # License.md is hand-maintained and must not be overwritten.
     plist = PLIST_TEMPLATE.format(
         name=xml_escape(t["name"]), identifier=t["identifier"],
-        homepage=xml_escape(t["homepage"]), creator=xml_escape(t["creator"])
+        homepage=xml_escape(t["homepage"]), creator="kyrielie"
     )
     with open(os.path.join(dirname, "Info.plist"), "w") as f:
         f.write(plist)
+    license_path = os.path.join(dirname, "License.md")
+    if not os.path.exists(license_path):
+        with open(license_path, "w") as f:
+            f.write(f"# {t['name']}\n\n{t['creator'].rstrip('.')}.\n\nLicense: not yet decided; set one before publishing.\n")
 
     css = STYLESHEET_TEMPLATE.format(**t)
     if t["name"] in FONT_IMPORTS:
