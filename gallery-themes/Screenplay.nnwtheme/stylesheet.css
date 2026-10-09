@@ -22,6 +22,10 @@
 	--code-bg: rgba(27, 26, 23, 0.05);
 	--blockquote-bg: rgba(27, 26, 23, 0.04);
 	--system-message-color: var(--ink-muted);
+	--nnw-bg: #fffdf6;
+	--nnw-ink: #1b1a17;
+	--nnw-link: #1b1a17;
+	--u: calc(1rem / 15);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -36,6 +40,9 @@
 		--code-color: #e8e4d8;
 		--code-bg: rgba(232, 228, 216, 0.07);
 		--blockquote-bg: rgba(232, 228, 216, 0.05);
+		--nnw-bg: #1d1c19;
+		--nnw-ink: #e8e4d8;
+		--nnw-link: #e8e4d8;
 	}
 }
 
@@ -188,8 +195,8 @@ body {
 
 body {
 	color-scheme: light dark;
-	background-color: var(--paper);
-	color: var(--ink);
+	background-color: var(--nnw-bg);
+	color: var(--nnw-ink);
 	font-family: var(--font-body);
 	word-wrap: break-word;
 }
@@ -198,13 +205,13 @@ body {
    `body`, `.articleBody`, `a` and `.articleBody a` by exact string). Higher-
    specificity rules below still win the cascade. */
 a {
-	color: var(--link);
+	color: var(--nnw-link);
 }
 .articleBody a {
-	color: var(--link);
+	color: var(--nnw-link);
 }
 body a, body a * {
-	color: var(--link);
+	color: var(--nnw-link);
 }
 body a:visited {
 	color: var(--visited-link);
@@ -257,7 +264,7 @@ img, figure, video, object {
 	margin-top: 2em;
 	padding-top: 1em;
 	border-top: 1px solid var(--table-border);
-	font-family: var(--font-main);
+	font-family: var(--nnw-font-chrome, var(--font-main));
 	font-size: 0.75em;
 	color: var(--ink-muted);
 }
@@ -276,6 +283,42 @@ img, figure, video, object {
 	body {
 		padding-left: 44px;
 	}
+
+	html {
+		font: -apple-system-body;
+	}
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 12.285 * var(--nnw-detail-scale, 1));
+	}
+
+	.fontSize {
+		font-size: calc(var(--u) * 15);
+	}
+
+	.scriptHeader .articleTitle h1 {
+		font-size: max(calc(var(--u) * 18.75 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 13.65)) * 1.373));
+	}
+
+	.scriptHeader .byline {
+		font-size: calc(var(--u) * 15 * var(--nnw-detail-scale, 1));
+	}
+
+	.scriptFooter {
+		font-size: calc(var(--u) * 11.25 * var(--nnw-detail-scale, 1));
+	}
+
+	.scriptBody h2.heading, .scriptBody h3.title {
+		font-size: max(calc(var(--u) * 13.65 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 13.65)) * 1));
+	}
+
+	#ao3SyntheticPreface, #ao3Preface {
+		font-size: calc(var(--u) * 12.694 * var(--nnw-detail-scale, 1));
+	}
+
+	.scriptHeader .byline {
+		font-family: var(--nnw-font-chrome, var(--font-body));
+	}
 }
 
 /* macOS Specific */
@@ -292,3 +335,9 @@ img, figure, video, object {
 	.xlargeText { font-size: 20px; }
 	.xxlargeText { font-size: 22px; }
 }
+
+/* Theme contract: exact selectors read by ArticleThemeColorExtractor. */
+.articleBody {
+	color: var(--nnw-ink);
+}
+

@@ -20,6 +20,10 @@
 	--code-bg: rgba(22, 20, 18, 0.05);
 	--blockquote-bg: rgba(122, 31, 43, 0.05);
 	--system-message-color: var(--ink-muted);
+	--nnw-bg: #fbf8f2;
+	--nnw-ink: #161412;
+	--nnw-link: #7a1f2b;
+	--u: calc(1rem / 15);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -35,6 +39,9 @@
 		--code-color: #e6dfd2;
 		--code-bg: rgba(236, 230, 220, 0.07);
 		--blockquote-bg: rgba(217, 112, 127, 0.08);
+		--nnw-bg: #16130f;
+		--nnw-ink: #ece6dc;
+		--nnw-link: #d9707f;
 	}
 }
 
@@ -184,8 +191,8 @@
 
 body {
 	color-scheme: light dark;
-	background-color: var(--paper);
-	color: var(--ink);
+	background-color: var(--nnw-bg);
+	color: var(--nnw-ink);
 	font-family: var(--font-body);
 	word-wrap: break-word;
 }
@@ -194,13 +201,13 @@ body {
    `body`, `.articleBody`, `a` and `.articleBody a` by exact string). Higher-
    specificity rules below still win the cascade. */
 a {
-	color: var(--link);
+	color: var(--nnw-link);
 }
 .articleBody a {
-	color: var(--link);
+	color: var(--nnw-link);
 }
 body a, body a * {
-	color: var(--link);
+	color: var(--nnw-link);
 }
 body a:visited {
 	color: var(--visited-link);
@@ -253,7 +260,7 @@ img, figure, video, object {
 	margin-top: 2em;
 	padding-top: 1em;
 	border-top: 1px solid var(--table-border);
-	font-family: var(--font-main);
+	font-family: var(--nnw-font-chrome, var(--font-main));
 	font-size: 0.75em;
 	color: var(--ink-muted);
 }
@@ -268,6 +275,42 @@ img, figure, video, object {
 		word-break: break-word;
 		-webkit-text-size-adjust: none;
 		font-size: [[font-size]]px;
+	}
+
+	html {
+		font: -apple-system-body;
+	}
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+
+	.fontSize {
+		font-size: calc(var(--u) * 15);
+	}
+
+	.didoneHeader .articleTitle h1 {
+		font-size: max(calc(var(--u) * 30 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));
+	}
+
+	.didoneHeader .byline {
+		font-size: calc(var(--u) * 15 * var(--nnw-detail-scale, 1));
+	}
+
+	.didoneFooter {
+		font-size: calc(var(--u) * 11.25 * var(--nnw-detail-scale, 1));
+	}
+
+	.didoneBody h2.heading, .didoneBody h3.title {
+		font-size: max(calc(var(--u) * 27 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));
+	}
+
+	#ao3SyntheticPreface, #ao3Preface {
+		font-size: calc(var(--u) * 12.75 * var(--nnw-detail-scale, 1));
+	}
+
+	.didoneHeader .byline {
+		font-family: var(--nnw-font-chrome, var(--font-body));
 	}
 }
 
@@ -285,3 +328,9 @@ img, figure, video, object {
 	.xlargeText { font-size: 20px; }
 	.xxlargeText { font-size: 22px; }
 }
+
+/* Theme contract: exact selectors read by ArticleThemeColorExtractor. */
+.articleBody {
+	color: var(--nnw-ink);
+}
+

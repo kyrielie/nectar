@@ -33,6 +33,10 @@
 	--summary-border: #7a5a2e;
 	--notes-border: #ddccA4;
 	--chapter-heading-color: #2e2313;
+	--nnw-bg: #f2e9d6;
+	--nnw-ink: #3c2f1e;
+	--nnw-link: #6b4a23;
+	--u: calc(1rem / 15);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -59,13 +63,16 @@
 		--summary-border: #c9a468;
 		--notes-border: rgba(255, 255, 255, 0.16);
 		--chapter-heading-color: #f2e6cc;
+		--nnw-bg: #241d12;
+		--nnw-ink: #e8dcc2;
+		--nnw-link: #c9a468;
 	}
 }
 
 body {
 	color-scheme: light dark;
-	background-color: var(--background-color);
-	color: var(--text-color);
+	background-color: var(--nnw-bg);
+	color: var(--nnw-ink);
 	font-family: var(--font-body);
 	word-wrap: break-word;
 }
@@ -73,15 +80,15 @@ body {
 /* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
    the higher-specificity 'body a' rule below still wins the cascade. */
 a {
-	color: var(--link-color);
+	color: var(--nnw-link);
 }
 
 .articleBody a {
-	color: var(--link-color);
+	color: var(--nnw-link);
 }
 
 body a, body a * {
-	color: var(--link-color);
+	color: var(--nnw-link);
 }
 
 body a:visited {
@@ -101,11 +108,11 @@ body > .systemMessage {
    background shows through, matching the rest of the page. */
 
 .headerBar {
-	background: var(--background-color);
+	background: var(--nnw-bg);
 	border-top: 1px solid var(--header-top);
 	border-bottom: 1px solid var(--header-top);
 	padding: 10px 0;
-	font-family: var(--font-main);
+	font-family: var(--nnw-font-chrome, var(--font-main));
 	font-size: 0.82em;
 	font-weight: normal;
 	font-variant: small-caps;
@@ -148,7 +155,7 @@ body .byline a:link, .byline a:visited, .byline a {
 /* Content containers */
 
 .barContent, .articleContent {
-	max-width: 42rem;
+	max-width: calc(var(--u) * 630);
 	margin-left: auto;
 	margin-right: auto;
 }
@@ -162,10 +169,10 @@ body .byline a:link, .byline a:visited, .byline a {
    printer's imprint line rather than a second banner in a second color. */
 
 .datelineBar {
-	background: var(--background-color);
+	background: var(--nnw-bg);
 	border-bottom: 1px solid var(--separator-color);
 	padding: 6px 0;
-	font-family: var(--font-main);
+	font-family: var(--nnw-font-chrome, var(--font-main));
 	font-size: 0.78em;
 	font-weight: normal;
 	font-variant: small-caps;
@@ -395,7 +402,7 @@ img, figure, video, div, object {
 body .footer {
 	margin-top: 28px;
 	margin-bottom: 2em;
-	font-family: var(--font-main);
+	font-family: var(--nnw-font-chrome, var(--font-main));
 	color: var(--footer-color);
 	font-size: 0.85em;
 	font-style: italic;
@@ -419,6 +426,47 @@ body .footer a:link, .footer a:visited {
 		-webkit-text-size-adjust: none;
 		font-family: var(--font-body);
 		font-size: [[font-size]]px;
+	}
+
+	html {
+		font: -apple-system-body;
+	}
+
+	:root {
+		--ao3-preface-font-size: calc(var(--u) * 14.85 * var(--nnw-detail-scale, 1));
+		--ao3-series-footer-font-size: calc(var(--u) * 14.85 * var(--nnw-detail-scale, 1));
+	}
+
+	.fontSize {
+		font-size: calc(var(--u) * 15);
+	}
+
+	.headerBar {
+		font-size: calc(var(--u) * 12.3 * var(--nnw-detail-scale, 1));
+	}
+
+	.headerBar .byline {
+		font-size: calc(var(--u) * 12.3 * var(--nnw-detail-scale, 1));
+	}
+
+	.datelineBar {
+		font-size: calc(var(--u) * 11.7 * var(--nnw-detail-scale, 1));
+	}
+
+	.articleTitle {
+		font-size: max(calc(var(--u) * 27 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 16.5)) * 1.4));
+	}
+
+	.pressMark {
+		font-size: calc(var(--u) * 18 * var(--nnw-detail-scale, 1));
+	}
+
+	body .footer {
+		font-size: calc(var(--u) * 12.75 * var(--nnw-detail-scale, 1));
+	}
+
+	.articleBody h2.heading, .articleBody h3.title {
+		font-size: max(calc(var(--u) * 22.275 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 16.5)) * 1.2));
 	}
 }
 
@@ -452,3 +500,9 @@ body .footer a:link, .footer a:visited {
 		font-size: 22px;
 	}
 }
+
+/* Theme contract: exact selectors read by ArticleThemeColorExtractor. */
+.articleBody {
+	color: var(--nnw-ink);
+}
+

@@ -48,10 +48,3 @@ body: The body of the article.
 <div id="bodyContainer" class="articleBody [[text_size_class]]">[[body]]</div>
 <div class="externalLink"><a href="[[external_link]]">[[external_link]]</a></div>
 </article>
-<script type="text/javascript">
-	let externalLinkElement = document.body.getElementsByClassName('externalLink')[0].querySelectorAll('a')[0];
-	if (externalLinkElement.innerText != '') {
-		let host = externalLinkElement.hostname;
-		externalLinkElement.innerHTML = host;
-	}
-</script>
