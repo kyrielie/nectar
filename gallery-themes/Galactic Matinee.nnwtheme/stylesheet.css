@@ -4,16 +4,16 @@
    override; markup maps onto real AO3 blocks (dl.tags preface, .summary.module,
    .notes.module, h2.heading chapter headings, versal caps + chapter dividers via
    main.js data attributes). */
-:root{--fh:'Archivo Black',sans-serif;--fb:'Libre Franklin',sans-serif;--bg:#f6f6f4;--ink:#0a0a0a;--a:#3b5b9a;--ln:#000;--r:0}
+:root{--fh:'Archivo Black',sans-serif;--fb:'Libre Franklin',sans-serif;--nnw-bg:#f6f6f4;--nnw-ink:#0a0a0a;--nnw-link:#0a0a0a;--a:#3b5b9a;--ln:#000;--r:0;}
 
 /* ---- structural base shared by every converted mockup theme ---- */
 :root{--font-main:var(--fh);--font-body:var(--fb);--font-code:'Courier New',Courier,monospace}
-html{background-color:var(--bg)}
-body{margin:0 auto;max-width:44em;background-color:var(--bg);color:var(--ink);font-family:var(--fb);word-wrap:break-word}
-.articleBody{color:var(--ink)}
-a,.articleBody a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--a);text-decoration-thickness:2px;text-underline-offset:2px}
+html{background-color:var(--nnw-bg)}
+body{margin:0 auto;max-width:44em;background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link);text-decoration:underline;text-decoration-color:var(--a);text-decoration-thickness:2px;text-underline-offset:2px}
 .hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
-body > .systemMessage{color:var(--ink)}
+body > .systemMessage{color:var(--nnw-ink)}
 #ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
 .summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
 .summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
@@ -30,23 +30,23 @@ img, video { height: auto; }
 /* running head: in full-screen reading the app zeroes the top safe area, so page content
    starts under the notch/Dynamic Island. This band (feed name + date, bottom-aligned,
    >= 56px) absorbs that zone so the title always starts clear of it. */
-.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--fb);font-size:calc(var(--u) * 11);line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--rule-rh,currentColor);box-sizing:border-box}
+.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--nnw-font-chrome, var(--fb));font-size:calc(var(--u) * 11 * var(--nnw-detail-scale, 1));line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--nnw-ink);border-bottom:1px solid var(--rule-rh,currentColor);box-sizing:border-box}
 .rh a,.rh a:visited{color:inherit;text-decoration:none;opacity:.78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .rh time{flex:none;opacity:.78;white-space:nowrap}
 /* notes: marker */
 :is(.notes.module,.end.notes.module){margin:1.9em 0}
 :is(.notes.module,.end.notes.module) h3.heading{display:inline-block;margin:0 0 .45em;padding:0 .35em;font-weight:700;background:linear-gradient(transparent 36%,color-mix(in srgb,var(--a) 55%,transparent) 36% 90%,transparent 90%)}
 :is(.notes.module,.end.notes.module) blockquote.userstuff{padding-left:.35em;font-size:.95em}
-.t{padding:10px var(--gx) 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+.t{padding:10px var(--gx) 26px;background:var(--nnw-bg);color:var(--nnw-ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
 .t h1{margin:0;font-family:var(--fh);font-weight:400}
 .t h2.heading, .t h3.title{margin:0;font-family:var(--fh);font-weight:400}
 .t h3.heading{margin:0;font-family:var(--fh);font-weight:400}
-.t h1{font-size:calc(var(--u) * 30);line-height:1.05}
-.t h2.heading, .t h3.title{font-size:calc(var(--u) * 21);margin-bottom:8px}
+.t h1{font-size:max(calc(var(--u) * 30 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.05}
+.t h2.heading, .t h3.title{font-size:max(calc(var(--u) * 21 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));margin-bottom:8px}
 .t h3.heading{font-size:calc(var(--u) * 12)}
 .hd{position:relative;margin-bottom:16px}
-.by{margin:8px 0 0;font-size:calc(var(--u) * 12);letter-spacing:.05em}
-#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12)}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;font-family:var(--nnw-font-chrome)}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
 #bodyContainer dl.tags dt{font-weight:700}
 #bodyContainer dl.tags dd{margin:0}
 .summary.module{margin:0 0 14px;padding:10px 12px}
@@ -59,7 +59,7 @@ p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;f
 .t9 p:has(> .versalCap:first-child)::first-letter{float:none;font:inherit;color:inherit;padding:0}
 .t9{padding:10px var(--gx);container-type:inline-size}
 .t9 .hd{margin:0 0 14px;padding:0}
-.t9 .hd::before{content:"";display:block;height:115px;border:2px solid #000;outline:1px solid var(--ink);outline-offset:3px;background:
+.t9 .hd::before{content:"";display:block;height:115px;border:2px solid #000;outline:1px solid var(--nnw-ink);outline-offset:3px;background:
   linear-gradient(#fff,#fff) 0 50%/100% 2px no-repeat,
   radial-gradient(circle at 62% 50%,#fff 0 3px,rgba(190,210,255,.85) 7px,transparent 40px),
   radial-gradient(ellipse 52% 90% at 50% 18%,#1d2748 0 62%,transparent 63%),
@@ -68,15 +68,15 @@ p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;f
   linear-gradient(#05060f,#11183a 60%,#2a2f45)}
 .t9 .hd::after{content:"";position:absolute;left:62%;top:59px;width:200px;height:110px;transform:translate(-50%,-50%);max-width:92%;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%22-100%20-55%20200%20110%22%3E%3Cg%20fill%3D%22%23fff%22%3E%3Cpath%20d%3D%22M0%20-54C.9%20-14%2014%20-1.1%20100%200C14%201.1%20.9%2014%200%2054C-.9%2014%20-14%201.1%20-100%200C-14%20-1.1%20-.9%20-14%200%20-54Z%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") center/contain no-repeat;pointer-events:none}
 .t9 h1{margin-top:14px;font:italic 900 clamp(18px,8.5cqi,30px)/1 'Orbitron',var(--fh);text-transform:uppercase;letter-spacing:.03em;text-align:center;color:transparent;background:radial-gradient(#fff .7px,transparent 1.2px) 0 0/8px 8px,linear-gradient(#a9bbe0,#3a4f86);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(2px 0 0 var(--ln)) drop-shadow(-2px 0 0 var(--ln)) drop-shadow(0 2px 0 var(--ln)) drop-shadow(0 -2px 0 var(--ln)) drop-shadow(0 3px 0 var(--ln))}
-.t9 .by{text-align:center;color:var(--ink)}
+.t9 .by{text-align:center;color:var(--nnw-ink)}
 .t9 #bodyContainer dl.tags{display:block;text-align:center;font-variant:small-caps;letter-spacing:.08em;line-height:1.7}
 .t9 #bodyContainer dl.tags dt{display:inline;color:var(--a)}
 .t9 #bodyContainer dl.tags dd{display:inline;margin:0 10px 0 4px}
 .t9 .dv::before{content:"\2605 \2605 \2605";color:var(--a)}
-.t9 h2.heading, .t9 h3.title{text-transform:uppercase;letter-spacing:.06em;font-size:calc(var(--u) * 19)}
-.t9 .summary.module{border-top:4px solid var(--ink);border-bottom:1px solid var(--ink)}
+.t9 h2.heading, .t9 h3.title{text-transform:uppercase;letter-spacing:.06em;font-size:max(calc(var(--u) * 19 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2))}
+.t9 .summary.module{border-top:4px solid var(--nnw-ink);border-bottom:1px solid var(--nnw-ink)}
 @media (prefers-color-scheme: dark) {
-	:root{--bg:#0b0b0d;--ink:#ececf1;--a:#8aa5dd;--ln:#ececf1}
+	:root{--nnw-bg:#0b0b0d;--nnw-ink:#ececf1;--nnw-link:#ececf1;--a:#8aa5dd;--ln:#ececf1;}
 
 }
 
@@ -84,6 +84,10 @@ p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;f
 @supports (-webkit-touch-callout: none) {
 	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
 	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
 }
 /* macOS Specific */
 @supports not (-webkit-touch-callout: none) {

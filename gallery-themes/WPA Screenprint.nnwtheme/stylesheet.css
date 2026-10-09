@@ -4,16 +4,16 @@
    override; markup maps onto real AO3 blocks (dl.tags preface, .summary.module,
    .notes.module, h2.heading chapter headings, versal caps + chapter dividers via
    main.js data attributes). */
-:root{--fh:'League Gothic',sans-serif;--fb:'Source Serif 4',serif;--bg:#f2e6cf;--ink:#1f3b4d;--a:#c8553a;--s1:#e8815a;--s2:#efa465;--s3:#e3c27a;--pl:#1f3b4d;--h:#f2e6cf;--sun:#f6e3a0;--r:0}
+:root{--fh:'League Gothic',sans-serif;--fb:'Source Serif 4',serif;--nnw-bg:#f2e6cf;--nnw-ink:#1f3b4d;--nnw-link:#1f3b4d;--a:#c8553a;--s1:#e8815a;--s2:#efa465;--s3:#e3c27a;--pl:#1f3b4d;--h:#f2e6cf;--sun:#f6e3a0;--r:0;}
 
 /* ---- structural base shared by every converted mockup theme ---- */
 :root{--font-main:var(--fh);--font-body:var(--fb);--font-code:'Courier New',Courier,monospace}
-html{background-color:var(--bg)}
-body{margin:0 auto;max-width:44em;background-color:var(--bg);color:var(--ink);font-family:var(--fb);word-wrap:break-word}
-.articleBody{color:var(--ink)}
-a,.articleBody a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--a);text-decoration-thickness:2px;text-underline-offset:2px}
+html{background-color:var(--nnw-bg)}
+body{margin:0 auto;max-width:44em;background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link);text-decoration:underline;text-decoration-color:var(--a);text-decoration-thickness:2px;text-underline-offset:2px}
 .hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
-body > .systemMessage{color:var(--ink)}
+body > .systemMessage{color:var(--nnw-ink)}
 #ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
 .summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
 .summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
@@ -30,22 +30,22 @@ img, video { height: auto; }
 /* running head: in full-screen reading the app zeroes the top safe area, so page content
    starts under the notch/Dynamic Island. This band (feed name + date, bottom-aligned,
    >= 56px) absorbs that zone so the title always starts clear of it. */
-.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--fb);font-size:calc(var(--u) * 11);line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--rule-rh,currentColor);box-sizing:border-box}
+.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--nnw-font-chrome, var(--fb));font-size:calc(var(--u) * 11 * var(--nnw-detail-scale, 1));line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--nnw-ink);border-bottom:1px solid var(--rule-rh,currentColor);box-sizing:border-box}
 .rh a,.rh a:visited{color:inherit;text-decoration:none;opacity:.78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .rh time{flex:none;opacity:.78;white-space:nowrap}
 /* notes: tape */
 :is(.notes.module,.end.notes.module){text-align:center;margin:2.2em 0 1.8em}
-:is(.notes.module,.end.notes.module) h3.heading{display:inline-block;margin:0 0 .7em;padding:.2em 1.5em;background:var(--bg);background:color-mix(in srgb,var(--a) 40%,var(--bg));color:var(--ink);font:700 .74em/1.5 var(--fb);letter-spacing:.2em;text-transform:uppercase;transform:rotate(-1.5deg);clip-path:polygon(0 0,2.5% 25%,0 50%,2.5% 75%,0 100%,100% 100%,97.5% 75%,100% 50%,97.5% 25%,100% 0)}
-.t{padding:10px var(--gx) 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+:is(.notes.module,.end.notes.module) h3.heading{display:inline-block;margin:0 0 .7em;padding:.2em 1.5em;background:var(--nnw-bg);background:color-mix(in srgb,var(--a) 40%,var(--nnw-bg));color:var(--nnw-ink);font:700 .74em/1.5 var(--fb);letter-spacing:.2em;text-transform:uppercase;transform:rotate(-1.5deg);clip-path:polygon(0 0,2.5% 25%,0 50%,2.5% 75%,0 100%,100% 100%,97.5% 75%,100% 50%,97.5% 25%,100% 0)}
+.t{padding:10px var(--gx) 26px;background:var(--nnw-bg);color:var(--nnw-ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
 .t h1{margin:0;font-family:var(--fh);font-weight:400}
 .t h2.heading, .t h3.title{margin:0;font-family:var(--fh);font-weight:400}
 .t h3.heading{margin:0;font-family:var(--fh);font-weight:400}
-.t h1{font-size:calc(var(--u) * 30);line-height:1.05}
-.t h2.heading, .t h3.title{font-size:calc(var(--u) * 21);margin-bottom:8px}
+.t h1{font-size:max(calc(var(--u) * 30 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.05}
+.t h2.heading, .t h3.title{font-size:max(calc(var(--u) * 21 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));margin-bottom:8px}
 .t h3.heading{font-size:calc(var(--u) * 12)}
 .hd{position:relative;margin-bottom:16px}
-.by{margin:8px 0 0;font-size:calc(var(--u) * 12);letter-spacing:.05em}
-#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12)}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;font-family:var(--nnw-font-chrome)}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
 #bodyContainer dl.tags dt{font-weight:700}
 #bodyContainer dl.tags dd{margin:0}
 .summary.module{margin:0 0 14px;padding:10px 12px}
@@ -57,15 +57,15 @@ p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;f
 .t10 .hd{margin:-10px calc(var(--gx) * -1) 16px;padding:104px 20px 16px;background:var(--pl);color:var(--h)}
 .t10 .hd::before{content:"";position:absolute;left:0;right:0;top:0;height:92px;background:radial-gradient(circle at 76% 68%,var(--sun) 0 16px,transparent 17px),linear-gradient(var(--s1) 0 35%,var(--s2) 35% 70%,var(--s3) 70%)}
 .t10 .hd::after{content:"";position:absolute;left:0;right:0;top:46px;height:46px;background:var(--pl);clip-path:polygon(0 100%,0 62%,16% 26%,30% 56%,48% 0,66% 52%,82% 22%,100% 58%,100% 100%)}
-.t10 h1{font-size:calc(var(--u) * 52);text-transform:uppercase;letter-spacing:.02em;color:var(--h)}
+.t10 h1{font-size:max(calc(var(--u) * 52 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));text-transform:uppercase;letter-spacing:.02em;color:var(--h)}
 .t10 .by{color:var(--h)}
 .t10 #bodyContainer dl.tags{background:#5a3a22;color:#f2e6cf;padding:10px 14px;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
 .t10 .dv::before{content:"\25B2 \25B2 \25B2";color:var(--a);font-size:calc(var(--u) * 12);letter-spacing:.3em}
-.t10 h2.heading, .t10 h3.title{font-size:calc(var(--u) * 30);text-transform:uppercase}
+.t10 h2.heading, .t10 h3.title{font-size:max(calc(var(--u) * 30 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));text-transform:uppercase}
 .t10 p:has(> .versalCap:first-child)::first-letter{font-size:3.4em}
 .t10 .summary.module{border-top:4px solid var(--a);padding-top:8px}
 @media (prefers-color-scheme: dark) {
-	:root{--bg:#14213a;--ink:#f2e6cf;--s1:#2a2d5e;--s2:#4a3f7f;--s3:#a8703a;--pl:#0b1226;--a:#e8a15a;--sun:#e9b45a}
+	:root{--nnw-bg:#14213a;--nnw-ink:#f2e6cf;--nnw-link:#f2e6cf;--s1:#2a2d5e;--s2:#4a3f7f;--s3:#a8703a;--pl:#0b1226;--a:#e8a15a;--sun:#e9b45a;}
 
 }
 
@@ -73,6 +73,10 @@ p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;f
 @supports (-webkit-touch-callout: none) {
 	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
 	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
 }
 /* macOS Specific */
 @supports not (-webkit-touch-callout: none) {

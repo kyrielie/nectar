@@ -263,7 +263,7 @@ private extension ArticleRenderer {
 		// keyed to a specific theme's markup.
 		let overrides = AppDefaults.shared.articleThemeOverrides
 		if !overrides.isEmpty {
-			return base + "\n" + overrides.cssOverrideBlock
+			return base + "\n" + overrides.cssOverrideBlock(themeCSS: base)
 		}
 		return base
 	}

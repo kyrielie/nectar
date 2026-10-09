@@ -279,6 +279,7 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 			var divider = document.createElement("div");
 			divider.className = dividerClass;
 			divider.setAttribute("aria-hidden", "true");
+			divider.setAttribute("data-nnw-ornament", "");
 			divider.textContent = dividerChar;
 			heading.parentNode.insertBefore(divider, heading);
 		});

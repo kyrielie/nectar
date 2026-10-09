@@ -4,7 +4,7 @@
   "description": "Headless unit tests for cross-platform article-rendering JS (Shared/Article Rendering/*.js) that doesn't otherwise have a way to be exercised outside a real WKWebView. Scoped to this directory only -- not part of the Xcode build, not a dependency of the app target. See annotations/README.md.",
   "type": "commonjs",
   "scripts": {
-    "test": "node --test annotations/*.test.js toc/*.test.js"
+    "test": "node --test annotations/*.test.js toc/*.test.js ornaments/*.test.js"
   },
   "devDependencies": {
     "jsdom": "^25.0.0"

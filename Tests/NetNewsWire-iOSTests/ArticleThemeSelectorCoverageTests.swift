@@ -69,6 +69,29 @@ import Foundation
 		}
 	}
 
+	/// The link-color override excludes preface and series links by id. Each id must
+	/// be defined by core.css or emitted by a generator, or the exclusion silently
+	/// protects nothing.
+	@Test func linkExclusionIdsAreDefinedByCoreCSSOrGenerators() throws {
+		let sources = try [
+			"Shared/Article Rendering/core.css",
+			"Shared/Article Rendering/ArticleRenderer.swift",
+			"Modules/AO3Kit/Sources/AO3Kit/AO3PrefaceRenderer.swift",
+			"Modules/AO3Kit/Sources/AO3Kit/AO3ChapterHTMLExtractor.swift"
+		].map { try Self.readRepoFile($0) }.joined(separator: "\n")
+
+		for id in ["ao3Preface", "ao3SyntheticPreface", "ao3SeriesFooter"] {
+			#expect(sources.contains(id), "'\(id)' is named by the link override but defined nowhere")
+		}
+
+		var overrides = ArticleThemeOverrides()
+		overrides.linkColorHex = "#0000ff"
+		let css = overrides.cssOverrideBlock
+		for id in ["#ao3Preface", "#ao3SyntheticPreface", "#ao3SeriesFooter"] {
+			#expect(css.contains(id), "link override should exclude \(id)")
+		}
+	}
+
 	/// Walks up from this test file's own path to find the repo root, then reads the
 	/// given repo-relative file. Bundle.main inside a test target is the test
 	/// runner's bundle, not the app's, so it can't be used to locate source-tree

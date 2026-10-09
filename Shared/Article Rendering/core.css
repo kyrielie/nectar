@@ -288,7 +288,7 @@ a.footnote {
 	margin: 1.5em 0 0 0;
 	padding-top: 1em;
 	border-top: 1px solid var(--ao3-preface-border-color, rgba(0, 0, 0, 0.15));
-	font-size: 0.9em;
+	font-size: var(--ao3-series-footer-font-size, 0.9em);
 }
 .ao3SeriesFooterHeading {
 	margin: 0 0 0.5em 0;
@@ -455,6 +455,15 @@ mark.nnw-highlight.nnw-highlight-flash {
    tappable. */
 span.nnw-edit-only {
 	cursor: pointer;
+}
+/* Decoration inserted by main.js (the chapter divider). Its text is not
+   annotation text: keep selection boundaries out of it so
+   annotations.js never sees a range container missing from its text
+   index. */
+[data-nnw-ornament] {
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
 }
 span.nnw-edit-only.nnw-highlight-flash {
 	animation: nnw-highlight-flash 1.5s ease-out;
