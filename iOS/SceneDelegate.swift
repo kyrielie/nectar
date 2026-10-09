@@ -15,8 +15,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 	var window: UIWindow?
 	var coordinator: SceneCoordinator!
-	private var screenTimeOverlay: ScreenTimeEnforcementOverlay?
-	private var screenTimeBreakView: ScreenTimeBreakView?
+	private var readingTimeOverlay: ReadingTimeEnforcementOverlay?
+	private var readingTimeBreakView: ReadingTimeBreakView?
 
 	// UIWindowScene delegate
 
@@ -49,10 +49,10 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		coordinator = SceneCoordinator(rootSplitViewController: rootViewController)
 		rootViewController.coordinator = coordinator
 		rootViewController.delegate = coordinator
-		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeLimitReached(_:)), name: .screenTimeLimitReached, object: nil)
-		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeEnforcementDidClear(_:)), name: .screenTimeEnforcementDidClear, object: nil)
-		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeBreakReached(_:)), name: .screenTimeBreakReached, object: nil)
-		NotificationCenter.default.addObserver(self, selector: #selector(screenTimeBreakDidClear(_:)), name: .screenTimeBreakDidClear, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(readingTimeLimitReached(_:)), name: .readingTimeLimitReached, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(readingTimeEnforcementDidClear(_:)), name: .readingTimeEnforcementDidClear, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(readingTimeBreakReached(_:)), name: .readingTimeBreakReached, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(readingTimeBreakDidClear(_:)), name: .readingTimeBreakDidClear, object: nil)
 
 		coordinator.restoreWindowState()
 
@@ -83,25 +83,25 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		}
 	}
 
-	@objc private func screenTimeLimitReached(_ note: Notification) {
+	@objc private func readingTimeLimitReached(_ note: Notification) {
 		guard let window else { return }
-		screenTimeBreakView?.hide()
-		if screenTimeOverlay == nil { screenTimeOverlay = ScreenTimeEnforcementOverlay() }
-		screenTimeOverlay?.show(in: window, reasons: ScreenTimeTracker.shared.activeReasons, bedtimeEndMinutesFromMidnight: AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight)
+		readingTimeBreakView?.hide()
+		if readingTimeOverlay == nil { readingTimeOverlay = ReadingTimeEnforcementOverlay() }
+		readingTimeOverlay?.show(in: window, reasons: ReadingTimeTracker.shared.activeReasons, bedtimeEndMinutesFromMidnight: AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight)
 	}
 
-	@objc private func screenTimeEnforcementDidClear(_ note: Notification) {
-		screenTimeOverlay?.hide()
+	@objc private func readingTimeEnforcementDidClear(_ note: Notification) {
+		readingTimeOverlay?.hide()
 	}
 
-	@objc private func screenTimeBreakReached(_ note: Notification) {
+	@objc private func readingTimeBreakReached(_ note: Notification) {
 		guard let window else { return }
-		if screenTimeBreakView == nil { screenTimeBreakView = ScreenTimeBreakView() }
-		screenTimeBreakView?.show(in: window)
+		if readingTimeBreakView == nil { readingTimeBreakView = ReadingTimeBreakView() }
+		readingTimeBreakView?.show(in: window)
 	}
 
-	@objc private func screenTimeBreakDidClear(_ note: Notification) {
-		screenTimeBreakView?.hide()
+	@objc private func readingTimeBreakDidClear(_ note: Notification) {
+		readingTimeBreakView?.hide()
 	}
 
 	func windowScene(_ windowScene: UIWindowScene, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {

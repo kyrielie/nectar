@@ -43,12 +43,12 @@ pushes `AO3AccountSettingsView` directly (see below).
   (below) — **Annotations**, a disclosure row pushing
   `AnnotationsSettingsView` (see `annotations.md`), and **Text
   Replacement**, a disclosure row pushing `TextReplacementSettingsView`,
-  **Screen Time**, a disclosure row pushing `ScreenTimeSettingsView`, and
+  **Reading Time**, a disclosure row pushing `ReadingTimeSettingsView`, and
   **Reading Stats**, a disclosure row pushing `ReadingStatsView`. Screen
   Time enforcement is independent of Reading Stats tracking.
-  `ScreenTimeSettingsView` also has its own "Show indicator while
-  reading" toggle (`screenTimeIndicatorDisplayMode`), independent of the
-  Page Counter toggle below — see `screen-time.md` for the full
+  `ReadingTimeSettingsView` also has its own "Show indicator while
+  reading" toggle (`readingTimeIndicatorDisplayMode`), independent of the
+  Page Counter toggle below — see `reading-time.md` for the full
   interaction.
   (also `annotations.md`: master auto-apply toggle, reader-insert names
   — with a per-work override `NavigationLink` into
@@ -94,9 +94,9 @@ Two storage tiers exist beyond `Settings.storyboard`'s rows:
   above, plus some flags with no UI row at all (state like
   `articleWindowScrollY` — restoration bookkeeping, not a person-facing
   setting). It is split by feature where a feature has its own directory:
-  the Screen Time and Reading Stats keys, properties, and mode enums
-  (`TakeABreakMode`, `ScreenTimeIndicatorDisplayMode`) live in
-  `iOS/ScreenTime/AppDefaults+ScreenTime.swift` and
+  the Reading Time and Reading Stats keys, properties, and mode enums
+  (`TakeABreakMode`, `ReadingTimeIndicatorDisplayMode`) live in
+  `iOS/ReadingTime/AppDefaults+ReadingTime.swift` and
   `iOS/ReadingStats/AppDefaults+ReadingStats.swift` as
   `extension AppDefaults` / `extension AppDefaults.Key` blocks. Everything
   else is still in `AppDefaults.swift`, now grouped with `// MARK:` banners

@@ -35,8 +35,8 @@ enum GuideContent {
 			body: "Typos in a fic bugging you? Set up a rule once and Nectar quietly fixes it everywhere, every time."
 		),
 		GuidePage(
-			id: "screen-time-intro",
-			title: "Screen Time",
+			id: "reading-time-intro",
+			title: "Reading Time",
 			body: "Set a daily reading limit or a bedtime window. Nectar will gently lock you out when it's time to sleep."
 		)
 	]

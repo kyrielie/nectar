@@ -90,9 +90,9 @@ import BackupRestore
 		// Platform.isRunningUnitTests). Without this, the test host's own
 		// launch wires up a real repeating Timer and real
 		// UIApplication.willResignActive/didBecomeActive observers on these
-		// two singletons -- the same singletons ScreenTimeTrackerTests and
+		// two singletons -- the same singletons ReadingTimeTrackerTests and
 		// ReadingStatsTrackerAccountingTests directly drive and reset via
-		// resetForTesting(). ScreenTimeTrackerTests' resetState() does call
+		// resetForTesting(). ReadingTimeTrackerTests' resetState() does call
 		// resetForTesting() (which tears the real timer/observers back down),
 		// but only once the first test in that suite runs -- until then, the
 		// real timer is live and can fire tick() on the shared singleton
@@ -101,7 +101,7 @@ import BackupRestore
 		// loop. Not starting it under tests at all removes that window
 		// entirely rather than relying on cleanup order.
 		if !Platform.isRunningUnitTests {
-			ScreenTimeTracker.shared.start()
+			ReadingTimeTracker.shared.start()
 			ReadingStatsTracker.shared.start()
 		}
 

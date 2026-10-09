@@ -516,10 +516,10 @@
                                             <outlet property="label" destination="Nct-txr-03" id="Nct-txr-06"/>
                                         </connections>
                                     </tableViewCell>
-                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" accessoryType="disclosureIndicator" style="IBUITableViewCellStyleDefault" id="Nct-screen-time">
-                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="Nct-screen-time" id="Nct-screen-time-content">
-                                            <subviews><label opaque="NO" userInteractionEnabled="NO" text="Screen Time" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-screen-time-label"><fontDescription key="fontDescription" style="UICTFontTextStyleBody"/></label></subviews>
-                                            <constraints><constraint firstItem="Nct-screen-time-label" firstAttribute="leading" secondItem="Nct-screen-time-content" secondAttribute="leadingMargin" id="Nct-screen-time-leading"/><constraint firstItem="Nct-screen-time-label" firstAttribute="centerY" secondItem="Nct-screen-time-content" secondAttribute="centerY" id="Nct-screen-time-center"/></constraints>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" accessoryType="disclosureIndicator" style="IBUITableViewCellStyleDefault" id="Nct-reading-time">
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" tableViewCell="Nct-reading-time" id="Nct-reading-time-content">
+                                            <subviews><label opaque="NO" userInteractionEnabled="NO" text="Reading Time" translatesAutoresizingMaskIntoConstraints="NO" id="Nct-reading-time-label"><fontDescription key="fontDescription" style="UICTFontTextStyleBody"/></label></subviews>
+                                            <constraints><constraint firstItem="Nct-reading-time-label" firstAttribute="leading" secondItem="Nct-reading-time-content" secondAttribute="leadingMargin" id="Nct-reading-time-leading"/><constraint firstItem="Nct-reading-time-label" firstAttribute="centerY" secondItem="Nct-reading-time-content" secondAttribute="centerY" id="Nct-reading-time-center"/></constraints>
                                         </tableViewCellContentView>
                                     </tableViewCell>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" accessoryType="disclosureIndicator" style="IBUITableViewCellStyleDefault" id="Nct-reading-stats">

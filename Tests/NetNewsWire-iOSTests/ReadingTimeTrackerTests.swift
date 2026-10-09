@@ -1,9 +1,9 @@
 //
-//  ScreenTimeTrackerTests.swift
+//  ReadingTimeTrackerTests.swift
 //  NetNewsWire-iOSTests
 //
 //  Regression coverage for three compounding bugs in the old scalar
-//  isEnforced/enforcementReason lockout logic (see the Screen Time bug-fix
+//  isEnforced/enforcementReason lockout logic (see the Reading Time bug-fix
 //  plan, Section 1, for the full trace):
 //
 //  Bug 1 -- .limit always won over .bedtime, and had no clear condition
@@ -17,15 +17,15 @@
 //
 //  The fix tracks isLimitLockout/isBedtimeLockout independently and
 //  funnels every clear through evaluate()'s wasLocked/isLocked comparison,
-//  which is the only place that posts .screenTimeEnforcementDidClear.
+//  which is the only place that posts .readingTimeEnforcementDidClear.
 //
-//  ScreenTimeCalendarTests.swift covers only the pure date-math helpers in
+//  ReadingTimeCalendarTests.swift covers only the pure date-math helpers in
 //  Account, in isolation; this file exercises the tracker itself, which is
-//  a singleton (ScreenTimeTracker.shared) -- resetState() clears both
+//  a singleton (ReadingTimeTracker.shared) -- resetState() clears both
 //  AppDefaults state and the tracker's own in-memory flags via
 //  resetForTesting() so tests don't leak into each other regardless of
 //  run order. Time is driven deterministically through the
-//  ScreenTimeTracker.now injection point rather than by sleeping.
+//  ReadingTimeTracker.now injection point rather than by sleeping.
 //
 //  .serialized: every test drives the same shared singleton and the same
 //  handful of AppDefaults keys, so parallel execution could interleave
@@ -36,68 +36,68 @@ import Testing
 import Foundation
 @testable import Nectar
 
-@Suite(.serialized) @MainActor struct ScreenTimeTrackerTests {
+@Suite(.serialized) @MainActor struct ReadingTimeTrackerTests {
 
 	private func resetState() {
-		AppDefaults.shared.screenTimeEnabled = true
-		AppDefaults.shared.screenTimeDailyLimitEnabled = true
-		AppDefaults.shared.screenTimeBedtimeEnabled = false
-		AppDefaults.shared.screenTimeDailyLimitMinutesByWeekday = [1: 120, 2: 120, 3: 120, 4: 120, 5: 120, 6: 120, 7: 120]
-		AppDefaults.shared.screenTimeMinutesUsedTodaySeconds = 0
-		AppDefaults.shared.screenTimeUsageDate = nil
-		AppDefaults.shared.screenTimeDailyUsageHistory = [:]
-		AppDefaults.shared.screenTimeTakeABreakMode = .off
-		AppDefaults.shared.screenTimeBreakReadingMinutes = 15
-		AppDefaults.shared.screenTimeBreakEnforcedMinutes = 15
-		ScreenTimeTracker.shared.resetForTesting()
-		ScreenTimeTracker.now = { Date() }
+		AppDefaults.shared.readingTimeEnabled = true
+		AppDefaults.shared.readingTimeDailyLimitEnabled = true
+		AppDefaults.shared.readingTimeBedtimeEnabled = false
+		AppDefaults.shared.readingTimeDailyLimitMinutesByWeekday = [1: 120, 2: 120, 3: 120, 4: 120, 5: 120, 6: 120, 7: 120]
+		AppDefaults.shared.readingTimeMinutesUsedTodaySeconds = 0
+		AppDefaults.shared.readingTimeUsageDate = nil
+		AppDefaults.shared.readingTimeDailyUsageHistory = [:]
+		AppDefaults.shared.readingTimeTakeABreakMode = .off
+		AppDefaults.shared.readingTimeBreakReadingMinutes = 15
+		AppDefaults.shared.readingTimeBreakEnforcedMinutes = 15
+		ReadingTimeTracker.shared.resetForTesting()
+		ReadingTimeTracker.now = { Date() }
 	}
 
 	/// Teardown counterpart to `resetState()`. These tests run inside the
 	/// Nectar.app host and write to its real UserDefaults, so ending on
-	/// `resetState()` (which turns Screen Time on) would leave it on for the
+	/// `resetState()` (which turns Reading Time on) would leave it on for the
 	/// next launch of the app on the same simulator. Removing the keys lets
-	/// the registered defaults (Screen Time off) apply again.
+	/// the registered defaults (Reading Time off) apply again.
 	private func cleanupState() {
 		resetState()
 		for key in [
-			AppDefaults.Key.screenTimeEnabled, AppDefaults.Key.screenTimeDailyLimitEnabled,
-			AppDefaults.Key.screenTimeBedtimeEnabled, AppDefaults.Key.screenTimeDailyLimitMinutesByWeekday,
-			AppDefaults.Key.screenTimeMinutesUsedTodaySeconds, AppDefaults.Key.screenTimeUsageDate,
-			AppDefaults.Key.screenTimeDailyUsageHistory, AppDefaults.Key.screenTimeTakeABreakMode,
-			AppDefaults.Key.screenTimeBreakReadingMinutes, AppDefaults.Key.screenTimeBreakEnforcedMinutes
+			AppDefaults.Key.readingTimeEnabled, AppDefaults.Key.readingTimeDailyLimitEnabled,
+			AppDefaults.Key.readingTimeBedtimeEnabled, AppDefaults.Key.readingTimeDailyLimitMinutesByWeekday,
+			AppDefaults.Key.readingTimeMinutesUsedTodaySeconds, AppDefaults.Key.readingTimeUsageDate,
+			AppDefaults.Key.readingTimeDailyUsageHistory, AppDefaults.Key.readingTimeTakeABreakMode,
+			AppDefaults.Key.readingTimeBreakReadingMinutes, AppDefaults.Key.readingTimeBreakEnforcedMinutes
 		] {
 			AppDefaults.store.removeObject(forKey: key)
 		}
 	}
 
 	/// Sets the same limit for every weekday, bypassing the >=60 floor
-	/// enforced by `setScreenTimeDailyLimitMinutes` -- these tests need
+	/// enforced by `setReadingTimeDailyLimitMinutes` -- these tests need
 	/// short limits to run fast, and go directly through the raw
 	/// dictionary so Section 2's floor doesn't have to be worked around
 	/// via calendar-day counts.
 	private func setDailyLimit(_ minutes: Int) {
-		var limits = AppDefaults.shared.screenTimeDailyLimitMinutesByWeekday
+		var limits = AppDefaults.shared.readingTimeDailyLimitMinutesByWeekday
 		for weekday in 1...7 { limits[weekday] = minutes }
-		AppDefaults.shared.screenTimeDailyLimitMinutesByWeekday = limits
+		AppDefaults.shared.readingTimeDailyLimitMinutesByWeekday = limits
 	}
 
-	/// Drives `ScreenTimeTracker.shared` forward from `start` to `end`,
+	/// Drives `ReadingTimeTracker.shared` forward from `start` to `end`,
 	/// ticking once per second the way the real timer would, without
 	/// actually sleeping.
 	private func drive(from start: Date, to end: Date) {
 		var current = start
-		ScreenTimeTracker.now = { current }
-		ScreenTimeTracker.shared.tick()
+		ReadingTimeTracker.now = { current }
+		ReadingTimeTracker.shared.tick()
 		while current < end {
 			current = current.addingTimeInterval(1)
-			ScreenTimeTracker.now = { current }
-			ScreenTimeTracker.shared.tick()
+			ReadingTimeTracker.now = { current }
+			ReadingTimeTracker.shared.tick()
 		}
 	}
 
 	/// Matches Calendar.current, which is what evaluate() and
-	/// ScreenTimeCalendar.isWithinBedtimeWindow both actually use in
+	/// ReadingTimeCalendar.isWithinBedtimeWindow both actually use in
 	/// production (their `calendar` parameter defaults to .current, and
 	/// nothing here overrides it). A hardcoded UTC calendar built dates
 	/// that could land on a different local calendar day, or a different
@@ -122,27 +122,27 @@ import Foundation
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 0, minute: 0, second: 0))!
 
 		setDailyLimit(1) // 1 minute -- 60s threshold, reached quickly
-		AppDefaults.shared.screenTimeBedtimeEnabled = true
-		AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight = 60 // 1:00am
-		AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight = 120 // 2:00am
+		AppDefaults.shared.readingTimeBedtimeEnabled = true
+		AppDefaults.shared.readingTimeBedtimeStartMinutesFromMidnight = 60 // 1:00am
+		AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight = 120 // 2:00am
 
 		drive(from: start, to: start.addingTimeInterval(61))
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.limit))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.limit))
 
 		nonisolated(unsafe) var clearFired = false
-		let observer = NotificationCenter.default.addObserver(forName: .screenTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFired = true }
+		let observer = NotificationCenter.default.addObserver(forName: .readingTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFired = true }
 		defer { NotificationCenter.default.removeObserver(observer) }
 
 		let intoBedtime = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 1, minute: 30))!
 		drive(from: start.addingTimeInterval(61), to: intoBedtime)
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.bedtime))
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.limit))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.bedtime))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.limit))
 
 		let pastBedtime = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 2, minute: 1))!
 		drive(from: intoBedtime, to: pastBedtime)
 
-		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.bedtime))
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.limit))
+		#expect(!ReadingTimeTracker.shared.activeReasons.contains(.bedtime))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.limit))
 		#expect(!clearFired)
 	}
 
@@ -154,21 +154,21 @@ import Foundation
 
 		let calendar = testCalendar()
 
-		AppDefaults.shared.screenTimeBedtimeEnabled = true
-		AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight = 22 * 60 // 10pm
-		AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight = 7 * 60 // 7am, crosses midnight
+		AppDefaults.shared.readingTimeBedtimeEnabled = true
+		AppDefaults.shared.readingTimeBedtimeStartMinutesFromMidnight = 22 * 60 // 10pm
+		AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight = 7 * 60 // 7am, crosses midnight
 
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0))!
 		let lateNight = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 23, minute: 0))!
 		drive(from: start, to: lateNight)
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.bedtime))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.bedtime))
 
 		// Advance to the next calendar day, still inside the (overnight) window.
 		let earlyNextDay = calendar.date(from: DateComponents(year: 2026, month: 1, day: 2, hour: 1, minute: 0))!
-		ScreenTimeTracker.now = { earlyNextDay }
-		ScreenTimeTracker.shared.tick()
+		ReadingTimeTracker.now = { earlyNextDay }
+		ReadingTimeTracker.shared.tick()
 
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.bedtime))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.bedtime))
 	}
 
 	// MARK: - Bug 3
@@ -182,18 +182,18 @@ import Foundation
 
 		setDailyLimit(1)
 		drive(from: start, to: start.addingTimeInterval(61))
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.limit))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.limit))
 
 		nonisolated(unsafe) var clearFireCount = 0
-		let observer = NotificationCenter.default.addObserver(forName: .screenTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFireCount += 1 }
+		let observer = NotificationCenter.default.addObserver(forName: .readingTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFireCount += 1 }
 		defer { NotificationCenter.default.removeObserver(observer) }
 
 		let nextDay = calendar.date(from: DateComponents(year: 2026, month: 1, day: 2, hour: 12, minute: 0, second: 0))!
-		ScreenTimeTracker.now = { nextDay }
-		ScreenTimeTracker.shared.simulateDidBecomeActiveForTesting()
+		ReadingTimeTracker.now = { nextDay }
+		ReadingTimeTracker.shared.simulateDidBecomeActiveForTesting()
 
-		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.limit))
-		#expect(AppDefaults.shared.screenTimeMinutesUsedTodaySeconds == 0)
+		#expect(!ReadingTimeTracker.shared.activeReasons.contains(.limit))
+		#expect(AppDefaults.shared.readingTimeMinutesUsedTodaySeconds == 0)
 		#expect(clearFireCount == 1)
 	}
 
@@ -206,10 +206,10 @@ import Foundation
 
 		setDailyLimit(1)
 		drive(from: start, to: start.addingTimeInterval(61))
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.limit))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.limit))
 
 		nonisolated(unsafe) var clearFireCount = 0
-		let observer = NotificationCenter.default.addObserver(forName: .screenTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFireCount += 1 }
+		let observer = NotificationCenter.default.addObserver(forName: .readingTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFireCount += 1 }
 		defer { NotificationCenter.default.removeObserver(observer) }
 
 		// simulateDidBecomeActiveForTesting reproduces didBecomeActive()'s
@@ -217,10 +217,10 @@ import Foundation
 		// runs, so elapsed == 0 inside that tick() -- this is the "even
 		// when elapsed is zero" case this test is named for.
 		let nextDay = calendar.date(from: DateComponents(year: 2026, month: 1, day: 2, hour: 12, minute: 0, second: 0))!
-		ScreenTimeTracker.now = { nextDay }
-		ScreenTimeTracker.shared.simulateDidBecomeActiveForTesting()
+		ReadingTimeTracker.now = { nextDay }
+		ReadingTimeTracker.shared.simulateDidBecomeActiveForTesting()
 
-		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.limit))
+		#expect(!ReadingTimeTracker.shared.activeReasons.contains(.limit))
 		#expect(clearFireCount == 1)
 	}
 
@@ -234,29 +234,29 @@ import Foundation
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 21, minute: 58))!
 
 		setDailyLimit(1)
-		AppDefaults.shared.screenTimeBedtimeEnabled = true
-		AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight = 22 * 60
-		AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight = 23 * 60
+		AppDefaults.shared.readingTimeBedtimeEnabled = true
+		AppDefaults.shared.readingTimeBedtimeStartMinutesFromMidnight = 22 * 60
+		AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight = 23 * 60
 
 		nonisolated(unsafe) var clearFireCount = 0
-		let observer = NotificationCenter.default.addObserver(forName: .screenTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFireCount += 1 }
+		let observer = NotificationCenter.default.addObserver(forName: .readingTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFireCount += 1 }
 		defer { NotificationCenter.default.removeObserver(observer) }
 
 		let bothActive = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 22, minute: 1))!
 		drive(from: start, to: bothActive)
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.limit))
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.bedtime))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.limit))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.bedtime))
 
 		let afterWindow = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 23, minute: 1))!
 		drive(from: bothActive, to: afterWindow)
-		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.bedtime))
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.limit))
+		#expect(!ReadingTimeTracker.shared.activeReasons.contains(.bedtime))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.limit))
 		#expect(clearFireCount == 0)
 
 		let nextDay = calendar.date(from: DateComponents(year: 2026, month: 1, day: 2, hour: 23, minute: 1))!
-		ScreenTimeTracker.now = { nextDay }
-		ScreenTimeTracker.shared.simulateDidBecomeActiveForTesting()
-		#expect(ScreenTimeTracker.shared.activeReasons.isEmpty)
+		ReadingTimeTracker.now = { nextDay }
+		ReadingTimeTracker.shared.simulateDidBecomeActiveForTesting()
+		#expect(ReadingTimeTracker.shared.activeReasons.isEmpty)
 		#expect(clearFireCount == 1)
 	}
 
@@ -271,19 +271,19 @@ import Foundation
 
 		nonisolated(unsafe) var limitReachedFired = false
 		nonisolated(unsafe) var clearFired = false
-		let limitObserver = NotificationCenter.default.addObserver(forName: .screenTimeLimitReached, object: nil, queue: nil) { _ in limitReachedFired = true }
-		let clearObserver = NotificationCenter.default.addObserver(forName: .screenTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFired = true }
+		let limitObserver = NotificationCenter.default.addObserver(forName: .readingTimeLimitReached, object: nil, queue: nil) { _ in limitReachedFired = true }
+		let clearObserver = NotificationCenter.default.addObserver(forName: .readingTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFired = true }
 		defer {
 			NotificationCenter.default.removeObserver(limitObserver)
 			NotificationCenter.default.removeObserver(clearObserver)
 		}
 
-		ScreenTimeTracker.now = { start }
-		ScreenTimeTracker.shared.tick()
+		ReadingTimeTracker.now = { start }
+		ReadingTimeTracker.shared.tick()
 
 		let nextDay = calendar.date(from: DateComponents(year: 2026, month: 1, day: 2, hour: 12, minute: 0, second: 0))!
-		ScreenTimeTracker.now = { nextDay }
-		ScreenTimeTracker.shared.simulateDidBecomeActiveForTesting()
+		ReadingTimeTracker.now = { nextDay }
+		ReadingTimeTracker.shared.simulateDidBecomeActiveForTesting()
 
 		#expect(!limitReachedFired)
 		#expect(!clearFired)
@@ -295,37 +295,37 @@ import Foundation
 		resetState()
 		defer { cleanupState() }
 
-		AppDefaults.shared.screenTimeTakeABreakMode = .reminder
+		AppDefaults.shared.readingTimeTakeABreakMode = .reminder
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		nonisolated(unsafe) var breakReachedCount = 0
-		let observer = NotificationCenter.default.addObserver(forName: .screenTimeBreakReached, object: nil, queue: nil) { _ in breakReachedCount += 1 }
+		let observer = NotificationCenter.default.addObserver(forName: .readingTimeBreakReached, object: nil, queue: nil) { _ in breakReachedCount += 1 }
 		defer { NotificationCenter.default.removeObserver(observer) }
 
 		drive(from: start, to: start.addingTimeInterval(15 * 60))
 
 		#expect(breakReachedCount == 1)
-		#expect(AppDefaults.shared.screenTimeMinutesUsedTodaySeconds >= 15 * 60)
+		#expect(AppDefaults.shared.readingTimeMinutesUsedTodaySeconds >= 15 * 60)
 	}
 
 	@Test func breakReminder_resetsCountdownOnDismiss() {
 		resetState()
 		defer { cleanupState() }
 
-		AppDefaults.shared.screenTimeTakeABreakMode = .reminder
+		AppDefaults.shared.readingTimeTakeABreakMode = .reminder
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		nonisolated(unsafe) var breakReachedCount = 0
-		let observer = NotificationCenter.default.addObserver(forName: .screenTimeBreakReached, object: nil, queue: nil) { _ in breakReachedCount += 1 }
+		let observer = NotificationCenter.default.addObserver(forName: .readingTimeBreakReached, object: nil, queue: nil) { _ in breakReachedCount += 1 }
 		defer { NotificationCenter.default.removeObserver(observer) }
 
 		let firstBreak = start.addingTimeInterval(15 * 60)
 		drive(from: start, to: firstBreak)
 		#expect(breakReachedCount == 1)
 
-		ScreenTimeTracker.shared.dismissBreak()
+		ReadingTimeTracker.shared.dismissBreak()
 
 		let tenMinutesLater = firstBreak.addingTimeInterval(10 * 60)
 		drive(from: firstBreak, to: tenMinutesLater)
@@ -340,17 +340,17 @@ import Foundation
 		resetState()
 		defer { cleanupState() }
 
-		AppDefaults.shared.screenTimeTakeABreakMode = .reminder
+		AppDefaults.shared.readingTimeTakeABreakMode = .reminder
 		setDailyLimit(1) // 60s limit, reached well before the 15-minute break mark
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		nonisolated(unsafe) var breakReachedCount = 0
-		let observer = NotificationCenter.default.addObserver(forName: .screenTimeBreakReached, object: nil, queue: nil) { _ in breakReachedCount += 1 }
+		let observer = NotificationCenter.default.addObserver(forName: .readingTimeBreakReached, object: nil, queue: nil) { _ in breakReachedCount += 1 }
 		defer { NotificationCenter.default.removeObserver(observer) }
 
 		drive(from: start, to: start.addingTimeInterval(61))
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.limit))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.limit))
 
 		drive(from: start.addingTimeInterval(61), to: start.addingTimeInterval(16 * 60))
 		#expect(breakReachedCount == 0)
@@ -359,13 +359,13 @@ import Foundation
 	@Test func breakReminder_disabledByDefault() {
 		resetState()
 		defer { cleanupState() }
-		// screenTimeTakeABreakMode left at its default (.off).
+		// readingTimeTakeABreakMode left at its default (.off).
 
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		nonisolated(unsafe) var breakReachedCount = 0
-		let observer = NotificationCenter.default.addObserver(forName: .screenTimeBreakReached, object: nil, queue: nil) { _ in breakReachedCount += 1 }
+		let observer = NotificationCenter.default.addObserver(forName: .readingTimeBreakReached, object: nil, queue: nil) { _ in breakReachedCount += 1 }
 		defer { NotificationCenter.default.removeObserver(observer) }
 
 		drive(from: start, to: start.addingTimeInterval(16 * 60))
@@ -377,16 +377,16 @@ import Foundation
 		resetState()
 		defer { cleanupState() }
 
-		AppDefaults.shared.screenTimeTakeABreakMode = .enforced
-		AppDefaults.shared.screenTimeBreakReadingMinutes = 15
-		AppDefaults.shared.screenTimeBreakEnforcedMinutes = 5
+		AppDefaults.shared.readingTimeTakeABreakMode = .enforced
+		AppDefaults.shared.readingTimeBreakReadingMinutes = 15
+		AppDefaults.shared.readingTimeBreakEnforcedMinutes = 5
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		nonisolated(unsafe) var limitReachedFired = false
 		nonisolated(unsafe) var clearFired = false
-		let reachedObserver = NotificationCenter.default.addObserver(forName: .screenTimeLimitReached, object: nil, queue: nil) { _ in limitReachedFired = true }
-		let clearObserver = NotificationCenter.default.addObserver(forName: .screenTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFired = true }
+		let reachedObserver = NotificationCenter.default.addObserver(forName: .readingTimeLimitReached, object: nil, queue: nil) { _ in limitReachedFired = true }
+		let clearObserver = NotificationCenter.default.addObserver(forName: .readingTimeEnforcementDidClear, object: nil, queue: nil) { _ in clearFired = true }
 		defer {
 			NotificationCenter.default.removeObserver(reachedObserver)
 			NotificationCenter.default.removeObserver(clearObserver)
@@ -395,29 +395,29 @@ import Foundation
 		let breakStart = start.addingTimeInterval(15 * 60)
 		drive(from: start, to: breakStart)
 		#expect(limitReachedFired)
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.recurringBreak))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.recurringBreak))
 		#expect(!clearFired)
 
 		drive(from: breakStart, to: breakStart.addingTimeInterval(5 * 60))
 		#expect(clearFired)
-		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.recurringBreak))
+		#expect(!ReadingTimeTracker.shared.activeReasons.contains(.recurringBreak))
 	}
 
 	@Test func breakEnforced_doesNotStartUnderAnExistingLimitLockout() {
 		resetState()
 		defer { cleanupState() }
 
-		AppDefaults.shared.screenTimeTakeABreakMode = .enforced
-		AppDefaults.shared.screenTimeBreakReadingMinutes = 15
+		AppDefaults.shared.readingTimeTakeABreakMode = .enforced
+		AppDefaults.shared.readingTimeBreakReadingMinutes = 15
 		setDailyLimit(1) // 60s limit, reached well before the 15-minute break mark
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 
 		drive(from: start, to: start.addingTimeInterval(61))
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.limit))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.limit))
 
 		drive(from: start.addingTimeInterval(61), to: start.addingTimeInterval(16 * 60))
-		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.recurringBreak))
+		#expect(!ReadingTimeTracker.shared.activeReasons.contains(.recurringBreak))
 	}
 
 	// MARK: - ActiveTimeAccumulator wiring (background credit, clamping, lockout pause)
@@ -428,17 +428,17 @@ import Foundation
 
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
-		ScreenTimeTracker.now = { start }
-		ScreenTimeTracker.shared.tick()
+		ReadingTimeTracker.now = { start }
+		ReadingTimeTracker.shared.tick()
 
 		// Simulate resign, then a long real-world gap (suspend), then resume --
 		// no tick() calls happen while backgrounded, mirroring a suspended process.
-		ScreenTimeTracker.shared.willResignActiveForTesting()
+		ReadingTimeTracker.shared.willResignActiveForTesting()
 		let fourHoursLater = start.addingTimeInterval(4 * 60 * 60)
-		ScreenTimeTracker.now = { fourHoursLater }
-		ScreenTimeTracker.shared.simulateDidBecomeActiveForTesting()
+		ReadingTimeTracker.now = { fourHoursLater }
+		ReadingTimeTracker.shared.simulateDidBecomeActiveForTesting()
 
-		#expect(AppDefaults.shared.screenTimeMinutesUsedTodaySeconds < 10)
+		#expect(AppDefaults.shared.readingTimeMinutesUsedTodaySeconds < 10)
 	}
 
 	@Test func forwardClockJumpMidForeground_isCappedPerTick() {
@@ -447,16 +447,16 @@ import Foundation
 
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
-		ScreenTimeTracker.now = { start }
-		ScreenTimeTracker.shared.tick()
+		ReadingTimeTracker.now = { start }
+		ReadingTimeTracker.shared.tick()
 
 		// No resign/active cycle -- a single tick() call far in the future,
 		// simulating a clock jump without a suspend.
 		let muchLater = start.addingTimeInterval(600)
-		ScreenTimeTracker.now = { muchLater }
-		ScreenTimeTracker.shared.tick()
+		ReadingTimeTracker.now = { muchLater }
+		ReadingTimeTracker.shared.tick()
 
-		#expect(AppDefaults.shared.screenTimeMinutesUsedTodaySeconds <= 5)
+		#expect(AppDefaults.shared.readingTimeMinutesUsedTodaySeconds <= 5)
 	}
 
 	@Test func lockoutPause_usageDoesNotAccrueWhileLockedOut() {
@@ -467,11 +467,11 @@ import Foundation
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
 		setDailyLimit(1)
 		drive(from: start, to: start.addingTimeInterval(61))
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.limit))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.limit))
 
-		let usedAtLockout = AppDefaults.shared.screenTimeMinutesUsedTodaySeconds
+		let usedAtLockout = AppDefaults.shared.readingTimeMinutesUsedTodaySeconds
 		drive(from: start.addingTimeInterval(61), to: start.addingTimeInterval(120))
-		#expect(AppDefaults.shared.screenTimeMinutesUsedTodaySeconds == usedAtLockout)
+		#expect(AppDefaults.shared.readingTimeMinutesUsedTodaySeconds == usedAtLockout)
 	}
 
 	@Test func breakPersistence_survivesForceQuit_expiredBreakClearsOnRelaunch() {
@@ -480,13 +480,13 @@ import Foundation
 
 		let calendar = testCalendar()
 		let past = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
-		AppDefaults.shared.screenTimeRecurringBreakEndDate = past
-		ScreenTimeTracker.now = { past.addingTimeInterval(60) }
-		ScreenTimeTracker.shared.start()
-		defer { ScreenTimeTracker.shared.resetForTesting() }
+		AppDefaults.shared.readingTimeRecurringBreakEndDate = past
+		ReadingTimeTracker.now = { past.addingTimeInterval(60) }
+		ReadingTimeTracker.shared.start()
+		defer { ReadingTimeTracker.shared.resetForTesting() }
 
-		#expect(!ScreenTimeTracker.shared.activeReasons.contains(.recurringBreak))
-		#expect(AppDefaults.shared.screenTimeRecurringBreakEndDate == nil)
+		#expect(!ReadingTimeTracker.shared.activeReasons.contains(.recurringBreak))
+		#expect(AppDefaults.shared.readingTimeRecurringBreakEndDate == nil)
 	}
 
 	@Test func breakPersistence_survivesForceQuit_activeBreakStaysLockedOnRelaunch() {
@@ -495,28 +495,28 @@ import Foundation
 
 		let calendar = testCalendar()
 		let now = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
-		AppDefaults.shared.screenTimeRecurringBreakEndDate = now.addingTimeInterval(300)
-		ScreenTimeTracker.now = { now }
-		ScreenTimeTracker.shared.start()
-		defer { ScreenTimeTracker.shared.resetForTesting() }
+		AppDefaults.shared.readingTimeRecurringBreakEndDate = now.addingTimeInterval(300)
+		ReadingTimeTracker.now = { now }
+		ReadingTimeTracker.shared.start()
+		defer { ReadingTimeTracker.shared.resetForTesting() }
 
-		#expect(ScreenTimeTracker.shared.activeReasons.contains(.recurringBreak))
+		#expect(ReadingTimeTracker.shared.activeReasons.contains(.recurringBreak))
 	}
 
 	@Test func awayReset_clearsSecondsSinceLastBreakAfterLongEnoughAway() {
 		resetState()
 		defer { cleanupState() }
 
-		AppDefaults.shared.screenTimeBreakEnforcedMinutes = 5
+		AppDefaults.shared.readingTimeBreakEnforcedMinutes = 5
 		let calendar = testCalendar()
 		let start = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1, hour: 12, minute: 0, second: 0))!
-		AppDefaults.shared.screenTimeSecondsSinceLastBreak = 500
-		AppDefaults.shared.screenTimeLastResignDate = start
+		AppDefaults.shared.readingTimeSecondsSinceLastBreak = 500
+		AppDefaults.shared.readingTimeLastResignDate = start
 
 		let farEnoughAway = start.addingTimeInterval(6 * 60)
-		ScreenTimeTracker.now = { farEnoughAway }
-		ScreenTimeTracker.shared.simulateDidBecomeActiveForTesting()
+		ReadingTimeTracker.now = { farEnoughAway }
+		ReadingTimeTracker.shared.simulateDidBecomeActiveForTesting()
 
-		#expect(AppDefaults.shared.screenTimeSecondsSinceLastBreak == 0)
+		#expect(AppDefaults.shared.readingTimeSecondsSinceLastBreak == 0)
 	}
 }

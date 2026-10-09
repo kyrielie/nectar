@@ -3,7 +3,7 @@
 //  NetNewsWire-iOSTests
 //
 //  Regression coverage for WebViewController.isProvisionalAO3Stub(_:), the
-//  seam introduced by the Reading Stats/Screen Time fix plan's Phase 2 to
+//  seam introduced by the Reading Stats/Reading Time fix plan's Phase 2 to
 //  stop the reader from recording scroll progress, page-counter state, or
 //  Reading Stats credit against an unfetched AO3 stub. WebViewController
 //  itself can't be instantiated here -- see

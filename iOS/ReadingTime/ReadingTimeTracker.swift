@@ -3,8 +3,8 @@ import ReadingTime
 import UIKit
 import Account
 
-@MainActor final class ScreenTimeTracker {
-	static let shared = ScreenTimeTracker()
+@MainActor final class ReadingTimeTracker {
+	static let shared = ReadingTimeTracker()
 	static var now: () -> Date = { Date() }
 
 	private let ticker = ForegroundTicker()
@@ -14,18 +14,18 @@ import Account
 	private var isShowingBreak = false
 	private var isRecurringBreakLockout = false
 
-	/// In-memory mirror of `AppDefaults.shared.screenTimeSecondsSinceLastBreak`.
+	/// In-memory mirror of `AppDefaults.shared.readingTimeSecondsSinceLastBreak`.
 	/// Persisted so time away from the app (including a force-quit) is
 	/// accounted for -- see `didBecomeActive`'s away-reset check.
 	private var secondsSinceLastBreak: Int {
-		get { AppDefaults.shared.screenTimeSecondsSinceLastBreak }
-		set { AppDefaults.shared.screenTimeSecondsSinceLastBreak = newValue }
+		get { AppDefaults.shared.readingTimeSecondsSinceLastBreak }
+		set { AppDefaults.shared.readingTimeSecondsSinceLastBreak = newValue }
 	}
 
-	/// In-memory mirror of `AppDefaults.shared.screenTimeRecurringBreakEndDate`.
+	/// In-memory mirror of `AppDefaults.shared.readingTimeRecurringBreakEndDate`.
 	private var recurringBreakEndDate: Date? {
-		get { AppDefaults.shared.screenTimeRecurringBreakEndDate }
-		set { AppDefaults.shared.screenTimeRecurringBreakEndDate = newValue }
+		get { AppDefaults.shared.readingTimeRecurringBreakEndDate }
+		set { AppDefaults.shared.readingTimeRecurringBreakEndDate = newValue }
 	}
 
 	enum Reason: Equatable { case limit, bedtime, recurringBreak }
@@ -54,14 +54,14 @@ import Account
 	@objc private func willResignActive() {
 		tick()
 		activeTime.resignActive()
-		AppDefaults.shared.screenTimeLastResignDate = Self.now()
+		AppDefaults.shared.readingTimeLastResignDate = Self.now()
 	}
 
 	@objc private func didBecomeActive() {
 		let now = Self.now()
 		evaluateRecurringBreakExpiry(at: now) // clears an expired persisted break first
-		if let lastResign = AppDefaults.shared.screenTimeLastResignDate,
-		   now.timeIntervalSince(lastResign) >= TimeInterval(AppDefaults.shared.screenTimeBreakEnforcedMinutes * 60) {
+		if let lastResign = AppDefaults.shared.readingTimeLastResignDate,
+		   now.timeIntervalSince(lastResign) >= TimeInterval(AppDefaults.shared.readingTimeBreakEnforcedMinutes * 60) {
 			secondsSinceLastBreak = 0
 			if isShowingBreak { dismissBreak() }
 		}
@@ -70,7 +70,7 @@ import Account
 	}
 
 	@objc func tick() {
-		guard AppDefaults.shared.screenTimeEnabled else { return }
+		guard AppDefaults.shared.readingTimeEnabled else { return }
 		let now = Self.now()
 		rolloverIfNeeded(at: now)
 		// Don't credit usage seconds while an enforcement overlay from
@@ -80,15 +80,15 @@ import Account
 		// Includes isRecurringBreakLockout alongside the daily-limit/bedtime
 		// flags: an active enforced break is exactly the same kind of
 		// "reading is already blocked" state as the other two, so it needs
-		// the same pause -- without it, screenTimeMinutesUsedTodaySeconds
-		// kept accruing (and .screenTimeUsageDidChange kept firing once a
+		// the same pause -- without it, readingTimeMinutesUsedTodaySeconds
+		// kept accruing (and .readingTimeUsageDidChange kept firing once a
 		// second) for the entire break-enforced window, even though the
 		// overlay was up and nothing was actually being read.
 		let wasLockedBeforeThisTick = isLimitLockout || isBedtimeLockout || isRecurringBreakLockout
 		if let elapsed = activeTime.tick(now: now) {
 			if !wasLockedBeforeThisTick {
-				AppDefaults.shared.screenTimeMinutesUsedTodaySeconds += elapsed
-				NotificationCenter.default.post(name: .screenTimeUsageDidChange, object: self)
+				AppDefaults.shared.readingTimeMinutesUsedTodaySeconds += elapsed
+				NotificationCenter.default.post(name: .readingTimeUsageDidChange, object: self)
 			}
 			evaluate(at: now)
 			evaluateRecurringBreakExpiry(at: now)
@@ -102,7 +102,7 @@ import Account
 	}
 
 	private func evaluateBreak(elapsed: Int) {
-		let mode = AppDefaults.shared.screenTimeTakeABreakMode
+		let mode = AppDefaults.shared.readingTimeTakeABreakMode
 		guard mode != .off else { return }
 		// A daily-limit or bedtime lockout takes priority: don't start (or
 		// keep counting toward) a recurring break underneath a stricter
@@ -113,7 +113,7 @@ import Account
 		}
 		guard !isRecurringBreakLockout else { return }
 		secondsSinceLastBreak += elapsed
-		let intervalSeconds = AppDefaults.shared.screenTimeBreakReadingMinutes * 60
+		let intervalSeconds = AppDefaults.shared.readingTimeBreakReadingMinutes * 60
 		guard secondsSinceLastBreak >= intervalSeconds else { return }
 
 		switch mode {
@@ -122,16 +122,16 @@ import Account
 		case .reminder:
 			guard !isShowingBreak else { return }
 			isShowingBreak = true
-			NotificationCenter.default.post(name: .screenTimeBreakReached, object: self)
+			NotificationCenter.default.post(name: .readingTimeBreakReached, object: self)
 		case .enforced:
 			isRecurringBreakLockout = true
-			recurringBreakEndDate = Self.now().addingTimeInterval(TimeInterval(AppDefaults.shared.screenTimeBreakEnforcedMinutes * 60))
+			recurringBreakEndDate = Self.now().addingTimeInterval(TimeInterval(AppDefaults.shared.readingTimeBreakEnforcedMinutes * 60))
 			// Reuses the same enforcement-overlay notifications the daily
 			// limit and bedtime lockouts post -- SceneDelegate's overlay
 			// show/hide wiring already keys off `activeReasons`, which now
 			// includes `.recurringBreak` (see `activeReasons` below), so
 			// no separate presentation path is needed.
-			NotificationCenter.default.post(name: .screenTimeLimitReached, object: self, userInfo: ["reason": String(describing: Reason.recurringBreak)])
+			NotificationCenter.default.post(name: .readingTimeLimitReached, object: self, userInfo: ["reason": String(describing: Reason.recurringBreak)])
 		}
 	}
 
@@ -145,49 +145,49 @@ import Account
 		isRecurringBreakLockout = false
 		recurringBreakEndDate = nil
 		secondsSinceLastBreak = 0
-		NotificationCenter.default.post(name: .screenTimeEnforcementDidClear, object: self)
+		NotificationCenter.default.post(name: .readingTimeEnforcementDidClear, object: self)
 	}
 
 	func dismissBreak() {
 		guard isShowingBreak else { return }
 		isShowingBreak = false
 		secondsSinceLastBreak = 0
-		NotificationCenter.default.post(name: .screenTimeBreakDidClear, object: self)
+		NotificationCenter.default.post(name: .readingTimeBreakDidClear, object: self)
 	}
 
 	func rolloverIfNeeded(at date: Date) {
-		guard let usageDate = AppDefaults.shared.screenTimeUsageDate else {
-			AppDefaults.shared.screenTimeUsageDate = date
+		guard let usageDate = AppDefaults.shared.readingTimeUsageDate else {
+			AppDefaults.shared.readingTimeUsageDate = date
 			return
 		}
-		guard !ScreenTimeCalendar.isSameUsageDay(usageDate, date) else { return }
+		guard !ReadingTimeCalendar.isSameUsageDay(usageDate, date) else { return }
 		let formatter = DateFormatter()
 		formatter.locale = Locale(identifier: "en_US_POSIX")
 		formatter.dateFormat = "yyyy-MM-dd"
-		var history = AppDefaults.shared.screenTimeDailyUsageHistory
-		history[formatter.string(from: usageDate)] = AppDefaults.shared.screenTimeMinutesUsedTodaySeconds / 60
-		AppDefaults.shared.screenTimeDailyUsageHistory = history
-		AppDefaults.shared.screenTimeMinutesUsedTodaySeconds = 0
-		AppDefaults.shared.screenTimeUsageDate = date
+		var history = AppDefaults.shared.readingTimeDailyUsageHistory
+		history[formatter.string(from: usageDate)] = AppDefaults.shared.readingTimeMinutesUsedTodaySeconds / 60
+		AppDefaults.shared.readingTimeDailyUsageHistory = history
+		AppDefaults.shared.readingTimeMinutesUsedTodaySeconds = 0
+		AppDefaults.shared.readingTimeUsageDate = date
 	}
 
 	private func evaluate(at date: Date) {
 		let calendar = Calendar.current
 		let weekday = calendar.component(.weekday, from: date)
-		let limitReached = AppDefaults.shared.screenTimeDailyLimitEnabled && AppDefaults.shared.screenTimeMinutesUsedTodaySeconds >= AppDefaults.shared.screenTimeDailyLimitMinutes(for: weekday) * 60
-		let bedtimeReached = AppDefaults.shared.screenTimeBedtimeEnabled && ScreenTimeCalendar.isWithinBedtimeWindow(date, startMinutes: AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight, endMinutes: AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight)
+		let limitReached = AppDefaults.shared.readingTimeDailyLimitEnabled && AppDefaults.shared.readingTimeMinutesUsedTodaySeconds >= AppDefaults.shared.readingTimeDailyLimitMinutes(for: weekday) * 60
+		let bedtimeReached = AppDefaults.shared.readingTimeBedtimeEnabled && ReadingTimeCalendar.isWithinBedtimeWindow(date, startMinutes: AppDefaults.shared.readingTimeBedtimeStartMinutesFromMidnight, endMinutes: AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight)
 
 		let wasLocked = isLimitLockout || isBedtimeLockout
 
 		if limitReached, !isLimitLockout {
 			isLimitLockout = true
-			NotificationCenter.default.post(name: .screenTimeLimitReached, object: self, userInfo: ["reason": String(describing: Reason.limit)])
+			NotificationCenter.default.post(name: .readingTimeLimitReached, object: self, userInfo: ["reason": String(describing: Reason.limit)])
 		} else if !limitReached, isLimitLockout {
 			isLimitLockout = false
 		}
 		if bedtimeReached, !isBedtimeLockout {
 			isBedtimeLockout = true
-			NotificationCenter.default.post(name: .screenTimeLimitReached, object: self, userInfo: ["reason": String(describing: Reason.bedtime)])
+			NotificationCenter.default.post(name: .readingTimeLimitReached, object: self, userInfo: ["reason": String(describing: Reason.bedtime)])
 		}
 		if !bedtimeReached, isBedtimeLockout {
 			isBedtimeLockout = false
@@ -195,7 +195,7 @@ import Account
 
 		let isLocked = isLimitLockout || isBedtimeLockout
 		if wasLocked, !isLocked {
-			NotificationCenter.default.post(name: .screenTimeEnforcementDidClear, object: self)
+			NotificationCenter.default.post(name: .readingTimeEnforcementDidClear, object: self)
 		}
 	}
 
@@ -227,7 +227,7 @@ import Account
 		isShowingBreak = false
 		isRecurringBreakLockout = false
 		recurringBreakEndDate = nil
-		AppDefaults.shared.screenTimeLastResignDate = nil
+		AppDefaults.shared.readingTimeLastResignDate = nil
 		activeTime.resetForTesting(isActive: UIApplication.shared.applicationState != .background)
 	}
 
@@ -254,10 +254,10 @@ import Account
 #endif
 }
 
-extension ScreenTimeTracker {
+extension ReadingTimeTracker {
 	/// SF Symbol name and friendly copy for the current lockout reason(s).
-	/// Used by both the status banner in ScreenTimeSettingsView and
-	/// ScreenTimeEnforcementOverlay -- previously the overlay kept its own
+	/// Used by both the status banner in ReadingTimeSettingsView and
+	/// ReadingTimeEnforcementOverlay -- previously the overlay kept its own
 	/// separate, differently-worded `text(for:)` switch over the same
 	/// cases, which let the two surfaces' wording drift out of sync;
 	/// they're now unified onto this one function. Returns nil when

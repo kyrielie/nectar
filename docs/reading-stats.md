@@ -1,6 +1,6 @@
 # Reading Stats
 
-Reading Stats is independent of Screen Time and is enabled by default. `ReadingStatsTracker` observes the active article and reading-progress updates from `WebViewController`.
+Reading Stats is independent of Reading Time and is enabled by default. `ReadingStatsTracker` observes the active article and reading-progress updates from `WebViewController`.
 
 Daily entries contain words, active seconds, completed work keys, overlapping fandom/tag word totals, and (as of the `worksByFandom`/`worksByTag` migration below) per-work-completion breakdowns by fandom and tag. The rolling history retains thirty-five dates. Per-work progress and all-time word totals are stored separately so the display history can be pruned without losing accounting state.
 
@@ -59,7 +59,7 @@ currently open, and ends (`endSession()`) when:
   open, or with `nil`.
 - The app resigns active (`willResignActive`). The tracker's timer and
   resign/become-active observers are set up by a `ForegroundTicker`; see
-  `screen-time.md`, "Active-time accounting".
+  `reading-time.md`, "Active-time accounting".
 - No scroll sample has arrived within `idleSessionThresholdSeconds` (see
   below) — checked at the top of every `tick()`.
 
@@ -228,5 +228,5 @@ when today was empty, counted back from the most recent active day however
 long ago it was.
 
 The persisted key strings and the `ReadingStatsDailyEntry` JSON shape are
-pinned by `ReadingTimePersistedContractTests`; see `screen-time.md`,
+pinned by `ReadingTimePersistedContractTests`; see `reading-time.md`,
 "Persisted contract and test locations".

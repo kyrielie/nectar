@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /// Wraps UIDatePicker in `.countDownTimer` mode -- the "hours | min"
-/// spinning wheel Settings → Screen Time → App Limits → Add Limit uses
+/// spinning wheel Settings → Reading Time → App Limits → Add Limit uses
 /// for this exact screen (also the Clock app's Timer tab). SwiftUI has
 /// no native duration-wheel equivalent, hence the wrapper. Same
 /// UIViewRepresentable + Coordinator shape as AnchorReadingButton in

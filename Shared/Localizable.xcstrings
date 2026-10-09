@@ -368,7 +368,7 @@
     "Confirm daily limit" : {
 
     },
-    "Confirm Screen Time setting" : {
+    "Confirm Reading Time setting" : {
 
     },
     "Connect" : {
@@ -569,7 +569,7 @@
     "Enable Notifications in Settings" : {
       "comment" : "Enable Notifications in Settings"
     },
-    "Enable Screen Time" : {
+    "Enable Reading Time" : {
 
     },
     "Ends" : {
@@ -1133,7 +1133,7 @@
     "No results" : {
       "comment" : "No results"
     },
-    "No Screen Time history yet." : {
+    "No Reading Time history yet." : {
 
     },
     "Not found on AO3" : {
@@ -1434,11 +1434,11 @@
     "Scope" : {
       "comment" : "Annotations list: tab picker accessibility label"
     },
-    "Screen Time" : {
+    "Reading Time" : {
 
     },
-    "Screen Time Remaining" : {
-      "comment" : "Toolbar function: screen time remaining"
+    "Reading Time Remaining" : {
+      "comment" : "Toolbar function: reading time remaining"
     },
     "Scroll Back" : {
       "comment" : "Toolbar function: scroll back to previous jump position"
@@ -1807,7 +1807,7 @@
     "We were unable to process the selected file.  Please ensure that it is a properly formatted OPML file." : {
       "comment" : "Import Failed Message"
     },
-    "When enabled, reading is blocked immediately after the daily limit or bedtime window begins. Turn Screen Time off to change limits, bedtime, or Take a Break settings — they're locked while it's on so a change can't land mid-session and cause a different lockout than the one you started with." : {
+    "When enabled, reading is blocked immediately after the daily limit or bedtime window begins. Turn Reading Time off to change limits, bedtime, or Take a Break settings — they're locked while it's on so a change can't land mid-session and cause a different lockout than the one you started with." : {
 
     },
     "When off, no new reading activity is recorded. Existing history is kept." : {

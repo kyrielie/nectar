@@ -2,12 +2,12 @@ import Foundation
 import UIKit
 
 /// The one-second timer and the resign/become-active observer wiring that
-/// `ReadingStatsTracker` and `ScreenTimeTracker` each need. Each tracker
+/// `ReadingStatsTracker` and `ReadingTimeTracker` each need. Each tracker
 /// owns one (composition, not a base class).
 ///
 /// This deliberately owns only the lifecycle. What happens inside `tick`,
 /// `willResignActive`, and `didBecomeActive` stays with the owner, because
-/// the two trackers differ in ways that matter: `ScreenTimeTracker.tick()`
+/// the two trackers differ in ways that matter: `ReadingTimeTracker.tick()`
 /// must evaluate bedtime and break expiry even on a tick that credits no
 /// foreground time, while `ReadingStatsTracker.tick()` returns early in that
 /// case. A shared template `tick()` would have to encode that difference, and
@@ -31,7 +31,7 @@ import UIKit
 	/// `prepare` runs after the observers are registered and before the timer
 	/// exists, which is the point in `start()` where each tracker did its own
 	/// one-time work (seeding `ActiveTimeAccumulator`, and for
-	/// `ScreenTimeTracker`, reading a persisted enforced break back in).
+	/// `ReadingTimeTracker`, reading a persisted enforced break back in).
 	/// Because of the `isRunning` guard it runs once per process, not once per
 	/// `start()` call.
 	func start(

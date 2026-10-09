@@ -2,22 +2,22 @@ import SwiftUI
 import ReadingTime
 import Account
 
-struct ScreenTimeSettingsView: View {
-	@State private var enabled = AppDefaults.shared.screenTimeEnabled
-	@State private var dailyLimitEnabled = AppDefaults.shared.screenTimeDailyLimitEnabled
-	@State private var indicatorEnabled = AppDefaults.shared.screenTimeIndicatorDisplayMode != .off
-	@State private var bedtimeEnabled = AppDefaults.shared.screenTimeBedtimeEnabled
-	@State private var start = Self.minutesDate(AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight)
-	@State private var end = Self.minutesDate(AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight)
-	@State private var limits = AppDefaults.shared.screenTimeDailyLimitMinutesByWeekday
+struct ReadingTimeSettingsView: View {
+	@State private var enabled = AppDefaults.shared.readingTimeEnabled
+	@State private var dailyLimitEnabled = AppDefaults.shared.readingTimeDailyLimitEnabled
+	@State private var indicatorEnabled = AppDefaults.shared.readingTimeIndicatorDisplayMode != .off
+	@State private var bedtimeEnabled = AppDefaults.shared.readingTimeBedtimeEnabled
+	@State private var start = Self.minutesDate(AppDefaults.shared.readingTimeBedtimeStartMinutesFromMidnight)
+	@State private var end = Self.minutesDate(AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight)
+	@State private var limits = AppDefaults.shared.readingTimeDailyLimitMinutesByWeekday
 	@State private var pendingConfirmation: PendingConfirmation?
-	@State private var takeABreakMode = AppDefaults.shared.screenTimeTakeABreakMode
-	@State private var breakReadingMinutes = AppDefaults.shared.screenTimeBreakReadingMinutes
-	@State private var breakEnforcedMinutes = AppDefaults.shared.screenTimeBreakEnforcedMinutes
-	// Sourced from ScreenTimeTracker.shared.activeReasons, kept in sync via
+	@State private var takeABreakMode = AppDefaults.shared.readingTimeTakeABreakMode
+	@State private var breakReadingMinutes = AppDefaults.shared.readingTimeBreakReadingMinutes
+	@State private var breakEnforcedMinutes = AppDefaults.shared.readingTimeBreakEnforcedMinutes
+	// Sourced from ReadingTimeTracker.shared.activeReasons, kept in sync via
 	// the same notifications the enforcement overlay reacts to, so the
 	// banner below doesn't go stale while this screen is on screen.
-	@State private var activeLockoutReasons: Set<ScreenTimeTracker.Reason> = ScreenTimeTracker.shared.activeReasons
+	@State private var activeLockoutReasons: Set<ReadingTimeTracker.Reason> = ReadingTimeTracker.shared.activeReasons
 	// 0 = the current Sunday-start calendar week; increasing goes further
 	// into the past. See weeklySummarySection/weekStart below.
 	@State private var weeksBack = 0
@@ -25,7 +25,7 @@ struct ScreenTimeSettingsView: View {
 	private let weekdays = Calendar.current.weekdaySymbols
 
 	private struct PendingConfirmation: Identifiable {
-		enum Kind { case screenTimeEnable, bedtimeSpan }
+		enum Kind { case readingTimeEnable, bedtimeSpan }
 		let id = UUID()
 		let kind: Kind
 		let message: String
@@ -36,7 +36,7 @@ struct ScreenTimeSettingsView: View {
 		Form {
 			weeklySummarySection
 
-			if let status = ScreenTimeTracker.lockoutStatus(for: activeLockoutReasons, bedtimeEndMinutesFromMidnight: AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight) {
+			if let status = ReadingTimeTracker.lockoutStatus(for: activeLockoutReasons, bedtimeEndMinutesFromMidnight: AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight) {
 				Section {
 					Label(status.message, systemImage: status.systemImageName)
 						.foregroundStyle(.secondary)
@@ -44,25 +44,25 @@ struct ScreenTimeSettingsView: View {
 			}
 
 			Section {
-				Toggle("Enable Screen Time", isOn: $enabled)
+				Toggle("Enable Reading Time", isOn: $enabled)
 					.onChange(of: enabled) { _, value in
-						AppDefaults.shared.screenTimeEnabled = value
+						AppDefaults.shared.readingTimeEnabled = value
 						if value {
 							pendingConfirmation = PendingConfirmation(
-								kind: .screenTimeEnable,
+								kind: .readingTimeEnable,
 								message: "Reading will be blocked immediately once today's limit or bedtime window is reached.",
 								revert: {
 									enabled = false
-									AppDefaults.shared.screenTimeEnabled = false
+									AppDefaults.shared.readingTimeEnabled = false
 								}
 							)
 						}
 					}
-			} footer: { Text("When enabled, reading is blocked immediately after the daily limit or bedtime window begins. Turn Screen Time off to change limits, bedtime, or Take a Break settings — they're locked while it's on so a change can't land mid-session and cause a different lockout than the one you started with.") }
+			} footer: { Text("When enabled, reading is blocked immediately after the daily limit or bedtime window begins. Turn Reading Time off to change limits, bedtime, or Take a Break settings — they're locked while it's on so a change can't land mid-session and cause a different lockout than the one you started with.") }
 
 			Section("Daily limits") {
 				Toggle("Enable daily limit", isOn: $dailyLimitEnabled)
-					.onChange(of: dailyLimitEnabled) { _, value in AppDefaults.shared.screenTimeDailyLimitEnabled = value }
+					.onChange(of: dailyLimitEnabled) { _, value in AppDefaults.shared.readingTimeDailyLimitEnabled = value }
 				ForEach(1...7, id: \.self) { weekday in
 					NavigationLink {
 						DailyLimitDetailView(
@@ -71,7 +71,7 @@ struct ScreenTimeSettingsView: View {
 								get: { limits[weekday, default: 120] },
 								set: { newValue in
 									limits[weekday] = newValue
-									AppDefaults.shared.setScreenTimeDailyLimitMinutes(newValue, for: weekday)
+									AppDefaults.shared.setReadingTimeDailyLimitMinutes(newValue, for: weekday)
 								}
 							)
 						)
@@ -84,10 +84,10 @@ struct ScreenTimeSettingsView: View {
 					}
 				}
 			}
-			// Locked (not editable) while Screen Time is on -- editing a
+			// Locked (not editable) while Reading Time is on -- editing a
 			// limit or bedtime mid-session could silently change what's
 			// currently blocking (or about to block) reading without the
-			// person realizing why; turning Screen Time off first makes
+			// person realizing why; turning Reading Time off first makes
 			// that impossible. Same treatment applied to Bedtime and
 			// takeABreakSection below.
 			.disabled(enabled)
@@ -95,7 +95,7 @@ struct ScreenTimeSettingsView: View {
 
 			Section("Bedtime") {
 				Toggle("Enable bedtime", isOn: $bedtimeEnabled)
-					.onChange(of: bedtimeEnabled) { _, value in AppDefaults.shared.screenTimeBedtimeEnabled = value }
+					.onChange(of: bedtimeEnabled) { _, value in AppDefaults.shared.readingTimeBedtimeEnabled = value }
 				DatePicker("Starts", selection: $start, displayedComponents: .hourAndMinute)
 					.onChange(of: start) { _, value in updateBedtimeStart(value) }
 				DatePicker("Ends", selection: $end, displayedComponents: .hourAndMinute)
@@ -111,24 +111,24 @@ struct ScreenTimeSettingsView: View {
 			Section {
 				Toggle("Show indicator while reading", isOn: $indicatorEnabled)
 					.onChange(of: indicatorEnabled) { _, value in
-						AppDefaults.shared.screenTimeIndicatorDisplayMode = value ? .pie : .off
+						AppDefaults.shared.readingTimeIndicatorDisplayMode = value ? .pie : .off
 					}
 			} footer: {
 				Text("Shows a small pie indicator of today's remaining reading time in fullscreen reading, independent of the Page Counter setting.")
 			}
 		}
-		.navigationTitle("Screen Time")
+		.navigationTitle("Reading Time")
 		.navigationBarTitleDisplayMode(.inline)
-		.onAppear { activeLockoutReasons = ScreenTimeTracker.shared.activeReasons }
-		.onReceive(NotificationCenter.default.publisher(for: .screenTimeLimitReached)) { _ in
-			activeLockoutReasons = ScreenTimeTracker.shared.activeReasons
+		.onAppear { activeLockoutReasons = ReadingTimeTracker.shared.activeReasons }
+		.onReceive(NotificationCenter.default.publisher(for: .readingTimeLimitReached)) { _ in
+			activeLockoutReasons = ReadingTimeTracker.shared.activeReasons
 		}
-		.onReceive(NotificationCenter.default.publisher(for: .screenTimeEnforcementDidClear)) { _ in
+		.onReceive(NotificationCenter.default.publisher(for: .readingTimeEnforcementDidClear)) { _ in
 			activeLockoutReasons = []
 		}
 		.alert(item: $pendingConfirmation) { confirmation in
 			Alert(
-				title: Text("Confirm Screen Time setting"),
+				title: Text("Confirm Reading Time setting"),
 				message: Text(confirmation.message),
 				primaryButton: .default(Text("Keep")),
 				secondaryButton: .cancel(Text("Undo"), action: confirmation.revert)
@@ -149,14 +149,14 @@ struct ScreenTimeSettingsView: View {
 				Text("Reminder").tag(TakeABreakMode.reminder)
 				Text("Enforced").tag(TakeABreakMode.enforced)
 			}
-			.onChange(of: takeABreakMode) { _, value in AppDefaults.shared.screenTimeTakeABreakMode = value }
+			.onChange(of: takeABreakMode) { _, value in AppDefaults.shared.readingTimeTakeABreakMode = value }
 
 			if takeABreakMode != .off {
 				takeABreakTimerRow(
 					title: "Reading Time",
 					footer: "How long to read before a break is triggered.",
 					minutes: $breakReadingMinutes,
-					store: { AppDefaults.shared.screenTimeBreakReadingMinutes = $0 }
+					store: { AppDefaults.shared.readingTimeBreakReadingMinutes = $0 }
 				)
 			}
 
@@ -165,7 +165,7 @@ struct ScreenTimeSettingsView: View {
 					title: "Break Time",
 					footer: "How long reading is blocked for once a break is triggered.",
 					minutes: $breakEnforcedMinutes,
-					store: { AppDefaults.shared.screenTimeBreakEnforcedMinutes = $0 }
+					store: { AppDefaults.shared.readingTimeBreakEnforcedMinutes = $0 }
 				)
 			}
 		} header: {
@@ -215,18 +215,18 @@ struct ScreenTimeSettingsView: View {
 	private func updateBedtimeStart(_ value: Date) {
 		let newStart = minutes(value)
 		let oldStart = minutes(start)
-		let span = ScreenTimeCalendar.bedtimeWindowSpanMinutes(startMinutes: newStart, endMinutes: minutes(end))
-		AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight = newStart
-		if span > ScreenTimeCalendar.maxBedtimeWindowSpanMinutes {
+		let span = ReadingTimeCalendar.bedtimeWindowSpanMinutes(startMinutes: newStart, endMinutes: minutes(end))
+		AppDefaults.shared.readingTimeBedtimeStartMinutesFromMidnight = newStart
+		if span > ReadingTimeCalendar.maxBedtimeWindowSpanMinutes {
 			// AppDefaults' setter already clamped `end`; re-read the stored value.
-			let clampedEnd = AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight
+			let clampedEnd = AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight
 			end = Self.minutesDate(clampedEnd)
 			pendingConfirmation = PendingConfirmation(
 				kind: .bedtimeSpan,
 				message: "Bedtime can't be longer than 12 hours, so the end time was moved to \(Self.timeString(end)). Reading will be blocked for the full 12 hours.",
 				revert: {
 					start = Self.minutesDate(oldStart)
-					AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight = oldStart
+					AppDefaults.shared.readingTimeBedtimeStartMinutesFromMidnight = oldStart
 				}
 			)
 		}
@@ -235,17 +235,17 @@ struct ScreenTimeSettingsView: View {
 	private func updateBedtimeEnd(_ value: Date) {
 		let newEnd = minutes(value)
 		let oldEnd = minutes(end)
-		let span = ScreenTimeCalendar.bedtimeWindowSpanMinutes(startMinutes: minutes(start), endMinutes: newEnd)
-		AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight = newEnd
-		if span > ScreenTimeCalendar.maxBedtimeWindowSpanMinutes {
-			let clampedStart = AppDefaults.shared.screenTimeBedtimeStartMinutesFromMidnight
+		let span = ReadingTimeCalendar.bedtimeWindowSpanMinutes(startMinutes: minutes(start), endMinutes: newEnd)
+		AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight = newEnd
+		if span > ReadingTimeCalendar.maxBedtimeWindowSpanMinutes {
+			let clampedStart = AppDefaults.shared.readingTimeBedtimeStartMinutesFromMidnight
 			start = Self.minutesDate(clampedStart)
 			pendingConfirmation = PendingConfirmation(
 				kind: .bedtimeSpan,
 				message: "Bedtime can't be longer than 12 hours, so the start time was moved to \(Self.timeString(start)). Reading will be blocked for the full 12 hours.",
 				revert: {
 					end = Self.minutesDate(oldEnd)
-					AppDefaults.shared.screenTimeBedtimeEndMinutesFromMidnight = oldEnd
+					AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight = oldEnd
 				}
 			)
 		}
@@ -278,9 +278,9 @@ struct ScreenTimeSettingsView: View {
 	}()
 
 	/// How many weeks back "Previous" will go. Bounded by how far back
-	/// screenTimeDailyUsageHistory actually retains data (35 days / 5
+	/// readingTimeDailyUsageHistory actually retains data (35 days / 5
 	/// weeks including the current one -- see AppDefaults'
-	/// screenTimeDailyUsageHistory), so the navigator never lands on a
+	/// readingTimeDailyUsageHistory), so the navigator never lands on a
 	/// week that's guaranteed to show as empty.
 	private static let maxWeeksBack = 4
 
@@ -292,14 +292,14 @@ struct ScreenTimeSettingsView: View {
 
 	private var weeklyUsage: [DailyUsage] {
 		let calendar = Self.sundayCalendar
-		let history = AppDefaults.shared.screenTimeDailyUsageHistory
+		let history = AppDefaults.shared.readingTimeDailyUsageHistory
 		let today = calendar.startOfDay(for: Date())
 		let start = weekStart
 		return (0..<7).compactMap { offset -> DailyUsage? in
 			guard let day = calendar.date(byAdding: .day, value: offset, to: start) else { return nil }
 			let key = Self.dateKeyFormatter.string(from: day)
 			let weekday = calendar.component(.weekday, from: day)
-			return DailyUsage(id: key, label: Self.dayLetterFormatter.string(from: day), minutesUsed: history[key] ?? 0, limitMinutes: AppDefaults.shared.screenTimeDailyLimitMinutes(for: weekday), isToday: calendar.isDate(day, inSameDayAs: today))
+			return DailyUsage(id: key, label: Self.dayLetterFormatter.string(from: day), minutesUsed: history[key] ?? 0, limitMinutes: AppDefaults.shared.readingTimeDailyLimitMinutes(for: weekday), isToday: calendar.isDate(day, inSameDayAs: today))
 		}
 	}
 
@@ -337,8 +337,8 @@ struct ScreenTimeSettingsView: View {
 			.buttonStyle(.plain)
 			.foregroundStyle(.secondary)
 
-			if AppDefaults.shared.screenTimeDailyUsageHistory.isEmpty {
-				Text("No Screen Time history yet.").foregroundStyle(.secondary)
+			if AppDefaults.shared.readingTimeDailyUsageHistory.isEmpty {
+				Text("No Reading Time history yet.").foregroundStyle(.secondary)
 			} else {
 				weeklyUsageBarChart
 					.listRowInsets(EdgeInsets())
@@ -411,11 +411,11 @@ struct ScreenTimeSettingsView: View {
 }
 
 /// "Xh Ym" duration formatting shared between the daily-limits row labels
-/// in ScreenTimeSettingsView and DailyLimitDetailView's footer, so the
+/// in ReadingTimeSettingsView and DailyLimitDetailView's footer, so the
 /// two can't drift out of sync with each other's wording -- the same
-/// reasoning that motivated ScreenTimeTracker.lockoutStatus(for:
+/// reasoning that motivated ReadingTimeTracker.lockoutStatus(for:
 /// bedtimeEndMinutesFromMidnight:), though that one is currently only
-/// consumed here, not by ScreenTimeEnforcementOverlay -- see
+/// consumed here, not by ReadingTimeEnforcementOverlay -- see
 /// lockoutStatus's own doc comment.
 private func durationString(_ minutes: Int) -> String {
 	let hours = minutes / 60
@@ -425,7 +425,7 @@ private func durationString(_ minutes: Int) -> String {
 	return "\(hours)h \(mins)m"
 }
 
-/// Pushed from ScreenTimeSettingsView's "Take a Break" section for either
+/// Pushed from ReadingTimeSettingsView's "Take a Break" section for either
 /// of its two timer settings (reading time, enforced break time). Same
 /// countDownTimer-wheel-on-its-own-screen shape as DailyLimitDetailView
 /// below, minus that view's daily-limit-specific "strict limit" confirm
@@ -451,11 +451,11 @@ private struct CountDownTimerSettingView: View {
 	}
 }
 
-/// Pushed per weekday from ScreenTimeSettingsView's "Daily limits"
+/// Pushed per weekday from ReadingTimeSettingsView's "Daily limits"
 /// section -- the countDownTimer wheel (see CountDownTimerPicker) is too
 /// tall to sit inline in a Form row alongside six other weekdays, so each
-/// weekday gets its own screen, matching how Settings → Screen Time →
-/// App Limits → Add Limit is its own pushed screen in iOS Screen Time.
+/// weekday gets its own screen, matching how Settings → Reading Time →
+/// App Limits → Add Limit is its own pushed screen in iOS Reading Time.
 private struct DailyLimitDetailView: View {
 	let weekdayName: String
 	@Binding var minutes: Int
