@@ -698,7 +698,7 @@ struct ArticleThemeListView: View {
 	/// approximation of it.
 	private var previewCSS: String {
 		let themeCSS = ArticleThemesManager.shared.currentTheme.css ?? ""
-		let overrideCSS = liveOverrides.cssOverrideBlock
+		let overrideCSS = liveOverrides.cssOverrideBlock(themeCSS: themeCSS)
 		guard !overrideCSS.isEmpty else { return themeCSS }
 		return themeCSS + "\n" + overrideCSS
 	}

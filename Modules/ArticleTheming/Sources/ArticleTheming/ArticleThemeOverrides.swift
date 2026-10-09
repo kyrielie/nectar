@@ -166,8 +166,57 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 	/// Dark-mode color variants are emitted as a `@media (prefers-color-scheme: dark)`
 	/// block layered after the light-mode rules, so they react live to system
 	/// appearance changes without any Swift-side trait-collection plumbing.
-	public var cssOverrideBlock: String {
+	public var cssOverrideBlock: String { cssOverrideBlock(themeCSS: nil) }
+
+	/// True when the theme declares its own `--gx` horizontal inset variable (shape B and
+	/// the migrated Nectar bundles). Such a theme gets the horizontal-margin override as
+	/// `--gx`; one without it (the NetNewsWire-origin bundles) gets it as `body` padding.
+	private static func usesInsetVariable(_ css: String?) -> Bool {
+		guard let css else { return false }
+		return css.range(of: #"--gx\s*:"#, options: .regularExpression) != nil
+	}
+
+	/// Prose, summary and notes links only. Preface tag links, series links and the
+	/// title/header links are excluded by construction: there is no bare `a` selector.
+	private static let proseLinkExclusions = ":not(#ao3Preface a):not(#ao3SyntheticPreface a):not(#ao3SeriesFooter a)"
+	private static var proseLinkSelectors: String {
+		["", ":link", ":visited"].map { ".articleBody a\($0)\(proseLinkExclusions)" }.joined(separator: ", ")
+	}
+
+	/// Same as `cssOverrideBlock`, but aware of the active theme's CSS so the
+	/// horizontal-margin override can target `--gx` for themes that declare it.
+	/// Pass `ArticleTheme.css ?? ArticleRenderer.defaultStyleSheet`.
+	public func cssOverrideBlock(themeCSS: String?) -> String {
 		guard !isEmpty else { return "" }
+		let usesInset = Self.usesInsetVariable(themeCSS)
+
+		var css = ""
+
+		// Variable block. Tokenized themes read these (see nnwtheme-format.md); the
+		// `!important` ones must beat the theme's own `:root` declarations.
+		// `--nnw-prose-size` is our own variable, so it is not `!important`.
+		var rootDeclarations = [String]()
+		if let fontSize {
+			rootDeclarations.append("--nnw-prose-size: \(fontSize)px;")
+		}
+		if let backgroundColorHex {
+			rootDeclarations.append("--nnw-bg: \(backgroundColorHex) !important;")
+		}
+		if let textColorHex {
+			rootDeclarations.append("--nnw-ink: \(textColorHex) !important;")
+		}
+		if let linkColorHex {
+			rootDeclarations.append("--nnw-link: \(linkColorHex) !important;")
+		}
+		if let sansFontFamilyName {
+			rootDeclarations.append("--nnw-font-chrome: \"\(sansFontFamilyName)\" !important;")
+		}
+		if usesInset, let marginHorizontal {
+			rootDeclarations.append("--gx: \(marginHorizontal)px !important;")
+		}
+		if !rootDeclarations.isEmpty {
+			css += ":root {\n\t\(rootDeclarations.joined(separator: "\n\t"))\n}\n"
+		}
 
 		var bodyDeclarations = [String]()
 		if let serifFontFamilyName {
@@ -186,7 +235,6 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 			bodyDeclarations.append("background-color: \(backgroundColorHex) !important;")
 		}
 
-		var css = ""
 		if !bodyDeclarations.isEmpty {
 			css += "body, .articleBody {\n\t\(bodyDeclarations.joined(separator: "\n\t"))\n}\n"
 		}
@@ -245,7 +293,9 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		}
 
 		if let linkColorHex {
-			css += "a, a:link, a:visited, .articleBody a, .articleBody a:link, .articleBody a:visited {\n\tcolor: \(linkColorHex) !important;\n}\n"
+			// Plain colored, underlined link: strips fills, borders and shadows so a
+			// filled-link theme cannot leave text and fill disagreeing.
+			css += "\(Self.proseLinkSelectors) {\n\tcolor: \(linkColorHex) !important;\n\tbackground: none !important;\n\tborder: 0 !important;\n\tbox-shadow: none !important;\n\ttext-shadow: none !important;\n\ttext-decoration: underline !important;\n}\n"
 		}
 
 		// Horizontal/top margin overrides. .articleContent/.barContent don't exist in
@@ -257,7 +307,7 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		// default template.html at all, so there's nothing correct to target without
 		// inventing a selector the same way the margin properties themselves were
 		// originally invented against.
-		if let marginHorizontal {
+		if let marginHorizontal, !usesInset {
 			css += "body {\n\tpadding-left: \(marginHorizontal)px !important; padding-right: \(marginHorizontal)px !important;\n}\n"
 		}
 		if let marginTop {
@@ -272,11 +322,24 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 			darkDeclarations.append("background-color: \(dark) !important;")
 		}
 		var darkCSS = ""
+		var darkRootDeclarations = [String]()
+		if let dark = backgroundColorDarkHex ?? backgroundColorHex {
+			darkRootDeclarations.append("--nnw-bg: \(dark) !important;")
+		}
+		if let dark = textColorDarkHex ?? textColorHex {
+			darkRootDeclarations.append("--nnw-ink: \(dark) !important;")
+		}
+		if let dark = linkColorDarkHex ?? linkColorHex {
+			darkRootDeclarations.append("--nnw-link: \(dark) !important;")
+		}
+		if !darkRootDeclarations.isEmpty {
+			darkCSS += ":root {\n\t\(darkRootDeclarations.joined(separator: "\n\t"))\n}\n"
+		}
 		if !darkDeclarations.isEmpty {
 			darkCSS += "body, .articleBody {\n\t\(darkDeclarations.joined(separator: "\n\t"))\n}\n"
 		}
 		if let dark = linkColorDarkHex ?? linkColorHex {
-			darkCSS += "a, a:link, a:visited, .articleBody a, .articleBody a:link, .articleBody a:visited {\n\tcolor: \(dark) !important;\n}\n"
+			darkCSS += "\(Self.proseLinkSelectors) {\n\tcolor: \(dark) !important;\n}\n"
 		}
 		if !darkCSS.isEmpty {
 			css += "@media (prefers-color-scheme: dark) {\n\(darkCSS)}\n"

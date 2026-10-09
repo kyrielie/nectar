@@ -4,16 +4,16 @@
    override; markup maps onto real AO3 blocks (dl.tags preface, .summary.module,
    .notes.module, h2.heading chapter headings, versal caps + chapter dividers via
    main.js data attributes). */
-:root{--fh:'Forum',serif;--fb:'Cormorant Garamond',serif;--bg:#f4e8d0;--ink:#3a2a1e;--a:#a9782a;--p:#f3cfa6;--r:1.6em}
+:root{--fh:'Forum',serif;--fb:'Cormorant Garamond',serif;--nnw-bg:#f4e8d0;--nnw-ink:#3a2a1e;--nnw-link:#3a2a1e;--a:#a9782a;--p:#f3cfa6;--r:1.6em;}
 
 /* ---- structural base shared by every converted mockup theme ---- */
 :root{--font-main:var(--fh);--font-body:var(--fb);--font-code:'Courier New',Courier,monospace}
-html{background-color:var(--bg)}
-body{margin:0 auto;max-width:44em;background-color:var(--bg);color:var(--ink);font-family:var(--fb);word-wrap:break-word}
-.articleBody{color:var(--ink)}
-a,.articleBody a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--a);text-decoration-thickness:2px;text-underline-offset:2px}
+html{background-color:var(--nnw-bg)}
+body{margin:0 auto;max-width:44em;background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link);text-decoration:underline;text-decoration-color:var(--a);text-decoration-thickness:2px;text-underline-offset:2px}
 .hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
-body > .systemMessage{color:var(--ink)}
+body > .systemMessage{color:var(--nnw-ink)}
 #ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
 .summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
 .summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
@@ -30,24 +30,24 @@ img, video { height: auto; }
 /* running head: in full-screen reading the app zeroes the top safe area, so page content
    starts under the notch/Dynamic Island. This band (feed name + date, bottom-aligned,
    >= 56px) absorbs that zone so the title always starts clear of it. */
-.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--fb);font-size:calc(var(--u) * 11);line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--rule-rh,currentColor);box-sizing:border-box}
+.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--nnw-font-chrome, var(--fb));font-size:calc(var(--u) * 11 * var(--nnw-detail-scale, 1));line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--nnw-ink);border-bottom:1px solid var(--rule-rh,currentColor);box-sizing:border-box}
 .rh a,.rh a:visited{color:inherit;text-decoration:none;opacity:.78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .rh time{flex:none;opacity:.78;white-space:nowrap}
 /* notes: bubble */
-:is(.notes.module,.end.notes.module){position:relative;margin:2em 0 2.4em;padding:.9em 1.15em;border:2px solid var(--ink);border-radius:var(--r);background:var(--bg);background:color-mix(in srgb,var(--a) 8%,var(--bg))}
-:is(.notes.module,.end.notes.module)::after{content:"";position:absolute;left:1.7em;bottom:-.72em;width:1em;height:1em;background:var(--bg);border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(45deg)}
+:is(.notes.module,.end.notes.module){position:relative;margin:2em 0 2.4em;padding:.9em 1.15em;border:2px solid var(--nnw-ink);border-radius:var(--r);background:var(--nnw-bg);background:color-mix(in srgb,var(--a) 8%,var(--nnw-bg))}
+:is(.notes.module,.end.notes.module)::after{content:"";position:absolute;left:1.7em;bottom:-.72em;width:1em;height:1em;background:var(--nnw-bg);border-right:2px solid var(--nnw-ink);border-bottom:2px solid var(--nnw-ink);transform:rotate(45deg)}
 :is(.notes.module,.end.notes.module) h3.heading{display:inline;margin:0 .45em 0 0;font:inherit;font-weight:700}
 :is(.notes.module,.end.notes.module) blockquote.userstuff,:is(.notes.module,.end.notes.module) blockquote.userstuff p{display:inline}
-.t{padding:10px var(--gx) 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+.t{padding:10px var(--gx) 26px;background:var(--nnw-bg);color:var(--nnw-ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
 .t h1{margin:0;font-family:var(--fh);font-weight:400}
 .t h2.heading, .t h3.title{margin:0;font-family:var(--fh);font-weight:400}
 .t h3.heading{margin:0;font-family:var(--fh);font-weight:400}
-.t h1{font-size:calc(var(--u) * 30);line-height:1.05}
-.t h2.heading, .t h3.title{font-size:calc(var(--u) * 21);margin-bottom:8px}
+.t h1{font-size:max(calc(var(--u) * 30 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.05}
+.t h2.heading, .t h3.title{font-size:max(calc(var(--u) * 21 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));margin-bottom:8px}
 .t h3.heading{font-size:calc(var(--u) * 12)}
 .hd{position:relative;margin-bottom:16px}
-.by{margin:8px 0 0;font-size:calc(var(--u) * 12);letter-spacing:.05em}
-#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12)}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;font-family:var(--nnw-font-chrome)}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
 #bodyContainer dl.tags dt{font-weight:700}
 #bodyContainer dl.tags dd{margin:0}
 .summary.module{margin:0 0 14px;padding:10px 12px}
@@ -58,13 +58,13 @@ p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;f
 .versalCap{font-variant:small-caps;letter-spacing:.03em}
 .t2{font-size:calc(var(--u) * 17)}
 .t2 .hd{text-align:center;border:3px solid var(--a);border-radius:140px 140px 10px 10px;padding:38px 16px 16px;background:radial-gradient(circle at 50% 0,var(--p) 0 62%,transparent 63%)}
-.t2 h1{font-size:calc(var(--u) * 25)}
-.t2 #bodyContainer dl.tags{border:2px solid var(--a);border-radius:16px;padding:10px 16px;box-shadow:inset 0 0 0 4px var(--bg),inset 0 0 0 5px var(--a)}
+.t2 h1{font-size:max(calc(var(--u) * 25 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 17)) * 1.4))}
+.t2 #bodyContainer dl.tags{border:2px solid var(--a);border-radius:16px;padding:10px 16px;box-shadow:inset 0 0 0 4px var(--nnw-bg),inset 0 0 0 5px var(--a)}
 .t2 .dv{text-align:center}
 .t2 .dv::before{content:"\2766";color:var(--a);font-size:calc(var(--u) * 20)}
 .t2 .summary.module{background:var(--p);border-radius:60px 60px 10px 10px/30px 30px 10px 10px;text-align:center;padding:18px 20px 12px}
 @media (prefers-color-scheme: dark) {
-	:root{--bg:#25201c;--ink:#f1e3c8;--a:#d4a65a;--p:#4a3a2c}
+	:root{--nnw-bg:#25201c;--nnw-ink:#f1e3c8;--nnw-link:#f1e3c8;--a:#d4a65a;--p:#4a3a2c;}
 
 }
 
@@ -72,6 +72,14 @@ p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;f
 @supports (-webkit-touch-callout: none) {
 	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
 	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+
+	.t2 {
+		--ao3-series-footer-font-size: calc(var(--u) * 15.3 * var(--nnw-detail-scale, 1));
+	}
 }
 /* macOS Specific */
 @supports not (-webkit-touch-callout: none) {

@@ -270,11 +270,31 @@ theme's own specificity/declaration order — every declaration is
 - Dark-mode colors are emitted inside a `@media (prefers-color-scheme: dark)`
   block layered after the light rules, so they react live to system
   appearance changes with no Swift-side trait-collection plumbing.
-- `marginHorizontal`/`marginTop` target `body`'s padding and
-  `#bodyContainer`'s padding-top respectively — chosen because
+- `marginTop` targets `#bodyContainer`'s padding-top, chosen because
   `.articleContent`/`.barContent` (which an earlier draft of this feature
   assumed existed) don't actually exist anywhere in
-  `Shared/Article Rendering/template.html`.
+  `Shared/Article Rendering/template.html`. `marginHorizontal` depends on the
+  theme: if the theme CSS declares `--gx` (matched by `--gx\s*:`), the override
+  sets `--gx` in `:root`; otherwise it pads `body` as before.
+- **Signature.** `cssOverrideBlock(themeCSS:)` takes the active theme's CSS
+  (`ArticleRenderer.styleString()` passes the theme CSS or the default
+  stylesheet; `ArticleThemeListView.previewCSS` passes the preview's
+  `themeCSS`). The `cssOverrideBlock` property is `cssOverrideBlock(themeCSS: nil)`.
+- **Variables.** Before the legacy rules, a `:root` block sets
+  `--nnw-prose-size` (font size, not `!important`), `--nnw-bg`, `--nnw-ink`,
+  `--nnw-link`, `--nnw-font-chrome` (all `!important`) and, for `--gx` themes,
+  `--gx`. The dark `@media` block repeats `--nnw-bg`/`--nnw-ink`/`--nnw-link`
+  in its own `:root` rule before its `body, .articleBody` rule, because a
+  theme's dark `:root` would otherwise lose to the light `!important` values.
+  The legacy `body, .articleBody` rules stay so untokenized themes still work.
+- **Links.** The link color applies to `.articleBody a`, `:link` and
+  `:visited`, excluding `#ao3Preface a`, `#ao3SyntheticPreface a` and
+  `#ao3SeriesFooter a`, and strips background, border and shadows and
+  underlines (a plain colored link). There is no bare `a` selector, so title,
+  header, preface and series links are never recolored. The dark rule sets only
+  `color`.
+- **Chrome font.** `chromeSelectors` stays for the NetNewsWire-origin bundles
+  and Vintage Letter Green; tokenized themes read `--nnw-font-chrome` themselves.
 
 ## Rendering integration
 

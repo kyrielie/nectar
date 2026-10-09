@@ -71,6 +71,24 @@
 	var EDIT_ONLY_CLASS = "nnw-edit-only";
 	var DEFAULT_ROOT_SELECTOR = ".articleBody";
 
+	// Text inside an element carrying this attribute is decoration (today
+	// only the chapter divider main.js inserts), not article text. It is
+	// excluded from the text index, from range-node collection and from
+	// find-in-page, so stored offsets and quotes do not depend on which
+	// theme's divider glyph happens to be on screen.
+	var ORNAMENT_SELECTOR = "[data-nnw-ornament]";
+
+	function isOrnamentText(node) {
+		var parent = node.parentElement;
+		return !!(parent && parent.closest(ORNAMENT_SELECTOR));
+	}
+
+	var annotationTextFilter = {
+		acceptNode: function (node) {
+			return isOrnamentText(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+		}
+	};
+
 	// Below this prefix/suffix similarity score (0-1), a multiple-quote-match
 	// is treated as ambiguous and the annotation is orphaned rather than
 	// guessing at the wrong occurrence.
@@ -125,7 +143,7 @@
 	// [startOffset, endOffset) pairs can be mapped back to real DOM
 	// node/offset pairs in wrapRange below.
 	function buildTextIndex(root) {
-		var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+		var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, annotationTextFilter);
 		var text = "";
 		var entries = [];
 		var node;
@@ -415,11 +433,11 @@
 		// CSS) are passed in explicitly by the caller rather than assumed
 		// ambient, and Node itself has never been one of them.
 		if (range.commonAncestorContainer.nodeType === 3) {
-			return [range.commonAncestorContainer];
+			return isOrnamentText(range.commonAncestorContainer) ? [] : [range.commonAncestorContainer];
 		}
 
 		var nodes = [];
-		var walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT, null);
+		var walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_TEXT, annotationTextFilter);
 		var node;
 		while ((node = walker.nextNode())) {
 			if (range.intersectsNode(node)) {

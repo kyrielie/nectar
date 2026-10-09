@@ -412,10 +412,12 @@ Rules for any ornament:
    builds its text index by walking every text node under `.articleBody`, so
    real characters a theme's markup or script adds inside the body count toward
    stored highlight offsets, where `content:` text does not. The one exception
-   today is the chapter-divider glyph, which `applyChapterDividers()` inserts as
-   real text inside `#bodyContainer`; no exclusion for it was found in
-   `annotations.js`, so keep a theme's divider glyph constant and treat any
-   effect on highlight offsets as unverified.
+   is the chapter-divider glyph, which `applyChapterDividers()` inserts as real
+   text inside `#bodyContainer` on an element carrying `data-nnw-ornament`.
+   Text inside `[data-nnw-ornament]` is excluded from the annotation index,
+   range wrapping, selection and find-in-page, so the glyph is free to differ
+   between themes. Only `main.js` creates such elements; a theme or shared
+   script must not insert any other text under `#bodyContainer`.
 2. **Mark decorative elements `aria-hidden="true"`.**
 3. **Keep ornaments inside the page width.** `core.css` clips horizontal
    overflow, so an ornament that pokes past the edge is cut off rather than

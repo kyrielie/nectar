@@ -4,16 +4,16 @@
    override; markup maps onto real AO3 blocks (dl.tags preface, .summary.module,
    .notes.module, h2.heading chapter headings, versal caps + chapter dividers via
    main.js data attributes). */
-:root{--fh:'Amatic SC',cursive;--fb:'Lora',serif;--bg:#eadfc8;--ink:#2d3a34;--a:#a8452f;--r:.3em}
+:root{--fh:'Amatic SC',cursive;--fb:'Lora',serif;--nnw-bg:#eadfc8;--nnw-ink:#2d3a34;--nnw-link:#2d3a34;--a:#a8452f;--r:.3em;}
 
 /* ---- structural base shared by every converted mockup theme ---- */
 :root{--font-main:var(--fh);--font-body:var(--fb);--font-code:'Courier New',Courier,monospace}
-html{background-color:var(--bg)}
-body{margin:0 auto;max-width:44em;background-color:var(--bg);color:var(--ink);font-family:var(--fb);word-wrap:break-word}
-.articleBody{color:var(--ink)}
-a,.articleBody a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--a);text-decoration-thickness:2px;text-underline-offset:2px}
+html{background-color:var(--nnw-bg)}
+body{margin:0 auto;max-width:44em;background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link);text-decoration:underline;text-decoration-color:var(--a);text-decoration-thickness:2px;text-underline-offset:2px}
 .hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
-body > .systemMessage{color:var(--ink)}
+body > .systemMessage{color:var(--nnw-ink)}
 #ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
 .summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
 .summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
@@ -30,22 +30,22 @@ img, video { height: auto; }
 /* running head: in full-screen reading the app zeroes the top safe area, so page content
    starts under the notch/Dynamic Island. This band (feed name + date, bottom-aligned,
    >= 56px) absorbs that zone so the title always starts clear of it. */
-.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--fb);font-size:calc(var(--u) * 11);line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--rule-rh,currentColor);box-sizing:border-box}
+.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--nnw-font-chrome, var(--fb));font-size:calc(var(--u) * 11 * var(--nnw-detail-scale, 1));line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--nnw-ink);border-bottom:1px solid var(--rule-rh,currentColor);box-sizing:border-box}
 .rh a,.rh a:visited{color:inherit;text-decoration:none;opacity:.78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .rh time{flex:none;opacity:.78;white-space:nowrap}
 /* notes: stamp */
 :is(.notes.module,.end.notes.module){position:relative;margin:2.2em 0 1.8em;padding:1.1em 1em .8em;border:2px dashed var(--a);border-radius:var(--r)}
-:is(.notes.module,.end.notes.module) h3.heading{position:absolute;top:-.9em;left:1em;margin:0;padding:.05em .7em;background:var(--bg);color:var(--ink);border:2px solid var(--a);border-radius:var(--r);transform:rotate(-2.5deg);font:700 .72em/1.6 var(--fb);letter-spacing:.22em;text-transform:uppercase}
-.t{padding:10px var(--gx) 26px;background:var(--bg);color:var(--ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+:is(.notes.module,.end.notes.module) h3.heading{position:absolute;top:-.9em;left:1em;margin:0;padding:.05em .7em;background:var(--nnw-bg);color:var(--nnw-ink);border:2px solid var(--a);border-radius:var(--r);transform:rotate(-2.5deg);font:700 .72em/1.6 var(--fb);letter-spacing:.22em;text-transform:uppercase}
+.t{padding:10px var(--gx) 26px;background:var(--nnw-bg);color:var(--nnw-ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
 .t h1{margin:0;font-family:var(--fh);font-weight:400}
 .t h2.heading, .t h3.title{margin:0;font-family:var(--fh);font-weight:400}
 .t h3.heading{margin:0;font-family:var(--fh);font-weight:400}
-.t h1{font-size:calc(var(--u) * 30);line-height:1.05}
-.t h2.heading, .t h3.title{font-size:calc(var(--u) * 21);margin-bottom:8px}
+.t h1{font-size:max(calc(var(--u) * 30 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.05}
+.t h2.heading, .t h3.title{font-size:max(calc(var(--u) * 21 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));margin-bottom:8px}
 .t h3.heading{font-size:calc(var(--u) * 12)}
 .hd{position:relative;margin-bottom:16px}
-.by{margin:8px 0 0;font-size:calc(var(--u) * 12);letter-spacing:.05em}
-#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12)}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;font-family:var(--nnw-font-chrome)}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
 #bodyContainer dl.tags dt{font-weight:700}
 #bodyContainer dl.tags dd{margin:0}
 .summary.module{margin:0 0 14px;padding:10px 12px}
@@ -55,18 +55,18 @@ img, video { height: auto; }
 p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;font-size:2.7em;line-height:.85;padding:.05em .1em 0 0;color:var(--a)}
 .versalCap{font-variant:small-caps;letter-spacing:.03em}
 .t36 .hd{border:3px double var(--a);border-radius:50px/24px;text-align:center;padding:14px}
-.t36 h1{font-weight:700;font-size:calc(var(--u) * 40)}
-.t36 .by{display:inline-block;background:var(--a);color:var(--bg);padding:2px 22px;clip-path:polygon(0 0,100% 0,94% 50%,100% 100%,0 100%,6% 50%)}
+.t36 h1{font-weight:700;font-size:max(calc(var(--u) * 40 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4))}
+.t36 .by{display:inline-block;background:var(--a);color:var(--nnw-bg);padding:2px 22px;clip-path:polygon(0 0,100% 0,94% 50%,100% 100%,0 100%,6% 50%)}
 .t36 #bodyContainer dl.tags{gap:0 12px}
 .t36 #bodyContainer dl.tags dt{border-bottom:2px dotted var(--a);padding:3px 0}
 .t36 #bodyContainer dl.tags dd{border-bottom:2px dotted var(--a);padding:3px 0}
 .t36 #bodyContainer dl.tags dd{text-align:right}
 .t36 .dv{text-align:center}
 .t36 .dv::before{content:"\2740";color:var(--a);font-size:calc(var(--u) * 20)}
-.t36 h2.heading, .t36 h3.title{font-weight:700;font-size:calc(var(--u) * 30)}
+.t36 h2.heading, .t36 h3.title{font-weight:700;font-size:max(calc(var(--u) * 30 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2))}
 .t36 .summary.module{border:2px solid var(--a);border-radius:8px;text-align:center}
 @media (prefers-color-scheme: dark) {
-	:root{--bg:#263a33;--ink:#f2efe4;--a:#f0c75e}
+	:root{--nnw-bg:#263a33;--nnw-ink:#f2efe4;--nnw-link:#f2efe4;--a:#f0c75e;}
 
 }
 
@@ -74,6 +74,10 @@ p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;f
 @supports (-webkit-touch-callout: none) {
 	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
 	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
 }
 /* macOS Specific */
 @supports not (-webkit-touch-callout: none) {

@@ -465,7 +465,18 @@ concern.
    single `TreeWalker` (`NodeFilter.SHOW_TEXT`) pass, building the root's
    full inner text plus a parallel `{node, start, end}` table — the same
    walker idiom `main.js`'s `applyVersalCaps` and `main_ios.js`'s `Finder`
-   already use.
+   already use. Anchor text is "text under the root except inside
+   `[data-nnw-ornament]`": the walker uses `annotationTextFilter`, which
+   rejects text whose parent is inside such an element. Only `main.js`
+   creates those elements (the chapter divider), so stored offsets, quotes
+   and context no longer depend on which theme's divider glyph is shown.
+   `collectRangeTextNodes` applies the same filter (including its
+   single-text-node fast path), `core.css` makes ornaments
+   `user-select: none` so a selection never starts or ends in one, and the
+   `Finder` walker in `main_ios.js` rejects them too, so find-in-page does
+   not match divider glyphs. Highlights stored before this change counted
+   the glyphs; the first render re-finds them by quote search and reports
+   them as moved, and a quote that crossed a chapter heading may orphan.
 2. `resolveAnnotation` tries the stored `[startOffset, endOffset)` first;
    if `text.slice(start, end) === quoteExact`, resolution is done. If not,
    it searches the full text for every occurrence of `quoteExact`

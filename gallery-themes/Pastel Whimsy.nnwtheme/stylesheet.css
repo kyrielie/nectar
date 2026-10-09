@@ -18,8 +18,8 @@ body {
 	margin-right: auto;
 	word-wrap: break-word;
 	max-width: 44em;
-	background-color: #fff7fb;
-	color: #3f3747;
+	background-color: var(--nnw-bg);
+	color: var(--nnw-ink);
 }
 
 [href] {
@@ -64,13 +64,17 @@ body {
 	--link-underline-special: color-mix(in hsl, currentColor, transparent 70%);
 	/* Consumed by core.css's #ao3SyntheticPreface/#ao3Preface rules. */
 	--ao3-preface-border-color: #d9cdee;
+	--nnw-bg: #fff7fb;
+	--nnw-ink: #3f3747;
+	--nnw-link: #7b5fa3;
+	--u: calc(1rem / 15);
 }
 
 /* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
    higher-specificity 'body a' below still wins the cascade. See the fix
    applied to Ember/Sepia/Tiqoe Dark/Rose Pine for why this is needed. */
 a {
-	color: #7b5fa3;
+	color: var(--nnw-link);
 }
 
 body a,
@@ -81,7 +85,7 @@ body a * {
 
 body > header {
 	border-bottom: 1px solid var(--header-table-border-color);
-	padding-bottom: 0.5rem;
+	padding-bottom: calc(var(--u) * 7.5);
 }
 
 body > header a,
@@ -97,8 +101,8 @@ body > header .headerTable th {
 	color: var(--header-color);
 	padding: 0.2em;
 	border: none;
-	font-family: 'Playfair Display', Georgia, serif;
-	font-size: 0.9rem;
+	font-family: var(--nnw-font-chrome, 'Playfair Display', Georgia, serif);
+	font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
 }
 body > header .headerTable td.avatar {
 	width: 33%;
@@ -193,7 +197,7 @@ pre {
 code,
 pre {
 	font-family: "JetBrains Mono", "SF Mono", Menlo, monospace;
-	font-size: 0.85rem;
+	font-size: calc(var(--u) * 12.75);
 	letter-spacing: -0.027em;
 	-webkit-hyphens: none;
 }
@@ -278,13 +282,13 @@ figcaption {
 sup {
 	vertical-align: top;
 	position: relative;
-	bottom: 0.2rem;
+	bottom: calc(var(--u) * 3);
 }
 
 sub {
 	vertical-align: bottom;
 	position: relative;
-	top: 0.2rem;
+	top: calc(var(--u) * 3);
 }
 
 hr {
@@ -418,7 +422,7 @@ a.footnote:hover,
 	}
 
 	.articleTitle h1 {
-		font-size: 1.5em;
+		font-size: max(calc(var(--u) * 22.5 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));
 	}
 
 	pre {
@@ -428,6 +432,33 @@ a.footnote:hover,
 
 	.nnw-overflow table {
 		border: 1px solid var(--table-cell-border-color);
+	}
+
+	html {
+		font: -apple-system-body;
+	}
+
+	:root {
+		--ao3-preface-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+
+	.articleDateline,
+	.articleDatelineTitle,
+	.externalLink {
+		font-size: calc(var(--u) * 15 * var(--nnw-detail-scale, 1));
+	}
+
+	.chapter.preface.group > h2.heading {
+		font-size: max(calc(var(--u) * 22.5 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));
+	}
+
+	.articleDateline,
+	.articleDatelineTitle {
+		font-family: var(--nnw-font-chrome, 'Lora', Georgia, serif);
+	}
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
 	}
 }
 
@@ -469,4 +500,13 @@ a.footnote:hover,
 	.nnw-overflow table {
 		border: 1px solid #7b5fa3;
 	}
+}
+
+/* Theme contract: exact selectors read by ArticleThemeColorExtractor. */
+.articleBody {
+	color: var(--nnw-ink);
+}
+
+.articleBody a {
+	color: var(--nnw-link);
 }

@@ -34,6 +34,16 @@ later fix, this also covers the `@supports not (...)` form, which the
 original regex missed (`stylesheet.css`'s own macOS-only rules block uses
 exactly that form).
 
+Token rules for tokenized themes (see `nnwtheme-format.md`): each bundle
+declares `--nnw-bg`, `--nnw-ink` and `--nnw-link` with literal values in
+`:root` and in its dark `:root` block, and keeps `body`, `.articleBody`, `a`
+and `.articleBody a` declared on those exact selectors, because the
+extractor reads exactly those. The `var()` resolution is one level only: a
+variable whose value is itself a `var()` does not resolve, which is why the
+tokens must be literal. The user override block also sets these tokens (with
+`!important`), so a recolor reaches every surface the theme paints with
+`var(--nnw-bg)`.
+
 **Precedence logic now lives in `ArticleResolvedColors.resolved(theme:
 isDark:overrideBackgroundColorHex:overrideBackgroundColorDarkHex:)`**
 (`Modules/ArticleTheming`'s `ArticleThemeColorExtractor.swift`), not inline in

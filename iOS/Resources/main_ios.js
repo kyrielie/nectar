@@ -245,7 +245,16 @@ Finder = class {
 
 		Object.assign(this.options, options);
 
-		this.walker = document.createTreeWalker(this.root, NodeFilter.SHOW_TEXT);
+		// Chapter-divider glyphs (data-nnw-ornament) are decoration, not
+		// article text; skip them so find-in-page never matches them.
+		this.walker = document.createTreeWalker(this.root, NodeFilter.SHOW_TEXT, {
+			acceptNode: function (node) {
+				var parent = node.parentElement;
+				return (parent && parent.closest("[data-nnw-ornament]"))
+					? NodeFilter.FILTER_REJECT
+					: NodeFilter.FILTER_ACCEPT;
+			}
+		});
 	}
 
 	get root() {
