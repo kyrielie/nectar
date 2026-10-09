@@ -17,7 +17,7 @@ it exists to be added by hand, the same way any other feed is.
 (`iOS/UITestDemoData/UITestDemoData.swift`), invoked from `AppDelegate.didFinishLaunchingWithOptions`.
 
 This is a separate flag from `Platform.isRunningUnitTests` on purpose: `isRunningUnitTests` also gates
-unrelated behavior (`ErrorLogDatabase`, `AuthorCache`, the `ScreenTimeTracker`/`ReadingStatsTracker`
+unrelated behavior (`ErrorLogDatabase`, `AuthorCache`, the `ReadingTimeTracker`/`ReadingStatsTracker`
 `.start()` calls in `AppDelegate`) that shouldn't change just because a screenshot is being taken.
 
 One exception: `LocalAccountDelegate.refreshAll()` (called by `Account.importOPML(_:completion:)`
@@ -153,7 +153,7 @@ Text size has two independent controls:
 test is best effort per screen (a missing row is logged and skipped) and asserts only that Settings
 opens. The gear button has the accessibility identifier `settingsButton` (set in
 `MainFeedCollectionViewController.configureCurrentActivityButton`); Settings rows are matched by label
-substring from `Settings.storyboard`. Reading Stats and Screen Time show their empty states, since no
+substring from `Settings.storyboard`. Reading Stats and Reading Time show their empty states, since no
 usage data is seeded.
 
 ### App Store screenshots

@@ -3,7 +3,7 @@
 //  NetNewsWire-iOSTests
 //
 //  Coverage for ForegroundTicker, the timer/observer lifecycle shared by
-//  ReadingStatsTracker and ScreenTimeTracker. Uses a throwaway target rather
+//  ReadingStatsTracker and ReadingTimeTracker. Uses a throwaway target rather
 //  than either shared tracker so nothing here touches their singleton state,
 //  and deliberately does not post UIApplication's resign/become-active
 //  notifications: the app's real trackers observe those in the test host.

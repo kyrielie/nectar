@@ -1,6 +1,6 @@
 import Foundation
 
-public enum ScreenTimeCalendar {
+public enum ReadingTimeCalendar {
 
 	public static func isSameUsageDay(_ lhs: Date, _ rhs: Date, calendar: Calendar = .current) -> Bool {
 		calendar.isDate(lhs, inSameDayAs: rhs)

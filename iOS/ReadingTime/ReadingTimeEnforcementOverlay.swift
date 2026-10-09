@@ -1,6 +1,6 @@
 import UIKit
 
-final class ScreenTimeEnforcementOverlay: UIView {
+final class ReadingTimeEnforcementOverlay: UIView {
 	private let iconView = UIImageView()
 	private let message = UILabel()
 	private let stack = UIStackView()
@@ -51,7 +51,7 @@ final class ScreenTimeEnforcementOverlay: UIView {
 
 	required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-	func show(in window: UIWindow, reasons: Set<ScreenTimeTracker.Reason>, bedtimeEndMinutesFromMidnight: Int) {
+	func show(in window: UIWindow, reasons: Set<ReadingTimeTracker.Reason>, bedtimeEndMinutesFromMidnight: Int) {
 		apply(reasons: reasons, bedtimeEndMinutesFromMidnight: bedtimeEndMinutesFromMidnight)
 		guard superview == nil else { return }
 		frame = window.bounds
@@ -62,17 +62,17 @@ final class ScreenTimeEnforcementOverlay: UIView {
 		UIAccessibility.post(notification: .screenChanged, argument: self)
 	}
 
-	/// Delegates to ScreenTimeTracker.lockoutStatus for both the icon and
-	/// the message, so this overlay and the ScreenTimeSettingsView status
+	/// Delegates to ReadingTimeTracker.lockoutStatus for both the icon and
+	/// the message, so this overlay and the ReadingTimeSettingsView status
 	/// banner can't drift out of sync with each other -- see that
 	/// function's doc comment. Falls back to the pre-existing generic
 	/// copy (no icon) only for the reasons-empty case, which
 	/// show(in:reasons:bedtimeEndMinutesFromMidnight:) is never actually
 	/// called with in practice (SceneDelegate only shows the overlay once
-	/// ScreenTimeTracker.activeReasons is non-empty).
-	private func apply(reasons: Set<ScreenTimeTracker.Reason>, bedtimeEndMinutesFromMidnight: Int) {
-		let status = ScreenTimeTracker.lockoutStatus(for: reasons, bedtimeEndMinutesFromMidnight: bedtimeEndMinutesFromMidnight)
-		message.text = status?.message ?? "Screen Time limit reached"
+	/// ReadingTimeTracker.activeReasons is non-empty).
+	private func apply(reasons: Set<ReadingTimeTracker.Reason>, bedtimeEndMinutesFromMidnight: Int) {
+		let status = ReadingTimeTracker.lockoutStatus(for: reasons, bedtimeEndMinutesFromMidnight: bedtimeEndMinutesFromMidnight)
+		message.text = status?.message ?? "Reading Time limit reached"
 		iconView.image = status.map { UIImage(systemName: $0.systemImageName) } ?? nil
 		accessibilityLabel = message.text
 	}

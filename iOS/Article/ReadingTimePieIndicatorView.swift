@@ -14,7 +14,7 @@ import UIKit
 /// continuously -- and it renders the outline and the pie's edge as
 /// actual vector paths at full display resolution, so neither has the
 /// soft/fuzzy edge a CSS conic-gradient approximation can show.
-final class ScreenTimePieIndicatorView: UIView {
+final class ReadingTimePieIndicatorView: UIView {
 
 	/// 0 = empty, 1 = full. Values outside 0...1 are clamped before
 	/// comparing/storing, so out-of-range writes below don't cause a

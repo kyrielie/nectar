@@ -9,7 +9,7 @@
 //  work), and the worksByFandom/worksByTag migration.
 //
 //  Time is driven deterministically through ReadingStatsTracker.now, the
-//  same injection point ScreenTimeTrackerTests uses for its sibling
+//  same injection point ReadingTimeTrackerTests uses for its sibling
 //  tracker. .serialized: every test drives the same shared singleton.
 //
 

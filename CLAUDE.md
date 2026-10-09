@@ -38,7 +38,7 @@ task**, not this whole index cover-to-cover.
 - **Landing page (`landing/`), its `site.json` config and optional sections** → `landing-page.md`
 - **Database schema / SQLite storage layer** → `database.md`
 - **Settings screen, any toggle, or "does setting X exist"** → `settings-screen.md` (main screen) **and** `ao3-authenticated-reading.md` (the separate AO3 account screen — easy to miss)
-- **Screen Time reading limits / bedtime lockout / enforcement overlay** → `screen-time.md`
+- **Reading Time limits / bedtime lockout / enforcement overlay** → `reading-time.md`
 - **Reading Stats (words/time tracking, streaks)** → `reading-stats.md`
 - **UI vocabulary (Shelf/Chapter/Work/Library) vs. the underlying Feed/Article code vocabulary, or wording for a new user-facing string** → `terminology.md`
 - **Full device backup / restore, the Backup settings section** → `backup-restore.md`
@@ -115,7 +115,7 @@ it's trusted by default. Specifically:
 | `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |
 | Any row/case in `SettingsViewController`'s `*Row` enums, `Settings.storyboard`, `AppDefaults`, or an `AppDefaults+<Feature>.swift` extension file | `settings-screen.md` |
 | `.swiftlint.yml`'s `file_length`/`type_body_length` thresholds, or adding a large new file/type to `iOS/` | `module-layout.md` |
-| `ScreenTimeTracker`, `ScreenTimeEnforcementOverlay`, `ScreenTimeSettingsView` | `screen-time.md` |
+| `ReadingTimeTracker`, `ReadingTimeEnforcementOverlay`, `ReadingTimeSettingsView` | `reading-time.md` |
 | `ReadingStatsTracker`, `ReadingStatsView`, how completed works are counted | `reading-stats.md` |
 | Any new or renamed user-facing string, or a decision about which vocabulary (UI vs. code) a screen should use | `terminology.md` |
 | `BackupManager`, `BackupRestoreCoordinator`, the backup zip's file layout | `backup-restore.md` |

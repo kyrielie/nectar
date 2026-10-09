@@ -128,10 +128,10 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   `Zip` package. See `backup-restore.md`.
 - **Modules/ReadingStats, Modules/ReadingTime** — only the pure calendar
   and value types so far: `ReadingStatsCalendar.swift` (including the
-  persisted `ReadingStatsDailyEntry`) and `ScreenTimeCalendar` (usage-day
+  persisted `ReadingStatsDailyEntry`) and `ReadingTimeCalendar` (usage-day
   and bedtime-window math). The trackers, settings extensions on
   `AppDefaults`, and views remain in `iOS/ReadingStats` and
-  `iOS/ScreenTime`. See `screen-time.md`.
+  `iOS/ReadingTime`. See `reading-time.md`.
 - **Shared/** — cross-platform (iOS/Mac target scaffolding, though only iOS
   is actually built — see below) formatting and rendering:
   `ArticleStringFormatter` (title/summary truncation and caching),
@@ -154,7 +154,7 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
     `Shared/ReadingProgress`), `ArticleViewController`.
   - `iOS/AppDefaults.swift`: the settings singleton. Feature-owned settings
     are split into `extension AppDefaults` files next to the feature
-    (`iOS/ScreenTime/AppDefaults+ScreenTime.swift`,
+    (`iOS/ReadingTime/AppDefaults+ReadingTime.swift`,
     `iOS/ReadingStats/AppDefaults+ReadingStats.swift`); see
     `settings-screen.md`. Other groups (reader, toolbar, annotations, text
     replacement) are still in the main file under `// MARK:` banners and are

@@ -85,7 +85,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		case fullScreenReading = 4
 		case annotations = 5
 		case textReplacement = 6
-		case screenTime = 7
+		case readingTime = 7
 		case readingStats = 8
 	}
 
@@ -320,8 +320,8 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 					currentWork: currentWorkForTextReplacementOverride
 				))
 				self.navigationController?.pushViewController(hostingController, animated: true)
-			case .screenTime:
-				self.navigationController?.pushViewController(Self.makeSurfacePaletteAwareHostingController(rootView: ScreenTimeSettingsView()), animated: true)
+			case .readingTime:
+				self.navigationController?.pushViewController(Self.makeSurfacePaletteAwareHostingController(rootView: ReadingTimeSettingsView()), animated: true)
 			case .readingStats:
 				self.navigationController?.pushViewController(Self.makeSurfacePaletteAwareHostingController(rootView: ReadingStatsView()), animated: true)
 			default:

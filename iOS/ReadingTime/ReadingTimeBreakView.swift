@@ -1,6 +1,6 @@
 import UIKit
 
-final class ScreenTimeBreakView: UIView {
+final class ReadingTimeBreakView: UIView {
 	private let message = UILabel()
 	private let continueButton = UIButton(type: .system)
 
@@ -36,7 +36,7 @@ final class ScreenTimeBreakView: UIView {
 	required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
 	@objc private func continueTapped() {
-		ScreenTimeTracker.shared.dismissBreak()
+		ReadingTimeTracker.shared.dismissBreak()
 	}
 
 	func show(in window: UIWindow) {

@@ -161,7 +161,9 @@ enum ToolbarFunction: String, CaseIterable, Sendable {
 	case scrollBack
 	case scrollToTop
 	case scrollToBottom
-	case screenTimeRemaining
+	/// Raw value stays "screenTimeRemaining": it is persisted in the toolbar order
+	/// arrays, and the case was renamed from `screenTimeRemaining` when Screen Time became Reading Time.
+	case readingTimeRemaining = "screenTimeRemaining"
 	case readingStats
 }
 
@@ -208,8 +210,8 @@ extension ToolbarFunction {
 			return NSLocalizedString("Scroll to Top", comment: "Toolbar function: scroll to top of article")
 		case .scrollToBottom:
 			return NSLocalizedString("Scroll to Bottom", comment: "Toolbar function: scroll to bottom of article")
-		case .screenTimeRemaining:
-			return NSLocalizedString("Screen Time Remaining", comment: "Toolbar function: screen time remaining")
+		case .readingTimeRemaining:
+			return NSLocalizedString("Reading Time Remaining", comment: "Toolbar function: reading time remaining")
 		case .readingStats:
 			return NSLocalizedString("Reading Stats", comment: "Toolbar function: reading stats")
 		}
@@ -252,7 +254,7 @@ extension ToolbarFunction {
 		case .scrollBack: return Assets.Images.scrollBack
 		case .scrollToTop: return Assets.Images.scrollToTop
 		case .scrollToBottom: return Assets.Images.scrollToBottom
-		case .screenTimeRemaining: return UIImage(systemName: "timer")
+		case .readingTimeRemaining: return UIImage(systemName: "timer")
 		case .readingStats: return UIImage(systemName: "chart.bar")
 		}
 	}
@@ -291,11 +293,11 @@ extension Notification.Name {
 	public static let highlightPaletteDidChange = Notification.Name("HighlightPaletteDidChangeNotification")
 	public static let statsVisibilityDidChange = Notification.Name("StatsVisibilityDidChangeNotification")
 	public static let articleThemeOverridesDidChange = Notification.Name("ArticleThemeOverridesDidChangeNotification")
-	public static let screenTimeUsageDidChange = Notification.Name("ScreenTimeUsageDidChangeNotification")
-	public static let screenTimeLimitReached = Notification.Name("ScreenTimeLimitReachedNotification")
-	public static let screenTimeEnforcementDidClear = Notification.Name("ScreenTimeEnforcementDidClearNotification")
-	public static let screenTimeBreakReached = Notification.Name("ScreenTimeBreakReachedNotification")
-	public static let screenTimeBreakDidClear = Notification.Name("ScreenTimeBreakDidClearNotification")
+	public static let readingTimeUsageDidChange = Notification.Name("ReadingTimeUsageDidChangeNotification")
+	public static let readingTimeLimitReached = Notification.Name("ReadingTimeLimitReachedNotification")
+	public static let readingTimeEnforcementDidClear = Notification.Name("ReadingTimeEnforcementDidClearNotification")
+	public static let readingTimeBreakReached = Notification.Name("ReadingTimeBreakReachedNotification")
+	public static let readingTimeBreakDidClear = Notification.Name("ReadingTimeBreakDidClearNotification")
 	public static let readingStatsDidChange = Notification.Name("ReadingStatsDidChangeNotification")
 }
 
@@ -420,10 +422,10 @@ final class AppDefaults: Sendable {
 		static let toolbarFnScrollToBottomTopOverflow = "toolbarFnScrollToBottomTopOverflow"
 		static let toolbarFnScrollToBottomBottom = "toolbarFnScrollToBottomBottom"
 		static let toolbarFnScrollToBottomBottomOverflow = "toolbarFnScrollToBottomBottomOverflow"
-		static let toolbarFnScreenTimeRemainingTop = "toolbarFnScreenTimeRemainingTop"
-		static let toolbarFnScreenTimeRemainingTopOverflow = "toolbarFnScreenTimeRemainingTopOverflow"
-		static let toolbarFnScreenTimeRemainingBottom = "toolbarFnScreenTimeRemainingBottom"
-		static let toolbarFnScreenTimeRemainingBottomOverflow = "toolbarFnScreenTimeRemainingBottomOverflow"
+		static let toolbarFnReadingTimeRemainingTop = "toolbarFnScreenTimeRemainingTop"
+		static let toolbarFnReadingTimeRemainingTopOverflow = "toolbarFnScreenTimeRemainingTopOverflow"
+		static let toolbarFnReadingTimeRemainingBottom = "toolbarFnScreenTimeRemainingBottom"
+		static let toolbarFnReadingTimeRemainingBottomOverflow = "toolbarFnScreenTimeRemainingBottomOverflow"
 		static let toolbarFnReadingStatsTop = "toolbarFnReadingStatsTop"
 		static let toolbarFnReadingStatsTopOverflow = "toolbarFnReadingStatsTopOverflow"
 		static let toolbarFnReadingStatsBottom = "toolbarFnReadingStatsBottom"
@@ -455,8 +457,8 @@ final class AppDefaults: Sendable {
 		static let showArticleScrollbar = "showArticleScrollbar"
 		static let showLastUpdatedLabel = "showLastUpdatedLabel"
 		static let articleThemeOverrides = "articleThemeOverrides"
-		// Screen Time and Reading Stats keys live with their features, as
-		// `extension AppDefaults.Key` in iOS/ScreenTime/AppDefaults+ScreenTime.swift
+		// Reading Time and Reading Stats keys live with their features, as
+		// `extension AppDefaults.Key` in iOS/ReadingTime/AppDefaults+ReadingTime.swift
 		// and iOS/ReadingStats/AppDefaults+ReadingStats.swift.
 		// MARK: - Text replacement
 		/// Text Replacement feature (docs/annotations.md's "Storage shape";
@@ -531,8 +533,8 @@ final class AppDefaults: Sendable {
 	/// - `addFeedAccountID`, `addFeedFolderPath`, `addFolderAccountID`:
 	///   ephemeral last-used-account/folder state for the "Add Feed"
 	///   sheet, not something a person thinks of as a setting to back up.
-	/// - `screenTimeRecurringBreakEndDate`, `screenTimeSecondsSinceLastBreak`,
-	///   `screenTimeLastResignDate`: live Take a Break runtime state
+	/// - `readingTimeRecurringBreakEndDate`, `readingTimeSecondsSinceLastBreak`,
+	///   `readingTimeLastResignDate`: live Take a Break runtime state
 	///   (an in-progress enforced break, a running counter, a last-resign
 	///   timestamp). Replaying them onto another device could start or
 	///   end a lockout there for no reason the person chose. The Take a
@@ -580,7 +582,7 @@ final class AppDefaults: Sendable {
 		Key.toolbarFnScrollBackTop, Key.toolbarFnScrollBackTopOverflow, Key.toolbarFnScrollBackBottom, Key.toolbarFnScrollBackBottomOverflow,
 		Key.toolbarFnScrollToTopTop, Key.toolbarFnScrollToTopTopOverflow, Key.toolbarFnScrollToTopBottom, Key.toolbarFnScrollToTopBottomOverflow,
 		Key.toolbarFnScrollToBottomTop, Key.toolbarFnScrollToBottomTopOverflow, Key.toolbarFnScrollToBottomBottom, Key.toolbarFnScrollToBottomBottomOverflow,
-		Key.toolbarFnScreenTimeRemainingTop, Key.toolbarFnScreenTimeRemainingTopOverflow, Key.toolbarFnScreenTimeRemainingBottom, Key.toolbarFnScreenTimeRemainingBottomOverflow,
+		Key.toolbarFnReadingTimeRemainingTop, Key.toolbarFnReadingTimeRemainingTopOverflow, Key.toolbarFnReadingTimeRemainingBottom, Key.toolbarFnReadingTimeRemainingBottomOverflow,
 		Key.toolbarFnReadingStatsTop, Key.toolbarFnReadingStatsTopOverflow, Key.toolbarFnReadingStatsBottom, Key.toolbarFnReadingStatsBottomOverflow,
 		Key.toolbarTopUseOverflowMenu,
 		Key.toolbarBottomUseOverflowMenu,
@@ -602,14 +604,14 @@ final class AppDefaults: Sendable {
 		Key.showArticleScrollbar,
 		Key.showLastUpdatedLabel,
 		Key.articleThemeOverrides,
-		Key.screenTimeEnabled, Key.screenTimeDailyLimitMinutesByWeekday,
-		Key.screenTimeDailyLimitEnabled,
-		Key.screenTimeBedtimeEnabled, Key.screenTimeBedtimeStartMinutesFromMidnight,
-		Key.screenTimeBedtimeEndMinutesFromMidnight, Key.screenTimeMinutesUsedTodaySeconds,
-		Key.screenTimeUsageDate, Key.screenTimeDailyUsageHistory,
-		Key.screenTimeIndicatorDisplayMode,
-		Key.screenTimeTakeABreakEnabled, Key.screenTimeTakeABreakMode,
-		Key.screenTimeBreakReadingMinutes, Key.screenTimeBreakEnforcedMinutes,
+		Key.readingTimeEnabled, Key.readingTimeDailyLimitMinutesByWeekday,
+		Key.readingTimeDailyLimitEnabled,
+		Key.readingTimeBedtimeEnabled, Key.readingTimeBedtimeStartMinutesFromMidnight,
+		Key.readingTimeBedtimeEndMinutesFromMidnight, Key.readingTimeMinutesUsedTodaySeconds,
+		Key.readingTimeUsageDate, Key.readingTimeDailyUsageHistory,
+		Key.readingTimeIndicatorDisplayMode,
+		Key.readingTimeTakeABreakEnabled, Key.readingTimeTakeABreakMode,
+		Key.readingTimeBreakReadingMinutes, Key.readingTimeBreakEnforcedMinutes,
 		Key.readingStatsTrackingEnabled, Key.readingStatsDailyHistory, Key.readingStatsDailyWords,
 		Key.readingStatsProgressByBookKey, Key.readingStatsAllTimeWords,
 		Key.useSystemBrowser,
@@ -936,7 +938,7 @@ final class AppDefaults: Sendable {
 		.scrollBack: [.top: (Key.toolbarFnScrollBackTop, Key.toolbarFnScrollBackTopOverflow), .bottom: (Key.toolbarFnScrollBackBottom, Key.toolbarFnScrollBackBottomOverflow)],
 		.scrollToTop: [.top: (Key.toolbarFnScrollToTopTop, Key.toolbarFnScrollToTopTopOverflow), .bottom: (Key.toolbarFnScrollToTopBottom, Key.toolbarFnScrollToTopBottomOverflow)],
 		.scrollToBottom: [.top: (Key.toolbarFnScrollToBottomTop, Key.toolbarFnScrollToBottomTopOverflow), .bottom: (Key.toolbarFnScrollToBottomBottom, Key.toolbarFnScrollToBottomBottomOverflow)],
-		.screenTimeRemaining: [.top: (Key.toolbarFnScreenTimeRemainingTop, Key.toolbarFnScreenTimeRemainingTopOverflow), .bottom: (Key.toolbarFnScreenTimeRemainingBottom, Key.toolbarFnScreenTimeRemainingBottomOverflow)],
+		.readingTimeRemaining: [.top: (Key.toolbarFnReadingTimeRemainingTop, Key.toolbarFnReadingTimeRemainingTopOverflow), .bottom: (Key.toolbarFnReadingTimeRemainingBottom, Key.toolbarFnReadingTimeRemainingBottomOverflow)],
 		.readingStats: [.top: (Key.toolbarFnReadingStatsTop, Key.toolbarFnReadingStatsTopOverflow), .bottom: (Key.toolbarFnReadingStatsBottom, Key.toolbarFnReadingStatsBottomOverflow)]
 	]
 
@@ -1663,15 +1665,15 @@ final class AppDefaults: Sendable {
 									Key.showArticleScrollbar: ArticleScrollbarVisibility.whenNotFullScreen.rawValue,
 									Key.toolbarStyle: ToolbarStyle.system.rawValue,
 																	 Key.statsVisible: true,
-																	 Key.screenTimeEnabled: false,
-																	 Key.screenTimeBedtimeEnabled: false,
-																	 Key.screenTimeDailyLimitMinutesByWeekday: "{\"1\":120,\"2\":120,\"3\":120,\"4\":120,\"5\":120,\"6\":120,\"7\":120}",
+																	 Key.readingTimeEnabled: false,
+																	 Key.readingTimeBedtimeEnabled: false,
+																	 Key.readingTimeDailyLimitMinutesByWeekday: "{\"1\":120,\"2\":120,\"3\":120,\"4\":120,\"5\":120,\"6\":120,\"7\":120}",
 																	 // Default true preserves the pre-existing always-on
 																	 // behavior for anyone upgrading into this build.
-																	 Key.screenTimeDailyLimitEnabled: true,
-									 Key.screenTimeTakeABreakMode: TakeABreakMode.off.rawValue,
-									 Key.screenTimeBreakReadingMinutes: 15,
-									 Key.screenTimeBreakEnforcedMinutes: 15,
+																	 Key.readingTimeDailyLimitEnabled: true,
+									 Key.readingTimeTakeABreakMode: TakeABreakMode.off.rawValue,
+									 Key.readingTimeBreakReadingMinutes: 15,
+									 Key.readingTimeBreakEnforcedMinutes: 15,
 																	 Key.readingStatsTrackingEnabled: true,
 								// Text Replacement feature defaults -- see the Key block's own
 								// comment above. Quote conversion (textReplacementQuoteConversionEnabled)

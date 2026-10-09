@@ -131,7 +131,7 @@ final class NectarUITests: XCTestCase {
 		("Toolbars", "06Toolbars"),
 		("Highlights", "07HighlightsAndNotes"),
 		("Text Replacement", "08TextReplacement"),
-		("Screen Time", "09ScreenTime"),
+		("Reading Time", "09ReadingTime"),
 		("Reading Stats", "10ReadingStats"),
 		("Archive of Our Own", "11AO3Account")
 	]

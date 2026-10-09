@@ -77,7 +77,7 @@ Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWi
 - **Reader theming** — Accent Color and Surface Palette let you retint the app's chrome independently of the article reader's own theme, with a matching set of bundled `.nnwtheme`s.
 - **Annotations and highlights** - save quotes, write notes. 
 - **Text replacement** - Fix typos and grammar mistakes, replace Y/N with name.
-- **Screen Time and Reading Stats** - Limit yourself and track reading habits.
+- **Reading Time and Reading Stats** - Limit yourself and track reading habits.
 - **Backup and Restore** - Export your full library, settings, and reading history to a `.zip` and restore or merge it later, on this device or another.
 
 ## Installation

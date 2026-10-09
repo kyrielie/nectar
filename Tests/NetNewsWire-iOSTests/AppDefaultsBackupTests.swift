@@ -101,16 +101,16 @@ import Testing
 	// Replaying these onto another device could start or end a lockout
 	// there. The Take a Break settings themselves are included.
 
-	@Test func screenTimeRecurringBreakEndDateIsExcluded() {
-		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.screenTimeRecurringBreakEndDate))
+	@Test func readingTimeRecurringBreakEndDateIsExcluded() {
+		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.readingTimeRecurringBreakEndDate))
 	}
 
-	@Test func screenTimeSecondsSinceLastBreakIsExcluded() {
-		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.screenTimeSecondsSinceLastBreak))
+	@Test func readingTimeSecondsSinceLastBreakIsExcluded() {
+		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.readingTimeSecondsSinceLastBreak))
 	}
 
-	@Test func screenTimeLastResignDateIsExcluded() {
-		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.screenTimeLastResignDate))
+	@Test func readingTimeLastResignDateIsExcluded() {
+		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.readingTimeLastResignDate))
 	}
 
 	// MARK: - Sanity: the toggle counterpart to articleFullscreenAvailable
@@ -143,9 +143,9 @@ import Testing
 			AppDefaults.Key.addFeedAccountID,
 			AppDefaults.Key.addFeedFolderPath,
 			AppDefaults.Key.addFolderAccountID,
-			AppDefaults.Key.screenTimeRecurringBreakEndDate,
-			AppDefaults.Key.screenTimeSecondsSinceLastBreak,
-			AppDefaults.Key.screenTimeLastResignDate
+			AppDefaults.Key.readingTimeRecurringBreakEndDate,
+			AppDefaults.Key.readingTimeSecondsSinceLastBreak,
+			AppDefaults.Key.readingTimeLastResignDate
 		]
 
 		// No overlap: nothing named as excluded above should also appear
@@ -163,7 +163,7 @@ import Testing
 		let sourceFiles = [
 			repositoryRoot.appendingPathComponent("iOS/AppDefaults.swift"),
 			repositoryRoot.appendingPathComponent("iOS/ReadingStats/AppDefaults+ReadingStats.swift"),
-			repositoryRoot.appendingPathComponent("iOS/ScreenTime/AppDefaults+ScreenTime.swift")
+			repositoryRoot.appendingPathComponent("iOS/ReadingTime/AppDefaults+ReadingTime.swift")
 		]
 		// Regex literal (not `Regex(String)`) so the output is statically typed and
 		// `match.1` works. `\w+` excludes non-key constants such as `folderPathSeparator`.
@@ -185,8 +185,8 @@ import Testing
 			AppDefaults.Key.splitViewPreferredDisplayMode, AppDefaults.Key.articleFullscreenAvailable,
 			AppDefaults.Key.addFeedAccountID, AppDefaults.Key.addFeedFolderPath,
 			AppDefaults.Key.addFolderAccountID,
-			AppDefaults.Key.screenTimeRecurringBreakEndDate, AppDefaults.Key.screenTimeSecondsSinceLastBreak,
-			AppDefaults.Key.screenTimeLastResignDate
+			AppDefaults.Key.readingTimeRecurringBreakEndDate, AppDefaults.Key.readingTimeSecondsSinceLastBreak,
+			AppDefaults.Key.readingTimeLastResignDate
 		]
 		let accountedFor = excluded.union(AppDefaults.backupEligibleKeys)
 		#expect(declaredKeys == accountedFor, "Every AppDefaults.Key must be explicitly included or excluded. Missing: \(declaredKeys.subtracting(accountedFor)); unexpected: \(accountedFor.subtracting(declaredKeys))")
