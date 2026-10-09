@@ -11,6 +11,7 @@
 
 import Testing
 import Foundation
+import UIKit
 @testable import Nectar
 @testable import HexColor
 @testable import ArticleTheming
@@ -29,18 +30,30 @@ import Foundation
 	/// declare per-appearance colors.
 	@Suite struct BackgroundInversionExposure {
 
-		@Test func broadsheetHasGenuinelyOppositeLightAndDarkFallbackColors() throws {
-			let css = try Self.readThemeStylesheet("Broadsheet")
+		@Test func broadsheetHasGenuinelyOppositeLightAndDarkColors() throws {
+			// Broadsheet's stylesheet.css leads with `@import` lines. Production always
+			// runs CSSImportExtractor first (see the Black & White test below); reading
+			// the raw file would glue the imports onto `body`'s selector text, so `body`
+			// would never match and the background would silently hit the fallback.
+			let rawCSS = try Self.readThemeStylesheet("Broadsheet")
+			let css = CSSImportExtractor.extract(from: rawCSS).remainingCSS
 			let colors = ArticleThemeColorExtractor.colors(css: css)
 
-			// Neither body nor .articleBody declares color/background-color anywhere
-			// in Broadsheet's stylesheet.css, light or dark scan -- so both channels
-			// fall all the way through to the generic black-on-white / white-on-black
-			// fallback, and light/dark genuinely disagree.
-			#expect(colors.backgroundColor == .white)
-			#expect(colors.textColor == .black)
-			#expect(colors.backgroundColorDark == .black)
-			#expect(colors.textColorDark == .white)
+			// Broadsheet is tokenized: body reads `var(--nnw-bg)` / `var(--nnw-ink)`, and
+			// its light `:root` and dark-media `:root` define those tokens as opposite
+			// colors, so light/dark genuinely disagree. Components are compared rather
+			// than UIColor ==, because `.black`/`.white` live in the gray color space
+			// and are not == to the equivalent sRGB value.
+			#expect(Self.rgba(colors.backgroundColor) == Self.rgba(UIColor(cssHex: "#FFFFFF")!))
+			#expect(Self.rgba(colors.textColor) == Self.rgba(UIColor(cssHex: "#000000")!))
+			#expect(Self.rgba(colors.backgroundColorDark) == Self.rgba(UIColor(cssHex: "#000000")!))
+			#expect(Self.rgba(colors.textColorDark) == Self.rgba(UIColor(cssHex: "#FFFFFF")!))
+		}
+
+		private static func rgba(_ color: UIColor) -> [CGFloat] {
+			var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+			color.getRed(&r, green: &g, blue: &b, alpha: &a)
+			return [r, g, b, a]
 		}
 
 		@Test func blackAndWhiteResolvesIdenticallyRegardlessOfIsDark() throws {

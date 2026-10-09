@@ -98,12 +98,11 @@ struct ArticleThemeOverridesTests {
 
 	@Test func linkRulesHaveExclusionsAndStrippingDeclarations() {
 		let css = ArticleThemeOverrides(linkColorHex: "#0000ff").cssOverrideBlock(themeCSS: nil)
-		let exclusions = [":not(#ao3Preface a)", ":not(#ao3SyntheticPreface a)", ":not(#ao3SeriesFooter a)"]
-		for exclusion in exclusions {
-			#expect(css.contains(".articleBody a\(exclusion)"))
-			#expect(css.contains(".articleBody a:link\(exclusion)"))
-			#expect(css.contains(".articleBody a:visited\(exclusion)"))
-		}
+		// The exclusions are chained onto each anchor selector, in this order.
+		let exclusions = [":not(#ao3Preface a)", ":not(#ao3SyntheticPreface a)", ":not(#ao3SeriesFooter a)"].joined()
+		#expect(css.contains(".articleBody a\(exclusions)"))
+		#expect(css.contains(".articleBody a:link\(exclusions)"))
+		#expect(css.contains(".articleBody a:visited\(exclusions)"))
 		for declaration in ["color: #0000ff !important;", "background: none !important;", "border: 0 !important;",
 							"box-shadow: none !important;", "text-shadow: none !important;", "text-decoration: underline !important;"] {
 			#expect(css.contains(declaration), "missing \(declaration)")
