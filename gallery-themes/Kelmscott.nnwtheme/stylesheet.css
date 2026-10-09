@@ -42,6 +42,10 @@
 	--blockquote-bg: rgba(164, 35, 26, 0.05);
 	--header-bg: rgba(28, 23, 16, 0.03);
 	--system-message-color: var(--ink-muted);
+	--nnw-bg: #f2e9d7;
+	--nnw-ink: #1c1710;
+	--nnw-link: #a4231a;
+	--u: calc(1rem / 15);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -60,13 +64,16 @@
 		--code-bg: rgba(236, 226, 204, 0.07);
 		--blockquote-bg: rgba(217, 122, 99, 0.08);
 		--header-bg: rgba(236, 226, 204, 0.04);
+		--nnw-bg: #14110c;
+		--nnw-ink: #ece2cc;
+		--nnw-link: #d97a63;
 	}
 }
 
 body {
 	color-scheme: light dark;
-	background-color: var(--paper);
-	color: var(--ink);
+	background-color: var(--nnw-bg);
+	color: var(--nnw-ink);
 	font-family: var(--font-body);
 	word-wrap: break-word;
 }
@@ -74,13 +81,13 @@ body {
 /* Exact-selector fallbacks for ArticleThemeColorExtractor -- additive
    only, the higher-specificity rules below still win the cascade. */
 a {
-	color: var(--link);
+	color: var(--nnw-link);
 }
 .articleBody a {
-	color: var(--link);
+	color: var(--nnw-link);
 }
 body a, body a * {
-	color: var(--link);
+	color: var(--nnw-link);
 }
 body a:visited {
 	color: var(--visited-link);
@@ -101,12 +108,12 @@ body > .systemMessage {
 }
 
 .kelmscottHeaderInner {
-	max-width: 40rem;
+	max-width: calc(var(--u) * 600);
 	margin: 0 auto;
 	padding: 0 1.2em;
 	display: flex;
 	align-items: center;
-	font-family: var(--font-main);
+	font-family: var(--nnw-font-chrome, var(--font-main));
 	font-size: 0.8em;
 	font-weight: 600;
 	letter-spacing: 0.08em;
@@ -142,7 +149,7 @@ body > .systemMessage {
    Kelmscott page without attempting to reproduce actual ornament. */
 
 .kelmscottFrame {
-	max-width: 40rem;
+	max-width: calc(var(--u) * 600);
 	margin: 2.5em auto;
 	padding: 2.2em 2.4em;
 	border: 10px double var(--rule);
@@ -171,7 +178,7 @@ body > .systemMessage {
 
 .kelmscottDateline {
 	margin-top: 0.4em;
-	font-family: var(--font-main);
+	font-family: var(--nnw-font-chrome, var(--font-main));
 	font-size: 0.7em;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
@@ -197,7 +204,7 @@ body > .systemMessage {
 	margin: 0 0 1.8em 0;
 	padding: 1em 1.2em;
 	border: 3px solid var(--preface-border);
-	box-shadow: 0 0 0 2px var(--paper), 0 0 0 5px var(--preface-border);
+	box-shadow: 0 0 0 2px var(--nnw-bg), 0 0 0 5px var(--preface-border);
 	background-color: var(--preface-bg);
 	font-size: 0.85em;
 }
@@ -364,7 +371,7 @@ img, figure, video, div, object {
 	margin-top: 2em;
 	padding-top: 1em;
 	border-top: 1px solid var(--table-border);
-	font-family: var(--font-main);
+	font-family: var(--nnw-font-chrome, var(--font-main));
 	font-size: 0.75em;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
@@ -405,6 +412,46 @@ img, figure, video, div, object {
 	.kelmscottTitle {
 		font-size: 1.3em;
 	}
+
+	html {
+		font: -apple-system-body;
+	}
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 14.58 * var(--nnw-detail-scale, 1));
+	}
+
+	.fontSize {
+		font-size: calc(var(--u) * 15);
+	}
+
+	.kelmscottHeaderInner {
+		font-size: calc(var(--u) * 12 * var(--nnw-detail-scale, 1));
+	}
+
+	.kelmscottByline {
+		font-size: calc(var(--u) * 12 * var(--nnw-detail-scale, 1));
+	}
+
+	.kelmscottTitle {
+		font-size: max(calc(var(--u) * 19.5 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 16.2)) * 1.203));
+	}
+
+	.kelmscottDateline {
+		font-size: calc(var(--u) * 10.5 * var(--nnw-detail-scale, 1));
+	}
+
+	.kelmscottFooter {
+		font-size: calc(var(--u) * 11.25 * var(--nnw-detail-scale, 1));
+	}
+
+	.kelmscottBody h2.heading, .kelmscottBody h3.title {
+		font-size: max(calc(var(--u) * 18.63 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 16.2)) * 1.15));
+	}
+
+	#ao3SyntheticPreface, #ao3Preface {
+		font-size: calc(var(--u) * 13.77 * var(--nnw-detail-scale, 1));
+	}
 }
 
 /* macOS Specific */
@@ -416,3 +463,9 @@ img, figure, video, div, object {
 		padding-right: 48px;
 	}
 }
+
+/* Theme contract: exact selectors read by ArticleThemeColorExtractor. */
+.articleBody {
+	color: var(--nnw-ink);
+}
+

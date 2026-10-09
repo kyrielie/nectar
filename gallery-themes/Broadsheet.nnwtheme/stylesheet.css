@@ -11,6 +11,8 @@ body {
 	text-align: justify;
 	text-justify: inter-word;
 	max-width: 44em;
+	background-color: var(--nnw-bg);
+	color: var(--nnw-ink);
 }
 
 .author {
@@ -31,6 +33,7 @@ body {
 a {
 	text-decoration: underline;
 	font-weight: bold;
+	color: var(--nnw-link);
 }
 a:hover {
 	text-decoration: underline;
@@ -61,6 +64,10 @@ a:hover {
 	--article-title-color: #333;
 	--article-date-color: rgba(0, 0, 0, 0.3);
 	--table-cell-border-color: lightgray;
+	--nnw-bg: #ffffff;
+	--nnw-ink: #000000;
+	--nnw-link: #000000;
+	--u: calc(1rem / 15);
 }
 
 @media(prefers-color-scheme: dark) {
@@ -72,6 +79,9 @@ a:hover {
 		--article-title-color: #e0e0e0;
 		--article-date-color: rgba(255, 255, 255, 0.5);
 		--table-cell-border-color: dimgray;
+		--nnw-bg: #000000;
+		--nnw-ink: #ffffff;
+		--nnw-link: #ffffff;
 	}
 }
 
@@ -260,13 +270,13 @@ figcaption {
 sup {
 	vertical-align: top;
 	position: relative;
-	bottom: 0.2rem;
+	bottom: calc(var(--u) * 3);
 }
 
 sub {
 	vertical-align: bottom;
 	position: relative;
-	top: 0.2rem;
+	top: calc(var(--u) * 3);
 }
 
 hr {
@@ -609,6 +619,43 @@ a.footnote:hover,
 		transform: translate(-50%, -50%);
 	}
 
+
+	html {
+		font: -apple-system-body;
+	}
+
+	:root {
+		--ao3-preface-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+
+	.feedHeader {
+		font-size: calc(var(--u) * 15);
+	}
+
+	article {
+		font-size: calc(var(--u) * 15);
+	}
+
+	.articleTitle h1 {
+		font-size: max(calc(var(--u) * 21 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));
+	}
+
+	.feedHeader .byline {
+		font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+
+	.externalLink {
+		font-size: calc(var(--u) * 15 * var(--nnw-detail-scale, 1));
+	}
+
+	.articleBody h2.heading, .articleBody h3.title {
+		font-size: max(calc(var(--u) * 22.5 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));
+	}
+
+	.feedHeader .byline {
+		font-family: var(--nnw-font-chrome, "Libre Baskerville", Baskerville, Georgia, "Times New Roman", serif);
+	}
 }
 
 /* macOS Specific */
@@ -664,4 +711,13 @@ a.footnote:hover,
 		//border: 1px solid var(--accent-color);
 	}
 
+}
+
+/* Theme contract: exact selectors read by ArticleThemeColorExtractor. */
+.articleBody {
+	color: var(--nnw-ink);
+}
+
+.articleBody a {
+	color: var(--nnw-link);
 }

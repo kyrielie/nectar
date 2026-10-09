@@ -38,6 +38,10 @@
 	--rule-color: #cadab2;
 	--code-color: #4a5c22;
 	--font-serif: "Libre Baskerville", Georgia, "Iowan Old Style", serif;
+	--nnw-bg: #fdfaec;
+	--nnw-ink: #3b2a13;
+	--nnw-link: #57310d;
+	--u: calc(1rem / 15);
 }
 @media (prefers-color-scheme: dark) {
 	:root {
@@ -50,6 +54,9 @@
 		--sage-border: #3c4a2c;
 		--rule-color: #3c4a2c;
 		--code-color: #cddba0;
+		--nnw-bg: #1b1a13;
+		--nnw-ink: #e8e2c9;
+		--nnw-link: #cddba0;
 	}
 }
 
@@ -58,13 +65,13 @@ body {
 	margin-right: auto;
 	word-wrap: break-word;
 	max-width: 42em;
-	background-color: var(--paper-color);
-	color: var(--ink-color);
+	background-color: var(--nnw-bg);
+	color: var(--nnw-ink);
 	font-family: var(--font-serif);
 }
 
 a {
-	color: var(--link-color);
+	color: var(--nnw-link);
 }
 [href] {
 	text-decoration-line: underline;
@@ -231,7 +238,7 @@ pre {
 code,
 pre {
 	font-family: "JetBrains Mono", "SF Mono", Menlo, "Courier New", Courier, monospace;
-	font-size: 0.85rem;
+	font-size: calc(var(--u) * 12.75);
 	letter-spacing: -0.027em;
 	-webkit-hyphens: none;
 	color: var(--code-color);
@@ -318,13 +325,13 @@ figcaption {
 sup {
 	vertical-align: top;
 	position: relative;
-	bottom: 0.2rem;
+	bottom: calc(var(--u) * 3);
 }
 
 sub {
 	vertical-align: bottom;
 	position: relative;
-	top: 0.2rem;
+	top: calc(var(--u) * 3);
 }
 
 hr {
@@ -352,7 +359,7 @@ hr {
 blockquote {
 	margin: 0 0 1em 0;
 	padding: 0.6em 1em;
-	background: color-mix(in srgb, var(--paper-color), var(--sage-color) 6%);
+	background: color-mix(in srgb, var(--nnw-bg), var(--sage-color) 6%);
 	border: 1px solid var(--sage-border);
 	border-radius: 8px;
 }
@@ -389,7 +396,7 @@ blockquote {
 
 /* Newsfoot theme */
 .newsfoot-footnote-popover {
-	background: var(--paper-color);
+	background: var(--nnw-bg);
 	box-shadow: 0 2px 4px rgba(87, 49, 13, 0.2), 0 3px 6px rgba(87, 49, 13, 0.1);
 	color: var(--ink-color);
 	padding: 1px;
@@ -397,12 +404,12 @@ blockquote {
 }
 
 .newsfoot-footnote-popover-arrow {
-	background: var(--paper-color);
+	background: var(--nnw-bg);
 	border: 1px solid var(--sage-border);
 }
 
 .newsfoot-footnote-popover-inner {
-	background: var(--paper-color);
+	background: var(--nnw-bg);
 	border-radius: 6px;
 }
 
@@ -419,7 +426,7 @@ body a.footnote:visited,
 a.footnote:hover,
 .newsfoot-footnote-popover + a.footnote {
 	background: var(--sage-color);
-	color: var(--paper-color);
+	color: var(--nnw-bg);
 	text-decoration: none;
 	border-radius: 3px;
 	transition: background-color 200ms ease-out;
@@ -433,7 +440,7 @@ a.footnote:hover,
 	border: 1px dashed var(--rule-color);
 	border-radius: 8px;
 	padding: 0.8em 1em 1em 1em;
-	background: color-mix(in srgb, var(--paper-color), var(--sage-color) 4%);
+	background: color-mix(in srgb, var(--nnw-bg), var(--sage-color) 4%);
 }
 #ao3SyntheticPreface dt,
 #ao3Preface dt {
@@ -520,7 +527,7 @@ a.footnote:hover,
 	padding: 0.6em 0.8em;
 	border: 1px dashed var(--rule-color);
 	border-radius: 8px;
-	background: color-mix(in srgb, var(--paper-color), var(--sage-color) 4%);
+	background: color-mix(in srgb, var(--nnw-bg), var(--sage-color) 4%);
 	font-size: 0.9em;
 	font-style: italic;
 	color: var(--ink-muted);
@@ -552,6 +559,47 @@ a.footnote:hover,
 
 	.nnw-overflow table {
 		border: 1px solid var(--sage-border);
+	}
+
+	html {
+		font: -apple-system-body;
+	}
+
+	:root {
+		--ao3-preface-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+
+	.letter {
+		font-size: calc(var(--u) * 15);
+	}
+
+	.letter-header {
+		font-size: calc(var(--u) * 15 * var(--nnw-detail-scale, 1));
+	}
+
+	.letter-byline {
+		font-size: calc(var(--u) * 12.75 * var(--nnw-detail-scale, 1));
+	}
+
+	.letter-title h1 {
+		font-size: max(calc(var(--u) * 22.5 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));
+	}
+
+	.letter-dateline {
+		font-size: calc(var(--u) * 15 * var(--nnw-detail-scale, 1));
+	}
+
+	.letter-flourish {
+		font-size: calc(var(--u) * 16.5 * var(--nnw-detail-scale, 1));
+	}
+
+	.externalLink {
+		font-size: calc(var(--u) * 15 * var(--nnw-detail-scale, 1));
+	}
+
+	.articleBody h2.heading, .articleBody h3.title {
+		font-size: max(calc(var(--u) * 22.5 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));
 	}
 }
 
@@ -593,4 +641,13 @@ a.footnote:hover,
 	.nnw-overflow table {
 		border: 1px solid var(--sage-border);
 	}
+}
+
+/* Theme contract: exact selectors read by ArticleThemeColorExtractor. */
+.articleBody {
+	color: var(--nnw-ink);
+}
+
+.articleBody a {
+	color: var(--nnw-link);
 }

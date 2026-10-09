@@ -37,6 +37,10 @@
 	--summary-border: #c9a13b;
 	--notes-border: #ddd3ba;
 	--chapter-heading-color: #17201f;
+	--nnw-bg: #f4f1ea;
+	--nnw-ink: #23282b;
+	--nnw-link: #0f6e5c;
+	--u: calc(1rem / 15);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -66,13 +70,16 @@
 		--summary-border: #e0b957;
 		--notes-border: rgba(255, 255, 255, 0.16);
 		--chapter-heading-color: #f2eee0;
+		--nnw-bg: #14181a;
+		--nnw-ink: #e7e2d4;
+		--nnw-link: #4fd7bb;
 	}
 }
 
 body {
 	color-scheme: light dark;
-	background-color: var(--background-color);
-	color: var(--text-color);
+	background-color: var(--nnw-bg);
+	color: var(--nnw-ink);
 	font-family: var(--font-body);
 	word-wrap: break-word;
 }
@@ -80,15 +87,15 @@ body {
 /* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
    the higher-specificity 'body a' rule below still wins the cascade. */
 a {
-	color: var(--link-color);
+	color: var(--nnw-link);
 }
 
 .articleBody a {
-	color: var(--link-color);
+	color: var(--nnw-link);
 }
 
 body a, body a * {
-	color: var(--link-color);
+	color: var(--nnw-link);
 }
 
 body a:visited {
@@ -104,7 +111,7 @@ body > .systemMessage {
 .headerBar {
 	background: linear-gradient(to bottom, var(--header-top), var(--header-bottom));
 	padding: 14px 0;
-	font-family: var(--font-main);
+	font-family: var(--nnw-font-chrome, var(--font-main));
 	font-size: 1em;
 	font-weight: 700;
 	line-height: 1.4;
@@ -144,7 +151,7 @@ body .byline a:link, .byline a:visited, .byline a {
 /* Content containers */
 
 .barContent, .articleContent {
-	max-width: 42rem;
+	max-width: calc(var(--u) * 630);
 	margin-left: auto;
 	margin-right: auto;
 }
@@ -158,7 +165,7 @@ body .byline a:link, .byline a:visited, .byline a {
 .datelineBar {
 	background: linear-gradient(to bottom, var(--dateline-bar-top), var(--dateline-bar-bottom));
 	padding: 8px 0;
-	font-family: var(--font-main);
+	font-family: var(--nnw-font-chrome, var(--font-main));
 	font-size: 0.85em;
 	font-weight: 700;
 	line-height: 1.4;
@@ -382,7 +389,7 @@ img, figure, video, div, object {
 body .footer {
 	margin-top: 28px;
 	margin-bottom: 2em;
-	font-family: var(--font-main);
+	font-family: var(--nnw-font-chrome, var(--font-main));
 	color: var(--footer-color);
 	font-size: 0.85em;
 	font-style: italic;
@@ -407,6 +414,43 @@ body .footer a:link, .footer a:visited {
 		-webkit-text-size-adjust: none;
 		font-family: var(--font-body);
 		font-size: [[font-size]]px;
+	}
+
+	html {
+		font: -apple-system-body;
+	}
+
+	:root {
+		--ao3-preface-font-size: calc(var(--u) * 14.175 * var(--nnw-detail-scale, 1));
+		--ao3-series-footer-font-size: calc(var(--u) * 14.175 * var(--nnw-detail-scale, 1));
+	}
+
+	.fontSize {
+		font-size: calc(var(--u) * 15);
+	}
+
+	.headerBar {
+		font-size: calc(var(--u) * 15 * var(--nnw-detail-scale, 1));
+	}
+
+	.headerBar .byline {
+		font-size: calc(var(--u) * 15 * var(--nnw-detail-scale, 1));
+	}
+
+	.datelineBar {
+		font-size: calc(var(--u) * 12.75 * var(--nnw-detail-scale, 1));
+	}
+
+	.articleTitle {
+		font-size: max(calc(var(--u) * 25.5 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15.75)) * 1.4));
+	}
+
+	body .footer {
+		font-size: calc(var(--u) * 12.75 * var(--nnw-detail-scale, 1));
+	}
+
+	.articleBody h2.heading, .articleBody h3.title {
+		font-size: max(calc(var(--u) * 16.537 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15.75)) * 1.049));
 	}
 }
 
@@ -440,3 +484,9 @@ body .footer a:link, .footer a:visited {
 		font-size: 22px;
 	}
 }
+
+/* Theme contract: exact selectors read by ArticleThemeColorExtractor. */
+.articleBody {
+	color: var(--nnw-ink);
+}
+

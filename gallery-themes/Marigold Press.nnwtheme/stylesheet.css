@@ -34,6 +34,10 @@
 	--summary-border: #c1633b;
 	--notes-border: #e6d8bd;
 	--chapter-heading-color: #2e2013;
+	--nnw-bg: #faf3e6;
+	--nnw-ink: #3a2a1c;
+	--nnw-link: #c1633b;
+	--u: calc(1rem / 15);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -60,20 +64,23 @@
 		--summary-border: #e08a5c;
 		--notes-border: rgba(255, 255, 255, 0.16);
 		--chapter-heading-color: #f6ecd8;
+		--nnw-bg: #241a12;
+		--nnw-ink: #f0e4d0;
+		--nnw-link: #e08a5c;
 	}
 }
 
 body {
 	color-scheme: light dark;
-	background-color: var(--background-color);
-	color: var(--text-color);
+	background-color: var(--nnw-bg);
+	color: var(--nnw-ink);
 	font-family: var(--font-serif);
 	font-optical-sizing: auto;
 	word-wrap: break-word;
 }
 
 body a, body a * {
-	color: var(--link-color);
+	color: var(--nnw-link);
 }
 
 body a:visited {
@@ -95,7 +102,7 @@ body > .systemMessage {
 .headerBar {
 	background: var(--header-top);
 	padding: 14px 0;
-	font-family: var(--font-serif);
+	font-family: var(--nnw-font-chrome, var(--font-serif));
 	font-optical-sizing: auto;
 	font-variation-settings: "SOFT" 40, "opsz" 30;
 	font-size: 1.05em;
@@ -128,7 +135,7 @@ body > .systemMessage {
 .byline {
 	color: rgba(250, 243, 230, 0.82);
 	margin-left: 0.5em;
-	font-family: var(--font-sans);
+	font-family: var(--nnw-font-chrome, var(--font-sans));
 	font-weight: normal;
 	font-size: 0.85em;
 }
@@ -140,7 +147,7 @@ body .byline a:link, .byline a:visited, .byline a {
 /* Content containers */
 
 .barContent, .articleContent {
-	max-width: 42rem;
+	max-width: calc(var(--u) * 630);
 	margin-left: auto;
 	margin-right: auto;
 }
@@ -154,10 +161,10 @@ body .byline a:link, .byline a:visited, .byline a {
    imprint line, not a second poster panel. */
 
 .datelineBar {
-	background: var(--background-color);
+	background: var(--nnw-bg);
 	border-bottom: 2px solid var(--header-top);
 	padding: 6px 0;
-	font-family: var(--font-sans);
+	font-family: var(--nnw-font-chrome, var(--font-sans));
 	font-size: 0.78em;
 	font-weight: bold;
 	letter-spacing: 0.06em;
@@ -384,7 +391,7 @@ img, figure, video, div, object {
 body .footer {
 	margin-top: 28px;
 	margin-bottom: 2em;
-	font-family: var(--font-sans);
+	font-family: var(--nnw-font-chrome, var(--font-sans));
 	color: var(--footer-color);
 	font-size: 0.85em;
 	font-style: italic;
@@ -408,6 +415,47 @@ body .footer a:link, .footer a:visited {
 		-webkit-text-size-adjust: none;
 		font-family: var(--font-serif);
 		font-size: [[font-size]]px;
+	}
+
+	html {
+		font: -apple-system-body;
+	}
+
+	:root {
+		--ao3-preface-font-size: calc(var(--u) * 14.31 * var(--nnw-detail-scale, 1));
+		--ao3-series-footer-font-size: calc(var(--u) * 14.31 * var(--nnw-detail-scale, 1));
+	}
+
+	.fontSize {
+		font-size: calc(var(--u) * 15);
+	}
+
+	.headerBar {
+		font-size: calc(var(--u) * 15.75 * var(--nnw-detail-scale, 1));
+	}
+
+	.headerBar .byline {
+		font-size: calc(var(--u) * 13.387 * var(--nnw-detail-scale, 1));
+	}
+
+	.datelineBar {
+		font-size: calc(var(--u) * 11.7 * var(--nnw-detail-scale, 1));
+	}
+
+	.articleTitle {
+		font-size: max(calc(var(--u) * 30 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15.9)) * 1.4));
+	}
+
+	.sunburst {
+		font-size: calc(var(--u) * 15 * var(--nnw-detail-scale, 1));
+	}
+
+	body .footer {
+		font-size: calc(var(--u) * 12.75 * var(--nnw-detail-scale, 1));
+	}
+
+	.articleBody h2.heading, .articleBody h3.title {
+		font-size: max(calc(var(--u) * 20.67 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15.9)) * 1.2));
 	}
 }
 
@@ -440,4 +488,13 @@ body .footer a:link, .footer a:visited {
 	.xxlargeText {
 		font-size: 22px;
 	}
+}
+
+/* Theme contract: exact selectors read by ArticleThemeColorExtractor. */
+.articleBody {
+	color: var(--nnw-ink);
+}
+
+.articleBody a {
+	color: var(--nnw-link);
 }
