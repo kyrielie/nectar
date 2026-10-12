@@ -4,6 +4,10 @@ Bundle-file structure and authoring conventions for `.nnwtheme` themes. For
 the Swift-side theme system (`ArticleTheme`, `ArticleThemesManager`, color
 extraction, rendering integration), see `theme-system.md`.
 
+Starting a new theme? Read `creating-a-theme.md` first: it is the short, spec-only
+walk-through, and this document is the reference behind it. Mockups and the
+mockup-to-bundle conversion history are in `theme-mockups.md`.
+
 ## `.nnwtheme` Structure
 
 An `.nnwtheme` comprises of three required files, plus an optional fourth:
@@ -17,7 +21,7 @@ The `Info.plist` requires the following keys/types:
 
 |Key|Type|Notes|
 |---|---|---|
-|`ThemeIdentifier`|`String`|Unique identifier for the theme, e.g. using reverse domain name. Nectar bundles use `com.nectar.themes.<slug>` (plural `themes`; 156 bundles). The slug is usually the lower-cased name, but a few older bundles keep ids from earlier names (Beacon `teenwolf`, Mystery `gravityfalls`, Perseus `percyjackson`, Black & White `blackandwhite`) and were not renamed, since changing an identifier would make an installed copy look like a different theme (inferred; not checked in code). The NetNewsWire-origin bundles keep their upstream ids. The 65 batch 3 to 8 conversions were `com.nectar.theme.<slug>` (singular) and have been changed to match.|
+|`ThemeIdentifier`|`String`|Unique identifier for the theme, e.g. using reverse domain name. Nectar bundles use `com.nectar.themes.<slug>` (plural `themes`). The slug is usually the lower-cased name, but a few older bundles keep ids from earlier names (Beacon `teenwolf`, Mystery `gravityfalls`, Perseus `percyjackson`, Black & White `blackandwhite`) and were not renamed, since changing an identifier would make an installed copy look like a different theme (inferred; not checked in code). The NetNewsWire-origin bundles keep their upstream ids. The 65 batch 3 to 8 conversions were `com.nectar.theme.<slug>` (singular) and have been changed to match.|
 |`Name`|`String`|Theme name|
 |`CreatorHomePage`|`String`||
 |`CreatorName`|`String`|The creator's name (a person or organization), and nothing else. **Do not put the theme's description, attribution prose, or license status here** -- those go in `License.md` (see below). Migrated: every bundle except the eight NetNewsWire-origin ones (which keep their upstream creators and are left alone) now has `CreatorName` `kyrielie`, and the text that used to sit here is in its `License.md`. `gallery/build.py` still copies this key into its `by` field and does not read `License.md` (confirmed by reading it), so the gallery's detail dialog shows only the creator name for migrated bundles until the build reads `License.md`. `buildscripts/theme-generation/generate_ported_themes.py` now writes `kyrielie` here and puts its `creator=` text in a new `License.md` only when the bundle has none. The gallery grid card shows only the theme name -- see `docs/theme-gallery.md`.|
@@ -47,8 +51,9 @@ A `License.md` is plain Markdown, a few short paragraphs, in this order:
 
 `Themes/*/License.md` already follow this shape informally (Black & White,
 Powder Pink and Tumblr Blue each lead with attribution and then describe the
-look). Current state: all 150 gallery bundles and 7 of the 14 bundled ones have a
-`License.md`; the seven without are NetNewsWire-origin bundles, left unchanged.
+look). Current state: every bundle has a `License.md` except some of the NetNewsWire-origin
+ones, which are left unchanged (`buildscripts/theme-generation/theme_inventory.py
+--details` lists them).
 When `CreatorName` was migrated, bundles that had no `License.md` got a short one
 holding the old text plus `License: not yet decided; set one before publishing.`;
 the 65 batch 3 to 8 conversions carry the same line, and their font licenses were
@@ -90,40 +95,34 @@ theme must supply itself when it has no running head.
 
 #### Template shapes in `gallery-themes/`
 
-Surveyed by reading every `gallery-themes/*/template.html` (85 bundles at the
-time; `Themes/` was not surveyed). The 65 batch 3 to 8 mockup conversions added
-since (150 bundles now) were classified by matching `class="rh"` in their
-templates, not by reading each one, and are all shape B. Counts drift; the
-shapes are what matter.
+Surveyed by reading `gallery-themes/*/template.html` (`Themes/` was not surveyed); later
+additions were classified by matching `class="rh"` in their templates, not by reading each
+one. `buildscripts/theme-generation/theme_inventory.py` detects shape B the same way and
+prints the current counts. None are kept in this document, because they drifted and
+disagreed with each other across docs.
 
-| Shape | Count | Markup | Examples |
-|---|---|---|---|
-| A. NetNewsWire header table | 17 | `header.headerContainer > table.headerTable` (feed link and byline left, avatar right), then title, `[[dateline_style]]`, external link, body. Stock NetNewsWire structure. | Beacon, Dracula, Twilight, Rosé Pine (all four variants) |
-| B. Compact running head | 117 (52 earlier, 65 mockup conversions) | Converted from mockups (see "Theme mockups"). 8 lines: `div.rh` (feed link left, date right), then `div.t.tNN > header.hd` (title, byline), then body. `tNN` (t1 to t38) is a per-theme variant class, so the design lives in the CSS. No avatar, no `[[dateline_style]]`, no external-link line. | Swiss International, Disco, Bauhaus, Birdsite, Bridge Command |
-| C. Custom wrapper | 13 | `div.fontSize` wrapper, external-link line, and `#nnwFooter`. The six older themes (Aldine, Deco Line, Kelmscott, Kennerley, Marigold Press, Rosarivo) keep header bars with feed link and avatar; the seven newer ones (Craft Table, Didone Editorial, Four Nations, Illuminated Codex, Mid-century Jost, Screenplay, Sticker Pop) have no feed link or avatar and open with the title. | Craft Table, Illuminated Codex |
-| D. Outliers | 3 | Broadsheet is the stock layout plus a live inline `<script>` (blocked in the real reader). Heist Night and Undercity Dusk are hand-built (Route B in "Converting mockups"), B-like with their own class prefixes (`sc-`, `ar-`). | |
+| Shape | Markup | Examples |
+|---|---|---|
+| A. NetNewsWire header table | `header.headerContainer > table.headerTable` (feed link and byline left, avatar right), then title, `[[dateline_style]]`, external link, body. Stock NetNewsWire structure. | Beacon, Dracula, Twilight, Rosé Pine (all four variants) |
+| B. Compact running head | Converted from mockups (see `theme-mockups.md`). 8 lines: `div.rh` (feed link left, date right), then `div.t.tNN > header.hd` (title, byline), then body. `tNN` (t1 to t38) is a per-theme variant class, so the design lives in the CSS. No avatar, no `[[dateline_style]]`, no external-link line. | Swiss International, Disco, Bauhaus, Birdsite, Bridge Command |
+| C. Custom wrapper | `div.fontSize` wrapper, external-link line, and `#nnwFooter`. The six older themes (Aldine, Deco Line, Kelmscott, Kennerley, Marigold Press, Rosarivo) keep header bars with feed link and avatar; the seven newer ones (Craft Table, Didone Editorial, Four Nations, Illuminated Codex, Mid-century Jost, Screenplay, Sticker Pop) have no feed link or avatar and open with the title. | Craft Table, Illuminated Codex |
+| D. Outliers | Broadsheet is the stock layout plus a live inline `<script>` (blocked in the real reader). Heist Night and Undercity Dusk are hand-built (Route B in `theme-mockups.md`), B-like with their own class prefixes (`sc-`, `ar-`). | |
 
-Behavior differs by shape too. A has no versal and no chapter dividers, and
-only Pinerose has a `prefers-color-scheme: dark` block, so the other 16 are
-single-mode. B opts into the divider mechanism in all 117 (zero-width glyph,
-styled through CSS) and into versal in 84. The 33 that skip versal are Birdsite,
-Upvote, Watch Later, Galactic Matinee and Matisse Paper Cutouts, plus 28 mockup
-conversions whose drop cap and small-caps opening words were removed by decision
-(Green Phosphor, 1-Bit Desktop, Night Amber, Cassette Futurism, Catppuccin,
-Symmetry Pastel Hotel, Wiener Werkstätte, Futurism, Suprematism, Papel Picado,
-Atomic Age Populuxe, Mid-Century Modern, Underground Comix, Nordic Folk, Papercut
-Layers, Giallo, Large Print, OLED Black, Gruvbox, Game Boy Green, Commodore 64,
-Bento Grid, Park Service Brochure, Library Card Catalog, Tokyo Night, Solarized,
-Subway Diagram, E-Ink); their stylesheets keep `.versalCap` and
-`::first-letter` rules that can no longer match. Every B theme has a dark block. C is mixed: nine use versal, six of the older ones have no divider
-attributes at all, and the newer ones use visible dividers (a diamond, a fleuron,
-kanji, `CUT TO:`, `/`). Kelmscott's template mentions an inline script only in a
+Behavior differs by shape too. A has no versal and no chapter dividers, and only Pinerose
+has a `prefers-color-scheme: dark` block, so the other shape A themes are single-mode. B
+opts into the divider mechanism and, unless its design drops the drop cap, into versal;
+every B theme has a dark block. A B template that omits `data-versal-target` chose no drop
+cap or small-caps opening words, and its stylesheet may keep `.versalCap` and
+`::first-letter` rules that can no longer match (`theme_inventory.py --details` lists the
+templates without `data-versal-target`). C is mixed: some use versal, the six older ones
+have no divider attributes at all, and the newer ones use visible dividers (a diamond, a
+fleuron, kanji, `CUT TO:`, `/`). Kelmscott's template mentions an inline script only in a
 comment explaining why it was removed; it ships none.
 
 #### Which templates to add, and which to start from
 
 Only shape B is a starter. It is the one pipeline with a documented layout, a mockup
-review page, a mockup-to-bundle contract and a title-spacing check ("Theme mockups"). Two
+review page, a mockup-to-bundle contract and a title-spacing check (see `theme-mockups.md`). Two
 templates are kept in these docs, and neither is the default: pick by what the design
 needs, and leave the running head out unless the design uses it.
 
@@ -147,12 +146,11 @@ needs, and leave the running head out unless the design uses it.
 </div>
 ```
 
-(This is Swiss International's `template.html` with its `t16` replaced by `tN`. Checked
-across `gallery-themes/`: 83 of the 117 shape B templates are identical to it apart from
-that class number, 33 omit `data-versal-target` (the five earlier ones above and 28 converted
-mockups), and Bridge Command adds a nav strip and a credit line. Counts were taken by script
-over `gallery-themes/`.)
-Drop `data-versal-target` for a theme with no drop cap. The layout it renders is the fixed order under "Page layout".
+(This is Swiss International's `template.html` with its `t16` replaced by `tN`. Most shape
+B templates are identical to it apart from that class number; the ones without
+`data-versal-target` chose no drop cap, and Bridge Command adds a nav strip and a credit
+line.)
+Drop `data-versal-target` for a theme with no drop cap. The layout it renders is the fixed order under "Page layout" in `theme-mockups.md`.
 
 Not added as starters:
 
@@ -183,7 +181,7 @@ The shape B template has no external-link line. Add `<div class="externalLink">[
 | `[[dateline_style]]`, `[[datetime_*]]`, `[[date_*]]` | Optional | Shape B uses only `[[date_medium]]` and `[[datetime_long]]` |
 | `[[external_link*]]` | Optional | Shape B omits it |
 | The running head (`div.rh`), `[[feed_link]]`, `[[feed_link_title]]`, `[[date_medium]]`, `[[datetime_long]]` | Optional; leave out unless the design uses them | Nothing requires them; `removeFeedNameLink` only acts on anchors that exist |
-| `[[byline]]`, `[[title]]`, `[[preferred_link]]` | Unverified | All 85 gallery templates include them, so whether omitting is safe was not tested |
+| `[[byline]]`, `[[title]]`, `[[preferred_link]]` | Unverified | Every gallery template includes them, so whether omitting is safe was not tested |
 | `data-versal-target` | Optional | `applyVersalCaps` no-ops without it |
 | `data-chapter-divider*` | Optional, but `-char` and `-class` must be set together | `applyChapterDividers` no-ops if either is missing |
 | `#nnwFooter` | Optional | Custom templates only |
@@ -237,6 +235,29 @@ not a base64-embedded `@font-face`. `Hyperlegible.nnwtheme` is the reference pat
 - Only reference font families genuinely published on Google Fonts -- confirm on
   fonts.google.com before writing the `@import`, don't guess a family name.
 
+#### Color tokens and the page color
+
+The app reads a theme's page, text and link colors out of its stylesheet
+(`ArticleThemeColorExtractor`) for the webview background, the full-screen notch cover, the
+page-counter text and the Blend nav bar. These rules make that reliable; the reasons and the
+code path are in `article-color-pipeline.md`.
+
+- Declare `--nnw-bg`, `--nnw-ink` and `--nnw-link` with literal `#hex` or `rgb()` values in
+  `:root`, and again in the dark `:root` inside the single
+  `@media (prefers-color-scheme: dark)` block. `var()` resolves one level only, so a token
+  whose value is another `var()` is not found.
+- The extractor reads exact selectors: `body` and `.articleBody` for `color` and
+  `background-color`, and `a` and `.articleBody a` for link `color`. A color set only on
+  `html`, `.t` or `#bodyContainer` is invisible to it.
+- Write the page color as `background-color`, never the `background` shorthand. The extractor
+  cannot read the shorthand and falls back to white (light) or black (dark) for the notch
+  cover, webview and nav bar, even though the page itself looks right.
+  `buildscripts/theme-generation/fix_body_background_color.py --check` lists offenders and a
+  test fails on them.
+- Do not redeclare `--nnw-*` outside those two `:root` blocks: the scanner collects every
+  `--name: value;` in the non-dark CSS and the last declaration wins.
+- Anything inside an `@supports` block is ignored by the extractor.
+
 #### AO3 preface styling
 
 The AO3 work preface (`#ao3SyntheticPreface` / `#ao3Preface` in
@@ -257,12 +278,8 @@ CSS custom properties; there is no other override path.
 }
 ```
 
-- `--ao3-preface-border-color` and `--ao3-preface-background-color` already
-  work today. `--ao3-preface-text-color`, `--ao3-preface-label-color`, and
-  `--ao3-preface-font-size` require a small `core.css` change (each hardcoded
-  value replaced with `var(--ao3-preface-<x>, <existing hardcoded value>)`)
-  before they take effect -- confirm that change has actually landed before
-  relying on them in a theme.
+- `core.css` reads all five variables (`border-color`, `background-color`, `text-color`,
+  `label-color`, `font-size`), each with a fallback, so a theme can set any of them.
 - `--ao3-preface-label-color` falls back to `--ao3-preface-text-color` when
   unset, which itself falls back to the theme's normal body text color.
 - These must be declared as custom properties in the theme's own
@@ -500,7 +517,7 @@ Verify on a device with a notch or Dynamic Island: turn on Page Counter (forces
 notch hiding), open a long-titled work, enter full-screen reading, scroll to
 the top, and confirm the whole title is visible. Audit status, by template shape (see
 "Custom template.html"). Shape B: the mockups were measured in headless Chromium (see
-"Theme mockups", "Full-screen title check"), with the first title line 87px to 155px down
+`theme-mockups.md`, "Full-screen title check"), with the first title line 87px to 155px down
 with the running head. Conversion moves a title up to 12px (`10px` top padding instead of
 `22px`), so the converted bundles should clear 68px by that arithmetic; that is inferred,
 and neither the bundles nor the mockups have been checked on a device. Without the `.rh`
@@ -508,274 +525,14 @@ band, 59 of the 65 mockups fell under 68px. Shapes A, C and D have not been audi
 test enforces this rule for any bundle. Shape A themes do not set a `.headerTable` height
 of their own.
 
-## Theme mockups
+## Theme mockups and mockup-to-bundle conversion
 
-A mockup is a one-theme CSS preview of a fixed sample page, written against simplified
-markup, reviewed on a single page, then converted into a `.nnwtheme`. Every mockup styles
-the same sample, so themes compare like for like. The page layout, sample text and shared
-CSS are below so none of it has to be regenerated; the tools that build and check the
-review page are in `buildscripts/theme-mockups/`:
-
-| File | Purpose |
-|---|---|
-| `build_mockup_page.py` | Builds the review page from `themes.json`. Holds the sample text and the page shell, so the page is rebuilt without regenerating anything. |
-| `themes.json` | The 65 mockups of batches 3 to 8 (`id`, `cat`, `name`, `n`, `css`, `lk`). All 65 now also exist as converted bundles in `gallery-themes/` (matched by name; they were not there when this section was first written), so this file is the source of the mockups rather than the only copy of the designs. |
-| `fonts.html` | The Google Fonts `<link>` tags (91 families) the mockups load. The builder writes them into the page head. Add a family here when a mockup uses a new one, or the preview silently falls back to system fonts. |
-| `check_fullscreen_titles.py` | Full-screen title check in headless Chromium (needs Playwright). |
-
-These files are not in the checkout this doc was last revised against: `buildscripts/` there has only `theme-generation/` among the theme tools, so confirm they exist before relying on the commands below.
-
-The built review page (about 220KB) is not committed. `python3 build_mockup_page.py
-themes.json out.html` regenerates it, byte for byte identical to the page it was first
-built as (checked when this section was written).
-
-### Page layout (fixed order)
-
-Every mockup and every converted theme lays the page out in this order. Notes never come
-after a chapter. Aesthetic ornaments (rules, flourishes, corner marks, borders) may sit
-anywhere between these blocks; in a mockup they are CSS only (`::before`/`::after`,
-backgrounds, or the `.dv` divider). See "Ornaments: where they go" for the real-markup
-slots.
-
-| # | Block | Mockup markup | Converted theme | Notes |
-|---|---|---|---|---|
-| 1 | NetNewsWire-style header (optional) | `.rh` | `.rh` in `template.html`, outside `.t` | Feed name and date. Counts toward the 68px above the title. |
-| 2 | Title / author | `header.hd > h1`, `p.by` | same, from `template.html` | |
-| 3 | Preface | `dl.pf` | `#bodyContainer dl.tags` | Rows can carry `.wide`; the series row uses `.ao3SeriesPrefaceEntry`, `.ao3SeriesPrefaceLinks`, `.ao3SeriesNavDisabled`. |
-| 4 | Summary | `.sm` (`h3`, `p`) | `.summary.module` (`h3.heading`, `blockquote.userstuff`) | |
-| 5 | Notes | `.nt` | `.notes.module` | Before the first chapter heading. |
-| 6 | First chapter heading | `span.dv` then `h2` | `h2.heading` / `h3.title` | The divider is inserted by `data-chapter-divider`. |
-| 7 | First chapter text | `p.b`, opening words in `span.vc` | prose inside `div.userstuff.module[role="article"]` | Opening words wrapped by `data-versal-target`. |
-| 8 | Chapter heading | `span.dv` then `h2` | as 6 | |
-| 9 | Chapter text | `p.b` with `span.vc` | as 7 | |
-| 10 | End matter (optional) | `div.nt.end` | `.end.notes.module` | The series footer (`#ao3SeriesFooter`) also belongs here in the app. |
-
-Not in the sample: the fetch notice, the series footer, highlights, footnotes and wide
-tables. Style those from the "Styleable blocks" table; a mockup does not exercise them.
-
-### Sample content
-
-The one sample every mockup renders. It is a copy of `PF` and `sample_html()` in
-`build_mockup_page.py` (checked equal when this section was written); change both
-together. `__N__` is the theme's number (`.t1`, `.t2`, ...). Only the first paragraph after
-each chapter heading is `p.b`; the converter keeps the drop-cap rule for that paragraph
-only. The builder emits the preface rows with no whitespace between them.
-
-```html
-<div class="stage">
-<div class="rh"><a href="#">Archive of Our Own</a><time>Nov 18, 2024</time></div>
-<section class="t t__N__"><header class="hd"><h1>The Lantern Keeper's Apprentice</h1><p class="by">by Wren Ashcombe</p></header>
-<div class="bd">
-<dl class="pf">
-<dt>Rating:</dt><dd><a href="#">Teen And Up Audiences</a></dd>
-<dt class="wide">Archive Warning:</dt><dd class="wide"><a href="#">Creator Chose Not To Use Archive Warnings</a>, <a href="#">Graphic Depictions Of Violence</a></dd>
-<dt>Category:</dt><dd><a href="#">F/M</a>, <a href="#">Gen</a></dd>
-<dt class="wide">Fandom:</dt><dd class="wide"><a href="#">Original Work</a>, <a href="#">The Lantern Keeper's Apprentice - Wren Ashcombe</a></dd>
-<dt class="wide">Relationships:</dt><dd class="wide"><a href="#">Mara Hale/Tobias Wren</a>, <a href="#">Mara Hale &amp; The Ghost</a>, <a href="#">Mara Hale &amp; Mrs. Pell</a></dd>
-<dt class="wide">Characters:</dt><dd class="wide"><a href="#">Mara Hale</a>, <a href="#">Tobias Wren</a>, <a href="#">The Ghost (Elias)</a>, <a href="#">Mrs. Pell</a>, <a href="#">Captain Orrin Vale</a>, <a href="#">The Harbor Cat</a></dd>
-<dt class="wide">Additional Tags:</dt><dd class="wide"><a href="#">Slow Burn</a>, <a href="#">Found Family</a>, <a href="#">Gentle Fantasy</a>, <a href="#">Lighthouse Keeper</a>, <a href="#">Ghosts</a>, <a href="#">Hurt/Comfort</a>, <a href="#">Cozy Mystery</a>, <a href="#">Coming of Age</a>, <a href="#">Original Female Character</a>, <a href="#">Soft Ending</a>, <a href="#">Established Friendship</a>, <a href="#">Sea Imagery</a>, <a href="#">Everyone Is Tired</a>, <a href="#">Mild Peril</a>, <a href="#">Weather as Character</a>, <a href="#">Angst with a Happy Ending</a>, <a href="#">Mara Is Competent and Also Panicking</a>, <a href="#">Spooky but Not Scary</a>, <a href="#">Inherited Property</a>, <a href="#">Reluctant Roommates (Living and Dead)</a>, <a href="#">Sundays Updates</a>, <a href="#">Rated for Brooding</a></dd>
-<dt>Language:</dt><dd>English</dd>
-<dt class="wide">Series:</dt><dd class="wide"><span class="ao3SeriesPrefaceEntry">Part 2 of <a href="#">The Lantern Keeper Cycle</a></span> <span class="ao3SeriesPrefaceLinks"><a href="#">First</a> · <a href="#">Previous</a> · <span class="ao3SeriesNavDisabled">Next</span></span></dd>
-<dt class="wide">Collections:</dt><dd class="wide"><a href="#">Lighthouse Fic Exchange 2024</a>, <a href="#">Cozy Autumn Reads</a></dd>
-<dt>Published:</dt><dd>2021-03-04</dd>
-<dt>Updated:</dt><dd>2024-11-18</dd>
-<dt>Words:</dt><dd>42,180</dd>
-<dt>Chapters:</dt><dd>12/12</dd>
-<dt>Comments:</dt><dd>318</dd>
-<dt>Kudos:</dt><dd>2,104</dd>
-<dt>Bookmarks:</dt><dd>412</dd>
-<dt>Hits:</dt><dd>58,977</dd>
-</dl>
-<div class="sm"><h3>Summary:</h3><p>Mara inherits a lighthouse she cannot afford and a ghost who will not leave.</p></div>
-<div class="nt">Notes: thank you for reading. New chapters on Sundays, see <a href="#">my profile</a>.</div>
-<span class="dv"></span><h2>Chapter 1</h2>
-<p class="b"><span class="vc">The tide came in</span> earlier than <a href="#">the almanac</a> promised, and Mara counted the stairs twice to be sure the night had not stolen any.</p>
-<span class="dv"></span><h2>Chapter 2</h2>
-<p class="b"><span class="vc">Mrs. Pell left the kettle</span> on the stove and a note on the table, which said only that the ghost preferred his tea without sugar.</p>
-<div class="nt end">End Notes: the harbor cat is based on a real cat. Next part is <a href="#">here</a>.</div></div></section></div>
-```
-
-This is the pre-conversion sample. The gallery preview uses a second, smaller sample in
-real converted markup (`SAMPLE` and `SUB` in `gallery/index.template.html`; see
-`theme-gallery.md`), so a converted bundle is previewed there, not here.
-
-### Shared base CSS
-
-Every theme's `css` field starts with this block (checked: all 65 entries in `themes.json`
-do), followed by that theme's own `.tN` rules: palette and fonts as custom properties on
-`.tN` (`--bg --ink --a --fh --fb`, plus any extras), dark values on `.dk .tN`, and element
-rules such as `.tN .hd`, `.tN h2`, `.tN .sm`, `.tN .dv`. Green Phosphor adds one
-`@keyframes` rule after the base.
-
-```css
-.t{padding:22px 20px 26px;background:var(--bg);color:var(--ink);font:15px/1.6 var(--fb);position:relative;overflow:hidden}
-.t h1,.t h2,.t h3{margin:0;font-family:var(--fh);font-weight:400}
-.t h1{font-size:30px;line-height:1.05}.t h2{font-size:21px;margin-bottom:8px}.t h3{font-size:12px}
-.hd{position:relative;margin-bottom:16px}.by{margin:8px 0 0;font-size:12px;letter-spacing:.05em}
-.pf{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:12px}.pf dt{font-weight:700}.pf dd{margin:0}
-.sm{margin:0 0 14px;padding:10px 12px}.sm h3{margin-bottom:4px}.sm p,.b{margin:0}
-.nt{font-size:13px;opacity:.8;border-left:2px solid var(--a);padding-left:10px;margin-top:12px}
-.dv{display:block;margin:18px 0 8px}
-.b::first-letter{font-family:var(--fh);float:left;font-size:2.7em;line-height:.85;padding:.05em .1em 0 0;color:var(--a)}
-.vc{font-variant:small-caps;letter-spacing:.03em}
-```
-
-### Review page
-
-```
-python3 buildscripts/theme-mockups/build_mockup_page.py themes.json out.html [old_page.html]
-```
-
-`themes.json` is a list of `{"id", "cat", "name", "n", "css", "lk"}`: `n` is the root class
-number, `css` is the shared base plus the theme's rules, `lk` is per-theme link styling
-(always applied). The optional third argument is an earlier page whose font links are
-reused instead of `fonts.html`.
-
-- Each theme renders in its own shadow root, so `.tN` numbers can repeat across batches.
-- The builder copies each theme's custom properties from `.tN` and `.dk .tN` onto `.stage`,
-  so the header band, which sits outside the section as in a converted theme, uses the same
-  palette.
-- The header band uses the same rules as `RH_CSS` in the converter (56px minimum height,
-  12px below, 20px side padding, which is the iOS `--gx`).
-- The page mirrors the converted body rules `word-wrap: break-word` and (iOS)
-  `word-break: break-word`; without them a long word runs off the side of the mockup.
-- Visible controls: "Preview dark mode" and "Full-screen view", which hatches the top 68px
-  the way the app's notch cover hides it. The Approve/Discard buttons, filters and "Copy
-  decisions" exist in the markup but are hidden in the final page.
-
-### Full-screen title check
-
-Requirements are the three under "Full-screen reading" above. `check_fullscreen_titles.py`
-tests them for every mockup in headless Chromium at 390px wide:
-
-```
-python3 buildscripts/theme-mockups/check_fullscreen_titles.py page.html [--dark] [--no-header] [--long-title | --extreme-title] [--shots DIR]
-```
-
-- **clear**: top of the first title line to top of the page must be at least 68px.
-- **clipped**: the title must be in the hit-test stack at 3 points on each line. If it is
-  absent, an ancestor's `overflow` or `clip-path` is cutting it. An element merely drawn
-  above the title is reported as a note for a visual check (Tattoo Flash's transparent
-  dotted frame is one; it does not hide the title).
-- **side**: no title line may pass the left or right edge.
-- **css**: no title `line-height` under 1, no `nowrap`/`text-overflow`, no `overflow` on
-  the title.
-- `--long-title` swaps in a 76 character title, `--extreme-title` a 126 character one,
-  `--no-header` hides the band to show what the header contributes, `--shots` writes a PNG
-  of the top of each theme with the 68px zone marked.
-- Fonts load from Google Fonts. With no network the browser falls back to system fonts, so
-  line counts and heights are approximate while clearance (pure layout) is exact.
-
-Results on the 65 mockups, as reported by the engineer who ran the check on 2026-10-07;
-they were not reproduced when this doc was written (no browser available there). With the
-band, the first title line sits 87px to 155px down (median 101px), in light and dark and
-with the 76 character title. Without the band 59 of 65 start under 68px, so the band is
-what makes the mockups pass; a design without it has to supply the 68px itself. Fixes made
-while checking: `line-height: .95` raised to 1 on the titles of Bullet Journal, Giallo,
-Futurism, Underground Comix and VHS Tracking Glitch; `padding-inline: .45em` added to the
-skewed titles of Giallo and Futurism so the skew does not push the lower lines off the
-left edge. Known remaining: Giallo at 126 characters leaves about 4px of the last lines
-past the left edge. Device verification (see "Full-screen reading") has not been done for
-the mockups or the converted bundles.
-
-### Making a mockup
-
-1. Pick the theme's `n` (any unused number in its batch) and write its rules against the
-   sample markup above: `.tN` for palette and fonts, `.dk .tN` for dark values, then
-   element rules. Use only the classes in the layout table.
-2. Keep the title safe: `.hd` and `h1` need no `overflow: hidden`, fixed `height`,
-   `line-height` under 1 or `nowrap`; ornaments must not take space above the title.
-3. A theme with a custom header (negative top margin on `.hd`, large top padding) still sits
-   below the band, because the band comes first.
-4. Add the theme's object to `themes.json` (and any new font to `fonts.html`), rebuild the
-   page, run the title check in light and dark and with `--long-title`, then review.
-
-### Converting mockups into `.nnwtheme` bundles
-
-Status: the two conversion routes below are described from the scripts that produced the
-bundles in `gallery-themes/` (`convert_mockups.py`, `notes_lib.py`, `kit.py`, `t_*.py`,
-`build_all.py`, `finalize_credits.py`). Those scripts are in the v4 theme set's `tools/`
-directory and are not in this repo, so what they do was not re-read here. What the
-bundles contain was checked in `gallery-themes/` (Swiss International read in full; the
-sections below say what was checked).
-
-**Route A: CSS-mapped themes.** `convert_mockups.py <batch1.html> <batch2.html> <out_dir>`
-produced the shape B bundles. Its output is the contract between the mockup and the
-bundle:
-
-| Mockup | Bundle |
-|---|---|
-| `.pf` | `#bodyContainer dl.tags` |
-| `.sm` | `.summary.module` |
-| `.sm p` | `.summary.module blockquote.userstuff` |
-| `h2` | `h2.heading, h3.title` |
-| `h3` | `h3.heading` |
-| `.vc` | `.versalCap` |
-| `.b::first-letter` | `p:has(> .versalCap:first-child)::first-letter` |
-| `.nt` | not converted; notes get one of 17 treatments from `notes_lib.py`, chosen per theme and built from the theme's own `--ink --a --bg --fb --r` |
-| `.dv` | unchanged; inserted by `data-chapter-divider` with class `dv` and a zero-width character |
-| `.tN` custom properties | `:root`; `.dk ` rules go into one `@media (prefers-color-scheme: dark)` block, with dark rules identical to light ones dropped |
-| `font-size: Npx` | `calc(var(--u) * N)` (`--u` is 1px on macOS, font size / 15 on iOS, so type follows Dynamic Type) |
-| `padding: 22px 20px ...` | `10px var(--gx) ...`; `-20px` becomes `calc(var(--gx) * -1)`, `-22px` becomes `-10px` |
-
-**Page color is `background-color`, not the `background` shorthand.** The converted
-`body` rule must be `background-color: var(--nnw-bg)`. `ArticleThemeColorExtractor`
-reads only `background-color`, so a shorthand body renders correctly but gives the
-full-screen notch cover, the webview and under-page background and the Blend nav bar
-white (light) or black (dark); see `article-color-pipeline.md`. The 66 Route A bundles
-that shipped with the shorthand were rewritten by
-`buildscripts/theme-generation/fix_body_background_color.py`. The converter and
-`kit.py` are outside this repo, so their body rule was not changed here and still needs
-to emit `background-color`. After any conversion run, `fix_body_background_color.py
---check` lists offenders and `--write` fixes them.
-
-Other rules that mention `.b` are dropped. A converted title therefore sits 12px higher than
-in the mockup for themes with plain top padding, and in the same place for themes with a
-negative top margin. Versal is dropped for themes in the converter's `NO_VERSAL` set.
-
-Anatomy of a converted stylesheet, in file order (read in Swiss International; the `.rh`,
-`.t` and `@supports` pattern also matches Disco): the Google Fonts `@import`, a `:root`
-palette, the structural base (link, preface-reset, blockquote, table, `img` max-width and
-text-size rules), the `.rh` running head, the notes treatment, the converted `.t` base, the
-theme's own `.tN` rules, the dark `@media` block, then the iOS and macOS `@supports` blocks
-that set `--gx` (20px iOS, 48px macOS) and `--u`.
-
-Starting a bundle by hand: copy the structural base, `.rh` block and `@supports` blocks
-from an existing shape B bundle, then replace the palette, the notes treatment and the
-`.tN` rules. The converter's limits, if it is ever added to the repo: the batch names,
-fonts and `NOTES` table are hard-coded (a new theme needs a name, a `NOTES` entry and a
-font spec or it raises `KeyError`), `parse_rules` asserts there are no at-rules (Green
-Phosphor's `@keyframes` needs hand handling), and it reads the two-file batch format, not
-`themes.json`. Converting from the review page needs a small adapter that calls its
-`process` and `build` functions per theme; it has not been written.
-
-**Route B: hand-built themes with their own markup** (`kit.py`, `t_*.py`, `build_all.py`).
-Each `t_<name>.py` defines `LIGHT`/`DARK` palettes, a `TEMPLATE` and a `CSS` string with
-`@@LIGHT@@`, `@@DARK@@`, `@@STRUCT@@` and `@@PLATFORM@@` placeholders, and `build(outdir)`
-calling `kit.write`. `kit.py` supplies `STRUCT` (the shared overflow, image, footnote and
-preface-reset rules), `platform()`, `PLIST`, `rootvars`, `svg_uri` and `contrast`.
-`build_all.py <out>` builds every module, then checks each bundle: `@import` first,
-balanced braces, no leftover `@@`, `#bodyContainer` with `articleBody` and `[[body]]`, an
-`img` `max-width`, the `[[font-size]]` token, a dark block and the platform split, and it
-prints WCAG contrast for the text pairs and marks any under 4.5. In the tree, Heist Night
-and Undercity Dusk (shape D) match this route: both are `Version` 2 with homepage
-`https://github.com/nectar-app/gallery-themes` and both put a 56px-minimum running head first.
-
-**Info.plist fingerprints, checked across `gallery-themes/` by script:** all 117 shape B
-bundles have homepage `https://github.com/kyrielie/nectar` and `CreatorName` `kyrielie`;
-113 are `Version` 1 and four are `Version` 2 (why was not determined). Every one has a
-`License.md`. How the 65 batch 3 to 8 bundles were converted is not recorded in this
-repo; their `License.md` only says "converted to this bundle by script".
-
-**After either route.**
-
-1. `finalize_credits.py <dir>` sets `CreatorName` to just the creator name and moves the
-   descriptive text into `License.md` (CC0 unless the bundle already ships another license).
-   All 117 shape B bundles have a `License.md`; the 65 mockup conversions carry the placeholder described under "License.md".
-   Leave `Version` at 1.
-2. Put the bundle in `Themes/` or `gallery-themes/` (see below) and update `BUNDLED` if needed.
-3. Run the theme tests named below, which scan both directories.
-4. Check full-screen reading on a device, as described above.
+Moved to `theme-mockups.md`: the fixed sample page and layout order, the shared base CSS,
+the review page and full-screen title check, how to make a mockup, and the two conversion
+routes that produced the shape B bundles (with the mockup-to-bundle contract table). That
+material describes tooling that is not in this repo and part of it is history, so it no
+longer sits in the authoring reference. The one rule from it every author needs, 68px above
+the title, stays in "Full-screen reading: space above the title" above.
 
 ## Where a theme lives: `Themes/` vs `gallery-themes/`
 
