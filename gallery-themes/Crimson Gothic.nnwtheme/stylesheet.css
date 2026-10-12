@@ -2,7 +2,7 @@
 /* Crimson Gothic: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Pirata One',cursive;--fb:'Crimson Pro',serif;--nnw-bg:#efe3cf;--nnw-ink:#1a0d0d;--nnw-link:#a30f18;--a:#a30f18;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--nnw-link)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

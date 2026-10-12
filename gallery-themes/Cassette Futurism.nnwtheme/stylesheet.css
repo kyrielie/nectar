@@ -2,7 +2,7 @@
 /* Cassette Futurism: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Share Tech Mono',monospace;--fb:'IBM Plex Mono',monospace;--nnw-bg:#cdc5b0;--nnw-ink:#1c1a14;--nnw-link:#d46a0a;--a:#d46a0a;--sc:#1f190b;--am:#ffb23f;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--nnw-link)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

@@ -33,6 +33,14 @@ class FamilyTests(unittest.TestCase):
 	def migrate(self, css=SAMPLE):
 		return fam.migrate_css(css, "Test.nnwtheme")[0]
 
+	def test_shorthand_body_background_is_renamed(self):
+		sample = SAMPLE.replace("body {\n\tbackground-color:", "body {\n\tbackground:", 1)
+		self.assertNotEqual(sample, SAMPLE)
+		css = fam.migrate_css(sample, "Test.nnwtheme")[0]
+		body = css.split("body {", 1)[1].split("}", 1)[0]
+		self.assertIn("background-color: var(--nnw-bg);", body)
+		self.assertNotIn("background: var(--nnw-bg)", body)
+
 	def test_tokens_are_literal_and_body_uses_them(self):
 		css = self.migrate()
 		self.assertIn("--nnw-bg: #080808;", css)

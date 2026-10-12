@@ -2,7 +2,7 @@
 /* Game Boy Green: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Press Start 2P',monospace;--fb:'VT323',monospace;--nnw-bg:#9bbc0f;--nnw-ink:#0f380f;--nnw-link:#306230;--a:#306230;--dz:#8bac0f;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--nnw-link)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

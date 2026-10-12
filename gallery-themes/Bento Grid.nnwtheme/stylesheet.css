@@ -2,7 +2,7 @@
 /* Bento Grid: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Plus Jakarta Sans',sans-serif;--fb:'Plus Jakarta Sans',sans-serif;--nnw-bg:#f0f0f5;--tile:#fff;--nnw-ink:#1c1b29;--nnw-link:#1c1b29;--v:#7c5cff;--mn:#3ddc97;--co:#ff6b6b;--su:#ffc83d;--mu:#6b6a7a;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--a)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

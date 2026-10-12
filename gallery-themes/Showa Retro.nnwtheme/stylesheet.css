@@ -2,7 +2,7 @@
 /* Showa Retro: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Dela Gothic One',sans-serif;--fb:'Zen Maru Gothic',sans-serif;--nnw-bg:#f6e7c8;--nnw-ink:#4a2c2a;--nnw-link:#e4572e;--a:#e4572e;--b:#0f7f76;--c:#f2b134;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--nnw-link)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

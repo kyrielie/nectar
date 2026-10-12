@@ -2,7 +2,7 @@
 /* Catppuccin: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Nunito',sans-serif;--fb:'Nunito',sans-serif;--nnw-bg:#eff1f5;--sf:#e6e9ef;--nnw-ink:#4c4f69;--nnw-link:#8839ef;--a:#8839ef;--pk:#ea76cb;--bl:#1e66f5;--gr:#40a02b;--pe:#fe640b;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--nnw-link)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

@@ -2,7 +2,7 @@
 /* Papercut Layers: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Fredoka',sans-serif;--fb:'Nunito',sans-serif;--nnw-bg:#fbf3e6;--nnw-ink:#264653;--nnw-link:#264653;--te:#2a9d8f;--co:#e76f51;--su:#f4c95d;--cr:#fffaf0;--sh:rgba(38,70,83,.28);--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--a)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

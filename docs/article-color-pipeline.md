@@ -44,6 +44,34 @@ tokens must be literal. The user override block also sets these tokens (with
 `!important`), so a recolor reaches every surface the theme paints with
 `var(--nnw-bg)`.
 
+**The page color must be the literal property `background-color`.** The extractor
+asks for `background-color` on `body`/`.articleBody`, and its matcher
+(`lastDeclaredValue`) cannot see the `background` shorthand. So
+`body { background: var(--nnw-bg) }` paints correctly in the webview but counts
+as "not found" here, and the fallbacks apply: light is `.white`, dark is
+`darkBackgroundFound ?? lightBackgroundFound ?? .black`, which is black. Because
+`ArticleResolvedColors.resolved` feeds the webview background,
+`underPageBackgroundColor`, the scroll view, `notchCoverView` and the Blend nav
+bar from that one value, all of them go white or black instead of the theme's
+page color. Seen on Delft Blue: the dark-mode notch cover was black instead of
+`#0c1736`. 66 bundles shipped with the shorthand (all from the mockup converter,
+whose body rule lives outside this repo) until
+`buildscripts/theme-generation/fix_body_background_color.py` renamed the property
+in each; it is a one-token change by text offset, so nothing the page paints
+changes. Only `body` and `.articleBody` rules are read, so a page color set only
+on `html`, `.t` or `#bodyContainer` is invisible to the extractor as well. Three
+stock themes (Appanoose, Hyperlegible, Promenade) declare no body background at
+all and use the fallback. Enforced three ways: `fix_body_background_color.py
+--check` (exit 1 on any offender), `test_bundle_body_background.py`, and the
+Swift suite `ArticleThemeColorExtractorTests.BodyBackgroundContract` (written
+without being run in Xcode). The migration scripts' model of the extractor
+(`extractor_colors` in `migrate_theme_contract.py`) used to fall back to the
+shorthand, which is why their self-check never flagged this; it now reads only
+`background-color`, and the migrators rename the property when they rewrite a
+body rule. Reading a stylesheet in a test: production strips `@import` lines
+with `CSSImportExtractor` before extraction, so a test that reads the raw file
+must do the same, or the import text is glued onto the first rule's selector.
+
 **Precedence logic now lives in `ArticleResolvedColors.resolved(theme:
 isDark:overrideBackgroundColorHex:overrideBackgroundColorDarkHex:)`**
 (`Modules/ArticleTheming`'s `ArticleThemeColorExtractor.swift`), not inline in

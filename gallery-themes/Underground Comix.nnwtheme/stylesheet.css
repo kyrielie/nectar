@@ -2,7 +2,7 @@
 /* Underground Comix: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Londrina Solid',sans-serif;--fb:'Patrick Hand',cursive;--nnw-bg:#f1e4c3;--nnw-ink:#1a1209;--nnw-link:#e2542c;--a:#e2542c;--b:#3b6fb6;--y:#f2c230;--w:255px 15px 225px 15px/15px 225px 15px 255px;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--nnw-link)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

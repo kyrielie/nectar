@@ -2,7 +2,7 @@
 /* Leather-Bound: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Cormorant SC',serif;--fb:'EB Garamond',serif;--nnw-bg:#f1e5c8;--nnw-ink:#2b2018;--nnw-link:#2b2018;--lt:#3b2418;--lt2:#4c2f20;--gl:#e6c77a;--th:#d9c9a3;--bp:#f8efd6;--bpt:#2b2018;--g2:#8a6a1f;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--a)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

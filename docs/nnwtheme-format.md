@@ -80,6 +80,14 @@ Two systems key off that exact class name regardless of which theme is active:
 Everything else in a custom `template.html` -- header layout, added wrapper elements,
 decorative markup, alternate class names on non-`articleBody` elements -- is fair game.
 
+**Header elements are optional.** The running head (`div.rh` with the feed link and
+date), the byline, the title link and every other header placeholder are design
+choices, not requirements. Do not add a running head, feed link, date or byline to a
+new theme unless the design calls for one. A theme may open with its own ornament
+(Nectar opens with a full-width frieze) or with the title alone. The only header-related
+requirement is the 68px of space above the title (see "Full-screen reading"), which the
+theme must supply itself when it has no running head.
+
 #### Template shapes in `gallery-themes/`
 
 Surveyed by reading every `gallery-themes/*/template.html` (85 bundles at the
@@ -115,15 +123,18 @@ comment explaining why it was removed; it ships none.
 #### Which templates to add, and which to start from
 
 Only shape B is a starter. It is the one pipeline with a documented layout, a mockup
-review page, a mockup-to-bundle contract and a title-spacing check ("Theme mockups"), and
-its running head clears the 68px rule by arithmetic. Two templates are kept in these docs:
+review page, a mockup-to-bundle contract and a title-spacing check ("Theme mockups"). Two
+templates are kept in these docs, and neither is the default: pick by what the design
+needs, and leave the running head out unless the design uses it.
 
-1. **B with the running head (default).** Written out below.
-2. **B without the header.** The same file with the `.rh` line deleted and
-   `.t{padding-top:68px}` added after the converted `.t` rule. The 68px has to come from
-   the theme because nothing else supplies it (59 of the 65 mockups fell under 68px
-   without the band). No bundle in the tree does this yet and the padding value is
-   inferred, so check it on a device.
+1. **B with the running head.** Written out below. Its running head clears the 68px
+   rule by arithmetic.
+2. **B without the header.** The same file with the `.rh` line deleted. The 68px above the
+   title has to come from the theme (padding on `.t`, or the height of an opening
+   ornament) because nothing else supplies it; 59 of the 65 mockups fell under 68px
+   without the band. Nectar is the example: its full-width frieze opens the page, `.t` has
+   18px of top padding, and the title measured 108px down in headless Chromium. That was
+   measured in a browser, not on a device, so check it on a device.
 
 ```html
 <div class="rh"><a class="rh-feed" href="[[feed_link]]">[[feed_link_title]]</a><time class="rh-date" datetime="[[datetime_long]]">[[date_medium]]</time></div>
@@ -171,7 +182,7 @@ The shape B template has no external-link line. Add `<div class="externalLink">[
 | `[[avatar_src]]` | Optional | Shape B omits it; `main.js` strips the image anyway |
 | `[[dateline_style]]`, `[[datetime_*]]`, `[[date_*]]` | Optional | Shape B uses only `[[date_medium]]` and `[[datetime_long]]` |
 | `[[external_link*]]` | Optional | Shape B omits it |
-| `[[feed_link]]`, `[[feed_link_title]]` | Optional | Nothing requires them; `removeFeedNameLink` only acts on anchors that exist |
+| The running head (`div.rh`), `[[feed_link]]`, `[[feed_link_title]]`, `[[date_medium]]`, `[[datetime_long]]` | Optional; leave out unless the design uses them | Nothing requires them; `removeFeedNameLink` only acts on anchors that exist |
 | `[[byline]]`, `[[title]]`, `[[preferred_link]]` | Unverified | All 85 gallery templates include them, so whether omitting is safe was not tested |
 | `data-versal-target` | Optional | `applyVersalCaps` no-ops without it |
 | `data-chapter-divider*` | Optional, but `-char` and `-class` must be set together | `applyChapterDividers` no-ops if either is missing |
@@ -357,6 +368,20 @@ leave the `data-chapter-divider*` attributes unset entirely.
 `Vintage Letter Green.nnwtheme` is the reference theme for this pattern.
 
 
+#### Glass themes (`backdrop-filter`)
+
+Liquid Glass Clear and Liquid Glass Aurora (`gallery-themes/`, family "Liquid Glass", shape B, `t308`/`t310`) are the reference for translucent themes. What the CSS was written against, checked by reading `ArticleThemeColorExtractor.colors(css:)`; none of it has been run on a device:
+
+- **Background on `body`, not `.t`.** The glass is blurred background, so the gradient has to sit behind the panels. It is set as `background-image` on `body` next to `background-color: var(--nnw-bg)`; the extractor reads `body`/`.articleBody` `background-color` for the webview and notch cover, and ignores `background-image`. Use `background-image`, never the `background` shorthand, on that selector. `.t` is `background: none`.
+- **`--nnw-bg` should match the top of the gradient**, so the notch cover blends into the page. A user background override recolors only the flat color underneath, not the gradient (inferred from the override description in `article-color-pipeline.md`).
+- **Tile the background.** An article can be tens of thousands of words tall; a single percent-positioned gradient would stretch across all of it. Both themes use `background-size: 100% <tile>px; background-repeat: repeat-y` with a tile that has no seam (Clear is a palindrome; Aurora keeps every blob clear of the tile edges). `background-attachment: fixed` is not used; its behavior in WKWebView was not checked.
+- **`body` spans the full width** (`max-width: none`, side padding of `max(0px, (100% - 44em) / 2)`) so its background reaches the edges on iPad/macOS. The macOS block uses body padding instead of margins for the same reason.
+- **Custom properties.** `cssCustomProperties` collects every `--name: value;` in the non-dark CSS regardless of selector and lets later declarations win, so never redeclare `--nnw-*` outside `:root` and the dark block. Palette, glass and gradient variables are all in `:root` with dark overrides in the one dark media block.
+- **Blur and saturate only.** SVG filters inside `backdrop-filter` render in Chromium only, so none are used. Keep blur at 6px or more (Clear uses 6px, the rest 18px or more); Apple's Regular/Clear guidance and later user feedback both favor more opacity under text, so every glass theme carries a scrim or dim layer under the body text.
+- **One blurred layer per surface.** Only `.hd`, `.bd` and the two running-head capsules use `backdrop-filter`; the preface, summary, notes and chapter pills are flat tints.
+- **Unverified on device:** whether `backdrop-filter` in the real reader samples the `body` background correctly, the cost of a full-article-height `backdrop-filter` box, and the 68px title clearance (the running head keeps its 56px minimum plus 12px margin).
+- **Running head as capsules.** `.rh-feed` and `.rh-date` are separate glass pills (34px tall, centered in the 56px band); the feed pill ellipsizes long names.
+
 ## Styleable blocks
 
 Every block a theme can style, in document order, with where its markup comes
@@ -448,6 +473,9 @@ reading; custom templates may not. What the code does (confirmed by reading
 - `notchCoverView`, as tall as the raw top inset and filled with the article
   background color, covers the notch area when notch hiding is on (it is forced
   on whenever Page Counter is not Off).
+- The cover's color is the theme's body background as `ArticleThemeColorExtractor`
+  reads it, so a theme's `body` rule must declare `background-color` (not the
+  `background` shorthand); see `article-color-pipeline.md`.
 - No shared CSS compensates: `env(safe-area-inset-top)` appears in no
   `core.css` or default `stylesheet.css` rule.
 
@@ -690,6 +718,17 @@ bundle:
 | `font-size: Npx` | `calc(var(--u) * N)` (`--u` is 1px on macOS, font size / 15 on iOS, so type follows Dynamic Type) |
 | `padding: 22px 20px ...` | `10px var(--gx) ...`; `-20px` becomes `calc(var(--gx) * -1)`, `-22px` becomes `-10px` |
 
+**Page color is `background-color`, not the `background` shorthand.** The converted
+`body` rule must be `background-color: var(--nnw-bg)`. `ArticleThemeColorExtractor`
+reads only `background-color`, so a shorthand body renders correctly but gives the
+full-screen notch cover, the webview and under-page background and the Blend nav bar
+white (light) or black (dark); see `article-color-pipeline.md`. The 66 Route A bundles
+that shipped with the shorthand were rewritten by
+`buildscripts/theme-generation/fix_body_background_color.py`. The converter and
+`kit.py` are outside this repo, so their body rule was not changed here and still needs
+to emit `background-color`. After any conversion run, `fix_body_background_color.py
+--check` lists offenders and `--write` fixes them.
+
 Other rules that mention `.b` are dropped. A converted title therefore sits 12px higher than
 in the mockup for themes with plain top padding, and in the same place for themes with a
 negative top margin. Versal is dropped for themes in the converter's `NO_VERSAL` set.
@@ -769,6 +808,8 @@ least one sibling to mean anything. As of this writing, the theme gallery
 (`gallery/build.py`, `gallery/index.template.html`) does not use `Family` or
 `FamilyVariant` (`build.py` copies them into the theme data, but the template ignores them) -- it lists every published bundle as its own grid card, with no
 family grouping or swatch dots. See `docs/theme-gallery.md`.
+
+Liquid Glass Clear and Liquid Glass Aurora (family "Liquid Glass", variants "Clear" and "Aurora") are a two-bundle family added after the counts and shape tables above were taken; those counts were not refreshed.
 
 Distinguish a genuine family from a single theme with an accent-color setting baked
 in: if the bundles differ only in one or two color values with everything else

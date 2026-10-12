@@ -53,6 +53,14 @@ class BespokeTests(unittest.TestCase):
 	def migrate(self, mz=None):
 		return bespoke.migrate_css(SAMPLE, "Test.nnwtheme", SPEC, mz or measured())[0]
 
+	def test_shorthand_body_background_is_renamed(self):
+		sample = SAMPLE.replace("body {\n\tbackground-color:", "body {\n\tbackground:", 1)
+		self.assertNotEqual(sample, SAMPLE)
+		css = bespoke.migrate_css(sample, "Test.nnwtheme", SPEC, measured())[0]
+		body = css.split("body {", 1)[1].split("}", 1)[0]
+		self.assertIn("background-color: var(--nnw-bg);", body)
+		self.assertNotIn("background: var(--nnw-bg)", body)
+
 	def test_pin_value_is_px_in_u(self):
 		self.assertEqual(bespoke.n_of(17), Decimal(15))
 		self.assertEqual(bespoke.n_of(28.9), Decimal("25.5"))
