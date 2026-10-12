@@ -37,12 +37,12 @@ Application Support Themes folder (imported) contains:
   license status (e.g. NewsFax, Ember). Nothing in Swift reads it; format and
   expected contents are in `nnwtheme-format.md`.
 
-Nectar ships 14 themes in `Themes/`: the eight NetNewsWire-origin themes
+Nectar ships these themes in `Themes/`: the eight NetNewsWire-origin themes
 (Appanoose, Biblioteca, Hyperlegible, NewsFax, Promenade, Sepia, Tiqoe Dark,
 Verdana Revival) plus six Nectar customs (Black & White, Duskbloom, Ember,
 Powder Pink, Tumblr Blue, Vintage Letter Green). Only `Themes/` is copied into
-the app bundle (`project.yml`). Every other authored theme (85 at last count; this drifts) lives in
-`gallery-themes/`, are not in the app, and are published only on the theme
+the app bundle (`project.yml`). Every other authored theme lives in
+`gallery-themes/`, is not in the app, and is published only on the theme
 gallery (`gallery/build.py`), from which a person installs them via the
 `nectar://theme/add` URL scheme. See `nnwtheme-format.md` for the
 directory rules and `docs/theme-gallery.md` for the gallery page itself.
@@ -59,13 +59,13 @@ Beacon, Beetlejuice, Mystery, Perseus, Pinerose, Rosé Pine, and Twilight use th
 same shape but are not in the generator's table; where they came from was not
 determined.
 
-The 52 "shape B" themes (compact running head, `nnwtheme-format.md`) were converted from
-CSS mockups by a separate script (`convert_mockups.py`, "Route A" in `nnwtheme-format.md`
-under "Converting mockups"). That script is not in this repo (it lives in the v4 theme
-set's `tools/` directory), so a structural fix has to be applied to each bundle, not
-regenerated. The mockup side is in the repo: `buildscripts/theme-mockups/` holds the review
-page builder, the full-screen title check and the 65 mockups of batches 3 to 8, none of
-which exists as a bundle yet.
+The "shape B" themes (compact running head, `nnwtheme-format.md`) were converted from CSS
+mockups by a separate script (`convert_mockups.py`, "Route A" in `theme-mockups.md`). That
+script is not in this repo (it lives in the v4 theme set's `tools/` directory), so a
+structural fix has to be applied to each bundle, not regenerated. The mockup tooling
+(`buildscripts/theme-mockups/`) is not in this checkout either; `theme-mockups.md`
+describes it. `buildscripts/theme-generation/theme_inventory.py` prints the current bundle
+and shape counts, which this document no longer states.
 
 Horizontal overflow (an oversized fic image forcing the whole article page
 to scroll sideways) is guarded at two layers: every theme is expected to
@@ -332,6 +332,9 @@ all of the above comes together for a given article:
 | `.didFailToImportThemeWithError` | an import attempt fails |
 
 ## Authoring new themes
+
+`docs/creating-a-theme.md` is the short end-to-end walk-through, with the exact names a
+bundle must use; the skills below carry the detailed workflow.
 
 `.claude/skills/nnwtheme-porter/SKILL.md`,
 `.claude/skills/nnwtheme-header-design/SKILL.md`, and

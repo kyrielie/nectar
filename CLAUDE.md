@@ -33,7 +33,9 @@ task**, not this whole index cover-to-cover.
 - **Accent Color / Surface Palette / nav bar tinting (app chrome)** → `app-chrome-palette.md`
 - **Badge Colors (timeline rating/category/warning pill tinting)** → `app-chrome-palette.md`
 - **Article theme (`.nnwtheme`) system itself** → `theme-system.md`
-- **`.nnwtheme` bundle format / authoring / theme families / theme mockups and the mockup-to-bundle conversion** → `nnwtheme-format.md`
+- **Creating a new theme (start here), required names, bundle checklist** → `creating-a-theme.md`
+- **`.nnwtheme` bundle format / authoring reference / theme families** → `nnwtheme-format.md`
+- **Theme mockups, review page, title check, mockup-to-bundle conversion history** → `theme-mockups.md`
 - **The theme gallery (`gallery/`), its build pipeline, or the install deep link** → `theme-gallery.md`
 - **Landing page (`landing/`), its `site.json` config and optional sections** → `landing-page.md`
 - **Database schema / SQLite storage layer** → `database.md`
@@ -109,7 +111,9 @@ it's trusted by default. Specifically:
 | `ArticleThemeColorExtractor`, `ArticleResolvedColors`, `WebViewController.applyResolvedBackgroundColors`/`registerForTraitChanges` | `article-color-pipeline.md` |
 | `SurfacePalette`, `AccentColor`, `SurfacePaletteNavigationBarAware`, `ToolbarStyle`/`toolbarStyle`, `BadgeColorPalette`, `BadgeColorTable` | `app-chrome-palette.md` |
 | `.nnwtheme` bundles, `ArticleTheme`, `ArticleThemesManager`, `core.css`/`stylesheet.css` structure | `theme-system.md` |
-| `.nnwtheme` bundle-file layout, `Info.plist` `CreatorName`/`License.md` (description, attribution), per-theme fonts, theme families, `template.html` conventions, styleable blocks and ornament placement, full-screen title spacing, AO3 preface styling variables, theme mockups (fixed page layout, sample text, review page, title check, mockup-to-bundle conversion), `buildscripts/theme-mockups/` | `nnwtheme-format.md` |
+| `.nnwtheme` bundle-file layout, `Info.plist` `CreatorName`/`License.md` (description, attribution), per-theme fonts, theme families, `template.html` conventions, styleable blocks and ornament placement, full-screen title spacing, AO3 preface styling variables, `--nnw-*` color tokens and the page-color rule | `nnwtheme-format.md` |
+| Creating a new theme end to end, required file/key/selector names, `buildscripts/theme-generation/theme_inventory.py` (current bundle counts) | `creating-a-theme.md` |
+| Theme mockups (fixed page layout, sample text, review page, title check), mockup-to-bundle conversion, `buildscripts/theme-mockups/` (not in this checkout) | `theme-mockups.md` |
 | `gallery/build.py`, `gallery/index.template.html`, `BUNDLED`/`BUNDLED_ID_PREFIXES`, `.github/workflows/gallery.yml` | `theme-gallery.md` |
 | `landing/` (`build.py`, `template.html`, `site.json`), the optional-section rules, `gallery.yml` (publishes landing page and gallery) | `landing-page.md` |
 | `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |
