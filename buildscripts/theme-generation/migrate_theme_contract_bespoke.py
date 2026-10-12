@@ -261,6 +261,9 @@ def migrate_css(css, name, spec, measured):
 	if bg_decl:
 		replace_value(body, bg_decl, "var(--nnw-bg)")
 		replace_value(body, ink_decl, "var(--nnw-ink)")
+		if bg_decl[2] == "background":
+			# The extractor reads only `background-color`; lit() above already guarantees one plain color.
+			edits.append((body.body_start + bg_decl[0], body.body_start + bg_decl[0] + len("background"), "background-color"))
 	else:
 		edits.append(fam.token_edit(css, body, "\n\tbackground-color: var(--nnw-bg);\n\tcolor: var(--nnw-ink);\n"))
 	if a_decl:

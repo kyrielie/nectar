@@ -2,7 +2,7 @@
 /* Atomic Age Populuxe: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Righteous',sans-serif;--fb:'Quicksand',sans-serif;--nnw-bg:#f4efe0;--nnw-ink:#1d3a44;--nnw-link:#e8587a;--a:#e8587a;--t:#1f9e92;--y:#ffd166;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--nnw-link)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

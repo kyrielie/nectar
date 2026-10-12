@@ -2,7 +2,7 @@
 /* Marble and Gold: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Marcellus',serif;--fb:'Cormorant Garamond',serif;--nnw-bg:#f7f5f0;--nnw-ink:#26252b;--nnw-link:#26252b;--gd:#8a6a1f;--gf:#c9a24a;--vn:rgba(110,110,125,.16);--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--a)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

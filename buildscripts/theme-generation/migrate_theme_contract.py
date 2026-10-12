@@ -251,8 +251,57 @@ def exact_last_value(css, masked, rules, contexts, selectors, prop):
 	return last
 
 
+# Colors the Swift extractor can only read from the literal `background-color` property:
+# ArticleThemeColorExtractor.colors(css:) asks for "background-color" on body/.articleBody and its
+# matcher cannot see the `background` shorthand. A body rule that sets the page color with the
+# shorthand therefore falls back to white (light) / black (dark) for the notch cover, the
+# webview and under-page background and the Blend nav bar. See docs/article-color-pipeline.md.
+NOT_A_COLOR_KEYWORD = {"none", "inherit", "initial", "unset", "revert", "transparent", "currentcolor"}
+
+
+def single_color_value(value):
+	"""True when a `background` value is exactly one color token, so it can be renamed to
+	`background-color` without changing what it paints."""
+	v = re.sub(r"\s*!\s*important\s*$", "", value).strip()
+	if re.fullmatch(r"#[0-9a-fA-F]{3,8}", v) or re.fullmatch(r"rgba?\([^()]*\)", v, re.I):
+		return True
+	if re.fullmatch(r"var\(\s*--[A-Za-z0-9_-]+\s*(?:,[^()]*)?\)", v):
+		return True
+	return re.fullmatch(r"[a-zA-Z]+", v) is not None and v.lower() not in NOT_A_COLOR_KEYWORD
+
+
+def normalize_body_background(css):
+	"""Rename `background` -> `background-color` in every `body` rule (light or dark block, never
+	@supports) that declares the page color as a single-color shorthand and has no
+	`background-color` of its own. Edits by offset, so formatting is untouched; idempotent.
+	Returns (new_css, renamed_count, manual) where `manual` lists shorthands this will not touch
+	(anything more than one color token, or a `.articleBody`-only rule) as strings."""
+	masked = mask_comments(css)
+	positions, manual = [], []
+	for r in find_rules(masked):
+		if r.context == "supports":
+			continue
+		parts = split_selectors(masked[r.sel_start:r.sel_end])
+		if not any(p in ("body", ".articleBody") for p in parts):
+			continue
+		decls = declarations(css[r.body_start:r.body_end])
+		if any(prop == "background-color" for _s, _e, prop, _v in decls):
+			continue
+		for s_off, _e, prop, value in decls:
+			if prop != "background":
+				continue
+			if "body" in parts and single_color_value(value):
+				positions.append(r.body_start + s_off)
+			else:
+				manual.append("%s { background: %s }" % (", ".join(parts), value))
+	for pos in sorted(positions, reverse=True):
+		css = css[:pos] + "background-color" + css[pos + len("background"):]
+	return css, len(positions), manual
+
+
 def extractor_colors(css):
-	"""(text, bg, link) for light and dark, as raw literal strings, like the Swift extractor."""
+	"""(text, bg, link) for light and dark, as raw literal strings, like the Swift extractor.
+	Only `background-color` counts for the page color, exactly as in Swift."""
 	masked = mask_comments(css)
 	rules = find_rules(masked)
 	light_vars, dark_vars = {}, {}
@@ -275,9 +324,9 @@ def extractor_colors(css):
 		)
 
 	text = compute("color", ["body", ".articleBody"])
+	# Faithful to the Swift extractor: only the literal `background-color` property is read
+	# (no shorthand fallback). normalize_body_background() makes shorthand inputs readable.
 	bg = compute("background-color", ["body", ".articleBody"])
-	if bg == (None, None):
-		bg = compute("background", ["body", ".articleBody"])
 	link = compute("color", ["a", ".articleBody a"])
 	return {"text": text, "bg": bg, "link": link, "raw_link": link}
 
@@ -325,6 +374,13 @@ def migrate_css(css, name):
 	if name in MANUAL:
 		return css, 0, ["skipped (manual): " + MANUAL[name]]
 	changes = 0
+	# A `background:` shorthand on body is invisible to the Swift extractor; make it readable first so
+	# the self-check below compares like with like (the rename is the intended fix, not drift).
+	css, renamed, manual_bg = normalize_body_background(css)
+	if renamed:
+		changes += renamed
+		notes.append("body background shorthand renamed to background-color (%d rule(s))" % renamed)
+	notes.extend("manual: %s is not a single color; the extractor cannot read it" % x for x in manual_bg)
 	original = css
 
 	before_colors = extractor_colors(original)

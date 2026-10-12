@@ -2,7 +2,7 @@
 /* Persian Miniature: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Aref Ruqaa',serif;--fb:'Amiri',serif;--nnw-bg:#f5ecd5;--nnw-ink:#1d2a52;--nnw-link:#9b1d20;--a:#9b1d20;--lp:#1f3c88;--em:#1e6b52;--au:#c9a227;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--nnw-link)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

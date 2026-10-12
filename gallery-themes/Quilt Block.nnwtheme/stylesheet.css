@@ -2,7 +2,7 @@
 /* Quilt Block: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Zilla Slab',serif;--fb:'Lora',serif;--nnw-bg:#f6ecd9;--nnw-ink:#3b2b2b;--nnw-link:#3b2b2b;--c1:#a63d40;--c2:#2f5d8a;--c3:#e0b24a;--c4:#5b8a62;--cr:#f2e6cf;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--a)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

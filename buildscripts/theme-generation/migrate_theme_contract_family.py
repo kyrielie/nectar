@@ -159,6 +159,9 @@ def migrate_css(css, name):
 
 	replace_value(body, bg_decl, "var(--nnw-bg)")
 	replace_value(body, ink_decl, "var(--nnw-ink)")
+	if bg_decl[2] == "background":
+		# The extractor reads only `background-color`; lit() above already guarantees one plain color.
+		edits.append((body.body_start + bg_decl[0], body.body_start + bg_decl[0] + len("background"), "background-color"))
 	if a_decl:
 		replace_value(a_rule, a_decl, "var(--nnw-link)")
 

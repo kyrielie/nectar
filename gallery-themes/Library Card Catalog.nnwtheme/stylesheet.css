@@ -2,7 +2,7 @@
 /* Library Card Catalog: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Courier Prime',monospace;--fb:'Courier Prime',monospace;--nnw-bg:#f4ecd6;--nnw-ink:#2a2a2a;--nnw-link:#2a2a2a;--rd:#c0392b;--ln:rgba(60,100,160,.28);--tab:#e6d49a;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--a)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

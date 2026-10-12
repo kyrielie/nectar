@@ -2,7 +2,7 @@
 /* Gruvbox: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'IBM Plex Mono',monospace;--fb:'Bitter',serif;--nnw-bg:#fbf1c7;--b1:#ebdbb2;--nnw-ink:#3c3836;--nnw-link:#af3a03;--a:#af3a03;--r:#cc241d;--g:#98971a;--y:#d79921;--ta:#fbf1c7;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--nnw-link)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

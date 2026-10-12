@@ -2,7 +2,7 @@
 /* Mid-Century Modern: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'DM Serif Display',serif;--fb:'DM Sans',sans-serif;--nnw-bg:#f2e9d8;--nnw-ink:#3b2a1e;--nnw-link:#d9822b;--a:#d9822b;--te:#1f7a7a;--mu:#e0a82e;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--nnw-link)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

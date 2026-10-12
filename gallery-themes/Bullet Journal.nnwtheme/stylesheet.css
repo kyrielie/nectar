@@ -2,7 +2,7 @@
 /* Bullet Journal: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Caveat',cursive;--fb:'Nunito',sans-serif;--nnw-bg:#fbf7ee;--nnw-ink:#2b2a33;--nnw-link:#e0577d;--a:#e0577d;--dot:#c9c2b0;--p1:#f9c6d6;--p2:#bfe6d4;--p3:#f6dc86;--p4:#d4c8f4;--smt:#2b2a33;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--nnw-link)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

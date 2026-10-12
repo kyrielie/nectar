@@ -2,7 +2,7 @@
 /* 1-Bit Desktop: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Pixelify Sans',sans-serif;--fb:'IBM Plex Sans',sans-serif;--w:#fff;--k:#000;--nnw-bg:#fff;--nnw-ink:#000;--nnw-link:#000;--a:var(--k);--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--a)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

@@ -76,5 +76,60 @@ class MigrateTests(unittest.TestCase):
 		self.assertTrue(any("bg-literal: .x" in n for n in notes))
 
 
+class BodyBackgroundTests(unittest.TestCase):
+	"""The Swift extractor reads only `background-color` on body/.articleBody (see
+	docs/article-color-pipeline.md); a `background:` shorthand there resolves to white/black."""
+
+	def test_model_does_not_read_the_shorthand(self):
+		colors = m.extractor_colors("body{background:#123456;color:#000}")
+		self.assertEqual(colors["bg"], (None, None))
+
+	def test_model_reads_background_color(self):
+		colors = m.extractor_colors("body{background-color:#123456;color:#000}")
+		self.assertEqual(colors["bg"][0], "#123456")
+
+	def test_single_color_shorthand_is_renamed_by_offset(self):
+		css = "body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}\n.t{background:#fff}\n"
+		new, renamed, manual = m.normalize_body_background(css)
+		self.assertEqual(new, css.replace("padding:0;background:", "padding:0;background-color:", 1))
+		self.assertEqual((renamed, manual), (1, []))
+
+	def test_idempotent(self):
+		once, _n, _m = m.normalize_body_background("body{background:#102030;color:#fff}")
+		twice, renamed, _m2 = m.normalize_body_background(once)
+		self.assertEqual((once, renamed), (twice, 0))
+
+	def test_dark_block_body_rule_is_renamed_but_supports_is_not(self):
+		css = ("body{background-color:#fff}\n@media (prefers-color-scheme: dark){\nbody{background:#000}\n}\n"
+			"@supports (-webkit-touch-callout: none){\nbody{background:#111}\n}\n")
+		new, renamed, _manual = m.normalize_body_background(css)
+		self.assertIn("body{background-color:#000}", new)
+		self.assertIn("body{background:#111}", new)
+		self.assertEqual(renamed, 1)
+
+	def test_leading_import_does_not_hide_the_body_rule(self):
+		css = "@import url('https://fonts.googleapis.com/css2?family=A:wght@400;700&display=swap');\nbody{background:#abc}\n"
+		self.assertEqual(m.normalize_body_background(css)[1], 1)
+
+	def test_left_alone_and_reported(self):
+		for css in ("body{background:none}", "body{background:transparent}", "body{background:inherit}"):
+			new, renamed, manual = m.normalize_body_background(css)
+			self.assertEqual((new, renamed), (css, 0), css)
+		complex_css = "body{background:var(--nnw-bg) url(x.png) repeat-y}"
+		new, renamed, manual = m.normalize_body_background(complex_css)
+		self.assertEqual((new, renamed, len(manual)), (complex_css, 0, 1))
+		both = "body{background:#111;background-color:#222}"
+		self.assertEqual(m.normalize_body_background(both), (both, 0, []))
+		panel = ".articleBody{background:#eee}"
+		new, renamed, manual = m.normalize_body_background(panel)
+		self.assertEqual((new, renamed, len(manual)), (panel, 0, 1))
+
+	def test_migrate_css_emits_background_color_for_a_shorthand_body(self):
+		new, _changes, notes = m.migrate_css(ZELLIGE_LIKE, "Test.nnwtheme")
+		self.assertIn("background-color:var(--nnw-bg)", new.replace(" ", ""))
+		self.assertNotIn("background:var(--nnw-bg)", new.replace(" ", "").split("body{", 1)[1].split("}", 1)[0])
+		self.assertTrue(any("renamed to background-color" in n for n in notes))
+
+
 if __name__ == "__main__":
 	unittest.main()

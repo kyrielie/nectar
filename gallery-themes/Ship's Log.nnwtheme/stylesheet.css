@@ -2,7 +2,7 @@
 /* Ship's Log: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'IM Fell English',serif;--fb:'IM Fell English',serif;--nnw-bg:#efe2c2;--nnw-ink:#1d2a3a;--nnw-link:#a8302a;--a:#a8302a;--ln:rgba(60,90,130,.35);--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--nnw-link)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

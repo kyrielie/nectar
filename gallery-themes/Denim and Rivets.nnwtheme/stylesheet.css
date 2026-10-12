@@ -2,7 +2,7 @@
 /* Denim and Rivets: converted from the Nectar mockup review page (shape B, test conversion). */
 :root{--fh:'Bevan',serif;--fb:'Work Sans',sans-serif;--nnw-bg:#d6e3f2;--nnw-ink:#10233f;--nnw-link:#10233f;--st:#c98a1a;--lp:#b98b5a;--dn:#9db8d8;--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);color:var(--nnw-ink)}
 a{color:var(--a)}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}
