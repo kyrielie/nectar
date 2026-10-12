@@ -36,7 +36,7 @@ private final class InMemoryBackupSettingsStore: BackupSettingsStoring {
 }
 
 /// `manifest.json`'s shape. `schemaVersion` is what makes a future
-/// additive change (e.g. the blacklist/mute feature noted in the plan)
+/// additive change (e.g. backing up the AO3 ignore list, see docs/backup-restore.md)
 /// non-breaking -- a backup written before that field exists simply omits
 /// it, and any importer reading an older backup already has to treat
 /// "field absent" as a normal case.

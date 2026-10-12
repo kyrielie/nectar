@@ -10,9 +10,7 @@
 //  cases (isWorkRow/isRegistrationRequired), had already drifted in actual
 //  behavior between files -- see this repo's audit notes.
 //
-//  Unlike AO3IgnoreList's own copy of classTokens-style logic (blocked by
-//  RSParser not being able to depend on Account, and documented as such),
-//  there's no layering reason for these extractors -- all in the same
+//  There's no layering reason for these extractors -- all in the same
 //  module, same target, same directory -- to keep separate copies. This
 //  file plays the same role HTMLLiteTree.swift's firstDescendant/
 //  flattenedText already play for this cluster: a shared, non-public

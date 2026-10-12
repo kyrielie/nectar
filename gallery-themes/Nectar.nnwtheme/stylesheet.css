@@ -2,7 +2,7 @@
 /* Nectar: the landing page and gallery look as a reader theme (shape B, contract form). */
 :root{--fb:'Sorts Mill Goudy',Georgia,'Times New Roman',serif;--nnw-bg:#f6f1e6;--nnw-ink:#231c14;--nnw-link:#8a2f22;--plate:#fffdf8;--mut:#5a4c3a;--madder:#8a2f22;--vine:#2f4a3a;--gold:#a67c1f;--gold-ink:#75520f;--gilt:#f7e9b8;--r:0.5px;--grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .27 0 0 0 0 .15 0 0 0 .2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");--ao3-preface-border-color:transparent;--ao3-preface-background-color:transparent;--gx:20px;--u:1px;}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;padding:0;background:var(--nnw-bg) var(--grain);color:var(--nnw-ink)}
+body{margin:0;padding:0;background-color:var(--nnw-bg);background-image:var(--grain);color:var(--nnw-ink)}
 a{color:var(--nnw-link);text-decoration:underline;text-decoration-color:var(--gold);text-underline-offset:.22em}
 a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .articleBody{color:var(--nnw-ink)}

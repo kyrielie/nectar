@@ -165,6 +165,11 @@ enum ToolbarFunction: String, CaseIterable, Sendable {
 	/// arrays, and the case was renamed from `screenTimeRemaining` when Screen Time became Reading Time.
 	case readingTimeRemaining = "screenTimeRemaining"
 	case readingStats
+	/// "Ignore This Work" / "Ignore Author" for the open AO3 work (see
+	/// `ArticleIgnoreActions`). Added after the original set, so it takes the
+	/// default position at the end of each bar's order and is off everywhere
+	/// until the person places it.
+	case ignore
 }
 
 /// Single source of truth for each function's display name and icon --
@@ -214,6 +219,8 @@ extension ToolbarFunction {
 			return NSLocalizedString("Reading Time Remaining", comment: "Toolbar function: reading time remaining")
 		case .readingStats:
 			return NSLocalizedString("Reading Stats", comment: "Toolbar function: reading stats")
+		case .ignore:
+			return NSLocalizedString("Ignore Work or Author", comment: "Toolbar function: hide future feed items for the open AO3 work or its author")
 		}
 	}
 
@@ -256,6 +263,7 @@ extension ToolbarFunction {
 		case .scrollToBottom: return Assets.Images.scrollToBottom
 		case .readingTimeRemaining: return UIImage(systemName: "timer")
 		case .readingStats: return UIImage(systemName: "chart.bar")
+		case .ignore: return UIImage(systemName: "eye.slash")
 		}
 	}
 }
@@ -430,6 +438,10 @@ final class AppDefaults: Sendable {
 		static let toolbarFnReadingStatsTopOverflow = "toolbarFnReadingStatsTopOverflow"
 		static let toolbarFnReadingStatsBottom = "toolbarFnReadingStatsBottom"
 		static let toolbarFnReadingStatsBottomOverflow = "toolbarFnReadingStatsBottomOverflow"
+		static let toolbarFnIgnoreTop = "toolbarFnIgnoreTop"
+		static let toolbarFnIgnoreTopOverflow = "toolbarFnIgnoreTopOverflow"
+		static let toolbarFnIgnoreBottom = "toolbarFnIgnoreBottom"
+		static let toolbarFnIgnoreBottomOverflow = "toolbarFnIgnoreBottomOverflow"
 		/// Whether each bar collapses its overflow-flagged functions into
 		/// a single trailing menu icon. Two independent switches (top and
 		/// bottom no longer share one Bool) -- replaces the pre-unification
@@ -584,6 +596,7 @@ final class AppDefaults: Sendable {
 		Key.toolbarFnScrollToBottomTop, Key.toolbarFnScrollToBottomTopOverflow, Key.toolbarFnScrollToBottomBottom, Key.toolbarFnScrollToBottomBottomOverflow,
 		Key.toolbarFnReadingTimeRemainingTop, Key.toolbarFnReadingTimeRemainingTopOverflow, Key.toolbarFnReadingTimeRemainingBottom, Key.toolbarFnReadingTimeRemainingBottomOverflow,
 		Key.toolbarFnReadingStatsTop, Key.toolbarFnReadingStatsTopOverflow, Key.toolbarFnReadingStatsBottom, Key.toolbarFnReadingStatsBottomOverflow,
+		Key.toolbarFnIgnoreTop, Key.toolbarFnIgnoreTopOverflow, Key.toolbarFnIgnoreBottom, Key.toolbarFnIgnoreBottomOverflow,
 		Key.toolbarTopUseOverflowMenu,
 		Key.toolbarBottomUseOverflowMenu,
 		Key.toolbarTopFunctionOrder,
@@ -912,7 +925,7 @@ final class AppDefaults: Sendable {
 
 	/// Table-driven key lookup for the unified toolbar model: (inline key,
 	/// overflow key) per (ToolbarFunction, ToolbarBar). A hand-written
-	/// 16-function x 2-bar x 2-role switch would be 64 near-identical
+	/// per-function x 2-bar x 2-role switch would be dozens of near-identical
 	/// cases; this keeps the mapping in one place and the read/write
 	/// dispatch functions below as thin wrappers. Force-unwrapped
 	/// dictionary lookups are safe here because ToolbarFunction/ToolbarBar
@@ -939,7 +952,8 @@ final class AppDefaults: Sendable {
 		.scrollToTop: [.top: (Key.toolbarFnScrollToTopTop, Key.toolbarFnScrollToTopTopOverflow), .bottom: (Key.toolbarFnScrollToTopBottom, Key.toolbarFnScrollToTopBottomOverflow)],
 		.scrollToBottom: [.top: (Key.toolbarFnScrollToBottomTop, Key.toolbarFnScrollToBottomTopOverflow), .bottom: (Key.toolbarFnScrollToBottomBottom, Key.toolbarFnScrollToBottomBottomOverflow)],
 		.readingTimeRemaining: [.top: (Key.toolbarFnReadingTimeRemainingTop, Key.toolbarFnReadingTimeRemainingTopOverflow), .bottom: (Key.toolbarFnReadingTimeRemainingBottom, Key.toolbarFnReadingTimeRemainingBottomOverflow)],
-		.readingStats: [.top: (Key.toolbarFnReadingStatsTop, Key.toolbarFnReadingStatsTopOverflow), .bottom: (Key.toolbarFnReadingStatsBottom, Key.toolbarFnReadingStatsBottomOverflow)]
+		.readingStats: [.top: (Key.toolbarFnReadingStatsTop, Key.toolbarFnReadingStatsTopOverflow), .bottom: (Key.toolbarFnReadingStatsBottom, Key.toolbarFnReadingStatsBottomOverflow)],
+		.ignore: [.top: (Key.toolbarFnIgnoreTop, Key.toolbarFnIgnoreTopOverflow), .bottom: (Key.toolbarFnIgnoreBottom, Key.toolbarFnIgnoreBottomOverflow)]
 	]
 
 	private func toolbarKeys(_ function: ToolbarFunction, _ bar: ToolbarBar) -> (inline: String, overflow: String) {

@@ -156,7 +156,8 @@ The Gestures section's Long-Press Context Menu switch
 (`AppDefaults.articleFullscreenContextMenuEnabled`, default on) controls
 whether `WebViewController.configureContextMenuInteraction()` attaches
 Nectar's own `UIContextMenuInteraction` (prev/next article, read/star/
-loved, next-unread, check-for-updates, share) while fullscreen, or leaves
+loved, next-unread, check-for-updates, Ignore This Work / Ignore Author for
+an AO3 work, share) while fullscreen, or leaves
 it detached so WKWebView's native long-press-to-select-text gesture is
 reachable instead -- the two are mutually exclusive on a long-press, so
 this is framed as a single on/off tradeoff rather than two separate
@@ -195,10 +196,12 @@ past `maxSlots(for:)` — it costs one slot once on (`slotsUsed(excluding:)`'s
 `overflowCost`), so it's subject to the same cap the inline function rows
 already visibly enforce.
 
-The unification is driven by `ToolbarFunction`, a single 13-case,
-`String`-rawValue `CaseIterable` enum (`theme`/`tableOfContents`/`find`/
-`prevNext`/`lock`/`annotations`/`settings`/`checkForUpdates`/`read`/
-`star`/`heart`/`nextUnread`/`action`) that replaces the formerly-disjoint
+The unification is driven by `ToolbarFunction`, a
+`String`-rawValue `CaseIterable` enum (originally `theme`/`tableOfContents`/
+`find`/`prevNext`/`lock`/`annotations`/`settings`/`checkForUpdates`/`read`/
+`star`/`heart`/`nextUnread`/`action`, since extended with the scroll
+functions, `readingTimeRemaining`, `readingStats` and `ignore`; the enum
+in `AppDefaults.swift` is the source of truth for the current list) that replaces the formerly-disjoint
 `ArticleToolbarToggle` (top-only, first 8 cases) and `BottomToolbarToggle`
 (bottom-only, last 5 cases). The `String` rawValue lets a person's chosen
 per-bar display order persist as an array of stable identifiers
@@ -246,7 +249,7 @@ not just whichever bar happened to build its items last.
   on `.top` only is what makes it screen-rightmost on both, matching
   `ArticleViewController`'s identical per-bar branch.
 - **Functions (1)**: exactly one `ToolbarFunctionCell` per
-  `ToolbarFunction.allCases` (17 rows), in this bar's persisted display
+  `ToolbarFunction.allCases` (one row per case), in this bar's persisted display
   order (`AppDefaults.toolbarFunctionOrder(for:)`), configured via
   `configure(function:bar:isOn:isEnabled:)` — no master-switch row in
   this section (that moved to Overflow, item 0, below). Rows support
