@@ -30,7 +30,7 @@ than a separately-invented identifier.
 `manifest.json` (`BackupManifest`) carries `schemaVersion` (currently
 `1`), `appVersion`/`appBuild`, `exportDate`, `accountFolderNames`, and
 `settingsIncluded: Bool`. `schemaVersion` is what makes a later additive
-change (e.g. the blacklist/mute feature noted below) non-breaking — a
+change (e.g. backing up the ignore list, noted below) non-breaking — a
 backup written before a field exists simply omits it, and any importer
 reading an older backup already has to treat "field absent" as a normal
 case. `settingsIncluded` is read by the restore UI (see
@@ -214,15 +214,18 @@ itself — the earlier "needs verification" flag on this (Correction 7 in
 the original plan) is resolved: the code is correct as written for the
 restore case without modification.
 
-## Blacklist / mute feature — flagged for later, not built now
+## Ignore list and future tag/fandom rules
 
-There is currently no muted-tag, blocked-feed, or content-filter concept
-anywhere in the app, and it isn't part of this feature's scope. No
-schema or table is reserved for it now. `manifest.json`'s
-`schemaVersion` field is what makes a later addition like this additive
-rather than a breaking change — whoever specs that feature should decide
-its own storage shape and merge rule (union-merge like annotations if
-it's a set of independent entries, replace-if-different if it's closer
-to a single setting) and loop in whoever owns this backup feature before
-finalizing it, rather than reverse-engineering it from wherever the
-feature happened to land.
+The only content-filter concept in the app is `AO3IgnoreList` (ignored AO3
+works and authors, see `ao3-direct-feed-ingestion.md`). It is stored in the
+app-group `NectarAppGroupUserDefaults` suite, not in `AppDefaults`, so it is
+**not in the backup**: `settingsIncluded` covers `AppDefaults.backupEligibleKeys`
+only, and `BackupRestore` has no reference to the ignore list. A restored
+install starts with no ignore rules.
+
+Adding the list to the backup, and any later rule type (tag, fandom, other
+metadata), is an additive change for `manifest.json`'s `schemaVersion`. Decide
+its storage shape and merge rule when it is specced (union-merge like
+annotations if it is a set of independent entries, replace-if-different if it
+is closer to a single setting), and loop in whoever owns this backup feature
+before finalizing it.

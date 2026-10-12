@@ -40,11 +40,8 @@ cases, into actual behavioral disagreement) across the extractor files:
   since misreading some other `#signin`-bearing notice as a login wall
   would block a fetch that could otherwise have succeeded.)
 
-`AO3IgnoreList` (see below) has its own independent copy of similar
-class-token logic rather than depending on this file — not for lack of a
-shared home, but because `AO3IgnoreList` predates the reconciliation and,
-per its own header comment, is blocked from depending on `Account` in the
-other direction.
+`AO3IgnoreList` (see below) does not use these helpers: it matches on
+`ParsedItem` fields (the work ID and the author URLs), not on HTML.
 
 ## `AO3SummaryExtractor` — tag/user Atom feed entries
 
@@ -276,8 +273,10 @@ for where that synthetic path is invoked.
 
 A `UserDefaults`-backed (app-group suite) allow/deny list of AO3 work IDs
 and author URLs, consulted at `ParsedItem` construction time —
-`shouldExclude(_:)` is called from `RSSParser`/`AtomParser` right after
-mapping raw items to `ParsedItem`s, and from `AO3SearchResultsExtractor`.
+`shouldExclude(_:)` is called right after raw items are mapped to
+`ParsedItem`s: from `RSSParser`/`AtomParser` through the
+`AO3FeedExtending`/`AO3FeedExtensionPoint` seam (see below), and directly
+from `AO3SearchResultsExtractor`.
 Filtering this early is what makes one mechanism simultaneously solve
 "don't show," "don't fetch," and "don't save": an excluded item never
 becomes a persisted `Article` at all, so it never reaches account update,
@@ -295,10 +294,20 @@ becomes a persisted `Article` at all, so it never reaches account update,
   articles, and none is planned — a documented, deliberate scope
   limitation, not an oversight.
 
-Lives in `RSParser` rather than `Account` specifically so every AO3
-ingestion path (native tag/user RSS-Atom, the search extractor, and a
-pasted-link-list import) can reach it without `RSParser` having to depend on
-`Account`.
+Lives in `AO3Kit` (`Modules/AO3Kit/Sources/AO3Kit/AO3IgnoreList.swift`), not
+`RSParser`: `RSParser` cannot depend on `AO3Kit` (the dependency points the
+other way), so `RSSParser`/`AtomParser` reach it through the
+`AO3FeedExtending` protocol and `AO3FeedExtensionPoint.provider` in
+`RSParser`, and `AO3FeedExtension` in `AO3Kit` (the registered provider)
+forwards to `AO3IgnoreList.shouldExclude(_:)`. The search extractor and the
+pasted-link-list import are in `AO3Kit` and call it directly.
+
+The rules are stored in the app-group `NectarAppGroupUserDefaults` suite
+(keys `ao3IgnoredWorkIDs`, `ao3IgnoredAuthorURLs` and the two label
+dictionaries), not in `AppDefaults`, so they are **not part of the backup
+settings allowlist** (`AppDefaults.backupEligibleKeys`) and a restore does
+not bring them back. Where rules are added and managed is in
+`ao3-direct-feed-ingestion.md`.
 
 ## Pasted-AO3-link-list import destinations
 

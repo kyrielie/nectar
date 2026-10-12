@@ -17,7 +17,8 @@ with three fork-specific additions layered on at the `parsedItems`
 construction site in both parsers:
 
 - **`AO3IgnoreList.shouldExclude(_:)`** filters out items from
-  blocked works/authors before they're ever turned into a `ParsedItem` —
+  blocked works/authors right after they're mapped to `ParsedItem`s, before
+  they can become persisted articles —
   one choke point that covers show/fetch/save at once, so a blocked
   work never reaches the database, the timeline, or search. Rules carry
   optional display labels (work title, author name) in two separate
@@ -29,11 +30,23 @@ construction site in both parsers:
   (`workDisplayName(id:)`, `authorDisplayName(url:)`). Labels never affect
   matching. Rules are not retroactive: nothing already stored is touched.
   The person manages them in AO3 settings under Ignored Works and Authors
-  (`AO3IgnoreListView`, swipe to remove), and adds them from the reader's
-  context menu ("Ignore This Work", and "Ignore Author" when the article's
-  author has an AO3 URL; one row per author when there are several), each
-  behind a confirmation alert. The menu rows are hidden for anything that
-  is not a single AO3 work (`AO3FetchPolicy.workID(fromBookKey:)` is nil).
+  (`AO3IgnoreListView`, swipe to remove). Rules are added from the open
+  article in two places that share one implementation
+  (`ArticleIgnoreActions`, `iOS/Article/ArticleIgnoreActions.swift`):
+  "Ignore This Work", and "Ignore Author" when the article's author has an
+  AO3 URL (one row per author when there are several), each behind a
+  confirmation alert.
+  - The reader's press-and-hold context menu. It is attached only on iPhone
+    while reading full screen with the navigation bar hidden, and only when
+    the Long-Press Context Menu setting is on
+    (`WebViewController.configureContextMenuInteraction()`).
+  - The toolbar's **Ignore Work or Author** function (`ToolbarFunction.ignore`),
+    which works in normal reading and on iPad. It is off until placed:
+    Settings, Articles, Toolbars, then either put it on a bar or in that bar's
+    overflow menu. Placed on a bar it opens a menu of the same rows;
+    in the overflow menu the rows are listed directly.
+  The rows are absent, and the toolbar item is disabled, for anything that is
+  not a single AO3 work (`AO3FetchPolicy.workID(fromBookKey:)` is nil).
 - **`AO3SummaryExtractor.extract(fromSummaryHTML:)`** (`RSSItem.toParsedItem`
   only — Atom items don't carry AO3's summary HTML in the same shape) tries
   to parse AO3's machine-generated summary HTML into structured fields

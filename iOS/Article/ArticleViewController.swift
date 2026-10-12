@@ -86,6 +86,9 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	private lazy var scrollToBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollToBottom, style: .plain, target: self, action: #selector(scrollToBottom(_:)))
 	private lazy var readingTimeRemainingBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "timer"), style: .plain, target: nil, action: nil)
 	private lazy var readingStatsBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "chart.bar"), style: .plain, target: self, action: #selector(showReadingStatsFromToolbar(_:)))
+	// Tapping shows a menu of ArticleIgnoreActions for the current article. The
+	// menu and isEnabled are set per article by updateIgnoreItems(), not here.
+	private lazy var ignoreBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "eye.slash"), menu: nil)
 	// Optional collapsed-toolbar mode, independently per bar
 	// (AppDefaults.toolbarTopUseOverflowMenu/toolbarBottomUseOverflowMenu).
 	// Menu is rebuilt in place by rebuildOverflowMenu(for:) rather than
@@ -160,6 +163,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	private lazy var scrollToBottomBottomBarButtonItem = UIBarButtonItem(image: Assets.Images.scrollToBottom, style: .plain, target: self, action: #selector(scrollToBottom(_:)))
 	private lazy var readingTimeRemainingBottomBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "timer"), style: .plain, target: nil, action: nil)
 	private lazy var readingStatsBottomBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "chart.bar"), style: .plain, target: self, action: #selector(showReadingStatsFromToolbar(_:)))
+	private lazy var ignoreBottomBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "eye.slash"), menu: nil)
 
 	/// The live UIBarButtonItem instance(s) `function` contributes on
 	/// `bar` specifically -- see the "Cross-bar duplicate support"
@@ -205,6 +209,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		case (.readingTimeRemaining, .bottom): return [readingTimeRemainingBottomBarButtonItem]
 		case (.readingStats, .top): return [readingStatsBarButtonItem]
 		case (.readingStats, .bottom): return [readingStatsBottomBarButtonItem]
+		case (.ignore, .top): return [ignoreBarButtonItem]
+		case (.ignore, .bottom): return [ignoreBottomBarButtonItem]
 		}
 	}
 
@@ -519,6 +525,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			allBarButtonItemInstances(for: .heart).forEach { $0.isEnabled = false }
 			allBarButtonItemInstances(for: .action).forEach { $0.isEnabled = false }
 			allBarButtonItemInstances(for: .checkForUpdates).forEach { $0.isEnabled = false }
+			updateIgnoreItems()
 			rebuildOverflowMenu(for: .top)
 			rebuildOverflowMenu(for: .bottom)
 			return
@@ -597,8 +604,22 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			allBarButtonItemInstances(for: .scrollBack).forEach { $0.isEnabled = available }
 		}
 
+		updateIgnoreItems()
 		rebuildOverflowMenu(for: .top)
 		rebuildOverflowMenu(for: .bottom)
+	}
+
+	/// Points the Ignore toolbar item(s) at the current article's actions. The
+	/// actions are built from this controller's own `article`, not the page view
+	/// controller's, so the menu can't lag behind during a page transition. No
+	/// actions (not an AO3 work, or no article) means no menu and a disabled item.
+	private func updateIgnoreItems() {
+		let actions = ArticleIgnoreActions.actions(for: article, presenter: self)
+		for item in allBarButtonItemInstances(for: .ignore) {
+			item.menu = actions.isEmpty ? nil : UIMenu(title: "", children: actions)
+			item.isEnabled = !actions.isEmpty
+			item.accLabelText = ToolbarFunction.ignore.title
+		}
 	}
 
 	@objc private func readingTimeUsageDidChange(_ note: Notification) { updateReadingTimeItems() }
@@ -847,6 +868,10 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			return [UIAction(title: function.title, image: function.icon) { [weak self] _ in
 				self?.showReadingStatsFromToolbar(self as Any)
 			}]
+		case .ignore:
+			// Empty (nothing added to the menu) unless the open article is a
+			// single AO3 work; same rule as the reader's context menu.
+			return ArticleIgnoreActions.actions(for: article, presenter: self)
 		}
 	}
 

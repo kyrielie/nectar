@@ -794,6 +794,9 @@
     "Ignore Work" : {
       "comment" : "Command"
     },
+    "Ignore Work or Author" : {
+      "comment" : "Toolbar function: hide future feed items for the open AO3 work or its author"
+    },
     "Ignored Works and Authors" : {
       "comment" : "AO3 settings: ignore list row title"
     },
