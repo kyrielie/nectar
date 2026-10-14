@@ -66,6 +66,55 @@ import Foundation
 		#expect(decoded.familyVariant == nil)
 	}
 
+	private static func rawPlist(_ keys: String) -> Data {
+		Data("""
+		<?xml version="1.0" encoding="UTF-8"?>
+		<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+		<plist version="1.0">
+		<dict>
+		\(keys)
+		</dict>
+		</plist>
+		""".utf8)
+	}
+
+	/// Upstream's synthesized decoder throws when any key is missing. Nectar's must not.
+	@Test func emptyDictionaryDecodesWithDefaults() throws {
+		let decoded = try PropertyListDecoder().decode(ArticleThemePlist.self, from: Self.rawPlist(""))
+		#expect(decoded.name == "")
+		#expect(decoded.creatorName == "")
+		#expect(decoded.version == 0)
+		#expect(decoded.family == nil)
+	}
+
+	@Test func versionAcceptsStringAndRealAndIgnoresGarbage() throws {
+		func version(_ xml: String) throws -> Int {
+			try PropertyListDecoder().decode(ArticleThemePlist.self, from: Self.rawPlist("<key>Version</key>\(xml)")).version
+		}
+		#expect(try version("<integer>3</integer>") == 3)
+		#expect(try version("<string>2</string>") == 2)
+		#expect(try version("<real>4.0</real>") == 4)
+		#expect(try version("<string>one</string>") == 0)
+		#expect(try version("<true/>") == 0)
+	}
+
+	@Test func wrongTypedStringsDoNotThrow() throws {
+		let data = Self.rawPlist("<key>Name</key><array/><key>CreatorName</key><integer>7</integer><key>CreatorHomePage</key><string>  https://example.com  </string>")
+		let decoded = try PropertyListDecoder().decode(ArticleThemePlist.self, from: data)
+		#expect(decoded.name == "")
+		#expect(decoded.creatorName == "7")
+		#expect(decoded.creatorHomePage == "https://example.com")
+	}
+
+	@Test func nonDictionaryPlistYieldsNilNotAThrow() {
+		let array = Data("""
+		<?xml version="1.0" encoding="UTF-8"?>
+		<plist version="1.0"><array/></plist>
+		""".utf8)
+		#expect(ArticleThemePlist.lenient(from: array) == nil)
+		#expect(ArticleThemePlist.lenient(from: Data("not a plist".utf8)) == nil)
+	}
+
 	/// Every actually-shipped Info.plist, in Themes/ (app-embedded) or
 	/// gallery-themes/ (gallery-only), must still decode -- catches any future
 	/// accidental key removal or a malformed hand-edit of the plist XML. Checking

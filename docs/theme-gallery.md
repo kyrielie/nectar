@@ -321,6 +321,33 @@ Verified when this was written: `nnw-theme package` (the validation and packagin
 half of `check`) accepts all six listed bundles with both 2.0.2 and 2.1.0. The WebKit
 render half of `check` needs a browser download and was not run outside CI.
 
+## Upstream pin test
+
+`gallery/test_upstream_pins.py` pins the eight NetNewsWire-origin bundles in `Themes/`
+(Appanoose, Biblioteca, Hyperlegible, NewsFax, Promenade, Sepia, Tiqoe Dark, Verdana
+Revival) to upstream, file by file. `UPSTREAM` holds the SHA-256 of all 25 files at one
+upstream commit (`UPSTREAM_COMMIT`, path `Resources/Themes/` in
+`Ranchero-Software/NetNewsWire`). Every file must equal its upstream hash unless it is
+listed in `INTENTIONAL_DELTAS`, where it must equal the recorded Nectar hash instead.
+The suite fails on an unlisted edit, on a listed file edited without re-pinning, on a
+listed file that has become identical to upstream, and on a file added to or missing
+from a bundle. It runs with the rest of `python3 -m unittest discover -s gallery`, needs
+no network and no Xcode.
+
+Each delta carries a reason. Permanent ones: Appanoose's `ThemeIdentifier` (upstream's
+`starter` is rejected by `test_no_placeholder_metadata`) and its removed
+`[[time_short]]` line (the renderer strips the time only from `datetime_*`), and
+Biblioteca's appended AO3 CSS and its `#bodyContainer`/`articleBody` container (the
+color probe loads no `main.js`, so a runtime fix would leave the probe without
+`.articleBody`). Entries marked `PENDING REVERT` are scanner-driven or redundant edits
+waiting on the probe check described in `theme-testing.md`.
+
+After an intentional bundle change, run `python3 gallery/test_upstream_pins.py --print`
+and paste the output over `INTENTIONAL_DELTAS`. Moving the upstream pin means
+regenerating `UPSTREAM` from the new commit by hand; the test does not fetch anything.
+Editing any of these bundles' CSS or template also requires regenerating
+`ThemeColorTable.json` (see `theme-testing.md`).
+
 ## `gallery.yml`
 
 `.github/workflows/gallery.yml` runs `gallery/build.py` (without waiting for

@@ -4,7 +4,10 @@
 //
 //  Covers the theme import rules: the pre-flight archive validator
 //  (ArticleThemeArchiveValidator), the on-disk bundle validator
-//  (ArticleThemeBundleValidator), and the download checks. The upstream
+//  (ArticleThemeBundleValidator), and the download checks. Safety rules
+//  (paths, links, sizes, zip features) reject; layout never does: extra files,
+//  subfolders, wrapper folders, several bundles and missing theme files all
+//  load. The only layout failure is an archive with no .nnwtheme folder. The upstream
 //  fixtures at the bottom are copied verbatim from NetNewsWire
 //  `Tests/NetNewsWireTests/ThemeUnzipTests.swift` (tag mac-7.2b4). Every other
 //  archive is built in this file by `ZipBuilder`, so each fixture is reviewable.
@@ -123,39 +126,127 @@ import Foundation
 		try expectRejected(zip.build())
 	}
 
-	@Test func twoTopLevelBundlesAreRejected() throws {
-		var zip = validBundle()
-		zip.addFile("Other.nnwtheme/Info.plist", "x")
-		zip.addFile("Other.nnwtheme/stylesheet.css", "x")
-		zip.addFile("Other.nnwtheme/template.html", "x")
-		try expectRejected(zip.build())
+	@Test func twoTopLevelBundlesPickOneDeterministically() throws {
+		// The same two bundles in either archive order give the same answer.
+		for order in [["Good", "Other"], ["Other", "Good"]] {
+			var zip = ZipBuilder()
+			for name in order {
+				zip.addFile("\(name).nnwtheme/Info.plist", "x")
+				zip.addFile("\(name).nnwtheme/stylesheet.css", "x")
+				zip.addFile("\(name).nnwtheme/template.html", "x")
+			}
+			let validated = try ArticleThemeArchiveValidator.validate(data: zip.build())
+			#expect(validated.bundleName == "Good.nnwtheme")
+			#expect(validated.fileNames == ["Info.plist", "stylesheet.css", "template.html"])
+		}
 	}
 
-	@Test func nestedBundleIsRejected() throws {
+	@Test func bundleWithThemeFilesBeatsEmptyBundle() throws {
+		var zip = ZipBuilder()
+		zip.addFile("Aaa.nnwtheme/readme.txt", "x")
+		zip.addFile("Zzz.nnwtheme/stylesheet.css", "x")
+		let validated = try ArticleThemeArchiveValidator.validate(data: zip.build())
+		#expect(validated.bundleName == "Zzz.nnwtheme")
+	}
+
+	@Test func nestedBundleIsAccepted() throws {
+		let root = try makeRoot()
+		defer { try? FileManager.default.removeItem(at: root) }
+
 		var zip = ZipBuilder()
 		zip.addFile("Wrapper/Good.nnwtheme/Info.plist", "x")
 		zip.addFile("Wrapper/Good.nnwtheme/stylesheet.css", "x")
 		zip.addFile("Wrapper/Good.nnwtheme/template.html", "x")
-		try expectRejected(zip.build())
+		zip.addFile("Wrapper/notes.txt", "x")
+
+		let validated = try ArticleThemeArchiveValidator.validate(data: zip.build())
+		#expect(validated.bundleName == "Good.nnwtheme")
+		#expect(validated.bundlePath == "Wrapper/Good.nnwtheme")
+
+		let zipURL = try writeZip(zip.build(), to: root)
+		let destination = root.appendingPathComponent("extract")
+		let themeURL = try ArticleThemeDownloader.shared.unzipTheme(at: zipURL, to: destination)
+		#expect(themeURL.lastPathComponent == "Good.nnwtheme")
+		#expect(try FileManager.default.contentsOfDirectory(atPath: destination.path) == ["Good.nnwtheme"])
 	}
 
-	@Test func extraFileIsRejected() throws {
+	@Test func extraFilesAreIgnoredNotRejected() throws {
+		let root = try makeRoot()
+		defer { try? FileManager.default.removeItem(at: root) }
+
 		var zip = validBundle()
 		zip.addFile("Good.nnwtheme/readme.txt", "x")
-		try expectRejected(zip.build())
+		zip.addFile("Good.nnwtheme/screenshot.png", "x")
+		zip.addFile("Good.nnwtheme/script.js", "x")
+
+		let zipURL = try writeZip(zip.build(), to: root)
+		let themeURL = try ArticleThemeDownloader.shared.unzipTheme(at: zipURL, to: root.appendingPathComponent("extract"))
+		let names = try FileManager.default.contentsOfDirectory(atPath: themeURL.path).sorted()
+		#expect(names == ["Info.plist", "stylesheet.css", "template.html"])
 	}
 
-	@Test func subfolderIsRejected() throws {
+	@Test func subfolderIsIgnoredNotRejected() throws {
+		let root = try makeRoot()
+		defer { try? FileManager.default.removeItem(at: root) }
+
 		var zip = validBundle()
 		zip.addFile("Good.nnwtheme/img/logo.png", "x")
-		try expectRejected(zip.build())
+		zip.addFile("Good.nnwtheme/fonts/a/b/font.woff", "x")
+
+		let zipURL = try writeZip(zip.build(), to: root)
+		let themeURL = try ArticleThemeDownloader.shared.unzipTheme(at: zipURL, to: root.appendingPathComponent("extract"))
+		let names = try FileManager.default.contentsOfDirectory(atPath: themeURL.path).sorted()
+		#expect(names == ["Info.plist", "stylesheet.css", "template.html"])
 	}
 
-	@Test func missingRequiredFileIsRejected() throws {
+	@Test func wrongCaseThemeFilesAreKeptUnderCanonicalNames() throws {
+		var zip = ZipBuilder()
+		zip.addFile("Good.nnwtheme/info.plist", "x")
+		zip.addFile("Good.nnwtheme/Stylesheet.CSS", "x")
+		zip.addFile("Good.nnwtheme/TEMPLATE.HTML", "x")
+		let validated = try ArticleThemeArchiveValidator.validate(data: zip.build())
+		#expect(validated.fileNames == ["Info.plist", "stylesheet.css", "template.html"])
+	}
+
+	@Test func uppercaseBundleSuffixIsNormalizedOnInstall() throws {
+		let root = try makeRoot()
+		defer { try? FileManager.default.removeItem(at: root) }
+
+		var zip = ZipBuilder()
+		zip.addFile("Good.NNWTHEME/Info.plist", "x")
+		zip.addFile("Good.NNWTHEME/stylesheet.css", "x")
+		zip.addFile("Good.NNWTHEME/template.html", "x")
+		let zipURL = try writeZip(zip.build(), to: root)
+		let themeURL = try ArticleThemeDownloader.shared.unzipTheme(at: zipURL, to: root.appendingPathComponent("extract"))
+		#expect(themeURL.lastPathComponent == "Good.nnwtheme")
+	}
+
+	@Test func missingThemeFilesAreAccepted() throws {
+		let root = try makeRoot()
+		defer { try? FileManager.default.removeItem(at: root) }
+
 		var zip = ZipBuilder()
 		zip.addFile("Good.nnwtheme/Info.plist", "x")
 		zip.addFile("Good.nnwtheme/template.html", "x")
-		try expectRejected(zip.build())
+		var onlyCSS = ZipBuilder()
+		onlyCSS.addFile("Only.nnwtheme/stylesheet.css", "x")
+
+		for (index, builder) in [zip, onlyCSS].enumerated() {
+			let dir = root.appendingPathComponent("case\(index)")
+			try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+			let zipURL = try writeZip(builder.build(), to: dir)
+			let themeURL = try ArticleThemeDownloader.shared.unzipTheme(at: zipURL, to: dir.appendingPathComponent("extract"))
+			#expect(themeURL.lastPathComponent.hasSuffix(".nnwtheme"))
+		}
+	}
+
+	@Test func archiveWithNoBundleFolderReportsNoThemeFile() throws {
+		var zip = ZipBuilder()
+		zip.addFile("readme.txt", "x")
+		zip.addFile("Pack/stylesheet.css", "x")
+		#expect(throws: DownloaderError.self) {
+			_ = try ArticleThemeArchiveValidator.validate(data: zip.build())
+		}
 	}
 
 	@Test func bundleNameTricksAreRejected() throws {
@@ -262,32 +353,45 @@ import Foundation
 		}
 	}
 
-	@Test func localBundleWithSubfolderOrExtraFileIsRejected() throws {
+	@Test func localBundleWithSubfolderOrExtraFileIsAcceptedAndPruned() throws {
 		let root = try makeRoot()
 		defer { try? FileManager.default.removeItem(at: root) }
 
 		let bundle = try makeLocalBundle(in: root)
 		try FileManager.default.createDirectory(at: bundle.appendingPathComponent("img"), withIntermediateDirectories: false)
-		#expect(throws: DownloaderError.self) {
-			try ArticleThemeBundleValidator.validate(directory: bundle)
-		}
-		try FileManager.default.removeItem(at: bundle.appendingPathComponent("img"))
-
 		try Data("x".utf8).write(to: bundle.appendingPathComponent("script.js"))
-		#expect(throws: DownloaderError.self) {
-			try ArticleThemeBundleValidator.validate(directory: bundle)
-		}
+		try Data("x".utf8).write(to: bundle.appendingPathComponent("License.md"))
+		try ArticleThemeBundleValidator.validate(directory: bundle)
+
+		let copy = root.appendingPathComponent("copy.nnwtheme")
+		try ArticleThemeBundleValidator.copyInstallableFiles(from: bundle, to: copy)
+		let names = try FileManager.default.contentsOfDirectory(atPath: copy.path).sorted()
+		#expect(names == ["Info.plist", "License.md", "stylesheet.css", "template.html"])
 	}
 
-	@Test func localBundleMissingRequiredFileIsRejected() throws {
+	@Test func localBundleMissingThemeFilesIsAccepted() throws {
 		let root = try makeRoot()
 		defer { try? FileManager.default.removeItem(at: root) }
 
 		let bundle = try makeLocalBundle(in: root)
 		try FileManager.default.removeItem(at: bundle.appendingPathComponent("template.html"))
-		#expect(throws: DownloaderError.self) {
-			try ArticleThemeBundleValidator.validate(directory: bundle)
-		}
+		try FileManager.default.removeItem(at: bundle.appendingPathComponent("Info.plist"))
+		try ArticleThemeBundleValidator.validate(directory: bundle)
+	}
+
+	@Test func themeWithoutUsableInfoPlistStillLoads() throws {
+		let root = try makeRoot()
+		defer { try? FileManager.default.removeItem(at: root) }
+
+		let bundle = try makeLocalBundle(in: root) // Info.plist holds "x", which is not a plist
+		let theme = try ArticleTheme(url: bundle, isAppTheme: false)
+		#expect(theme.name == "Local")
+		#expect(theme.creatorName == "Unknown")
+		#expect(theme.creatorHomePage == "Unknown")
+
+		try FileManager.default.removeItem(at: bundle.appendingPathComponent("Info.plist"))
+		let noPlist = try ArticleTheme(url: bundle, isAppTheme: false)
+		#expect(noPlist.name == "Local")
 	}
 
 	@Test func localBundleJunkIsToleratedButMustBeRegular() throws {

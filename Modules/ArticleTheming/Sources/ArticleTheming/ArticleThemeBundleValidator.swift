@@ -2,9 +2,15 @@
 //  ArticleThemeBundleValidator.swift
 //  ArticleTheming
 //
-//  Validates an on-disk `.nnwtheme` folder: either one just extracted from an
+//  Checks an on-disk `.nnwtheme` folder: either one just extracted from an
 //  archive (defense in depth after `ArticleThemeArchiveValidator`) or one the
 //  user opened from Files (D17). Uses `lstat` so symlinks are never followed.
+//
+//  Safety rules reject: a link or special file at the top level, an unreadable
+//  entry, or kept files that add up past the size cap. Layout never rejects:
+//  subfolders, unknown files and missing theme files are tolerated, and
+//  `copyInstallableFiles(from:to:)` leaves them behind, so only the three theme
+//  files and `LICENSE*` / `NOTICE*` ever reach the Themes folder.
 //
 
 import Foundation
@@ -13,8 +19,9 @@ public enum ArticleThemeBundleValidator {
 
 	private typealias Failure = ArticleThemeDownloader.ArticleThemeDownloaderError
 
-	/// Throws `invalidArchive` if the folder is not a plain theme bundle.
-	/// Junk (`.DS_Store`, `._*`) is tolerated but must still be a regular file.
+	/// Throws `invalidArchive` only for safety problems. Subfolders are ignored and never
+	/// entered. Junk (`.DS_Store`, `._*`) and unknown files are tolerated but, like
+	/// every other top-level entry, must not be a link or special file.
 	public static func validate(directory: URL) throws {
 		let path = directory.path
 
@@ -23,50 +30,53 @@ public enum ArticleThemeBundleValidator {
 		}
 
 		let names = try FileManager.default.contentsOfDirectory(atPath: path)
-		var present = Set<String>()
-		var total: UInt64 = 0
+		var keptTotal: UInt64 = 0
 
 		for name in names {
-			guard !name.isEmpty, !name.contains("/"), !name.contains("\\"),
-				  !name.unicodeScalars.contains(where: { $0.value < 0x20 || $0.value == 0x7F }) else {
-				throw Failure.invalidArchive("The theme contains an invalid file name.")
-			}
 			let child = (path as NSString).appendingPathComponent(name)
 			guard let childStat = statInfo(atPath: child) else {
 				throw Failure.invalidArchive("The theme could not be read.")
 			}
+			if isDirectory(childStat.mode) {
+				continue // ignored, not entered
+			}
 			guard isRegularFile(childStat.mode) else {
-				throw Failure.invalidArchive("The theme contains a link, folder or special file: \(name).")
+				throw Failure.invalidArchive("The theme contains a link or special file: \(name).")
+			}
+			guard ArticleThemeArchiveValidator.canonicalFileName(for: name) != nil else {
+				continue // regular but not kept: ignored
 			}
 
-			let isJunk = name == ".DS_Store" || name.hasPrefix("._")
-			if !isJunk {
-				guard ArticleThemeArchiveValidator.isAllowedFileName(name) else {
-					throw Failure.invalidArchive("The theme folder contains an unexpected file: \(name).")
-				}
-				present.insert(name)
-			}
-
-			let (sum, overflow) = total.addingReportingOverflow(childStat.size)
+			let (sum, overflow) = keptTotal.addingReportingOverflow(childStat.size)
 			guard !overflow, sum <= ArticleThemeArchiveValidator.maxExpandedSize else {
 				throw Failure.tooLarge
 			}
-			total = sum
-		}
-
-		for required in ArticleThemeArchiveValidator.requiredFileNames where !present.contains(required) {
-			throw Failure.invalidArchive("The theme is missing \(required).")
+			keptTotal = sum
 		}
 	}
 
-	/// Removes `.DS_Store` and `._*` files from a validated bundle folder.
-	public static func removeJunk(in directory: URL) {
+	/// Copies the kept files of `source` into a new folder at `destination`, using their
+	/// canonical names. Anything else is left behind: subfolders, junk, unknown files,
+	/// and any entry that is not a regular file (checked with `lstat`, never followed).
+	/// Call `validate(directory:)` first; this only guarantees what it copies.
+	public static func copyInstallableFiles(from source: URL, to destination: URL) throws {
 		let fileManager = FileManager.default
-		guard let names = try? fileManager.contentsOfDirectory(atPath: directory.path) else {
-			return
-		}
-		for name in names where name == ".DS_Store" || name.hasPrefix("._") {
-			try? fileManager.removeItem(at: directory.appendingPathComponent(name))
+		try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
+
+		for name in try fileManager.contentsOfDirectory(atPath: source.path).sorted() {
+			guard let canonical = ArticleThemeArchiveValidator.canonicalFileName(for: name) else {
+				continue
+			}
+			let from = source.appendingPathComponent(name)
+			guard let info = statInfo(atPath: from.path), isRegularFile(info.mode) else {
+				continue
+			}
+			let to = destination.appendingPathComponent(canonical)
+			// Two spellings of one name can coexist on a case-sensitive volume; first wins.
+			guard !fileManager.fileExists(atPath: to.path) else {
+				continue
+			}
+			try fileManager.copyItem(at: from, to: to)
 		}
 	}
 

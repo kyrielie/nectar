@@ -3,19 +3,38 @@
 //  ArticleTheming
 //
 //  Validates a downloaded theme archive by reading only its central directory,
-//  before any byte is extracted. The rules mirror the upstream `nnw-theme`
-//  validator (D15, D16 in the theme color probe plan): exactly one top-level
-//  `<Name>.nnwtheme` folder holding only `Info.plist`, `template.html`,
-//  `stylesheet.css` and optional `LICENSE*` / `NOTICE*` files.
+//  before any byte is extracted.
+//
+//  Two tiers, kept apart on purpose:
+//
+//  - Safety rules reject the archive. They protect the device and the extractor:
+//    size caps, path escapes, links, duplicate paths, and zip features the
+//    extraction library cannot handle.
+//  - Layout rules never reject. Themes are community work, so an archive with
+//    extra files, subfolders, a wrapper folder, several bundles or missing
+//    theme files still loads. The validator picks one bundle folder and reports
+//    which files inside it will be kept; everything else is dropped at
+//    extraction time (see `ArticleThemeDownloader.unzipTheme`). The only layout
+//    failure left is an archive with no `.nnwtheme` folder at all, which is
+//    also what upstream NetNewsWire reports.
+//
+//  Upstream NetNewsWire does no layout validation: it extracts, then takes the
+//  first `.nnwtheme` it finds anywhere. The stricter layout rules that used to
+//  live here came from the `nnw-theme` authoring linter, which is a publishing
+//  gate for theme authors, not an import gate for readers.
 //
 
 import Foundation
 
 /// The outcome of a successful archive validation.
 public struct ValidatedArchive: Sendable, Equatable {
-	/// The single top-level bundle folder, for example `Sepia.nnwtheme`.
+	/// The chosen `.nnwtheme` folder's own name, for example `Sepia.nnwtheme`.
 	public let bundleName: String
-	/// Names of the files inside the bundle folder (junk entries excluded).
+	/// Path of the chosen folder inside the archive. Equal to `bundleName` unless
+	/// the bundle sits inside a wrapper folder, for example `Pack/Sepia.nnwtheme`.
+	public let bundlePath: String
+	/// Names of the files inside the chosen folder that will be kept, in canonical
+	/// spelling (junk, unknown files and subfolders excluded).
 	public let fileNames: [String]
 	/// Sum of the declared uncompressed sizes of every entry, junk included.
 	public let totalUncompressedSize: UInt64
@@ -26,6 +45,10 @@ public enum ArticleThemeArchiveValidator {
 	public static let maxCompressedSize: UInt64 = 10_000_000
 	public static let maxExpandedSize: UInt64 = 50 * 1024 * 1024
 
+	/// The three files a theme normally has. None is required for an import to succeed:
+	/// a missing `template.html` or `stylesheet.css` falls back to the app default
+	/// (see `ArticleTheme`), and a missing or odd `Info.plist` falls back to the
+	/// folder name. The list names the files that are kept when present.
 	public static let requiredFileNames: [String] = ["Info.plist", "template.html", "stylesheet.css"]
 
 	private typealias Failure = ArticleThemeDownloader.ArticleThemeDownloaderError
@@ -251,19 +274,27 @@ public enum ArticleThemeArchiveValidator {
 		return first == "__MACOSX" || last == ".DS_Store" || last.hasPrefix("._")
 	}
 
-	static func isAllowedFileName(_ name: String) -> Bool {
-		if requiredFileNames.contains(name) {
-			return true
-		}
+	/// The canonical spelling of a file the importer keeps, or nil for anything else.
+	/// The three theme files match case-insensitively (`Stylesheet.CSS` is kept as
+	/// `stylesheet.css`); `LICENSE*` and `NOTICE*` keep their own spelling.
+	static func canonicalFileName(for name: String) -> String? {
 		let lowered = name.lowercased()
-		for stem in ["license", "notice"] where lowered == stem || lowered.hasPrefix(stem + ".") {
-			return true
+		if let known = requiredFileNames.first(where: { $0.lowercased() == lowered }) {
+			return known
 		}
-		return false
+		for stem in ["license", "notice"] where lowered == stem || lowered.hasPrefix(stem + ".") {
+			return name
+		}
+		return nil
+	}
+
+	static func isAllowedFileName(_ name: String) -> Bool {
+		canonicalFileName(for: name) != nil
 	}
 
 	private static func checkLayout(_ entries: [Entry]) throws -> ValidatedArchive {
-		// Duplicates, compared after NFC and case folding, junk included.
+		// Safety: duplicates, compared after NFC and case folding, junk included, and the
+		// declared expanded size.
 		var seen = Set<String>()
 		var total: UInt64 = 0
 		for entry in entries {
@@ -278,40 +309,66 @@ public enum ArticleThemeArchiveValidator {
 			total = sum
 		}
 
+		// Layout: never rejects. Pick one bundle folder; the rest is ignored.
 		let kept = entries.filter { !isJunk(path: $0.path) }
-		var topLevel = Set<String>()
-		for entry in kept {
-			topLevel.insert(String(entry.path.split(separator: "/", maxSplits: 1)[0]))
-		}
-		guard topLevel.count == 1, let bundleName = topLevel.first else {
-			throw fail("The archive must contain exactly one .nnwtheme folder.")
-		}
-		let lowered = bundleName.lowercased()
-		guard lowered.hasSuffix(".nnwtheme"), lowered != ".nnwtheme" else {
-			throw fail("The archive must contain exactly one .nnwtheme folder.")
+		guard let bundle = chooseBundle(in: kept) else {
+			throw Failure.noThemeFile
 		}
 
+		let prefix = bundle.path + "/"
 		var fileNames: [String] = []
-		for entry in kept {
+		for entry in kept where !entry.isDirectory && entry.path.hasPrefix(prefix) {
+			let rest = String(entry.path.dropFirst(prefix.count))
+			if !rest.contains("/"), let canonical = canonicalFileName(for: rest) {
+				fileNames.append(canonical)
+			}
+		}
+		return ValidatedArchive(bundleName: bundle.name, bundlePath: bundle.path, fileNames: fileNames.sorted(), totalUncompressedSize: total)
+	}
+
+	/// Every path component that ends in `.nnwtheme` and is a folder (a directory entry,
+	/// or the parent of another entry) is a candidate, at any depth, as upstream's deep
+	/// search allows. Preference: a folder that directly holds a theme file, then the
+	/// shallowest, then the name in NFC with case folded, so the choice never depends on
+	/// archive order.
+	private static func chooseBundle(in entries: [Entry]) -> (path: String, name: String)? {
+		struct Candidate {
+			let path: String
+			let name: String
+			let depth: Int
+			var hasThemeFile = false
+			var sortKey: String { name.precomposedStringWithCanonicalMapping.lowercased() }
+		}
+		var candidates: [String: Candidate] = [:]
+
+		for entry in entries {
 			let components = entry.path.split(separator: "/").map(String.init)
-			if components.count == 1 {
-				guard entry.isDirectory else {
-					throw fail("The .nnwtheme item in the archive is a file, not a folder.")
+			for (index, component) in components.enumerated() {
+				let lowered = component.lowercased()
+				guard lowered.hasSuffix(".nnwtheme"), lowered != ".nnwtheme" else {
+					continue
 				}
-				continue
+				if index == components.count - 1, !entry.isDirectory {
+					continue // a file that happens to be named like a bundle
+				}
+				let path = components[0...index].joined(separator: "/")
+				let key = path.precomposedStringWithCanonicalMapping.lowercased()
+				if candidates[key] == nil {
+					candidates[key] = Candidate(path: path, name: component, depth: index)
+				}
+				if index == components.count - 2, !entry.isDirectory,
+				   requiredFileNames.contains(where: { $0.lowercased() == components[index + 1].lowercased() }) {
+					candidates[key]?.hasThemeFile = true
+				}
 			}
-			guard components.count == 2, !entry.isDirectory else {
-				throw fail("The theme folder must not contain subfolders.")
-			}
-			guard isAllowedFileName(components[1]) else {
-				throw fail("The theme folder contains an unexpected file: \(components[1]).")
-			}
-			fileNames.append(components[1])
 		}
-		for required in requiredFileNames where !fileNames.contains(required) {
-			throw fail("The theme is missing \(required).")
+
+		let best = candidates.values.min { a, b in
+			if a.hasThemeFile != b.hasThemeFile { return a.hasThemeFile }
+			if a.depth != b.depth { return a.depth < b.depth }
+			return a.sortKey < b.sortKey
 		}
-		return ValidatedArchive(bundleName: bundleName, fileNames: fileNames.sorted(), totalUncompressedSize: total)
+		return best.map { (path: $0.path, name: $0.name) }
 	}
 
 	// MARK: - Helpers

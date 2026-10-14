@@ -51,6 +51,9 @@
          <TestPlanReference
             reference = "container:Nectar-CI.xctestplan">
          </TestPlanReference>
+         <TestPlanReference
+            reference = "container:Nectar-Performance.xctestplan">
+         </TestPlanReference>
       </TestPlans>
       <MacroExpansion>
          <BuildableReference

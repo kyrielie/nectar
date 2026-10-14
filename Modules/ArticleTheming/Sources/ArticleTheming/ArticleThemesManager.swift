@@ -145,16 +145,25 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 	public func importTheme(filename: String) throws {
 		// Validate before touching the installed copy, so a rejected bundle
 		// can never replace or delete an existing theme.
-		try ArticleThemeBundleValidator.validate(directory: URL(fileURLWithPath: filename))
+		let source = URL(fileURLWithPath: filename)
+		try ArticleThemeBundleValidator.validate(directory: source)
 
 		let filenameLastPathComponent = (filename as NSString).lastPathComponent
 		let toFilename = (folderPath as NSString).appendingPathComponent(filenameLastPathComponent)
 
-		if FileManager.default.fileExists(atPath: toFilename) {
-			try FileManager.default.removeItem(atPath: toFilename)
+		// Build the clean copy (kept files only) outside the Themes folder first, so a
+		// failure while copying also leaves the installed theme alone.
+		let fileManager = FileManager.default
+		let staging = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+		defer { try? fileManager.removeItem(at: staging) }
+		let staged = staging.appendingPathComponent(filenameLastPathComponent, isDirectory: true)
+		try ArticleThemeBundleValidator.copyInstallableFiles(from: source, to: staged)
+
+		if fileManager.fileExists(atPath: toFilename) {
+			try fileManager.removeItem(atPath: toFilename)
 		}
 
-		try FileManager.default.copyItem(atPath: filename, toPath: toFilename)
+		try fileManager.copyItem(at: staged, to: URL(fileURLWithPath: toFilename))
 
 		prewarmTheme(named: ArticleTheme.themeNameForPath(filename))
 	}

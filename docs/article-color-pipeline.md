@@ -151,7 +151,9 @@ measurement nil. The app builds the probe's inputs with
 `ArticleThemeProbeEnvironment.reader()` (`iOS/Article/`). The store drives
 the probe through `ensureMeasured` (see "Theme gate" below); the bundled table is
 described under "Bundled table" below. If the hidden window turns out not to flip `prefers-color-scheme`,
-`ArticleThemeColorProbe.useVisibleHostFallback` is the pre-decided switch.
+`ArticleThemeColorProbe.useVisibleHostFallback` is the pre-decided switch. It is now
+`true`: the first CI run of the probe suites got no read-back from the hidden-window
+host. Re-run the probe suites to confirm the visible host fixes it.
 Tests: `ArticleThemeColorProbeTests` (rendering, written without being run in
 Xcode) and the package's `ArticleThemeColorProbeLogicTests` (pure logic).
 

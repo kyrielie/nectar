@@ -171,6 +171,10 @@ The shape B template has no external-link line. Add `<div class="externalLink">[
 
 #### Required vs optional
 
+This table is the bar for bundles that ship with Nectar or in the gallery. It is an
+authoring standard, not an import rule: a theme a person imports loads even if it
+breaks every row here (see `theme-system.md`, "Two tiers").
+
 | Item | Status | Enforced by |
 |---|---|---|
 | `Name`, `ThemeIdentifier`, `CreatorHomePage`, `CreatorName`, `Version` in `Info.plist` | Required | `REQUIRED_KEYS` in `gallery/build.py` (fails the build) |
@@ -593,10 +597,12 @@ On iOS and macOS, themes can be opened directly in Nectar using the below URL sc
 `nectar://theme/add?url={url}`
 
 When using this URL scheme the theme being shared must be zipped, and the zip must
-contain exactly one top-level `<Name>.nnwtheme` folder holding only `Info.plist`,
-`template.html`, `stylesheet.css` and optional `LICENSE*` / `NOTICE*` files. The URL
-must be `http` or `https` and the file at most 10,000,000 bytes. See `theme-system.md`
-("Archive rules") for the full list of rejected archives.
+contain a `<Name>.nnwtheme` folder. Anything else in the archive is ignored: extra
+files and subfolders are dropped, missing theme files fall back to the app default,
+and a missing or malformed `Info.plist` just means the creator shows as "Unknown". The
+URL must be `http` or `https` and the file at most 10,000,000 bytes. Archives that fail
+a safety rule (path escapes, links, size caps, unsupported zip features) are still
+rejected; see `theme-system.md` ("Two tiers") for the full list.
 
 Parameters:
 - `url`: (mandatory, URL-encoded): The theme's location.
