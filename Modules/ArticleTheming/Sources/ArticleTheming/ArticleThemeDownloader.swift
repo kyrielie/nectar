@@ -118,14 +118,17 @@ public final class ArticleThemeDownloader: Sendable {
 
 	/// Validates, then unzips the archive into `destination`.
 	///
-	/// The central directory is checked before any byte is written. After
-	/// extraction the bundle folder is checked again with `lstat`, junk files
-	/// are removed, and the single `.nnwtheme` folder is returned. `destination`
-	/// is deleted on failure. The zip itself is left for the caller to delete.
+	/// The central directory is checked before any byte is written. After extraction the
+	/// chosen bundle folder is checked again with `lstat` and rebuilt with only the files
+	/// the app uses (`Info.plist`, `template.html`, `stylesheet.css`, `LICENSE*`,
+	/// `NOTICE*`). Extra files, subfolders, wrapper folders and other bundles in the
+	/// archive are dropped, not rejected. `destination` ends up holding just the clean
+	/// bundle folder, and is deleted on failure. The zip itself is left for the caller
+	/// to delete.
 	/// - Parameters:
 	///   - zipURL: Location of the zip archive.
 	///   - destination: A directory that does not exist yet.
-	/// - Returns: The enclosed `.nnwtheme` folder inside `destination`.
+	/// - Returns: The `.nnwtheme` folder inside `destination`.
 	public func unzipTheme(at zipURL: URL, to destination: URL) throws -> URL {
 		let fileManager = FileManager.default
 		do {
@@ -138,23 +141,25 @@ public final class ArticleThemeDownloader: Sendable {
 				throw ArticleThemeDownloaderError.invalidArchive("The archive could not be extracted.")
 			}
 
-			// Keep only the validated bundle folder; drop __MACOSX and other junk.
-			let expectedName = validated.bundleName.precomposedStringWithCanonicalMapping
-			var bundleURL: URL?
-			for name in try fileManager.contentsOfDirectory(atPath: destination.path) {
-				let itemURL = destination.appendingPathComponent(name)
-				if bundleURL == nil, name.precomposedStringWithCanonicalMapping == expectedName {
-					bundleURL = itemURL
-				} else {
-					try? fileManager.removeItem(at: itemURL)
-				}
-			}
-			guard let bundleURL else {
-				throw ArticleThemeDownloaderError.noThemeFile
-			}
+			let extractedBundle = destination.appendingPathComponent(validated.bundlePath, isDirectory: true)
+			try ArticleThemeBundleValidator.validate(directory: extractedBundle)
 
-			try ArticleThemeBundleValidator.validate(directory: bundleURL)
-			ArticleThemeBundleValidator.removeJunk(in: bundleURL)
+			// Rebuild into a uniquely named staging folder so nothing in the archive can
+			// collide with it, then clear the extraction and move the clean bundle in.
+			// The folder suffix is normalized to `.nnwtheme`, which is what the themes
+			// manager lists.
+			let suffix = ArticleTheme.nnwThemeSuffix
+			let installName = String(validated.bundleName.dropLast(suffix.count)) + suffix
+			let staging = destination.appendingPathComponent(".staging-\(UUID().uuidString)", isDirectory: true)
+			let stagedBundle = staging.appendingPathComponent(installName, isDirectory: true)
+			try ArticleThemeBundleValidator.copyInstallableFiles(from: extractedBundle, to: stagedBundle)
+
+			for name in try fileManager.contentsOfDirectory(atPath: destination.path) where name != staging.lastPathComponent {
+				try? fileManager.removeItem(at: destination.appendingPathComponent(name))
+			}
+			let bundleURL = destination.appendingPathComponent(installName, isDirectory: true)
+			try fileManager.moveItem(at: stagedBundle, to: bundleURL)
+			try? fileManager.removeItem(at: staging)
 			return bundleURL
 		} catch {
 			try? fileManager.removeItem(at: destination)

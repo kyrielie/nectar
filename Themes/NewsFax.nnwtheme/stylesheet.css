@@ -13,7 +13,7 @@
 body {
 	margin-left: auto;
 	margin-right: auto;
-	background-color: black;
+	background: black;
 	word-wrap: break-word;
 	max-width: 44em;
 	color: white;

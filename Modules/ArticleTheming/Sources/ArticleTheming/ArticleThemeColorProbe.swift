@@ -40,7 +40,10 @@ import RSCore
 	/// Pre-decided fallback if the hidden window does not flip `prefers-color-scheme`
 	/// (acceptance test 1): keep the window and the web view in it, but make both
 	/// technically visible at near-zero alpha. Never switch to `evaluateJavaScript`.
-	static let useVisibleHostFallback = false
+	/// Now true: the first CI run of the probe suites (iPhone 17 simulator, iOS 26.3.1)
+	/// got no read-back at all from the hidden-window host (every measurement nil, 84
+	/// matrix pages without the requested appearance).
+	static let useVisibleHostFallback = true
 
 	static let messageHandlerName = "themeColorProbe"
 

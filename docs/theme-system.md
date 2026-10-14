@@ -21,7 +21,8 @@ Application Support Themes folder (imported) contains:
 - `stylesheet.css` — the theme's CSS. May start with one or more `@import`
   statements (e.g. a Google Fonts `@import url(...)`), which are handled
   specially (see below).
-- `Info.plist` — theme metadata, decoded into `ArticleThemePlist`:
+- `Info.plist` — theme metadata, decoded into `ArticleThemePlist`. Every key is
+  optional at import (see "Two tiers"); the table is what authors should supply:
 
   | Key | Type | Notes |
   |---|---|---|
@@ -158,11 +159,13 @@ and a failure notification per broken theme per render would spam the user.
 Callers doing a user-initiated import report their own failures instead.
 
 `importTheme(filename:)` first runs `ArticleThemeBundleValidator.validate(directory:)`
-on the source, then copies the `.nnwtheme` directory into the Themes data
-folder (overwriting any existing bundle with the same name). The validation
-runs before the existing copy is removed, so a rejected bundle never replaces
-or deletes an installed theme. `ArticleThemeImporter.importTheme` also
-validates before it reads the bundle for the install alert.
+on the source (safety checks only, see "Two tiers" below), builds a clean copy
+containing just the kept files in a temporary folder, then replaces the
+installed bundle of the same name with it. Both steps run before the existing
+copy is removed, so a rejected bundle, or a copy that fails halfway, never
+replaces or deletes an installed theme. `ArticleThemeImporter.importTheme` also
+validates before it reads the bundle for the install alert, and offers "Show
+Website" only when `CreatorHomePage` is an http or https address.
 `deleteTheme(themeName:)` removes an installed bundle by resolved path.
 
 ## Third-party theme download and import
@@ -185,35 +188,67 @@ downloaded `.zip`-wrapped theme:
    deletes the zip afterwards.
 3. `unzipTheme(at:to:)` runs `ArticleThemeArchiveValidator.validate(zipURL:)`
    first. That reads only the ZIP central directory, so no byte is extracted
-   from an archive that breaks a rule. After extraction it removes everything
-   except the validated bundle folder (`__MACOSX`, stray top-level files),
-   runs `ArticleThemeBundleValidator.validate(directory:)` (an `lstat`-based
-   second check), removes `.DS_Store` and `._*` files, and returns the bundle
-   URL. On any failure the destination directory is deleted.
+   from an archive that breaks a safety rule. It also picks the bundle folder
+   (see below). After extraction it runs `ArticleThemeBundleValidator.validate(directory:)`
+   (an `lstat`-based second safety check) on that folder, rebuilds it with
+   `copyInstallableFiles(from:to:)` into a uniquely named staging folder, deletes
+   everything else in the extraction directory, and moves the clean bundle
+   into place under a name ending in exactly `.nnwtheme`. On any failure the
+   destination directory is deleted.
 4. Posts `.didEndDownloadingTheme` with the `.nnwtheme` URL in
    `userInfo["url"]`.
 
-### Archive rules (`ArticleThemeArchiveValidator`)
+### Two tiers: safety rejects, layout never does
 
-Limits: 10,000,000 bytes compressed, 50 MiB declared expanded (sum of every
-entry, junk included, overflow-safe). Rules, matching the upstream `nnw-theme`
-validator:
+Themes are community work and should load even when imperfect, so the import
+path separates two kinds of rule. This follows upstream NetNewsWire, which does
+no layout validation at all: it extracts, then takes the first `.nnwtheme` it
+finds anywhere. The stricter layout rules Nectar used to enforce (exactly one
+top-level folder, only the three theme files plus `LICENSE*`/`NOTICE*`, no
+subfolders, all three files present) came from the `nnw-theme` authoring
+linter. That linter is a publishing gate for authors; it is still what
+`gallery/upstream_compat.py` runs for bundles Nectar ships as upstream-portable,
+and `gallery/build.py` still requires the five `Info.plist` keys for gallery
+entries. Neither applies to a reader importing a theme.
 
-- Exactly one top-level `<Name>.nnwtheme` folder. Inside it only
-  `Info.plist`, `template.html`, `stylesheet.css` and optional `LICENSE*` or
-  `NOTICE*` files (case-insensitive); the three required files must be present;
-  no subfolders.
-- `__MACOSX/**`, `.DS_Store` and `._*` entries are ignored for layout but still
-  checked for path safety, symlinks and size.
-- Rejected: symlink or other non-regular Unix entries, absolute paths (including
-  drive letters), any `.` or `..` component, empty components, control
-  characters (including NUL), names that are not UTF-8, duplicate paths after
-  NFC and case folding, ZIP64 (EOCD sentinels, locator, extra field 0x0001),
-  multi-part archives, encrypted entries, compression methods other than
-  stored or deflate, and local headers that disagree with the central
-  directory.
-- `\` is normalized to `/` before every check, because `Zip` does the same when
-  it extracts. Checks are component-wise, never a string-prefix test.
+**Safety rules (reject).** Limits: 10,000,000 bytes compressed, 50 MiB declared
+expanded (sum of every entry, junk included, overflow-safe). Rejected:
+symlink or other non-regular Unix entries, absolute paths (including drive
+letters), any `.` or `..` component, empty components, control characters
+(including NUL), names that are not UTF-8, duplicate paths after NFC and case
+folding, ZIP64 (EOCD sentinels, locator, extra field 0x0001), multi-part
+archives, encrypted entries, compression methods other than stored or deflate,
+and local headers that disagree with the central directory. On disk, a link or
+special file at the top level of the bundle, or kept files over the size cap.
+`\` is normalized to `/` before every check, because `Zip` does the same when it
+extracts. Checks are component-wise, never a string-prefix test.
+
+**Layout rules (never reject).**
+
+- Bundle choice: any path component ending in `.nnwtheme` (any case, non-empty
+  stem) that is a folder is a candidate, at any depth. Preference order: a
+  folder that directly holds one of the three theme files, then the
+  shallowest, then name (NFC, case folded), so the result does not depend on
+  archive order. No candidate is the one layout failure
+  (`ArticleThemeDownloaderError.noThemeFile`, the same error upstream raises).
+- Kept: `Info.plist`, `template.html`, `stylesheet.css` (matched case-insensitively and
+  stored under those exact names) and `LICENSE*` / `NOTICE*`. Everything else
+  (screenshots, READMEs, fonts, scripts, subfolders, other bundles,
+  `__MACOSX`, `.DS_Store`, `._*`) is dropped, never copied. Nothing reads
+  it: the renderer only takes the three theme files, and upstream's
+  validator documents that bundle-local resource references do not work.
+- Missing files are fine. A missing `template.html` or `stylesheet.css` makes
+  the theme use the app default for that part (`ArticleTheme.template` /
+  `.css` are nil and `ArticleRenderer` falls back).
+- `Info.plist` is decoded leniently (`ArticleThemePlist.init(from:)`): every
+  key is optional, wrong types read as empty, `Version` also accepts a numeric
+  string or real number. A missing, unreadable or non-dictionary plist gives
+  no metadata; the name comes from the folder and the creator reads "Unknown".
+  Every plist upstream accepts decodes to the same values as before. The
+  theme's identity is its folder name, not `ThemeIdentifier`.
+- Not checked at import, on purpose: `Name` matching the folder, placeholder
+  metadata, `CSS @import`, remote or bundle-local `url()`, macros in comments.
+  These stay in the authoring checklist (`creating-a-theme.md`).
 
 Dependency note: `Zip` is pinned to `bca30f6d6c7d37cbc4aa8f6b0002e281dcc36195`
 in `Modules/ArticleTheming/Package.swift`, `Modules/BackupRestore/Package.swift`

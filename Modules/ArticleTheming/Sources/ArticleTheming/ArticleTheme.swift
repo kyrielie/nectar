@@ -39,11 +39,11 @@ public struct ArticleTheme: Equatable, Sendable {
 	}
 
 	public var creatorHomePage: String {
-		return info?.creatorHomePage ?? Self.unknownValue
+		return Self.nonEmpty(info?.creatorHomePage) ?? Self.unknownValue
 	}
 
 	public var creatorName: String {
-		return info?.creatorName ?? Self.unknownValue
+		return Self.nonEmpty(info?.creatorName) ?? Self.unknownValue
 	}
 
 	public var version: String {
@@ -112,9 +112,19 @@ public struct ArticleTheme: Equatable, Sendable {
 
 		self.isAppTheme = isAppTheme
 
+		// Permissive: a missing, unreadable or odd Info.plist never blocks a theme. The name
+		// comes from the folder, and the creator fields read as "Unknown". Upstream throws
+		// here, which hid the theme from the list entirely.
 		let infoURL = url.appendingPathComponent("Info.plist")
-		let data = try Data(contentsOf: infoURL)
-		self.info = try PropertyListDecoder().decode(ArticleThemePlist.self, from: data)
+		self.info = (try? Data(contentsOf: infoURL)).flatMap { ArticleThemePlist.lenient(from: $0) }
+	}
+
+	/// nil for nil, empty and whitespace-only strings.
+	private static func nonEmpty(_ string: String?) -> String? {
+		guard let trimmed = string?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+			return nil
+		}
+		return trimmed
 	}
 
 	/// SHA-256 (lowercase hex) over length-prefixed stylesheet, template and probe version,

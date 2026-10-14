@@ -34,7 +34,10 @@ import ArticleTheming
 		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
 		alertController.addAction(UIAlertAction(title: cancelTitle, style: .cancel))
 
-		if let websiteURL = URL(string: theme.creatorHomePage) {
+		// Only a real web address gets the button: a theme with no CreatorHomePage reports
+		// "Unknown", which parses as a relative URL and must not be opened.
+		if let websiteURL = URL(string: theme.creatorHomePage),
+		   let scheme = websiteURL.scheme?.lowercased(), scheme == "http" || scheme == "https" {
 			let visitSiteTitle = NSLocalizedString("Show Website", comment: "Show Website")
 			let visitSiteAction = UIAlertAction(title: visitSiteTitle, style: .default) { _ in
 				UIApplication.shared.open(websiteURL)
