@@ -1,10 +1,11 @@
-"""Tests for gallery/build.py (WP10 of the theme color probe plan).
+"""Tests for gallery/build.py.
 
     python3 -m unittest discover -s gallery
 
 Standard library only.
 """
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -197,7 +198,7 @@ class BuildRuns(unittest.TestCase):
     def test_duplicate_with_bundled_theme_fails(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
-            make_bundle(tmp / "src", "Sepia", plist_overrides={"ThemeIdentifier": "com.example.same"})
+            make_bundle(tmp / "src", "Duskbloom", plist_overrides={"ThemeIdentifier": "com.example.same"})
             make_bundle(tmp / "src", "Other", plist_overrides={"ThemeIdentifier": "com.example.same"})
             result = self.run_build(tmp / "src", tmp / "out")
             self.assertEqual(result.returncode, 1)
@@ -421,6 +422,38 @@ class ShippedCorpus(unittest.TestCase):
         self.assertEqual(build.template_problems(template), [])
         # The macro itself must still be used where the class list is built.
         self.assertIn('class="articleBody [[text_size_class]]"', template)
+
+    def test_system_bundle_matches_the_builtin_fallback(self):
+        """Themes/System.nnwtheme and the built-in fallback are one design in two places."""
+        fallback = HERE.parent / "Shared" / "Article Rendering"
+        bundle = HERE.parent / "Themes" / "System.nnwtheme"
+        for name in ("stylesheet.css", "template.html"):
+            with self.subTest(file=name):
+                self.assertEqual((bundle / name).read_bytes(), (fallback / name).read_bytes())
+
+    def test_fallback_template_keeps_the_selector_coverage_hooks(self):
+        """ArticleThemeSelectorCoverageTests reads this file; keep its hooks (and System's copy) intact."""
+        template = (HERE.parent / "Shared" / "Article Rendering" / "template.html").read_text(encoding="utf-8")
+        for hook in ("headerContainer", "headerTable", "header", "feedlink"):
+            with self.subTest(hook=hook):
+                self.assertIn(hook, template)
+
+    def test_fresh_install_default_theme_is_a_bundled_theme(self):
+        """AppDefaults registers the fresh-install theme by bundle name; it must exist in Themes/."""
+        source = (HERE.parent / "iOS" / "AppDefaults.swift").read_text(encoding="utf-8")
+        found = re.findall(r'Key\.currentThemeName:\s*"([^"]+)"', source)
+        self.assertEqual(len(found), 1, found)
+        self.assertTrue((HERE.parent / "Themes" / f"{found[0]}.nnwtheme").is_dir(), found[0])
+        self.assertEqual(found[0], "System")
+
+    def test_bundled_set_equals_the_bundles_in_themes_dir(self):
+        """BUNDLED must list exactly the bundles that ship in the app (Themes/)."""
+        shipped = {build.bundle_stem(p) for p in (HERE.parent / "Themes").glob("*.nnwtheme")}
+        self.assertEqual(build.BUNDLED, shipped)
+
+    def test_no_bundled_theme_is_published_and_no_gallery_theme_is_skipped(self):
+        gallery = {build.bundle_stem(p) for p in (HERE.parent / "gallery-themes").glob("*.nnwtheme")}
+        self.assertEqual(build.BUNDLED & gallery, set())
 
 
 if __name__ == "__main__":

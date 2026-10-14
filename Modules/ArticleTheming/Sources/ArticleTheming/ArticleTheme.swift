@@ -14,7 +14,10 @@ public struct ArticleTheme: Equatable, Sendable {
 	public static let defaultTheme = ArticleTheme()
 	public static let nnwThemeSuffix = ".nnwtheme"
 
-	private static let defaultThemeName = NSLocalizedString("Default", comment: "Default")
+	/// Display name of the built-in fallback theme. It is the same design as the bundled
+	/// "System" theme, so it carries that name; the persisted sentinel stays
+	/// `ArticleThemesManager.defaultThemeName` ("Default").
+	private static let defaultThemeName = NSLocalizedString("System", comment: "Name of the built-in default article theme")
 	private static let unknownValue = NSLocalizedString("Unknown", comment: "Unknown Value")
 
 	public let url: URL?

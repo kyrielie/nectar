@@ -341,8 +341,15 @@ struct ArticleThemeListView: View {
 		}
 	}
 
+	/// The built-in fallback is displayed as "System", the same name as the bundled System
+	/// theme, and `themeNames` can still hold the "Default" sentinel before the first folder
+	/// scan. Drop the sentinel and de-duplicate, because `ForEach(id: \.self)` would otherwise
+	/// see two rows with the same id. Picking "System" stores that name, which resolves to
+	/// the bundled theme (the same design as the fallback).
 	private var themeNames: [String] {
-		[ArticleTheme.defaultTheme.name] + ArticleThemesManager.shared.themeNames
+		var seen = Set<String>()
+		return ([ArticleTheme.defaultTheme.name] + ArticleThemesManager.shared.themeNames)
+			.filter { $0 != ArticleThemesManager.defaultThemeName && seen.insert($0).inserted }
 	}
 
 	private var themeNameBinding: Binding<String> {

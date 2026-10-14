@@ -128,7 +128,7 @@ final class ThemeColorStoreTestLock: @unchecked Sendable {
 		#expect(try #require(theme.css).contains("scrollbar-gutter"))
 	}
 
-	// MARK: Scanner fallback (D13)
+	// MARK: Scanner fallback
 
 	@Test func scannerFallbackReadsDarkVariantFromTheOwnStylesheet() async throws {
 		await Self.withIsolatedStore {
@@ -138,7 +138,7 @@ final class ThemeColorStoreTestLock: @unchecked Sendable {
 		}
 	}
 
-	// MARK: The seam (WP5)
+	// MARK: The seam
 
 	private static func hex(_ color: UIColor) -> String {
 		var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
@@ -237,7 +237,7 @@ final class ThemeColorStoreTestLock: @unchecked Sendable {
 		}
 	}
 
-	// MARK: remeasureIfStale (D9)
+	// MARK: remeasureIfStale
 
 	@Test func staleCacheIsRemeasuredReplacedAndReported() async throws {
 		let theme = try Self.theme("LightOnly")

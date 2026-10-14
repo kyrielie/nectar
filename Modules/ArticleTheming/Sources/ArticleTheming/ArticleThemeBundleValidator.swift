@@ -4,7 +4,7 @@
 //
 //  Checks an on-disk `.nnwtheme` folder: either one just extracted from an
 //  archive (defense in depth after `ArticleThemeArchiveValidator`) or one the
-//  user opened from Files (D17). Uses `lstat` so symlinks are never followed.
+//  user opened from Files. Uses `lstat` so symlinks are never followed.
 //
 //  Safety rules reject: a link or special file at the top level, an unreadable
 //  entry, or kept files that add up past the size cap. Layout never rejects:

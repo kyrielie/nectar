@@ -338,8 +338,7 @@
 	// table buildTextIndex produced, splitting text nodes at both
 	// boundaries (Text.splitText, applyVersalCaps' technique) so the range's
 	// start/end containers land exactly on a text-node boundary. Extracted
-	// out of wrapRange (which used to inline this same node-walking/
-	// splitting logic) so applyTextEdit below can share it rather than
+	// out of wrapRange so applyTextEdit below can share it rather than
 	// duplicating the boundary math -- one offset-to-DOM mapper serving
 	// both highlighting and text-editing.
 	//

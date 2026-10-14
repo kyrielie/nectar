@@ -28,7 +28,7 @@ public enum ArticleThemeColorStore {
 		return await ArticleThemeColorProbe.measure(theme, environment: environment)
 	}
 
-	/// Maximum measurement attempts per theme per launch (one retry, D7).
+	/// Maximum measurement attempts per theme per launch (one retry).
 	static let maximumAttempts = 2
 
 	@MainActor private static var inFlight = [String: Task<Void, Never>]()
@@ -87,7 +87,7 @@ public enum ArticleThemeColorStore {
 		inFlight[key] = nil
 	}
 
-	/// D9: when the persisted cache was written under a different probe version or `core.css`,
+	/// When the persisted cache was written under a different probe version or `core.css`,
 	/// re-measure the given installed themes one at a time and replace the cache with the
 	/// results. Entries stay in use meanwhile (no flash). Returns the keys whose values changed,
 	/// so the caller can repost the current-theme notification.
@@ -143,7 +143,7 @@ struct ThemeColorCacheEnvelope: Codable, Equatable, Sendable {
 	var entries: [String: ArticleThemeColorMeasurement]
 }
 
-/// The bundled table's shape (`iOS/Resources/ThemeColorTable.json`, generated in WP7).
+/// The bundled table's shape (`iOS/Resources/ThemeColorTable.json`).
 struct ThemeColorBundledTable: Codable, Equatable, Sendable {
 	struct Entry: Codable, Equatable, Sendable {
 		var key: String
@@ -172,7 +172,7 @@ final class ThemeColorStoreCore: Sendable {
 	private let state: OSAllocatedUnfairLock<State>
 
 	init(fileURL: URL? = ThemeColorStoreCore.defaultFileURL(),
-		 bundledLoader: (@Sendable () -> [String: ArticleThemeColorMeasurement])? = ThemeColorStoreCore.loadBundledFromMainBundle) {
+	     bundledLoader: (@Sendable () -> [String: ArticleThemeColorMeasurement])? = ThemeColorStoreCore.loadBundledFromMainBundle) {
 		var initial = State()
 		initial.fileURL = fileURL
 		initial.bundledLoader = bundledLoader
@@ -268,7 +268,7 @@ final class ThemeColorStoreCore: Sendable {
 		state.withLock { $0.attempts[key] ?? 0 }
 	}
 
-	// MARK: Staleness (D9)
+	// MARK: Staleness
 
 	/// True when a persisted file exists and was written under a different probe version
 	/// or `core.css` than the current ones. No file, or no configured environment: not stale.

@@ -2,8 +2,7 @@
 //  ArticleThemeColorProbeTests.swift
 //  NetNewsWire-iOSTests
 //
-//  Acceptance tests for `ArticleThemeColorProbe` (WP3 of the theme color probe
-//  plan). These render real themes in a simulator `WKWebView` through the
+//  Acceptance tests for `ArticleThemeColorProbe` (rendering side). These render real themes in a simulator `WKWebView` through the
 //  reader's `page.html` and the bundled `core.css`, so they live here rather
 //  than in the package's own test target. Pure logic (compositing, sanity,
 //  decoding) is in the package's `ArticleThemeColorProbeLogicTests`.
@@ -75,9 +74,9 @@ import WebKit
 	}
 
 	private static func expected(_ pageLight: String, _ inkLight: String, _ linkLight: String,
-								 dark pageDark: String, _ inkDark: String, _ linkDark: String,
-								 paintedLight: Bool = true, paintedDark: Bool = true,
-								 darkVariant: Bool) -> ArticleThemeColorMeasurement {
+	                             dark pageDark: String, _ inkDark: String, _ linkDark: String,
+	                             paintedLight: Bool = true, paintedDark: Bool = true,
+	                             darkVariant: Bool) -> ArticleThemeColorMeasurement {
 		ArticleThemeColorMeasurement(pageLight: pageLight, pageDark: pageDark,
 									 inkLight: inkLight, inkDark: inkDark,
 									 linkLight: linkLight, linkDark: linkDark,
@@ -111,7 +110,7 @@ import WebKit
 		#expect(light?.dark == false, "Light pass must report matchMedia dark == false")
 		#expect(dark?.dark == true, """
 			Dark pass must report matchMedia dark == true. If this fails with the hidden window, \
-			change ArticleThemeColorProbe.useVisibleHostFallback to true (plan WP3 test 1); do not switch to evaluateJavaScript.
+			change ArticleThemeColorProbe.useVisibleHostFallback to true; do not switch to evaluateJavaScript.
 			""")
 	}
 
@@ -217,8 +216,12 @@ import WebKit
 					mismatches.append("\(theme.name) \(label): scanner \(s) probe \(measured)")
 				}
 			}
-			check("pageLight", scanner.backgroundColor, fallback: .white, m.pageLight)
-			check("pageDark", scanner.backgroundColorDark, fallback: .black, m.pageDark)
+			// The scanner cannot resolve the `Canvas` system color (Biblioteca sets it on iOS), so it
+			// reads the non-iOS value. The probe measures what WebKit paints, so skip the page colors.
+			if !(theme.css ?? "").contains("Canvas") {
+				check("pageLight", scanner.backgroundColor, fallback: .white, m.pageLight)
+				check("pageDark", scanner.backgroundColorDark, fallback: .black, m.pageDark)
+			}
 			check("inkLight", scanner.textColor, fallback: .black, m.inkLight)
 			check("inkDark", scanner.textColorDark, fallback: .white, m.inkDark)
 		}

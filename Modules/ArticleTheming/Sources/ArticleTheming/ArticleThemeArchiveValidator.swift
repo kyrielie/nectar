@@ -288,10 +288,6 @@ public enum ArticleThemeArchiveValidator {
 		return nil
 	}
 
-	static func isAllowedFileName(_ name: String) -> Bool {
-		canonicalFileName(for: name) != nil
-	}
-
 	private static func checkLayout(_ entries: [Entry]) throws -> ValidatedArchive {
 		// Safety: duplicates, compared after NFC and case folding, junk included, and the
 		// declared expanded size.

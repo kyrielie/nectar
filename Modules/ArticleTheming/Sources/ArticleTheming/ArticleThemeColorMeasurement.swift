@@ -23,10 +23,10 @@ public struct ArticleThemeColorMeasurement: Codable, Sendable, Equatable {
 	public var hasDarkModeVariant: Bool
 
 	public init(pageLight: String, pageDark: String,
-				inkLight: String, inkDark: String,
-				linkLight: String, linkDark: String,
-				pageWasPaintedLight: Bool, pageWasPaintedDark: Bool,
-				hasDarkModeVariant: Bool) {
+	            inkLight: String, inkDark: String,
+	            linkLight: String, linkDark: String,
+	            pageWasPaintedLight: Bool, pageWasPaintedDark: Bool,
+	            hasDarkModeVariant: Bool) {
 		self.pageLight = pageLight
 		self.pageDark = pageDark
 		self.inkLight = inkLight

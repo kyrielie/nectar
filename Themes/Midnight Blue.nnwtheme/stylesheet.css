@@ -1,12 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400..700&display=swap');
-/* Tumblr Blue -- ported from the tumblr-blue variant of the neos AO3 workskin family (ZerafinaCSS, MIT). Deep navy background, light gray body text, classic Tumblr-blue link accent.
+/* Midnight Blue -- ported from the tumblr-blue variant of the neos AO3 workskin family (ZerafinaCSS, MIT). Deep navy background, light gray body text, a clear sky-blue link accent.
    Palette:
      body background   <- #1A2735
      body text          <- #B3B3B3
      link                <- #529ECC
      header border        <- transparent
      table/rule border     <- rgba(255, 255, 255, 0.13)
-   Differentiation: bold, no-underline links (Tumblr's own dashboard convention) with an underline only on hover, flat sans-serif throughout instead of a serif body face, and a semi-transparent white preface card echoing the source skin's translucent-panel-on-navy look.
+   Differentiation: bold, no-underline links with an underline only on hover, flat sans-serif throughout instead of a serif body face, and a semi-transparent white preface card echoing the source skin's translucent-panel-on-navy look.
    Structure follows the bundled Sepia.nnwtheme (same selectors, same
    iOS/macOS @supports split); shared iOS/macOS structural rules (max-width,
    hyphens, footnote popover, table borders, etc.) are the same base every

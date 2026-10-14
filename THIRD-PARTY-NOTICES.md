@@ -53,9 +53,11 @@ where one exists.
 
 | Theme(s) | Source | License |
 | --- | --- | --- |
+| System | Derived from the default article stylesheet and template of [Ranchero-Software/NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire), with Nectar's AO3 additions | MIT |
+| Reversi | Inspired by AO3's own Reversi skin ([otwcode/otwarchive](https://github.com/otwcode/otwarchive), GPL-2.0-or-later); the CSS is a hand-written reimplementation and no code or color scheme was copied from ReversiPlusPlus (galaxygrotesque, GPL-2.0) | MIT (owner to confirm) |
 | Ember | [emmsdibs/ao3-darkred](https://github.com/emmsdibs/ao3-darkred) | GPLv3 |
 | Beetlejuice | [NCFC-Wiki/Beetlejuice-theme-for-AO3](https://github.com/NCFC-Wiki/Beetlejuice-theme-for-AO3) | MIT |
-| Black & White, Charcoal Rose, Dusky Purple, Midnight Teal, Powder Pink, Tumblr Blue | [ZerafinaCSS/neos](https://github.com/ZerafinaCSS/neos) | MIT |
+| Black & White, Charcoal Rose, Dusky Purple, Midnight Teal, Powder Pink, Midnight Blue (the `tumblr-blue` variant) | [ZerafinaCSS/neos](https://github.com/ZerafinaCSS/neos) | MIT |
 | Dracula | [dracula/archive-of-our-own](https://github.com/dracula/archive-of-our-own) | MIT |
 | Rosé Pine, Rosé Pine Dawn, Rosé Pine Moon | [Wolfbatcat/ao3-rose-pine](https://github.com/Wolfbatcat/ao3-rose-pine) | |
 | Vintage Letter Green | [Wolfbatcat/Vintage-Letter-Green-AO3-Skin](https://github.com/Wolfbatcat/Vintage-Letter-Green-AO3-Skin) | MIT |
@@ -66,9 +68,9 @@ where one exists.
 ## Fonts
 
 Every Nectar custom theme (all bundles in `Themes/` and `gallery-themes/`
-except the eight NetNewsWire defaults: Appanoose, Biblioteca, Hyperlegible,
-NewsFax, Promenade, Sepia, Tiqoe Dark, Verdana Revival) uses a `@import` from
-Google Fonts. Where a theme originally named an Apple-only face, a close Google
+except System and the eight NetNewsWire themes now in `gallery-themes/`:
+Appanoose, Biblioteca, Hyperlegible, NewsFax, Promenade, Sepia, Tiqoe Dark,
+Verdana Revival) uses a `@import` from Google Fonts. Where a theme originally named an Apple-only face, a close Google
 Fonts stand-in is used and the Apple face is kept as a fallback: Charter to
 Source Serif 4, SF Pro / `-apple-system` to Inter, SF Mono / Menlo to JetBrains
 Mono, Iowan Old Style to Lora (Duskbloom, Kennerley chrome text), and Georgia
@@ -76,6 +78,6 @@ to Libre Baskerville (Vintage Letter Green, Broadsheet). All are SIL OFL. The
 fonts are pulled at render time under each font's own open
 license (SIL Open Font License for most Google Fonts entries); no font files
 are bundled in this repository. NewsFax bundles the ModeSeven font directly —
-see `Themes/NewsFax.nnwtheme/License.md`. The theme gallery page (`gallery/`)
+see `gallery-themes/NewsFax.nnwtheme/License.md`. The theme gallery page (`gallery/`)
 loads Sorts Mill Goudy (SIL OFL) from Google Fonts the same way; the previously
 bundled woff2 copies and their license file were removed.

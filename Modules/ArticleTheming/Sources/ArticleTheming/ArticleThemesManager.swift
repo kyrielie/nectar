@@ -245,7 +245,7 @@ extension ArticleThemesManager {
 		}
 	}
 
-	// MARK: Gate (D12)
+	// MARK: Gate
 
 	/// Native colors are derived from the theme, so a theme with no measurement would paint
 	/// scanner colors first and visibly correct itself. The gate avoids that where it can:
@@ -295,7 +295,7 @@ extension ArticleThemesManager {
 		state.withLock { $0.settleTask = task }
 	}
 
-	/// D9: when the persisted cache predates the current probe version or `core.css`,
+	/// When the persisted cache predates the current probe version or `core.css`,
 	/// re-measure the installed themes at utility priority. Entries stay in use meanwhile.
 	func remeasureInstalledThemesIfStale() {
 		guard ArticleThemeColorProbe.isEnabled, ArticleThemeColorStore.core.isPersistedCacheStale() else {

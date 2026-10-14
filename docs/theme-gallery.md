@@ -28,7 +28,7 @@ For every `.nnwtheme` bundle under `--src` (default: `Themes/` and
    bundle's files; `.`-prefixed files are left out. The app derives the theme
    name from that folder on import, and the shape matches the upstream
    marketplace's release-asset rules. `slugify` still produces each theme's
-   `slug` field in the data blob, but it no longer names the zip. Because stems
+   `slug` field in the data blob, but the zip is named from the folder stem, not the slug. Because stems
    contain spaces, `&` and non-ASCII characters, the `zip` field in the data
    blob is the percent-encoded file name (`zip_url_path`); `index.template.html`
    appends it to `base` unchanged, so both the Zip link and the install deep link
@@ -89,11 +89,9 @@ that directory has no other purpose. Moving a theme between `Themes/` and
 `gallery-themes/` means updating `BUNDLED` here in the same change (see
 `nnwtheme-format.md`'s "Where a theme lives" section).
 
-As of this writing there are 150 gallery-only themes under `gallery-themes/`
-and 14 bundled themes under `Themes/` (8 NetNewsWire-origin + 6 Nectar
-customs) -- see `theme-system.md` for the itemized lists. This count drifts
-as themes are added; don't treat it as load-bearing anywhere outside this
-doc.
+Bundle counts for `gallery-themes/` and `Themes/` come from
+`buildscripts/theme-generation/theme_inventory.py`; see `theme-system.md` for the
+itemized lists. This document does not state counts.
 
 ### Family metadata
 
@@ -229,7 +227,7 @@ have changed since the page was first built:
   thumbnail is the only way to open the dialog now; there is no separate
   "Details" affordance next to Zip/Copy link.
 - **Banner background is transparent.** `.band` (the frieze banner behind
-  the title) no longer paints `var(--plate)` behind itself -- it's
+  the title) does not paint `var(--plate)` behind itself -- it's
   `transparent`, so the page's own paper-grain background (the `body`
   rule's noise-filter SVG data URI) shows through the banner instead of
   sitting behind a flat rectangle. Card preview mounts (`.pvw`, `.pv`) are
@@ -301,7 +299,7 @@ fetched: `python3 gallery/build.py --check-release-identity origin/main`.
 `#` comments are ignored), the bundles that are meant to stay portable to upstream
 NetNewsWire. It is a checked-in list, not an `Info.plist` key. Currently:
 Biblioteca, NewsFax, Promenade, Sepia, Tiqoe Dark, Verdana Revival, the six that
-passed the upstream validator at audit time. A bundle belongs on it only while it
+pass the upstream validator; the `upstream-compat` CI job is the source of truth. A bundle belongs on it only while it
 also keeps the upstream rules Nectar does not otherwise enforce: no `@import`
 (`@import` stays a supported Nectar capability, so themes that use it are
 Nectar-only), `Name` equal to the bundle name, no bundle-local `url()`.
@@ -328,10 +326,6 @@ Nectar. The upstream validator reports their `url(#...)` references to inline SV
 filters as bundle-local CSS resources. That is a false positive for inline SVG
 filter references and the CSS is left as it is; each also begins with an `@import`,
 so they are Nectar-only regardless.
-
-Verified when this was written: `nnw-theme package` (the validation and packaging
-half of `check`) accepts all six listed bundles with both 2.0.2 and 2.1.0. The WebKit
-render half of `check` needs a browser download and was not run outside CI.
 
 ## Upstream pin test
 

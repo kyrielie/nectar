@@ -1704,12 +1704,15 @@ final class AppDefaults: Sendable {
 								// fresh-install behavior only, never an upgrader's.
 								Key.textReplacementApplyAutomatically: false,
 								Key.textReplacementTypoFixesEnabled: true,
-										// "Promenade" (Themes/Promenade.nnwtheme), not Self.defaultThemeName --
+										// "System" (Themes/System.nnwtheme), not Self.defaultThemeName --
 										// that constant is a sentinel meaning "use the app's built-in fallback
 										// ArticleTheme.defaultTheme" (see ArticleThemesManager), a distinct
-										// concept from "which theme a fresh install starts on." Changing
-										// Self.defaultThemeName itself would repurpose that fallback sentinel.
-										Key.currentThemeName: "Promenade",
+										// concept from "which theme a fresh install starts on." The bundle and
+										// the fallback are the same design (byte-identical stylesheet and
+										// template), so a stored name that no longer resolves lands on the
+										// same look. Changing Self.defaultThemeName itself would repurpose
+										// that fallback sentinel.
+										Key.currentThemeName: "System",
 									   Key.splitViewPreferredDisplayMode: UISplitViewController.DisplayMode.oneBesideSecondary.rawValue]
 		AppDefaults.store.register(defaults: defaults)
 	}

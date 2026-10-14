@@ -1,18 +1,23 @@
-# Generates the 9 palette-ported .nnwtheme bundles listed in
-# nectar-personalization-plan.md's theme table (Rosé Pine Moon/Dawn, Black &
-# White, Charcoal Rose, Dusky Purple, Midnight Teal, Powder Pink, Tumblr
-# Blue, Constellations). Run from the repo root: `python3
-# buildscripts/theme-generation/generate_ported_themes.py`. Re-running
-# overwrites the generated bundles in place -- Beetlejuice and Vintage
-# Letter Green are hand-written, not generated, and this script doesn't
-# touch them.
+# Generates 19 palette-ported .nnwtheme bundles: the nine in the first `themes`
+# list (Rosé Pine Moon/Dawn, Black & White, Charcoal Rose, Dusky Purple,
+# Midnight Teal, Powder Pink, Midnight Blue (the neos tumblr-blue variant), Constellations), the seven Dracula
+# hue variants, and the three site-skin ports (Moonlit Wisteria, Pastel
+# Whimsy, Poudre et Plume). Only the bundles in SHIPPED are written to
+# Themes/; the rest are written to gallery-themes/. Run from the repo root:
+# `python3 buildscripts/theme-generation/generate_ported_themes.py`.
+# Re-running overwrites each generated bundle's Info.plist, stylesheet.css and
+# template.html in place (an existing License.md is kept). Bundles not
+# generated here are hand-written and untouched. The committed Black & White,
+# Powder Pink in gallery-themes/ and Midnight Blue in Themes/ carry edits beyond
+# this template (--nnw-* tokens, --u sizing), so regenerating them reverts those
+# edits; run it in a scratch copy of the repo and compare before using its output.
 import os
 
 BASE_DIR = "Themes"
 # Only these generated themes ship inside the app; every other generated theme is
 # written to GALLERY_DIR and is published on the theme gallery only (see
 # gallery/build.py, whose BUNDLED set must stay in sync with this).
-SHIPPED = {"Black & White", "Powder Pink", "Tumblr Blue"}
+SHIPPED = {"Midnight Blue"}
 GALLERY_DIR = "gallery-themes"
 
 STYLESHEET_TEMPLATE = """/* {name} -- {credit_comment}
@@ -672,12 +677,12 @@ themes = [
         link_hover_css="\topacity: 0.8;",
     ),
     dict(
-        name="Tumblr Blue",
-        identifier="tumblrblue",
+        name="Midnight Blue",
+        identifier="midnightblue",
         homepage="https://github.com/ZerafinaCSS/neos",
         creator='Ported from the "Tumblr Blue" variant of ZerafinaCSS\'s "neos" AO3 workskin family (MIT licensed)',
-        credit_comment="ported from the tumblr-blue variant of the neos AO3 workskin family (ZerafinaCSS, MIT). Deep navy background, light gray body text, classic Tumblr-blue link accent.",
-        differentiation_comment="Differentiation: bold, no-underline links (Tumblr's own dashboard convention) with an underline only on hover, flat sans-serif throughout instead of a serif body face, and a semi-transparent white preface card echoing the source skin's translucent-panel-on-navy look.",
+        credit_comment="ported from the tumblr-blue variant of the neos AO3 workskin family (ZerafinaCSS, MIT). Deep navy background, light gray body text, a clear sky-blue link accent.",
+        differentiation_comment="Differentiation: bold, no-underline links with an underline only on hover, flat sans-serif throughout instead of a serif body face, and a semi-transparent white preface card echoing the source skin's translucent-panel-on-navy look.",
         bg="#1A2735", text="#B3B3B3", link="#529ECC",
         header_border="transparent", table_border="rgba(255, 255, 255, 0.13)", header_text="#7A8A99",
         code_color="#7EC0E8", preface_border="rgba(255, 255, 255, 0.13)",
@@ -928,10 +933,11 @@ for t in themes:
     with open(os.path.join(dirname, "stylesheet.css"), "w") as f:
         f.write(css)
 
-    # All nine reuse Sepia's template.html verbatim -- CSS-only
+    # All of them reuse Sepia's template.html verbatim -- CSS-only
     # differentiation, same pattern as Beetlejuice. None of these needed a
     # structural rework the way Vintage Letter Green's letter framing did.
+    # Sepia is a gallery-only bundle now, so the template is read from GALLERY_DIR.
     import shutil
-    shutil.copyfile(os.path.join(BASE_DIR, "Sepia.nnwtheme", "template.html"), os.path.join(dirname, "template.html"))
+    shutil.copyfile(os.path.join(GALLERY_DIR, "Sepia.nnwtheme", "template.html"), os.path.join(dirname, "template.html"))
 
     print("wrote", dirname)

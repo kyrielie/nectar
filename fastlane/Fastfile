@@ -40,8 +40,8 @@ platform :ios do
   variants = {
     "01-light-default" => "-userInterfaceColorPalette 1 -accentColor 0 -currentThemeName Default",
     "02-dark-default" => "-userInterfaceColorPalette 2 -accentColor 0 -currentThemeName Default",
-    "03-light-sepia" => "-userInterfaceColorPalette 1 -accentColor 6 -currentThemeName Sepia",
-    "04-dark-biblioteca" => "-userInterfaceColorPalette 2 -accentColor 8 -currentThemeName Biblioteca",
+    "03-light-nectar" => "-userInterfaceColorPalette 1 -accentColor 6 -currentThemeName Nectar",
+    "04-dark-reversi" => "-userInterfaceColorPalette 2 -accentColor 8 -currentThemeName Reversi",
     "05-dark-duskbloom" => "-userInterfaceColorPalette 2 -surfaceTint 4 -accentColor 5 -currentThemeName Duskbloom -UITestReadingProfile personal",
     "06-light-duskbloom" => "-userInterfaceColorPalette 1 -surfaceTint 4 -accentColor 5 -currentThemeName Duskbloom -UITestReadingProfile personal"
   }
