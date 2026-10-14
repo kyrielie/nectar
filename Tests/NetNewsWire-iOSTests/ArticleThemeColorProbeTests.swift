@@ -21,6 +21,22 @@ import WebKit
 @testable import Nectar
 @testable import ArticleTheming
 
+/// Probe results by `ArticleTheme.colorCacheKey`, shared by the suites in this target so a theme
+/// is loaded once per test process. `nil` (a rejected or failed measurement) is cached too.
+/// Only for tests that call `measure(_:environment:)` with the reader environment.
+@MainActor enum ThemeProbeMeasurementCache {
+	private static var results = [String: ArticleThemeColorMeasurement?]()
+
+	static func measure(_ theme: ArticleTheme) async -> ArticleThemeColorMeasurement? {
+		if let hit = results[theme.colorCacheKey] {
+			return hit
+		}
+		let measurement = await ArticleThemeColorProbe.measure(theme, environment: ArticleThemeProbeEnvironment.reader())
+		results[theme.colorCacheKey] = .some(measurement)
+		return measurement
+	}
+}
+
 @MainActor @Suite(.serialized) struct ArticleThemeColorProbeTests {
 
 	// MARK: Helpers
@@ -83,14 +99,6 @@ import WebKit
 	private static func luminance(_ hex: String) -> Double {
 		let c = bytes(hex)
 		return ThemeColorProbeLogic.relativeLuminance(.init(r: c.r, g: c.g, b: c.b))
-	}
-
-	private static func median(_ values: [Double]) -> Double {
-		let sorted = values.sorted()
-		guard !sorted.isEmpty else {
-			return 0
-		}
-		return sorted[sorted.count / 2]
 	}
 
 	// MARK: 1. Dark-flag assertion
@@ -181,12 +189,19 @@ import WebKit
 
 	// MARK: 3. Agreement with the legacy scanner
 
-	@Test func probeAgreesWithScannerWhereScannerFoundAValue() async throws {
+	@Test(.timeLimit(.minutes(5))) func probeAgreesWithScannerWhereScannerFoundAValue() async throws {
 		var mismatches = [String]()
+		var breaker = ConsecutiveNilBreaker()
 		for url in try Self.bundles(in: "Themes") {
 			let theme = try ArticleTheme(url: url, isAppTheme: false)
-			guard let m = await ArticleThemeColorProbe.measure(theme, environment: Self.environment()) else {
+			let measured = await ThemeProbeMeasurementCache.measure(theme)
+			breaker.record(isNil: measured == nil)
+			guard let m = measured else {
 				mismatches.append("\(theme.name): probe returned nil")
+				if breaker.isTripped {
+					mismatches.append("aborted after \(breaker.limit) consecutive nil results")
+					break
+				}
 				continue
 			}
 			let scanner = ArticleThemeColorExtractor.colors(for: theme)
@@ -211,41 +226,9 @@ import WebKit
 	}
 
 	// MARK: 4. Sanity floor
+	// The all-themes sanity check is `ArticleThemeSmokeTests` (heavy, skipped by default in CI).
 
 	@Test func inkEqualToPageIsRejected() async throws {
 		#expect(try await Self.measure("InkEqualsPage") == nil)
-	}
-
-	@Test func everyShippedThemePassesTheSanityCheck() async throws {
-		let bundled = try Self.bundles(in: "Themes")
-		let gallery = try Self.bundles(in: "gallery-themes")
-		#expect(!bundled.isEmpty && !gallery.isEmpty)
-		var failures = [String]()
-		var coldTimes = [Double]()
-		var warmTimes = [Double]()
-		let clock = ContinuousClock()
-		for url in bundled + gallery {
-			let theme = try ArticleTheme(url: url, isAppTheme: false)
-			let start = clock.now
-			let m = await ArticleThemeColorProbe.measure(theme, environment: Self.environment())
-			coldTimes.append(Self.seconds(clock.now - start))
-			if m == nil {
-				failures.append(theme.name)
-			}
-		}
-		// Warm timing: a second measurement of each bundled theme.
-		for url in bundled {
-			let theme = try ArticleTheme(url: url, isAppTheme: false)
-			let start = clock.now
-			_ = await ArticleThemeColorProbe.measure(theme, environment: Self.environment())
-			warmTimes.append(Self.seconds(clock.now - start))
-		}
-		// Acceptance test 5 is a recording, not an assertion.
-		print("ThemeColorProbe timing: cold median \(Self.median(coldTimes)) s over \(coldTimes.count) themes, warm median \(Self.median(warmTimes)) s over \(warmTimes.count) bundled themes (plan threshold 0.75 s)")
-		#expect(failures.isEmpty, "Failed the D7 sanity check (investigate the theme or probe, do not lower the floor): \(failures.joined(separator: ", "))")
-	}
-
-	private static func seconds(_ d: Duration) -> Double {
-		Double(d.components.seconds) + Double(d.components.attoseconds) / 1e18
 	}
 }

@@ -1,0 +1,47 @@
+{
+  "configurations": [
+    {
+      "id": "7A3C1E52-5B0D-4C54-9E3B-2F6D8A4B1C90",
+      "name": "Configuration 1",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "codeCoverage": false
+  },
+  "testTargets": [
+    {
+      "selectedTests": [
+        "MD5PerformanceTests",
+        "StripHTMLPerformanceTests",
+        "CollapsingWhitespacePerformanceTests",
+        "StringRSCoreTests/testMD5StringPerformance()"
+      ],
+      "target": {
+        "containerPath": "container:Modules/RSCore",
+        "identifier": "RSCoreTests",
+        "name": "RSCoreTests"
+      }
+    },
+    {
+      "selectedTests": [
+        "OPMLPerformanceTests",
+        "RSSParserPerformanceTests",
+        "AtomParserPerformanceTests",
+        "FeedParserTypePerformanceTests",
+        "JSONFeedParserPerformanceTests",
+        "RSSInJSONParserPerformanceTests",
+        "EntityDecodingPerformanceTests",
+        "DateParserPerformanceTests",
+        "HTMLLinkPerformanceTests",
+        "HTMLMetadataPerformanceTests"
+      ],
+      "target": {
+        "containerPath": "container:Modules/RSParser",
+        "identifier": "RSParserTests",
+        "name": "RSParserTests"
+      }
+    }
+  ],
+  "version": 1
+}

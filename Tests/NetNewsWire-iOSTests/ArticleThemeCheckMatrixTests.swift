@@ -19,8 +19,13 @@
 //
 //  Written without being run in Xcode. `UIFont.preferredFont(forTextStyle:compatibleWith:)`
 //  and `UITraitCollection(preferredContentSizeCategory:)` are used for the large-text
-//  size; confirm they behave as expected on first run. A full run loads roughly 2,000
-//  pages; the timing line printed at the end says what it cost.
+//  size; confirm they behave as expected on first run.
+//
+//  Cost: `Themes/` gets the full 12-column matrix (3 fixtures x 2 sizes x 2 appearances).
+//  `gallery-themes/` gets the largest size only, light only, plus a dark page for a bundle
+//  whose own stylesheet declares a dark variant (see `ThemeCheckColumns`). The timing line
+//  printed at the end of each run says what it cost. The heavy suites in this file are skipped
+//  by default in CI (docs/theme-testing.md, "CI scope").
 //
 
 import Testing
@@ -101,6 +106,60 @@ struct ThemePageMetrics: Decodable, Sendable {
 			return false
 		}
 		return max(scrollWidth ?? 0, bodyScrollWidth ?? 0) > client
+	}
+}
+
+// MARK: - Columns and circuit breaker
+
+/// Which size and appearance columns a bundle gets in the overflow matrix.
+enum ThemeCheckColumns {
+
+	struct Column: Sendable {
+		var sizeName: String
+		var dark: Bool
+	}
+
+	/// Substrings that mark a stylesheet as having a dark variant worth a dark page. Same style of
+	/// rule as the footnote test's `footnote` match.
+	static let darkMarkers = ["prefers-color-scheme", "color-scheme", "light-dark("]
+
+	static func declaresDarkVariant(_ ownStylesheet: String?) -> Bool {
+		guard let ownStylesheet else {
+			return false
+		}
+		return darkMarkers.contains { ownStylesheet.localizedCaseInsensitiveContains($0) }
+	}
+
+	/// `Themes/` (shipped bundles): every size, light and dark. Anything else (`gallery-themes/`):
+	/// largest size, light, plus dark only when the bundle's own stylesheet declares a dark variant.
+	static func columns(folder: String, ownStylesheet: String?) -> [Column] {
+		if folder == "Themes" {
+			return [false, true].flatMap { dark in
+				["default", "largest"].map { Column(sizeName: $0, dark: dark) }
+			}
+		}
+		var columns = [Column(sizeName: "largest", dark: false)]
+		if declaresDarkVariant(ownStylesheet) {
+			columns.append(Column(sizeName: "largest", dark: true))
+		}
+		return columns
+	}
+}
+
+/// Aborts a loop after `limit` consecutive pages that did not report back, so a systemic failure
+/// (every load timing out) costs a handful of timeouts instead of one per page.
+struct ConsecutiveNilBreaker {
+	let limit: Int
+	private(set) var streak = 0
+
+	init(limit: Int = 5) {
+		self.limit = limit
+	}
+
+	var isTripped: Bool { streak >= limit }
+
+	mutating func record(isNil: Bool) {
+		streak = isNil ? streak + 1 : 0
 	}
 }
 
@@ -365,64 +424,62 @@ struct ThemePageMetrics: Decodable, Sendable {
 		url.deletingPathExtension().lastPathComponent
 	}
 
-	/// The fixtures decode, hold exactly the reader's macro keys, and match the keys the app's own
-	/// sample uses, so a change on either side is noticed.
-	@Test func upstreamFixturesCarryTheReaderMacroKeys() throws {
-		let sampleKeys = Set(ArticleThemeSampleContent.substitutions().keys).subtracting(["dateline_style"])
-		for fixture in [ThemeCheckFixture.article, .kitchenSink] {
-			let values = try fixture.substitutions()
-			#expect(Set(values.keys).subtracting(["dateline_style"]) == sampleKeys, "\(fixture.rawValue) macro keys")
-			#expect(values["dateline_style"] == "articleDatelineTitle")
-			#expect(values["body"]?.contains("<p") == true)
-		}
-	}
-
-	@Test(arguments: ["Themes", "gallery-themes"])
+	@Test(.timeLimit(.minutes(15)), arguments: ["Themes", "gallery-themes"])
 	func noOverflowAndNoBrokenImagesAcrossMatrix(folder: String) async throws {
 		let environment = Self.environment()
-		let sizes: [(name: String, value: String)] = [("default", MatrixRenderer.defaultFontSize),
-													  ("largest", MatrixRenderer.largestFontSize)]
+		let sizes: [String: String] = ["default": MatrixRenderer.defaultFontSize,
+									   "largest": MatrixRenderer.largestFontSize]
 		var failures = [String]()
 		var appearanceMismatches = 0
 		var pages = 0
+		var breaker = ConsecutiveNilBreaker()
+		var aborted = false
 		let started = ContinuousClock.now
 
-		for bundle in try ThemeCheckPaths.bundles(in: folder) {
+		bundleLoop: for bundle in try ThemeCheckPaths.bundles(in: folder) {
 			let theme = try ArticleTheme(url: bundle, isAppTheme: false)
+			let columns = ThemeCheckColumns.columns(folder: folder, ownStylesheet: theme.ownStylesheet)
 			for fixture in ThemeCheckFixture.allCases {
-				for size in sizes {
+				for column in columns {
+					let size = try #require(sizes[column.sizeName])
 					let html = try MatrixRenderer.composeHTML(theme: theme, fixture: fixture,
-															  fontSize: size.value, environment: environment)
-					for dark in [false, true] {
-						let label = "\(Self.displayName(bundle)) / \(fixture.rawValue) / \(dark ? "dark" : "light") / \(size.name)"
-						pages += 1
-						guard let metrics = await MatrixRenderer.measure(html: html, dark: dark, environment: environment),
-							  metrics.error == nil else {
-							failures.append("\(label): page did not report back")
-							continue
+															  fontSize: size, environment: environment)
+					let dark = column.dark
+					let label = "\(Self.displayName(bundle)) / \(fixture.rawValue) / \(dark ? "dark" : "light") / \(column.sizeName)"
+					pages += 1
+					let measured = await MatrixRenderer.measure(html: html, dark: dark, environment: environment)
+					guard let metrics = measured, metrics.error == nil else {
+						failures.append("\(label): page did not report back")
+						breaker.record(isNil: true)
+						if breaker.isTripped {
+							aborted = true
+							break bundleLoop
 						}
-						if metrics.dark != dark {
-							appearanceMismatches += 1
-						}
-						if metrics.overflows {
-							failures.append("\(label): horizontal overflow, scrollWidth \(metrics.scrollWidth ?? 0), body \(metrics.bodyScrollWidth ?? 0), clientWidth \(metrics.clientWidth ?? 0)")
-						}
-						for image in metrics.badImages ?? [] {
-							failures.append("\(label): \(image)")
-						}
+						continue
+					}
+					breaker.record(isNil: false)
+					if metrics.dark != dark {
+						appearanceMismatches += 1
+					}
+					if metrics.overflows {
+						failures.append("\(label): horizontal overflow, scrollWidth \(metrics.scrollWidth ?? 0), body \(metrics.bodyScrollWidth ?? 0), clientWidth \(metrics.clientWidth ?? 0)")
+					}
+					for image in metrics.badImages ?? [] {
+						failures.append("\(label): \(image)")
 					}
 				}
 			}
 		}
 
-		print("ThemeCheckMatrix \(folder): \(pages) pages in \(ContinuousClock.now - started)")
+		print("ThemeCheckMatrix \(folder): \(pages) pages in \(ContinuousClock.now - started)\(aborted ? " (aborted by circuit breaker)" : "")")
+		#expect(!aborted, "\(breaker.limit) consecutive pages did not report back in \(folder); the run was aborted. This points at the harness (hidden window, WebKit), not at one theme.")
 		#expect(appearanceMismatches == 0, "\(appearanceMismatches) page(s) did not get the requested prefers-color-scheme; the hidden window did not flip it (see ArticleThemeColorProbe.useVisibleHostFallback)")
 		#expect(failures.isEmpty, "\(failures.count) failure(s):\n\(failures.prefix(60).joined(separator: "\n"))")
 	}
 
 	/// Only themes whose own stylesheet mentions footnotes are held to the numeral checks; a theme
 	/// that does not style them inherits `core.css`, which this checks nothing about.
-	@Test func footnoteMarkersAreLegibleForThemesThatStyleThem() async throws {
+	@Test(.timeLimit(.minutes(10))) func footnoteMarkersAreLegibleForThemesThatStyleThem() async throws {
 		let environment = Self.environment()
 		var failures = [String]()
 		var checked = 0
@@ -452,11 +509,41 @@ struct ThemePageMetrics: Decodable, Sendable {
 		#expect(checked > 0, "no theme styles footnotes; the selection rule found nothing")
 		#expect(failures.isEmpty, "\(failures.count) failure(s):\n\(failures.prefix(60).joined(separator: "\n"))")
 	}
+}
+
+// MARK: - Cheap fixture check (always runs)
+
+@MainActor @Suite struct ArticleThemeCheckFixtureTests {
+
+	/// The fixtures decode, hold exactly the reader's macro keys, and match the keys the app's own
+	/// sample uses, so a change on either side is noticed.
+	@Test func upstreamFixturesCarryTheReaderMacroKeys() throws {
+		let sampleKeys = Set(ArticleThemeSampleContent.substitutions().keys).subtracting(["dateline_style"])
+		for fixture in [ThemeCheckFixture.article, .kitchenSink] {
+			let values = try fixture.substitutions()
+			#expect(Set(values.keys).subtracting(["dateline_style"]) == sampleKeys, "\(fixture.rawValue) macro keys")
+			#expect(values["dateline_style"] == "articleDatelineTitle")
+			#expect(values["body"]?.contains("<p") == true)
+		}
+	}
+}
+
+// MARK: - Render-diff report (heavy, skipped by default in CI)
+
+@MainActor @Suite(.serialized) struct ArticleThemeRenderDiffTests {
+
+	private static func environment() -> ArticleThemeProbeEnvironment {
+		ArticleThemeProbeEnvironment.reader()
+	}
+
+	private static func displayName(_ url: URL) -> String {
+		url.deletingPathExtension().lastPathComponent
+	}
 
 	/// Report, not a gate: how Nectar's `core.css` and the pinned upstream one differ in overflow and
 	/// image sizes for the starter-style fixture and the bundles that pass the upstream validator.
 	/// The only assertions are that the upstream copy is the pinned file and that every page rendered.
-	@Test func renderDiffAgainstUpstreamCoreCSS() async throws {
+	@Test(.timeLimit(.minutes(5))) func renderDiffAgainstUpstreamCoreCSS() async throws {
 		let upstreamURL = try ThemeCheckPaths.repoURL("Tests/NetNewsWire-iOSTests/Fixtures/ThemeCheck/upstream-core.css")
 		let upstreamData = try Data(contentsOf: upstreamURL)
 		let hash = SHA256.hash(data: upstreamData).map { String(format: "%02x", $0) }.joined()

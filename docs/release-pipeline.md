@@ -50,6 +50,14 @@ Consequences:
   by hand.
 - `gallery.yml` still publishes the landing page and gallery on pushes to `main` without waiting for CI. Its own
   `gallery/build.py` run performs the bundle checks; the `unittest` step and `upstream-compat` do not run there.
+- What the simulator test job runs: the `Nectar-CI` plan with coverage off
+  (`-enableCodeCoverage NO`; the plan keeps it on for local runs, nothing in the repo reads it).
+  The heavy theme suites run only when theme-related files changed since the previous release tag,
+  when there is no previous tag, or when the manual `theme_suites` input is true; the 31 XCTest
+  performance tests are not in the plan. See `theme-testing.md` ("CI scope"). The same job runs
+  `buildscripts/fail_on_warnings.sh` on the test log; the separate `ios-simulator-build` job that
+  compiled the app a second time was removed. Because the test log also covers the test targets,
+  test-target warnings now fail the gate.
 - The gate runs before the IPA build, so a release takes as long as the slowest `ci.yml` job (the simulator test)
   longer than before. Running `ci` in parallel with the build would be faster, but the IPA would be attached to
   the release before the tests pass.
