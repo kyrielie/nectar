@@ -21,10 +21,13 @@ capture command are below.
   code problem.
 
 Relevant suites: `ArticleThemeColorProbeTests` (rendering),
+`ArticleThemeSmokeTests` (every bundle passes the probe's sanity check),
 `ArticleThemeColorStoreAppTests` and the package's `ArticleThemeColorStoreTests`
 (store), `ArticleThemesManagerGateTests` (gate and prewarm),
 `ThemeColorTableGeneratorTests` and `ThemeColorTableGuardTests` (bundled table),
-`ArticleThemeCheckMatrixTests` (render checks over every theme).
+`ArticleThemeCheckMatrixTests` (overflow, image and footnote checks over every theme),
+`ArticleThemeRenderDiffTests` (report against upstream `core.css`),
+`ArticleThemeCheckFixtureTests` (the article fixtures' macro keys).
 
 ## The bundled color table
 
@@ -88,9 +91,56 @@ every `colorCacheKey`, so regenerate the table in the same change.
 
 ## Smoke test over all themes
 
-`ArticleThemeColorProbeTests.everyShippedThemePassesTheSanityCheck` probes every
+`ArticleThemeSmokeTests.everyShippedThemePassesTheSanityCheck` probes every
 `Themes/` and `gallery-themes/` bundle, stores nothing, fails if any measurement
-is rejected, and prints cold and warm timings.
+is rejected, and prints a median probe time. It lives in its own suite (it used to be
+in `ArticleThemeColorProbeTests`) so CI can skip it, see "CI scope". Measurements go
+through `ThemeProbeMeasurementCache` (keyed by `ArticleTheme.colorCacheKey`, declared in
+`ArticleThemeColorProbeTests.swift`), so
+`probeAgreesWithScannerWhereScannerFoundAValue` and this test load a bundle once per test
+process. The old warm-timing loop was deleted; the printed median now mixes real loads and
+cache hits.
+
+## CI scope
+
+The Nectar-CI plan always runs everything except the heavy theme suites and the
+performance tests:
+
+- **Heavy theme suites** (`ArticleThemeCheckMatrixTests`, `ArticleThemeSmokeTests`,
+  `ArticleThemeRenderDiffTests`). The `ios-simulator-test` job in `ci.yml` passes
+  `-skip-testing:Nectar-iOSTests/<Suite>` for all three unless its `Decide whether to run
+  the theme suites` step sets `run=true`. That happens when the `theme_suites` input is true
+  (the default for a manual `workflow_dispatch`, false when `release.yml` calls `ci.yml`),
+  when there is no previous release tag (`git describe --tags --match 'v[0-9]*' HEAD^`), or
+  when `git diff --name-only <previous tag>..HEAD` touches any of: `Themes/`,
+  `gallery-themes/`, `Shared/Article Rendering/`, `Modules/ArticleTheming/`,
+  `iOS/Resources/ThemeColorTable.json`, `Tests/NetNewsWire-iOSTests/ArticleTheme*`,
+  `Tests/NetNewsWire-iOSTests/Fixtures/ThemeCheck/`, `.../Fixtures/ThemeColorProbe/`,
+  `ThemeColorTableTests.swift`. The path list is in the workflow; keep it and this list
+  together. A release with none of those changes skips the suites (accepted decision).
+  The step summary says which way it went and why.
+- **The suites that stay in the gate**: `ArticleThemeColorProbeTests`,
+  `ArticleThemeColorStoreAppTests`, `ArticleThemesManagerGateTests`,
+  `ArticleThemeCheckFixtureTests`, `ThemeColorTableGuardTests` and the other theme tests.
+  They are small next to the matrix.
+- **Performance tests**: the 31 XCTest `measure` tests in RSParser (26) and RSCore (5) are
+  listed under `skippedTests` for `RSParserTests` and `RSCoreTests` in `Nectar-CI.xctestplan`
+  and are the `selectedTests` of `Nectar-Performance.xctestplan`. Run them with
+  `./test.sh performance` or by choosing that plan in Xcode. Nothing runs them
+  automatically. If a performance test is added or renamed, update both plans.
+
+Locally, `./test.sh` runs the whole Nectar-CI plan including the theme suites. To skip them
+the same way CI does, add the three `-skip-testing:` flags to the `xcodebuild` command. To run
+only them: `-only-testing:Nectar-iOSTests/ArticleThemeCheckMatrixTests` (and the other two).
+Whether Xcode 26.3 accepts a Swift Testing suite name in `-skip-testing:` and
+`-only-testing:` in the `Nectar-iOSTests/<Suite>` form has not been confirmed in a CI run;
+if a suite still runs, check the log for its name.
+
+Both heavy suites also have time limits (`.timeLimit(.minutes(n))`: matrix 15, footnotes
+10, smoke 10, render diff 5, probe/scanner agreement 5) and a circuit breaker
+(`ConsecutiveNilBreaker`, 5 pages or themes in a row that did not report back) so a
+systemic failure ends the run early instead of costing one timeout per page. A tripped
+breaker fails the test with a message pointing at the harness.
 
 ## Article fixtures
 
@@ -116,14 +166,26 @@ To add a fixture, convert a captured `.toml` the same way and add a case to
 
 ## Check matrix (`ArticleThemeCheckMatrixTests`)
 
-Renders each bundle in `Themes/` and `gallery-themes/` through
-`ArticlePageComposer` with the reader's page preferences (content JavaScript
+Renders each bundle in `Themes/` and `gallery-themes/` (a suite CI skips by default, see
+"CI scope") through `ArticlePageComposer` with the reader's page preferences (content JavaScript
 off), for each fixture, light and dark, at the default and the largest
 accessibility body size (`.accessibilityExtraExtraExtraLarge`, fed to the
 theme's `font-size` macro the way the reader feeds it). The page reports back
 through a `WKUserScript` and a message handler, as the color probe does; nothing
-uses `evaluateJavaScript`. That is about 2,000 page loads, so the test prints a
-timing line.
+uses `evaluateJavaScript`. The columns per bundle are chosen by
+`ThemeCheckColumns`:
+
+- `Themes/` (shipped bundles): all 12 (3 fixtures x 2 sizes x light and dark), 168 pages.
+- `gallery-themes/`: the largest size only, light, 3 fixtures; plus a dark page when the
+  bundle's `ownStylesheet` contains `prefers-color-scheme`, `color-scheme` or `light-dark(`.
+  With the 151 gallery bundles the plan counted that is 453 pages, so 621 pages in all before the dark
+  additions; the real total is higher by one page per fixture per dark-capable bundle and
+  is printed by the test. The basis for dropping the default-size and dark columns is two
+  recorded runs in which every overflow also appeared at the largest size and none appeared
+  only in dark; re-check against one full run of the old 1,980-page matrix before treating
+  the reduction as permanent.
+
+Each run prints a `ThemeCheckMatrix <folder>: N pages in <time>` line.
 
 - `noOverflowAndNoBrokenImagesAcrossMatrix` (one run per folder) fails on
   horizontal document overflow (`scrollWidth` or the body's `scrollWidth` above
@@ -132,7 +194,7 @@ timing line.
   skipped). It also fails if a page did not get the requested
   `prefers-color-scheme`, which would make the dark column meaningless; the
   remedy is `ArticleThemeColorProbe.useVisibleHostFallback`.
-- `footnoteMarkersAreLegibleForThemesThatStyleThem` ports the numeral checks of
+- `footnoteMarkersAreLegibleForThemesThatStyleThem` (`ArticleThemeCheckMatrixTests`) ports the numeral checks of
   `nnw-theme`'s `assets/footnotes.js` for themes whose own stylesheet mentions
   `footnote` (37 bundles when this was written): each marker resolves to a
   non-empty note, the numeral differs from its flattened backdrop by more than 60
@@ -141,7 +203,7 @@ timing line.
   the popover click (newsfoot is an app script and never runs here) and
   `keep_with_word` (opt-in upstream). Because `main.js` adds `a.footnote` at
   runtime, the selector also accepts `sup > a[href*="#fn"]`.
-- `renderDiffAgainstUpstreamCoreCSS` is a report, not a gate. It renders the
+- `ArticleThemeRenderDiffTests.renderDiffAgainstUpstreamCoreCSS` is a report, not a gate. It renders the
   starter-style fixture theme and the six bundles that pass the upstream
   validator (Biblioteca, NewsFax, Promenade, Sepia, Tiqoe Dark, Verdana Revival)
   once with Nectar's `core.css` and once with `upstream-core.css`, and prints

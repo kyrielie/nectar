@@ -43,8 +43,20 @@
         "containerPath" : "container:Modules/RSParser",
         "identifier" : "RSParserTests",
         "name" : "RSParserTests"
-      }
-    },
+      },
+        "skippedTests" : [
+          "OPMLPerformanceTests",
+          "RSSParserPerformanceTests",
+          "AtomParserPerformanceTests",
+          "FeedParserTypePerformanceTests",
+          "JSONFeedParserPerformanceTests",
+          "RSSInJSONParserPerformanceTests",
+          "EntityDecodingPerformanceTests",
+          "DateParserPerformanceTests",
+          "HTMLLinkPerformanceTests",
+          "HTMLMetadataPerformanceTests"
+        ]
+      },
     {
       "target" : {
         "containerPath" : "container:Modules/Account",
@@ -71,8 +83,14 @@
         "containerPath" : "container:Modules/RSCore",
         "identifier" : "RSCoreTests",
         "name" : "RSCoreTests"
-      }
-    },
+      },
+        "skippedTests" : [
+          "MD5PerformanceTests",
+          "StripHTMLPerformanceTests",
+          "CollapsingWhitespacePerformanceTests",
+          "StringRSCoreTests/testMD5StringPerformance()"
+        ]
+      },
     {
       "target" : {
         "containerPath" : "container:Modules/RSDatabase",

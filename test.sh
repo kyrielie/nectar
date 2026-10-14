@@ -21,6 +21,15 @@ case "${1:-}" in
       -destination 'platform=iOS Simulator,name=iPhone 17' \
       test
     ;;
+  performance)
+    # The XCTest `measure` tests (RSParser, RSCore). They are skipped in the
+    # Nectar-CI plan and run only from the Nectar-Performance plan, on demand.
+    xcodebuild -project NetNewsWire.xcodeproj -scheme Nectar-iOS \
+      -testPlan Nectar-Performance \
+      -xcconfig .github/ios-ci-no-signing.xcconfig \
+      -destination 'platform=iOS Simulator,name=iPhone 17' \
+      test
+    ;;
   screenshots)
     reset_app_container
     xcodebuild -project NetNewsWire.xcodeproj -scheme Nectar-iOSUITests \
@@ -54,7 +63,7 @@ case "${1:-}" in
     exit "$status"
     ;;
   *)
-    echo "Usage: $0 [screenshots|screenshots-debug]" >&2
+    echo "Usage: $0 [performance|screenshots|screenshots-debug]" >&2
     exit 2
     ;;
 esac

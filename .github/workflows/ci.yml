@@ -13,6 +13,13 @@ name: CI
 # There is deliberately no `concurrency:` block. A workflow_call run is part of a
 # release, and `cancel-in-progress` would let a second run on the same ref cancel
 # the gate of the first.
+#
+# The heavy theme suites (ArticleThemeCheckMatrixTests, ArticleThemeSmokeTests,
+# ArticleThemeRenderDiffTests) run only when files that can change theme rendering
+# differ from the previous release tag, when there is no previous tag, or when
+# `theme_suites` is true. The XCTest performance tests are not in the Nectar-CI plan;
+# run them with the Nectar-Performance plan (`test.sh performance`). See
+# docs/theme-testing.md ("CI scope") and docs/release-pipeline.md.
 on:
   workflow_call:
     inputs:
@@ -21,7 +28,18 @@ on:
         required: false
         default: ""
         type: string
+      theme_suites:
+        description: "Run the heavy theme suites even if no theme-related file changed."
+        required: false
+        default: false
+        type: boolean
   workflow_dispatch:
+    inputs:
+      theme_suites:
+        description: "Run the heavy theme suites even if no theme-related file changed."
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -180,11 +198,64 @@ jobs:
     name: iOS Simulator Test
     runs-on: macos-26
     steps:
+      # Full history and tags: the theme-suite decision diffs against the previous release tag.
       - name: Checkout
         uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || github.sha }}
           submodules: recursive
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Decide whether to run the theme suites
+        id: themes
+        shell: bash
+        env:
+          FORCE: ${{ inputs.theme_suites }}
+        run: |
+          set -euo pipefail
+
+          # Paths that can change what the theme suites measure. Keep in sync with
+          # docs/theme-testing.md ("CI scope").
+          paths=(
+            "Themes/"
+            "gallery-themes/"
+            "Shared/Article Rendering/"
+            "Modules/ArticleTheming/"
+            "iOS/Resources/ThemeColorTable.json"
+            "Tests/NetNewsWire-iOSTests/ArticleTheme"
+            "Tests/NetNewsWire-iOSTests/Fixtures/ThemeCheck/"
+            "Tests/NetNewsWire-iOSTests/Fixtures/ThemeColorProbe/"
+            "Tests/NetNewsWire-iOSTests/ThemeColorTableTests.swift"
+          )
+
+          run=false
+          reason=""
+          if [ "${FORCE:-false}" = "true" ]; then
+            run=true
+            reason="theme_suites input is true"
+          else
+            # Parent of the tested commit: when the commit itself already carries a release tag
+            # (a rerun), the nearest tag of the parent is still the previous release.
+            previous=$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD^ 2>/dev/null || true)
+            if [ -z "$previous" ]; then
+              run=true
+              reason="no previous release tag"
+            else
+              changed=$(git diff --name-only "$previous"..HEAD -- "${paths[@]}")
+              if [ -n "$changed" ]; then
+                run=true
+                reason="theme-related files changed since $previous"
+                echo "$changed" | head -20
+              else
+                reason="no theme-related files changed since $previous"
+              fi
+            fi
+          fi
+
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "::notice::Theme suites: run=$run ($reason)"
+          echo "Theme suites: run=$run ($reason)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Select Xcode 26.3
         run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
@@ -197,12 +268,23 @@ jobs:
 
       - name: Test on iOS Simulator
         shell: bash
+        env:
+          RUN_THEME_SUITES: ${{ steps.themes.outputs.run }}
         run: |
           set -euo pipefail
 
           test_log="${RUNNER_TEMP}/Nectar-iOS-test.log"
           result_bundle="${RUNNER_TEMP}/Nectar-iOS.xcresult"
           rm -rf "$result_bundle"
+
+          skip_args=()
+          if [ "$RUN_THEME_SUITES" != "true" ]; then
+            skip_args=(
+              -skip-testing:Nectar-iOSTests/ArticleThemeCheckMatrixTests
+              -skip-testing:Nectar-iOSTests/ArticleThemeSmokeTests
+              -skip-testing:Nectar-iOSTests/ArticleThemeRenderDiffTests
+            )
+          fi
 
           set -o pipefail
           xcodebuild \
@@ -212,8 +294,22 @@ jobs:
             -xcconfig .github/ios-ci-no-signing.xcconfig \
             -destination "platform=iOS Simulator,name=iPhone 17" \
             -resultBundlePath "$result_bundle" \
+            -enableCodeCoverage NO \
+            ${skip_args[@]+"${skip_args[@]}"} \
             OTHER_SWIFT_FLAGS='$(inherited) -DDEBUG -DSKIP_APP_GROUP_ACCESS' \
             test 2>&1 | tee "$test_log" | xcbeautify --renderer github-actions
+
+      # Runs after the tests so a failing test does not hide warnings, and fails the job on any
+      # first-party warning in the build log (this replaces the old separate build job).
+      - name: Fail on first-party warnings
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test_log="${RUNNER_TEMP}/Nectar-iOS-test.log"
+          if [ -f "$test_log" ]; then
+            ./buildscripts/fail_on_warnings.sh "$test_log"
+          fi
 
       - name: Summarize test results
         if: always()
@@ -236,40 +332,3 @@ jobs:
             ${{ runner.temp }}/Nectar-iOS-testresults.json
           if-no-files-found: warn
           retention-days: 14
-
-  ios-simulator-build:
-    name: iOS Simulator Build
-    runs-on: macos-26
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.ref || github.sha }}
-          submodules: recursive
-
-      - name: Select Xcode 26.3
-        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
-
-      - name: Install XcodeGen
-        run: brew install xcodegen
-
-      - name: Generate Xcode project
-        run: xcodegen generate
-
-      - name: Build for iOS Simulator
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          build_log="${RUNNER_TEMP}/NetNewsWire-iOS-build.log"
-
-          set -o pipefail
-          xcodebuild \
-            -project NetNewsWire.xcodeproj \
-            -scheme Nectar-iOS \
-            -xcconfig .github/ios-ci-no-signing.xcconfig \
-            -destination "platform=iOS Simulator,name=iPhone 17" \
-            OTHER_SWIFT_FLAGS='$(inherited) -DDEBUG -DSKIP_APP_GROUP_ACCESS' \
-            build 2>&1 | tee "$build_log" | xcbeautify --renderer github-actions
-
-          ./buildscripts/fail_on_warnings.sh "$build_log"

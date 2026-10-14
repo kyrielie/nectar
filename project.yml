@@ -238,6 +238,7 @@ schemes:
         - path: NetNewsWire-iOS.xctestplan
           defaultPlan: true
         - path: Nectar-CI.xctestplan
+        - path: Nectar-Performance.xctestplan
       commandLineArguments: {}
     run:
       config: Debug

@@ -217,9 +217,16 @@ package test target, add its entry there too. `scripts/check-test-plan.sh`
 enforces this: it reads every `Modules/*/Package.swift`, and exits 1 naming
 any `.testTarget` that `Nectar-CI.xctestplan` does not list. CI runs it in
 the `swiftlint` job (it needs no Xcode), so a new package test target that
-is not added to the plan fails the build. Both plans have
+is not added to the plan fails the build. Both of those plans have
 `codeCoverage` enabled so coverage of the large `iOS/` files can be tracked
-over time; it does not change test behavior.
+over time; it does not change test behavior. CI passes `-enableCodeCoverage NO`,
+so the setting only applies to local runs.
+
+`Nectar-CI.xctestplan` lists the 31 XCTest `measure` tests under `skippedTests` for
+`RSParserTests` and `RSCoreTests`; `Nectar-Performance.xctestplan` selects exactly those
+(`./test.sh performance`). CI also skips the three heavy theme suites at the command line
+(`-skip-testing:`, not in the plan) unless theme-related files changed. See
+`theme-testing.md` ("CI scope").
 
 Packages with no test target today: `Images`, `HTMLMetadata`, `RSTree`.
 The `AppChrome`, `ReadingStats` and `ReadingTime` targets each hold only a
