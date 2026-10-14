@@ -140,6 +140,8 @@ import BackupRestore
 		// crash to flag it. See ArticleThemesManager.swift.
 		ArticleThemesManager.nameStorage = AppDefaults.shared
 		BackupManager.settingsStore = AppDefaults.shared
+		// Also before start(): the theme gate and the stale-cache re-measure read it.
+		ArticleThemeColorStore.configure(.reader())
 		ArticleThemesManager.shared.start()
 		NetworkMonitor.shared.start()
 

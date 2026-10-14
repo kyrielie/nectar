@@ -217,16 +217,13 @@ bundle:
 | `font-size: Npx` | `calc(var(--u) * N)` (`--u` is 1px on macOS, font size / 15 on iOS, so type follows Dynamic Type) |
 | `padding: 22px 20px ...` | `10px var(--gx) ...`; `-20px` becomes `calc(var(--gx) * -1)`, `-22px` becomes `-10px` |
 
-**Page color is `background-color`, not the `background` shorthand.** The converted
-`body` rule must be `background-color: var(--nnw-bg)`. `ArticleThemeColorExtractor`
-reads only `background-color`, so a shorthand body renders correctly but gives the
-full-screen notch cover, the webview and under-page background and the Blend nav bar
-white (light) or black (dark); see `article-color-pipeline.md`. The 66 Route A bundles
-that shipped with the shorthand were rewritten by
-`buildscripts/theme-generation/fix_body_background_color.py`. The converter and
-`kit.py` are outside this repo, so their body rule was not changed here and still needs
-to emit `background-color`. After any conversion run, `fix_body_background_color.py
---check` lists offenders and `--write` fixes them.
+**Page color.** The converted `body` rule should paint the page with `background-color:
+var(--nnw-bg)`. The app measures the rendered page, so the `background` shorthand also
+works now; `background-color` stays preferred because the legacy scanner fallback (used
+until a measurement exists) can only read that property, and it is what the 66 Route A
+bundles already use. `fix_body_background_color.py` and its test were removed in WP8 of
+the theme color probe plan; see `article-color-pipeline.md`. The converter and `kit.py`
+are outside this repo and were not changed here.
 
 Other rules that mention `.b` are dropped. A converted title therefore sits 12px higher than
 in the mockup for themes with plain top padding, and in the same place for themes with a

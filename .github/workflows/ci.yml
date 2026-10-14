@@ -1,14 +1,27 @@
 name: CI
 
+# Not triggered by pull requests or pushes. It runs in two ways only:
+#   - workflow_call from release.yml, as the gate that must pass before the
+#     release tag is created and the IPA is built. release.yml passes the
+#     commit it is about to release as `ref`.
+#   - workflow_dispatch, to run the whole suite by hand on any branch (pick the
+#     branch in the "Run workflow" dropdown). `test.sh` runs the iOS tests locally.
+# See docs/release-pipeline.md. If a branch protection rule or ruleset lists any
+# of these jobs as a required status check, remove it: with no PR trigger the
+# check never reports and pull requests would wait on it forever.
+#
+# There is deliberately no `concurrency:` block. A workflow_call run is part of a
+# release, and `cancel-in-progress` would let a second run on the same ref cancel
+# the gate of the first.
 on:
-  pull_request:
-  push:
-    branches:
-      - main
-
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  workflow_call:
+    inputs:
+      ref:
+        description: "Commit SHA (or ref) to check out and test."
+        required: false
+        default: ""
+        type: string
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,6 +36,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -40,6 +55,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       # release.yml publishes appstore/screenshots to gh-pages with cp -R, so a
       # symlink (for example into fastlane's output) would dangle there. Catch
@@ -72,12 +89,83 @@ jobs:
           fi
           exit $status
 
+  theme-gallery:
+    name: Theme Gallery
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Gallery tests
+        run: python3 -m unittest discover -s gallery
+
+      # Runs the bundle checks (comment macros, @import placement, duplicate
+      # ThemeIdentifier, Version) over every bundle and writes the zips.
+      - name: Build gallery
+        run: python3 gallery/build.py --out "$RUNNER_TEMP/gallery"
+
+      # `gallery/build.py --check-release-identity origin/<base>` is not run here
+      # any more: it compares against a pull request's base branch, and this
+      # workflow no longer runs on pull requests. Run it by hand when a bundle's
+      # stylesheet.css or template.html changes (see docs/theme-gallery.md).
+
+  # Runs the upstream nnw-theme release gate (render and test in WebKit) on the bundles
+  # in gallery/upstream-compatible.txt. Node 24 is nnw-theme's minimum. The ubuntu-26.04
+  # runner is the one nnw-theme's own reusable workflow uses with `setup --with-deps`.
+  # To move to a newer nnw-theme, change NNW_THEME_VERSION here and DEFAULT_VERSION in
+  # gallery/upstream_compat.py together (a test checks they agree).
+  upstream-compat:
+    name: Upstream Compatibility
+    runs-on: ubuntu-26.04
+    env:
+      NNW_THEME_VERSION: "2.0.2"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Cache npm and WebKit
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/ms-playwright
+          key: nnw-theme-${{ runner.os }}-${{ runner.arch }}-${{ env.NNW_THEME_VERSION }}
+
+      - name: Install WebKit
+        run: npx --yes "nnw-theme@$NNW_THEME_VERSION" setup --with-deps
+
+      - name: Check listed bundles
+        run: >-
+          python3 gallery/upstream_compat.py
+          --nnw-theme-version "$NNW_THEME_VERSION"
+          --report-dir "$RUNNER_TEMP/upstream-compat"
+
+      - name: Upload check reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upstream-compat-reports
+          path: ${{ runner.temp }}/upstream-compat
+          if-no-files-found: warn
+          retention-days: 14
+
   swiftlint:
     name: SwiftLint
     runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Install SwiftLint
         run: brew install swiftlint
@@ -95,6 +183,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
+          ref: ${{ inputs.ref || github.sha }}
           submodules: recursive
 
       - name: Select Xcode 26.3
@@ -155,6 +244,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
         with:
+          ref: ${{ inputs.ref || github.sha }}
           submodules: recursive
 
       - name: Select Xcode 26.3

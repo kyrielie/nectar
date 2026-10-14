@@ -1,0 +1,6 @@
+html { background-color: #fdf6e3; color: #333333; }
+a { color: #0645ad; }
+@media (prefers-color-scheme: dark) {
+html { background-color: #1b1b1b; color: #dddddd; }
+a { color: #8ab4f8; }
+}

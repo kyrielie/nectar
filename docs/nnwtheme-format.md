@@ -77,10 +77,11 @@ Two systems key off that exact class name regardless of which theme is active:
 
 - `core.css`'s AO3 preface rules (`#ao3SyntheticPreface`, `#ao3Preface`) are concatenated
   ahead of every theme's CSS and assume no theme overrides them at the markup level.
-- `ArticleThemeOverrides.cssOverrideBlock` and `ArticleThemeColorExtractor` both target
-  `.articleBody` by class name, not by structural position -- a theme that renames or
-  drops that class breaks font-size/line-height/color overrides and the live theme-color
-  preview for anyone using that theme.
+- `ArticleThemeOverrides.cssOverrideBlock` and the legacy `ArticleThemeColorExtractor`
+  fallback both target `.articleBody` by class name, not by structural position -- a
+  theme that renames or drops that class breaks font-size/line-height/color overrides and
+  the live theme-color preview for anyone using that theme. The color probe also reads
+  `.articleBody`'s computed `color`, falling back to `body`.
 
 Everything else in a custom `template.html` -- header layout, added wrapper elements,
 decorative markup, alternate class names on non-`articleBody` elements -- is fair game.
@@ -237,26 +238,37 @@ not a base64-embedded `@font-face`. `Hyperlegible.nnwtheme` is the reference pat
 
 #### Color tokens and the page color
 
-The app reads a theme's page, text and link colors out of its stylesheet
-(`ArticleThemeColorExtractor`) for the webview background, the full-screen notch cover, the
-page-counter text and the Blend nav bar. These rules make that reliable; the reasons and the
-code path are in `article-color-pipeline.md`.
+The app measures a theme's page, ink and link colors by rendering it
+(`ArticleThemeColorProbe`) for the webview background, the full-screen notch cover, the
+page-counter text and the Blend nav bar. Tokens and selectors are therefore optional;
+the code path is in `article-color-pipeline.md`.
 
-- Declare `--nnw-bg`, `--nnw-ink` and `--nnw-link` with literal `#hex` or `rgb()` values in
-  `:root`, and again in the dark `:root` inside the single
-  `@media (prefers-color-scheme: dark)` block. `var()` resolves one level only, so a token
-  whose value is another `var()` is not found.
-- The extractor reads exact selectors: `body` and `.articleBody` for `color` and
-  `background-color`, and `a` and `.articleBody a` for link `color`. A color set only on
-  `html`, `.t` or `#bodyContainer` is invisible to it.
-- Write the page color as `background-color`, never the `background` shorthand. The extractor
-  cannot read the shorthand and falls back to white (light) or black (dark) for the notch
-  cover, webview and nav bar, even though the page itself looks right.
-  `buildscripts/theme-generation/fix_body_background_color.py --check` lists offenders and a
-  test fails on them.
-- Do not redeclare `--nnw-*` outside those two `:root` blocks: the scanner collects every
-  `--name: value;` in the non-dark CSS and the last declaration wins.
-- Anything inside an `@supports` block is ignored by the extractor.
+- Write colors the way you like: on `html` or `body`, with the `background` shorthand,
+  `light-dark()`, `oklch()`, space-separated `rgb()`, or a `color-scheme` with no explicit
+  colors. The probe reads computed values.
+- `--nnw-bg`, `--nnw-ink` and `--nnw-link` are an optional convenience. Themes that use
+  them still get the user color override applied through the same variables. If you use
+  them, keep them literal and in the single dark `:root` block as before, which also keeps
+  the legacy scanner fallback accurate.
+- The page color is `background-color` on `body`, else `html`. A gradient or image alone
+  counts as unpainted, so also set a `background-color` near the gradient's top edge.
+- Ink must contrast with the page (WCAG 1.5 or more for ink and for links) and must not
+  equal it, or the measurement is rejected and the scanner fallback is used.
+- Content JavaScript never runs in the reader, so a script that recolors the page has no
+  effect on the measurement.
+- Upstream-compatible subset: no `@import`, no scripts, `Name` equals the bundle name, no
+  bundle-local `url()` (see `theme-gallery.md`). Every bundle in `Themes/` and
+  `gallery-themes/` keeps `Info.plist` `Name` equal to the folder name, both in NFC
+  (`gallery/test_build.py` enforces this and the absence of placeholder metadata such as
+  `starter` or `example.com` in `ThemeIdentifier`, `Name`, `CreatorHomePage`,
+  `CreatorName`). A folder name typed on macOS can be NFD; rename it to NFC rather than
+  changing `Name`. The app looks themes up by folder name, not by `ThemeIdentifier`, so
+  correcting an identifier does not affect existing selections.
+- Known divergence from upstream `core.css`: Nectar's lacks `.articleBody, .article-body
+  { position: relative }`, `pre, code { tab-size: 4 }`, the twemoji layout rules, and the
+  hiding rules for `img[src*="/img/social/"]`, `.social_items` and `.mcnFollowBlock`; it
+  adds `html, body { overflow-x: hidden }`, paragraph spacing and indent, the AO3 preface
+  rules and the highlight rules. This is documented, not synced.
 
 #### AO3 preface styling
 
@@ -387,9 +399,9 @@ leave the `data-chapter-divider*` attributes unset entirely.
 
 #### Glass themes (`backdrop-filter`)
 
-Liquid Glass Clear and Liquid Glass Aurora (`gallery-themes/`, family "Liquid Glass", shape B, `t308`/`t310`) are the reference for translucent themes. What the CSS was written against, checked by reading `ArticleThemeColorExtractor.colors(css:)`; none of it has been run on a device:
+Liquid Glass Clear and Liquid Glass Aurora (`gallery-themes/`, family "Liquid Glass", shape B, `t308`/`t310`) are the reference for translucent themes. What the CSS was written against (not yet run on a device):
 
-- **Background on `body`, not `.t`.** The glass is blurred background, so the gradient has to sit behind the panels. It is set as `background-image` on `body` next to `background-color: var(--nnw-bg)`; the extractor reads `body`/`.articleBody` `background-color` for the webview and notch cover, and ignores `background-image`. Use `background-image`, never the `background` shorthand, on that selector. `.t` is `background: none`.
+- **Background on `body`, not `.t`.** The glass is blurred background, so the gradient has to sit behind the panels. It is set as `background-image` on `body` next to `background-color: var(--nnw-bg)`; the probe records `background-color` for the webview and notch cover and ignores `background-image`. Prefer `background-image` over the `background` shorthand on that selector so the flat color stays declared. `.t` is `background: none`.
 - **`--nnw-bg` should match the top of the gradient**, so the notch cover blends into the page. A user background override recolors only the flat color underneath, not the gradient (inferred from the override description in `article-color-pipeline.md`).
 - **Tile the background.** An article can be tens of thousands of words tall; a single percent-positioned gradient would stretch across all of it. Both themes use `background-size: 100% <tile>px; background-repeat: repeat-y` with a tile that has no seam (Clear is a palindrome; Aurora keeps every blob clear of the tile edges). `background-attachment: fixed` is not used; its behavior in WKWebView was not checked.
 - **`body` spans the full width** (`max-width: none`, side padding of `max(0px, (100% - 44em) / 2)`) so its background reaches the edges on iPad/macOS. The macOS block uses body padding instead of margins for the same reason.
@@ -490,9 +502,8 @@ reading; custom templates may not. What the code does (confirmed by reading
 - `notchCoverView`, as tall as the raw top inset and filled with the article
   background color, covers the notch area when notch hiding is on (it is forced
   on whenever Page Counter is not Off).
-- The cover's color is the theme's body background as `ArticleThemeColorExtractor`
-  reads it, so a theme's `body` rule must declare `background-color` (not the
-  `background` shorthand); see `article-color-pipeline.md`.
+- The cover's color is the theme's measured page color (`ArticleThemeColorStore`),
+  which is `background-color` on `body`, else `html`; see `article-color-pipeline.md`.
 - No shared CSS compensates: `env(safe-area-inset-top)` appears in no
   `core.css` or default `stylesheet.css` rule.
 
@@ -581,7 +592,11 @@ On iOS and macOS, themes can be opened directly in Nectar using the below URL sc
 
 `nectar://theme/add?url={url}`
 
-When using this URL scheme the theme being shared must be zipped.
+When using this URL scheme the theme being shared must be zipped, and the zip must
+contain exactly one top-level `<Name>.nnwtheme` folder holding only `Info.plist`,
+`template.html`, `stylesheet.css` and optional `LICENSE*` / `NOTICE*` files. The URL
+must be `http` or `https` and the file at most 10,000,000 bytes. See `theme-system.md`
+("Archive rules") for the full list of rejected archives.
 
 Parameters:
 - `url`: (mandatory, URL-encoded): The theme's location.

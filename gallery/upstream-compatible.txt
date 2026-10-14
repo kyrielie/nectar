@@ -1,0 +1,24 @@
+# Bundles meant to stay portable to upstream NetNewsWire. CI (the `upstream-compat`
+# job in .github/workflows/ci.yml) runs `nnw-theme check` on every name below and
+# fails if one fails. One bundle name (the folder name without .nnwtheme) per line;
+# blank lines and lines starting with '#' are ignored. Run it locally with
+#   python3 gallery/upstream_compat.py
+# See docs/theme-gallery.md, "Upstream-compatibility gate".
+#
+# A bundle belongs here only if it also meets the upstream rules Nectar does not
+# otherwise enforce: no @import (themes that use one are Nectar-only, plan D18),
+# Info.plist Name equal to the bundle name, no bundle-local url().
+Biblioteca
+NewsFax
+Promenade
+Sepia
+Tiqoe Dark
+Verdana Revival
+
+# Not listed, on purpose:
+#  - Craft Table, Illuminated Codex, Nectar: the upstream validator reports their
+#    url(#...) references to inline SVG filters as bundle-local CSS resources. That is
+#    a validator false positive and the CSS is left as it is. They also begin with an
+#    @import, which upstream rejects, so they stay Nectar-only either way.
+#  - Every other bundle that begins with an @import of web fonts (158 at the time of
+#    the audit): Nectar-only by design.

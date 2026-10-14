@@ -35,6 +35,7 @@ task**, not this whole index cover-to-cover.
 - **Article theme (`.nnwtheme`) system itself** → `theme-system.md`
 - **Creating a new theme (start here), required names, bundle checklist** → `creating-a-theme.md`
 - **`.nnwtheme` bundle format / authoring reference / theme families** → `nnwtheme-format.md`
+- **Theme color probe/store tests, check matrix, article fixtures, `nnwdump`, regenerating `ThemeColorTable.json`, when to bump the probe version** → `theme-testing.md`
 - **Theme mockups, review page, title check, mockup-to-bundle conversion history** → `theme-mockups.md`
 - **The theme gallery (`gallery/`), its build pipeline, or the install deep link** → `theme-gallery.md`
 - **Landing page (`landing/`), its `site.json` config and optional sections** → `landing-page.md`
@@ -111,10 +112,12 @@ it's trusted by default. Specifically:
 | `ArticleThemeColorExtractor`, `ArticleResolvedColors`, `WebViewController.applyResolvedBackgroundColors`/`registerForTraitChanges` | `article-color-pipeline.md` |
 | `SurfacePalette`, `AccentColor`, `SurfacePaletteNavigationBarAware`, `ToolbarStyle`/`toolbarStyle`, `BadgeColorPalette`, `BadgeColorTable` | `app-chrome-palette.md` |
 | `.nnwtheme` bundles, `ArticleTheme`, `ArticleThemesManager`, `core.css`/`stylesheet.css` structure | `theme-system.md` |
+| `iOS/Resources/ThemeColorTable.json`, `ThemeColorTableGeneratorTests`/`ThemeColorTableGuardTests`, `ArticleThemeColorProbe.version`, editing `core.css` or a bundled theme's `stylesheet.css`/`template.html` (the table must be regenerated) | `theme-testing.md` (and `article-color-pipeline.md`) 
+| `ArticleThemeCheckMatrixTests`, `Tests/NetNewsWire-iOSTests/Fixtures/ThemeCheck/` (article fixtures, `upstream-core.css`), the `nnwdump` capture command | `theme-testing.md` |
 | `.nnwtheme` bundle-file layout, `Info.plist` `CreatorName`/`License.md` (description, attribution), per-theme fonts, theme families, `template.html` conventions, styleable blocks and ornament placement, full-screen title spacing, AO3 preface styling variables, `--nnw-*` color tokens and the page-color rule | `nnwtheme-format.md` |
 | Creating a new theme end to end, required file/key/selector names, `buildscripts/theme-generation/theme_inventory.py` (current bundle counts) | `creating-a-theme.md` |
 | Theme mockups (fixed page layout, sample text, review page, title check), mockup-to-bundle conversion, `buildscripts/theme-mockups/` (not in this checkout) | `theme-mockups.md` |
-| `gallery/build.py`, `gallery/index.template.html`, `BUNDLED`/`BUNDLED_ID_PREFIXES`, `.github/workflows/gallery.yml` | `theme-gallery.md` |
+| `gallery/build.py` (zip naming, bundle checks, `--check-release-identity`), `gallery/test_build.py`, `gallery/index.template.html`, `BUNDLED`/`BUNDLED_ID_PREFIXES`, `.github/workflows/gallery.yml`, the `theme-gallery` and `upstream-compat` jobs in `.github/workflows/ci.yml`, `gallery/upstream-compatible.txt`, `gallery/upstream_compat.py`, `gallery/test_upstream_compat.py` | `theme-gallery.md` |
 | `landing/` (`build.py`, `template.html`, `site.json`), the optional-section rules, `gallery.yml` (publishes landing page and gallery) | `landing-page.md` |
 | `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |
 | Any row/case in `SettingsViewController`'s `*Row` enums, `Settings.storyboard`, `AppDefaults`, or an `AppDefaults+<Feature>.swift` extension file | `settings-screen.md` |

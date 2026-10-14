@@ -1,0 +1,6 @@
+body { background: linear-gradient(#ffffff, #cccccc); color: #111111; }
+a { color: #0000cc; }
+@media (prefers-color-scheme: dark) {
+body { background: linear-gradient(#222222, #000000); color: #eeeeee; }
+a { color: #99ccff; }
+}

@@ -10,67 +10,53 @@ shortcut that pipeline relies on. Also unrelated to, but in the same file
 as, the article scrollbar-visibility setting and the reading-progress
 scroll tracking in `reading-progress.md`.
 
-`ArticleThemeColorExtractor.colors(for:)` resolves the text/background/link
-colors a theme's own stylesheet declares, so the webview background, the
-notch cover, and the page-counter text can default to what the theme
-actually looks like instead of a generic system color. It's a small
-regex-based scanner, not a full CSS parser: it understands literal
-`#hex`/`rgb()`/`rgba()` colors, a modest set of named CSS colors, and
-`var(--custom-property)` resolved against that theme's own `:root`
-declarations (scoped separately for light/dark so a dark-mode redefinition
-of a variable doesn't leak into the light-mode result). It does not
-understand CSS-4 system color keywords (`Canvas`, `CanvasText`, etc. — these
-fall through to "not found" like anything else unparseable) or selector
-specificity beyond exact-string matching. `@supports (...)` blocks are
-excluded from consideration entirely before scanning starts
-(`stripBraceBlocks`). `colors(for theme:)` is a thin wrapper over
-`colors(css:)`, which takes a raw CSS string directly -- same reasoning as
-`stripBraceBlocks` being `internal` rather than `private`, so tests can
-exercise real shipped themes' `stylesheet.css` without needing
-`ArticleTheme.init(url:isAppTheme:)`'s `Bundle.main` core.css resource. It
-excludes `@supports` blocks on the basis that they carry platform-specific
-overrides this scanner isn't equipped to reason about correctly — as of a
-later fix, this also covers the `@supports not (...)` form, which the
-original regex missed (`stylesheet.css`'s own macOS-only rules block uses
-exactly that form).
+Every native consumer reads theme colors through
+`ArticleThemeColorStore.colors(for:)` (the seam; see "Color store" below). The
+colors come from **measuring the rendered theme**, not from reading its CSS:
+`ArticleThemeColorProbe` renders the theme in a hidden web view and reads back
+computed colors (see "Color probe" below). A theme written the way community
+themes are written (colors on `html`, the `background` shorthand,
+`light-dark()`, `oklch()`, space-separated `rgb()`) therefore gets correct
+native colors. There is no required token, selector or property spelling for
+the native surfaces any more.
 
-Token rules for tokenized themes (see `nnwtheme-format.md`): each bundle
-declares `--nnw-bg`, `--nnw-ink` and `--nnw-link` with literal values in
-`:root` and in its dark `:root` block, and keeps `body`, `.articleBody`, `a`
-and `.articleBody a` declared on those exact selectors, because the
-extractor reads exactly those. The `var()` resolution is one level only: a
-variable whose value is itself a `var()` does not resolve, which is why the
-tokens must be literal. The user override block also sets these tokens (with
-`!important`), so a recolor reaches every surface the theme paints with
-`var(--nnw-bg)`.
+What is still true of theme CSS:
 
-**The page color must be the literal property `background-color`.** The extractor
-asks for `background-color` on `body`/`.articleBody`, and its matcher
-(`lastDeclaredValue`) cannot see the `background` shorthand. So
-`body { background: var(--nnw-bg) }` paints correctly in the webview but counts
-as "not found" here, and the fallbacks apply: light is `.white`, dark is
-`darkBackgroundFound ?? lightBackgroundFound ?? .black`, which is black. Because
-`ArticleResolvedColors.resolved` feeds the webview background,
-`underPageBackgroundColor`, the scroll view, `notchCoverView` and the Blend nav
-bar from that one value, all of them go white or black instead of the theme's
-page color. Seen on Delft Blue: the dark-mode notch cover was black instead of
-`#0c1736`. 66 bundles shipped with the shorthand (all from the mockup converter,
-whose body rule lives outside this repo) until
-`buildscripts/theme-generation/fix_body_background_color.py` renamed the property
-in each; it is a one-token change by text offset, so nothing the page paints
-changes. Only `body` and `.articleBody` rules are read, so a page color set only
-on `html`, `.t` or `#bodyContainer` is invisible to the extractor as well. Three
-stock themes (Appanoose, Hyperlegible, Promenade) declare no body background at
-all and use the fallback. Enforced three ways: `fix_body_background_color.py
---check` (exit 1 on any offender), `test_bundle_body_background.py`, and the
-Swift suite `ArticleThemeColorExtractorTests.BodyBackgroundContract` (written
-without being run in Xcode). The migration scripts' model of the extractor
-(`extractor_colors` in `migrate_theme_contract.py`) used to fall back to the
-shorthand, which is why their self-check never flagged this; it now reads only
-`background-color`, and the migrators rename the property when they rewrite a
-body rule. Reading a stylesheet in a test: production strips `@import` lines
-with `CSSImportExtractor` before extraction, so a test that reads the raw file
-must do the same, or the import text is glued onto the first rule's selector.
+- `--nnw-bg`, `--nnw-ink` and `--nnw-link` are an optional authoring
+  convenience. The user override block still sets them (with `!important`) next
+  to direct `body, .articleBody` color and background rules, so a recolor
+  reaches the page whether or not a theme uses the tokens. Themes may keep them
+  literal and on the exact selectors the old scanner read; nothing requires it.
+- The page color the probe records is `background-color` on `body`, then
+  `html`. A page painted only by a gradient or image counts as unpainted and
+  gets the legacy white/black fallback, so a theme with a gradient page should
+  also set a `background-color` close to the gradient's top edge so the notch
+  cover blends in.
+- `--nnw-highlight-*`, `--nnw-line-height`, `--nnw-prose-size`,
+  `--nnw-font-chrome` and `--gx` are app-to-theme inputs and are unchanged.
+
+**The scanner is only a fallback.** `ArticleThemeColorExtractor.colors(for:)` is a
+small regex scanner, not a CSS parser. It reads literal `#hex`/`rgb()`/`rgba()`
+and a modest set of named colors, resolves `var()` one level against the
+theme's own `:root` (light and dark scoped separately), excludes `@supports`
+blocks, and reads only `color`/`background-color` on `body` and `.articleBody`
+and `color` on `a` and `.articleBody a`. It is consulted when no measurement
+exists yet (first launch of a non-bundled theme, a failed measurement, the
+probe disabled). Because it cannot see the `background` shorthand, a
+shorthand-only body falls back to white (light) or black (dark) while it is in
+use; that is the accepted cost of the fallback and is corrected once the
+measurement lands. This used to be a hard contract: 66 bundles were rewritten
+to `background-color` and `fix_body_background_color.py`,
+`test_bundle_body_background.py` and
+`ArticleThemeColorExtractorTests.BodyBackgroundContract` enforced it. All three
+were removed in WP8 of the theme color probe plan, and
+`migrate_theme_contract.py` no longer models the scanner's text and page colors
+(it keeps `link_colors`, the one input it needs to write `--nnw-link`). The
+scanner suites `BackgroundInversionExposure` and `ComposedThemeDarkBlockCollision`
+stay while the scanner exists. Reading a stylesheet in a test: production strips
+`@import` lines with `CSSImportExtractor` before extraction, so a test that reads
+the raw file must do the same, or the import text is glued onto the first rule's
+selector.
 
 **Precedence logic now lives in `ArticleResolvedColors.resolved(theme:
 isDark:overrideBackgroundColorHex:overrideBackgroundColorDarkHex:)`**
@@ -134,7 +120,7 @@ system `prefers-color-scheme`) resolves correctly. Nothing previously corrected
 this afterward, since `registerForTraitChanges` only fires on a *change* event,
 not on "the initial read was wrong." Most visible on themes with no
 `body`/`.articleBody` `color`/`background-color` declared at all (e.g.
-Broadsheet), since `ArticleThemeColorExtractor`'s fallback for those is a
+Broadsheet) while the scanner fallback is in use, since its fallback for those is a
 genuine light/dark opposite (`.black`-on-`.white` vs `.white`-on-`.black`) --
 themes that declare an explicit, appearance-invariant background/color (no
 dark media block; e.g. Black & White) resolve to the same color either way and
@@ -144,6 +130,96 @@ actually be on screen in a real, key window -- the first lifecycle point whose
 timing doesn't depend on `SceneCoordinator`'s own restore-path scheduling. See
 `ArticleThemeColorExtractorTests.BackgroundInversionExposure` for the
 Broadsheet/Black & White divergence this depends on.
+
+**Color probe (added in WP3 of the theme color probe plan).**
+`ArticleThemeColorProbe` (`Modules/ArticleTheming`) measures what a theme paints
+instead of scanning its CSS. It renders the theme through the reader's real
+`page.html` in a hidden `WKWebView` (composed by `ArticlePageComposer`, sample
+article from `ArticleThemeSampleContent`), once in light and once in dark, and
+reads back computed colors with a `WKUserScript` that posts to a message
+handler. Content JavaScript stays off (the page preferences come from
+`WebViewConfiguration.makeReaderWebpagePreferences()`), so a theme's own
+scripts cannot change the result. Page color is `background-color` only: body
+over html over the legacy white/black fallback, and a page painted only by a
+gradient or image counts as unpainted. Ink is `.articleBody`'s `color`, link is
+the first `.articleBody a`, each normalized to opaque sRGB through a 2D canvas
+(so `oklch()`, `light-dark()` and space-separated `rgb()` work); translucent
+text is composited onto the page color. A pass whose `matchMedia` dark flag
+does not match the requested appearance, an unparsable color, ink equal to the
+page, or ink or link under 1.5 WCAG contrast against the page makes the whole
+measurement nil. The app builds the probe's inputs with
+`ArticleThemeProbeEnvironment.reader()` (`iOS/Article/`). The store drives
+the probe through `ensureMeasured` (see "Theme gate" below); the bundled table is
+described under "Bundled table" below. If the hidden window turns out not to flip `prefers-color-scheme`,
+`ArticleThemeColorProbe.useVisibleHostFallback` is the pre-decided switch.
+Tests: `ArticleThemeColorProbeTests` (rendering, written without being run in
+Xcode) and the package's `ArticleThemeColorProbeLogicTests` (pure logic).
+
+**Color store (WP4; read seam switched in WP5).** `ArticleThemeColorStore`
+(`Modules/ArticleTheming`) is where measurements live. `colors(for:)` never
+blocks and looks in session memory, then the persisted
+`ThemeColorCache/ThemeColors.json`, then the bundled `ThemeColorTable.json` (written by
+`ThemeColorTableGeneratorTests`; see `theme-testing.md`), then the legacy scanner. For the scanner fallback,
+`hasDarkModeVariant` now comes from `ArticleThemeColorExtractor.declaresDarkBlock`
+run on `ArticleTheme.ownStylesheet` (the theme's own CSS after `@import`
+extraction, before `core.css`), because `core.css` carries a dark block of its
+own and made the composed-CSS answer true for every theme. The cache key,
+`ArticleTheme.colorCacheKey`, is SHA-256 over the length-prefixed raw
+`stylesheet.css`, raw `template.html` and `ArticleThemeColorProbe.version`; it
+excludes `core.css` and identity fields. The persisted file records the probe
+version and `core.css` hash it was written under; `remeasureIfStale(_:)`
+re-measures installed themes when either differs, keeps old entries in use
+meanwhile, and returns the keys whose values changed. `ensureMeasured(_:)`
+coalesces concurrent callers per theme and allows two attempts per launch;
+failures are never persisted. `ArticleThemeColorStore.measurer` is the test hook.
+The environment is supplied by `configure(_:)`, which `AppDelegate` calls with
+`.reader()` just before `ArticleThemesManager.shared.start()`.
+
+The seam: `ArticleResolvedColors.resolved` and `ArticleThemeListView` (the
+appearance footer, the dark-mode preview toggle's availability, the override
+picker's initial values and "Reset to Theme Defaults") all call
+`ArticleThemeColorStore.colors(for:)`; the only remaining direct calls to
+`ArticleThemeColorExtractor.colors(for:)` are the store's own fallback and the
+probe agreement test. `hasDarkModeVariant` is true only when the theme's
+own stylesheet declares a dark block (or, once measured, when page, ink or link
+differs between light and dark), so the single-palette branches in
+`ArticleThemeListView` (footer wording, disabled preview toggle) are reachable.
+
+**Bundled table (WP7).** `iOS/Resources/ThemeColorTable.json` holds a measurement
+for every theme that ships in the app (each `Themes/*.nnwtheme` plus Default) so
+a cold start needs no measuring and no correction. It is generated by
+`ThemeColorTableGeneratorTests` and kept honest by `ThemeColorTableGuardTests`,
+which fail when `core.css`, a bundled theme or the probe version changes without
+regenerating it. Procedure and bump rules are in `theme-testing.md`. State of this
+checkout: the generator and guard are written, but the JSON itself has to be
+produced by running the generator in Xcode (it needs a simulator web view) and
+committed; until then the guard fails and the store falls back to the scanner as
+before.
+
+**Theme gate (WP6).** `ArticleThemesManager.updateCurrentTheme` decides when a
+newly resolved theme becomes `currentTheme`, so native surfaces never paint
+scanner colors and then visibly correct them where that can be avoided. A theme
+that has a measurement (memory, persisted cache, bundled table) is
+assigned synchronously. At launch the stored current theme is
+assigned at once with scanner colors and measured in the background; if the
+measurement differs from the scanner colors, the manager reposts
+`CurrentArticleThemeDidChangeNotification` once. Any other unmeasured theme is
+measured first and assigned afterwards (also when the measurement fails), unless
+`currentThemeName` changed meanwhile, in which case the result is dropped.
+Measurements are coalesced per theme by the store. `importTheme` and
+`presentedSubitemDidChange(at:)` prewarm the affected theme (deduplicated by
+name, so repeated file-presenter callbacks start nothing new). After `start()`,
+if the persisted cache was written under another probe version or `core.css`,
+installed themes are re-measured at utility priority and the notification is
+reposted if the current theme's values changed. `ArticleThemeColorProbe.isEnabled`
+(a constant, true) is the rollback: when false the store neither measures nor
+serves measurements and the gate assigns synchronously with scanner colors.
+`ArticleThemeListView` keeps a `pendingSelection` so the picker shows a choice
+immediately while the gate waits; the current-theme notification clears it. The
+only first-paint exception is a non-bundled current theme whose cache file is
+missing at launch. Tests: `ArticleThemesManagerGateTests`.
+Tests: the package's `ArticleThemeColorStoreTests` and the app's
+`ArticleThemeColorStoreAppTests` (written without being run in Xcode).
 
 **Open investigation, not yet resolved as of this doc:** `WebViewController`
 previously carried temporary debug logging (`Self.logger.debug(...)` calls

@@ -83,9 +83,12 @@ A missing required key makes loading throw.
   (`project.yml` copies that folder; also see `BUNDLED` in `gallery/build.py`).
 - Swift suites that scan both folders: `ArticleThemeOverflowSafetyTests`,
   `ArticleThemePlistFamilyTests`, `ArticleThemeColorExtractorTests`.
-- Python, from `buildscripts/theme-generation`: `python3 -m unittest`, and
-  `fix_body_background_color.py --check`. `gallery/build.py` fails on a missing plist key or a
-  missing `#bodyContainer.articleBody`.
+- Python, from `buildscripts/theme-generation`: `python3 -m unittest`.
+  `gallery/build.py` fails on a missing plist key, a missing
+  `#bodyContainer.articleBody`, a macro inside an HTML comment in `template.html`, a
+  non-leading or unterminated `@import`, a `ThemeIdentifier` shared with another
+  bundle, or a `Version` that is not an integer >= 1 (see `theme-gallery.md`,
+  "Bundle checks"). Its tests: `python3 -m unittest discover -s gallery`.
 - Counts of bundles and shapes: `theme_inventory.py` (the docs do not state them).
 
 ## 5. Check on a device

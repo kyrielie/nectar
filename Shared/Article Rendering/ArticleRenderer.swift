@@ -231,22 +231,8 @@ private extension ArticleRenderer {
 	}
 
 	private var importStyle: String {
-		guard let importCSS = articleTheme.importCSS, !importCSS.isEmpty else {
-			return ""
-		}
-
-		return """
-		<style>
-			\(importCSS)
-		</style>
-		"""
+		ArticlePageComposer.importStyle(importCSS: articleTheme.importCSS)
 	}
-
-	static var defaultStyleSheet: String = {
-		let path = Bundle.main.path(forResource: "stylesheet", ofType: "css")!
-		let s = try! String(contentsOfFile: path, encoding: .utf8)
-		return "\n\(s)\n"
-	}()
 
 	static let defaultTemplate: String = {
 		let path = Bundle.main.path(forResource: "template", ofType: "html")!
@@ -394,7 +380,27 @@ private extension ArticleRenderer {
 		return byline
 	}
 
+}
+
+// The default stylesheet and style macro values are used outside this file (theme
+// color probe, theme preview, tests), so they live in an internal extension. Members of the private
+// extension above default to fileprivate.
+
+extension ArticleRenderer {
+
+	static var defaultStyleSheet: String = {
+		let path = Bundle.main.path(forResource: "stylesheet", ofType: "css")!
+		let s = try! String(contentsOfFile: path, encoding: .utf8)
+		return "\n\(s)\n"
+	}()
+
 	func styleSubstitutions() -> [String: String] {
+		Self.styleSubstitutions()
+	}
+
+	/// The macro values a theme's stylesheet receives. Static so the app can build
+	/// the same dictionary without a renderer instance (theme color probe, preview).
+	static func styleSubstitutions() -> [String: String] {
 		var d = [String: String]()
 		let bodyFont = UIFont.preferredFont(forTextStyle: .body)
 		d["font-size"] = String(describing: bodyFont.pointSize)

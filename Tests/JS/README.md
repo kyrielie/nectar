@@ -18,7 +18,8 @@ npm install
 npm test
 ```
 
-The same suite runs in CI on every pull request and push to `main`.
+The same suite runs in CI (`javascript-tests` in `.github/workflows/ci.yml`) as part of the release gate, or
+on demand via that workflow's `workflow_dispatch`. It does not run on pull requests or pushes.
 
 ## What's here
 

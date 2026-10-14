@@ -12,6 +12,15 @@ import ArticleTheming
 @MainActor struct ArticleThemeImporter {
 
 	static func importTheme(controller: UIViewController, url: URL) throws {
+		// Reject symlinks, subfolders and unexpected files before reading anything.
+		let hasAccess = url.startAccessingSecurityScopedResource()
+		defer {
+			if hasAccess {
+				url.stopAccessingSecurityScopedResource()
+			}
+		}
+		try ArticleThemeBundleValidator.validate(directory: url)
+
 		let theme = try ArticleTheme(url: url, isAppTheme: false)
 
 		let localizedTitleText = NSLocalizedString("Install theme “%@” by %@?", comment: "Theme message text")

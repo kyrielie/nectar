@@ -127,7 +127,10 @@ a document picker).
 and deletion. It is an `NSFilePresenter` on the Themes folder
 (`Platform.dataSubfolder(..., "Themes")`, under Application Support), so
 external changes to that folder (e.g. a Finder drag) trigger
-`presentedSubitemDidChange(at:)`, which re-scans.
+`presentedSubitemDidChange(at:)`, which re-scans and prewarms the changed
+theme's measured colors. Making a resolved theme current goes through a gate
+that can wait for a color measurement first; see the "Theme gate" section of
+`article-color-pipeline.md`.
 
 State is kept in an `OSAllocatedUnfairLock`-protected `State` struct
 (`currentTheme`, `themeNames`) rather than plain stored properties, since the
@@ -154,26 +157,70 @@ repeatedly during SwiftUI re-renders (e.g. by the theme picker's row labels)
 and a failure notification per broken theme per render would spam the user.
 Callers doing a user-initiated import report their own failures instead.
 
-`importTheme(filename:)` copies a `.nnwtheme` directory into the Themes data
-folder (overwriting any existing bundle with the same name).
+`importTheme(filename:)` first runs `ArticleThemeBundleValidator.validate(directory:)`
+on the source, then copies the `.nnwtheme` directory into the Themes data
+folder (overwriting any existing bundle with the same name). The validation
+runs before the existing copy is removed, so a rejected bundle never replaces
+or deletes an installed theme. `ArticleThemeImporter.importTheme` also
+validates before it reads the bundle for the install alert.
 `deleteTheme(themeName:)` removes an installed bundle by resolved path.
 
 ## Third-party theme download and import
 
-`Modules/ArticleTheming`'s `ArticleThemeDownloader.swift` handles the case of a
-person downloading a `.zip`-wrapped theme from the web (e.g. from a browser
-"Open in Nectar" flow):
+The `nectar://theme/add?url=` handler in `iOS/SceneDelegate.swift` checks that
+the URL scheme is `http` or `https` (`ArticleThemeDownloader.validateDownloadURL`),
+starts a `URLSessionDownloadTask`, and requires an `HTTPURLResponse` with a 2xx
+status (`validateDownloadResponse`). Every failure, including a transport
+error, posts `.didFailToImportThemeWithError`; nothing is dropped silently.
 
-1. `handleFile(at:)` is given the downloaded file's temporary location.
-2. `moveTheme(from:)` relocates it into `Application Support/NetNewsWire/Downloads`,
-   renaming `.tmp` → `.zip`.
-3. `unzipFile(at:)` unzips using the `Zip` package, then deep-searches the
-   unzipped contents (via `FileManager.enumerator`) for a `.nnwtheme`
-   directory, explicitly skipping anything under a `__MACOSX/` path (a
-   macOS zip artifact). Throws `ArticleThemeDownloaderError.noThemeFile` if
-   none is found.
-4. Posts `.didEndDownloadingTheme` with the resolved `.nnwtheme` URL in
+`Modules/ArticleTheming`'s `ArticleThemeDownloader.swift` then handles the
+downloaded `.zip`-wrapped theme:
+
+1. `moveDownloadedTheme(from:)` rejects a file over 10,000,000 bytes
+   (`ArticleThemeDownloaderError.tooLarge`), then relocates it into
+   `Application Support/NetNewsWire/Downloads`, renaming `.tmp` → `.zip`. This
+   must stay synchronous inside the download completion handler.
+2. `finishImportingTheme(at:)` calls `unzipFile(at:)`, which extracts into a
+   fresh `Downloads/<UUID>` directory through `unzipTheme(at:to:)` and always
+   deletes the zip afterwards.
+3. `unzipTheme(at:to:)` runs `ArticleThemeArchiveValidator.validate(zipURL:)`
+   first. That reads only the ZIP central directory, so no byte is extracted
+   from an archive that breaks a rule. After extraction it removes everything
+   except the validated bundle folder (`__MACOSX`, stray top-level files),
+   runs `ArticleThemeBundleValidator.validate(directory:)` (an `lstat`-based
+   second check), removes `.DS_Store` and `._*` files, and returns the bundle
+   URL. On any failure the destination directory is deleted.
+4. Posts `.didEndDownloadingTheme` with the `.nnwtheme` URL in
    `userInfo["url"]`.
+
+### Archive rules (`ArticleThemeArchiveValidator`)
+
+Limits: 10,000,000 bytes compressed, 50 MiB declared expanded (sum of every
+entry, junk included, overflow-safe). Rules, matching the upstream `nnw-theme`
+validator:
+
+- Exactly one top-level `<Name>.nnwtheme` folder. Inside it only
+  `Info.plist`, `template.html`, `stylesheet.css` and optional `LICENSE*` or
+  `NOTICE*` files (case-insensitive); the three required files must be present;
+  no subfolders.
+- `__MACOSX/**`, `.DS_Store` and `._*` entries are ignored for layout but still
+  checked for path safety, symlinks and size.
+- Rejected: symlink or other non-regular Unix entries, absolute paths (including
+  drive letters), any `.` or `..` component, empty components, control
+  characters (including NUL), names that are not UTF-8, duplicate paths after
+  NFC and case folding, ZIP64 (EOCD sentinels, locator, extra field 0x0001),
+  multi-part archives, encrypted entries, compression methods other than
+  stored or deflate, and local headers that disagree with the central
+  directory.
+- `\` is normalized to `/` before every check, because `Zip` does the same when
+  it extracts. Checks are component-wise, never a string-prefix test.
+
+Dependency note: `Zip` is pinned to `bca30f6d6c7d37cbc4aa8f6b0002e281dcc36195`
+in `Modules/ArticleTheming/Package.swift`, `Modules/BackupRestore/Package.swift`
+and `project.yml`. All three must name the same revision or SwiftPM cannot
+resolve the graph. That revision adds a containment check to extraction, but it
+is a string-prefix test, so the validator above is the real guard. The repo has
+no committed `Package.resolved` that records `Zip`.
 
 `cleanUp()` removes all downloaded theme folders from the Downloads
 directory (called opportunistically, not automatically after each import).
@@ -200,15 +247,34 @@ own `<style>` block ahead of everything else once `core.css` gets prepended
 to a theme's stylesheet (which would otherwise push a theme's own leading
 `@import` past the start of the combined string, invalidating it).
 
-## `ArticleThemeColorExtractor`
+## Color measurement: probe, store, composer
 
-`Modules/ArticleTheming`'s `ArticleThemeColorExtractor.swift` is a small,
+Native colors (webview background, notch cover, Blend toolbars, page counter,
+override-picker defaults) are measured, not scanned. `ArticlePageComposer` builds
+the page the reader would build (real `page.html`, same six keys) from a theme
+and `ArticleThemeSampleContent`; `ArticleThemeColorProbe` renders it in a hidden
+`WKWebView`, light then dark, and reads back computed colors;
+`ArticleThemeColorStore` caches the result (memory, `ThemeColors.json`, the
+bundled `ThemeColorTable.json`) and serves it through `colors(for:)`;
+`ArticleThemesManager.updateCurrentTheme()` holds back an unmeasured theme until
+it has colors. The Settings preview uses the same composer and sample. All of
+this, including the cache key, the gate and the cold-start exception, is
+described in `article-color-pipeline.md`; testing and table regeneration are in
+`theme-testing.md`.
+
+## `ArticleThemeColorExtractor` (scanner fallback)
+
+`Modules/ArticleTheming`'s `ArticleThemeColorExtractor.swift` is the legacy, small,
 deliberately non-general CSS color scanner (regex-based, not a real CSS
 parser) that reads a theme's *effective* text/background/link colors — both
 light- and dark-mode — directly out of its compiled `css` string. This is
 used so the app's own chrome (webview background, the iOS notch/status-bar
 fill) and the theme-override UI can default to what a given theme actually
-looks like, rather than a generic system color.
+looks like, rather than a generic system color. Callers do not use it
+directly: they go through `ArticleThemeColorStore.colors(for:)`, and this scanner
+is only the store's fallback when a theme has no measurement (see
+`article-color-pipeline.md`). Theme authors do not need to write CSS the scanner
+can read.
 
 What it understands:
 - Literal `#hex`, `rgb()`/`rgba()`, and a modest hand-maintained table of
@@ -218,9 +284,12 @@ What it understands:
   declarations — light and dark variable scopes are tracked and resolved
   separately, so a dark-mode redefinition of a variable can't leak into the
   light-mode result.
-- A single `@media (prefers-color-scheme: dark)` block, whose presence alone
-  sets `hasDarkModeVariant` — this reflects presence, not whether every
-  color actually differs inside it.
+- A single `@media (prefers-color-scheme: dark)` block. `colors(css:)` still
+  reports its presence in the composed CSS as `hasDarkModeVariant`, but that is
+  always true once `core.css` is prepended; callers go through
+  `ArticleThemeColorStore.colors(for:)`, which recomputes it from
+  `ArticleTheme.ownStylesheet` via `declaresDarkBlock(_:)` (presence only, not
+  whether every color differs). See `article-color-pipeline.md`.
 
 What it deliberately ignores: nested `@supports` conditional blocks (stripped
 out entirely via brace-depth matching in `stripBraceBlocks` before any
@@ -296,6 +365,32 @@ theme's own specificity/declaration order — every declaration is
 - **Chrome font.** `chromeSelectors` stays for the NetNewsWire-origin bundles
   and Vintage Letter Green; tokenized themes read `--nnw-font-chrome` themselves.
 
+## Page composer and sample content
+
+`ArticlePageComposer` (`Modules/ArticleTheming`) renders `page.html` through
+`MacroProcessor` with exactly the six keys the reader uses (`title`,
+`importStyle`, `style`, `baseURL`, `body`, `lang`). The package cannot see the
+app's `page.html`, so callers pass its text in (`ArticleRenderer.page.html`).
+`ArticlePageComposer.defaultLang` is the reader's language expression
+(`WebViewController.renderPage` uses it). `ArticlePageComposerTests` renders a
+theme through the reader's own path and through the composer and asserts the
+HTML is identical, so the two cannot drift.
+
+`ArticleThemeSampleContent` holds the sample article (preface, summary, notes,
+chapter heading, two chapter paragraphs with a prose `<a>` inside `.articleBody`),
+the fallback template and the sample macro values. The Settings preview
+(`ArticleThemePreviewWebView`) renders through the composer and
+`ArticleRenderer.page.html`, so its canvas, viewport and margins match the
+reader; it no longer adds its own `body { margin; padding }` rule. It still uses
+a default `WKWebViewConfiguration` (JavaScript on) and appends its own inline
+helper scripts, and it loads with the fixed base URL
+`https://example.invalid/`. `ArticleThemePreviewWebView.sampleBodyForTesting`
+remains as an alias of `ArticleThemeSampleContent.sampleBody`.
+
+Unknown `[[macro]]` tokens are left untouched by `MacroProcessor`, so a template
+macro the sample does not supply (the default template's `[[text_size_class]]`)
+stays literal in the preview, as it does in the reader.
+
 ## Rendering integration
 
 `ArticleRenderer` (`Shared/Article Rendering/ArticleRenderer.swift`) is where
@@ -309,9 +404,12 @@ all of the above comes together for a given article:
   are non-empty.
 - `importStyle` wraps `articleTheme.importCSS` (the extracted `@import`
   statements) in its own `<style>` block, kept separate from the main
-  style tag.
+  style tag. The wrapping lives in `ArticlePageComposer.importStyle(importCSS:)`
+  and `ArticleRenderer` calls it.
 - `articleCSS` runs the composed style string through `MacroProcessor` with
-  `styleSubstitutions()` to fill in any remaining CSS-side template tokens.
+  `styleSubstitutions()` to fill in any remaining CSS-side template tokens
+  (currently only `font-size`). There is a static `ArticleRenderer.styleSubstitutions()`
+  so callers without a renderer instance can build the same dictionary.
 - `ArticleRenderer.stripFakeParagraphIndents` removes leading `&nbsp;`
   sequences and literal-space "fake indents" from the start of `<p>` tag
   content, without disturbing the tag's own attributes or the rest of the

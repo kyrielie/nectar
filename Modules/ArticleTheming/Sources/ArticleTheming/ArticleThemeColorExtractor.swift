@@ -9,33 +9,31 @@ import UIKit
 import HexColor
 import AppChrome
 
-/// Extracts the effective text/background/link colors a theme's own stylesheet declares,
-/// so overrides and chrome (webview background, notch fill) can default to what the
-/// theme actually looks like instead of a generic system color.
+/// Legacy scanner for the effective text/background/link colors a theme's own stylesheet
+/// declares. It is now only the fallback behind `ArticleThemeColorStore`: native colors are
+/// measured by `ArticleThemeColorProbe`, and this scanner answers only when no measurement
+/// exists (see docs/article-color-pipeline.md and docs/theme-system.md).
 ///
-/// This is a small regex-based scanner, not a full CSS parser -- see docs/theme-system.md
-/// and docs/article-color-pipeline.md for the pipeline this sits in. It understands the patterns actually used across the shipped
-/// themes (Default, Appanoose, Biblioteca, Hyperlegible, NewsFax, Promenade, Sepia,
-/// Tiqoe Dark, Verdana Revival, plus the gallery-only themes under gallery-themes/):
+/// It is a small regex-based scanner, not a full CSS parser. It understands:
 ///   - literal `#hex`/`rgb()`/`rgba()` colors
 ///   - a modest set of common named CSS colors
-///   - `var(--custom-property)`, resolved against that theme's own `:root` declarations,
-///     with light/dark scoped separately so a dark-mode redefinition of a variable
-///     doesn't leak into the light-mode result (or vice versa)
-/// It does not understand nested `@supports`/other conditional overrides beyond
-/// stripping them out of consideration entirely (see `stripBraceBlocks`), CSS-4
-/// system color keywords (`Canvas`, `CanvasText`, etc. -- these fall through to "not
-/// found" like any other unparseable value), or selector specificity beyond
-/// exact-selector matching.
-/// Precedence: explicit override (if set) -> theme's own extracted color ->
-/// ArticleThemeColorExtractor's black/white fallback. Shared by
+///   - `var(--custom-property)`, resolved one level against that theme's own `:root`
+///     declarations, with light/dark scoped separately
+/// It reads only `color`/`background-color` on `body`/`.articleBody` and `color` on
+/// `a`/`.articleBody a`, so it cannot see the `background` shorthand, colors set on `html`,
+/// `light-dark()`, `oklch()` or CSS-4 system colors (these fall through to "not found").
+/// It strips `@supports` blocks (see `stripBraceBlocks`) and matches selectors exactly.
+/// Theme CSS is not required to be scanner-readable.
+/// Precedence: explicit override (if set) -> the theme's measured color
+/// (`ArticleThemeColorStore`: memory, disk cache, bundled table) -> the legacy
+/// scanner's color, whose black/white fallback applies last. Shared by
 /// WebViewController.resolvedArticleColors(isDark:) (real reader, reads the
 /// persisted override) and ArticleThemePreviewWebView.updateUIView() (Settings
 /// preview, reads in-progress unsaved override state) so both agree on the same
 /// precedence instead of the preview re-deriving it and risking drift.
 public enum ArticleResolvedColors {
 	public static func resolved(theme: ArticleTheme, isDark: Bool, overrideBackgroundColorHex: String?, overrideBackgroundColorDarkHex: String?) -> (background: UIColor, text: UIColor) {
-		let themeColors = ArticleThemeColorExtractor.colors(for: theme)
+		let themeColors = ArticleThemeColorStore.colors(for: theme)
 		let background: UIColor
 		if isDark, let hex = overrideBackgroundColorDarkHex ?? overrideBackgroundColorHex, let overrideColor = UIColor(cssHex: hex) {
 			background = overrideColor
@@ -159,6 +157,19 @@ public enum ArticleThemeColorExtractor {
 			linkColorDark: linkColorDark,
 			hasDarkModeVariant: hasDarkBlock
 		)
+	}
+
+	/// True when `css` declares an `@media (prefers-color-scheme: dark)` block, using the
+	/// same comment and `@supports` stripping as `colors(css:)`. Meant for a theme's own
+	/// stylesheet (`ArticleTheme.ownStylesheet`), not the composed CSS: `core.css` carries
+	/// a dark block of its own, which made the composed-CSS answer true for every theme.
+	static func declaresDarkBlock(_ css: String?) -> Bool {
+		guard let css else {
+			return false
+		}
+		let stripped = stripBraceBlocks(stripComments(css))
+		let (_, darkBlocks) = extractBraceBlocks(in: stripped, openerPattern: #"@media\s*\(\s*prefers-color-scheme:\s*dark\s*\)\s*\{"#)
+		return !darkBlocks.isEmpty
 	}
 
 	// MARK: - CSS pre-processing
