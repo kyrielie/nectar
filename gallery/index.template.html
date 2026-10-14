@@ -67,6 +67,15 @@ h1{font-size:clamp(4rem,15vw,9rem);line-height:.9;margin:0;letter-spacing:.01em}
 .seg button{border:0;background:none;color:var(--mut);font-style:italic;font-size:.95rem;padding:1px 10px}
 .seg button[aria-pressed=true]{background:var(--btn);color:var(--gilt)}
 .meta{flex:1}
+.head{position:relative;padding-inline:40px}
+.head .star{position:absolute;right:0;top:50%;transform:translateY(-50%)}
+.star{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;background:none;border:0;color:var(--mut);cursor:pointer}
+.star svg{fill:none}
+.star[aria-pressed=true]{color:var(--gold-ink)}
+.star[aria-pressed=true] svg{fill:currentColor}
+.star:hover{color:var(--gold-ink)}
+.star:focus-visible{outline:2px solid var(--gold-ink);outline-offset:2px}
+#dstar .star{width:32px;height:32px}
 .meta h2{font-size:1.45rem;line-height:1.15;margin:0}
 .row{display:flex;margin-top:6px}
 .btn{flex:1;text-align:center;background:var(--btn);color:var(--gilt);text-decoration:none;font-size:1.15rem;letter-spacing:.06em;padding:8px 12px;border:1px solid var(--gold);border-radius:var(--r);outline:1px solid var(--gold);outline-offset:-4px}
@@ -96,12 +105,13 @@ footer .fleuron{margin-top:0}
 <p class="note" id="note" hidden>Install opens Nectar and automatically installs the theme. AO3 site skins must be modified to be used with Nectar.</p>
 </header>
 </div>
-<div class="bar"><div class="wrap"><div id="chips" role="group" aria-label="Filter by tone"></div><button class="chip" id="pagemode" type="button"></button><span id="count" aria-live="polite"></span></div></div>
+<div class="bar"><div class="wrap"><div id="chips" role="group" aria-label="Filter by tone"></div><button class="chip" id="starfilter" type="button" aria-pressed="false">Starred<span id="starcount"></span></button><button class="chip" id="pagemode" type="button"></button><span id="count" aria-live="polite"></span></div></div>
 <div class="wrap">
 <main id="grid"></main>
+<p class="note" id="empty" hidden></p>
 <footer><div class="fleuron" aria-hidden="true"><i></i></div><p>Set in Sorts Mill Goudy. Frieze inspired by William Morris. Tap a preview to enlarge it.</p></footer>
 </div>
-<dialog id="dlg"><div class="dh"><strong id="dname"></strong><span id="dseg"></span><button class="chip" id="dclose">Close</button></div><iframe id="dframe" title="Theme preview"></iframe><p class="dtext" id="dtext"></p><div class="row" id="dact" style="margin-top:10px"></div></dialog>
+<dialog id="dlg"><div class="dh"><strong id="dname"></strong><span id="dstar"></span><span id="dseg"></span><button class="chip" id="dclose">Close</button></div><iframe id="dframe" title="Theme preview"></iframe><p class="dtext" id="dtext"></p><div class="row" id="dact" style="margin-top:10px"></div></dialog>
 
 <script id="data" type="application/json">__DATA__</script>
 <script>
@@ -175,7 +185,38 @@ function frameDoc(t, mode, scroll) {
 }
 
 const state = new Map(T.map(t => [t.slug, t.dark && sysDark ? "dark" : "light"]));
-let filter = "all", openSlug = null;
+let filter = "all", openSlug = null, starOnly = false;
+
+/* Starred themes: a JSON array of slugs in localStorage, per browser. Storage can
+   be unavailable (private mode, blocked cookies); then stars last for the visit. */
+const STAR_KEY = "nectar-gallery-starred";
+function loadStars() {
+  try {
+    const v = JSON.parse(localStorage.getItem(STAR_KEY) || "[]");
+    return new Set(Array.isArray(v) ? v.filter(x => typeof x === "string") : []);
+  } catch (e) { return new Set(); }
+}
+let stars = loadStars();
+function saveStars() { try { localStorage.setItem(STAR_KEY, JSON.stringify([...stars])); } catch (e) {} }
+function starHTML(t) {
+  return `<button type="button" class="star" data-s="${t.slug}" aria-pressed="${stars.has(t.slug)}" aria-label="Star ${esc(t.name)}"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></button>`;
+}
+function syncStars() {
+  document.querySelectorAll(".star[data-s]").forEach(b => b.setAttribute("aria-pressed", stars.has(b.dataset.s)));
+  const n = T.filter(t => stars.has(t.slug)).length;
+  $("#starcount").textContent = n ? " (" + n + ")" : "";
+}
+function setStarred(slug, on) {
+  if (on) stars.add(slug); else stars.delete(slug);
+  saveStars(); syncStars(); applyVisibility();
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest(".star[data-s]");
+  if (b) setStarred(b.dataset.s, !stars.has(b.dataset.s));
+});
+addEventListener("storage", e => {
+  if (e.key === STAR_KEY || e.key === null) { stars = loadStars(); syncStars(); applyVisibility(); }
+});
 
 function segHTML(t) {
   const m = state.get(t.slug);
@@ -201,7 +242,7 @@ function build() {
     const mode = state.get(t.slug), el = document.createElement("article");
     el.className = "card"; el.dataset.slug = t.slug; el.dataset.tone = t.tone;
     el.innerHTML = `<div class="pvw"><button class="pv" aria-label="Enlarge preview of ${esc(t.name)}"><iframe title="${esc(t.name)} preview" loading="lazy" tabindex="-1"></iframe></button>${t.dark ? segHTML(t) : ""}</div>
-<div class="meta"><h2>${esc(t.name)}</h2></div>
+<div class="meta head"><h2>${esc(t.name)}</h2>${starHTML(t)}</div>
 <div class="row">${actions(t)}</div>
 <div class="sub"><a href="${zipURL(t)}" download>Zip</a><button type="button">Copy link</button></div>`;
     el.querySelector("iframe").srcdoc = frameDoc(t, mode);
@@ -215,6 +256,7 @@ function bindSeg(root, t) { root.querySelectorAll(".seg button").forEach(b => b.
 function openDlg(t) {
   openSlug = t.slug;
   $("#dname").textContent = t.name;
+  $("#dstar").innerHTML = starHTML(t);
   $("#dframe").srcdoc = frameDoc(t, state.get(t.slug), true);
   $("#dact").innerHTML = actions(t);
   $("#dseg").innerHTML = t.dark ? segHTML(t) : ""; bindSeg($("#dseg"), t);
@@ -223,20 +265,29 @@ function openDlg(t) {
 }
 const ro = new ResizeObserver(es => es.forEach(e => e.target.style.setProperty("--s", e.target.clientWidth / 390)));
 function scale() { document.querySelectorAll(".pv").forEach(p => p.style.setProperty("--s", p.clientWidth / 390)); }
-function applyFilter() {
+function applyVisibility() {
   let n = 0;
   document.querySelectorAll(".card").forEach(c => {
-    const tone = c.dataset.tone, show = filter === "all" || tone === filter || tone === "both";
+    const tone = c.dataset.tone;
+    const show = (filter === "all" || tone === filter || tone === "both") && (!starOnly || stars.has(c.dataset.slug));
     c.hidden = !show; if (show) n++;
   });
+  $("#count").textContent = n + (n === 1 ? " theme" : " themes");
+  const empty = $("#empty");
+  empty.hidden = !(starOnly && n === 0);
+  empty.textContent = stars.size ? "No starred themes match this filter." : "No starred themes yet. Tap the star on a theme to save it here.";
+  document.querySelectorAll(".chip[data-f]").forEach(b => b.setAttribute("aria-pressed", b.dataset.f === filter));
+  $("#starfilter").setAttribute("aria-pressed", starOnly);
+  scale();
+}
+function applyFilter() {
   /* "Light"/"Dark" filters double as a preview-mode switch for every dark-capable
      card, not just a visibility filter -- "All" leaves each card's mode as the
      user last set it rather than forcing it back to a system default. */
   if (filter === "light" || filter === "dark") T.forEach(t => t.dark && setMode(t, filter));
-  $("#count").textContent = n + (n === 1 ? " theme" : " themes");
-  document.querySelectorAll(".chip[data-f]").forEach(b => b.setAttribute("aria-pressed", b.dataset.f === filter));
-  scale();
+  applyVisibility();
 }
+$("#starfilter").onclick = () => { starOnly = !starOnly; applyVisibility(); };
 $("#chips").innerHTML = [["all", "All"], ["light", "Light mode"], ["dark", "Dark mode"]].map(([f, l]) => `<button class="chip" data-f="${f}" aria-pressed="${f === "all"}">${l}</button>`).join(" ");
 $("#chips").onclick = e => { const f = e.target.dataset && e.target.dataset.f; if (f) { filter = f; applyFilter(); } };
 
@@ -268,7 +319,7 @@ $("#dclose").onclick = () => $("#dlg").close();
 $("#dlg").onclick = e => { if (e.target === e.currentTarget) e.currentTarget.close(); };
 $("#dlg").addEventListener("close", () => { openSlug = null; $("#dframe").srcdoc = ""; });
 if (!iOS) $("#note").hidden = false;
-build(); applyFilter();
+build(); syncStars(); applyFilter();
 document.querySelectorAll(".pv").forEach(p => ro.observe(p));
 </script>
 </body>

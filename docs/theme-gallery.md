@@ -243,6 +243,18 @@ have changed since the page was first built:
   independent of, and does not change, each card's own per-preview
   Light/Dark toggle or the "Light mode"/"Dark mode" tone filter chips, which
   are controls over the theme previews rather than the page itself.
+- **Starred themes.** Each card has a star toggle at the right of its title, and the
+  detail dialog has one beside the theme name. Stars are a JSON array of theme slugs in
+  `localStorage` under `nectar-gallery-starred`, so they are per browser and per origin
+  and never leave the device. The sticky bar's "Starred (n)" button shows only starred
+  themes and combines with the tone chips (a starred Dark theme must pass both). The
+  count in the button covers only slugs that still exist; a slug whose theme was removed
+  or renamed stays in storage but matches nothing, because slugs come from the bundle
+  name (see `slugify` in `build.py`), so renaming a bundle drops its star. Unreadable or
+  malformed stored data is treated as no stars, a blocked `localStorage` leaves stars
+  working for the visit only, and a `storage` listener keeps open tabs in step.
+  `applyVisibility()` handles show/hide and the count; `applyFilter()` adds the tone
+  chips' preview-mode switch on top, so starring never reloads a preview.
 
 ### Release identity check
 
