@@ -2,7 +2,7 @@
 //  ArticleThemeCheckMatrixTests.swift
 //  NetNewsWire-iOSTests
 //
-//  WP9 of the theme color probe plan. Renders every theme in `Themes/` and
+//  The theme check matrix. Renders every theme in `Themes/` and
 //  `gallery-themes/` through `ArticlePageComposer` in the reader's configuration
 //  (content JavaScript off, read back by a `WKUserScript` that posts to a message
 //  handler, the same mechanism as `ArticleThemeColorProbe`) with the upstream
@@ -236,7 +236,15 @@ struct ConsecutiveNilBreaker {
 		let root = UIViewController()
 		window.rootViewController = root
 		root.view.addSubview(webView)
-		window.isHidden = true
+		// Same host as the probe: a hidden window never flipped `prefers-color-scheme` on the CI
+		// simulator, so follow the probe's switch and keep the window technically visible.
+		if ArticleThemeColorProbe.useVisibleHostFallback {
+			window.alpha = 0.01
+			webView.alpha = 0.01
+			window.isHidden = false
+		} else {
+			window.isHidden = true
+		}
 		return window
 	}
 
@@ -275,10 +283,10 @@ struct ConsecutiveNilBreaker {
 	/// Composes the page for `theme` and `fixture` the way the reader does, with an optional
 	/// replacement for the composed CSS (the render-diff report swaps `core.css`).
 	static func composeHTML(theme: ArticleTheme,
-							fixture: ThemeCheckFixture,
-							fontSize: String,
-							css cssOverride: String? = nil,
-							environment: ArticleThemeProbeEnvironment) throws -> String {
+	                        fixture: ThemeCheckFixture,
+	                        fontSize: String,
+	                        css cssOverride: String? = nil,
+	                        environment: ArticleThemeProbeEnvironment) throws -> String {
 		let template = theme.template ?? ArticleThemeSampleContent.fallbackTemplate
 		let body = try MacroProcessor.renderedText(withTemplate: template, substitutions: try fixture.substitutions())
 		var styleValues = environment.styleSubstitutions
@@ -555,8 +563,13 @@ struct ConsecutiveNilBreaker {
 		let starter = try ThemeCheckPaths.repoURL("Tests/NetNewsWire-iOSTests/Fixtures/ThemeColorProbe/StarterStyle.nnwtheme")
 		// The six bundles that pass `nnw-theme`'s validator today (plan decision D19).
 		let compatible = ["Biblioteca", "NewsFax", "Promenade", "Sepia", "Tiqoe Dark", "Verdana Revival"]
-		let themesFolder = try ThemeCheckPaths.repoURL("Themes")
-		let bundles = [starter] + compatible.map { themesFolder.appendingPathComponent("\($0).nnwtheme") }
+		// These six are gallery-only now; look in both folders so a later promotion still works.
+		let folders = [try ThemeCheckPaths.repoURL("Themes"), try ThemeCheckPaths.repoURL("gallery-themes")]
+		let bundles = try [starter] + compatible.map { name in
+			let found = folders.map { $0.appendingPathComponent("\(name).nnwtheme") }
+				.first { FileManager.default.fileExists(atPath: $0.path) }
+			return try #require(found, "\(name).nnwtheme is in neither Themes/ nor gallery-themes/")
+		}
 
 		var rendered = 0
 		var differences = 0

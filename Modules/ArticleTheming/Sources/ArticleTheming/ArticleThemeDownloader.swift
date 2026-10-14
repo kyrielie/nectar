@@ -54,11 +54,6 @@ public final class ArticleThemeDownloader: Sendable {
 
 	private init() {}
 
-	public func handleFile(at location: URL) throws {
-		let movedFileLocation = try moveDownloadedTheme(from: location)
-		try finishImportingTheme(at: movedFileLocation)
-	}
-
 	/// Moves the just-downloaded `.tmp` file to `downloadDirectory`, renaming it to
 	/// `.zip`. Callers driven by `URLSessionDownloadTask`'s completion handler must
 	/// call this *synchronously* within that handler -- the system deletes the `.tmp`
@@ -79,8 +74,8 @@ public final class ArticleThemeDownloader: Sendable {
 	}
 
 	/// Unzips an already-moved theme archive and posts `.didEndDownloadingTheme`.
-	/// Safe to call from anywhere (main actor or otherwise) since it no longer
-	/// touches the ephemeral download temp file -- see `moveDownloadedTheme(from:)`.
+	/// Safe to call from anywhere (main actor or otherwise) since it does not
+	/// touch the ephemeral download temp file -- see `moveDownloadedTheme(from:)`.
 	/// - Parameter location: The moved `.zip` file's location, as returned by
 	///   `moveDownloadedTheme(from:)`.
 	public func finishImportingTheme(at location: URL) throws {

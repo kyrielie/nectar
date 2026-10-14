@@ -1,0 +1,494 @@
+/* Reversi: AO3's dark skin. See License.md. */
+
+:root {
+	color-scheme: dark;
+
+	/* core.css preface variables (the sanctioned override path) */
+	--ao3-preface-border-color: #555;
+	--ao3-preface-background-color: #333;
+	--ao3-preface-text-color: #eee;
+	--ao3-preface-label-color: #fff;
+	--ao3-preface-font-size: 1em;
+	--ao3-series-nav-disabled-color: #777;
+	--ao3-series-footer-font-size: 1em;
+
+	--rv-bg: #333;
+	--rv-bg-alt: #2a2a2a;
+	--rv-text: #eee;
+	--rv-muted: #aaa;
+	--rv-rule: #555;
+	--rv-link: #fff;
+	--rv-visited: #999;
+	--rv-accent: #5998d6;
+	--rv-sans: 'Lucida Grande', 'Lucida Sans Unicode', Verdana, Helvetica, sans-serif;
+	--rv-serif: Georgia, serif;
+}
+
+body {
+	margin-left: auto;
+	margin-right: auto;
+	max-width: 44em;
+	word-wrap: break-word;
+	background-color: #333;
+	color: #eee;
+	font-family: 'Lucida Grande', 'Lucida Sans Unicode', Verdana, Helvetica, sans-serif;
+}
+
+.articleBody {
+	color: #eee;
+	line-height: 1.5;
+}
+
+/* ArticleThemeColorExtractor only matches an exact `a` selector. */
+a {
+	color: #fff;
+}
+
+a,
+a:link {
+	color: var(--rv-link);
+	text-decoration: underline;
+	text-decoration-color: #777;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.15em;
+}
+
+a:visited {
+	color: var(--rv-visited);
+}
+
+a:hover,
+a:focus {
+	color: var(--rv-accent);
+}
+
+.systemMessage {
+	position: absolute;
+	top: 45%;
+	left: 50%;
+	transform: translateX(-55%) translateY(-50%);
+	-webkit-user-select: none;
+	cursor: default;
+	color: #eee;
+}
+
+/* ---- Template head (shown only when the article has no AO3 #workskin) ---- */
+
+/* At least 68px above the title in full-screen reading (nnwtheme-format.md). */
+.rv {
+	padding-top: 68px;
+}
+
+.rvHead {
+	border-bottom: 1px solid var(--rv-rule);
+	margin-bottom: 1.5em;
+	padding-bottom: 0.75em;
+}
+
+.articleTitle {
+	margin: 0 0 0.25em;
+	line-height: 1.15;
+	font-family: var(--rv-serif);
+	font-weight: 400;
+}
+
+.articleTitle a,
+.articleTitle a:visited {
+	color: #fff;
+	text-decoration: none;
+}
+
+.rvBy,
+.articleDateline,
+.articleDatelineTitle,
+.externalLink {
+	margin: 0 0 0.25em;
+	color: var(--rv-muted);
+	font-size: 0.9em;
+}
+
+.articleDateline a,
+.articleDatelineTitle a,
+.externalLink a {
+	color: var(--rv-muted);
+}
+
+.externalLink {
+	font-style: italic;
+	overflow-wrap: anywhere;
+}
+
+/* An AO3 work already carries its own title and byline in #workskin, and the
+   tag block belongs first, so drop the template head for those. */
+.rv:has(#workskin) .rvHead {
+	display: none;
+}
+
+h1, h2, h3, h4, h5, h6, .heading {
+	font-family: var(--rv-serif);
+	font-weight: 400;
+	color: #fff;
+	text-shadow: none;
+}
+
+hr {
+	border: 0;
+	border-bottom: 3px double var(--rv-rule);
+}
+
+/* ---- AO3 tag block: border, shadow, and stats on one wrapping line ---- */
+
+.rv #ao3Preface,
+.rv #ao3SyntheticPreface {
+	border: 1px solid var(--rv-rule);
+	box-shadow: 1px 1px 3px #000;
+	padding: 1.286em 0.75em 0.643em;
+	margin: 0 0 1.5em;
+}
+
+.rv #ao3Preface dl.tags,
+.rv #ao3SyntheticPreface dl.tags {
+	display: block;
+	margin: 0;
+}
+
+/* Short rows (Rating, Category, Language, and every stats row) flow inline,
+   so Published / Words / Chapters / ... share a line and wrap together. */
+.rv #ao3Preface dt,
+.rv #ao3SyntheticPreface dt {
+	display: inline;
+	margin: 0 0.3em 0 0;
+	font-weight: 700;
+}
+
+.rv #ao3Preface dd,
+.rv #ao3SyntheticPreface dd {
+	display: inline;
+	margin: 0 1em 0 0;
+}
+
+/* Each short label/value pair is one unbreakable unit; a zero-width space
+   after it (generated content, so annotations ignore it) is the only place
+   the line may wrap. Without it the browser splits "2026-01-01" mid-value. */
+.rv #ao3Preface dd:not(.wide),
+.rv #ao3SyntheticPreface dd:not(.wide) {
+	white-space: nowrap;
+}
+
+.rv #ao3Preface dd:not(.wide)::after,
+.rv #ao3SyntheticPreface dd:not(.wide)::after {
+	content: "\200B";
+}
+
+/* Long tag lists keep their label on its own line and use the full width. */
+.rv #ao3Preface dt.wide,
+.rv #ao3SyntheticPreface dt.wide {
+	display: block;
+	margin: 0.643em 0 0.15em;
+}
+
+.rv #ao3Preface dd.wide,
+.rv #ao3SyntheticPreface dd.wide {
+	display: block;
+	margin: 0 0 0.643em;
+}
+
+.rv #ao3Preface dl.tags > :first-child,
+.rv #ao3SyntheticPreface dl.tags > :first-child {
+	margin-top: 0;
+}
+
+/* ---- AO3 work preface (title, byline, summary, notes), chapters, end notes ---- */
+
+#workskin {
+	color: #eee;
+}
+
+div.preface {
+	margin: 1.5em 0;
+	padding: 0.643em 0.643em 0;
+}
+
+div.preface .module {
+	margin: 0;
+	padding: 0 0 0.643em;
+}
+
+.chapter .preface {
+	border-top: 1px solid var(--rv-rule);
+}
+
+.preface h3 {
+	margin: 0.5375em 0;
+	font-size: 1.15em;
+	line-height: 1.1;
+	border-bottom: 1px solid var(--rv-rule);
+}
+
+.preface h2.title,
+.preface h2.heading {
+	display: block;
+	margin: 0.429em 0;
+	border: 0;
+	text-align: center;
+	line-height: 1.1;
+}
+
+.preface h2.title {
+	font-size: 1.7em;
+}
+
+.preface h2.heading {
+	font-size: 1.3em;
+}
+
+div.preface .byline,
+div.preface .byline a {
+	border: 0;
+	text-align: center;
+	font-weight: 700;
+}
+
+.preface .byline {
+	margin: 0.643em 0;
+	font-size: 1.1em;
+}
+
+.preface blockquote {
+	border: 0;
+	margin: 0.643em;
+	padding: 0;
+	font: inherit;
+}
+
+.preface blockquote p:first-child {
+	margin-top: 0;
+}
+
+.preface blockquote p:last-child {
+	margin-bottom: 0;
+}
+
+div.preface .associations {
+	margin-bottom: 1.5em;
+}
+
+div.preface .jump {
+	margin-top: 1.5em;
+}
+
+.end.notes.module {
+	margin-bottom: 1.5em;
+}
+
+/* ---- Series footer ---- */
+
+#ao3SeriesFooter {
+	border-top: 1px solid var(--rv-rule);
+}
+
+/* ---- Code, quotes, tables, media (stock behaviors) ---- */
+
+code,
+pre {
+	color: #ccc;
+	font-family: Monaco, Consolas, Courier, monospace;
+	font-size: 0.857em;
+	-webkit-hyphens: none;
+}
+
+pre {
+	max-width: 100%;
+	margin: 0;
+	overflow: auto;
+	overflow-y: hidden;
+	word-wrap: normal;
+	word-break: normal;
+	line-height: 1.4286;
+	background-color: var(--rv-bg-alt);
+	border: 1px solid var(--rv-rule);
+	padding: 5px;
+}
+
+a code {
+	color: inherit;
+}
+
+blockquote {
+	margin-inline-start: 0;
+	margin-inline-end: 0;
+	padding-inline-start: 15px;
+	border-inline-start: 3px solid var(--rv-rule);
+}
+
+.nnw-overflow {
+	overflow-x: auto;
+}
+
+.nnw-overflow table {
+	margin-bottom: 1px;
+	border-spacing: 0;
+	border: 1px solid var(--rv-rule);
+	font-size: inherit;
+}
+
+.nnw-overflow table table {
+	margin-bottom: 0;
+	border: none;
+}
+
+.nnw-overflow td,
+.nnw-overflow th {
+	-webkit-hyphens: none;
+	word-break: normal;
+	border: 1px solid var(--rv-rule);
+	border-top: none;
+	border-left: none;
+	padding: 5px;
+}
+
+.nnw-overflow th {
+	background-color: var(--rv-bg-alt);
+}
+
+.nnw-overflow tr :matches(td, th):last-child {
+	border-right: none;
+}
+
+.nnw-overflow :matches(thead, tbody, tfoot):last-child > tr:last-child :matches(td, th) {
+	border-bottom: none;
+}
+
+.nnw-overflow td pre {
+	border: none;
+	padding: 0;
+}
+
+.nnw-overflow table[border="0"] {
+	border-width: 0;
+}
+
+img,
+figure,
+video,
+div,
+object {
+	max-width: 100%;
+	height: auto !important;
+	margin: 0 auto;
+}
+
+iframe {
+	max-width: 100%;
+	margin: 0 auto;
+}
+
+iframe.nnw-constrained {
+	max-height: 50vw;
+}
+
+figure {
+	margin-top: 1em;
+	margin-bottom: 1em;
+}
+
+figcaption {
+	font-size: 14px;
+	line-height: 1.3em;
+}
+
+sup {
+	vertical-align: top;
+	position: relative;
+	bottom: 0.2rem;
+}
+
+sub {
+	vertical-align: bottom;
+	position: relative;
+	top: 0.2rem;
+}
+
+.iframeWrap {
+	position: relative;
+	display: block;
+	padding-top: 56.25%;
+}
+
+.iframeWrap iframe {
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 100% !important;
+	width: 100% !important;
+}
+
+/* Footnote popovers (newsfoot.js) */
+.newsfoot-footnote-popover {
+	background: #555;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 3px 6px rgba(0, 0, 0, 0.25);
+	color: #eee;
+	padding: 1px;
+}
+
+.newsfoot-footnote-popover-arrow {
+	background: #2a2a2a;
+	border: 1px solid #555;
+}
+
+.newsfoot-footnote-popover-inner {
+	background: #2a2a2a;
+}
+
+body a.footnote,
+body a.footnote:visited,
+.newsfoot-footnote-popover + a.footnote:hover {
+	background: #444;
+	color: #ccc;
+	text-decoration: none;
+	transition: background-color 200ms ease-out;
+}
+
+a.footnote:hover,
+.newsfoot-footnote-popover + a.footnote {
+	background: #444;
+	transition: background-color 200ms ease-out;
+}
+
+.image-link-expand .icon-container svg {
+	stroke: #aaa;
+}
+
+/* iOS */
+@supports (-webkit-touch-callout: none) {
+	body {
+		margin-top: 3px;
+		margin-bottom: 20px;
+		padding-left: 20px;
+		padding-right: 20px;
+		word-break: break-word;
+		-webkit-hyphens: auto;
+		-webkit-text-size-adjust: none;
+		font-size: [[font-size]]px;
+	}
+
+	.articleTitle {
+		font-size: 1.6em;
+	}
+}
+
+/* macOS */
+@supports not (-webkit-touch-callout: none) {
+	body {
+		margin-top: 20px;
+		margin-bottom: 64px;
+		padding-left: 48px;
+		padding-right: 48px;
+	}
+
+	.smallText { font-size: 14px; }
+	.mediumText { font-size: 16px; }
+	.largeText { font-size: 18px; }
+	.xlargeText { font-size: 20px; }
+	.xxlargeText { font-size: 22px; }
+}

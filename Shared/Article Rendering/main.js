@@ -232,15 +232,14 @@ function removeFeedNameLink() {
 
 // Wraps the opening sentence of a paragraph in a marker span so a theme's CSS
 // can style a real drop cap/versal off it (e.g. `::first-letter` on
-// `p:has(> .versalCap:first-child)`). This used to live as a per-theme inline
-// <script> in template.html (Kelmscott's own DOMContentLoaded handler), which
-// worked in the Settings theme preview (a plain WKWebView with content JS
-// enabled) but silently never ran in the real article reader, since
-// WebViewConfiguration disables allowsContentJavaScript there and only
-// WKUserScripts (like this file) are exempt from that restriction. Moving the
-// logic here fixes that for every theme, not just Kelmscott: any theme opts
+// `p:has(> .versalCap:first-child)`). The logic lives here rather than in a
+// per-theme inline <script> in template.html because the real article reader
+// disables allowsContentJavaScript in WebViewConfiguration and only
+// WKUserScripts (like this file) are exempt from that restriction; an inline
+// script would work in the Settings theme preview (a plain WKWebView with
+// content JS enabled) and silently never run in the reader. Any theme opts
 // in by adding `data-versal-target` to its `#bodyContainer` element (see
-// Technotes/Themes.md) instead of shipping its own copy of this script.
+// docs/nnwtheme-format.md) instead of shipping its own copy of this script.
 //
 // Operates on actual DOM nodes (via TreeWalker + Text.splitText) rather than
 // rewriting textContent, so any inline markup already in that first sentence
@@ -343,10 +342,9 @@ function applyVersalCaps() {
 // `data-chapter-divider-char` and its class from
 // `data-chapter-divider-class` (both required -- the function no-ops if
 // either is missing, same fail-safe pattern as applyVersalCaps' marker
-// attribute). This used to be Vintage Letter Green's own inline <script>,
-// which had the same allowsContentJavaScript problem applyVersalCaps did:
-// it worked in the Settings preview and silently never ran in the real
-// article reader. See Technotes/Themes.md.
+// attribute). It lives here, not in a theme's inline <script>, for the same
+// allowsContentJavaScript reason as applyVersalCaps above. See
+// docs/nnwtheme-format.md.
 function applyChapterDividers() {
 	var container = document.getElementById("bodyContainer");
 	if (!container || !container.hasAttribute("data-chapter-divider")) return;

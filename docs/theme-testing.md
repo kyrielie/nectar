@@ -93,8 +93,7 @@ every `colorCacheKey`, so regenerate the table in the same change.
 
 `ArticleThemeSmokeTests.everyShippedThemePassesTheSanityCheck` probes every
 `Themes/` and `gallery-themes/` bundle, stores nothing, fails if any measurement
-is rejected, and prints a median probe time. It lives in its own suite (it used to be
-in `ArticleThemeColorProbeTests`) so CI can skip it, see "CI scope". Measurements go
+is rejected, and prints a median probe time. It lives in its own suite so CI can skip it, see "CI scope". Measurements go
 through `ThemeProbeMeasurementCache` (keyed by `ArticleTheme.colorCacheKey`, declared in
 `ArticleThemeColorProbeTests.swift`), so
 `probeAgreesWithScannerWhereScannerFoundAValue` and this test load a bundle once per test
@@ -178,9 +177,7 @@ uses `evaluateJavaScript`. The columns per bundle are chosen by
 - `Themes/` (shipped bundles): all 12 (3 fixtures x 2 sizes x light and dark), 168 pages.
 - `gallery-themes/`: the largest size only, light, 3 fixtures; plus a dark page when the
   bundle's `ownStylesheet` contains `prefers-color-scheme`, `color-scheme` or `light-dark(`.
-  With the 151 gallery bundles the plan counted that is 453 pages, so 621 pages in all before the dark
-  additions; the real total is higher by one page per fixture per dark-capable bundle and
-  is printed by the test. The basis for dropping the default-size and dark columns is two
+  The test prints the total page count. The basis for dropping the default-size and dark columns is two
   recorded runs in which every overflow also appeared at the largest size and none appeared
   only in dark; re-check against one full run of the old 1,980-page matrix before treating
   the reduction as permanent.
@@ -196,7 +193,7 @@ Each run prints a `ThemeCheckMatrix <folder>: N pages in <time>` line.
   remedy is `ArticleThemeColorProbe.useVisibleHostFallback`.
 - `footnoteMarkersAreLegibleForThemesThatStyleThem` (`ArticleThemeCheckMatrixTests`) ports the numeral checks of
   `nnw-theme`'s `assets/footnotes.js` for themes whose own stylesheet mentions
-  `footnote` (37 bundles when this was written): each marker resolves to a
+  `footnote`: each marker resolves to a
   non-empty note, the numeral differs from its flattened backdrop by more than 60
   summed channel units (white when nothing is painted), it stays inside its
   marker, and all markers share height, baseline seat and font size. Not ported:

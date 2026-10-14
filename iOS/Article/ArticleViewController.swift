@@ -242,7 +242,6 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 
 	@IBOutlet private var searchBar: ArticleSearchBar!
 	@IBOutlet private var searchBarBottomConstraint: NSLayoutConstraint!
-	private var defaultControls: [UIBarButtonItem]?
 
 	private var pageViewController: UIPageViewController!
 	private var isPageTransitionInProgress = false

@@ -204,26 +204,19 @@ public enum ArticleThemeColorExtractor {
 	/// `\{`), in source order, and returns both their inner contents and `css`
 	/// with all of them removed.
 	///
-	/// BUG FIX: this used to be a single-match finder (`extractBraceBlock`,
-	/// singular) that returned only the *first* match via `css.range(of:)`.
-	/// That was fine for `@supports` stripping (a plain removal, indifferent to
-	/// how many matches exist), but broke dark-mode color resolution below:
-	/// `ArticleTheme.css` is always `core.css + theme's own stylesheet.css` (see
-	/// `ArticleTheme.init()`), and `core.css` carries its own
+	/// Collecting every match, not just the first, matters for dark-mode color
+	/// resolution: `ArticleTheme.css` is always `core.css + theme's own
+	/// stylesheet.css` (see `ArticleTheme.init()`), and `core.css` carries its own
 	/// `@media (prefers-color-scheme: dark) { ... }` block (the
 	/// `mark.nnw-highlight` dark rules) *ahead of* any theme's own dark block in
-	/// the concatenated string. The single-match finder always grabbed core.css's
-	/// block and left the theme's real dark block sitting unremoved inside what
-	/// was supposed to be the light-only scan -- `cssCustomProperties` doesn't
-	/// understand media-query scoping, so the theme's dark `--background-color`
-	/// (etc.) declaration, still physically present in that "light" text and
-	/// appearing after the real light declaration, silently won as the "light"
-	/// value too. See docs/article-color-pipeline.md and
-	/// ArticleThemeColorExtractorTests.ComposedThemeDarkBlockCollision for the
-	/// reproduction this fixes. Same brace-depth-tracking approach as before,
-	/// generalized to keep searching (and collecting) past each match instead of
-	/// stopping at the first, and shared with `stripBraceBlocks` above so there's
-	/// one matcher instead of two independently-written ones.
+	/// the concatenated string. A first-match-only finder would take core.css's
+	/// block and leave the theme's real dark block inside the light-only scan.
+	/// `cssCustomProperties` doesn't understand media-query scoping, so the
+	/// theme's dark `--background-color` (etc.) declaration, appearing after the
+	/// real light declaration, would win as the "light" value too. See
+	/// docs/article-color-pipeline.md and
+	/// ArticleThemeColorExtractorTests.ComposedThemeDarkBlockCollision. The
+	/// matcher tracks brace depth and is shared with `stripBraceBlocks` above.
 	static func extractBraceBlocks(in css: String, openerPattern: String) -> (stripped: String, blocks: [String]) {
 		var result = ""
 		var blocks = [String]()

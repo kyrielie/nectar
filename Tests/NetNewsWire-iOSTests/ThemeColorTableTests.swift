@@ -2,7 +2,7 @@
 //  ThemeColorTableTests.swift
 //  NetNewsWire-iOSTests
 //
-//  The bundled color table (plan WP7): `iOS/Resources/ThemeColorTable.json`, the
+//  The bundled color table: `iOS/Resources/ThemeColorTable.json`, the
 //  cold-start color source for every theme that ships in the app (each
 //  `Themes/*.nnwtheme` plus the Default theme).
 //
@@ -106,7 +106,7 @@ enum ThemeColorTableSupport {
 			}
 			themes[name] = ThemeColorBundledTable.Entry(key: theme.colorCacheKey, measurement: measurement)
 		}
-		#expect(failures.isEmpty, "Failed the D7 sanity check, so the table was not written: \(failures.joined(separator: ", "))")
+		#expect(failures.isEmpty, "Failed the probe sanity check, so the table was not written: \(failures.joined(separator: ", "))")
 		guard failures.isEmpty else {
 			return
 		}

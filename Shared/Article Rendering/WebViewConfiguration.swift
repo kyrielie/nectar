@@ -170,18 +170,12 @@ private extension WebViewConfiguration {
 	/// has gone quiet for 250ms or a 3s hard cap (anchored to DOMContentLoaded, which fires
 	/// reliably regardless of how long images/fonts take) elapses.
 	static func scrollRestoreUserScript(windowScrollY: Int, generation: Int) -> WKUserScript {
-		// The per-lifecycle-event debugLog() calls that used to sit at every
-		// step below (script-parsed, before/after each restore point, reveal)
-		// were development-time scaffolding for building this feature -- 8-10
-		// unconditional console lines per single page load, which in practice
-		// buried everything else in the Xcode console. The feature is settled
-		// now; the one signal worth keeping is the terminal "did restore land
-		// correctly" state, which still reaches the native side via the
-		// scrollRestoreComplete message (see WebViewController's handler) --
-		// that's a structured, single-shot message per navigation, not a raw
-		// debug print, so it's kept. If step-by-step tracing is needed again
-		// for a specific scroll-restore bug, reintroduce debugLog() calls
-		// locally rather than leaving them on by default.
+		// The script logs nothing per step: the one signal worth keeping is the
+		// terminal "did restore land correctly" state, which reaches the native
+		// side via the scrollRestoreComplete message (see WebViewController's
+		// handler), a structured single-shot message per navigation. For
+		// step-by-step tracing of a specific scroll-restore bug, add debugLog()
+		// calls locally rather than leaving them on by default.
 		let source = """
 		(function() {
 			function scrollState(label) {

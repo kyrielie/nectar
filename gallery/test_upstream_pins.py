@@ -1,4 +1,4 @@
-"""Pins the eight NetNewsWire-origin bundles in Themes/ to upstream, file by file.
+"""Pins the eight NetNewsWire-origin bundles in gallery-themes/ to upstream, file by file.
 
 Every file in those bundles must be byte-identical to NetNewsWire at UPSTREAM_COMMIT
 (path Resources/Themes/), except the files listed in INTENTIONAL_DELTAS, which must
@@ -17,7 +17,8 @@ import sys
 import unittest
 
 HERE = pathlib.Path(__file__).resolve().parent
-THEMES = HERE.parent / "Themes"
+# The eight NetNewsWire-origin bundles are gallery-only now; they moved out of Themes/.
+THEMES = HERE.parent / "gallery-themes"
 
 UPSTREAM_REPO = "Ranchero-Software/NetNewsWire"
 UPSTREAM_COMMIT = "a3e61ddc5ab3c5b8fe49297cbaddb60b6201017f"
@@ -74,24 +75,8 @@ INTENTIONAL_DELTAS = {
         "Container becomes id=bodyContainer with class articleBody. Permanent: core.css, annotations, ArticleThemeOverrides and main.js all key on them, and the color probe loads no main.js.",
     ),
     "Hyperlegible.nnwtheme/stylesheet.css": (
-        "17f522422c6335a473dfb569f2ed48b23d65172b3400994aed48c1440d950e56",
-        "PENDING REVERT: still carries a Google Fonts @import instead of the base64 font, plus the font: font-family: typo fix. After the revert only the typo fix remains.",
-    ),
-    "NewsFax.nnwtheme/stylesheet.css": (
-        "8404bee60582d74892ebbf9f8ab0bbc54498922c7390a71e32685e89a3a11691",
-        "PENDING REVERT: background changed to background-color for the legacy scanner. Restore once the probe is confirmed.",
-    ),
-    "Sepia.nnwtheme/stylesheet.css": (
-        "699ca461860a491e269b534d6c598a19cd39e3d5d8e81d824898b5d96168417f",
-        "PENDING REVERT: extra a { color } rule for the legacy scanner. Restore once the probe is confirmed.",
-    ),
-    "Tiqoe Dark.nnwtheme/stylesheet.css": (
-        "06b8a11747ccd4a0fdc6cf2894fcf3cdcdcdbffaa53c1b54732cb6a432c213ee",
-        "PENDING REVERT: extra a { color } rule for the legacy scanner. Restore once the probe is confirmed.",
-    ),
-    "Verdana Revival.nnwtheme/stylesheet.css": (
-        "18a48d8435ac61dc2b9bcbf0ed48db1897dd492629f535662db0bb105b2246b9",
-        "PENDING REVERT: p margin and indent read the paragraph variables. Redundant, because the override block appends !important rules after the theme CSS.",
+        "d681c1c3a9749852ce0507e9eb3d348b9e325ffba6b2e3c6ed8f39235163cc1a",
+        "Fixes the two upstream `font: font-family:` typos. Permanent. The base64 Atkinson Hyperlegible font is upstream\'s own and is kept as is.",
     ),
 }
 

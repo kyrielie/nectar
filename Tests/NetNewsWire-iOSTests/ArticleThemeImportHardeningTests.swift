@@ -323,7 +323,7 @@ import Foundation
 		}
 	}
 
-	// MARK: - Local bundle directories (D17)
+	// MARK: - Local bundle directories
 
 	@Test func localBundleWithSymlinkIsRejected() throws {
 		let root = try makeRoot()
@@ -525,25 +525,25 @@ private struct ZipBuilder {
 	}
 
 	mutating func addFile(_ name: String,
-						  _ content: String,
-						  method: UInt16 = 0,
-						  flags: UInt16 = 0,
-						  externalAttributes: UInt32 = UInt32(0o100644) << 16,
-						  extra: Data = Data(),
-						  declaredCompressedSize: UInt32? = nil,
-						  declaredUncompressedSize: UInt32? = nil) {
+	                      _ content: String,
+	                      method: UInt16 = 0,
+	                      flags: UInt16 = 0,
+	                      externalAttributes: UInt32 = UInt32(0o100644) << 16,
+	                      extra: Data = Data(),
+	                      declaredCompressedSize: UInt32? = nil,
+	                      declaredUncompressedSize: UInt32? = nil) {
 		addFile(name, Data(content.utf8), method: method, flags: flags, externalAttributes: externalAttributes,
 				extra: extra, declaredCompressedSize: declaredCompressedSize, declaredUncompressedSize: declaredUncompressedSize)
 	}
 
 	mutating func addFile(_ name: String,
-						  _ data: Data,
-						  method: UInt16 = 0,
-						  flags: UInt16 = 0,
-						  externalAttributes: UInt32 = UInt32(0o100644) << 16,
-						  extra: Data = Data(),
-						  declaredCompressedSize: UInt32? = nil,
-						  declaredUncompressedSize: UInt32? = nil) {
+	                      _ data: Data,
+	                      method: UInt16 = 0,
+	                      flags: UInt16 = 0,
+	                      externalAttributes: UInt32 = UInt32(0o100644) << 16,
+	                      extra: Data = Data(),
+	                      declaredCompressedSize: UInt32? = nil,
+	                      declaredUncompressedSize: UInt32? = nil) {
 		items.append(Item(name: name, data: data, method: method, flags: flags, externalAttributes: externalAttributes,
 						  extra: extra, declaredCompressedSize: declaredCompressedSize, declaredUncompressedSize: declaredUncompressedSize))
 	}

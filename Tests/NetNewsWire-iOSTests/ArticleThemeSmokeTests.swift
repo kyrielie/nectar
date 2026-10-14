@@ -56,6 +56,6 @@ import Foundation
 		// Acceptance test 5 is a recording, not an assertion. Times include cache hits (near zero).
 		print("ThemeColorProbe timing: median \(Self.median(times)) s over \(times.count) themes (plan threshold 0.75 s)\(aborted ? " (aborted by circuit breaker)" : "")")
 		#expect(!aborted, "\(breaker.limit) consecutive themes returned no measurement; the run was aborted. This points at the probe or the harness, not at one theme.")
-		#expect(failures.isEmpty, "Failed the D7 sanity check (investigate the theme or probe, do not lower the floor): \(failures.joined(separator: ", "))")
+		#expect(failures.isEmpty, "Failed the probe sanity check (investigate the theme or probe, do not lower the floor): \(failures.joined(separator: ", "))")
 	}
 }

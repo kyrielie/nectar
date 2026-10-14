@@ -9,7 +9,7 @@
 //  content JavaScript stays off (the reader's own setting), so a theme's own
 //  scripts cannot influence the measurement.
 //
-//  Decisions D2 to D7 of the theme color probe plan are implemented here:
+//  Implemented here:
 //  page color is `background-color` only (body over html over the legacy
 //  white/black fallback), ink is `.articleBody`'s `color`, link is the first
 //  `.articleBody a`, every color is normalized to opaque sRGB through a 2D
@@ -59,7 +59,7 @@ import RSCore
 	/// anything was unreadable or implausible (see `ThemeColorProbeLogic.isSane`).
 	/// Calls are serialized: one measurement at a time.
 	public static func measure(_ theme: ArticleTheme,
-							   environment: ArticleThemeProbeEnvironment) async -> ArticleThemeColorMeasurement? {
+	                           environment: ArticleThemeProbeEnvironment) async -> ArticleThemeColorMeasurement? {
 		let previous = gateTail
 		let task = Task { @MainActor () -> ArticleThemeColorMeasurement? in
 			await previous?.value
@@ -73,10 +73,10 @@ import RSCore
 
 	/// The probe page for `theme`: the reader's `page.html` with the theme's CSS,
 	/// its `@import` block and its own template rendered with the shared sample
-	/// article. No color-scheme meta, CSP, margin, wrapper or extra stylesheet
-	/// (D4), and no override block.
+	/// article. No color-scheme meta, CSP, margin, wrapper or extra stylesheet,
+	/// and no override block.
 	static func composeHTML(for theme: ArticleTheme,
-							environment: ArticleThemeProbeEnvironment) throws -> String {
+	                        environment: ArticleThemeProbeEnvironment) throws -> String {
 		let template = theme.template ?? ArticleThemeSampleContent.fallbackTemplate
 		let body = try MacroProcessor.renderedText(withTemplate: template,
 												   substitutions: ArticleThemeSampleContent.substitutions())
@@ -92,7 +92,7 @@ import RSCore
 	}
 
 	private static func performMeasurement(_ theme: ArticleTheme,
-										   environment: ArticleThemeProbeEnvironment) async -> ArticleThemeColorMeasurement? {
+	                                       environment: ArticleThemeProbeEnvironment) async -> ArticleThemeColorMeasurement? {
 		guard let html = try? composeHTML(for: theme, environment: environment) else {
 			return nil
 		}
@@ -110,8 +110,8 @@ import RSCore
 	/// One load in one appearance. Returns the decoded read-back, or nil on
 	/// timeout, navigation failure, or an undecodable message.
 	static func runPass(html: String,
-								dark: Bool,
-								environment: ArticleThemeProbeEnvironment) async -> ThemeColorProbeLogic.RawPass? {
+	                    dark: Bool,
+	                    environment: ArticleThemeProbeEnvironment) async -> ThemeColorProbeLogic.RawPass? {
 		let run = ProbeRun()
 
 		let configuration = WKWebViewConfiguration()
@@ -154,7 +154,7 @@ import RSCore
 		}
 	}
 
-	/// D3: a 1x1 window in the first foreground-active scene, so the web view has
+	/// A 1x1 window in the first foreground-active scene, so the web view has
 	/// a real trait environment. With no such scene the web view stays unattached
 	/// and the `matchMedia` assertion guards the result.
 	private static func attachToHiddenWindow(_ webView: WKWebView) -> UIWindow? {
@@ -203,7 +203,7 @@ import RSCore
 				}
 				self?.finish(nil)
 			}
-			// baseURL nil per plan 4.3; the page's own `<base href>` carries the fixed base.
+			// baseURL is nil; the page's own `<base href>` carries the fixed base.
 			webView.loadHTMLString(html, baseURL: nil)
 		}
 	}
@@ -277,7 +277,7 @@ enum ThemeColorProbeLogic {
 		var pageWasPainted: Bool
 	}
 
-	/// Minimum WCAG contrast of ink and of link against the page (D7).
+	/// Minimum WCAG contrast of ink and of link against the page.
 	static let minimumContrast = 1.5
 
 	/// The color a page has when nothing paints one: what the legacy scanner uses.
@@ -296,8 +296,8 @@ enum ThemeColorProbeLogic {
 		[c.r, c.g, c.b, c.a].allSatisfy { (0...255).contains($0) }
 	}
 
-	/// Applies D3 (appearance must match what was requested) and D5/D6 (page
-	/// compositing, opaque ink and link). Nil when the pass cannot be trusted.
+	/// Requires the appearance to match what was requested, then resolves page
+	/// compositing and opaque ink and link. Nil when the pass cannot be trusted.
 	static func resolve(_ raw: RawPass, requestedDark: Bool) -> PassResult? {
 		guard raw.error == nil,
 			  raw.dark == requestedDark,
@@ -334,7 +334,7 @@ enum ThemeColorProbeLogic {
 		return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
 	}
 
-	/// D7: ink and page differ, and both ink and link reach the contrast floor.
+	/// Ink and page differ, and both ink and link reach the contrast floor.
 	static func isSane(_ pass: PassResult) -> Bool {
 		pass.ink != pass.page
 			&& contrastRatio(pass.ink, pass.page) >= minimumContrast
@@ -351,7 +351,7 @@ enum ThemeColorProbeLogic {
 			hasDarkModeVariant: light.page != dark.page || light.ink != dark.ink || light.link != dark.link)
 	}
 
-	/// D2/D6: runs at document end in the page world, reads computed colors,
+	/// Runs at document end in the page world, reads computed colors,
 	/// normalizes each through a 2D canvas (so `oklch()`, `light-dark()` and
 	/// space-separated `rgb()` all come out as sRGB bytes) and posts one JSON
 	/// string. A color the canvas cannot parse is detected by assigning it after

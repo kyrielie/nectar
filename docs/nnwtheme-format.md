@@ -576,7 +576,7 @@ Dawn palettes, plus Pinerose, whose `FamilyVariant` is "Pinerose (adaptive)") ca
 presentational metadata only -- it doesn't merge the bundles at runtime, doesn't
 change storage or deletion, and each variant is still picked, imported, and deleted
 as its own complete theme. Don't add `Family` for a single bundle; it needs at
-least one sibling to mean anything. As of this writing, the theme gallery
+least one sibling to mean anything. The theme gallery
 (`gallery/build.py`, `gallery/index.template.html`) does not use `Family` or
 `FamilyVariant` (`build.py` copies them into the theme data, but the template ignores them) -- it lists every published bundle as its own grid card, with no
 family grouping or swatch dots. See `docs/theme-gallery.md`.

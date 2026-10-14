@@ -2,7 +2,7 @@
 //  ArticleThemesManagerGateTests.swift
 //  NetNewsWire-iOSTests
 //
-//  The theme gate in `ArticleThemesManager.updateCurrentTheme` (plan WP6): a measured
+//  The theme gate in `ArticleThemesManager.updateCurrentTheme`: a measured
 //  theme switches synchronously, an unmeasured one waits for its measurement, a stale
 //  result is dropped, repeated file-presenter callbacks start one measurement, and the
 //  launch path assigns scanner colors at once and corrects once. The measurer is
@@ -75,7 +75,7 @@ import UIKit
 	/// A fresh manager over an isolated store and stub name storage, with a counter of the
 	/// current-theme notifications that manager posts. Restores the globals afterwards.
 	private static func withManager(storedName: String?,
-									_ body: (ArticleThemesManager, Counter) async throws -> Void) async throws {
+	                                _ body: (ArticleThemesManager, Counter) async throws -> Void) async throws {
 		await ThemeColorStoreTestLock.shared.acquire()
 		defer { ThemeColorStoreTestLock.shared.release() }
 		let originalMeasurer = ArticleThemeColorStore.measurer
@@ -114,14 +114,14 @@ import UIKit
 			}
 			let before = manager.currentTheme
 
-			manager.currentThemeName = "Sepia"
+			manager.currentThemeName = "Duskbloom"
 			await Self.settleNotifications()
 			#expect(manager.currentTheme == before)
 			#expect(notifications.value == 0)
 
 			gate.open()
 			await manager.settleTaskForTesting?.value
-			#expect(manager.currentTheme.name == "Sepia")
+			#expect(manager.currentTheme.name == "Duskbloom")
 			await Self.settleNotifications()
 			#expect(notifications.value == 1)
 		}
@@ -130,9 +130,9 @@ import UIKit
 	@Test func measurementFailureStillSwitchesTheTheme() async throws {
 		try await Self.withManager(storedName: nil) { manager, _ in
 			ArticleThemeColorStore.measurer = { _ in nil }
-			manager.currentThemeName = "Sepia"
+			manager.currentThemeName = "Duskbloom"
 			await manager.settleTaskForTesting?.value
-			#expect(manager.currentTheme.name == "Sepia")
+			#expect(manager.currentTheme.name == "Duskbloom")
 		}
 	}
 
@@ -143,13 +143,13 @@ import UIKit
 				calls.value += 1
 				return Self.measurement(page: "#ABCDEF")
 			}
-			let sepia = try #require(manager.articleThemeWithThemeName("Sepia"))
-			await ArticleThemeColorStore.ensureMeasured(sepia)
+			let duskbloom = try #require(manager.articleThemeWithThemeName("Duskbloom"))
+			await ArticleThemeColorStore.ensureMeasured(duskbloom)
 			#expect(calls.value == 1)
 
-			manager.currentThemeName = "Sepia"
+			manager.currentThemeName = "Duskbloom"
 			// No await between the assignment and this check.
-			#expect(manager.currentTheme.name == "Sepia")
+			#expect(manager.currentTheme.name == "Duskbloom")
 			#expect(calls.value == 1)
 		}
 	}
@@ -161,17 +161,17 @@ import UIKit
 				await gate.wait()
 				return Self.measurement(page: "#ABCDEF")
 			}
-			let tiqoe = try #require(manager.articleThemeWithThemeName("Tiqoe Dark"))
-			ArticleThemeColorStore.core.store(Self.measurement(page: "#222222"), forKey: tiqoe.colorCacheKey)
+			let midnight = try #require(manager.articleThemeWithThemeName("Midnight Blue"))
+			ArticleThemeColorStore.core.store(Self.measurement(page: "#222222"), forKey: midnight.colorCacheKey)
 
-			manager.currentThemeName = "Sepia"            // unmeasured: waits
-			let sepiaTask = manager.settleTaskForTesting
-			manager.currentThemeName = "Tiqoe Dark"       // measured: switches now
-			#expect(manager.currentTheme.name == "Tiqoe Dark")
+			manager.currentThemeName = "Duskbloom"            // unmeasured: waits
+			let duskbloomTask = manager.settleTaskForTesting
+			manager.currentThemeName = "Midnight Blue"       // measured: switches now
+			#expect(manager.currentTheme.name == "Midnight Blue")
 
 			gate.open()
-			await sepiaTask?.value
-			#expect(manager.currentTheme.name == "Tiqoe Dark")
+			await duskbloomTask?.value
+			#expect(manager.currentTheme.name == "Midnight Blue")
 		}
 	}
 
@@ -214,7 +214,7 @@ import UIKit
 	// MARK: Launch
 
 	@Test func startWithColdCacheAssignsScannerColorsThenCorrectsOnce() async throws {
-		try await Self.withManager(storedName: "Sepia") { manager, notifications in
+		try await Self.withManager(storedName: "Duskbloom") { manager, notifications in
 			let gate = MeasurerGate()
 			ArticleThemeColorStore.measurer = { _ in
 				await gate.wait()
@@ -224,7 +224,7 @@ import UIKit
 			defer { NSFileCoordinator.removeFilePresenter(manager) }
 
 			// Assigned at once, with scanner colors.
-			#expect(manager.currentTheme.name == "Sepia")
+			#expect(manager.currentTheme.name == "Duskbloom")
 			#expect(!ArticleThemeColorStore.hasMeasurement(for: manager.currentTheme))
 			await Self.settleNotifications()
 			#expect(notifications.value == 1)

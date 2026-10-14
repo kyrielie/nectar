@@ -12,15 +12,15 @@
 //  theme's own template.html through MacroProcessor (see
 //  ArticleThemePreviewWebView), so per-theme header selectors like
 //  headerContainer/feedlink don't belong in this test anymore: they're only
-//  ever correct for the default theme, and were exactly why Promenade/
-//  Rosarivo previously rendered with an unstyled header. What's still this
+//  ever correct for the default theme, and were exactly why themes with a
+//  different header layout previously rendered with an unstyled header. What's still this
 //  test's job is the sample *body* content that gets substituted into
 //  whichever template is active.
 //
 //  The sample also carries a chapter heading and a notes block (AO3's own
 //  h3.title / notes-module markup) so a theme's heading and blockquote/notes
 //  styling show up in the preview too, not just body-paragraph styling --
-//  see sampleBodyForTesting's own doc comment for why this still isn't
+//  see `ArticleThemeSampleContent`'s doc comment for why this still isn't
 //  fandom chrome.
 //
 //  It also carries a preface block (#ao3SyntheticPreface / dl.tags), but
@@ -36,7 +36,7 @@ import Foundation
 @Suite struct ArticleThemePreviewSampleTests {
 
 	@Test func sampleBodyHasPrefaceWithWarningsAndChaptersOnly() {
-		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
+		let sample = ArticleThemeSampleContent.sampleBody
 		#expect(sample.contains("ao3SyntheticPreface"))
 		#expect(sample.contains("dl class=\"tags\""))
 		#expect(sample.contains("Warnings:"))
@@ -44,7 +44,7 @@ import Foundation
 	}
 
 	@Test func sampleBodyIsFreeOfFandomChrome() {
-		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
+		let sample = ArticleThemeSampleContent.sampleBody
 		#expect(!sample.contains("Fandom"))
 		#expect(!sample.contains("Rating:"))
 		#expect(!sample.contains("Category:"))
@@ -52,9 +52,9 @@ import Foundation
 
 	/// The preface block precedes Summary, which precedes Notes, which
 	/// precedes the chapter heading -- matching AO3's own preface order (see
-	/// sampleBodyForTesting's doc comment).
+	/// `ArticleThemeSampleContent`'s doc comment).
 	@Test func prefacePrecedesSummaryPrecedesNotesPrecedesChapterHeading() {
-		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
+		let sample = ArticleThemeSampleContent.sampleBody
 		let prefaceRange = sample.range(of: "ao3SyntheticPreface")
 		let summaryRange = sample.range(of: "summary module")
 		let notesRange = sample.range(of: "notes module")
@@ -68,18 +68,18 @@ import Foundation
 	}
 
 	@Test func sampleBodyHasChapterHeading() {
-		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
+		let sample = ArticleThemeSampleContent.sampleBody
 		#expect(sample.contains("chapter preface group"))
 		#expect(sample.contains("h3 class=\"title\""))
 	}
 
 	@Test func sampleBodyHasNotes() {
-		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
+		let sample = ArticleThemeSampleContent.sampleBody
 		#expect(sample.contains("notes module"))
 	}
 
 	@Test func sampleBodyHasSummary() {
-		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
+		let sample = ArticleThemeSampleContent.sampleBody
 		#expect(sample.contains("summary module"))
 	}
 
@@ -87,14 +87,14 @@ import Foundation
 	/// required, not just non-empty text, so paragraph spacing/indent overrides have
 	/// an actual second paragraph to show space above.
 	@Test func sampleBodyHasTwoParagraphs() {
-		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
+		let sample = ArticleThemeSampleContent.sampleBody
 		#expect(sample.components(separatedBy: "<p>").count - 1 == 4)
 	}
 
 	/// The theme color probe reads the link color from the first `a` inside `.articleBody`,
 	/// so the sample's chapter text must contain a prose link.
 	@Test func sampleBodyHasProseLinkInsideChapterText() {
-		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
+		let sample = ArticleThemeSampleContent.sampleBody
 		#expect(sample.contains("<a href=\"#\">"))
 		if let userstuff = sample.range(of: "class=\"userstuff module\" role=\"article\""),
 		   let link = sample.range(of: "<a href=\"#\">") {

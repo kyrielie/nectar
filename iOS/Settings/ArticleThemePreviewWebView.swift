@@ -26,10 +26,10 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 
 	/// The current theme's own `template.html`, with its `[[placeholder]]` tokens still
 	/// in place. Bundled themes don't share one header layout -- the default theme wraps
-	/// its byline/feedlink in a `.headerContainer` table, Promenade uses a bare
-	/// `.feedHeader` div, Kennerley uses `.headerBar`/`.barContent` -- so a single
-	/// hand-written sample body (as this used to be) only ever matched the default
-	/// theme's markup and rendered every other theme's header unstyled. Running the
+	/// its byline/feedlink in a `.headerContainer` table, Reversi has no header at all
+	/// and puts the byline under the title, Kennerley uses `.headerBar`/`.barContent` -- so a single
+	/// hand-written sample body would only match the default theme's markup and
+	/// render every other theme's header unstyled. Running the
 	/// theme's real template through the same `MacroProcessor` `ArticleRenderer` uses
 	/// for actual articles (see `ArticleRenderer.renderedHTML()`) means the preview is
 	/// structurally identical to what a real article gets, for any theme.
@@ -55,11 +55,6 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 	/// ArticleThemeOverrides itself uses.
 	let overrideBackgroundColorHex: String?
 	let overrideBackgroundColorDarkHex: String?
-
-	/// The sample body now lives in `ArticleThemeSampleContent`, shared with the theme
-	/// color probe. Kept as an alias so `ArticleThemePreviewSampleTests` still reads it
-	/// through the preview.
-	internal nonisolated static var sampleBodyForTesting: String { ArticleThemeSampleContent.sampleBody }
 
 	/// Ported directly from `removeFeedNameLink()` in `Shared/Article Rendering/main.js`:
 	/// finds the anchor with a real `href` but empty text (exactly what an empty

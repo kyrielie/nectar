@@ -18,7 +18,7 @@ review page are in `buildscripts/theme-mockups/`:
 | File | Purpose |
 |---|---|
 | `build_mockup_page.py` | Builds the review page from `themes.json`. Holds the sample text and the page shell, so the page is rebuilt without regenerating anything. |
-| `themes.json` | The 65 mockups of batches 3 to 8 (`id`, `cat`, `name`, `n`, `css`, `lk`). All 65 now also exist as converted bundles in `gallery-themes/` (matched by name; they were not there when this section was first written), so this file is the source of the mockups rather than the only copy of the designs. |
+| `themes.json` | The 65 mockups of batches 3 to 8 (`id`, `cat`, `name`, `n`, `css`, `lk`). All 65 now also exist as converted bundles in `gallery-themes/` (matched by name), so this file is the source of the mockups rather than the only copy of the designs. |
 | `fonts.html` | The Google Fonts `<link>` tags (91 families) the mockups load. The builder writes them into the page head. Add a family here when a mockup uses a new one, or the preview silently falls back to system fonts. |
 | `check_fullscreen_titles.py` | Full-screen title check in headless Chromium (needs Playwright). |
 
@@ -26,7 +26,7 @@ These files are not in the checkout this doc was last revised against: `buildscr
 
 The built review page (about 220KB) is not committed. `python3 build_mockup_page.py
 themes.json out.html` regenerates it, byte for byte identical to the page it was first
-built as (checked when this section was written).
+built as.
 
 ## Page layout (fixed order)
 
@@ -55,7 +55,7 @@ tables. Style those from the "Styleable blocks" table; a mockup does not exercis
 ## Sample content
 
 The one sample every mockup renders. It is a copy of `PF` and `sample_html()` in
-`build_mockup_page.py` (checked equal when this section was written); change both
+`build_mockup_page.py`; change both
 together. `__N__` is the theme's number (`.t1`, `.t2`, ...). Only the first paragraph after
 each chapter heading is `p.b`; the converter keeps the drop-cap rule for that paragraph
 only. The builder emits the preface rows with no whitespace between them.
@@ -221,9 +221,8 @@ bundle:
 var(--nnw-bg)`. The app measures the rendered page, so the `background` shorthand also
 works now; `background-color` stays preferred because the legacy scanner fallback (used
 until a measurement exists) can only read that property, and it is what the 66 Route A
-bundles already use. `fix_body_background_color.py` and its test were removed in WP8 of
-the theme color probe plan; see `article-color-pipeline.md`. The converter and `kit.py`
-are outside this repo and were not changed here.
+bundles already use. See `article-color-pipeline.md`. The converter and `kit.py`
+are outside this repo.
 
 Other rules that mention `.b` are dropped. A converted title therefore sits 12px higher than
 in the mockup for themes with plain top padding, and in the same place for themes with a
@@ -257,7 +256,7 @@ prints WCAG contrast for the text pairs and marks any under 4.5. In the tree, He
 and Undercity Dusk (shape D) match this route: both are `Version` 2 with homepage
 `https://github.com/nectar-app/gallery-themes` and both put a 56px-minimum running head first.
 
-**Info.plist fingerprints, checked across `gallery-themes/` by script:** all shape B (117 when checked)
+**Info.plist fingerprints, checked across `gallery-themes/` by script:** all shape B
 bundles have homepage `https://github.com/kyrielie/nectar` and `CreatorName` `kyrielie`;
 113 are `Version` 1 and four are `Version` 2 (why was not determined). Every one has a
 `License.md`. How the 65 batch 3 to 8 bundles were converted is not recorded in this
@@ -267,7 +266,7 @@ repo; their `License.md` only says "converted to this bundle by script".
 
 1. `finalize_credits.py <dir>` sets `CreatorName` to just the creator name and moves the
    descriptive text into `License.md` (CC0 unless the bundle already ships another license).
-   All shape B (117 when checked) bundles have a `License.md`; the 65 mockup conversions carry the placeholder described under "License.md".
+   All shape B bundles have a `License.md`; the mockup conversions carry the placeholder described under "License.md".
    Leave `Version` at 1.
 2. Put the bundle in `Themes/` or `gallery-themes/` (see below) and update `BUNDLED` if needed.
 3. Run the theme tests named below, which scan both directories.

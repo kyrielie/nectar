@@ -86,7 +86,7 @@ class ShippedList(unittest.TestCase):
                 plist = plistlib.loads((path / "Info.plist").read_bytes())
                 self.assertEqual(plist["Name"], build.bundle_stem(path))
                 css = (path / "stylesheet.css").read_text(encoding="utf-8")
-                self.assertNotIn("@import", css, "upstream rejects @import (plan D18)")
+                self.assertNotIn("@import", css, "upstream rejects @import")
                 self.assertEqual(build.lint_bundle(path), [])
                 self.assertNotIn("url(#", css, "bundle-local url() fails the upstream validator")
 

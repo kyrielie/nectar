@@ -1,4 +1,7 @@
-/* Shared iOS and macOS CSS rules. Platform specific rules are at the bottom of this file. */
+/* System: the built-in article design. Themes/System.nnwtheme carries byte-identical copies
+   of this file and template.html (gallery/test_build.py enforces it), so the fallback used
+   when no theme is selected and the bundled theme cannot drift. Platform specific rules
+   are at the bottom of this file. */
 
 body {
 	margin-left: auto;
@@ -42,8 +45,8 @@ a:hover {
 .ao3ChapterFetchNotice {
 	margin: 0 0 1em 0;
 	padding: 0.6em 0.8em;
-	border-left: 3px solid rgba(0, 0, 0, 0.3);
-	background: rgba(0, 0, 0, 0.05);
+	border-left: 3px solid var(--ao3-notice-border-color, rgba(0, 0, 0, 0.3));
+	background: var(--ao3-notice-background-color, rgba(0, 0, 0, 0.05));
 	font-size: 0.9em;
 	font-style: italic;
 }
@@ -69,6 +72,11 @@ a:hover {
 	--sup-link-color: rgba(255, 255, 255, 0.9);
 	--article-text-color: black;
 	--article-background-color: white;
+	--ao3-preface-border-color: rgba(0, 0, 0, 0.15);
+	--ao3-preface-background-color: rgba(0, 0, 0, 0.03);
+	--ao3-series-nav-disabled-color: rgba(0, 0, 0, 0.4);
+	--ao3-notice-border-color: rgba(0, 0, 0, 0.3);
+	--ao3-notice-background-color: rgba(0, 0, 0, 0.05);
 }
 
 @media(prefers-color-scheme: dark) {
@@ -83,6 +91,11 @@ a:hover {
 		--code-background-color: #333;
 		--article-text-color: white;
 		--article-background-color: black;
+		--ao3-preface-border-color: rgba(255, 255, 255, 0.25);
+		--ao3-preface-background-color: rgba(255, 255, 255, 0.08);
+		--ao3-series-nav-disabled-color: rgba(255, 255, 255, 0.45);
+		--ao3-notice-border-color: rgba(255, 255, 255, 0.4);
+		--ao3-notice-background-color: rgba(255, 255, 255, 0.1);
 	}
 }
 

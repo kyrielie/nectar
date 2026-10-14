@@ -6,7 +6,7 @@
 # See docs/theme-gallery.md, "Upstream-compatibility gate".
 #
 # A bundle belongs here only if it also meets the upstream rules Nectar does not
-# otherwise enforce: no @import (themes that use one are Nectar-only, plan D18),
+# otherwise enforce: no @import (themes that use one are Nectar-only),
 # Info.plist Name equal to the bundle name, no bundle-local url().
 Biblioteca
 NewsFax

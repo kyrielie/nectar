@@ -317,10 +317,10 @@ private extension ArticleRenderer {
 		d["byline"] = byline()
 
 		let datePublished = article.logicalDatePublished
-		// datetime_* used to include a time component, but every article's time
-		// is auto-set to 12:00, so it never carried real information. All themes
-		// (including future ones) reference these same tokens, so fixing them
-		// here fixes every theme without editing each one.
+		// datetime_* is date-only: every article's time is auto-set to 12:00, so
+		// a time component would carry no real information. All themes reference
+		// these same tokens, so handling it here covers every theme without
+		// editing each one. time_* tokens still carry the time.
 		d["datetime_long"] = Self.longDateFormatter.string(from: datePublished)
 		d["datetime_medium"] = Self.mediumDateFormatter.string(from: datePublished)
 		d["datetime_short"] = Self.shortDateFormatter.string(from: datePublished)
@@ -542,9 +542,9 @@ extension ArticleRenderer {
 		// Atom feed this app parses). Revisit once that's decided.
 
 		// Each stat is its own row -- matching AO3's own dt/dd-per-stat
-		// shape (and AO3PrefaceRenderer's rendering of it) rather than the
-		// single bundled "Stats:" row this used to synthesize, so the two
-		// paths produce identical markup (see AO3PrefaceRenderer).
+		// shape (and AO3PrefaceRenderer's rendering of it) rather than a
+		// single bundled "Stats:" row, so the two paths produce identical
+		// markup (see AO3PrefaceRenderer).
 		var statsRows: [AO3PrefaceStatsRow] = []
 		if let datePublished = article.datePublished {
 			statsRows.append(AO3PrefaceStatsRow(label: "Published:", value: ao3StatsDateFormatter.string(from: datePublished)))

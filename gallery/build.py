@@ -38,19 +38,12 @@ TEMPLATE = Path(__file__).resolve().parent / "index.template.html"
 
 # Themes that ship inside the app (everything in Themes/) and are never published
 # to the gallery. Anything else, i.e. everything in gallery-themes/, is published.
-#   - The eight NetNewsWire-origin themes. Promenade is a hard dependency (see the
-#     fallback comment near AppDefaults.swift:2265).
-#   - The six Nectar customs that still ship in the app.
+# gallery/test_build.py checks that this set equals the bundle stems in Themes/, so
+# moving a bundle between the two folders means editing this set in the same change.
 BUNDLED = {
-    # NetNewsWire-origin
-    "Appanoose", "Biblioteca", "Hyperlegible", "NewsFax", "Promenade", "Sepia",
-    "Tiqoe Dark", "Verdana Revival",
-    # Nectar customs that ship in the app
-    "Black & White", "Duskbloom", "Ember", "Powder Pink", "Tumblr Blue", "Vintage Letter Green",
+    "System", "Reversi", "Duskbloom", "Midnight Blue", "OLED Black", "Night Amber",
+    "Solarized", "Dark Academia", "Nectar", "High Contrast",
 }
-# Any bundle whose ThemeIdentifier starts with one of these is also excluded,
-# so a new NetNewsWire starter theme added to Themes/ is skipped automatically.
-BUNDLED_ID_PREFIXES = ("com.netnewswire.themes.",)
 
 DEFAULT_BASE = "https://kyrielie.github.io/nectar/themes/"
 REQUIRED_KEYS = ("Name", "ThemeIdentifier", "CreatorHomePage", "CreatorName", "Version")
@@ -453,9 +446,6 @@ def main():
                 continue
             theme, problems, warnings = load_theme(path)
             identifiers.append((path.name, theme["id"]))
-            if theme["id"].startswith(BUNDLED_ID_PREFIXES):
-                print(f"skip  {path.name}: bundled by identifier ({theme['id']})")
-                continue
             for w in warnings:
                 print(f"warn  {path.name}: {w}")
             for p in problems:

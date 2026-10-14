@@ -3,7 +3,7 @@
 //  ArticleThemingTests
 //
 //  The probe's pure logic: decoding the read-back, alpha compositing, the
-//  D5/D6/D7 rules and hex output. No web view needed. The rendering side is
+//  page, ink, link and sanity rules and hex output. No web view needed. The rendering side is
 //  covered in the app's ArticleThemeColorProbeTests.
 //
 
@@ -24,7 +24,7 @@ struct ArticleThemeColorProbeLogicTests {
 	}
 
 	private func raw(html: Logic.RGBA? = nil, body: Logic.RGBA? = nil, ink: Logic.RGBA? = nil,
-					 link: Logic.RGBA? = nil, dark: Bool = false, error: String? = nil) -> Logic.RawPass {
+	                 link: Logic.RGBA? = nil, dark: Bool = false, error: String? = nil) -> Logic.RawPass {
 		Logic.RawPass(html: html ?? rgba(0, 0, 0, 0), body: body ?? rgba(0, 0, 0, 0),
 					  ink: ink ?? rgba(0, 0, 0), link: link, dark: dark, error: error)
 	}
@@ -46,7 +46,7 @@ struct ArticleThemeColorProbeLogicTests {
 		#expect(decoded.html == nil)
 	}
 
-	// MARK: Page color (D5)
+	// MARK: Page color
 
 	@Test func unpaintedPageUsesLegacyFallback() throws {
 		let light = try #require(Logic.resolve(raw(ink: rgba(10, 10, 10)), requestedDark: false))
@@ -78,7 +78,7 @@ struct ArticleThemeColorProbeLogicTests {
 		#expect(overFallback.pageWasPainted)
 	}
 
-	// MARK: Ink and link (D6)
+	// MARK: Ink and link
 
 	@Test func translucentInkIsCompositedOntoPage() throws {
 		let result = try #require(Logic.resolve(raw(html: rgba(255, 255, 255), ink: rgba(0, 0, 0, 128)), requestedDark: false))
@@ -95,7 +95,7 @@ struct ArticleThemeColorProbeLogicTests {
 		#expect(result.link == rgb(0, 0, 200))
 	}
 
-	// MARK: Rejection (D3, D6)
+	// MARK: Rejection
 
 	@Test func appearanceMismatchInvalidatesThePass() {
 		#expect(Logic.resolve(raw(dark: false), requestedDark: true) == nil)
@@ -120,7 +120,7 @@ struct ArticleThemeColorProbeLogicTests {
 		#expect(Logic.resolve(raw(link: rgba(0, -1, 0)), requestedDark: false) == nil)
 	}
 
-	// MARK: Sanity (D7)
+	// MARK: Sanity
 
 	@Test func contrastRatioMatchesWCAGExtremes() {
 		#expect(abs(Logic.contrastRatio(rgb(0, 0, 0), rgb(255, 255, 255)) - 21.0) < 0.0001)

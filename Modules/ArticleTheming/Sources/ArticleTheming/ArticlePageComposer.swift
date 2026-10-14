@@ -35,12 +35,12 @@ public enum ArticlePageComposer {
 	/// Renders `pageHTML` with the six keys `page.html` uses:
 	/// `title`, `importStyle`, `style`, `baseURL`, `body`, `lang`.
 	public static func compose(pageHTML: String,
-							   title: String,
-							   importStyle: String,
-							   style: String,
-							   baseURL: String,
-							   body: String,
-							   lang: String) throws -> String {
+	                           title: String,
+	                           importStyle: String,
+	                           style: String,
+	                           baseURL: String,
+	                           body: String,
+	                           lang: String) throws -> String {
 		let substitutions = [
 			"title": title,
 			"baseURL": baseURL,

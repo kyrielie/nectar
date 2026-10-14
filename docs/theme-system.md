@@ -65,8 +65,8 @@ mockups by a separate script (`convert_mockups.py`, "Route A" in `theme-mockups.
 script is not in this repo (it lives in the v4 theme set's `tools/` directory), so a
 structural fix has to be applied to each bundle, not regenerated. The mockup tooling
 (`buildscripts/theme-mockups/`) is not in this checkout either; `theme-mockups.md`
-describes it. `buildscripts/theme-generation/theme_inventory.py` prints the current bundle
-and shape counts, which this document no longer states.
+describes it. Bundle and shape counts come from
+`buildscripts/theme-generation/theme_inventory.py`; this document does not state them.
 
 Horizontal overflow (an oversized fic image forcing the whole article page
 to scroll sideways) is guarded at two layers: every theme is expected to
@@ -416,11 +416,12 @@ chapter heading, two chapter paragraphs with a prose `<a>` inside `.articleBody`
 the fallback template and the sample macro values. The Settings preview
 (`ArticleThemePreviewWebView`) renders through the composer and
 `ArticleRenderer.page.html`, so its canvas, viewport and margins match the
-reader; it no longer adds its own `body { margin; padding }` rule. It still uses
+reader; it adds no `body` margin or padding rule of its own. It uses
 a default `WKWebViewConfiguration` (JavaScript on) and appends its own inline
 helper scripts, and it loads with the fixed base URL
-`https://example.invalid/`. `ArticleThemePreviewWebView.sampleBodyForTesting`
-remains as an alias of `ArticleThemeSampleContent.sampleBody`.
+`https://example.invalid/`. The sample body lives in
+`ArticleThemeSampleContent.sampleBody`, shared with the theme color probe;
+`ArticleThemePreviewSampleTests` reads it from there.
 
 Unknown `[[macro]]` tokens are left untouched by `MacroProcessor`, so a template
 macro the sample does not supply (the default template's `[[text_size_class]]`)

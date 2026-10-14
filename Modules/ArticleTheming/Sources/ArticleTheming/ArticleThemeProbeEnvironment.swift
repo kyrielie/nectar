@@ -24,10 +24,10 @@ public struct ArticleThemeProbeEnvironment: Sendable {
 	public var makePagePreferences: @MainActor @Sendable () -> WKWebpagePreferences
 
 	public init(pageHTML: String,
-				styleSubstitutions: [String: String],
-				lang: String,
-				coreCSSHash: String,
-				makePagePreferences: @escaping @MainActor @Sendable () -> WKWebpagePreferences) {
+	            styleSubstitutions: [String: String],
+	            lang: String,
+	            coreCSSHash: String,
+	            makePagePreferences: @escaping @MainActor @Sendable () -> WKWebpagePreferences) {
 		self.pageHTML = pageHTML
 		self.styleSubstitutions = styleSubstitutions
 		self.lang = lang
