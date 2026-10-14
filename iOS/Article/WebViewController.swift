@@ -1786,7 +1786,7 @@ private extension WebViewController {
 			// Device-locale fallback (no per-feed/article language is parsed). Needed so
 			// `hyphens: auto` picks the right WebKit hyphenation dictionary; page.html had no
 			// lang attribute before.
-			"lang": Locale.current.language.languageCode?.identifier ?? "en"
+			"lang": ArticlePageComposer.defaultLang
 		]
 		Self.logger.debug("renderPage: articleID=\(self.article?.articleID ?? "nil", privacy: .public) windowScrollY=\(self.windowScrollY, privacy: .public) bodyLength=\(rendering.html.count, privacy: .public)")
 		// WKWebView fires scrollViewDidScroll with contentOffset reset to (0,0) while
@@ -1822,8 +1822,9 @@ private extension WebViewController {
 
 	// Resolve the theme's background before loadHTMLString commits, so there is no
 	// flash of the default .systemBackground (near-black in dark mode; see
-	// PreloadedWebView.init). Precedence: override background, then theme background,
-	// then ArticleThemeColorExtractor's black/white fallback.
+	// PreloadedWebView.init). Precedence: override background, then the theme's
+	// background from ArticleThemeColorStore (measured value if cached, else the
+	// legacy scanner, whose black/white fallback applies last).
 	//
 	// Also re-run on its own (no reload) from the registerForTraitChanges handler in
 	// viewDidLoad, since these native colors otherwise go stale until the next
@@ -1878,8 +1879,9 @@ private extension WebViewController {
 		}
 	}
 
-	/// Precedence: override background, then theme background, then
-	/// ArticleThemeColorExtractor's black/white fallback. Shared by
+	/// Precedence: override background, then the theme's background from
+	/// ArticleThemeColorStore (measured if cached, else the legacy scanner, whose
+	/// black/white fallback applies last). Shared by
 	/// applyResolvedBackgroundColors() and viewDidLoad's initial notch-cover resolution
 	/// (before webView exists) so both agree. Static; the caller supplies isDark from
 	/// whichever trait collection is valid at its call site.

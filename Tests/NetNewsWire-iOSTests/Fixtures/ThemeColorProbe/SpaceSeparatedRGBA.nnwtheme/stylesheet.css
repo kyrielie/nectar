@@ -1,0 +1,6 @@
+html { background-color: rgb(250 245 235 / 1); color: rgb(30 30 30 / 1); }
+a { color: rgb(0 0 200 / 1); }
+@media (prefers-color-scheme: dark) {
+html { background-color: rgb(20 24 32 / 1); color: rgb(230 230 230 / 1); }
+a { color: rgb(140 180 255 / 1); }
+}

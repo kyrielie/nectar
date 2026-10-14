@@ -12,14 +12,43 @@ import Zip
 public final class ArticleThemeDownloader: Sendable {
 	public static let shared = ArticleThemeDownloader()
 
-	public enum ArticleThemeDownloaderError: LocalizedError {
+	public enum ArticleThemeDownloaderError: LocalizedError, Equatable {
 		case noThemeFile
+		case unsupportedURLScheme
+		case tooLarge
+		case invalidArchive(String)
+		case badResponse(Int)
 
 		public var errorDescription: String? {
 			switch self {
 			case .noThemeFile:
 				return "There is no NetNewsWire theme available."
+			case .unsupportedURLScheme:
+				return "Themes can only be downloaded from http or https addresses."
+			case .tooLarge:
+				return "The theme is too large to install."
+			case .invalidArchive(let reason):
+				return "The theme can't be installed. \(reason)"
+			case .badResponse(let status):
+				return "The server could not provide the theme (HTTP status \(status))."
 			}
+		}
+	}
+
+	/// Throws unless `url` uses the `http` or `https` scheme.
+	public static func validateDownloadURL(_ url: URL) throws {
+		guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+			throw ArticleThemeDownloaderError.unsupportedURLScheme
+		}
+	}
+
+	/// Throws unless `response` is an `HTTPURLResponse` with a 2xx status.
+	public static func validateDownloadResponse(_ response: URLResponse?) throws {
+		guard let http = response as? HTTPURLResponse else {
+			throw ArticleThemeDownloaderError.badResponse(0)
+		}
+		guard (200...299).contains(http.statusCode) else {
+			throw ArticleThemeDownloaderError.badResponse(http.statusCode)
 		}
 	}
 
@@ -41,6 +70,10 @@ public final class ArticleThemeDownloader: Sendable {
 	///   completion handler.
 	/// - Returns: The moved file's new location.
 	public func moveDownloadedTheme(from location: URL) throws -> URL {
+		let attributes = try FileManager.default.attributesOfItem(atPath: location.path)
+		if let size = (attributes[.size] as? NSNumber)?.uint64Value, size > ArticleThemeArchiveValidator.maxCompressedSize {
+			throw ArticleThemeDownloaderError.tooLarge
+		}
 		createDownloadDirectoryIfRequired()
 		return try moveTheme(from: location)
 	}
@@ -71,42 +104,62 @@ public final class ArticleThemeDownloader: Sendable {
 		return fileUrl
 	}
 
-	/// Unzips the zip file
+	/// Unzips a downloaded archive into a fresh directory under `Downloads` and
+	/// deletes the zip afterwards, on success or failure.
 	/// - Parameter location: Location of the zip archive.
-	/// - Returns: Enclosed `.nnwtheme` file.
+	/// - Returns: The enclosed `.nnwtheme` folder.
 	private func unzipFile(at location: URL) throws -> URL {
-		do {
-			let unzipDirectory = URL(fileURLWithPath: location.path.replacingOccurrences(of: ".zip", with: ""))
-			try Zip.unzipFile(location, destination: unzipDirectory, overwrite: true, password: nil, progress: nil, fileOutputHandler: nil) // Unzips to folder in Application Support/NetNewsWire/Downloads
-			try FileManager.default.removeItem(at: location) // Delete zip in Cache
-			let themeFilePath = findThemeFile(in: unzipDirectory.path)
-			if themeFilePath == nil {
-				throw ArticleThemeDownloaderError.noThemeFile
-			}
-			return URL(fileURLWithPath: unzipDirectory.appendingPathComponent(themeFilePath!).path)
-		} catch {
+		defer {
 			try? FileManager.default.removeItem(at: location)
-			throw error
 		}
+		let destination = downloadDirectory().appendingPathComponent(UUID().uuidString, isDirectory: true)
+		return try unzipTheme(at: location, to: destination)
 	}
 
-	/// Performs a deep search of the unzipped directory to find the theme file.
-	/// - Parameter searchPath: directory to search
-	/// - Returns: optional `String`
-	private func findThemeFile(in searchPath: String) -> String? {
-		if let directoryContents = FileManager.default.enumerator(atPath: searchPath) {
-			while let file = directoryContents.nextObject() as? String {
-				if file.hasPrefix("__MACOSX/") {
-					// logger.debug("Ignoring theme file in __MACOSX folder.")
-					continue
-				}
-				if file.hasSuffix(".nnwtheme") {
-					return file
+	/// Validates, then unzips the archive into `destination`.
+	///
+	/// The central directory is checked before any byte is written. After
+	/// extraction the bundle folder is checked again with `lstat`, junk files
+	/// are removed, and the single `.nnwtheme` folder is returned. `destination`
+	/// is deleted on failure. The zip itself is left for the caller to delete.
+	/// - Parameters:
+	///   - zipURL: Location of the zip archive.
+	///   - destination: A directory that does not exist yet.
+	/// - Returns: The enclosed `.nnwtheme` folder inside `destination`.
+	public func unzipTheme(at zipURL: URL, to destination: URL) throws -> URL {
+		let fileManager = FileManager.default
+		do {
+			let validated = try ArticleThemeArchiveValidator.validate(zipURL: zipURL)
+			try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
+
+			do {
+				try Zip.unzipFile(zipURL, destination: destination, overwrite: true, password: nil, progress: nil, fileOutputHandler: nil)
+			} catch {
+				throw ArticleThemeDownloaderError.invalidArchive("The archive could not be extracted.")
+			}
+
+			// Keep only the validated bundle folder; drop __MACOSX and other junk.
+			let expectedName = validated.bundleName.precomposedStringWithCanonicalMapping
+			var bundleURL: URL?
+			for name in try fileManager.contentsOfDirectory(atPath: destination.path) {
+				let itemURL = destination.appendingPathComponent(name)
+				if bundleURL == nil, name.precomposedStringWithCanonicalMapping == expectedName {
+					bundleURL = itemURL
+				} else {
+					try? fileManager.removeItem(at: itemURL)
 				}
 			}
-		}
+			guard let bundleURL else {
+				throw ArticleThemeDownloaderError.noThemeFile
+			}
 
-		return nil
+			try ArticleThemeBundleValidator.validate(directory: bundleURL)
+			ArticleThemeBundleValidator.removeJunk(in: bundleURL)
+			return bundleURL
+		} catch {
+			try? fileManager.removeItem(at: destination)
+			throw error
+		}
 	}
 
 	/// The download directory used by the theme downloader: `Application Support/NetNewsWire/Downloads`

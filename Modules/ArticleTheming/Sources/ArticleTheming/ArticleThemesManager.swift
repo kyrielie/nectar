@@ -6,7 +6,7 @@
 //  Copyright © 2015 Ranchero Software, LLC. All rights reserved.
 //
 
-import Foundation
+import UIKit
 import os
 import RSCore
 
@@ -82,6 +82,10 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 	private struct State {
 		var currentTheme = ArticleTheme.defaultTheme
 		var themeNames = [ArticleThemesManager.defaultThemeName]
+		/// The most recent gate or correction task (see `assignOrMeasure`). Kept so tests can await it.
+		var settleTask: Task<Void, Never>?
+		/// In-flight prewarms by theme name, so repeated file-presenter callbacks start nothing new.
+		var prewarmTasks = [String: Task<Void, Never>]()
 	}
 	private let state = OSAllocatedUnfairLock(initialState: State())
 
@@ -115,7 +119,9 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 		didStart = true
 
 		updateThemeNames()
-		updateCurrentTheme()
+		updateCurrentTheme(isStart: true)
+		measureCurrentThemeAndCorrect()
+		remeasureInstalledThemesIfStale()
 
 		NSFileCoordinator.addFilePresenter(self)
 	}
@@ -123,6 +129,9 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 	public func presentedSubitemDidChange(at url: URL) {
 		updateThemeNames()
 		updateCurrentTheme()
+		if let themeName = Self.themeName(forChangedURL: url) {
+			prewarmTheme(named: themeName)
+		}
 	}
 
 	// MARK: API
@@ -134,6 +143,10 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 	}
 
 	public func importTheme(filename: String) throws {
+		// Validate before touching the installed copy, so a rejected bundle
+		// can never replace or delete an existing theme.
+		try ArticleThemeBundleValidator.validate(directory: URL(fileURLWithPath: filename))
+
 		let filenameLastPathComponent = (filename as NSString).lastPathComponent
 		let toFilename = (folderPath as NSString).appendingPathComponent(filenameLastPathComponent)
 
@@ -142,6 +155,8 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 		}
 
 		try FileManager.default.copyItem(atPath: filename, toPath: toFilename)
+
+		prewarmTheme(named: ArticleTheme.themeNameForPath(filename))
 	}
 
 	/// A silent lookup: returns nil for a theme name that can't be resolved or
@@ -181,7 +196,7 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 
 // MARK: - Private
 
-private extension ArticleThemesManager {
+extension ArticleThemesManager {
 
 	func updateThemeNames() {
 		let appThemeFilenames = Bundle.main.paths(forResourcesOfType: ArticleTheme.nnwThemeSuffix, inDirectory: "Themes")
@@ -201,7 +216,9 @@ private extension ArticleThemesManager {
 		articleThemeWithThemeName(Self.defaultThemeName)!
 	}
 
-	func updateCurrentTheme() {
+	/// Resolves the stored theme name to a theme and hands it to the gate.
+	/// `isStart` is true only for the launch-time resolution of the stored theme.
+	func updateCurrentTheme(isStart: Bool = false) {
 		var themeName = currentThemeName
 		if !themeNames.contains(themeName) {
 			themeName = Self.defaultThemeName
@@ -215,8 +232,127 @@ private extension ArticleThemesManager {
 		}
 
 		if let articleTheme = articleTheme, articleTheme != currentTheme {
-			currentTheme = articleTheme
+			assignOrMeasure(articleTheme, named: themeName, isStart: isStart)
 		}
+	}
+
+	// MARK: Gate (D12)
+
+	/// Native colors are derived from the theme, so a theme with no measurement would paint
+	/// scanner colors first and visibly correct itself. The gate avoids that where it can:
+	/// - measured theme (or the probe is disabled): assign synchronously;
+	/// - the stored theme at launch: assign synchronously with scanner colors, then measure
+	///   in the background (see `measureCurrentThemeAndCorrect`);
+	/// - anything else: measure first, assign afterwards, and drop the result if the
+	///   selection changed meanwhile.
+	private func assignOrMeasure(_ theme: ArticleTheme, named themeName: String, isStart: Bool) {
+		if isStart || !ArticleThemeColorProbe.isEnabled || ArticleThemeColorStore.hasMeasurement(for: theme) {
+			currentTheme = theme
+			return
+		}
+		let task = Task { @MainActor in
+			await ArticleThemeColorStore.ensureMeasured(theme)
+			// Stale: the person picked something else (or the theme was removed) while measuring.
+			guard self.currentThemeName == themeName, theme != self.currentTheme else {
+				return
+			}
+			self.currentTheme = theme
+		}
+		state.withLock { $0.settleTask = task }
+	}
+
+	/// For a current theme that was assigned without a measurement: measure it in the
+	/// background and, if its colors differ from the scanner colors already on screen,
+	/// repost the current-theme notification once so every native surface updates.
+	func measureCurrentThemeAndCorrect() {
+		let theme = currentTheme
+		guard ArticleThemeColorProbe.isEnabled, !ArticleThemeColorStore.hasMeasurement(for: theme) else {
+			return
+		}
+		let task = Task { @MainActor in
+			guard !ArticleThemeColorStore.hasMeasurement(for: theme) else {
+				return
+			}
+			let before = ArticleThemeColorStore.colors(for: theme)
+			await ArticleThemeColorStore.ensureMeasured(theme)
+			guard self.currentTheme.colorCacheKey == theme.colorCacheKey,
+				  ArticleThemeColorStore.hasMeasurement(for: theme) else {
+				return
+			}
+			if !Self.sameColors(before, ArticleThemeColorStore.colors(for: theme)) {
+				NotificationCenter.default.postOnMainThread(name: .CurrentArticleThemeDidChangeNotification, object: self)
+			}
+		}
+		state.withLock { $0.settleTask = task }
+	}
+
+	/// D9: when the persisted cache predates the current probe version or `core.css`,
+	/// re-measure the installed themes at utility priority. Entries stay in use meanwhile.
+	func remeasureInstalledThemesIfStale() {
+		guard ArticleThemeColorProbe.isEnabled, ArticleThemeColorStore.core.isPersistedCacheStale() else {
+			return
+		}
+		Task(priority: .utility) { @MainActor in
+			let themes = self.themeNames.compactMap { self.articleThemeWithThemeName($0) }
+			let changed = await ArticleThemeColorStore.remeasureIfStale(themes)
+			if changed.contains(self.currentTheme.colorCacheKey) {
+				NotificationCenter.default.postOnMainThread(name: .CurrentArticleThemeDidChangeNotification, object: self)
+			}
+		}
+	}
+
+	// MARK: Prewarm
+
+	/// Measures a newly installed or changed theme ahead of selection. Coalesced by theme
+	/// name here and by cache key in the store, so repeated callbacks do nothing.
+	func prewarmTheme(named themeName: String) {
+		guard ArticleThemeColorProbe.isEnabled else {
+			return
+		}
+		state.withLock { s in
+			guard s.prewarmTasks[themeName] == nil else {
+				return
+			}
+			s.prewarmTasks[themeName] = Task { @MainActor in
+				if let theme = self.articleThemeWithThemeName(themeName),
+				   !ArticleThemeColorStore.hasMeasurement(for: theme) {
+					await ArticleThemeColorStore.ensureMeasured(theme)
+				}
+				self.state.withLock { $0.prewarmTasks[themeName] = nil }
+			}
+		}
+	}
+
+	/// The theme a changed file-presenter URL belongs to: the first `.nnwtheme` path component.
+	static func themeName(forChangedURL url: URL) -> String? {
+		for component in url.pathComponents where component.hasSuffix(ArticleTheme.nnwThemeSuffix) {
+			return ArticleTheme.themeNameForPath(component)
+		}
+		return nil
+	}
+
+	/// Whether two color sets agree to within less than one 8-bit step per channel.
+	private static func sameColors(_ a: ArticleThemeColorExtractor.ThemeColors, _ b: ArticleThemeColorExtractor.ThemeColors) -> Bool {
+		func close(_ x: UIColor, _ y: UIColor) -> Bool {
+			var xr: CGFloat = 0, xg: CGFloat = 0, xb: CGFloat = 0, xa: CGFloat = 0
+			var yr: CGFloat = 0, yg: CGFloat = 0, yb: CGFloat = 0, ya: CGFloat = 0
+			x.getRed(&xr, green: &xg, blue: &xb, alpha: &xa)
+			y.getRed(&yr, green: &yg, blue: &yb, alpha: &ya)
+			let step = 1.0 / 255.0
+			return abs(xr - yr) < step && abs(xg - yg) < step && abs(xb - yb) < step
+		}
+		return close(a.backgroundColor, b.backgroundColor) && close(a.backgroundColorDark, b.backgroundColorDark)
+			&& close(a.textColor, b.textColor) && close(a.textColorDark, b.textColorDark)
+			&& close(a.linkColor, b.linkColor) && close(a.linkColorDark, b.linkColorDark)
+	}
+
+	/// Test hooks.
+	var settleTaskForTesting: Task<Void, Never>? {
+		state.withLock { $0.settleTask }
+	}
+
+	var prewarmTasksForTesting: [Task<Void, Never>] {
+		state.withLock { Array($0.prewarmTasks.values) }
 	}
 
 	func allThemePaths(_ folder: String) -> [String] {

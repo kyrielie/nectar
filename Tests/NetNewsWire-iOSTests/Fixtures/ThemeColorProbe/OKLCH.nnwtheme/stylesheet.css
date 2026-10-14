@@ -1,0 +1,6 @@
+html { background-color: oklch(0.97 0.02 90); color: oklch(0.25 0.02 90); }
+a { color: oklch(0.45 0.18 260); }
+@media (prefers-color-scheme: dark) {
+html { background-color: oklch(0.2 0.02 260); color: oklch(0.92 0.01 260); }
+a { color: oklch(0.8 0.12 250); }
+}

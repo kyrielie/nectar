@@ -90,4 +90,15 @@ import Foundation
 		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
 		#expect(sample.components(separatedBy: "<p>").count - 1 == 4)
 	}
+
+	/// The theme color probe reads the link color from the first `a` inside `.articleBody`,
+	/// so the sample's chapter text must contain a prose link.
+	@Test func sampleBodyHasProseLinkInsideChapterText() {
+		let sample = ArticleThemePreviewWebView.sampleBodyForTesting
+		#expect(sample.contains("<a href=\"#\">"))
+		if let userstuff = sample.range(of: "class=\"userstuff module\" role=\"article\""),
+		   let link = sample.range(of: "<a href=\"#\">") {
+			#expect(userstuff.lowerBound < link.lowerBound)
+		}
+	}
 }

@@ -1,0 +1,2 @@
+html { color-scheme: light dark; background-color: light-dark(#fffff0, #101820); color: light-dark(#202020, #e0e0e0); }
+a { color: light-dark(#0050a0, #80c0ff); }

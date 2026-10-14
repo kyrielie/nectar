@@ -174,7 +174,8 @@ codebase but nothing macOS is currently built or shipped for Nectar.
 `.swiftlint.yml` enables `file_length` and `type_body_length` as
 warnings only. They exist to make growth in the app target's largest
 files visible, not to enforce a target size: `swiftlint lint --strict`
-runs in CI (`.github/workflows/ci.yml`) and promotes any reported warning
+runs in CI (`.github/workflows/ci.yml`, which runs only as the release gate or
+by hand; see `release-pipeline.md`) and promotes any reported warning
 to a failure, so each threshold must stay above the current worst file or
 it breaks the build.
 

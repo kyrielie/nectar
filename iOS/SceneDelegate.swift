@@ -180,44 +180,63 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 			}
 
 			if let providedThemeURL = queryItems.first(where: { $0.name == "url" })?.value {
-				if let themeURL = URL(string: providedThemeURL) {
-					let request = URLRequest(url: themeURL)
-
-					DispatchQueue.main.async {
-						NotificationCenter.default.post(name: .didBeginDownloadingTheme, object: nil)
-					}
-					let task = URLSession.shared.downloadTask(with: request) { location, _, error in
-						guard let location = location else { return }
-
-						// URLSessionDownloadTask deletes the temp file at `location` as soon
-						// as this completion handler returns -- moving it off to the app's
-						// own Downloads directory must happen synchronously, here, rather
-						// than inside an async Task hop (which runs on a later runloop turn,
-						// by which point the temp file is very likely already gone: "...tmp
-						// couldn't be moved to Downloads because either the former doesn't
-						// exist..."). The unzip/notification work that follows doesn't touch
-						// the vanishing temp file, so only the move itself needs to be
-						// synchronous; that can safely continue on the main actor.
-						do {
-							let movedFileLocation = try ArticleThemeDownloader.shared.moveDownloadedTheme(from: location)
-							Task { @MainActor in
-								do {
-									try ArticleThemeDownloader.shared.finishImportingTheme(at: movedFileLocation)
-								} catch {
-									NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
-								}
-							}
-						} catch {
-							Task { @MainActor in
-								NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
-							}
-						}
-					}
-					task.resume()
-				} else {
+				guard let themeURL = URL(string: providedThemeURL) else {
 					print("No theme URL")
 					return
 				}
+
+				do {
+					try ArticleThemeDownloader.validateDownloadURL(themeURL)
+				} catch {
+					NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
+					return
+				}
+
+				let request = URLRequest(url: themeURL)
+
+				DispatchQueue.main.async {
+					NotificationCenter.default.post(name: .didBeginDownloadingTheme, object: nil)
+				}
+				let task = URLSession.shared.downloadTask(with: request) { location, response, error in
+					// Every failure is reported; nothing is dropped silently.
+					func fail(_ error: Error) {
+						Task { @MainActor in
+							NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
+						}
+					}
+
+					if let error {
+						fail(error)
+						return
+					}
+
+					// URLSessionDownloadTask deletes the temp file at `location` as soon
+					// as this completion handler returns -- moving it off to the app's
+					// own Downloads directory must happen synchronously, here, rather
+					// than inside an async Task hop (which runs on a later runloop turn,
+					// by which point the temp file is very likely already gone: "...tmp
+					// couldn't be moved to Downloads because either the former doesn't
+					// exist..."). The unzip/notification work that follows doesn't touch
+					// the vanishing temp file, so only the move itself needs to be
+					// synchronous; that can safely continue on the main actor.
+					do {
+						try ArticleThemeDownloader.validateDownloadResponse(response)
+						guard let location else {
+							throw ArticleThemeDownloader.ArticleThemeDownloaderError.noThemeFile
+						}
+						let movedFileLocation = try ArticleThemeDownloader.shared.moveDownloadedTheme(from: location)
+						Task { @MainActor in
+							do {
+								try ArticleThemeDownloader.shared.finishImportingTheme(at: movedFileLocation)
+							} catch {
+								NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
+							}
+						}
+					} catch {
+						fail(error)
+					}
+				}
+				task.resume()
 			} else {
 				return
 			}

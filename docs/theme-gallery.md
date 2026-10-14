@@ -22,13 +22,59 @@ For every `.nnwtheme` bundle under `--src` (default: `Themes/` and
    (required `Info.plist` keys, `#bodyContainer`/`articleBody` in
    `template.html`, an overflow guard in the CSS) -- a validation failure
    fails the build (`sys.exit(1)`), a missing overflow guard only warns.
-2. Writes `dist/zips/<slug>.nnwtheme.zip`, with the bundle's real folder name
-   kept as the zip's single top-level directory (the app derives the theme
-   name from that folder on import, not from the zip's file name).
+2. Writes `dist/zips/<BundleStem>.nnwtheme.zip` (`<BundleStem>` is the bundle
+   folder name without `.nnwtheme`, e.g. `Ink and Mist.nnwtheme.zip`). The zip
+   contains exactly one top-level `<BundleStem>.nnwtheme` folder holding the
+   bundle's files; `.`-prefixed files are left out. The app derives the theme
+   name from that folder on import, and the shape matches the upstream
+   marketplace's release-asset rules. `slugify` still produces each theme's
+   `slug` field in the data blob, but it no longer names the zip. Because stems
+   contain spaces, `&` and non-ASCII characters, the `zip` field in the data
+   blob is the percent-encoded file name (`zip_url_path`); `index.template.html`
+   appends it to `base` unchanged, so both the Zip link and the install deep link
+   (which wraps the whole URL in `encodeURIComponent`) stay valid.
 3. Writes `dist/index.html` from `index.template.html`, with every theme's
    CSS, imports, and `template.html` inlined into one `__DATA__` JSON blob
    and `Shared/Article Rendering/core.css` inlined as `__CORE__` -- the page
    needs no fetches for its own data and works opened straight from disk.
+
+### Bundle checks
+
+Every bundle under `--src` is checked, including the ones in `BUNDLED` that are
+not published. Each failure prints `ERROR <bundle>: <reason>` and fails the
+build (exit 1) after all bundles have been reported:
+
+- **Macro inside an HTML comment** in `template.html`
+  (`\[\[[A-Za-z0-9_-]+\]\]` within `<!--...-->`). Macros are substituted
+  inside comments too, and the substituted text can end the comment early.
+  Same rule as the upstream validator.
+- **Non-leading `@import`** in `stylesheet.css`. `build.py` ports
+  `CSSImportExtractor`'s notion of a leading block (whitespace, comments and
+  terminated `@import` rules only) and is quote-aware, because Google Fonts
+  URLs contain `;` inside quotes. An `@import` anywhere after other content
+  (matched case-insensitively, ignoring comments and strings) is an error,
+  because the app lifts only the leading block and an `@import` left in the
+  body is ignored once `core.css` is prepended.
+- **Unterminated `@import`**: no closing `;`, or an unquoted `{` or `}` before
+  one (a missing `;` would otherwise let the statement swallow the next rule).
+- **Duplicate `ThemeIdentifier`** across all bundles in `--src`, bundled and
+  published together.
+- **`Version`** that is not an integer or is less than 1 (booleans and
+  numeric strings are rejected).
+
+The existing required-keys, `#bodyContainer` and overflow-guard checks are
+unchanged. The checks are covered by `gallery/test_build.py`
+(`python3 -m unittest discover -s gallery`), which also builds the shipped
+corpus and asserts every zip has a single top-level `<BundleStem>.nnwtheme`.
+
+### Discoverability
+
+A zip of this shape, attached as a release asset to a GitHub repository that
+carries the `netnewswire-theme` topic, is discoverable by the upstream
+NetNewsWire theme marketplace. The same URL installs into Nectar with
+`nectar://theme/add?url=<zip URL>`; the app validates the archive before
+extracting it (`theme-system.md`, "Archive rules"), so a malformed zip fails
+with an error instead of writing files.
 
 ### `BUNDLED`
 
@@ -143,6 +189,11 @@ Each card's Install button and the "Copy link" button both build
 section for the scheme itself; it is `nectar://`, not NetNewsWire's original
 `netnewswire://.`
 
+The app only follows `http` and `https` zip URLs, requires a 2xx response,
+caps the download at 10,000,000 bytes, and validates the archive layout before
+extracting anything; the rules are in `theme-system.md`'s "Archive rules".
+A gallery zip that breaks them cannot be installed through this link.
+
 ### Page styling notes
 
 A few specifics worth flagging because they're easy to miss on a skim and
@@ -193,9 +244,87 @@ have changed since the page was first built:
   Light/Dark toggle or the "Light mode"/"Dark mode" tone filter chips, which
   are controls over the theme previews rather than the page itself.
 
+### Release identity check
+
+```
+python3 gallery/build.py --check-release-identity <base-ref> [--src DIR ...]
+```
+
+Builds nothing. Compares the working tree with the merge-base of `<base-ref>` and
+`HEAD` (so changes that landed on the base branch after a branch was cut are not
+blamed on the branch) and exits 1 with `ERROR <bundle>: <reason>` lines when:
+
+- a bundle's `ThemeIdentifier` differs from its base copy;
+- a bundle's name changed: a bundle with no base copy under its name but whose
+  `ThemeIdentifier` matches a base bundle under another name is a rename. The
+  name is the bundle folder name, compared after NFC normalization and matched
+  across `--src` directories, so moving a bundle between `Themes/` and
+  `gallery-themes/`, or re-encoding a folder name to NFC, is not a rename.
+  `Info.plist`'s `Name` is not compared (upstream requires it to equal the
+  folder name; the folder name is the identity the app looks themes up by);
+- `stylesheet.css` or `template.html` differ from the base copy and `Version` is
+  not strictly greater (or either `Version` is not an integer).
+
+New and deleted bundles are not checked, and a change confined to `Info.plist`
+metadata or `License.md` needs no bump. A missing or unresolvable base ref is
+reported as an error rather than skipped. If there is no merge-base (a shallow
+clone), the ref itself is the base and a note is printed.
+
+## `ci.yml`: `theme-gallery` job
+
+Runs as part of the release gate (see `release-pipeline.md`, "Test gate"), or by
+hand via `workflow_dispatch`; `ci.yml` has no pull request or push trigger:
+`python3 -m unittest discover -s gallery` and a build into the runner's temp
+directory (so the bundle checks above gate a release, not only the publish run on
+`main`).
+
+`--check-release-identity` no longer runs in CI. It compares against a base branch
+and the job used to run it only on pull requests. Run it by hand when a bundle's
+`stylesheet.css` or `template.html` changes, from a clone with the base branch
+fetched: `python3 gallery/build.py --check-release-identity origin/main`.
+
+## Upstream-compatibility gate
+
+`gallery/upstream-compatible.txt` lists, one bundle name per line (blank lines and
+`#` comments are ignored), the bundles that are meant to stay portable to upstream
+NetNewsWire. It is a checked-in list, not an `Info.plist` key. Currently:
+Biblioteca, NewsFax, Promenade, Sepia, Tiqoe Dark, Verdana Revival, the six that
+passed the upstream validator at audit time. A bundle belongs on it only while it
+also keeps the upstream rules Nectar does not otherwise enforce: no `@import`
+(`@import` stays a supported Nectar capability, so themes that use it are
+Nectar-only), `Name` equal to the bundle name, no bundle-local `url()`.
+
+`gallery/upstream_compat.py` runs `nnw-theme check --no-open` on every listed
+bundle. `nnw-theme` expects exactly one `*.nnwtheme` at the root of the directory
+it runs in and writes `build/` there, so the script copies each bundle into its own
+temporary directory and runs the check there; one failing bundle does not stop the
+rest, and the exit status is 1 if any failed, a name is not found in `Themes/` or
+`gallery-themes/`, or the list is empty or has a duplicate. `--report-dir` keeps each
+bundle's `build/check-report.txt`; `--dry-run` only validates the list.
+
+The `upstream-compat` job in `.github/workflows/ci.yml` runs it as part of the
+release gate (or on a manual `ci.yml` run). It pins Node 24 (nnw-theme's minimum), pins
+`nnw-theme` to an exact version (`NNW_THEME_VERSION`, currently 2.0.2, kept in step
+with `DEFAULT_VERSION` in `upstream_compat.py` by a test), caches `~/.npm` and
+`~/.cache/ms-playwright`, installs WebKit with `nnw-theme setup --with-deps`, and
+uploads the reports. It runs on `ubuntu-26.04`, the runner label nnw-theme's own
+reusable workflow uses for the same commands. To adopt a newer `nnw-theme`, change
+both version strings in one commit.
+
+Three bundles are deliberately not listed: Craft Table, Illuminated Codex and
+Nectar. The upstream validator reports their `url(#...)` references to inline SVG
+filters as bundle-local CSS resources. That is a false positive for inline SVG
+filter references and the CSS is left as it is; each also begins with an `@import`,
+so they are Nectar-only regardless.
+
+Verified when this was written: `nnw-theme package` (the validation and packaging
+half of `check`) accepts all six listed bundles with both 2.0.2 and 2.1.0. The WebKit
+render half of `check` needs a browser download and was not run outside CI.
+
 ## `gallery.yml`
 
-`.github/workflows/gallery.yml` runs `gallery/build.py` on every push to
+`.github/workflows/gallery.yml` runs `gallery/build.py` (without waiting for
+`ci.yml`, which no longer runs on pushes) on every push to
 `main` that touches `gallery/**`, `gallery-themes/**`, `Themes/**`, or
 `Shared/Article Rendering/core.css`, and publishes the result to the
 `gh-pages` branch under `/themes/` (alongside the AltStore `source.json`

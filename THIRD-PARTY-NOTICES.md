@@ -10,6 +10,13 @@ and is itself MIT-licensed (see [`LICENSE`](./LICENSE)). This file aggregates at
 | [Ranchero-Software/NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) | MIT | Nectar's base fork. |
 | [kyrielie/ambrosia](https://github.com/kyrielie/ambrosia) | MIT | Companion JSON Feed–based backend Nectar is repointed at. |
 
+## Theme test fixtures
+
+| Project | License | Used for |
+| --- | --- | --- |
+| `nnw-theme` (NetNewsWire theme tooling) | Apache-2.0 | `Tests/NetNewsWire-iOSTests/Fixtures/ThemeCheck/article.json` and `kitchen-sink.json`, converted from its `assets/fixtures/*.toml`; the numeral checks in `ArticleThemeCheckMatrixTests` are ported from its `assets/footnotes.js`. |
+| Ranchero-Software/NetNewsWire `core.css` at `mac-7.2b4` | MIT | `Tests/NetNewsWire-iOSTests/Fixtures/ThemeCheck/upstream-core.css`, used only by the render-diff report. |
+
 ## Reading Stats (GPL-3.0)
 
 | Project | License | Used for |

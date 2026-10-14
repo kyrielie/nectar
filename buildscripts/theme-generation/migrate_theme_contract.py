@@ -251,57 +251,12 @@ def exact_last_value(css, masked, rules, contexts, selectors, prop):
 	return last
 
 
-# Colors the Swift extractor can only read from the literal `background-color` property:
-# ArticleThemeColorExtractor.colors(css:) asks for "background-color" on body/.articleBody and its
-# matcher cannot see the `background` shorthand. A body rule that sets the page color with the
-# shorthand therefore falls back to white (light) / black (dark) for the notch cover, the
-# webview and under-page background and the Blend nav bar. See docs/article-color-pipeline.md.
-NOT_A_COLOR_KEYWORD = {"none", "inherit", "initial", "unset", "revert", "transparent", "currentcolor"}
-
-
-def single_color_value(value):
-	"""True when a `background` value is exactly one color token, so it can be renamed to
-	`background-color` without changing what it paints."""
-	v = re.sub(r"\s*!\s*important\s*$", "", value).strip()
-	if re.fullmatch(r"#[0-9a-fA-F]{3,8}", v) or re.fullmatch(r"rgba?\([^()]*\)", v, re.I):
-		return True
-	if re.fullmatch(r"var\(\s*--[A-Za-z0-9_-]+\s*(?:,[^()]*)?\)", v):
-		return True
-	return re.fullmatch(r"[a-zA-Z]+", v) is not None and v.lower() not in NOT_A_COLOR_KEYWORD
-
-
-def normalize_body_background(css):
-	"""Rename `background` -> `background-color` in every `body` rule (light or dark block, never
-	@supports) that declares the page color as a single-color shorthand and has no
-	`background-color` of its own. Edits by offset, so formatting is untouched; idempotent.
-	Returns (new_css, renamed_count, manual) where `manual` lists shorthands this will not touch
-	(anything more than one color token, or a `.articleBody`-only rule) as strings."""
-	masked = mask_comments(css)
-	positions, manual = [], []
-	for r in find_rules(masked):
-		if r.context == "supports":
-			continue
-		parts = split_selectors(masked[r.sel_start:r.sel_end])
-		if not any(p in ("body", ".articleBody") for p in parts):
-			continue
-		decls = declarations(css[r.body_start:r.body_end])
-		if any(prop == "background-color" for _s, _e, prop, _v in decls):
-			continue
-		for s_off, _e, prop, value in decls:
-			if prop != "background":
-				continue
-			if "body" in parts and single_color_value(value):
-				positions.append(r.body_start + s_off)
-			else:
-				manual.append("%s { background: %s }" % (", ".join(parts), value))
-	for pos in sorted(positions, reverse=True):
-		css = css[:pos] + "background-color" + css[pos + len("background"):]
-	return css, len(positions), manual
-
-
-def extractor_colors(css):
-	"""(text, bg, link) for light and dark, as raw literal strings, like the Swift extractor.
-	Only `background-color` counts for the page color, exactly as in Swift."""
+def link_colors(css):
+	"""(light, dark) raw literal color of the `a` / `.articleBody a` rules, or None when the rule
+	is absent or not a parseable color. This is the only part of the old scanner model the
+	migration still needs: it decides whether link rules are rewired to var(--nnw-link) and
+	which literal --nnw-link receives. Native colors are measured at runtime now (see
+	docs/article-color-pipeline.md), so no text/page model is kept here."""
 	masked = mask_comments(css)
 	rules = find_rules(masked)
 	light_vars, dark_vars = {}, {}
@@ -310,55 +265,16 @@ def extractor_colors(css):
 			target = {"light": light_vars, "dark": dark_vars}.get(r.context)
 			if target is not None:
 				target.update(parse_root_vars(css[r.body_start:r.body_end] + ";"))
-
-	def compute(prop, selectors):
-		uncond = exact_last_value(css, masked, rules, ("light",), selectors, prop)
-		dark_override = exact_last_value(css, masked, rules, ("dark",), selectors, prop)
-		light = resolve_one_level(uncond, light_vars, {}) if uncond else None
-		dark_raw = dark_override or uncond
-		dark = resolve_one_level(dark_raw, dark_vars, light_vars) if dark_raw else None
-		# Like the Swift extractor, a value that is not a parseable color counts as not found.
-		return tuple(
-			v if v is not None and (HEX_OR_RGB.match(v.strip()) or re.fullmatch(r"[a-zA-Z]+", v.strip())) else None
-			for v in (light, dark)
-		)
-
-	text = compute("color", ["body", ".articleBody"])
-	# Faithful to the Swift extractor: only the literal `background-color` property is read
-	# (no shorthand fallback). normalize_body_background() makes shorthand inputs readable.
-	bg = compute("background-color", ["body", ".articleBody"])
-	link = compute("color", ["a", ".articleBody a"])
-	return {"text": text, "bg": bg, "link": link, "raw_link": link}
-
-
-def effective(colors):
-	"""Per-mode values the way the Swift extractor falls back: link -> text, dark -> light."""
-	text_l, text_d = colors["text"]
-	bg_l, bg_d = colors["bg"]
-	link_l, link_d = colors["raw_link"]
-	# Swift: light falls back to black/white; dark falls back to the *found* light value,
-	# then to white/black.
-	text_d = text_d or text_l or "#ffffff"
-	bg_d = bg_d or bg_l or "#000000"
-	text_l = text_l or "#000000"
-	bg_l = bg_l or "#ffffff"
-	link_d = link_d or link_l or text_d
-	link_l = link_l or text_l
-	return {
-		"text": (text_l, text_d),
-		"bg": (bg_l, bg_d),
-		"link": (link_l, link_d),
-	}
-
-
-def norm_color(value):
-	if value is None:
-		return None
-	v = value.strip().lower()
-	m = re.fullmatch(r"#([0-9a-f])([0-9a-f])([0-9a-f])", v)
-	if m:
-		return "#" + "".join(c * 2 for c in m.groups())
-	return v
+	selectors = ["a", ".articleBody a"]
+	uncond = exact_last_value(css, masked, rules, ("light",), selectors, "color")
+	dark_override = exact_last_value(css, masked, rules, ("dark",), selectors, "color")
+	light = resolve_one_level(uncond, light_vars, {}) if uncond else None
+	dark_raw = dark_override or uncond
+	dark = resolve_one_level(dark_raw, dark_vars, light_vars) if dark_raw else None
+	return tuple(
+		v if v is not None and (HEX_OR_RGB.match(v.strip()) or re.fullmatch(r"[a-zA-Z]+", v.strip())) else None
+		for v in (light, dark)
+	)
 
 
 # ---------------------------------------------------------------- the migration
@@ -374,16 +290,7 @@ def migrate_css(css, name):
 	if name in MANUAL:
 		return css, 0, ["skipped (manual): " + MANUAL[name]]
 	changes = 0
-	# A `background:` shorthand on body is invisible to the Swift extractor; make it readable first so
-	# the self-check below compares like with like (the rename is the intended fix, not drift).
-	css, renamed, manual_bg = normalize_body_background(css)
-	if renamed:
-		changes += renamed
-		notes.append("body background shorthand renamed to background-color (%d rule(s))" % renamed)
-	notes.extend("manual: %s is not a single color; the extractor cannot read it" % x for x in manual_bg)
-	original = css
-
-	before_colors = extractor_colors(original)
+	original_links = link_colors(css)
 
 	# --- 1a. rename tokens everywhere
 	new = css
@@ -409,7 +316,7 @@ def migrate_css(css, name):
 		changes += 1
 
 	# --- 1b. literal tokens and --nnw-link
-	new, link_changes = ensure_tokens(new, before_colors)
+	new, link_changes = ensure_tokens(new, original_links)
 	changes += link_changes
 
 	# --- 2/3/4. sizes, summary/notes, chrome font
@@ -512,18 +419,10 @@ def migrate_css(css, name):
 	# --- 5. report literal copies of the page color
 	notes.extend(background_literals(new))
 
-	# --- self-check: extractor view must not change
-	after_colors = effective(extractor_colors(new))
-	before_eff = effective(before_colors)
-	for key in ("text", "bg", "link"):
-		for i, label in enumerate(("light", "dark")):
-			a, b = norm_color(before_eff[key][i]), norm_color(after_colors[key][i])
-			if a != b:
-				raise MigrationError("extractor %s %s changed: %s -> %s" % (key, label, a, b))
 	return new, changes, notes
 
 
-def ensure_tokens(css, before_colors):
+def ensure_tokens(css, raw_link):
 	"""Make --nnw-bg/--nnw-ink/--nnw-link literal and terminated in both root blocks, and
 	point the a / .articleBody a rules at var(--nnw-link). Returns (css, change_count)."""
 	changes = 0
@@ -568,7 +467,6 @@ def ensure_tokens(css, before_colors):
 	has_dark = roots["dark"] is not None
 	light_bg = literal(cascade("bg", False), "light --nnw-bg")
 	light_ink = literal(cascade("ink", False), "light --nnw-ink")
-	raw_link = before_colors["raw_link"]
 	rewire_links = raw_link[0] is not None
 	light_link = literal(raw_link[0] or light_ink, "light link color")
 	dark_bg = dark_ink = dark_link = None

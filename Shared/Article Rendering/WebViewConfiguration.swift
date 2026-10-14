@@ -39,6 +39,12 @@ import WebKit
 		return configuration
 	}
 
+	/// The reader's webpage preferences (content JavaScript off), for the theme color
+	/// probe, which must render under the same rules the reader does.
+	static func makeReaderWebpagePreferences() -> WKWebpagePreferences {
+		webpagePreferences
+	}
+
 	/// Add content blocking rules to a web view. Call before loading article content.
 	static func addContentBlockingRules(to webView: WKWebView) {
 		guard let contentBlockingRuleList else {

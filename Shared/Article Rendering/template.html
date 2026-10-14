@@ -27,9 +27,11 @@ time_long: Long version of the publish time.
 time_medium: Medium version of the publish time.
 time_short: Long version of the publish time.
 
-text_size_class: Legacy token inherited from upstream NetNewsWire. It always stays the literal
-  text "[[text_size_class]]": MacroProcessor leaves it unsubstituted because no Swift code sets
-  d["text_size_class"]. Harmless; every theme template still carries it.
+text_size_class: Legacy token inherited from upstream NetNewsWire, used only as a macro in the
+  class attribute of #bodyContainer below (the macro is deliberately not spelled out here: a
+  macro inside an HTML comment is substituted like any other). MacroProcessor leaves it
+  unsubstituted because no Swift code sets d["text_size_class"], so it stays literal text in the
+  class list. Harmless; every theme template still carries it.
 body: The body of the article.
 
 -->

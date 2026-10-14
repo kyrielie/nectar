@@ -31,9 +31,12 @@ name: Release IPA and Publish Source
 #     editing a release's notes after the fact silently advances source.json's
 #     buildVersion past what AltStore/SideStore can actually find in the IPA.
 #
-# workflow_dispatch now also creates the tag when it does not exist yet (the
-# prepare-tag job): enter a new vX.Y.Z and optionally a source_ref to cut it
-# from. See docs/release-pipeline.md.
+# workflow_dispatch now also creates the tag when it does not exist yet: enter a
+# new vX.Y.Z and optionally a source_ref to cut it from. Job order is
+# prepare-tag (validate and resolve the commit, nothing is pushed) -> ci (the
+# full ci.yml suite, run on that commit) -> create-tag (pushes the tag, only
+# after ci passed) -> build-ipa-release -> publish-source. ci.yml has no PR or
+# push trigger, so this gate is where the tests run. See docs/release-pipeline.md.
 on:
   workflow_dispatch:
     inputs:
@@ -59,23 +62,25 @@ permissions:
 
 jobs:
   prepare-tag:
-    name: Resolve or create tag
+    name: Validate tag and resolve commit
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.tag.outputs.sha }}
+      tag_exists: ${{ steps.tag.outputs.tag_exists }}
     steps:
-      # Without this job the tag had to exist before the workflow ran, because
-      # build-ipa-release checks out inputs.tag before anything creates it
-      # (gh release create only runs at the very end). Creating the tag here,
-      # first, removes the "create an empty release to mint a tag" workaround.
+      # Without a tag-minting step the tag had to exist before the workflow ran,
+      # because build-ipa-release checks out inputs.tag before anything creates it
+      # (gh release create only runs at the very end). This job only resolves
+      # the commit; the tag itself is pushed by create-tag, after ci passes, so a
+      # failing commit never ends up tagged.
       - name: Checkout (full history and tags)
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Resolve or create tag
+      - name: Validate tag and resolve commit
         id: tag
         env:
           TAG: ${{ inputs.tag }}
@@ -95,20 +100,55 @@ jobs:
 
           if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
             sha=$(git rev-parse "refs/tags/$TAG^{commit}")
+            tag_exists=true
             echo "::notice::Tag $TAG already exists at $sha; reusing it (source_ref is ignored)."
           else
             sha=$(git rev-parse --verify "${SOURCE_REF}^{commit}" 2>/dev/null \
               || git rev-parse --verify "origin/${SOURCE_REF}^{commit}")
-            git tag "$TAG" "$sha"
-            git push origin "refs/tags/$TAG"
-            echo "::notice::Created tag $TAG at $sha (from $SOURCE_REF)."
+            tag_exists=false
+            echo "::notice::Tag $TAG does not exist yet; it will be created at $sha (from $SOURCE_REF) once ci passes."
           fi
 
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "tag_exists=$tag_exists" >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: CI gate
+    needs: prepare-tag
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.prepare-tag.outputs.sha }}
+
+  create-tag:
+    name: Create tag
+    needs: [prepare-tag, ci]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      # Always runs on dispatch (the "does the tag exist" check is per step) so
+      # build-ipa-release, which needs this job, is not skipped when the tag
+      # already exists: a job whose needed job was skipped is itself skipped.
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare-tag.outputs.sha }}
+
+      - name: Create and push tag
+        if: needs.prepare-tag.outputs.tag_exists == 'false'
+        env:
+          TAG: ${{ inputs.tag }}
+          SHA: ${{ needs.prepare-tag.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git tag "$TAG" "$SHA"
+          git push origin "refs/tags/$TAG"
+          echo "::notice::Created tag $TAG at $SHA."
 
   build-ipa-release:
     name: Build and Release Unsigned IPA
-    needs: prepare-tag
+    needs: [prepare-tag, ci, create-tag]
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-26
     outputs:

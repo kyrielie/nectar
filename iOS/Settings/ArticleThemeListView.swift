@@ -29,6 +29,10 @@ struct ArticleThemeListView: View {
 
 	@State private var isImporterPresented = false
 	@State private var themeNamesRefreshToken = false
+	/// The theme the person just picked, shown as selected right away. The manager may
+	/// measure an unmeasured theme before switching to it, which takes a moment; this keeps
+	/// the picker from snapping back meanwhile. Cleared when the current theme changes.
+	@State private var pendingSelection: String?
 	@State private var isDeleteCurrentThemeAlertPresented = false
 
 	/// Preview-only -- not part of `ArticleThemeOverrides`, doesn't get saved. Lets the
@@ -115,7 +119,7 @@ struct ArticleThemeListView: View {
 
 	init() {
 		let overrides = AppDefaults.shared.articleThemeOverrides
-		let themeColors = ArticleThemeColorExtractor.colors(for: ArticleThemesManager.shared.currentTheme)
+		let themeColors = ArticleThemeColorStore.colors(for: ArticleThemesManager.shared.currentTheme)
 		let lastSerifFontFamilyName = UserDefaults.standard.string(forKey: Self.lastSerifFontFamilyNameDefaultsKey)
 		let lastSansFontFamilyName = UserDefaults.standard.string(forKey: Self.lastSansFontFamilyNameDefaultsKey)
 
@@ -213,6 +217,7 @@ struct ArticleThemeListView: View {
 			themeNamesRefreshToken.toggle()
 		}
 		.onReceive(NotificationCenter.default.publisher(for: .CurrentArticleThemeDidChangeNotification)) { _ in
+			pendingSelection = nil
 			themeNamesRefreshToken.toggle()
 		}
 		.onChange(of: snapshot) { _, _ in save() }
@@ -342,13 +347,16 @@ struct ArticleThemeListView: View {
 
 	private var themeNameBinding: Binding<String> {
 		Binding(
-			get: { ArticleThemesManager.shared.currentTheme.name },
-			set: { ArticleThemesManager.shared.currentThemeName = $0 }
+			get: { pendingSelection ?? ArticleThemesManager.shared.currentTheme.name },
+			set: {
+				pendingSelection = $0
+				ArticleThemesManager.shared.currentThemeName = $0
+			}
 		)
 	}
 
 	private func themeAppearanceDescription(for theme: ArticleTheme) -> String {
-		if ArticleThemeColorExtractor.colors(for: theme).hasDarkModeVariant {
+		if ArticleThemeColorStore.colors(for: theme).hasDarkModeVariant {
 			let format = NSLocalizedString("“%@” has separate light and dark mode colors and follows your system appearance setting.", comment: "Theme appearance footer, light+dark theme")
 			return NSString.localizedStringWithFormat(format as NSString, theme.name) as String
 		} else {
@@ -358,7 +366,7 @@ struct ArticleThemeListView: View {
 	}
 
 	private var currentThemeHasDarkModeVariant: Bool {
-		ArticleThemeColorExtractor.colors(for: ArticleThemesManager.shared.currentTheme).hasDarkModeVariant
+		ArticleThemeColorStore.colors(for: ArticleThemesManager.shared.currentTheme).hasDarkModeVariant
 	}
 
 	/// Disabled (and left off) for a single-palette theme, since that theme's CSS
@@ -710,7 +718,7 @@ struct ArticleThemeListView: View {
 	}
 
 	private func resetToThemeDefaults() {
-		let themeColors = ArticleThemeColorExtractor.colors(for: ArticleThemesManager.shared.currentTheme)
+		let themeColors = ArticleThemeColorStore.colors(for: ArticleThemesManager.shared.currentTheme)
 
 		useCustomSerifFont = false
 		useCustomSansFont = false
