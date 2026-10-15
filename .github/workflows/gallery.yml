@@ -5,9 +5,17 @@ name: Publish site (landing page and theme gallery)
 #   theme gallery -> /themes/
 #   demo feed     -> /demo-feeds/feed.json  (manually-added feed for Simulator use, not part of
 #                    the automated screenshot flow -- see docs/ui-test-demo-data.md)
-# alongside the AltStore source.json, icon.png and screenshots/ that release.yml
-# already publishes there. Only index.html, themes/ and demo-feeds/ are touched, so
-# those other files are never clobbered.
+#   screenshots   -> /screenshots/*      (copied over from appstore/screenshots; see below)
+# alongside the AltStore source.json and icon.png that release.yml already publishes
+# there. Only index.html, themes/, demo-feeds/ and the screenshot files are touched, so
+# source.json and icon.png are never clobbered.
+#
+# Screenshots: release.yml publishes them too, but only when a release is cut, so a
+# screenshot committed to main stayed stale on the site (and on the landing page, which
+# uses the same URLs) until the next release. This workflow now copies
+# appstore/screenshots over the published files. It never deletes: source.json (written at
+# release time) lists screenshots by file name, so removing one here could break that list.
+# A screenshot you delete from the repo is removed at the next release.
 #
 # The file keeps its old name (gallery.yml) so existing references stay valid.
 
@@ -17,6 +25,7 @@ on:
     paths:
       - "landing/**"
       - "appstore/source.template.json"
+      - "appstore/screenshots/**"
       - "gallery/**"
       - "gallery-themes/**"
       - "Themes/**"
@@ -74,10 +83,20 @@ jobs:
           rm -rf pages/demo-feeds
           mkdir -p pages/demo-feeds
           cp -R build-demo-feeds/. pages/demo-feeds/
+          if [ -d main/appstore/screenshots ] && [ "$(ls -A main/appstore/screenshots 2>/dev/null)" ]; then
+            # Same guard as release.yml: cp -R copies symlinks as symlinks, which dangle on gh-pages.
+            if [ -n "$(find main/appstore/screenshots -type l)" ]; then
+              echo "::error::main/appstore/screenshots contains symlinks; commit real PNG copies (run: bundle exec fastlane appstore_screenshots)." >&2
+              find main/appstore/screenshots -type l >&2
+              exit 1
+            fi
+            mkdir -p pages/screenshots
+            cp -R main/appstore/screenshots/. pages/screenshots/
+          fi
           cd pages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html themes demo-feeds
+          git add index.html themes demo-feeds screenshots
           if git diff --cached --quiet; then
             echo "No site changes"
             exit 0

@@ -77,7 +77,10 @@ is replaced by a newer one, which could drop a release publish.
 image files in `<dir>` in natural order (`2.png` before `10.png`), rooted at the template `iconURL`'s
 directory. With no usable directory the template's list is kept. The symlink guard (`release.yml` sync
 step and the `appstore-assets` job in `ci.yml`) exists because `cp -R` copies symlinks as symlinks, which
-dangle on `gh-pages`. Producing the files: see `ui-test-demo-data.md` (App Store screenshots).
+dangle on `gh-pages`. `gallery.yml` also copies `appstore/screenshots` to `gh-pages` when those files change on `main` (overwrite and add
+only, same symlink guard), because `publish-source` alone only refreshes them at release time. It never deletes,
+so a screenshot removed from the repo disappears at the next release, not before. Producing the files: see
+`ui-test-demo-data.md` (App Store screenshots).
 
 ## Not done
 
