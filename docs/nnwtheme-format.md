@@ -8,6 +8,54 @@ Starting a new theme? Read `creating-a-theme.md` first: it is the short, spec-on
 walk-through, and this document is the reference behind it. Mockups and the
 mockup-to-bundle conversion history are in `theme-mockups.md`.
 
+## Theme contract
+
+One table for every rule a theme is held to. "Required" alone is ambiguous, so each row names
+who enforces it. The sections below hold the detail; the rows link to them. Two visual
+versions open in a browser: `theme-contract.html` (this table, filterable by enforcement level)
+and `theme-anatomy.html` (a mock rendered article page with every block numbered and
+annotated: what the template supplies, what Nectar generates, what is opt-in).
+
+Enforcement levels, strongest first:
+
+| Level | Meaning | What happens if you break it |
+|---|---|---|
+| **App** | The Swift loader needs it | The theme falls back to the default, or does not load |
+| **Build** | `gallery/build.py` checks it | The gallery build fails |
+| **Test** | A unit test checks it | CI fails |
+| **Release** | `--check-release-identity` compares with the base branch | The release check fails |
+| **Docs only** | Written down, checked by nothing | Nothing fails; the theme may still render badly |
+
+A person importing a theme is held only to the App level (`theme-system.md`, "Two tiers").
+Bundles shipped in `Themes/` or the gallery are held to every level.
+
+| Item | Status | Enforced at | Detail |
+|---|---|---|---|
+| Folder `<Name>.nnwtheme` | Required | App (the folder name is the identity) | `.nnwtheme` Structure |
+| `Info.plist` present | Required | App (without it nothing identifies the theme) | `Info.plist` |
+| `Name`, `ThemeIdentifier`, `CreatorHomePage`, `CreatorName`, `Version` | Required for shipped bundles | Build (`REQUIRED_KEYS`). Import is lenient: a missing key decodes to `""` or `0` | `Info.plist` |
+| `Version` is an integer of 1 or more | Required | Build (`version_problems`) | `Info.plist` |
+| `Version` raised when `stylesheet.css` or `template.html` changed | Required for existing bundles | Release (`--check-release-identity`) | `theme-gallery.md` |
+| `ThemeIdentifier` and folder name unchanged once published | Required | Release | `theme-gallery.md` |
+| `Family`, `FamilyVariant` | Optional | Test (`ArticleThemePlistFamilyTests`, when set) | `Theme families` |
+| `template.html` present | Required for shipped bundles | Build and tests. App falls back to the default if missing | `template.html` |
+| `#bodyContainer` carrying class `articleBody` | Required | Build (regex). The override and color systems also key off it | Custom template.html |
+| `[[body]]` token | Required | Docs only | Custom template.html |
+| `[[title]]`, `[[preferred_link]]`, `[[byline]]` | Unverified | Nothing; omitting was never tested | Required vs optional |
+| Header, running head, feed link, date, avatar, external link, `[[dateline_style]]` | Optional | Nothing | Custom template.html |
+| `data-versal-target` | Optional | Nothing (no-ops if absent) | Drop caps / versal treatments |
+| `data-chapter-divider` with `-char` and `-class` | Optional, all three together | Nothing (no-ops if either is missing) | Chapter dividers |
+| `#nnwFooter` | Optional, custom templates only | Nothing | Styleable blocks |
+| Inline `<script>` | Forbidden | The real reader blocks it | Drop caps / versal treatments |
+| 68px above the title | Required | Docs only (no test, not audited for shapes A, C, D) | Full-screen reading |
+| `stylesheet.css` present | Required for shipped bundles | Build and tests. App falls back to the default if missing | `stylesheet.css` |
+| `img, figure, video, div, object { max-width: 100% }` | Required in practice | Test (`ArticleThemeOverflowSafetyTests`); build only warns | `stylesheet.css` |
+| `--nnw-bg`, `--nnw-ink`, `--nnw-link` as literals in `:root` and the dark `:root`; page color as `background-color` on `body` | Required for shipped bundles | Docs only | Color tokens and the page color |
+| `--ao3-preface-*` variables | Optional | Nothing (`core.css` supplies fallbacks) | Styleable blocks |
+| `@media (prefers-color-scheme: dark)` block | Optional | Nothing. Without it the gallery classifies by `body` background luminance | Color tokens and the page color |
+| `--gx`, `--u`, `--font-*`, the iOS and macOS `@supports` split | Convention | Nothing | `stylesheet.css` |
+| `License.md` | Optional; expected for ports | Nothing (no code reads it) | `License.md` |
+
 ## `.nnwtheme` Structure
 
 An `.nnwtheme` comprises of three required files, plus an optional fourth:
@@ -25,7 +73,7 @@ The `Info.plist` requires the following keys/types:
 |`Name`|`String`|Theme name|
 |`CreatorHomePage`|`String`||
 |`CreatorName`|`String`|The creator's name (a person or organization), and nothing else. **Do not put the theme's description, attribution prose, or license status here** -- those go in `License.md` (see below). Migrated: every bundle except the eight NetNewsWire-origin ones (which keep their upstream creators and are left alone) now has `CreatorName` `kyrielie`, and the text that used to sit here is in its `License.md`. `gallery/build.py` still copies this key into its `by` field and does not read `License.md` (confirmed by reading it), so the gallery's detail dialog shows only the creator name for migrated bundles until the build reads `License.md`. `buildscripts/theme-generation/generate_ported_themes.py` now writes `kyrielie` here and puts its `creator=` text in a new `License.md` only when the bundle has none. The gallery grid card shows only the theme name -- see `docs/theme-gallery.md`.|
-|`Version`|`Integer`|Leave at `1` while Nectar is in development; do not bump it for edits. Found as-is and left alone: seven gallery bundles at `2`, and two bundles in `Themes/` at `3` and `14`.|
+|`Version`|`Integer`|Start at `1`. An integer of 1 or more (build check). Raise it whenever `stylesheet.css` or `template.html` changes in a bundle that already exists on the base branch: `--check-release-identity` fails otherwise (`theme-gallery.md`). An edit confined to `Info.plist` or `License.md` needs no bump. Older text said not to bump it during development; the release check supersedes that. Existing values vary (gallery bundles at 1 to 3, two bundles in `Themes/` at 3 and 14).|
 |`Family`|`String`|Optional. Groups sibling bundles that are the same design with different accents/palettes (e.g. "Rosé Pine"). Omit unless there are genuinely 2+ sibling bundles -- a family of one adds nothing, and isn't how any single-variant theme (including Dracula, reduced to one accent) is set up. `gallery/build.py` copies it into each theme's data, but the gallery page does not use it yet (see "Theme families" below).|
 |`FamilyVariant`|`String`|Optional. This bundle's variant label within `Family` (e.g. "Moon", "Purple"). Meaningless without `Family` also being set.|
 
@@ -109,9 +157,19 @@ disagreed with each other across docs.
 | C. Custom wrapper | `div.fontSize` wrapper, external-link line, and `#nnwFooter`. The six older themes (Aldine, Deco Line, Kelmscott, Kennerley, Marigold Press, Rosarivo) keep header bars with feed link and avatar; the seven newer ones (Craft Table, Didone Editorial, Four Nations, Illuminated Codex, Mid-century Jost, Screenplay, Sticker Pop) have no feed link or avatar and open with the title. | Craft Table, Illuminated Codex |
 | D. Outliers | Broadsheet is the stock layout plus a live inline `<script>` (blocked in the real reader). Heist Night and Undercity Dusk are hand-built (Route B in `theme-mockups.md`), B-like with their own class prefixes (`sc-`, `ar-`). | |
 
-Behavior differs by shape too. A has no versal and no chapter dividers, and only Pinerose
-has a `prefers-color-scheme: dark` block, so the other shape A themes are single-mode. B
-opts into the divider mechanism and, unless its design drops the drop cap, into versal;
+A shape is a label for markup that already exists, not a category the app knows. Reading
+`main.js`, `core.css`, `gallery/build.py` and the Swift sources found nothing that reads a
+theme's shape; the only code that does is `theme_inventory.py`, which classifies by substring
+match (`class="rh"`, `headerTable`), and `generate_ported_themes.py`, which emits shape A
+markup. Every opt-in in "Required vs optional" below (`data-versal-target`,
+`data-chapter-divider*`, dark block, `[[...]]` tokens) works on any shape, because each one
+keys off `#bodyContainer` or the CSS, not off the header.
+
+What the existing bundles do differs by shape. None of the 23 `gallery-themes/` templates that
+contain `headerTable` used `data-versal-target` or `data-chapter-divider*` before Beacon opted
+into chapter dividers, and only Pinerose and Hyperlegible have a `prefers-color-scheme: dark`
+block, so the other header-table themes are single-mode. Those are habits of the generator's
+output and of a stock layout, not limits of the format. B opts into the divider mechanism and, unless its design drops the drop cap, into versal;
 every B theme has a dark block. A B template that omits `data-versal-target` chose no drop
 cap or small-caps opening words, and its stylesheet may keep `.versalCap` and
 `::first-letter` rules that can no longer match (`theme_inventory.py --details` lists the
@@ -122,7 +180,7 @@ comment explaining why it was removed; it ships none.
 
 #### Which templates to add, and which to start from
 
-Only shape B is a starter. It is the one pipeline with a documented layout, a mockup
+Only shape B is the recommended starter. It is the one pipeline with a documented layout, a mockup
 review page, a mockup-to-bundle contract and a title-spacing check (see `theme-mockups.md`). Two
 templates are kept in these docs, and neither is the default: pick by what the design
 needs, and leave the running head out unless the design uses it.
@@ -156,8 +214,13 @@ Drop `data-versal-target` for a theme with no drop cap. The layout it renders is
 Not added as starters:
 
 - **A (header table).** It is the stock NetNewsWire layout, whose source is
-  `Shared/Article Rendering/template.html`. Its avatar never renders, it has no versal or
-  divider opt-in, and its header height is unaudited. Use it only for a faithful port.
+  `Shared/Article Rendering/template.html`. It is not a starter because no mockup pipeline
+  or title check exists for it, not because it cannot carry a design. Its avatar never renders
+  and its header height is unaudited, but the stock template sets no versal or divider
+  attributes only because it was not written to; add them to `#bodyContainer` as in
+  "Chapter dividers" if the design wants them (Beacon does). Use A for a faithful port, or
+  for an original design that wants the header table as its masthead; for the latter, check
+  the 68px rule on a device, since no audit covers it.
 - **C (custom wrapper).** The older six carry a legacy header bar and avatar. The newer
   seven (Craft Table, Didone Editorial, Four Nations, Illuminated Codex, Mid-century Jost,
   Screenplay, Sticker Pop) are bespoke designs with no header and no checked 68px
@@ -398,7 +461,13 @@ own CSS can style it however it needs. Both attributes are required -- the
 function no-ops if either is missing, so it's safe for every other theme to
 leave the `data-chapter-divider*` attributes unset entirely.
 
-`Vintage Letter Green.nnwtheme` is the reference theme for this pattern.
+`Vintage Letter Green.nnwtheme` is the reference theme for this pattern. It is
+shape-independent: `applyChapterDividers()` only reads `#bodyContainer`, and inserts the
+divider as a sibling directly before each heading, so it works in a shape A template too.
+`Beacon.nnwtheme` (shape A) is the example. It sets the character to a zero-width space
+(`&#8203;`) and draws the ornament as a CSS mask on `::before` of the inserted class. The
+mask is needed because the shared `div { height: auto !important }` rule would override a
+height set on the divider div itself, so the size has to live on the pseudo-element.
 
 
 #### Glass themes (`backdrop-filter`)
@@ -459,7 +528,7 @@ annotations, or with the notch.
 |---|---|
 | Around the title | `::before`/`::after` on `.articleTitle` (Beacon and Twilight do this), or an `aria-hidden` element in `template.html` between the header and the body (Kelmscott's rule element). |
 | Between header and body | An `aria-hidden` element in `template.html` or `::after` on the dateline. |
-| Before each chapter heading | The shared `data-chapter-divider*` mechanism (see above). Never an inline `<script>`. |
+| Before each chapter heading | The shared `data-chapter-divider*` mechanism (see above), in any template shape (Vintage Letter Green, Beacon). Never an inline `<script>`. |
 | Edges of the preface, summary and notes blocks | `::before`/`::after` on `#ao3Preface`/`#ao3SyntheticPreface`, `.summary.module`, `.notes.module`, `.end.notes.module`. |
 | End of the work | `::before` on `#ao3SeriesFooter`, `::after` on `.end.notes.module`, or `#nnwFooter` in a custom template. |
 | Opening letter | The versal mechanism (`data-versal-target`) -- see "Drop caps / versal treatments". |
