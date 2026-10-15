@@ -607,9 +607,10 @@ the top, and confirm the whole title is visible. Audit status, by template shape
 with the running head. Conversion moves a title up to 12px (`10px` top padding instead of
 `22px`), so the converted bundles should clear 68px by that arithmetic; that is inferred,
 and neither the bundles nor the mockups have been checked on a device. Without the `.rh`
-band, 59 of the 65 mockups fell under 68px. Shapes A, C and D have not been audited, and no
-test enforces this rule for any bundle. Shape A themes do not set a `.headerTable` height
-of their own.
+band, 59 of the 65 mockups fell under 68px. Shapes A, C and D were measured later with
+`buildscripts/theme-audit/check_fullscreen_top.py` (results and the head decision in
+`theme-fullscreen-audit.md`); no test enforces this rule and the script is not run in CI. Shape A
+themes do not set a `.headerTable` height of their own.
 
 ## Theme mockups and mockup-to-bundle conversion
 

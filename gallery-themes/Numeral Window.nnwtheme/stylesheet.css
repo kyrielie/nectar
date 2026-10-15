@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,300&display=swap');
+/* Numeral Window -- original design for Nectar. Inspired by *fiddle of gold* by *egg.design*.
+   Reading layout only; the source's palette ideas and techniques were reimplemented from the written spec.
+   Palette tokens (--nnw-*) are literal in :root and in the dark block (the legacy scanner resolves var() one level). */
+:root{--fh:'Lato',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--fb:'Lato',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--font-main:var(--fh);--font-body:var(--fb);--font-code:'JetBrains Mono','Courier New',Courier,monospace;--nnw-bg:#ffffff;--nnw-ink:#1b1919;--nnw-link:#a50000;--a:#a50000;--s:#000000;--b:#000000;--m:#555555;--si:#ffffff;}
+html{background-color:var(--nnw-bg)}
+body{margin:0;max-width:none;box-sizing:border-box;padding-left:max(0px,calc((100% - 44em) / 2));padding-right:max(0px,calc((100% - 44em) / 2));background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link)}
+.hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
+body > .systemMessage{color:var(--nnw-ink)}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
+.articleBody blockquote{border-left:3px solid var(--a);margin-left:0;padding:.1em 1em}
+.articleBody pre,.articleBody code{font-family:var(--font-code)}
+.articleBody pre{overflow-x:auto}
+.articleBody table{border-collapse:collapse}
+.articleBody td,.articleBody th{border:1px solid var(--b);padding:.4em .6em}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+
+/* structure: no running head; 76px above the title keeps it clear of the notch cover in full-screen reading */
+.t{padding:76px var(--gx) 36px;color:var(--nnw-ink);font:calc(var(--u) * 15)/1.65 var(--fb);position:relative}
+.t h1{margin:0;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 28 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.12}
+.t h2.heading,.t h3.title{margin:0 0 8px;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 20 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));line-height:1.2}
+.t h3.heading{margin:0 0 4px;font-family:var(--fh);font-weight:400;font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:18px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;color:var(--m)}
+.by:empty{display:none}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.dv{display:block;margin:18px 0 8px}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+
+/* ---- Numeral Window: signature treatment ---- */
+#bodyContainer{counter-reset:t421ch}
+.t421 .hd{padding:14px 16px;background:var(--s);color:var(--si)}
+.t421 h1{font-weight:300;letter-spacing:.06em;text-transform:uppercase;font-size:max(calc(var(--u) * 24 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.35))}
+.t421 .by{color:var(--si);opacity:.8}
+.t421 .bd{margin-top:-1px;padding:16px 16px 4px;border:1px solid var(--b)}
+.t421 .bd img{filter:grayscale(1);transition:filter .9s ease}
+.t421 .bd img:hover,.t421 .bd img:active{filter:none}
+.t421 h2.heading,.t421 h3.title{font-weight:300;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--b);padding-bottom:3px}
+.t421 h2.heading::before{counter-increment:t421ch;content:counter(t421ch,upper-roman) ".\00a0";color:var(--a)}
+.t421 .dv{display:block;height:1px;margin:22px 0;background:var(--b)}
+.t421 .articleBody a{text-decoration:none;border-bottom:1px solid var(--a)}
+.t421 .articleBody blockquote{border-left:1px solid var(--b);padding-left:1em}
+.t421 .summary.module,.t421 .notes.module,.t421 .end.notes.module,.t421 #bodyContainer dl.tags{background:transparent;border:1px solid var(--b);border-radius:0;}
+.t421 #bodyContainer dl.tags{padding:10px 14px}
+.t421 .notes.module,.t421 .end.notes.module{margin:12px 0 0;padding:10px 14px;font-size:calc(var(--u) * 13 * var(--nnw-detail-scale, 1))}
+.t421 .summary.module h3.heading,.t421 .notes.module h3.heading,.t421 .end.notes.module h3.heading,.t421 #bodyContainer dl.tags dt{color:var(--a)}
+
+@media (prefers-color-scheme: dark) {
+	:root{--nnw-bg:#111111;--nnw-ink:#e8e6e6;--nnw-link:#ff6b6b;--a:#ff6b6b;--s:#e8e6e6;--b:#e8e6e6;--m:#b5b5b5;--si:#111111;}
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
+	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; --u: 1px; }
+	body { margin: 0; padding-top: 0; padding-bottom: 64px; }
+}

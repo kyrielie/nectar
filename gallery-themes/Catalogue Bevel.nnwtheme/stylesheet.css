@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Noto+Sans:ital,wght@0,400;0,700;1,400&display=swap');
+/* Catalogue Bevel -- original design for Nectar. Inspired by *Archive Of Your Own* by *wovenstarlight, an homage to a fan-fiction library site*.
+   Reading layout only; the source's palette ideas and techniques were reimplemented from the written spec.
+   Palette tokens (--nnw-*) are literal in :root and in the dark block (the legacy scanner resolves var() one level). */
+:root{--fh:'Libre Baskerville',Georgia,'Times New Roman',serif;--fb:'Noto Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--font-main:var(--fh);--font-body:var(--fb);--font-code:'JetBrains Mono','Courier New',Courier,monospace;--nnw-bg:#ffffff;--nnw-ink:#2a2a2a;--nnw-link:#990000;--a:#990000;--s:#f2f2f2;--b:#d6d6d6;--m:#555555;--on:#ffffff;}
+html{background-color:var(--nnw-bg)}
+body{margin:0;max-width:none;box-sizing:border-box;padding-left:max(0px,calc((100% - 44em) / 2));padding-right:max(0px,calc((100% - 44em) / 2));background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link)}
+.hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
+body > .systemMessage{color:var(--nnw-ink)}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
+.articleBody blockquote{border-left:3px solid var(--a);margin-left:0;padding:.1em 1em}
+.articleBody pre,.articleBody code{font-family:var(--font-code)}
+.articleBody pre{overflow-x:auto}
+.articleBody table{border-collapse:collapse}
+.articleBody td,.articleBody th{border:1px solid var(--b);padding:.4em .6em}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+
+/* structure: no running head; 76px above the title keeps it clear of the notch cover in full-screen reading */
+.t{padding:76px var(--gx) 36px;color:var(--nnw-ink);font:calc(var(--u) * 15)/1.65 var(--fb);position:relative}
+.t h1{margin:0;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 28 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.12}
+.t h2.heading,.t h3.title{margin:0 0 8px;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 20 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));line-height:1.2}
+.t h3.heading{margin:0 0 4px;font-family:var(--fh);font-weight:400;font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:18px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;color:var(--m)}
+.by:empty{display:none}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.dv{display:block;margin:18px 0 8px}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+
+/* ---- Catalogue Bevel: signature treatment ---- */
+.t411 .hd{display:grid;grid-template-columns:auto 1fr;column-gap:14px;align-items:center;padding:14px 16px;color:var(--on);background:linear-gradient(color-mix(in srgb,var(--a) 80%,#fff),var(--a) 55%,color-mix(in srgb,var(--a) 82%,#000));border:1px solid color-mix(in srgb,var(--a) 70%,#000);border-radius:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.t411 .hd::before{content:"";grid-row:1 / span 2;width:34px;height:34px;background:linear-gradient(var(--on),var(--on)) 0 0/15px 15px no-repeat,linear-gradient(var(--on),var(--on)) 100% 0/15px 15px no-repeat,linear-gradient(var(--on),var(--on)) 0 100%/15px 15px no-repeat,linear-gradient(var(--on),var(--on)) 100% 100%/15px 15px no-repeat;opacity:.9}
+.t411 h1{font-weight:700;font-size:max(calc(var(--u) * 22 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.35))}
+.t411 .by{color:var(--on);margin:2px 0 0;opacity:.9}
+.t411 .bd{margin-top:14px;padding:6px 14px 4px;border:1px solid var(--b);border-radius:4px}
+.t411 h2.heading,.t411 h3.title{display:inline-block;padding:3px 14px;font-weight:700;font-size:calc(var(--u) * 15);color:var(--ink,var(--nnw-ink));background:linear-gradient(var(--nnw-bg),var(--b));border:1px solid var(--m);border-radius:4px;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 1px 1px rgba(0,0,0,.2)}
+.t411 .articleBody a{text-decoration:none;border-bottom:1px solid currentColor}
+.t411 #bodyContainer dl.tags dd{border-bottom:1px dotted var(--m)}
+.t411 .articleBody blockquote{border-left:0;margin:.8em 0 .8em 1.6em;padding:0}
+.t411 .dv{text-align:center;color:var(--a);margin:20px 0 10px;font-size:calc(var(--u) * 10)}
+.t411 .summary.module,.t411 .notes.module,.t411 .end.notes.module,.t411 #bodyContainer dl.tags{background:var(--s);border:1px solid var(--b);border-radius:4px;}
+.t411 #bodyContainer dl.tags{padding:10px 14px}
+.t411 .notes.module,.t411 .end.notes.module{margin:12px 0 0;padding:10px 14px;font-size:calc(var(--u) * 13 * var(--nnw-detail-scale, 1))}
+.t411 .summary.module h3.heading,.t411 .notes.module h3.heading,.t411 .end.notes.module h3.heading,.t411 #bodyContainer dl.tags dt{color:var(--a)}
+
+@media (prefers-color-scheme: dark) {
+	:root{--nnw-bg:#333333;--nnw-ink:#eeeeee;--nnw-link:#7fb4e6;--a:#5998d6;--s:#1e1e1e;--b:#4a4a4a;--m:#b8b8b8;--on:#0b1b2b;}
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
+	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; --u: 1px; }
+	body { margin: 0; padding-top: 0; padding-bottom: 64px; }
+}

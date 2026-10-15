@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,700;1,400&display=swap');
+/* Lilac Card -- original design for Nectar. Inspired by *Unite* by *wovenstarlight, an homage to the Tumblr blog view*.
+   Reading layout only; the source's palette ideas and techniques were reimplemented from the written spec.
+   Palette tokens (--nnw-*) are literal in :root and in the dark block (the legacy scanner resolves var() one level). */
+:root{--fh:'Nunito',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--fb:'Nunito',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--font-main:var(--fh);--font-body:var(--fb);--font-code:'JetBrains Mono','Courier New',Courier,monospace;--nnw-bg:#e8d7ee;--nnw-ink:#1d0023;--nnw-link:#7a3ea3;--a:#8b5ab6;--s:#fff7fd;--b:#c9b1d6;--m:#5b3a6b;--card:#fff7fd;}
+html{background-color:var(--nnw-bg)}
+body{margin:0;max-width:none;box-sizing:border-box;padding-left:max(0px,calc((100% - 44em) / 2));padding-right:max(0px,calc((100% - 44em) / 2));background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link)}
+.hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
+body > .systemMessage{color:var(--nnw-ink)}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
+.articleBody blockquote{border-left:3px solid var(--a);margin-left:0;padding:.1em 1em}
+.articleBody pre,.articleBody code{font-family:var(--font-code)}
+.articleBody pre{overflow-x:auto}
+.articleBody table{border-collapse:collapse}
+.articleBody td,.articleBody th{border:1px solid var(--b);padding:.4em .6em}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+
+/* structure: no running head; 76px above the title keeps it clear of the notch cover in full-screen reading */
+.t{padding:76px var(--gx) 36px;color:var(--nnw-ink);font:calc(var(--u) * 15)/1.65 var(--fb);position:relative}
+.t h1{margin:0;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 28 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.12}
+.t h2.heading,.t h3.title{margin:0 0 8px;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 20 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));line-height:1.2}
+.t h3.heading{margin:0 0 4px;font-family:var(--fh);font-weight:400;font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:18px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;color:var(--m)}
+.by:empty{display:none}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.dv{display:block;margin:18px 0 8px}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+
+/* ---- Lilac Card: signature treatment ---- */
+.t407 .hd{margin-top:30px;padding:44px 18px 16px;background:var(--card);border:1px solid color-mix(in srgb,var(--a) 28%,transparent);border-radius:.5rem}
+.t407 .hd::before{content:"";position:absolute;left:18px;top:-30px;width:58px;height:58px;border-radius:50%;border:3px solid var(--card);background:radial-gradient(circle at 32% 30%,#fff,var(--a) 70%)}
+.t407 .bd{position:relative;overflow:hidden;background:var(--card);border:1px solid color-mix(in srgb,var(--a) 28%,transparent);border-radius:.5rem;padding:16px 18px 6px}
+.t407 .bd::after{content:"";position:absolute;top:0;right:0;border-style:solid;border-width:0 26px 26px 0;border-color:transparent var(--a) transparent transparent}
+.t407 .articleBody blockquote{position:relative;margin:14px 0 22px;padding:10px 14px;border:0;border-radius:.5rem;background:color-mix(in srgb,var(--a) 14%,var(--card))}
+.t407 .articleBody blockquote::after{content:"";position:absolute;left:18px;bottom:-9px;border-style:solid;border-width:9px 9px 0 0;border-color:color-mix(in srgb,var(--a) 14%,var(--card)) transparent transparent transparent}
+.t407 h2.heading,.t407 h3.title{padding-bottom:4px;border-bottom:1px solid color-mix(in srgb,var(--a) 28%,transparent);font-weight:700}
+.t407 .dv{text-align:center;color:var(--a);margin:20px 0 10px}
+.t407 .summary.module,.t407 .notes.module,.t407 .end.notes.module,.t407 #bodyContainer dl.tags{background:color-mix(in srgb,var(--a) 10%,var(--card));border:1px solid color-mix(in srgb,var(--a) 28%,transparent);border-radius:.5rem;}
+.t407 #bodyContainer dl.tags{padding:10px 14px}
+.t407 .notes.module,.t407 .end.notes.module{margin:12px 0 0;padding:10px 14px;font-size:calc(var(--u) * 13 * var(--nnw-detail-scale, 1))}
+.t407 .summary.module h3.heading,.t407 .notes.module h3.heading,.t407 .end.notes.module h3.heading,.t407 #bodyContainer dl.tags dt{color:var(--a)}
+
+@media (prefers-color-scheme: dark) {
+	:root{--nnw-bg:#290d2f;--nnw-ink:#e3d2f7;--nnw-link:#e077f5;--a:#cf43ed;--s:#000000;--b:#5a2766;--m:#b79ad4;--card:#000000;}
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
+	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; --u: 1px; }
+	body { margin: 0; padding-top: 0; padding-bottom: 64px; }
+}

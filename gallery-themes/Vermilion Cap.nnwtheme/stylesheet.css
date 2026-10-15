@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Mukta:wght@400;600;800&display=swap');
+/* Vermilion Cap -- original design for Nectar. Inspired by *daemonia* by *egg.design*.
+   Reading layout only; the source's palette ideas and techniques were reimplemented from the written spec.
+   Palette tokens (--nnw-*) are literal in :root and in the dark block (the legacy scanner resolves var() one level). */
+:root{--fh:'Oswald','Arial Narrow',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--fb:'Mukta',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--font-main:var(--fh);--font-body:var(--fb);--font-code:'JetBrains Mono','Courier New',Courier,monospace;--nnw-bg:#eaeaea;--nnw-ink:#101010;--nnw-link:#b8350f;--a:#f75222;--s:#ffffff;--b:#c4c4c4;--m:#555555;}
+html{background-color:var(--nnw-bg)}
+body{margin:0;max-width:none;box-sizing:border-box;padding-left:max(0px,calc((100% - 44em) / 2));padding-right:max(0px,calc((100% - 44em) / 2));background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link)}
+.hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
+body > .systemMessage{color:var(--nnw-ink)}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
+.articleBody blockquote{border-left:3px solid var(--a);margin-left:0;padding:.1em 1em}
+.articleBody pre,.articleBody code{font-family:var(--font-code)}
+.articleBody pre{overflow-x:auto}
+.articleBody table{border-collapse:collapse}
+.articleBody td,.articleBody th{border:1px solid var(--b);padding:.4em .6em}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+
+/* structure: no running head; 76px above the title keeps it clear of the notch cover in full-screen reading */
+.t{padding:76px var(--gx) 36px;color:var(--nnw-ink);font:calc(var(--u) * 15)/1.65 var(--fb);position:relative}
+.t h1{margin:0;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 28 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.12}
+.t h2.heading,.t h3.title{margin:0 0 8px;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 20 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));line-height:1.2}
+.t h3.heading{margin:0 0 4px;font-family:var(--fh);font-weight:400;font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:18px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;color:var(--m)}
+.by:empty{display:none}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.dv{display:block;margin:18px 0 8px}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+
+/* ---- Vermilion Cap: signature treatment ---- */
+.t427 .hd{margin:20px 0 26px calc(var(--gx) * -1);padding:16px 44px 16px var(--gx);color:#fff;background:var(--a);border-radius:0 100px 100px 0;box-shadow:2px 2px 4px rgba(0,0,0,.4)}
+.t427 .hd::before{content:"";position:absolute;right:10px;top:-14px;width:34px;height:34px;box-sizing:border-box;border:3px solid var(--a);border-radius:50%;background:var(--s)}
+.t427 h1{font-weight:700;text-transform:uppercase;letter-spacing:.03em;font-size:max(calc(var(--u) * 26 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.35))}
+.t427 .by{color:#fff;opacity:.9;font-style:italic;letter-spacing:.1em}
+.t427 .bd{position:relative;padding:14px 58px 4px 16px;background:var(--s)}
+.t427 .bd::after{content:"";position:absolute;top:0;bottom:0;right:0;width:46px;background:linear-gradient(var(--a),var(--a)) 100% 0/10px 100% no-repeat,linear-gradient(var(--a),var(--a)) calc(100% - 14px) 0/20px 100% no-repeat,linear-gradient(var(--a),var(--a)) calc(100% - 38px) 0/30px 100% no-repeat;opacity:.9;clip-path:inset(0 0 0 0)}
+.t427 h2.heading,.t427 h3.title{text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--a);border-bottom:1px solid var(--a);padding-bottom:2px}
+.t427 .articleBody blockquote{border:0;margin:.8em 0;padding:0 0 0 1.6em;font-style:italic}
+.t427 .articleBody blockquote::before{content:"\201C";float:left;margin:.12em .12em 0 -.5em;font-size:3.2em;line-height:.5;font-weight:700;color:var(--a)}
+.t427 .dv{display:block;height:3px;width:60px;margin:22px 0;background:var(--a)}
+.t427 .summary.module,.t427 .notes.module,.t427 .end.notes.module,.t427 #bodyContainer dl.tags{background:color-mix(in srgb,var(--b) 40%,transparent);border:0;border-radius:0;}
+.t427 #bodyContainer dl.tags{padding:10px 14px}
+.t427 .notes.module,.t427 .end.notes.module{margin:12px 0 0;padding:10px 14px;font-size:calc(var(--u) * 13 * var(--nnw-detail-scale, 1))}
+.t427 .summary.module h3.heading,.t427 .notes.module h3.heading,.t427 .end.notes.module h3.heading,.t427 #bodyContainer dl.tags dt{color:var(--a)}
+
+@media (prefers-color-scheme: dark) {
+	:root{--nnw-bg:#1b1b1b;--nnw-ink:#eaeaea;--nnw-link:#ff7a52;--a:#f75222;--s:#101010;--b:#444444;--m:#b5b5b5;}
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
+	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; --u: 1px; }
+	body { margin: 0; padding-top: 0; padding-bottom: 64px; }
+}
