@@ -15,6 +15,20 @@ public extension Notification.Name {
 	static let CurrentArticleThemeDidChangeNotification = Notification.Name("CurrentArticleThemeDidChangeNotification")
 }
 
+public enum ArticleThemesManagerError: LocalizedError, Equatable {
+	/// A theme with this name is built into the app. An installed copy could never be
+	/// selected, because lookups prefer the app's own bundle.
+	case nameReservedByBuiltInTheme(String)
+
+	public var errorDescription: String? {
+		switch self {
+		case .nameReservedByBuiltInTheme(let name):
+			let format = NSLocalizedString("A theme named “%@” is built into Nectar, so a theme with that name can’t be installed. Rename the theme’s folder and try again.", comment: "Error when importing a theme whose name matches a built-in theme")
+			return String(format: format, name)
+		}
+	}
+}
+
 /// The persisted-state seam `ArticleThemesManager` needs from the app target.
 /// `AppDefaults` (app-target-only -- see Modularization Stage 0b) conforms to
 /// this; nothing else about AppDefaults is exposed to this package.
@@ -86,6 +100,14 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 		var settleTask: Task<Void, Never>?
 		/// In-flight prewarms by theme name, so repeated file-presenter callbacks start nothing new.
 		var prewarmTasks = [String: Task<Void, Never>]()
+		/// Loaded themes by bundle path, valid while the three theme files are unchanged.
+		var loadedThemes = [String: LoadedTheme]()
+	}
+
+	/// A theme plus the fingerprint of the files it was read from.
+	fileprivate struct LoadedTheme {
+		var fingerprint: [String]
+		var theme: ArticleTheme
 	}
 	private let state = OSAllocatedUnfairLock(initialState: State())
 
@@ -142,7 +164,27 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 		return FileManager.default.fileExists(atPath: toFilename)
 	}
 
+	/// True for the name of the default theme and for any theme shipped in the app bundle.
+	/// An installed theme with such a name is never the one that loads, so importing it
+	/// is refused.
+	public func isBuiltInThemeName(_ themeName: String) -> Bool {
+		if themeName == Self.defaultThemeName {
+			return true
+		}
+		return Bundle.main.url(forResource: themeName, withExtension: ArticleTheme.nnwThemeSuffix, subdirectory: "Themes") != nil
+	}
+
+	/// `isBuiltInThemeName` for a bundle file name or path such as `Sepia.nnwtheme`.
+	public func isBuiltInThemeFilename(_ filename: String) -> Bool {
+		isBuiltInThemeName(ArticleTheme.themeNameForPath(filename))
+	}
+
 	public func importTheme(filename: String) throws {
+		let importedName = ArticleTheme.themeNameForPath(filename)
+		if isBuiltInThemeName(importedName) {
+			throw ArticleThemesManagerError.nameReservedByBuiltInTheme(importedName)
+		}
+
 		// Validate before touching the installed copy, so a rejected bundle
 		// can never replace or delete an existing theme.
 		let source = URL(fileURLWithPath: filename)
@@ -193,7 +235,32 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 			return nil
 		}
 
-		return try? ArticleTheme(url: url, isAppTheme: isAppTheme)
+		// Loading reads three files and hashes two of them, and the theme picker asks for
+		// every theme on every render, so reuse a load while the files are unchanged.
+		let fingerprint = Self.fingerprint(of: url)
+		if let cached = state.withLock({ $0.loadedThemes[url.path] }), cached.fingerprint == fingerprint {
+			return cached.theme
+		}
+		guard let theme = try? ArticleTheme(url: url, isAppTheme: isAppTheme) else {
+			state.withLock { $0.loadedThemes[url.path] = nil }
+			return nil
+		}
+		state.withLock { $0.loadedThemes[url.path] = LoadedTheme(fingerprint: fingerprint, theme: theme) }
+		return theme
+	}
+
+	/// Modification date and size of the files a theme is built from. A missing file has
+	/// its own marker, so adding or removing one also changes the fingerprint.
+	private static func fingerprint(of bundleURL: URL) -> [String] {
+		["Info.plist", "stylesheet.css", "template.html"].map { name in
+			let path = bundleURL.appendingPathComponent(name).path
+			guard let attributes = try? FileManager.default.attributesOfItem(atPath: path) else {
+				return "missing"
+			}
+			let modified = (attributes[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+			let size = (attributes[.size] as? NSNumber)?.uint64Value ?? 0
+			return "\(modified)|\(size)"
+		}
 	}
 
 	public func deleteTheme(themeName: String) {

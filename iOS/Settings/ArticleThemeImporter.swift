@@ -23,6 +23,11 @@ import ArticleTheming
 
 		let theme = try ArticleTheme(url: url, isAppTheme: false)
 
+		// A theme named like a built-in one could be installed but never selected.
+		if ArticleThemesManager.shared.isBuiltInThemeName(theme.name) {
+			throw ArticleThemesManagerError.nameReservedByBuiltInTheme(theme.name)
+		}
+
 		let localizedTitleText = NSLocalizedString("Install theme “%@” by %@?", comment: "Theme message text")
 		let title = NSString.localizedStringWithFormat(localizedTitleText as NSString, theme.name, theme.creatorName) as String
 

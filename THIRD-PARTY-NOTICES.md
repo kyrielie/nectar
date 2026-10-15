@@ -54,7 +54,7 @@ where one exists.
 | Theme(s) | Source | License |
 | --- | --- | --- |
 | System | Derived from the default article stylesheet and template of [Ranchero-Software/NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire), with Nectar's AO3 additions | MIT |
-| Reversi | Inspired by AO3's own Reversi skin ([otwcode/otwarchive](https://github.com/otwcode/otwarchive), GPL-2.0-or-later); the CSS is a hand-written reimplementation and no code or color scheme was copied from ReversiPlusPlus (galaxygrotesque, GPL-2.0) | MIT (owner to confirm) |
+| Reversi | AO3's own Reversi skin ([otwcode/otwarchive](https://github.com/otwcode/otwarchive)), reimplemented by hand for Nectar's template; no code or color scheme was copied from ReversiPlusPlus (galaxygrotesque, GPL-2.0) | GPL-2.0, the same license as the archive software |
 | Ember | [emmsdibs/ao3-darkred](https://github.com/emmsdibs/ao3-darkred) | GPLv3 |
 | Beetlejuice | [NCFC-Wiki/Beetlejuice-theme-for-AO3](https://github.com/NCFC-Wiki/Beetlejuice-theme-for-AO3) | MIT |
 | Black & White, Charcoal Rose, Dusky Purple, Midnight Teal, Powder Pink, Midnight Blue (the `tumblr-blue` variant) | [ZerafinaCSS/neos](https://github.com/ZerafinaCSS/neos) | MIT |

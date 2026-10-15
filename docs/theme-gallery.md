@@ -329,7 +329,7 @@ so they are Nectar-only regardless.
 
 ## Upstream pin test
 
-`gallery/test_upstream_pins.py` pins the eight NetNewsWire-origin bundles in `Themes/`
+`gallery/test_upstream_pins.py` pins the eight NetNewsWire-origin bundles in `gallery-themes/`
 (Appanoose, Biblioteca, Hyperlegible, NewsFax, Promenade, Sepia, Tiqoe Dark, Verdana
 Revival) to upstream, file by file. `UPSTREAM` holds the SHA-256 of all 25 files at one
 upstream commit (`UPSTREAM_COMMIT`, path `Resources/Themes/` in

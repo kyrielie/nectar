@@ -80,32 +80,11 @@ struct ArticleThemeListView: View {
 	@State private var linkColor: Color
 	@State private var linkColorDark: Color
 
-	/// The font choices mirror Apple Books' own "Themes & Settings" font menu, not
-	/// every UIFont family name reported by the system: matching Books' menu exactly
-	/// is the point, not enumerating whatever happens to be installed. A few of
-	/// these (Canela, Proxima Nova, Publico) are fonts Apple licenses exclusively
-	/// for Books and aren't exposed to third-party apps as system fonts, so WebKit
-	/// will silently fall back to its default serif/sans-serif for those -- they're
-	/// kept in the list anyway to match Books' menu, and the live preview below
-	/// makes that fallback immediately visible rather than surprising in the
-	/// rendered article. Reused for both the serif (prose) and sans (chrome)
-	/// pickers -- Books' own font menu already spans both categories, so no second
-	/// font list is needed.
-	private static let availableFonts: [(displayName: String, cssFontFamily: String)] = [
-		("Athelas", "Athelas"),
-		("Avenir Next", "Avenir Next"),
-		("Canela", "Canela"),
-		("Charter", "Charter"),
-		("Georgia", "Georgia"),
-		("Iowan", "Iowan Old Style"),
-		("Palatino", "Palatino"),
-		("Proxima Nova", "Proxima Nova"),
-		("Publico", "Publico"),
-		("San Francisco", "-apple-system"),
-		("New York", "New York"),
-		("Seravek", "Seravek"),
-		("Times New Roman", "Times New Roman")
-	]
+	/// The fonts offered are the short list in `ArticleThemeOverrides.FontChoice.all`: fonts
+	/// iOS itself provides to web content, plus the system font. Any other font comes from a
+	/// theme, which can load whatever it likes. The same list serves the serif (prose) and
+	/// sans (chrome) pickers.
+	private static let availableFonts = ArticleThemeOverrides.FontChoice.all
 
 	/// `ArticleThemeOverrides.serifFontFamilyName`/`sansFontFamilyName` are nil
 	/// whenever their "Custom Font" toggle is off, since nil is exactly what tells
@@ -120,14 +99,18 @@ struct ArticleThemeListView: View {
 	init() {
 		let overrides = AppDefaults.shared.articleThemeOverrides
 		let themeColors = ArticleThemeColorStore.colors(for: ArticleThemesManager.shared.currentTheme)
-		let lastSerifFontFamilyName = UserDefaults.standard.string(forKey: Self.lastSerifFontFamilyNameDefaultsKey)
-		let lastSansFontFamilyName = UserDefaults.standard.string(forKey: Self.lastSansFontFamilyNameDefaultsKey)
+		// A stored name that is no longer offered (a Books-only font from an earlier version)
+		// counts as "no custom font", so the toggle starts off and saving clears it.
+		let storedSerif = ArticleThemeOverrides.FontChoice.choice(forStoredName: overrides.serifFontFamilyName)?.id
+		let storedSans = ArticleThemeOverrides.FontChoice.choice(forStoredName: overrides.sansFontFamilyName)?.id
+		let lastSerifFontFamilyName = ArticleThemeOverrides.FontChoice.choice(forStoredName: UserDefaults.standard.string(forKey: Self.lastSerifFontFamilyNameDefaultsKey))?.id
+		let lastSansFontFamilyName = ArticleThemeOverrides.FontChoice.choice(forStoredName: UserDefaults.standard.string(forKey: Self.lastSansFontFamilyNameDefaultsKey))?.id
 
-		_useCustomSerifFont = State(initialValue: overrides.serifFontFamilyName != nil)
-		_serifFontFamilyName = State(initialValue: overrides.serifFontFamilyName ?? lastSerifFontFamilyName ?? Self.availableFonts.first!.cssFontFamily)
+		_useCustomSerifFont = State(initialValue: storedSerif != nil)
+		_serifFontFamilyName = State(initialValue: storedSerif ?? lastSerifFontFamilyName ?? Self.availableFonts.first!.id)
 
-		_useCustomSansFont = State(initialValue: overrides.sansFontFamilyName != nil)
-		_sansFontFamilyName = State(initialValue: overrides.sansFontFamilyName ?? lastSansFontFamilyName ?? Self.availableFonts.first!.cssFontFamily)
+		_useCustomSansFont = State(initialValue: storedSans != nil)
+		_sansFontFamilyName = State(initialValue: storedSans ?? lastSansFontFamilyName ?? Self.availableFonts.first!.id)
 
 		_useCustomFontSize = State(initialValue: overrides.fontSize != nil)
 		_fontSize = State(initialValue: overrides.fontSize ?? UIFont.preferredFont(forTextStyle: .body).pointSize)
@@ -426,8 +409,8 @@ struct ArticleThemeListView: View {
 			}
 			if useCustomSerifFont {
 				Picker(selection: $serifFontFamilyName) {
-					ForEach(Self.availableFonts, id: \.cssFontFamily) { font in
-						Text(font.displayName).tag(font.cssFontFamily)
+					ForEach(Self.availableFonts) { font in
+						Text(font.displayName).tag(font.id)
 					}
 				} label: {
 					Text("Reading Font", comment: "Reading Font picker label")
@@ -439,8 +422,8 @@ struct ArticleThemeListView: View {
 			}
 			if useCustomSansFont {
 				Picker(selection: $sansFontFamilyName) {
-					ForEach(Self.availableFonts, id: \.cssFontFamily) { font in
-						Text(font.displayName).tag(font.cssFontFamily)
+					ForEach(Self.availableFonts) { font in
+						Text(font.displayName).tag(font.id)
 					}
 				} label: {
 					Text("Interface Font", comment: "Interface Font picker label")

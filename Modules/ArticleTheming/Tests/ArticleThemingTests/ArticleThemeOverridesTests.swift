@@ -61,10 +61,92 @@ struct ArticleThemeOverridesTests {
 	}
 
 	@Test func sansFontEmitsChromeVariableAndKeepsLegacyAllowlist() {
-		let css = ArticleThemeOverrides(sansFontFamilyName: "Helvetica").cssOverrideBlock(themeCSS: nil)
-		#expect(css.contains("--nnw-font-chrome: \"Helvetica\" !important;"))
+		let css = ArticleThemeOverrides(sansFontFamilyName: "Avenir Next").cssOverrideBlock(themeCSS: nil)
+		#expect(css.contains("--nnw-font-chrome: \"Avenir Next\", \"Helvetica Neue\", sans-serif !important;"))
 		#expect(css.contains(".letter-header"))
 		#expect(css.contains(".feedlink"))
+	}
+
+	@Test func serifFontEmitsAFullFallbackStack() {
+		let css = ArticleThemeOverrides(serifFontFamilyName: "Charter").cssOverrideBlock(themeCSS: nil)
+		#expect(css.contains("font-family: Charter, Georgia, serif !important;"))
+	}
+
+	@Test func systemFontKeywordIsNeverQuoted() {
+		// Quoted, `-apple-system` would be looked up as a family name instead of selecting
+		// the system font.
+		let css = ArticleThemeOverrides(serifFontFamilyName: "-apple-system").cssOverrideBlock(themeCSS: nil)
+		#expect(css.contains("font-family: -apple-system, system-ui,"))
+		#expect(!css.contains("\"-apple-system\""))
+	}
+
+	@Test func fontsThatAreNotOfferedAreIgnored() {
+		// Books-only fonts from earlier versions, and anything that did not come from the picker.
+		for name in ["Canela", "Proxima Nova", "Publico", "Seravek", "Athelas", "Helvetica", "x\"; } body { display: none"] {
+			let overrides = ArticleThemeOverrides(serifFontFamilyName: name, sansFontFamilyName: name)
+			let css = overrides.cssOverrideBlock(themeCSS: nil)
+			#expect(!css.contains("font-family"), "\(name) should not produce a font-family rule")
+			#expect(!css.contains("--nnw-font-chrome"), "\(name) should not set the chrome font variable")
+			#expect(!css.contains("display: none"))
+		}
+	}
+
+	@Test func everyOfferedFontIsResolvableAndDistinct() {
+		let ids = ArticleThemeOverrides.FontChoice.all.map(\.id)
+		#expect(Set(ids).count == ids.count)
+		for choice in ArticleThemeOverrides.FontChoice.all {
+			#expect(ArticleThemeOverrides.FontChoice.choice(forStoredName: choice.id) == choice)
+			#expect(!choice.cssStack.contains(";") && !choice.cssStack.contains("{") && !choice.cssStack.contains("}"))
+		}
+	}
+
+	@Test func invalidColorsAreIgnored() {
+		let overrides = ArticleThemeOverrides(textColorHex: "red; } body { display: none", backgroundColorHex: "#12", linkColorHex: "#GGGGGG")
+		let css = overrides.cssOverrideBlock(themeCSS: nil)
+		#expect(!css.contains("display: none"))
+		#expect(!css.contains("--nnw-ink"))
+		#expect(!css.contains("--nnw-bg"))
+		#expect(!css.contains("--nnw-link"))
+	}
+
+	@Test func validHexFormsAreAccepted() {
+		for hex in ["#abc", "#abcd", "#aabbcc", "#aabbccdd"] {
+			let css = ArticleThemeOverrides(textColorHex: hex).cssOverrideBlock(themeCSS: nil)
+			#expect(css.contains("--nnw-ink: \(hex) !important;"), "\(hex) should be accepted")
+		}
+	}
+
+	@Test func invalidDarkColorFallsBackToTheLightValue() {
+		let css = ArticleThemeOverrides(textColorHex: "#111111", textColorDarkHex: "not a color").cssOverrideBlock(themeCSS: nil)
+		#expect(css.contains("@media (prefers-color-scheme: dark)"))
+		#expect(css.contains("--nnw-ink: #111111 !important;"))
+		#expect(!css.contains("not a color"))
+	}
+
+	@Test func numbersAreClampedToTheSliderRanges() {
+		let css = ArticleThemeOverrides(fontSize: 500, lineHeight: -3, marginTop: .infinity).cssOverrideBlock(themeCSS: nil)
+		#expect(css.contains("font-size: 32.0px !important;"))
+		#expect(css.contains("line-height: 1.0 !important;"))
+		#expect(!css.contains("inf"))
+		#expect(!css.contains("#bodyContainer {"))
+	}
+
+	@Test func justifyTargetsTextBlocksAndSkipsAuthorAlignedOnes() {
+		for justify in [true, false] {
+			let css = ArticleThemeOverrides(justifyText: justify).cssOverrideBlock(themeCSS: nil)
+			#expect(css.contains("#bodyContainer #workskin p:not([align]):not(.center)"))
+			#expect(css.contains("[style*=\"text-align\"]"))
+			// The old rule matched every descendant, which also moved centered content.
+			#expect(!css.contains("#bodyContainer #workskin * {\n\ttext-align"))
+			#expect(!css.contains("#bodyContainer #workskin, #bodyContainer #workskin * {\n\ttext-align"))
+		}
+		let off = ArticleThemeOverrides(justifyText: false).cssOverrideBlock(themeCSS: nil)
+		#expect(off.contains("text-align: left !important;"))
+	}
+
+	@Test func hyphenationStillReachesEveryWorkskinDescendant() {
+		let css = ArticleThemeOverrides(hyphenate: false).cssOverrideBlock(themeCSS: nil)
+		#expect(css.contains("#bodyContainer #workskin, #bodyContainer #workskin * {\n\thyphens: none !important;"))
 	}
 
 	@Test func themeWithoutInsetVariableGetsBodyPadding() {

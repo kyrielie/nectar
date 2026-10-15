@@ -117,7 +117,9 @@ set.
 3. Install `.nnwtheme` files from the zip's `Themes/` folder —
    unconditional, not gated by `includeSettings`. A name collision with
    an already-installed theme (`ArticleThemesManager.themeExists(filename:)`)
-   is skipped, keeping the local copy; this deliberately does not call
+   is skipped, keeping the local copy, and so is a theme whose name the app
+   already ships (`isBuiltInThemeFilename`), since it could never be selected;
+   this deliberately does not call
    `ArticleThemesManager.importTheme(filename:)` unconditionally, since
    that method's own contract is remove-then-copy (an overwrite), not
    skip-on-collision.

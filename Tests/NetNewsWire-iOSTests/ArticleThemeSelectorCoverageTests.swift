@@ -49,7 +49,7 @@ import Foundation
 	@Test func cssOverrideBlockDoesNotReferenceInventedSelectors() {
 		var overrides = ArticleThemeOverrides()
 		overrides.serifFontFamilyName = "Georgia"
-		overrides.sansFontFamilyName = "Helvetica"
+		overrides.sansFontFamilyName = "Avenir Next"
 		overrides.fontSize = 18
 		overrides.lineHeight = 1.5
 		overrides.paragraphSpacing = 1.2

@@ -345,7 +345,9 @@ public enum BackupManager {
 		let themesSourceFolder = workingDirectory.appendingPathComponent("Themes", isDirectory: true)
 		if let themeFilenames = try? FileManager.default.contentsOfDirectory(atPath: themesSourceFolder.path) {
 			for themeFilename in themeFilenames {
-				if ArticleThemesManager.shared.themeExists(filename: themeFilename) {
+				// Also skip a name the app already ships: it could never be selected.
+				if ArticleThemesManager.shared.themeExists(filename: themeFilename)
+					|| ArticleThemesManager.shared.isBuiltInThemeFilename(themeFilename) {
 					skippedThemeFilenames.append(themeFilename)
 					continue
 				}

@@ -552,11 +552,11 @@ the title, stays in "Full-screen reading: space above the title" above.
 ## Where a theme lives: `Themes/` vs `gallery-themes/`
 
 - `Themes/` is bundled into the app (`project.yml` adds it as a resources
-  folder). It holds the eight NetNewsWire-origin themes (Appanoose, Biblioteca,
-  Hyperlegible, NewsFax, Promenade, Sepia, Tiqoe Dark, Verdana Revival) and the
-  six Nectar customs that still ship (Black & White, Duskbloom, Ember, Powder
-  Pink, Tumblr Blue, Vintage Letter Green). Promenade cannot move: it is the
-  fresh-install default (`AppDefaults.swift`, `Key.currentThemeName`).
+  folder). It holds ten themes: System, Reversi, Duskbloom, Midnight Blue, OLED
+  Black, Night Amber, Solarized, Dark Academia, Nectar and High Contrast. The
+  eight NetNewsWire-origin themes are gallery-only now. The fresh-install theme is
+  the built-in `Default` (`ArticleThemesManager.defaultThemeName`). A theme with a
+  bundled name cannot be imported (`theme-system.md`, "Built-in names are reserved").
 - `gallery-themes/` holds every other authored theme. These are not in the app;
   they are built into the public gallery and installed from there.
 - `gallery/build.py` publishes every bundle from both directories that is not in

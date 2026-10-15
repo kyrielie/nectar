@@ -166,16 +166,20 @@ final class ThemeColorStoreCore: Sendable {
 		var persistedCoreCSSHash: String?
 		var bundled: [String: ArticleThemeColorMeasurement]?
 		var bundledLoader: (@Sendable () -> [String: ArticleThemeColorMeasurement])?
+		var bundledCoreCSSHashLoader: (@Sendable () -> String?)?
+		var bundledCoreCSSHash: String?
 		var attempts = [String: Int]()
 	}
 
 	private let state: OSAllocatedUnfairLock<State>
 
 	init(fileURL: URL? = ThemeColorStoreCore.defaultFileURL(),
-	     bundledLoader: (@Sendable () -> [String: ArticleThemeColorMeasurement])? = ThemeColorStoreCore.loadBundledFromMainBundle) {
+	     bundledLoader: (@Sendable () -> [String: ArticleThemeColorMeasurement])? = ThemeColorStoreCore.loadBundledFromMainBundle,
+	     bundledCoreCSSHashLoader: (@Sendable () -> String?)? = ThemeColorStoreCore.loadBundledCoreCSSHashFromMainBundle) {
 		var initial = State()
 		initial.fileURL = fileURL
 		initial.bundledLoader = bundledLoader
+		initial.bundledCoreCSSHashLoader = bundledCoreCSSHashLoader
 		state = OSAllocatedUnfairLock(initialState: initial)
 	}
 
@@ -195,6 +199,20 @@ final class ThemeColorStoreCore: Sendable {
 			return [:]
 		}
 		return bundledMeasurements(from: data)
+	}
+
+	/// The `core.css` hash the bundled table was generated against, or nil if there is no
+	/// readable table.
+	@Sendable static func loadBundledCoreCSSHashFromMainBundle() -> String? {
+		guard let url = Bundle.main.url(forResource: "ThemeColorTable", withExtension: "json"),
+			  let data = try? Data(contentsOf: url) else {
+			return nil
+		}
+		return bundledCoreCSSHash(from: data)
+	}
+
+	static func bundledCoreCSSHash(from data: Data) -> String? {
+		(try? JSONDecoder().decode(ThemeColorBundledTable.self, from: data))?.coreCSSHash
 	}
 
 	static func bundledMeasurements(from data: Data) -> [String: ArticleThemeColorMeasurement] {
@@ -219,11 +237,12 @@ final class ThemeColorStoreCore: Sendable {
 	}
 
 	/// Resets everything and points the core at a new file and bundled loader. For tests.
-	func resetForTesting(fileURL: URL?, bundledLoader: (@Sendable () -> [String: ArticleThemeColorMeasurement])?) {
+	func resetForTesting(fileURL: URL?, bundledLoader: (@Sendable () -> [String: ArticleThemeColorMeasurement])?, bundledCoreCSSHashLoader: (@Sendable () -> String?)? = nil) {
 		state.withLock {
 			$0 = State()
 			$0.fileURL = fileURL
 			$0.bundledLoader = bundledLoader
+			$0.bundledCoreCSSHashLoader = bundledCoreCSSHashLoader
 		}
 	}
 
@@ -240,6 +259,15 @@ final class ThemeColorStoreCore: Sendable {
 			}
 			if s.bundled == nil {
 				s.bundled = s.bundledLoader?() ?? [:]
+				s.bundledCoreCSSHash = s.bundledCoreCSSHashLoader?()
+			}
+			// The cache key covers a theme's own files and the probe version but not
+			// `core.css`, so a table generated against a different `core.css` is stale. The
+			// guard test catches that in CI; this keeps a stale table from being trusted in
+			// the app. Until the environment is configured the hash cannot be compared, and
+			// the table is used.
+			if let tableHash = s.bundledCoreCSSHash, let environment = s.environment, tableHash != environment.coreCSSHash {
+				return nil
 			}
 			return s.bundled?[key]
 		}
@@ -336,11 +364,15 @@ final class ThemeColorStoreCore: Sendable {
 		return (url, data)
 	}
 
+	/// Writes go through one serial queue, in the order they were requested. Separate
+	/// detached tasks could finish out of order and leave an older snapshot on disk.
+	private static let writeQueue = DispatchQueue(label: "ArticleThemeColorStore.write", qos: .utility)
+
 	private static func write(_ pending: (URL, Data)?) {
 		guard let (url, data) = pending else {
 			return
 		}
-		Task.detached(priority: .utility) {
+		writeQueue.async {
 			try? data.write(to: url, options: .atomic)
 		}
 	}
