@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+/* Pixel Notebook -- original design for Nectar. Inspired by *Haunted* by *wovenstarlight, design by Bwob*.
+   Reading layout only; the source's palette ideas and techniques were reimplemented from the written spec.
+   Palette tokens (--nnw-*) are literal in :root and in the dark block (the legacy scanner resolves var() one level). */
+:root{--fh:'Pixelify Sans','Courier New',monospace;--fb:'Courier Prime','Courier New',Courier,monospace;--font-main:var(--fh);--font-body:var(--fb);--font-code:'JetBrains Mono','Courier New',Courier,monospace;--nnw-bg:#f3ead3;--nnw-ink:#4a3010;--nnw-link:#7a4a12;--a:#2b1a05;--s:#ece0c2;--b:#6a4a22;--m:#6a5236;}
+html{background-color:var(--nnw-bg)}
+body{margin:0;max-width:none;box-sizing:border-box;padding-left:max(0px,calc((100% - 44em) / 2));padding-right:max(0px,calc((100% - 44em) / 2));background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link)}
+.hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
+body > .systemMessage{color:var(--nnw-ink)}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
+.articleBody blockquote{border-left:3px solid var(--a);margin-left:0;padding:.1em 1em}
+.articleBody pre,.articleBody code{font-family:var(--font-code)}
+.articleBody pre{overflow-x:auto}
+.articleBody table{border-collapse:collapse}
+.articleBody td,.articleBody th{border:1px solid var(--b);padding:.4em .6em}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+
+/* structure: no running head; 76px above the title keeps it clear of the notch cover in full-screen reading */
+.t{padding:76px var(--gx) 36px;color:var(--nnw-ink);font:calc(var(--u) * 15)/1.65 var(--fb);position:relative}
+.t h1{margin:0;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 28 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.12}
+.t h2.heading,.t h3.title{margin:0 0 8px;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 20 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));line-height:1.2}
+.t h3.heading{margin:0 0 4px;font-family:var(--fh);font-weight:400;font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:18px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;color:var(--m)}
+.by:empty{display:none}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.dv{display:block;margin:18px 0 8px}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+
+/* ---- Pixel Notebook: signature treatment ---- */
+:root{--bw:.21875rem}
+.t415 .hd{padding:12px 14px;border:var(--bw) solid var(--b);transition:background .2s,color .2s}
+.t415 .hd:hover,.t415 .hd:active{background:var(--b);color:var(--nnw-bg)}
+.t415 h1{font-weight:700;font-size:max(calc(var(--u) * 24 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.35));line-height:1.15}
+.t415 .by{color:inherit;letter-spacing:.08em}
+.t415 .bd{position:relative;margin-top:16px;padding:2px 8px 2px 30px;line-height:1.65;background-image:repeating-linear-gradient(transparent 0,transparent calc(1.65em - 1px),color-mix(in srgb,var(--b) 20%,transparent) calc(1.65em - 1px),color-mix(in srgb,var(--b) 20%,transparent) 1.65em);background-attachment:local;border:var(--bw) solid var(--b)}
+.t415 .bd::before{content:"";position:absolute;left:3px;top:0;bottom:0;width:20px;background:radial-gradient(circle at 10px 50%,var(--nnw-bg) 4px,var(--b) 4.5px,var(--b) 6px,transparent 6.5px) 0 0/20px 30px repeat-y}
+.t415 h2.heading,.t415 h3.title{display:inline-block;padding:2px 12px;border:var(--bw) solid var(--b);font-weight:700;background:var(--nnw-bg)}
+.t415 .dv{text-align:center;margin:18px 0 6px;letter-spacing:.2em;color:var(--b)}
+.t415 .articleBody blockquote{border:calc(var(--bw) * 3) double var(--b);margin:.8em 0;padding:.4em .8em;background:var(--nnw-bg)}
+.t415 .articleBody a{text-decoration:none;border-bottom:var(--bw) solid var(--b)}
+.t415 .summary.module,.t415 .notes.module,.t415 .end.notes.module,.t415 #bodyContainer dl.tags{background:var(--nnw-bg);border:calc(var(--bw) * 3) double var(--b);border-radius:0;}
+.t415 #bodyContainer dl.tags{padding:10px 14px}
+.t415 .notes.module,.t415 .end.notes.module{margin:12px 0 0;padding:10px 14px;font-size:calc(var(--u) * 13 * var(--nnw-detail-scale, 1))}
+.t415 .summary.module h3.heading,.t415 .notes.module h3.heading,.t415 .end.notes.module h3.heading,.t415 #bodyContainer dl.tags dt{color:var(--a)}
+
+@media (prefers-color-scheme: dark) {
+	:root{--nnw-bg:#311a05;--nnw-ink:#dcae75;--nnw-link:#ffe3b8;--a:#ffffff;--s:#3d2309;--b:#a97844;--m:#b88d5a;}
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
+	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; --u: 1px; }
+	body { margin: 0; padding-top: 0; padding-bottom: 64px; }
+}

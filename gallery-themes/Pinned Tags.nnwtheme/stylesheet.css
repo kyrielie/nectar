@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Abel&display=swap');
+/* Pinned Tags -- original design for Nectar. Inspired by *Paint Job* by *wovenstarlight*.
+   Reading layout only; the source's palette ideas and techniques were reimplemented from the written spec.
+   Palette tokens (--nnw-*) are literal in :root and in the dark block (the legacy scanner resolves var() one level). */
+:root{--fh:'Abel',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--fb:'Abel',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--font-main:var(--fh);--font-body:var(--fb);--font-code:'JetBrains Mono','Courier New',Courier,monospace;--nnw-bg:#a6c9ae;--nnw-ink:#1f1f1f;--nnw-link:#005d06;--a:#375600;--s:#dde2de;--b:#b3beb6;--m:#4a4f4b;--pg:#f3f4f3;--bold:#005f51;--ital:#7a3b00;}
+html{background-color:var(--nnw-bg)}
+body{margin:0;max-width:none;box-sizing:border-box;padding-left:max(0px,calc((100% - 44em) / 2));padding-right:max(0px,calc((100% - 44em) / 2));background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link)}
+.hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
+body > .systemMessage{color:var(--nnw-ink)}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
+.articleBody blockquote{border-left:3px solid var(--a);margin-left:0;padding:.1em 1em}
+.articleBody pre,.articleBody code{font-family:var(--font-code)}
+.articleBody pre{overflow-x:auto}
+.articleBody table{border-collapse:collapse}
+.articleBody td,.articleBody th{border:1px solid var(--b);padding:.4em .6em}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+
+/* structure: no running head; 76px above the title keeps it clear of the notch cover in full-screen reading */
+.t{padding:76px var(--gx) 36px;color:var(--nnw-ink);font:calc(var(--u) * 15)/1.65 var(--fb);position:relative}
+.t h1{margin:0;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 28 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.12}
+.t h2.heading,.t h3.title{margin:0 0 8px;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 20 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));line-height:1.2}
+.t h3.heading{margin:0 0 4px;font-family:var(--fh);font-weight:400;font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:18px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;color:var(--m)}
+.by:empty{display:none}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.dv{display:block;margin:18px 0 8px}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+
+/* ---- Pinned Tags: signature treatment ---- */
+html{background-color:var(--pg)}
+body{background-image:linear-gradient(to bottom,transparent 200px,var(--pg) 200px)}
+.t402 .hd{margin:0 -4px 26px;padding:14px 46px 16px 18px;background:var(--s);color:var(--nnw-ink);border-radius:10px;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.t402 .hd::before{content:"";position:absolute;top:12px;right:16px;width:14px;height:14px;border-radius:50%;background:var(--nnw-bg);box-shadow:inset 0 2px 3px rgba(0,0,0,.45)}
+.t402 h1{font-weight:700;letter-spacing:.01em}
+.t402 .bd{background:var(--pg);border-radius:10px;padding:18px 18px 8px;box-shadow:0 2px 0 rgba(0,0,0,.2)}
+.t402 h2.heading,.t402 h3.title{display:inline-block;padding:2px 14px;background:var(--s);border-radius:99px;font-weight:700}
+.t402 .dv{margin:20px 0 10px;text-align:center;color:var(--a)}
+.t402 .articleBody a{font-weight:700;text-decoration:none;border-bottom:2px solid color-mix(in srgb,var(--nnw-link) 35%,transparent)}
+.t402 .articleBody b,.t402 .articleBody strong{color:var(--bold)}
+.t402 .articleBody i,.t402 .articleBody em{color:var(--ital)}
+.t402 .summary.module,.t402 .notes.module,.t402 .end.notes.module,.t402 #bodyContainer dl.tags{background:var(--s);border:1px solid var(--b);border-radius:8px;}
+.t402 #bodyContainer dl.tags{padding:10px 14px}
+.t402 .notes.module,.t402 .end.notes.module{margin:12px 0 0;padding:10px 14px;font-size:calc(var(--u) * 13 * var(--nnw-detail-scale, 1))}
+.t402 .summary.module h3.heading,.t402 .notes.module h3.heading,.t402 .end.notes.module h3.heading,.t402 #bodyContainer dl.tags dt{color:var(--a)}
+
+@media (prefers-color-scheme: dark) {
+	:root{--nnw-bg:#252a28;--nnw-ink:#ece6df;--nnw-link:#ffb04d;--a:#c98a5a;--s:#4b5a37;--b:#6b5a45;--m:#cdbfae;--pg:#3b2e24;--bold:#ff9781;--ital:#fff382;}
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
+	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; --u: 1px; }
+	body { margin: 0; padding-top: 0; padding-bottom: 64px; }
+}

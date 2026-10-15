@@ -376,3 +376,5 @@ img, figure, video, object {
 	color: var(--nnw-ink);
 }
 
+/* Full-screen clearance: in full-screen reading the page starts under the notch cover, so the title needs at least 68px above it (docs/nnwtheme-format.md). */
+html{padding-top:65px}

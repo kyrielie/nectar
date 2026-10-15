@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Yanone+Kaffeesatz:wght@400;600&family=Roboto:ital,wght@0,400;0,700;1,400&display=swap');
+/* Gradient Stage -- original design for Nectar. Inspired by *cat in a box* by *octomoosey*.
+   Reading layout only; the source's palette ideas and techniques were reimplemented from the written spec.
+   Palette tokens (--nnw-*) are literal in :root and in the dark block (the legacy scanner resolves var() one level). */
+:root{--fh:'Yanone Kaffeesatz','Arial Narrow',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--fb:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;--font-main:var(--fh);--font-body:var(--fb);--font-code:'JetBrains Mono','Courier New',Courier,monospace;--nnw-bg:#d9d9d9;--nnw-ink:#333333;--nnw-link:#8a4a52;--a:#a76a71;--s:#f0f0f0;--b:#a76a71;--m:#555555;--g1:#a76a71;--g2:#6d7a9b;}
+html{background-color:var(--nnw-bg)}
+body{margin:0;max-width:none;box-sizing:border-box;padding-left:max(0px,calc((100% - 44em) / 2));padding-right:max(0px,calc((100% - 44em) / 2));background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link)}
+.hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
+body > .systemMessage{color:var(--nnw-ink)}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
+.articleBody blockquote{border-left:3px solid var(--a);margin-left:0;padding:.1em 1em}
+.articleBody pre,.articleBody code{font-family:var(--font-code)}
+.articleBody pre{overflow-x:auto}
+.articleBody table{border-collapse:collapse}
+.articleBody td,.articleBody th{border:1px solid var(--b);padding:.4em .6em}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+
+/* structure: no running head; 76px above the title keeps it clear of the notch cover in full-screen reading */
+.t{padding:76px var(--gx) 36px;color:var(--nnw-ink);font:calc(var(--u) * 15)/1.65 var(--fb);position:relative}
+.t h1{margin:0;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 28 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.12}
+.t h2.heading,.t h3.title{margin:0 0 8px;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 20 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));line-height:1.2}
+.t h3.heading{margin:0 0 4px;font-family:var(--fh);font-weight:400;font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:18px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;color:var(--m)}
+.by:empty{display:none}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.dv{display:block;margin:18px 0 8px}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+
+/* ---- Gradient Stage: signature treatment ---- */
+.t423 .hd,.t423 .bd{border:3px solid transparent;border-radius:6px;background:linear-gradient(var(--s),var(--s)) padding-box,linear-gradient(135deg,var(--g1),var(--g2)) border-box;box-shadow:5px 5px 10px 2px rgba(0,0,0,.35)}
+.t423 .hd{display:flex;align-items:center;gap:18px;padding:16px 18px 16px 50px;margin-left:8px}
+.t423 .hd::before{content:"";position:absolute;left:-8px;top:50%;width:34px;height:34px;margin-top:-17px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));box-shadow:-14px 8px 0 -6px var(--g2),-26px 12px 0 -11px var(--g1)}
+.t423 .hd h1,.t423 .hd .by{margin:0}
+.t423 .hd{flex-wrap:wrap}
+.t423 h1{font-weight:600;letter-spacing:.02em;font-size:max(calc(var(--u) * 30 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4))}
+.t423 .by{flex:1 0 100%}
+.t423 .bd{margin-top:22px;padding:14px 16px 4px}
+.t423 h2.heading,.t423 h3.title{font-weight:600;letter-spacing:.04em;color:var(--a)}
+.t423 .dv{text-align:center;margin:18px 0 8px;color:var(--a)}
+.t423 .articleBody blockquote{border-left:3px solid var(--a);padding-left:1em}
+.t423 .summary.module,.t423 .notes.module,.t423 .end.notes.module,.t423 #bodyContainer dl.tags{background:color-mix(in srgb,var(--g1) 8%,transparent);border:2px solid color-mix(in srgb,var(--g1) 60%,transparent);border-radius:6px;}
+.t423 #bodyContainer dl.tags{padding:10px 14px}
+.t423 .notes.module,.t423 .end.notes.module{margin:12px 0 0;padding:10px 14px;font-size:calc(var(--u) * 13 * var(--nnw-detail-scale, 1))}
+.t423 .summary.module h3.heading,.t423 .notes.module h3.heading,.t423 .end.notes.module h3.heading,.t423 #bodyContainer dl.tags dt{color:var(--a)}
+
+@media (prefers-color-scheme: dark) {
+	:root{--nnw-bg:#3a3a3a;--nnw-ink:#e6e6e6;--nnw-link:#e0a6ad;--a:#c98a92;--s:#4a4a4a;--b:#a76a71;--m:#bdbdbd;--g1:#a76a71;--g2:#5b6b94;}
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
+	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; --u: 1px; }
+	body { margin: 0; padding-top: 0; padding-bottom: 64px; }
+}

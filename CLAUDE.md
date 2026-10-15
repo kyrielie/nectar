@@ -35,6 +35,7 @@ task**, not this whole index cover-to-cover.
 - **Article theme (`.nnwtheme`) system itself** → `theme-system.md`
 - **Creating a new theme (start here), required names, bundle checklist** → `creating-a-theme.md`
 - **`.nnwtheme` bundle format / authoring reference / theme families** → `nnwtheme-format.md`
+- **Full-screen title clearance audit, running-head decision, spec-derived bundles, how to run `buildscripts/theme-audit/check_fullscreen_top.py`** → `theme-fullscreen-audit.md`
 - **Theme color probe/store tests, check matrix, article fixtures, `nnwdump`, regenerating `ThemeColorTable.json`, when to bump the probe version** → `theme-testing.md`
 - **Theme mockups, review page, title check, mockup-to-bundle conversion history** → `theme-mockups.md`
 - **The theme gallery (`gallery/`), its build pipeline, or the install deep link** → `theme-gallery.md`
@@ -115,6 +116,7 @@ it's trusted by default. Specifically:
 | `iOS/Resources/ThemeColorTable.json`, `ThemeColorTableGeneratorTests`/`ThemeColorTableGuardTests`, `ArticleThemeColorProbe.version`, editing `core.css` or a bundled theme's `stylesheet.css`/`template.html` (the table must be regenerated) | `theme-testing.md` (and `article-color-pipeline.md`) 
 | `ArticleThemeCheckMatrixTests`, `ArticleThemeSmokeTests`, `ArticleThemeRenderDiffTests`, `ThemeCheckColumns`, `Tests/NetNewsWire-iOSTests/Fixtures/ThemeCheck/` (article fixtures, `upstream-core.css`), the `nnwdump` capture command, which suites CI skips (`ci.yml`'s `theme_suites` input), `scripts/regenerate-theme-colors.sh`, `.github/workflows/theme-color-table.yml`, `Nectar-Performance.xctestplan` | `theme-testing.md` (and `module-layout.md`, `release-pipeline.md` for the plans and the gate) |
 | `.nnwtheme` bundle-file layout, `Info.plist` `CreatorName`/`License.md` (description, attribution), per-theme fonts, theme families, `template.html` conventions, styleable blocks and ornament placement, full-screen title spacing, AO3 preface styling variables, `--nnw-*` color tokens and the page-color rule | `nnwtheme-format.md` |
+| Full-screen top-clearance measurements per bundle, which bundles still FAIL, the running-head decision, the 29 spec-derived bundles and their generator | `theme-fullscreen-audit.md` |
 | Creating a new theme end to end, required file/key/selector names, `buildscripts/theme-generation/theme_inventory.py` (current bundle counts) | `creating-a-theme.md` |
 | Theme mockups (fixed page layout, sample text, review page, title check), mockup-to-bundle conversion, `buildscripts/theme-mockups/` (not in this checkout) | `theme-mockups.md` |
 | `gallery/build.py` (zip naming, bundle checks, `--check-release-identity`), `gallery/test_build.py`, `gallery/test_upstream_pins.py`, `gallery/index.template.html`, `BUNDLED`/`BUNDLED_ID_PREFIXES`, `.github/workflows/gallery.yml`, the `theme-gallery` and `upstream-compat` jobs in `.github/workflows/ci.yml`, `gallery/upstream-compatible.txt`, `gallery/upstream_compat.py`, `gallery/test_upstream_compat.py` | `theme-gallery.md` |

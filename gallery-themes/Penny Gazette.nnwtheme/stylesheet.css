@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Zen+Old+Mincho:wght@400;700&display=swap');
+/* Penny Gazette -- original design for Nectar. Inspired by *Newsprint* by *wovenstarlight*.
+   Reading layout only; the source's palette ideas and techniques were reimplemented from the written spec.
+   Palette tokens (--nnw-*) are literal in :root and in the dark block (the legacy scanner resolves var() one level). */
+:root{--fh:'IM Fell English SC',Georgia,'Times New Roman',serif;--fb:'Zen Old Mincho',Georgia,'Times New Roman',serif;--font-main:var(--fh);--font-body:var(--fb);--font-code:'JetBrains Mono','Courier New',Courier,monospace;--nnw-bg:#d0cdba;--nnw-ink:#2b2b2b;--nnw-link:#663a04;--a:#524000;--s:#f1f0eb;--b:#524000;--m:#5a5340;--bold:#840606;--ital:#8b4f00;}
+html{background-color:var(--nnw-bg)}
+body{margin:0;max-width:none;box-sizing:border-box;padding-left:max(0px,calc((100% - 44em) / 2));padding-right:max(0px,calc((100% - 44em) / 2));background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link)}
+.hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
+body > .systemMessage{color:var(--nnw-ink)}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
+.articleBody blockquote{border-left:3px solid var(--a);margin-left:0;padding:.1em 1em}
+.articleBody pre,.articleBody code{font-family:var(--font-code)}
+.articleBody pre{overflow-x:auto}
+.articleBody table{border-collapse:collapse}
+.articleBody td,.articleBody th{border:1px solid var(--b);padding:.4em .6em}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+
+/* structure: no running head; 76px above the title keeps it clear of the notch cover in full-screen reading */
+.t{padding:76px var(--gx) 36px;color:var(--nnw-ink);font:calc(var(--u) * 15)/1.65 var(--fb);position:relative}
+.t h1{margin:0;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 28 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.12}
+.t h2.heading,.t h3.title{margin:0 0 8px;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 20 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));line-height:1.2}
+.t h3.heading{margin:0 0 4px;font-family:var(--fh);font-weight:400;font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:18px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;color:var(--m)}
+.by:empty{display:none}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.dv{display:block;margin:18px 0 8px}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+
+/* ---- Penny Gazette: signature treatment ---- */
+.t403 .hd{padding:.5em 4.4em .5em 0;border-top:.25rem solid var(--a);border-bottom:.25rem solid var(--a);text-align:center;margin-bottom:22px}
+.t403 .hd::before{content:"";display:block;border-top:.1em solid var(--a);margin:.15em 0 .6em}
+.t403 h1{text-transform:uppercase;letter-spacing:.04em;font-size:max(calc(var(--u) * 25 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.35));line-height:1.08}
+.t403 .by{margin:.7em 0 0;padding:.25em;border-block:.1em solid var(--a);font-style:italic;color:var(--nnw-ink)}
+.t403 .hd::after{content:"\2605";position:absolute;right:0;top:.7em;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:3.6em;height:3.6em;color:var(--a);font-size:1.1em;background:linear-gradient(var(--s),var(--s)) center/calc(100% - 1em) calc(100% - 1em) no-repeat,radial-gradient(transparent 0,transparent .25em,var(--s) .25em) -.3em -.3em/1.2em 1.2em;filter:drop-shadow(0 0 .2em color-mix(in srgb,var(--nnw-ink) 45%,transparent))}
+.t403 .bd img{filter:sepia(.75) contrast(.95);transition:filter .3s}
+.t403 .bd img:hover,.t403 .bd img:active{filter:none}
+.t403 h2.heading,.t403 h3.title{display:block;text-align:center;border-block:3px double var(--a);padding:.2em 0;text-transform:uppercase;letter-spacing:.06em}
+.t403 .dv{text-align:center;color:var(--a);margin:20px 0 10px}
+.t403 .articleBody blockquote{border-left:0;border-block:.1em solid var(--a);text-align:center;font-style:italic;padding:.6em 1.5em}
+.t403 .bd > p:first-of-type::first-letter{float:left;font-family:var(--fh);font-size:3.1em;line-height:.82;padding:.06em .1em 0 0;color:var(--bold)}
+.t403 .articleBody b,.t403 .articleBody strong{color:var(--bold)}
+.t403 .articleBody i,.t403 .articleBody em{color:var(--ital)}
+.t403 .summary.module,.t403 .notes.module,.t403 .end.notes.module,.t403 #bodyContainer dl.tags{background:var(--s);border:3px double var(--a);border-radius:0;}
+.t403 #bodyContainer dl.tags{padding:10px 14px}
+.t403 .notes.module,.t403 .end.notes.module{margin:12px 0 0;padding:10px 14px;font-size:calc(var(--u) * 13 * var(--nnw-detail-scale, 1))}
+.t403 .summary.module h3.heading,.t403 .notes.module h3.heading,.t403 .end.notes.module h3.heading,.t403 #bodyContainer dl.tags dt{color:var(--a)}
+
+@media (prefers-color-scheme: dark) {
+	:root{--nnw-bg:#21201f;--nnw-ink:#d2ceb8;--nnw-link:#ff915c;--a:#ffcfb7;--s:#2f2d2a;--b:#9b8f78;--m:#aaa28c;--bold:#ffc29d;--ital:#f7ff99;}
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
+	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; --u: 1px; }
+	body { margin: 0; padding-top: 0; padding-bottom: 64px; }
+}

@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
+/* Ribbon Spread -- original design for Nectar. Inspired by *gothica* by *egg.design*.
+   Reading layout only; the source's palette ideas and techniques were reimplemented from the written spec.
+   Palette tokens (--nnw-*) are literal in :root and in the dark block (the legacy scanner resolves var() one level). */
+:root{--fh:'UnifrakturCook','Old English Text MT',Georgia,'Times New Roman',serif;--fb:'EB Garamond',Georgia,'Times New Roman',serif;--font-main:var(--fh);--font-body:var(--fb);--font-code:'JetBrains Mono','Courier New',Courier,monospace;--nnw-bg:#f3ebe4;--nnw-ink:#33241f;--nnw-link:#8a3b2a;--a:#a16456;--s:#e8d3cb;--b:#a16456;--m:#6a524b;}
+html{background-color:var(--nnw-bg)}
+body{margin:0;max-width:none;box-sizing:border-box;padding-left:max(0px,calc((100% - 44em) / 2));padding-right:max(0px,calc((100% - 44em) / 2));background-color:var(--nnw-bg);color:var(--nnw-ink);font-family:var(--fb);word-wrap:break-word}
+.articleBody{color:var(--nnw-ink)}
+a,.articleBody a{color:var(--nnw-link)}
+.hd a,.hd a:link,.hd a:visited,.articleBody h2.heading a,.articleBody h3.title a{color:inherit;text-decoration:none}
+body > .systemMessage{color:var(--nnw-ink)}
+#ao3SyntheticPreface,#ao3Preface{margin:0;padding:0;border:0;background:none;font-size:inherit;color:inherit}
+.summary.module blockquote.userstuff,.notes.module blockquote.userstuff,.end.notes.module blockquote.userstuff{margin:0;padding:0;border:0;background:none}
+.summary.module blockquote.userstuff p,.notes.module blockquote.userstuff p{margin:0}
+.articleBody blockquote{border-left:3px solid var(--a);margin-left:0;padding:.1em 1em}
+.articleBody pre,.articleBody code{font-family:var(--font-code)}
+.articleBody pre{overflow-x:auto}
+.articleBody table{border-collapse:collapse}
+.articleBody td,.articleBody th{border:1px solid var(--b);padding:.4em .6em}
+img, figure, video, div, object { max-width: 100%; }
+img, video { height: auto; }
+.smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
+
+/* structure: no running head; 76px above the title keeps it clear of the notch cover in full-screen reading */
+.t{padding:76px var(--gx) 36px;color:var(--nnw-ink);font:calc(var(--u) * 15)/1.65 var(--fb);position:relative}
+.t h1{margin:0;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 28 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.12}
+.t h2.heading,.t h3.title{margin:0 0 8px;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 20 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));line-height:1.2}
+.t h3.heading{margin:0 0 4px;font-family:var(--fh);font-weight:400;font-size:calc(var(--u) * 12)}
+.hd{position:relative;margin-bottom:18px}
+.by{margin:8px 0 0;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1));letter-spacing:.05em;color:var(--m)}
+.by:empty{display:none}
+#bodyContainer dl.tags{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0 0 14px;font-size:calc(var(--u) * 12 * var(--nnw-detail-scale, 1))}
+#bodyContainer dl.tags dt{font-weight:700}
+#bodyContainer dl.tags dd{margin:0}
+.summary.module{margin:0 0 14px;padding:10px 12px}
+.summary.module h3.heading{margin-bottom:4px}
+.dv{display:block;margin:18px 0 8px}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+
+/* ---- Ribbon Spread: signature treatment ---- */
+.t426 .hd{padding:22px 22px 18px;background:var(--a);color:#fff;border-radius:5px 5px 5px 30px;box-shadow:0 0 23px 2px rgba(0,0,0,.28)}
+.t426 h1{font-weight:700;letter-spacing:.01em;text-shadow:2px 2px 2px rgba(0,0,0,.35);font-size:max(calc(var(--u) * 34 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.5));line-height:1.05}
+.t426 .by{color:#fff;opacity:.88;font-style:italic}
+.t426 .bd{margin-top:22px;padding:18px 18px 6px 22px;border-left:10px solid var(--a);border-radius:40px 4px 4px 40px;background:var(--s);box-shadow:0 0 23px 2px rgba(0,0,0,.22);text-align:justify;hyphens:auto}
+.t426 h2.heading,.t426 h3.title{display:inline-block;margin-left:-32px;padding:3px 26px 3px 16px;color:#fff;background:var(--a);clip-path:polygon(0 0,100% 0,calc(100% - 12px) 50%,100% 100%,0 100%);font-weight:400;font-size:calc(var(--u) * 21)}
+.t426 .dv{text-align:center;color:var(--a);margin:20px 0 10px}
+.t426 .articleBody blockquote{border-left:3px solid var(--a);padding-left:1em;font-style:italic}
+.t426 .bd > p:first-of-type::first-letter{float:left;font-family:var(--fh);font-size:3.4em;line-height:.82;padding:.06em .1em 0 0;color:var(--a)}
+.t426 .summary.module,.t426 .notes.module,.t426 .end.notes.module,.t426 #bodyContainer dl.tags{background:color-mix(in srgb,var(--a) 14%,transparent);border:1px solid color-mix(in srgb,var(--a) 50%,transparent);border-radius:5px 5px 5px 20px;}
+.t426 #bodyContainer dl.tags{padding:10px 14px}
+.t426 .notes.module,.t426 .end.notes.module{margin:12px 0 0;padding:10px 14px;font-size:calc(var(--u) * 13 * var(--nnw-detail-scale, 1))}
+.t426 .summary.module h3.heading,.t426 .notes.module h3.heading,.t426 .end.notes.module h3.heading,.t426 #bodyContainer dl.tags dt{color:var(--a)}
+
+@media (prefers-color-scheme: dark) {
+	:root{--nnw-bg:#1d1d1d;--nnw-ink:#efefef;--nnw-link:#f0b3a4;--a:#c0806f;--s:#3a2a27;--b:#a16456;--m:#cbbab4;}
+}
+
+/* iOS Specific */
+@supports (-webkit-touch-callout: none) {
+	:root { --gx: 20px; --u: calc([[font-size]]px / 15); }
+	body { margin-top: 0; margin-bottom: 0; word-break: break-word; -webkit-text-size-adjust: none; font-size: [[font-size]]px; }
+
+	:root {
+		--ao3-series-footer-font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
+	}
+}
+/* macOS Specific */
+@supports not (-webkit-touch-callout: none) {
+	:root { --gx: 48px; --u: 1px; }
+	body { margin: 0; padding-top: 0; padding-bottom: 64px; }
+}
