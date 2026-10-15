@@ -267,11 +267,11 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// so repeated viewDidAppear calls don't keep re-adding the dependency.
 	private var hasConfiguredContentPopFailureRequirement = false
 
-	// Set once the nav-bar tap-to-hide-bars gesture recognizer has been added
-	// to parentNavController.navigationBar, so repeated viewDidAppear calls
-	// don't keep re-adding it. Mirrors hasConfiguredContentPopFailureRequirement
-	// above.
-	private var hasConfiguredNavigationBarTapGesture = false
+	/// The nav-bar tap-to-hide-bars recognizer while this screen is the visible one. It lives on the
+	/// shared navigation bar, so it is added in viewDidAppear (once, repeated calls do not re-add it)
+	/// and removed in viewWillDisappear; left in place it would also fire over a screen pushed on top
+	/// of the article (the theme picker, for example).
+	private var navigationBarTapGesture: UITapGestureRecognizer?
 
 	var article: Article? {
 		didSet {
@@ -498,6 +498,9 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			searchBar.shouldBeginEditing = false
 		}
 		coordinator.showHomeIndicator()
+		// A screen pushed over the article (theme picker, annotations list) shares this navigation
+		// bar. Without this, tapping the bar there hid it and took the back button with it.
+		removeNavigationBarTapGesture()
 		// Pass animated: false — animating the nav bar / toolbar visibility change during the
 		// disappear transition triggers an Auto Layout assertion (NSISEngine) and crashes.
 		currentWebViewController?.showBars(animated: false)
@@ -1041,6 +1044,14 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// MARK: Actions
 
 	@objc func didTapNavigationBar() {
+		// Defense in depth: the recognizer is removed in viewWillDisappear, but a tap during the
+		// push transition must not hide the bar of the screen that is arriving.
+		guard view.window != nil else {
+			return
+		}
+		if let top = navigationController?.topViewController, top !== self {
+			return
+		}
 		currentWebViewController?.hideBars()
 	}
 
@@ -1590,11 +1601,19 @@ private extension ArticleViewController {
 	/// right-bar-button-item bands so taps on those controls still reach them
 	/// normally.
 	func configureNavigationBarTapGestureIfNeeded(on parentNavController: UINavigationController) {
-		guard !hasConfiguredNavigationBarTapGesture else { return }
+		guard navigationBarTapGesture == nil else { return }
 		let tapGesture = UITapGestureRecognizer(target: self, action: #selector(didTapNavigationBar))
 		tapGesture.delegate = self
 		parentNavController.navigationBar.addGestureRecognizer(tapGesture)
-		hasConfiguredNavigationBarTapGesture = true
+		navigationBarTapGesture = tapGesture
+	}
+
+	/// Takes the tap-to-hide-bars recognizer off the shared navigation bar. viewDidAppear adds it
+	/// again, which also covers an interactive back swipe that is cancelled.
+	func removeNavigationBarTapGesture() {
+		guard let tapGesture = navigationBarTapGesture else { return }
+		tapGesture.view?.removeGestureRecognizer(tapGesture)
+		navigationBarTapGesture = nil
 	}
 
 	/// Restores whatever delegate(s) were installed on the shared navigation
