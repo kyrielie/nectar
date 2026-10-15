@@ -14,10 +14,11 @@ name: CI
 # release, and `cancel-in-progress` would let a second run on the same ref cancel
 # the gate of the first.
 #
-# The heavy theme suites (ArticleThemeCheckMatrixTests, ArticleThemeSmokeTests,
-# ArticleThemeRenderDiffTests) run only when files that can change theme rendering
-# differ from the previous release tag, when there is no previous tag, or when
-# `theme_suites` is true. The XCTest performance tests are not in the Nectar-CI plan;
+# The theme suites (ArticleThemeCheckMatrixTests, ArticleThemeSmokeTests,
+# ArticleThemeRenderDiffTests, ArticleThemeColorProbeTests, ThemeColorTableGuardTests)
+# never run here by default: they host WKWebViews and take too long on a runner.
+# Run them locally (`./test.sh`) or set `theme_suites` to true on a manual
+# workflow_dispatch. The XCTest performance tests are not in the Nectar-CI plan;
 # run them with the Nectar-Performance plan (`test.sh performance`). See
 # docs/theme-testing.md ("CI scope") and docs/release-pipeline.md.
 on:
@@ -29,16 +30,16 @@ on:
         default: ""
         type: string
       theme_suites:
-        description: "Run the heavy theme suites even if no theme-related file changed."
+        description: "Also run the slow theme suites (off by default)."
         required: false
         default: false
         type: boolean
   workflow_dispatch:
     inputs:
       theme_suites:
-        description: "Run the heavy theme suites even if no theme-related file changed."
+        description: "Also run the slow theme suites (off by default)."
         required: false
-        default: true
+        default: false
         type: boolean
 
 permissions:
@@ -198,64 +199,11 @@ jobs:
     name: iOS Simulator Test
     runs-on: macos-26
     steps:
-      # Full history and tags: the theme-suite decision diffs against the previous release tag.
       - name: Checkout
         uses: actions/checkout@v5
         with:
           ref: ${{ inputs.ref || github.sha }}
           submodules: recursive
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Decide whether to run the theme suites
-        id: themes
-        shell: bash
-        env:
-          FORCE: ${{ inputs.theme_suites }}
-        run: |
-          set -euo pipefail
-
-          # Paths that can change what the theme suites measure. Keep in sync with
-          # docs/theme-testing.md ("CI scope").
-          paths=(
-            "Themes/"
-            "gallery-themes/"
-            "Shared/Article Rendering/"
-            "Modules/ArticleTheming/"
-            "iOS/Resources/ThemeColorTable.json"
-            "Tests/NetNewsWire-iOSTests/ArticleTheme"
-            "Tests/NetNewsWire-iOSTests/Fixtures/ThemeCheck/"
-            "Tests/NetNewsWire-iOSTests/Fixtures/ThemeColorProbe/"
-            "Tests/NetNewsWire-iOSTests/ThemeColorTableTests.swift"
-          )
-
-          run=false
-          reason=""
-          if [ "${FORCE:-false}" = "true" ]; then
-            run=true
-            reason="theme_suites input is true"
-          else
-            # Parent of the tested commit: when the commit itself already carries a release tag
-            # (a rerun), the nearest tag of the parent is still the previous release.
-            previous=$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD^ 2>/dev/null || true)
-            if [ -z "$previous" ]; then
-              run=true
-              reason="no previous release tag"
-            else
-              changed=$(git diff --name-only "$previous"..HEAD -- "${paths[@]}")
-              if [ -n "$changed" ]; then
-                run=true
-                reason="theme-related files changed since $previous"
-                echo "$changed" | head -20
-              else
-                reason="no theme-related files changed since $previous"
-              fi
-            fi
-          fi
-
-          echo "run=$run" >> "$GITHUB_OUTPUT"
-          echo "::notice::Theme suites: run=$run ($reason)"
-          echo "Theme suites: run=$run ($reason)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Select Xcode 26.3
         run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
@@ -269,7 +217,7 @@ jobs:
       - name: Test on iOS Simulator
         shell: bash
         env:
-          RUN_THEME_SUITES: ${{ steps.themes.outputs.run }}
+          RUN_THEME_SUITES: ${{ inputs.theme_suites }}
         run: |
           set -euo pipefail
 
@@ -283,7 +231,11 @@ jobs:
               -skip-testing:Nectar-iOSTests/ArticleThemeCheckMatrixTests
               -skip-testing:Nectar-iOSTests/ArticleThemeSmokeTests
               -skip-testing:Nectar-iOSTests/ArticleThemeRenderDiffTests
+              -skip-testing:Nectar-iOSTests/ArticleThemeColorProbeTests
+              -skip-testing:Nectar-iOSTests/ThemeColorTableGuardTests
             )
+            echo "::notice::Theme suites skipped (theme_suites is not true)."
+            echo "Theme suites: skipped" >> "$GITHUB_STEP_SUMMARY"
           fi
 
           set -o pipefail

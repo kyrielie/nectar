@@ -52,8 +52,9 @@ Consequences:
   `gallery/build.py` run performs the bundle checks; the `unittest` step and `upstream-compat` do not run there.
 - What the simulator test job runs: the `Nectar-CI` plan with coverage off
   (`-enableCodeCoverage NO`; the plan keeps it on for local runs, nothing in the repo reads it).
-  The heavy theme suites run only when theme-related files changed since the previous release tag,
-  when there is no previous tag, or when the manual `theme_suites` input is true; the 31 XCTest
+  The theme suites (`ArticleThemeCheckMatrixTests`, `ArticleThemeSmokeTests`,
+  `ArticleThemeRenderDiffTests`, `ArticleThemeColorProbeTests`, `ThemeColorTableGuardTests`) are skipped
+  unless the manual `theme_suites` input is true (default false, including from `release.yml`); the 31 XCTest
   performance tests are not in the plan. See `theme-testing.md` ("CI scope"). The same job runs
   `buildscripts/fail_on_warnings.sh` on the test log; the separate `ios-simulator-build` job that
   compiled the app a second time was removed. Because the test log also covers the test targets,
