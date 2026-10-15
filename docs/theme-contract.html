@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nectar theme contract</title>
+<style>
+:root{--bg:#fbf8f2;--card:#fff;--ink:#23201b;--mute:#6b645a;--line:#e4ddd0;
+--app:#b3261e;--build:#a35a00;--test:#6a3fb5;--rel:#0b6b8a;--docs:#6b645a;--opt:#2f7d4f;--bad:#8a1c6e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16140f;--card:#1f1c16;--ink:#ece6da;--mute:#a39b8c;--line:#38332a;
+--app:#ff8a80;--build:#ffb74d;--test:#c9a8ff;--rel:#6fd0ee;--docs:#a39b8c;--opt:#7ddba0;--bad:#f08ad0}}
+:root[data-theme="dark"]{--bg:#16140f;--card:#1f1c16;--ink:#ece6da;--mute:#a39b8c;--line:#38332a;
+--app:#ff8a80;--build:#ffb74d;--test:#c9a8ff;--rel:#6fd0ee;--docs:#a39b8c;--opt:#7ddba0;--bad:#f08ad0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+main{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:26px;margin:8px 0 4px}h2{font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:28px 0 10px}
+p.sub{margin:0;color:var(--mute)}
+.legend,.filters{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--c,var(--line));color:var(--c,var(--ink));background:transparent;border-radius:999px;padding:5px 12px;font:inherit;font-size:14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--c,var(--ink));color:var(--bg)}
+.lv{font-size:13px;color:var(--mute);margin:6px 0 0}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.tier{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.tier b{display:block;margin-bottom:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.grp{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.grp h3{margin:0 0 8px;font:600 15px ui-monospace,Menlo,Consolas,monospace}
+.row{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.dot{flex:none;width:12px;height:12px;border-radius:50%;margin-top:6px;background:var(--c)}
+.row.opt .dot{background:transparent;border:2px dashed var(--c)}
+.t{min-width:0}.t code{font:13px ui-monospace,Menlo,Consolas,monospace;word-break:break-word}
+.t small{display:block;color:var(--mute);font-size:13px}
+.tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:1px 7px;border-radius:6px;border:1px solid var(--c);color:var(--c);margin-right:6px}
+.row.hide{display:none}.grp.hide{display:none}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
+.flow span.s{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.flow i{color:var(--mute);font-style:normal}
+.note{background:var(--card);border-left:4px solid var(--build);padding:10px 14px;border-radius:6px;margin-top:14px;font-size:14px}
+</style>
+</head>
+<body>
+<main>
+<h1>Nectar theme contract</h1>
+<p class="sub">Every rule a <code>.nnwtheme</code> bundle is held to, and who enforces it. Source: <code>docs/nnwtheme-format.md</code>, "Theme contract".</p>
+
+<h2>Who checks it</h2>
+<div class="tiers">
+<div class="tier"><b>Imported by a person</b>Only the app loader runs. It is lenient: a missing Info.plist key decodes to an empty value or 0.</div>
+<div class="tier"><b>Shipped in Themes/ or the gallery</b>Every level applies: app, build, test, release, plus the docs-only rules authors are trusted to follow.</div>
+</div>
+
+<h2>Path of a change</h2>
+<div class="flow"><span class="s">Edit bundle</span><i>&rarr;</i><span class="s">Tests (CI)</span><i>&rarr;</i><span class="s">Gallery build</span><i>&rarr;</i><span class="s">Release check vs base branch</span><i>&rarr;</i><span class="s">On a device: docs-only rules</span></div>
+
+<h2>Filter by enforcement</h2>
+<div class="filters" id="filters"></div>
+<p class="lv" id="count"></p>
+
+<h2>The bundle</h2>
+<div class="grid" id="grid"></div>
+<div class="note"><b>Version rule.</b> Start at 1. Raise it whenever <code>stylesheet.css</code> or <code>template.html</code> changes in a bundle that already exists on the base branch. Edits to <code>Info.plist</code> or <code>License.md</code> alone need no bump.</div>
+</main>
+<script>
+var LV={app:["App","var(--app)","Loader needs it; else fallback or no load"],build:["Build","var(--build)","gallery/build.py fails"],test:["Test","var(--test)","A unit test fails in CI"],release:["Release","var(--rel)","--check-release-identity fails"],docs:["Docs only","var(--docs)","Written down, checked by nothing"],opt:["Optional","var(--opt)","Safe to leave out"],bad:["Forbidden","var(--bad)","Do not use"]};
+var D=[
+["<Name>.nnwtheme/",[["Folder name = theme identity","app","Used for selection, lookup, import-overwrite; keep equal to Info.plist Name"]]],
+["Info.plist",[
+["Name, ThemeIdentifier, CreatorHomePage, CreatorName","build","Import tier is lenient; the gallery build requires all five"],
+["Version: integer, 1 or more","build","Strictly raised when CSS or template changed","release"],
+["ThemeIdentifier and folder name stay fixed once published","release",""],
+["Family, FamilyVariant","opt","Only for 2+ sibling bundles; checked when set","test"]]],
+["template.html",[
+["#bodyContainer with class articleBody","build","Override and color systems key off it too"],
+["[[body]] token","docs",""],
+["[[title]], [[preferred_link]], [[byline]]","opt","Unverified: omitting was never tested"],
+["Header, running head, feed link, date, avatar, external link","opt","Add only if the design uses them"],
+["data-versal-target","opt","No-ops if absent"],
+["data-chapter-divider + -char + -class","opt","All three together, or it no-ops"],
+["#nnwFooter","opt","Custom templates only"],
+["Inline script","bad","The real reader blocks it"],
+["68px above the title","docs","No test; shapes A, C, D never audited"]]],
+["stylesheet.css",[
+["max-width: 100% on img, figure, video, div, object","test","Overflow safety test; the build only warns"],
+["--nnw-bg, --nnw-ink, --nnw-link as literals in :root and dark :root","docs","Page color as background-color on body, not the shorthand"],
+["--ao3-preface-* variables","opt","core.css has fallbacks"],
+["prefers-color-scheme: dark block","opt","Without it the gallery guesses by body luminance"],
+["--gx, --u, --font-*, iOS/macOS @supports split","opt","Conventions, not enforced"]]],
+["License.md",[["Whole file","opt","Expected for ports; no code reads it"]]]
+];
+var on={};Object.keys(LV).forEach(function(k){on[k]=true});
+var grid=document.getElementById("grid"),fl=document.getElementById("filters");
+function tag(k){var l=LV[k];return '<span class="tag" style="--c:'+l[1]+'">'+l[0]+'</span>'}
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function render(){var n=0,tot=0;grid.innerHTML="";
+D.forEach(function(g){var h="",any=false;
+g[1].forEach(function(r){tot++;var lv=r[1],lv2=r[3];var show=on[lv]||(lv2&&on[lv2]);
+if(!show)return;any=true;n++;
+h+='<div class="row'+(lv==="opt"?" opt":"")+'" style="--c:'+LV[lv][1]+'"><span class="dot"></span><div class="t"><code>'+esc(r[0])+'</code><small>'+tag(lv)+(lv2?tag(lv2):"")+esc(r[2])+'</small></div></div>'});
+if(any){var d=document.createElement("div");d.className="grp";d.innerHTML="<h3>"+esc(g[0])+"</h3>"+h;grid.appendChild(d)}});
+document.getElementById("count").textContent=n+" of "+tot+" rules shown. Filled dot = required or enforced; dashed = optional.";}
+Object.keys(LV).forEach(function(k){var b=document.createElement("button");b.className="chip";b.style.setProperty("--c",LV[k][1]);b.setAttribute("aria-pressed","true");b.textContent=LV[k][0];b.title=LV[k][2];
+b.onclick=function(){on[k]=!on[k];b.setAttribute("aria-pressed",on[k]);render()};fl.appendChild(b)});
+render();
+</script>
+</body>
+</html>

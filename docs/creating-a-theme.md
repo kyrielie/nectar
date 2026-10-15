@@ -1,6 +1,6 @@
 # Creating a theme
 
-The short, spec-only walk-through. The detail lives elsewhere: `nnwtheme-format.md` (bundle
+The short, spec-only walk-through. For one table of every rule and who enforces it, see "Theme contract" in `nnwtheme-format.md`. The detail lives elsewhere: `nnwtheme-format.md` (bundle
 format and authoring rules), `theme-system.md` (the Swift side), `article-color-pipeline.md`
 (how the notch and webview color is read), `theme-mockups.md` (design previews and how the
 older bundles were converted), and the skills in `.claude/skills/` (`nnwtheme-builder`,
@@ -11,7 +11,7 @@ older bundles were converted), and the skills in `.claude/skills/` (`nnwtheme-bu
 | You want | Do this |
 |---|---|
 | The stock layout in a new palette (a port) | Add an entry to `buildscripts/theme-generation/generate_ported_themes.py` (shape A). See the porter skill. |
-| A new design | Copy a shape B bundle (`nnwtheme-format.md`, "Which templates to add"), with or without the running head; leave it out unless the design uses it. With the head, the 68px-above-the-title rule is met by arithmetic. Without it, the theme must supply that space itself. |
+| A new design | Copy a shape B bundle (`nnwtheme-format.md`, "Which templates to add"), with or without the running head; leave it out unless the design uses it. With the head, the 68px-above-the-title rule is met by arithmetic. Without it, the theme must supply that space itself. A shape A template is also fine as the base for an original design (Beacon); the versal and divider opt-ins in section 2 work with any shape. |
 | Custom markup for a real concept | Hand-build it (builder skill). You must supply the 68px above the title yourself and keep every name in section 2. |
 
 ## 2. Names that must be exact
@@ -32,10 +32,10 @@ older bundles were converted), and the skills in `.claude/skills/` (`nnwtheme-bu
 | `ThemeIdentifier` | string | Required. Convention `com.nectar.themes.<slug>`. App code never reads it; the gallery uses it as the id. |
 | `CreatorHomePage` | string | Required. |
 | `CreatorName` | string | Required. The creator's name only; the description goes in `License.md`. |
-| `Version` | integer | Required. `1` for a new theme. |
+| `Version` | integer | Required. `1` for a new theme; raise it when `stylesheet.css` or `template.html` changes (`theme-gallery.md`). |
 | `Family`, `FamilyVariant` | string | Optional. Only for two or more sibling bundles; checked by `ArticleThemePlistFamilyTests`. |
 
-A missing required key makes loading throw.
+The gallery build fails on a missing required key. The app's loader is lenient and decodes a missing key to `""` or `0` (`ArticleThemePlist`).
 
 **template.html**
 
