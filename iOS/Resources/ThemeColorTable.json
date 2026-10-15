@@ -1,0 +1,160 @@
+{
+  "coreCSSHash" : "dfc79c33aec54cc7ed7c35aa59bb15eb030e26885815a8c9a9337d9724f3df68",
+  "probeVersion" : 1,
+  "themes" : {
+    "Dark Academia" : {
+      "key" : "16a7892f807914fb71593fecf212fa8422b387452b9e56e588caa05ce987ec82",
+      "measurement" : {
+        "hasDarkModeVariant" : true,
+        "inkDark" : "#E3D3AC",
+        "inkLight" : "#2A2118",
+        "linkDark" : "#D58A63",
+        "linkLight" : "#7A1F24",
+        "pageDark" : "#17150F",
+        "pageLight" : "#EBE0C8",
+        "pageWasPaintedDark" : true,
+        "pageWasPaintedLight" : true
+      }
+    },
+    "Default" : {
+      "key" : "8424498bb62c7bdc27aa19f4d491063d3d93a0f31dfe5456cfa015a6cbbdacaa",
+      "measurement" : {
+        "hasDarkModeVariant" : true,
+        "inkDark" : "#FFFFFF",
+        "inkLight" : "#000000",
+        "linkDark" : "#5E9EF4",
+        "linkLight" : "#086AEE",
+        "pageDark" : "#000000",
+        "pageLight" : "#FFFFFF",
+        "pageWasPaintedDark" : true,
+        "pageWasPaintedLight" : true
+      }
+    },
+    "Duskbloom" : {
+      "key" : "7ad6918847f2924c9460e236157d7b7fa0259b683a605ea01990e9e083305d30",
+      "measurement" : {
+        "hasDarkModeVariant" : true,
+        "inkDark" : "#D3C5C8",
+        "inkLight" : "#5C4F6B",
+        "linkDark" : "#F59DB3",
+        "linkLight" : "#6B5A90",
+        "pageDark" : "#1D1D1D",
+        "pageLight" : "#F5EDE8",
+        "pageWasPaintedDark" : true,
+        "pageWasPaintedLight" : true
+      }
+    },
+    "High Contrast" : {
+      "key" : "7992ec13823b730fcee4bb537438d9f6b2f4ebba1a6c415bcae71e62e4070c11",
+      "measurement" : {
+        "hasDarkModeVariant" : true,
+        "inkDark" : "#FFFFFF",
+        "inkLight" : "#000000",
+        "linkDark" : "#99CCFF",
+        "linkLight" : "#0000CC",
+        "pageDark" : "#000000",
+        "pageLight" : "#FFFFFF",
+        "pageWasPaintedDark" : true,
+        "pageWasPaintedLight" : true
+      }
+    },
+    "Midnight Blue" : {
+      "key" : "3adff266d3f040d0818b6cb9912cf15556ae0e199d2aec8cfe76c9be17563e98",
+      "measurement" : {
+        "hasDarkModeVariant" : false,
+        "inkDark" : "#B3B3B3",
+        "inkLight" : "#B3B3B3",
+        "linkDark" : "#529ECC",
+        "linkLight" : "#529ECC",
+        "pageDark" : "#1A2735",
+        "pageLight" : "#1A2735",
+        "pageWasPaintedDark" : true,
+        "pageWasPaintedLight" : true
+      }
+    },
+    "Nectar" : {
+      "key" : "4250572537ead9858b2eee43f03f24b60d2ae1925a2e2147750c4b67737256e8",
+      "measurement" : {
+        "hasDarkModeVariant" : true,
+        "inkDark" : "#EFE4D2",
+        "inkLight" : "#231C14",
+        "linkDark" : "#E08AA0",
+        "linkLight" : "#8A2F22",
+        "pageDark" : "#1A1418",
+        "pageLight" : "#F6F1E6",
+        "pageWasPaintedDark" : true,
+        "pageWasPaintedLight" : true
+      }
+    },
+    "Night Amber" : {
+      "key" : "8d3485969d44e018d45203e2a2f3fee4f28c9cf3b440736c6ad12c6c22f19b15",
+      "measurement" : {
+        "hasDarkModeVariant" : true,
+        "inkDark" : "#E8C48A",
+        "inkLight" : "#3B2A14",
+        "linkDark" : "#E39A45",
+        "linkLight" : "#A8601A",
+        "pageDark" : "#1A120A",
+        "pageLight" : "#F3E4C8",
+        "pageWasPaintedDark" : true,
+        "pageWasPaintedLight" : true
+      }
+    },
+    "OLED Black" : {
+      "key" : "6020f3241d4e0f182c2509b86e62ee94e3f10d079824899c0439adddee91ed20",
+      "measurement" : {
+        "hasDarkModeVariant" : true,
+        "inkDark" : "#E4E4E6",
+        "inkLight" : "#1C1C1E",
+        "linkDark" : "#7DB4FF",
+        "linkLight" : "#1A56C4",
+        "pageDark" : "#000000",
+        "pageLight" : "#FAFAF8",
+        "pageWasPaintedDark" : true,
+        "pageWasPaintedLight" : true
+      }
+    },
+    "Reversi" : {
+      "key" : "fd7e424bf7436c1449b3c1a2a4bab94ff86c6cdc83981f9680b88e325b98b0aa",
+      "measurement" : {
+        "hasDarkModeVariant" : false,
+        "inkDark" : "#EEEEEE",
+        "inkLight" : "#EEEEEE",
+        "linkDark" : "#FFFFFF",
+        "linkLight" : "#FFFFFF",
+        "pageDark" : "#333333",
+        "pageLight" : "#333333",
+        "pageWasPaintedDark" : true,
+        "pageWasPaintedLight" : true
+      }
+    },
+    "Solarized" : {
+      "key" : "0b26a1aa139e9813e865534d54421d6e528d1675d5ef0d25a86ad3540a3a553b",
+      "measurement" : {
+        "hasDarkModeVariant" : true,
+        "inkDark" : "#93A1A1",
+        "inkLight" : "#586E75",
+        "linkDark" : "#268BD2",
+        "linkLight" : "#1F6CA8",
+        "pageDark" : "#002B36",
+        "pageLight" : "#FDF6E3",
+        "pageWasPaintedDark" : true,
+        "pageWasPaintedLight" : true
+      }
+    },
+    "System" : {
+      "key" : "8424498bb62c7bdc27aa19f4d491063d3d93a0f31dfe5456cfa015a6cbbdacaa",
+      "measurement" : {
+        "hasDarkModeVariant" : true,
+        "inkDark" : "#FFFFFF",
+        "inkLight" : "#000000",
+        "linkDark" : "#5E9EF4",
+        "linkLight" : "#086AEE",
+        "pageDark" : "#000000",
+        "pageLight" : "#FFFFFF",
+        "pageWasPaintedDark" : true,
+        "pageWasPaintedLight" : true
+      }
+    }
+  }
+}
