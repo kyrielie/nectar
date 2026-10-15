@@ -159,6 +159,10 @@ final class WebViewController: UIViewController {
 	/// Large manual scroll deltas are not detected as jumps (docs/reading-progress.md).
 	private var scrollJumpHistory: [Double] = []
 
+	/// URL the current page was loaded with (set in renderPage). nil when the article has no
+	/// usable base URL. Used to recognise links that only change the fragment (same-document).
+	private var renderedDocumentURL: URL?
+
 	var windowScrollY = 0 {
 		didSet {
 			// Persists per article (relaunch and Handoff restore read this per-book value).
@@ -697,6 +701,16 @@ extension WebViewController: WKNavigationDelegate {
 				return
 			}
 
+			// Links that only change the fragment (AO3's "more notes" pointer, footnote-style
+			// anchors) are navigation inside the article, not what disableArticleLinks guards.
+			// WebKit hands them over as absolute URLs equal to the base URL plus a fragment, so
+			// without this they would match the http(s) branch below and open the browser.
+			if let url, Self.isSameDocumentFragmentNavigation(url: url, documentURL: renderedDocumentURL) {
+				decisionHandler(.cancel)
+				handleSameDocumentAnchor(url)
+				return
+			}
+
 			if AppDefaults.shared.disableArticleLinks {
 				decisionHandler(.cancel)
 				return
@@ -710,16 +724,7 @@ extension WebViewController: WKNavigationDelegate {
 			let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
 			if components?.scheme == "http" || components?.scheme == "https" {
 				decisionHandler(.cancel)
-				if AppDefaults.shared.useSystemBrowser {
-					UIApplication.shared.open(url, options: [:])
-				} else {
-					UIApplication.shared.open(url, options: [.universalLinksOnly: true]) { didOpen in
-						guard didOpen == false else {
-							return
-						}
-						self.openURLInAppBrowser(url)
-					}
-				}
+				openExternalLink(url)
 
 			} else if components?.scheme == "mailto" {
 				decisionHandler(.cancel)
@@ -1817,6 +1822,7 @@ private extension WebViewController {
 
 		applyResolvedBackgroundColors()
 
+		renderedDocumentURL = rendering.baseURL.isEmpty ? nil : URL(string: rendering.baseURL)
 		webView.loadHTMLString(html, baseURL: URL(string: rendering.baseURL))
 	}
 
@@ -2461,6 +2467,21 @@ extension WebViewController {
 	/// than it. `nonisolated` because it touches no actor-isolated state; otherwise it
 	/// inherits @MainActor and can't be called from a synchronous test. See
 	/// article-color-pipeline.md.
+	/// True when `url` points at a fragment of the document the page was loaded from: same
+	/// URL once fragments are removed, and a non-empty fragment on the target. Pure so it can
+	/// be unit tested without a web view.
+	nonisolated static func isSameDocumentFragmentNavigation(url: URL, documentURL: URL?) -> Bool {
+		guard let documentURL,
+			  var target = URLComponents(url: url, resolvingAgainstBaseURL: false),
+			  var document = URLComponents(url: documentURL, resolvingAgainstBaseURL: false),
+			  let fragment = target.fragment, !fragment.isEmpty else {
+			return false
+		}
+		target.fragment = nil
+		document.fragment = nil
+		return target.string == document.string
+	}
+
 	nonisolated static func isDarkForColorResolution(selfTraitCollection: UITraitCollection, webViewTraitCollection: UITraitCollection) -> Bool {
 		return selfTraitCollection.userInterfaceStyle == .dark
 	}
@@ -2542,6 +2563,45 @@ extension WebViewController {
 				return
 			}
 			completionHandler(response.entries, response.currentTocIndex == -1 ? nil : response.currentTocIndex)
+		}
+	}
+
+	/// Opens an http(s) link in the system browser, a universal-link app, or the in-app
+	/// browser, per the useSystemBrowser setting.
+	private func openExternalLink(_ url: URL) {
+		if AppDefaults.shared.useSystemBrowser {
+			UIApplication.shared.open(url, options: [:])
+		} else {
+			UIApplication.shared.open(url, options: [.universalLinksOnly: true]) { didOpen in
+				guard didOpen == false else {
+					return
+				}
+				self.openURLInAppBrowser(url)
+			}
+		}
+	}
+
+	/// Scrolls to the element a same-document fragment link points at. The origin is captured
+	/// before the jump and pushed onto scrollJumpHistory only when the target exists, so Scroll
+	/// Back works. When the id is not in the page, the link behaves as it did before this path
+	/// existed (opens externally, unless disableArticleLinks is on) instead of going dead:
+	/// decisionHandler has to be answered synchronously, so the existence check happens here.
+	private func handleSameDocumentAnchor(_ url: URL) {
+		guard let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?.fragment,
+			  let json = try? JSONEncoder().encode(["id": id]) else {
+			return
+		}
+		let encoded = json.base64EncodedString()
+		let originY = Double(windowScrollY)
+		webView?.evaluateJavaScript("scrollToAnchor(\"\(encoded)\")") { [weak self] result, _ in
+			guard let self else {
+				return
+			}
+			if (result as? Bool) == true {
+				self.scrollJumpHistory.append(originY)
+			} else if !AppDefaults.shared.disableArticleLinks {
+				self.openExternalLink(url)
+			}
 		}
 	}
 

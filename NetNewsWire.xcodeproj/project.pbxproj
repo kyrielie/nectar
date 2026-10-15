@@ -209,6 +209,7 @@
 		9671352A9C9E3EAC74C7B126 /* AddFeedSelectFolderTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8E7A9D222B2E9794D52A03B /* AddFeedSelectFolderTableViewCell.swift */; };
 		96CF9BAF1ACBA5558374885B /* AO3SettingsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F808BD1BB3D3D09DAA7D140 /* AO3SettingsModel.swift */; };
 		96DFE385B2B481A0F7004FB2 /* OPMLExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A13AEFC9D91E846755FB351 /* OPMLExporter.swift */; };
+		97763F8132C8394059EB710D /* FolderRowLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21974F1DB2A09E657ADB9270 /* FolderRowLabel.swift */; };
 		978426390BA6669C0BB3B12A /* ArticleStringFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 519B2851D7C3139062F7EEA0 /* ArticleStringFormatterTests.swift */; };
 		984E0EAB531C7F6FB4086738 /* MainTimelineCellLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AD1F1DEE29D5AC5F3AF3280 /* MainTimelineCellLayout.swift */; };
 		98CFFD3E273890E57EEB014F /* AccountNotificationInspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE60AD3DFCB945E8A8E31218 /* AccountNotificationInspectorView.swift */; };
@@ -445,6 +446,7 @@
 		204A58D05323D31B927E6092 /* Articles */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Articles; path = Modules/Articles; sourceTree = SOURCE_ROOT; };
 		20EEFDB3CF110638E361971D /* MarkAsReadAlertController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkAsReadAlertController.swift; sourceTree = "<group>"; };
 		216807A46FBD5DF78D798052 /* UserNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserNotificationManager.swift; sourceTree = "<group>"; };
+		21974F1DB2A09E657ADB9270 /* FolderRowLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderRowLabel.swift; sourceTree = "<group>"; };
 		21B7CDE20D4E5C7CE622A7DC /* ToolbarFunctionCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarFunctionCell.swift; sourceTree = "<group>"; };
 		22AE046256E7B985A23CADFD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2309D714D9145D36DF69CEAA /* ArticleSorterDateBookmarkedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleSorterDateBookmarkedTests.swift; sourceTree = "<group>"; };
@@ -1464,6 +1466,7 @@
 				D9CF9FA05BD676DCDB04BB7D /* AddFeedSelectFolderTableViewCell.xib */,
 				91F7CD1B07FC2DB23C79CB15 /* AddFeedViewController.swift */,
 				DFA4D4952B174D2C16E22550 /* AddFolderViewController.swift */,
+				21974F1DB2A09E657ADB9270 /* FolderRowLabel.swift */,
 			);
 			path = Add;
 			sourceTree = "<group>";
@@ -1806,6 +1809,7 @@
 				5EC37BF080ABAF6FB52BA99A /* FetchRequestQueue.swift in Sources */,
 				043291147B3052FD66395025 /* FindInArticleActivity.swift in Sources */,
 				4E77E646DD953F7BC2D776B2 /* FolderPickerView.swift in Sources */,
+				97763F8132C8394059EB710D /* FolderRowLabel.swift in Sources */,
 				3017012F80100953303E528F /* FolderTreeControllerDelegate.swift in Sources */,
 				8E409132EBC0100AAC013CB6 /* ForegroundTicker.swift in Sources */,
 				C57A406403A9BAC7B73BF45D /* FullScreenReadingViewController.swift in Sources */,

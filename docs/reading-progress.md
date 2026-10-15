@@ -118,9 +118,12 @@ has no `bookKey` sharing. It is a plain `[Double]` stack of pre-jump
 
 - **Scope (deliberately narrow):** only explicit programmatic "jump to X"
   calls push onto this stack -- `scrollToHeading(tocIndex:)` (Table of
-  Contents) and `scrollToAnnotation(annotationID:)` (tapping an annotation
-  reference), each pushing `windowScrollY` immediately before issuing their
-  own `evaluateJavaScript` call. Large manual scroll deltas (e.g. a fast
+  Contents), `scrollToAnnotation(annotationID:)` (tapping an annotation
+  reference) and `handleSameDocumentAnchor(_:)` (tapping a same-document
+  fragment link such as AO3's "more notes" pointer). The first two push
+  `windowScrollY` immediately before issuing their own `evaluateJavaScript`
+  call; the anchor jump captures it first and pushes only if JS reports the
+  target id exists (`scrollToAnchor` returns a Bool). Large manual scroll deltas (e.g. a fast
   fling, or scrolling back up by hand to reread something) are **not**
   detected as jumps and do not push anything. This was a deliberate choice,
   not an oversight: detecting manual scrolls as jumps would need a
