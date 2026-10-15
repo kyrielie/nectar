@@ -27,18 +27,15 @@ img, figure, video, div, object { max-width: 100%; }
 img, video { height: auto; }
 .smallText{font-size:14px}.mediumText{font-size:16px}.largeText{font-size:18px}.xlargeText{font-size:20px}.xxlargeText{font-size:22px}
 
-/* running head: in full-screen reading the app zeroes the top safe area, so page content
-   starts under the notch/Dynamic Island. This band (feed name + date, bottom-aligned,
-   >= 56px) absorbs that zone so the title always starts clear of it. */
-.rh{display:flex;justify-content:space-between;align-items:flex-end;gap:1em;min-height:56px;margin:0 0 12px;padding:0 var(--gx) 9px;font-family:var(--nnw-font-chrome, var(--fb));font-size:calc(var(--u) * 11 * var(--nnw-detail-scale, 1));line-height:1.2;letter-spacing:.14em;text-transform:uppercase;color:var(--nnw-ink);border-bottom:1px solid var(--rule-rh,currentColor);box-sizing:border-box}
-.rh a,.rh a:visited{color:inherit;text-decoration:none;opacity:.78;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.rh time{flex:none;opacity:.78;white-space:nowrap}
+/* no running head: in full-screen reading the app zeroes the top safe area, so page content
+   starts under the notch/Dynamic Island. Without a header band the theme supplies the 68px
+   above the title itself: 78px of top padding on .t (the old band was 56px + 12px margin + 10px). */
 /* notes: footnote-rule */
 :is(.notes.module,.end.notes.module){margin:2.3em 0;font-size:.88em;text-align:center}
 :is(.notes.module,.end.notes.module)::before{content:"";display:block;width:4.5em;height:1px;margin:0 auto .9em;background:var(--nnw-ink);opacity:.55}
 :is(.notes.module,.end.notes.module) h3.heading{display:inline;margin:0 .5em 0 0;font:inherit;font-weight:700;font-variant:small-caps;letter-spacing:.18em}
 :is(.notes.module,.end.notes.module) blockquote.userstuff,:is(.notes.module,.end.notes.module) blockquote.userstuff p{display:inline}
-.t{padding:10px var(--gx) 26px;background:var(--nnw-bg);color:var(--nnw-ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+.t{padding:78px var(--gx) 26px;background:var(--nnw-bg);color:var(--nnw-ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
 .t h1{margin:0;font-family:var(--fh);font-weight:400}
 .t h2.heading, .t h3.title{margin:0;font-family:var(--fh);font-weight:400}
 .t h3.heading{margin:0;font-family:var(--fh);font-weight:400}
