@@ -4,7 +4,9 @@ The public landing page lives in `landing/` and is built to one self-contained
 `index.html` by `landing/build.py`. `.github/workflows/gallery.yml` builds it together
 with the theme gallery and publishes `index.html` to the root of the `gh-pages`
 branch and the gallery to `themes/`, next to `source.json`, `icon.png` and
-`screenshots/` (which `release.yml` publishes and this workflow never touches). It
+`screenshots/`. `release.yml` publishes `source.json`, `icon.png` and the screenshot set at release time;
+this workflow also copies `appstore/screenshots` over the published files (overwrite and add only, never
+delete) so a screenshot committed to `main` goes live without waiting for a release. It
 looks like the gallery on purpose: same tokens, same frieze, same paper grain.
 
 ## Files
