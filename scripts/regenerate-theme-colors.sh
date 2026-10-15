@@ -17,6 +17,12 @@ verify=1
 destination="${DESTINATION:-platform=iOS Simulator,name=iPhone 17}"
 table="iOS/Resources/ThemeColorTable.json"
 
+# The Debug xcconfig adds -warn-long-function-bodies=650 and warnings are errors, so a busy
+# machine turns a slow type-check into a build failure. Demote warnings for this run only.
+# Do not override OTHER_SWIFT_FLAGS here: a command-line value replaces the flags that Swift
+# package targets get from their own swiftSettings (Account's InferIsolatedConformances, for
+# example) and breaks their build.
+
 run_tests() {
   xcodebuild \
     -project NetNewsWire.xcodeproj \
@@ -25,6 +31,7 @@ run_tests() {
     -destination "$destination" \
     -enableCodeCoverage NO \
     "$@" \
+    SWIFT_TREAT_WARNINGS_AS_ERRORS=NO \
     test
 }
 

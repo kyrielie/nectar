@@ -172,11 +172,14 @@ enum ThemeColorTableSupport {
 		}
 	}
 
-	/// The store's loader reads the same file the guard reads, keyed by cache key.
+	/// The store's loader reads the same file the guard reads, keyed by cache key. Two table
+	/// entries can share a key (the System bundle's stylesheet and template are byte-identical
+	/// to the Default theme's), and the loader keeps one measurement per key, so compare
+	/// against the distinct keys, not the entry count.
 	@Test func storeLoaderReadsTheBundledTable() throws {
 		let table = try ThemeColorTableSupport.mainBundleTable()
 		let loaded = ThemeColorStoreCore.loadBundledFromMainBundle()
-		#expect(loaded.count == table.themes.count)
+		#expect(loaded.count == Set(table.themes.values.map(\.key)).count)
 		for entry in table.themes.values {
 			#expect(loaded[entry.key] == entry.measurement)
 		}

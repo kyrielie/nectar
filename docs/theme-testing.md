@@ -41,7 +41,9 @@ scanner (`ThemeColorStoreCore.loadBundledFromMainBundle`).
 The Default theme's key hashes the raw `Shared/Article Rendering/template.html`
 (and the default `stylesheet.css`), so editing that file, even only its header
 comment, changes the key and needs a regeneration of the table (the colors do not
-change, only the key).
+change, only the key). `Themes/System.nnwtheme` has a `stylesheet.css` and `template.html`
+byte-identical to the Default theme's, so the two share one key: the table has one more entry
+than it has distinct keys, and the store's loader keeps one measurement per key.
 
 `ThemeColorTableGuardTests` always runs and fails when:
 

@@ -51,6 +51,7 @@
 		200C3F75A55EB4B507BEFED4 /* SmartFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = B097756D7E321AA2E83909C5 /* SmartFeed.swift */; };
 		21574769D335135DCAB203D4 /* KeyboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5D302189A66FCBA55931D17 /* KeyboardManager.swift */; };
 		216B6E497363612E969630E8 /* MarkAsReadAlertController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20EEFDB3CF110638E361971D /* MarkAsReadAlertController.swift */; };
+		238DAE0FF31E55B936149974 /* ThemeColorTable.json in Resources */ = {isa = PBXBuildFile; fileRef = 7284E40A06E9D8C3BD8787F1 /* ThemeColorTable.json */; };
 		245C1A2CA7ABF4793A42D034 /* ArticleTheming in Frameworks */ = {isa = PBXBuildFile; productRef = B77E1A55DBFCB315DE8DC8C3 /* ArticleTheming */; };
 		25DA63DA6F5AA2B32BD00EE6 /* ReadingTimePieIndicatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70EFBF7E445D78286A58FECA /* ReadingTimePieIndicatorView.swift */; };
 		269B136D0DA1AE26BFFE0C38 /* ErrorLog in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 4B2049C5BF9FEAFCC17442D8 /* ErrorLog */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -560,6 +561,7 @@
 		6E2F778291B96C0F1887747A /* ManageStorageViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageStorageViewModel.swift; sourceTree = "<group>"; };
 		70EFBF7E445D78286A58FECA /* ReadingTimePieIndicatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingTimePieIndicatorView.swift; sourceTree = "<group>"; };
 		714F4781FD830853627123C0 /* AnnotationCSVExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationCSVExporter.swift; sourceTree = "<group>"; };
+		7284E40A06E9D8C3BD8787F1 /* ThemeColorTable.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ThemeColorTable.json; sourceTree = "<group>"; };
 		72F2E1704E43D65BF36E4984 /* ArticleThemeSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeSmokeTests.swift; sourceTree = "<group>"; };
 		740384DB4E8C2C325B020727 /* ArticleThemeColorStoreAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeColorStoreAppTests.swift; sourceTree = "<group>"; };
 		74203E5D0371E05B8F1C0045 /* UIViewController+Extras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIViewController+Extras.swift"; sourceTree = "<group>"; };
@@ -1151,6 +1153,7 @@
 				C06760FF56DDF1A29C7BA2A4 /* page.html */,
 				891918D29FDF1B23C4EE6166 /* PrivacyInfo.xcprivacy */,
 				A717FA6334C142D41B535687 /* Thanks.rtf */,
+				7284E40A06E9D8C3BD8787F1 /* ThemeColorTable.json */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -1669,6 +1672,7 @@
 				EB3590DF3E48CE74CBC85E81 /* SettingsTableViewCell.xib in Resources */,
 				020523D0002AD92A7C4914FE /* SidebarKeyboardShortcuts.plist in Resources */,
 				C72A57D10E174D84437CA709 /* Thanks.rtf in Resources */,
+				238DAE0FF31E55B936149974 /* ThemeColorTable.json in Resources */,
 				7CAA2A034C48057DB61628F3 /* Themes in Resources */,
 				8ED12C1BC67095900FF0F335 /* TimelineKeyboardShortcuts.plist in Resources */,
 				92C363C7AA0B767E6882E4B9 /* annotations.js in Resources */,
