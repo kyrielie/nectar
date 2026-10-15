@@ -107,11 +107,31 @@ import RSCore
 		return ThemeColorProbeLogic.assemble(light: light, dark: dark)
 	}
 
-	/// One load in one appearance. Returns the decoded read-back, or nil on
-	/// timeout, navigation failure, or an undecodable message.
+	/// Attempts per pass. A cold web content process (the first load of a run, or one that
+	/// lands while the host is busy) can miss the 5 second window with no read-back at all,
+	/// while the same page reads fine a moment later. One retry covers that without changing
+	/// what is measured, so `version` is not bumped. A pass that fails twice is still nil.
+	static let passAttempts = 2
+
+	/// One load in one appearance, retried once if no read-back arrived. Returns the decoded
+	/// read-back, or nil on timeout, navigation failure, or an undecodable message.
 	static func runPass(html: String,
 	                    dark: Bool,
 	                    environment: ArticleThemeProbeEnvironment) async -> ThemeColorProbeLogic.RawPass? {
+		for attempt in 1...passAttempts {
+			if let pass = await runPassOnce(html: html, dark: dark, environment: environment) {
+				return pass
+			}
+			if attempt < passAttempts {
+				log.notice("\(dark ? "dark" : "light", privacy: .public) pass: no read-back, retrying")
+			}
+		}
+		return nil
+	}
+
+	private static func runPassOnce(html: String,
+	                                dark: Bool,
+	                                environment: ArticleThemeProbeEnvironment) async -> ThemeColorProbeLogic.RawPass? {
 		let run = ProbeRun()
 
 		let configuration = WKWebViewConfiguration()
