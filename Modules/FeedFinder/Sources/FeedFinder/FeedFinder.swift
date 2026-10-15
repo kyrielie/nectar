@@ -19,7 +19,14 @@ public enum FeedFinderError: LocalizedError {
 	public var errorDescription: String? {
 		switch self {
 		case .feedNotFound:
-			return NSLocalizedString("That link couldn’t be found and can’t be added.", comment: "Not found")
+			return NSLocalizedString("Nectar couldn’t find a feed at that address.", comment: "Not found")
+		}
+	}
+
+	public var recoverySuggestion: String? {
+		switch self {
+		case .feedNotFound:
+			return NSLocalizedString("Try an AO3 search, tag, author, series, or bookmarks page, or the site’s own feed URL.", comment: "Not found recovery")
 		}
 	}
 }

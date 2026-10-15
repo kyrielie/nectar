@@ -96,6 +96,13 @@ final class AddFeedViewController: UITableViewController {
 			account = containerAccount
 		}
 
+		// One work can't be subscribed to, and feed discovery on a work page does
+		// not do what the person wants. Offer the one-time import instead.
+		if AO3Link.workID(from: url) != nil {
+			presentAO3SingleWorkPrompt(url: url, container: container, account: account!)
+			return
+		}
+
 		if account!.hasFeed(withURL: url.absoluteString) {
 			presentError(AccountError.createErrorAlreadySubscribed)
  			return
@@ -154,7 +161,7 @@ final class AddFeedViewController: UITableViewController {
 					return
 				}
 
-				self.presentError(error)
+				self.presentFeedAddError(error)
 			}
 
 		}
@@ -216,6 +223,59 @@ final class AddFeedViewController: UITableViewController {
 		present(alert, animated: true)
 	}
 
+	private func presentAO3SingleWorkPrompt(url: URL, container: Container, account: Account) {
+		let alert = UIAlertController(
+			title: NSLocalizedString("This Is a Single Work", comment: "Add AO3 Feed: pasted URL is one work, alert title"),
+			message: NSLocalizedString("A single work can’t be subscribed to. Import it once to read it? It won’t update on its own.", comment: "Add AO3 Feed: pasted URL is one work, alert message"),
+			preferredStyle: .alert
+		)
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel importing a single AO3 work"), style: .cancel))
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Import Once", comment: "Import a single AO3 work one time"), style: .default) { [weak self] _ in
+			self?.importSingleAO3Work(url: url, container: container, account: account)
+		})
+		present(alert, animated: true)
+	}
+
+	/// Same one-time import as Import AO3 Work Links, into the folder this sheet's
+	/// Folder row shows. On success the sheet closes and the sidebar jumps to the
+	/// Imported Links feed, the way a newly added feed does.
+	private func importSingleAO3Work(url: URL, container: Container, account: Account) {
+		addButton.isEnabled = false
+
+		Task { @MainActor [weak self] in
+			let result = await account.importAO3Links(url.absoluteString, destination: .existingContainer(container))
+			guard let self else { return }
+
+			if result.recognizedCount == 0 {
+				self.updateUI()
+				self.presentFeedAddError(AccountError.createErrorNotFound)
+				return
+			}
+			if result.newCount == 0 {
+				self.updateUI()
+				self.presentError(title: NSLocalizedString("Already Imported", comment: "Add AO3 Feed: single work was imported before, alert title"), message: NSLocalizedString("This work is already in Imported Links.", comment: "Add AO3 Feed: single work was imported before, alert message"))
+				return
+			}
+
+			self.dismiss(animated: true)
+			if let feed = result.feed {
+				NotificationCenter.default.post(name: .UserDidAddFeed, object: self, userInfo: [UserInfoKey.feed: feed])
+			}
+		}
+	}
+
+	/// `presentError(_:)` shows only `localizedDescription`, which would drop the
+	/// not-found error's recovery suggestion (what kinds of address work), so both
+	/// are folded into one message here. Every other error keeps the generic path.
+	private func presentFeedAddError(_ error: Error) {
+		if let accountError = error as? AccountError, case .createErrorNotFound = accountError {
+			let message = [accountError.errorDescription, accountError.recoverySuggestion].compactMap { $0 }.joined(separator: "\n\n")
+			presentError(title: NSLocalizedString("Couldn’t Add Feed", comment: "Add AO3 Feed: no feed found alert title"), message: message)
+			return
+		}
+		presentError(error)
+	}
+
 	/// `presentError(_:)` shows only `localizedDescription`, which would
 	/// drop this error's recovery suggestion, so both are folded into one
 	/// message here.
@@ -237,6 +297,10 @@ final class AddFeedViewController: UITableViewController {
 		} else {
 			return super.tableView(tableView, cellForRowAt: indexPath)
 		}
+	}
+
+	override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
+		NSLocalizedString("Paste an AO3 search, tag, author, series, or bookmarks link, or any feed URL. The feed keeps updating. To read one work, use Import AO3 Work Links.", comment: "Add AO3 Feed sheet footer")
 	}
 
 	override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -286,7 +350,7 @@ private extension AddFeedViewController {
 			if container is Folder {
 				folderLabel = "\(container?.account?.nameForDisplay ?? "") / \(containerName)"
 			} else {
-				folderLabel = containerName
+				folderLabel = FolderRowLabel.topLevel(accountName: containerName)
 			}
 			tableView.reloadData()
 		}

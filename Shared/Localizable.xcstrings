@@ -130,6 +130,12 @@
     "Add Anyway" : {
       "comment" : "Add a long AO3 URL despite the warning"
     },
+    "%@ (top level)" : {
+      "comment" : "Folder row value when the destination is the account's top level, not a folder"
+    },
+    "Add AO3 Feed" : {
+      "comment" : "Add menu: subscribe to an AO3 search/tag/author listing or feed URL"
+    },
     "Add Folder" : {
       "comment" : "Add Folder"
     },
@@ -401,6 +407,9 @@
     "Copy Work Link" : {
       "comment" : "Command"
     },
+    "Couldn’t Add Feed" : {
+      "comment" : "Add AO3 Feed: no feed found alert title"
+    },
     "Couldn't Load Page" : {
       "comment" : "AO3 in-app browser load error title"
     },
@@ -583,9 +592,6 @@
     },
     "Enter Server URL" : {
       "comment" : "Enter Server URL"
-    },
-    "Enter Server URL…" : {
-      "comment" : "Enter server URL button"
     },
     "Enter the address shown in your library app's preferences, e.g. http://192.168.1.5:8765" : {
       "comment" : "Enter Server URL message"
@@ -794,6 +800,54 @@
     "Import" : {
       "comment" : "Import AO3 links button"
     },
+    "Already Imported" : {
+      "comment" : "Add AO3 Feed: single work was imported before, alert title"
+    },
+    "This work is already in Imported Links." : {
+      "comment" : "Add AO3 Feed: single work was imported before, alert message"
+    },
+    "This Is a Single Work" : {
+      "comment" : "Add AO3 Feed: pasted URL is one work, alert title"
+    },
+    "A single work can’t be subscribed to. Import it once to read it? It won’t update on its own." : {
+      "comment" : "Add AO3 Feed: pasted URL is one work, alert message"
+    },
+    "Import Once" : {
+      "comment" : "Import a single AO3 work one time"
+    },
+    "One-time import, not a shelf. Works won’t update on their own." : {
+      "comment" : "Pasted AO3 link-list import: what kind of import this is"
+    },
+    "Paste links here. Other text is ignored." : {
+      "comment" : "Pasted AO3 link-list import text box placeholder"
+    },
+    "Only archiveofourown.org work links are imported. Imported works show their ID as the title until you open them." : {
+      "comment" : "Pasted AO3 link-list import footer"
+    },
+    "%d already imported." : {
+      "comment" : "Pasted AO3 link-list import: how many pasted works were imported before"
+    },
+    "Open Imported Links" : {
+      "comment" : "Pasted AO3 link-list import: go to the feed the works landed in"
+    },
+    "No AO3 work links found in the pasted text." : {
+      "comment" : "Pasted AO3 link-list import: no work links recognized"
+    },
+    "That work is already imported." : {
+      "comment" : "Pasted AO3 link-list import: the one pasted work was imported before"
+    },
+    "All %d works are already imported." : {
+      "comment" : "Pasted AO3 link-list import: every pasted work was imported before"
+    },
+    "Imported 1 work." : {
+      "comment" : "Pasted AO3 link-list import: one work added"
+    },
+    "Imported %d works." : {
+      "comment" : "Pasted AO3 link-list import: several works added"
+    },
+    "Import AO3 Work Links" : {
+      "comment" : "Add menu: one-time import of pasted AO3 work links"
+    },
     "Import AO3 Links" : {
       "comment" : "Pasted AO3 link-list import sheet title"
     },
@@ -802,12 +856,6 @@
     },
     "Import Failed" : {
       "comment" : "Import Failed"
-    },
-    "Import Link" : {
-      "comment" : "Add Feed"
-    },
-    "Import OPML…" : {
-      "comment" : "Import OPML\nImport OPML button"
     },
     "Import Theme" : {
       "comment" : "Import Theme"
@@ -1106,14 +1154,8 @@
     "No ignored works or authors." : {
       "comment" : "AO3 ignore list: empty state"
     },
-    "No library connected yet." : {
-      "comment" : "Empty state message"
-    },
     "No more results" : {
       "comment" : "AO3 load more: no more results"
-    },
-    "No new AO3 work links found in the pasted text." : {
-      "comment" : "Pasted AO3 link-list import: nothing new found"
     },
     "No Reading Time history yet." : {
 
@@ -1233,8 +1275,11 @@
     "Paragraph Spacing" : {
       "comment" : "Paragraph Spacing section header"
     },
-    "Paste any text containing archiveofourown.org work links -- everything else is ignored. This is a one-time import, not a shelf: pasted works won't refresh with new stats or chapters until you open them." : {
-      "comment" : "Pasted AO3 link-list import footer"
+    "Paste an AO3 search, tag, author, series, or bookmarks link, or any feed URL. The feed keeps updating. To read one work, use Import AO3 Work Links." : {
+      "comment" : "Add AO3 Feed sheet footer"
+    },
+    "Paste AO3 Work Links" : {
+      "comment" : "Pasted AO3 link-list import text box header"
     },
     "Paste AO3 Links" : {
       "comment" : "Pasted AO3 link-list import text box header"

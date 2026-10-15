@@ -655,6 +655,21 @@ public enum FetchType {
 		}
 	}
 
+	/// What an AO3 link-list import found and did -- see `importAO3Links(_:destination:)`.
+	public struct AO3LinkImportResult {
+		/// Distinct AO3 work links recognized in the pasted text. 0 means the text
+		/// held nothing importable.
+		public let recognizedCount: Int
+
+		/// Links that were not already present, i.e. actually added. Always
+		/// `<= recognizedCount`; the difference was imported previously.
+		public let newCount: Int
+
+		/// The "Imported Links" feed the links landed in, so callers can navigate to
+		/// it. `nil` only when `recognizedCount == 0`.
+		public let feed: Feed?
+	}
+
 	/// The `nectar-import:` scheme used for the one-time pasted-AO3-link-list
 	/// import feed's synthetic URL -- see `importPastedAO3Links(_:destination:)`
 	/// below and `LocalAccountRefresher.feedShouldBeSkippedForDisallowedHostReasons`,
@@ -688,16 +703,14 @@ public enum FetchType {
 	/// first use at that destination, reused on every later import into the
 	/// same one. No live AO3 fetch: articles are titled from their work id
 	/// only, until the person opens one and the existing AO3ChapterFetcher
-	/// path takes over. Returns the number of new links added (0 if none
-	/// were recognized or all were already imported previously --
-	/// `updateAsync`'s `deleteOlder: false` plus this feed's stable feedID
-	/// means a repeat paste of the same link is a no-op at the database
-	/// level, not just within a single paste).
-	@discardableResult
-	public func importPastedAO3Links(_ pastedText: String, destination: AO3LinkImportDestination = .sharedTopLevel) async -> Int {
+	/// path takes over. Returns how many links were recognized, how many were
+	/// new (a repeat paste of the same link is a no-op at the database level,
+	/// not just within a single paste -- `updateAsync`'s `deleteOlder: false`
+	/// plus this feed's stable feedID), and the feed they landed in.
+	public func importAO3Links(_ pastedText: String, destination: AO3LinkImportDestination = .sharedTopLevel) async -> AO3LinkImportResult {
 		let links = AO3LinkListImporter.importedLinks(fromPastedText: pastedText)
 		guard !links.isEmpty else {
-			return 0
+			return AO3LinkImportResult(recognizedCount: 0, newCount: 0, feed: nil)
 		}
 
 		let container: Container
@@ -743,7 +756,15 @@ public enum FetchType {
 		})
 
 		let articleChanges = await updateAsync(feedID: feed.feedID, parsedItems: parsedItems, deleteOlder: false)
-		return articleChanges.new?.count ?? 0
+		return AO3LinkImportResult(recognizedCount: links.count, newCount: articleChanges.new?.count ?? 0, feed: feed)
+	}
+
+	/// Convenience wrapper over `importAO3Links(_:destination:)` for callers that
+	/// only need the number of new links added (0 if none were recognized or all
+	/// were already imported).
+	@discardableResult
+	public func importPastedAO3Links(_ pastedText: String, destination: AO3LinkImportDestination = .sharedTopLevel) async -> Int {
+		await importAO3Links(pastedText, destination: destination).newCount
 	}
 
 	func clearFeedSettings(_ feed: Feed) {

@@ -73,7 +73,7 @@ public enum AccountError: LocalizedError {
 	public var errorDescription: String? {
 		switch self {
 		case .createErrorNotFound:
-			return NSLocalizedString("That link couldn’t be found and can’t be added.", comment: "Not found")
+			return NSLocalizedString("Nectar couldn’t find a feed at that address.", comment: "Not found")
 		case .createErrorAlreadySubscribed:
 			return NSLocalizedString("This link is already on one of your shelves, so it can’t be added again.", comment: "Already subscribed")
 		case .opmlImportInProgress:
@@ -110,7 +110,7 @@ public enum AccountError: LocalizedError {
 	public var recoverySuggestion: String? {
 		switch self {
 		case .createErrorNotFound:
-			return nil
+			return NSLocalizedString("Try an AO3 search, tag, author, series, or bookmarks page, or the site’s own feed URL.", comment: "Not found recovery")
 		case .createErrorAlreadySubscribed:
 			return nil
 		case .ao3FiltersNotApplied:

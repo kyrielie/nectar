@@ -162,4 +162,34 @@ import XCTest
 		let articles = await account.fetchArticlesAsync(.feed(nested.topLevelFeeds.first!))
 		XCTAssertEqual(Set(articles.map(\.uniqueID)), ["111", "222"])
 	}
+
+	// MARK: - importAO3Links (result with counts and feed)
+
+	func testResultReportsRecognizedAndNewCountsAndFeed() async {
+		let result = await account.importAO3Links("https://archiveofourown.org/works/111 and https://archiveofourown.org/works/222")
+		XCTAssertEqual(result.recognizedCount, 2)
+		XCTAssertEqual(result.newCount, 2)
+		XCTAssertTrue(result.feed === account.existingFeed(withURL: Account.importedLinksFeedURL))
+	}
+
+	func testResultForAlreadyImportedLinkIsRecognizedButNotNew() async {
+		_ = await account.importAO3Links("https://archiveofourown.org/works/111")
+		let result = await account.importAO3Links("https://archiveofourown.org/works/111")
+		XCTAssertEqual(result.recognizedCount, 1)
+		XCTAssertEqual(result.newCount, 0)
+		XCTAssertNotNil(result.feed, "A repeat import still reports the feed the work lives in")
+	}
+
+	func testResultForTextWithNoLinksHasNoFeed() async {
+		let result = await account.importAO3Links("no links in here")
+		XCTAssertEqual(result.recognizedCount, 0)
+		XCTAssertEqual(result.newCount, 0)
+		XCTAssertNil(result.feed)
+	}
+
+	func testAccountRootAsExistingContainerLandsInTheSharedTopLevelFeed() async {
+		let result = await account.importAO3Links("https://archiveofourown.org/works/111", destination: .existingContainer(account))
+		XCTAssertEqual(result.newCount, 1)
+		XCTAssertTrue(result.feed === account.existingFeed(withURL: Account.importedLinksFeedURL))
+	}
 }
