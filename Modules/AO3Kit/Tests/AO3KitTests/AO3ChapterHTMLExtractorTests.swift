@@ -464,6 +464,28 @@ import Testing
 		#expect(result.contentHTML.components(separatedBy: "href='nectar-series:first?ao3id=1001'").count - 1 == 2)
 	}
 
+	@Test func worksInspiredByModuleSurvivesSerializationInAfterwordOrder() throws {
+		// Hand-built from AO3's source (see the comment in the fixture), not a captured
+		// page. Pins that the extractor ships div#children untouched, after the end
+		// notes and the series module, which is AO3's afterword order. Nectar builds no
+		// block for it; themes style AO3's own markup.
+		let html = htmlFixtureString("ao3-work-inspired-by.html")
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+		let endnotes = try #require(result.contentHTML.range(of: "id=\"work_endnotes\""))
+		let series = try #require(result.contentHTML.range(of: "id=\"series\""))
+		let children = try #require(result.contentHTML.range(of: "id=\"children\""))
+		#expect(endnotes.lowerBound < series.lowerBound)
+		#expect(series.lowerBound < children.lowerBound)
+		#expect(result.contentHTML.contains("Works inspired by this one:"))
+		#expect(result.contentHTML.contains("A Podfic"))
+		#expect(result.contentHTML.contains("[Restricted Work] by"))
+		#expect(result.contentHTML.contains("A work in an unrevealed collection"))
+	}
+
 	@Test func metaGroupCollectionsRowRenderedForSingleChapterWork() throws {
 		// This fixture's Work Header includes a Collections row -- the only
 		// one of the four fixtures that does. Confirms a row this app

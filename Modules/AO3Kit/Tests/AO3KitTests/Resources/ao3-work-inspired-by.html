@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><title>Hand-built fixture</title></head>
+<body>
+<!--
+  Hand-built from AO3's own source (otwcode/otwarchive: app/views/works/show.html.erb,
+  _work_approved_children.html.erb, works_helper.rb, config/locales/views/en.yml), not a captured
+  page. It is a minimal single-chapter work whose afterword holds end notes, the series module
+  and the "Works inspired by this one" module, in AO3's order. Used to pin that the extractor
+  ships #children untouched.
+-->
+<div id="workskin">
+  <div class="preface group">
+    <h2 class="title heading">Fixture Work</h2>
+    <h3 class="byline heading"><a rel="author" href="/users/fixture/pseuds/fixture">fixture</a></h3>
+  </div>
+  <div id="chapters" role="article">
+    <h3 class="landmark heading" id="work">Work Text:</h3>
+    <div class="userstuff"><p>Body text.</p></div>
+  </div>
+  <!--afterword-->
+  <div class="afterword preface group">
+    <!--work endnotes-->
+    <div id="work_endnotes" class="end notes module">
+      <h3 class="heading">Notes:</h3>
+      <blockquote class="userstuff"><p>An end note.</p></blockquote>
+    </div>
+    <!--/work endnotes-->
+    <!--series links, backwards and forwards-->
+    <div id="series" class="series module">
+      <h3 class="heading">Series this work belongs to:</h3>
+      <ul>
+        <li><span class="series"><span class="position">Part 1 of <a href="/series/4001">Fixture Series</a></span><span class="divider"> </span><a class="next" href="/works/4002">Next Work &#8594;</a></span></li>
+      </ul>
+    </div>
+    <!--/series links-->
+    <!--approved children-->
+    <div id="children" class="children module">
+      <h3 class="heading">Works inspired by this one:</h3>
+      <ul>
+        <li><a href="https://archiveofourown.org/works/5001">A Podfic</a> by <a rel="author" href="/users/podder/pseuds/podder">podder</a></li>
+        <li>[Restricted Work] by <a rel="author" href="/users/hidden/pseuds/hidden">hidden</a> (Log in to access.)</li>
+        <li>A work in an unrevealed collection</li>
+      </ul>
+    </div>
+    <!--/approved children-->
+  </div>
+  <!--/afterword-->
+</div>
+</body>
+</html>

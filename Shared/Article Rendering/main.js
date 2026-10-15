@@ -152,6 +152,28 @@ function styleLocalFootnotes() {
 	}
 }
 
+// Calibre/EPUB-converted content links across split files ("book_split_003.xhtml#endnotes").
+// When the target id is in this document, make it a plain same-document link. Only bare
+// *.xhtml#id hrefs (no scheme, no path) are touched; the link is left alone when the id is
+// not here, which keeps today's behavior.
+function localizeSplitFileLinks() {
+	for (const a of document.querySelectorAll("a[href*='.xhtml#']")) {
+		const match = /^[^:\/?#]+\.xhtml#(.+)$/i.exec(a.getAttribute("href"));
+		if (!match) {
+			continue;
+		}
+		let id;
+		try {
+			id = decodeURIComponent(match[1]);
+		} catch (e) {
+			continue;
+		}
+		if (document.getElementById(id)) {
+			a.setAttribute("href", "#" + match[1]);
+		}
+	}
+}
+
 // convert <img alt="📰" src="[...]" class="wp-smiley"> to a text node containing 📰
 function removeWpSmiley() {
 	for (const img of document.querySelectorAll("img.wp-smiley[alt]")) {
@@ -227,6 +249,24 @@ function removeFeedNameLink() {
 
 		// There's only ever one feed-name link per rendered page.
 		return;
+	}
+}
+
+// AO3's own "Series this work belongs to:" module opens plain browser links. Nectar's
+// #ao3SeriesFooter covers the same data with in-reader navigation, so hide AO3's copy, but
+// only when the footer exists (works stored before the footer existed lack it and keep
+// AO3's links as a fallback). An .afterword left empty is removed too, so themes that
+// border or pad .preface.group do not draw an empty box.
+function removeAO3SeriesModule() {
+	if (!document.getElementById("ao3SeriesFooter")) {
+		return;
+	}
+	for (const module of document.querySelectorAll("#workskin #series.series.module")) {
+		const afterword = module.parentElement;
+		module.remove();
+		if (afterword && afterword.classList.contains("afterword") && afterword.children.length === 0) {
+			afterword.remove();
+		}
 	}
 }
 
@@ -383,8 +423,10 @@ function processPage() {
 	runStep("constrainBodyRelativeIframes", constrainBodyRelativeIframes);
 	runStep("convertImgSrc", convertImgSrc);
 	runStep("flattenPreElements", flattenPreElements);
+	runStep("localizeSplitFileLinks", localizeSplitFileLinks);
 	runStep("styleLocalFootnotes", styleLocalFootnotes);
 	runStep("removeWpSmiley", removeWpSmiley);
+	runStep("removeAO3SeriesModule", removeAO3SeriesModule);
 	runStep("applyVersalCaps", applyVersalCaps);
 	runStep("applyChapterDividers", applyChapterDividers);
 	runStep("postRenderProcessing", postRenderProcessing);

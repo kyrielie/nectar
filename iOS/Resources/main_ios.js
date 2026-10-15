@@ -598,6 +598,18 @@ scrollToHeading = withEncodedArg(options => {
 	}
 });
 
+// Scrolls a same-document fragment link's target to the top of the viewport (same landing
+// as scrollToHeading). Returns whether the id exists so the native side can push Scroll
+// Back history only for real jumps and fall back to the old behavior otherwise.
+scrollToAnchor = withEncodedArg(options => {
+	const el = document.getElementById(options.id);
+	if (!el) {
+		return false;
+	}
+	el.scrollIntoView({ behavior: 'instant', block: 'start' });
+	return true;
+});
+
 // In-article scroll-back navigation. scrollToWindowY is the counterpart
 // WebViewController.scrollBack() calls to restore a position pushed onto
 // its scrollJumpHistory stack before a scrollToHeading/scrollToAnnotation

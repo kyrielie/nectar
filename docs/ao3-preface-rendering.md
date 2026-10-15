@@ -26,6 +26,28 @@ Ambrosia-sourced article's preface is either Ambrosia's own embedded HTML
 AO3's structure re-rendered through `AO3PrefaceRenderer` — `ArticleRenderer`
 never synthesizes a preface for an Ambrosia item.
 
+The "(See the end of the work for more notes.)" pointer (`p.jump`, `href="#work_endnotes"`)
+works for fetched works and for Calibre/Ambrosia content that has not been
+fetched yet. WebKit hands a bare fragment link to `decidePolicyFor` as an
+absolute URL equal to the article base URL plus the fragment, so
+`WebViewController.isSameDocumentFragmentNavigation` recognises it before the
+`disableArticleLinks` and http(s) branches, and `scrollToAnchor` (`main_ios.js`)
+scrolls to the id, with Scroll Back available (`reading-progress.md`). If the id
+is not in the page the link opens externally as before. Calibre links of the
+form `book_split_003.xhtml#endnotes` are rewritten to `#endnotes` at load by
+`localizeSplitFileLinks` (`main.js`), only for bare `.xhtml#id` hrefs whose id
+exists in the document; nothing stored is modified.
+
+AO3's own "Series this work belongs to:" module (`div#series.series.module`,
+shipped inside `#workskin`) duplicates Nectar's series UI and its links open in
+the browser, so `main.js` `removeAO3SeriesModule` removes it at render time,
+but only when `#ao3SeriesFooter` is present. Works fetched before the footer
+existed keep AO3's module as a fallback. An `.afterword` left empty by the
+removal is removed too. Stored content is not modified. AO3's "Works inspired
+by this one" module (`div#children.children.module`, last in the afterword) is
+left as AO3 wrote it; `AO3ChapterHTMLExtractorTests` pins that the extractor
+ships it (the fixture is hand-built from AO3's source, not captured).
+
 Each row of that shared markup is either bounded (renders inside the
 label-adjacent value column) or wide (`AO3PrefaceRow.isWide`, renders
 `class='wide'` on both `<dt>`/`<dd>`, spanning the preface's full width on
