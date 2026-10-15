@@ -7,6 +7,10 @@ this describes tooling that is not in this checkout (`buildscripts/theme-mockups
 `nnwtheme-format.md` so that document stays an authoring reference; to start a theme, read
 `creating-a-theme.md` first.
 
+**Note:** the 68px title-clearance rule referenced throughout this file is retired (the app
+now keeps the page below the notch cover; see `nnwtheme-format.md`, "Full-screen reading").
+The 68px measurements and the "clear" check below are history, not a current requirement.
+
 Quoted section names below that are not headings in this file ("License.md", "Ornaments: where they go", "Styleable blocks") are in `nnwtheme-format.md`.
 
 A mockup is a one-theme CSS preview of a fixed sample page, written against simplified

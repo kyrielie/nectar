@@ -10,8 +10,7 @@ License.md. Nothing is copied from the source Tumblr themes: they are read for t
 palette only, the layouts are reading layouts, and every bundle carries an "Inspired by" credit.
 
 Rules every bundle here follows (docs/nnwtheme-format.md):
-  * no running head; the first line of the title starts at 76px or lower (>= 68px required),
-    and the first painted element starts below the 62px notch cover;
+  * no running head and no top clearance padding: the app keeps the page below the notch cover;
   * --nnw-bg / --nnw-ink / --nnw-link are literal in :root and in the single dark :root block;
   * the @import is the first line; every font stack ends in a system fallback.
 """
@@ -79,8 +78,8 @@ img, figure, video, div, object {{ max-width: 100%; }}
 img, video {{ height: auto; }}
 .smallText{{font-size:14px}}.mediumText{{font-size:16px}}.largeText{{font-size:18px}}.xlargeText{{font-size:20px}}.xxlargeText{{font-size:22px}}
 
-/* structure: no running head; 76px above the title keeps it clear of the notch cover in full-screen reading */
-.t{{padding:76px var(--gx) 36px;color:var(--nnw-ink);font:calc(var(--u) * 15)/1.65 var(--fb);position:relative}}
+/* structure: no running head; the app keeps the page below the notch cover, so no top clearance is needed */
+.t{{padding:28px var(--gx) 36px;color:var(--nnw-ink);font:calc(var(--u) * 15)/1.65 var(--fb);position:relative}}
 .t h1{{margin:0;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 28 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.4));line-height:1.12}}
 .t h2.heading,.t h3.title{{margin:0 0 8px;font-family:var(--fh);font-weight:400;font-size:max(calc(var(--u) * 20 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 15)) * 1.2));line-height:1.2}}
 .t h3.heading{{margin:0 0 4px;font-family:var(--fh);font-weight:400;font-size:calc(var(--u) * 12)}}

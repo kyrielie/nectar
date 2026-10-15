@@ -362,6 +362,11 @@ def load_theme(path):
         problems.append('#bodyContainer must keep id="bodyContainer" and class "articleBody"')
     if not re.search(r"max-width:\s*100%", css):
         warnings.append("no 'max-width: 100%' media rule (overflow guard)")
+    # Retired rule: the app keeps the page below the notch cover in full-screen reading, so
+    # a theme needs no top clearance (docs/nnwtheme-format.md, "Full-screen reading").
+    if re.search(r"Full-screen clearance|html\s*\{\s*padding-top:\s*\d+px\s*\}", css):
+        warnings.append("leftover full-screen clearance rule (html padding-top); the app now keeps "
+                        "the page below the notch cover, so remove it")
     imports, css = split_imports(css)
     has_dark = bool(re.search(r"prefers-color-scheme\s*:\s*dark", css))
     lum = light_luminance(css)

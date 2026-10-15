@@ -21,7 +21,8 @@ For every `.nnwtheme` bundle under `--src` (default: `Themes/` and
 1. Validates the bundle against the constraints in `nnwtheme-format.md`
    (required `Info.plist` keys, `#bodyContainer`/`articleBody` in
    `template.html`, an overflow guard in the CSS) -- a validation failure
-   fails the build (`sys.exit(1)`), a missing overflow guard only warns.
+   fails the build (`sys.exit(1)`), a missing overflow guard only warns. A leftover full-screen clearance rule (`Full-screen clearance` comment or
+   `html{padding-top:Npx}`) also only warns; see `theme-fullscreen-audit.md`.
 2. Writes `dist/zips/<BundleStem>.nnwtheme.zip` (`<BundleStem>` is the bundle
    folder name without `.nnwtheme`, e.g. `Ink and Mist.nnwtheme.zip`). The zip
    contains exactly one top-level `<BundleStem>.nnwtheme` folder holding the

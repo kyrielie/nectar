@@ -35,7 +35,7 @@ img, video { height: auto; }
 :is(.notes.module,.end.notes.module)::before{content:"";display:block;width:4.5em;height:1px;margin:0 auto .9em;background:var(--nnw-ink);opacity:.55}
 :is(.notes.module,.end.notes.module) h3.heading{display:inline;margin:0 .5em 0 0;font:inherit;font-weight:700;font-variant:small-caps;letter-spacing:.18em}
 :is(.notes.module,.end.notes.module) blockquote.userstuff,:is(.notes.module,.end.notes.module) blockquote.userstuff p{display:inline}
-.t{padding:78px var(--gx) 26px;background:var(--nnw-bg);color:var(--nnw-ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
+.t{padding:26px var(--gx) 26px;background:var(--nnw-bg);color:var(--nnw-ink);font:calc(var(--u) * 15)/1.6 var(--fb);position:relative;overflow:hidden}
 .t h1{margin:0;font-family:var(--fh);font-weight:400}
 .t h2.heading, .t h3.title{margin:0;font-family:var(--fh);font-weight:400}
 .t h3.heading{margin:0;font-family:var(--fh);font-weight:400}

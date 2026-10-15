@@ -11,8 +11,8 @@ older bundles were converted), and the skills in `.claude/skills/` (`nnwtheme-bu
 | You want | Do this |
 |---|---|
 | The stock layout in a new palette (a port) | Add an entry to `buildscripts/theme-generation/generate_ported_themes.py` (shape A). See the porter skill. |
-| A new design | Copy a shape B bundle (`nnwtheme-format.md`, "Which templates to add"), with or without the running head; leave it out unless the design uses it. With the head, the 68px-above-the-title rule is met by arithmetic. Without it, the theme must supply that space itself. A shape A template is also fine as the base for an original design (Beacon); the versal and divider opt-ins in section 2 work with any shape. |
-| Custom markup for a real concept | Hand-build it (builder skill). You must supply the 68px above the title yourself and keep every name in section 2. |
+| A new design | Copy a shape B bundle (`nnwtheme-format.md`, "Which templates to add"), with or without the running head; leave it out unless the design uses it. The app keeps the page below the notch cover, so the theme adds no top spacing for it. A shape A template is also fine as the base for an original design (Beacon); the versal and divider opt-ins in section 2 work with any shape. |
+| Custom markup for a real concept | Hand-build it (builder skill). Keep every name in section 2; no notch spacing is needed. |
 
 ## 2. Names that must be exact
 
@@ -93,8 +93,8 @@ The gallery build fails on a missing required key. The app's loader is lenient a
 
 ## 5. Check on a device
 
-No test enforces these. In full-screen reading, confirm the first title line sits at least
-68px below the top edge, the notch cover matches the page color in light and dark, and the
+No test enforces these. In full-screen reading, confirm the first title line sits just
+below the notch cover (no extra gap), the notch cover matches the page color in light and dark, and the
 page counter is readable.
 
 ## 6. Share it

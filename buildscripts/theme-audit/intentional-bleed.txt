@@ -1,3 +1,0 @@
-# Bundles whose design deliberately starts under the full-screen notch cover (one name per line).
-# check_fullscreen_top.py reports these as BLEED instead of REVIEW. The title must still clear 68px.
-Watch Later
