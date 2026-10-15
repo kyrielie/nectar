@@ -89,6 +89,3 @@ p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;f
 	:root { --gx: 48px; --u: 1px; }
 	body { margin-top: 20px; margin-bottom: 64px; }
 }
-
-/* Full-screen clearance: in full-screen reading the page starts under the notch cover, so the title needs at least 68px above it (docs/nnwtheme-format.md). */
-html{padding-top:14px}

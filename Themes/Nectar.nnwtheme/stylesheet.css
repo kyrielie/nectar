@@ -14,7 +14,7 @@ pre,code{white-space:pre-wrap;word-wrap:break-word}
 .t h1 a,.t h1 a:visited,#bodyContainer dl.tags a,#bodyContainer dl.tags a:visited{color:inherit;text-decoration:none}
 #bodyContainer blockquote.userstuff{margin:0;padding:0;border:0}
 #bodyContainer blockquote.userstuff p{margin:0}
-.t{padding:66px var(--gx) 26px;background:var(--nnw-bg) var(--grain);color:var(--nnw-ink);font:calc(var(--u) * 16)/1.55 var(--fb);font-synthesis:none;font-kerning:normal;font-variant-ligatures:common-ligatures;position:relative;overflow:hidden}
+.t{padding:18px var(--gx) 26px;background:var(--nnw-bg) var(--grain);color:var(--nnw-ink);font:calc(var(--u) * 16)/1.55 var(--fb);font-synthesis:none;font-kerning:normal;font-variant-ligatures:common-ligatures;position:relative;overflow:hidden}
 .t h1,.t h2.heading,.t h3.title,.t h3.heading{margin:0;font-family:var(--fb);font-weight:400}
 .t h1{font-size:max(calc(var(--u) * 30 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 16)) * 1.4));line-height:.98;letter-spacing:.01em}
 .t h2.heading,.t h3.title{font-size:max(calc(var(--u) * 22 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 16)) * 1.2));line-height:1.15;text-align:center;margin-bottom:10px}

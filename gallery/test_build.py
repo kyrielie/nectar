@@ -456,5 +456,20 @@ class ShippedCorpus(unittest.TestCase):
         self.assertEqual(build.BUNDLED & gallery, set())
 
 
+class LeftoverClearanceWarning(unittest.TestCase):
+    def _warnings(self, css):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = make_bundle(Path(tmp), "Clearance", css=css)
+            return build.load_theme(path)[2]
+
+    def test_old_html_padding_rule_warns(self):
+        warns = self._warnings("body { color: #000; }\nhtml{padding-top:23px}\n")
+        self.assertTrue(any("clearance" in w for w in warns))
+
+    def test_clean_stylesheet_does_not_warn(self):
+        warns = self._warnings("body { color: #000; max-width: 100%; }\n")
+        self.assertFalse(any("clearance" in w for w in warns))
+
+
 if __name__ == "__main__":
     unittest.main()

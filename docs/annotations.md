@@ -598,20 +598,21 @@ base64-encode-the-JSON-argument convention (`getTableOfContents`/
 — self-contained rather than reused from `main_ios.js`, since this file is
 cross-platform and can't assume an iOS-only script ran first.
 
-**Fullscreen safe-area fix.** `textWasSelected(body:)` converts the
+**Fullscreen safe-area handling.** `textWasSelected(body:)` converts the
 selection rect JS reports into this view controller's coordinate space
 via `adjustedY = y + webView.safeAreaInsets.top`, read synchronously.
-While in fullscreen reading mode, `hideBars()` now calls
-`updateTopSafeAreaForFullScreen()` — a top-side mirror of the pre-existing
-`updateBottomSafeAreaForFullScreen()` — so this inset is correct
-synchronously rather than depending on the reactive
-`viewSafeAreaInsetsDidChange` path, which previously left it stale for a
-beat after entering fullscreen and could shift `HighlightColorPopover`'s
-`sourceRect` for a short selection entirely outside `view.bounds` (a
-longer selection's taller rect usually still overlapped `view.bounds`
-despite the same shift, which is why this specifically read as "single-word
-selections don't highlight in fullscreen"). `showBars()` resets
-`additionalSafeAreaInsets.top = 0`, symmetric with `.bottom`.
+Earlier builds called `updateTopSafeAreaForFullScreen()` from `hideBars()` to
+cancel the top inset synchronously, because the reactive
+`viewSafeAreaInsetsDidChange` path left the inset stale for a beat and could
+shift `HighlightColorPopover`'s `sourceRect` for a short selection entirely
+outside `view.bounds` (which read as "single-word selections don't highlight in
+fullscreen"). That function is removed: the top notch inset now stays in place so
+the page starts below the notch cover (`nnwtheme-format.md`, "Full-screen
+reading"). `hideBars()` and `showBars()` both assign
+`additionalSafeAreaInsets.top = 0` synchronously, so no cancelled value is left
+behind. Not yet re-checked on a device: select a single word right after entering
+fullscreen. If the popover misplaces, re-apply the inset from
+`viewSafeAreaInsetsDidChange` with a value-changed guard.
 `presentHighlightColorPopover` also now defensively clamps `sourceRect`
 to `view.bounds` via `CGRect.clamped(toBounds:)` (`Modules/RSCore`,
 `Geometry.swift`) before presenting, independent of the fix above —

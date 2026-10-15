@@ -243,12 +243,12 @@ final class WebViewController: UIViewController {
 		applyResolvedBackgroundColors()
 	}
 
-	// notchCoverView's height is the raw physical top inset. It can't be pinned to
-	// safeAreaLayoutGuide: hideBars() zeroes that guide via additionalSafeAreaInsets.top
-	// (so content flows under the notch), which would collapse the cover to 0pt for
-	// good. Subtracting additionalSafeAreaInsets.top recovers the raw inset, the same
-	// formula updateTopSafeAreaForFullScreen() uses. UIKit also calls this on the
-	// first safe-area establishment, so viewDidLoad needs no separate call.
+	// notchCoverView's height is the top safe-area inset. The top inset is no longer
+	// cancelled in full-screen reading (matching upstream NetNewsWire), so the page
+	// starts directly below the cover at scroll position 0 and themes need no
+	// clearance padding. additionalSafeAreaInsets.top is always 0 now; the subtraction
+	// is kept as a harmless guard. UIKit also calls this on the first safe-area
+	// establishment, so viewDidLoad needs no separate call.
 	override func viewSafeAreaInsetsDidChange() {
 		super.viewSafeAreaInsetsDidChange()
 		let rawTop = view.safeAreaInsets.top - additionalSafeAreaInsets.top
@@ -519,10 +519,12 @@ final class WebViewController: UIViewController {
 			// viewSafeAreaInsetsDidChange path; otherwise adjustedContentInset.bottom can stay
 			// stale for a beat and shift the visible scroll position.
 			updateBottomSafeAreaForFullScreen()
-			// Same, top side: a stale webView.safeAreaInsets.top (read in textWasSelected)
-			// shifts HighlightColorPopover's sourceRect away from the selection; see also the
-			// clamp in presentHighlightColorPopover.
-			updateTopSafeAreaForFullScreen()
+			// Top side: the notch inset is deliberately left in place so the page starts
+			// below notchCoverView (docs/nnwtheme-format.md, "Full-screen reading").
+			// Assigning 0 synchronously keeps webView.safeAreaInsets.top from carrying a
+			// stale cancelled value into textWasSelected; see also the clamp in
+			// presentHighlightColorPopover.
+			additionalSafeAreaInsets.top = 0
 			setBottomScrollEdgeEffectHidden(true)
 			configureContextMenuInteraction()
 			updateNotchAndPageCounterVisibility()
@@ -1158,7 +1160,7 @@ extension WebViewController {
 			// Defensive clamp: if sourceRect falls outside view.bounds (a short selection's
 			// small rect triggered this), UIPopoverPresentationController silently never
 			// presents. Clamping anchors at the nearest valid edge instead. Independent of
-			// updateTopSafeAreaForFullScreen().
+			// the full-screen top inset handling in hideBars().
 			presentationController.sourceRect = sourceRect.intersects(view.bounds)
 				? sourceRect
 				: sourceRect.clamped(toBounds: view.bounds)
@@ -2009,10 +2011,9 @@ private extension WebViewController {
 		notchCoverView.translatesAutoresizingMaskIntoConstraints = false
 		view.addSubview(notchCoverView)
 
-		// Deliberately not safeAreaLayoutGuide.topAnchor: hideBars() zeroes that guide via
-		// additionalSafeAreaInsets.top, which collapsed the cover to 0pt permanently once
-		// fullscreen engaged. A fixed height kept in sync with the raw inset in
-		// viewSafeAreaInsetsDidChange is immune.
+		// Deliberately not safeAreaLayoutGuide.topAnchor: a fixed height kept in sync with
+		// the top inset in viewSafeAreaInsetsDidChange is immune to the guide changing
+		// while the bars animate.
 		notchCoverViewHeightConstraint = notchCoverView.heightAnchor.constraint(equalToConstant: view.safeAreaInsets.top)
 		NSLayoutConstraint.activate([
 			notchCoverView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -2113,15 +2114,6 @@ private extension WebViewController {
 	func updateBottomSafeAreaForFullScreen() {
 		let rawBottom = view.safeAreaInsets.bottom - additionalSafeAreaInsets.bottom
 		additionalSafeAreaInsets.bottom = -rawBottom
-	}
-
-	/// Top-side counterpart of updateBottomSafeAreaForFullScreen(), called from hideBars().
-	/// Relying on the reactive viewSafeAreaInsetsDidChange path left webView.safeAreaInsets.top
-	/// stale for a beat, which textWasSelected(body:) reads to position the popover's
-	/// sourceRect. showBars() resets the top inset synchronously, as it does the bottom.
-	func updateTopSafeAreaForFullScreen() {
-		let rawTop = view.safeAreaInsets.top - additionalSafeAreaInsets.top
-		additionalSafeAreaInsets.top = -rawTop
 	}
 
 	/// Hides or shows the toolbar scroll edge effect at the bottom of the web view;

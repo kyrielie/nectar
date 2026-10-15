@@ -143,6 +143,13 @@ not enumerated file-by-file here since the directory-level grouping above is the
 actionable unit (an entire backend, not individual files, is what's either present
 or absent).
 
+## Deliberate behavior notes
+
+- **Full-screen top inset.** Upstream `hideBars()` cancels only the bottom safe-area inset.
+  Nectar once also cancelled the top inset; that was removed, so the top notch inset stays
+  and Nectar matches upstream here. Nectar adds `notchCoverView` on top of that. See
+  `nnwtheme-format.md`, "Full-screen reading".
+
 ## Nectar-original (no upstream counterpart)
 
 Files that are wholly new in Nectar -- new features, not modifications of

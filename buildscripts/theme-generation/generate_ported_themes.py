@@ -11,8 +11,8 @@
 # Powder Pink in gallery-themes/ and Midnight Blue in Themes/ carry edits beyond
 # this template (--nnw-* tokens, --u sizing), so regenerating them reverts those
 # edits; run it in a scratch copy of the repo and compare before using its output.
-# The committed bundles also carry a trailing `html{padding-top:Npx}` full-screen clearance rule
-# (docs/theme-fullscreen-audit.md) that this template does not emit; re-add it after regenerating.
+# The committed bundles no longer carry the old `html{padding-top:Npx}` full-screen clearance
+# rule (retired; the app keeps the page below the notch cover), so nothing needs re-adding.
 import os
 
 BASE_DIR = "Themes"

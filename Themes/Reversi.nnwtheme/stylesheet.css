@@ -74,11 +74,6 @@ a:focus {
 
 /* ---- Template head (shown only when the article has no AO3 #workskin) ---- */
 
-/* At least 68px above the title in full-screen reading (nnwtheme-format.md). */
-.rv {
-	padding-top: 68px;
-}
-
 .rvHead {
 	border-bottom: 1px solid var(--rv-rule);
 	margin-bottom: 1.5em;

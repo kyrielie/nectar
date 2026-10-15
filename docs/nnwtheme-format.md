@@ -47,7 +47,7 @@ Bundles shipped in `Themes/` or the gallery are held to every level.
 | `data-chapter-divider` with `-char` and `-class` | Optional, all three together | Nothing (no-ops if either is missing) | Chapter dividers |
 | `#nnwFooter` | Optional, custom templates only | Nothing | Styleable blocks |
 | Inline `<script>` | Forbidden | The real reader blocks it | Drop caps / versal treatments |
-| 68px above the title | Required | Docs only (no test, not audited for shapes A, C, D) | Full-screen reading |
+| Space above the title for the notch | Not needed (the app keeps the page below the notch cover) | Nothing | Full-screen reading |
 | `stylesheet.css` present | Required for shipped bundles | Build and tests. App falls back to the default if missing | `stylesheet.css` |
 | `img, figure, video, div, object { max-width: 100% }` | Required in practice | Test (`ArticleThemeOverflowSafetyTests`); build only warns | `stylesheet.css` |
 | `--nnw-bg`, `--nnw-ink`, `--nnw-link` as literals in `:root` and the dark `:root`; page color as `background-color` on `body` | Required for shipped bundles | Docs only | Color tokens and the page color |
@@ -139,8 +139,8 @@ date), the byline, the title link and every other header placeholder are design
 choices, not requirements. Do not add a running head, feed link, date or byline to a
 new theme unless the design calls for one. A theme may open with its own ornament
 (Nectar opens with a full-width frieze) or with the title alone. The only header-related
-requirement is the 68px of space above the title (see "Full-screen reading"), which the
-theme must supply itself when it has no running head.
+requirement is that the title is not clipped (see "Full-screen reading"); the app supplies the
+notch clearance, so a theme with no running head needs no extra top padding.
 
 #### Template shapes in `gallery-themes/`
 
@@ -185,12 +185,11 @@ review page, a mockup-to-bundle contract and a title-spacing check (see `theme-m
 templates are kept in these docs, and neither is the default: pick by what the design
 needs, and leave the running head out unless the design uses it.
 
-1. **B with the running head.** Written out below. Its running head clears the 68px
-   rule by arithmetic.
-2. **B without the header.** The same file with the `.rh` line deleted. The 68px above the
-   title has to come from the theme (padding on `.t`, or the height of an opening
-   ornament) because nothing else supplies it; 59 of the 65 mockups fell under 68px
-   without the band. Nectar is the example: its full-width frieze opens the page, `.t` has
+1. **B with the running head.** Written out below. Its running head is a design choice,
+   not a spacer.
+2. **B without the header.** The same file with the `.rh` line deleted. The app supplies the notch clearance, so the theme adds no top spacing for it (older bundles
+   that carry 66 to 76px of it are leftovers). The mockup measurements below date from when
+   the theme had to supply 68px. Nectar is the example: its full-width frieze opens the page, `.t` has
    18px of top padding, and the title measured 108px down in headless Chromium. That was
    measured in a browser, not on a device, so check it on a device.
 
@@ -220,11 +219,10 @@ Not added as starters:
   attributes only because it was not written to; add them to `#bodyContainer` as in
   "Chapter dividers" if the design wants them (Beacon does). Use A for a faithful port, or
   for an original design that wants the header table as its masthead; for the latter, check
-  the 68px rule on a device, since no audit covers it.
+  the top of the page on a device.
 - **C (custom wrapper).** The older six carry a legacy header bar and avatar. The newer
   seven (Craft Table, Didone Editorial, Four Nations, Illuminated Codex, Mid-century Jost,
-  Screenplay, Sticker Pop) are bespoke designs with no header and no checked 68px
-  clearance. Read them for a footer or an external-link line; do not copy their top
+  Screenplay, Sticker Pop) are bespoke designs with no header and no running head. Read them for a footer or an external-link line; do not copy their top
   spacing.
 - **D.** Broadsheet ships a live inline `<script>`, and the other two are one-off hand-built
   designs.
@@ -243,7 +241,7 @@ breaks every row here (see `theme-system.md`, "Two tiers").
 | `Name`, `ThemeIdentifier`, `CreatorHomePage`, `CreatorName`, `Version` in `Info.plist` | Required | `REQUIRED_KEYS` in `gallery/build.py` (fails the build) |
 | `#bodyContainer` with the `articleBody` class | Required | `gallery/build.py` regex (fails the build) |
 | `img, ... { max-width: 100% }` rule in the CSS | Required in practice | `build.py` only warns, but `ArticleThemeOverflowSafetyTests` fails on it |
-| At least 68px above the title | Required | Documentation only; no test |
+| Space above the title for the notch | Not needed | Nothing |
 | `Family`, `FamilyVariant`, `License.md` | Optional (`License.md` expected for ports) | Nothing |
 | `[[avatar_src]]` | Optional | Shape B omits it; `main.js` strips the image anyway |
 | `[[dateline_style]]`, `[[datetime_*]]`, `[[date_*]]` | Optional | Shape B uses only `[[date_medium]]` and `[[datetime_long]]` |
@@ -481,7 +479,7 @@ Liquid Glass Clear and Liquid Glass Aurora (`gallery-themes/`, family "Liquid Gl
 - **Custom properties.** `cssCustomProperties` collects every `--name: value;` in the non-dark CSS regardless of selector and lets later declarations win, so never redeclare `--nnw-*` outside `:root` and the dark block. Palette, glass and gradient variables are all in `:root` with dark overrides in the one dark media block.
 - **Blur and saturate only.** SVG filters inside `backdrop-filter` render in Chromium only, so none are used. Keep blur at 6px or more (Clear uses 6px, the rest 18px or more); Apple's Regular/Clear guidance and later user feedback both favor more opacity under text, so every glass theme carries a scrim or dim layer under the body text.
 - **One blurred layer per surface.** Only `.hd`, `.bd` and the two running-head capsules use `backdrop-filter`; the preface, summary, notes and chapter pills are flat tints.
-- **Unverified on device:** whether `backdrop-filter` in the real reader samples the `body` background correctly, the cost of a full-article-height `backdrop-filter` box, and the 68px title clearance (the running head keeps its 56px minimum plus 12px margin).
+- **Unverified on device:** whether `backdrop-filter` in the real reader samples the `body` background correctly, the cost of a full-article-height `backdrop-filter` box, and how the glass layout looks with the notch cover now that the page starts below it.
 - **Running head as capsules.** `.rh-feed` and `.rh-date` are separate glass pills (34px tall, centered in the 56px band); the feed pill ellipsizes long names.
 
 ## Styleable blocks
@@ -497,7 +495,7 @@ style it. Verified against `Shared/Article Rendering/template.html`,
 |---|---|---|---|
 | Page / body | `body`, `html` | template + `core.css` | `core.css` sets `html { scrollbar-gutter: stable }` and `html, body { overflow-x: hidden }`, so anything wider than the page is clipped, not scrolled. |
 | Header (feed name, byline, avatar) | `.headerContainer`, `.headerTable`, `.header`, `.feedlink`, `.avatar img`, `#nnwImageIcon` | template | Default header is a 68px-tall table. `main.js` runs `removeArticleIconAvatar()` at load, which removes every `img` whose `src` starts with `nnwimageicon:` (so the avatar `<img>` in a template never renders), and `removeFeedNameLink()`, which removes any `a[href]` with a non-empty href and empty text (what the feed-name anchor becomes when `showFeedNameInReaderView` is off). Neither depends on theme markup. See "Full-screen reading" below before shrinking or removing it. |
-| Title | `.articleTitle`, `.articleTitle h1`, `.articleTitle a` | template | Must stay clear of the notch in full-screen reading. |
+| Title | `.articleTitle`, `.articleTitle h1`, `.articleTitle a` | template | Not clipped by overflow or fixed height; the app keeps the page below the notch cover. |
 | Dateline | `.articleDateline` or `.articleDatelineTitle` | template (`[[dateline_style]]`) | Which class is used depends on whether the article has a title. |
 | External link | `.externalLink` | template | |
 | Body container | `#bodyContainer.articleBody` | template | Hard constraint: keep the id and the `articleBody` class. Everything below is inside it. |
@@ -566,51 +564,40 @@ Rules for any ornament:
 
 ## Full-screen reading: space above the title
 
-The default theme's structure leaves room above the title in full-screen
-reading; custom templates may not. What the code does (confirmed by reading
-`WebViewController`):
+Themes need no top clearance for full-screen reading. What the code does (confirmed by
+reading `WebViewController`):
 
-- `hideBars()` hides the navigation bar and toolbar and calls
-  `updateTopSafeAreaForFullScreen()`, which sets `additionalSafeAreaInsets.top`
-  to minus the raw top inset. The web view's content therefore starts at the
-  very top edge of the screen instead of below the status bar area.
-- `notchCoverView`, as tall as the raw top inset and filled with the article
+- `hideBars()` hides the navigation bar and toolbar and sets `additionalSafeAreaInsets.top`
+  to 0. The top safe-area inset (the notch or Dynamic Island footprint) is deliberately left
+  in place, as in upstream NetNewsWire, so the page starts directly below the notch area at
+  scroll position 0 and scrolls up past it as usual.
+- `notchCoverView`, as tall as the top safe-area inset and filled with the article
   background color, covers the notch area when notch hiding is on (it is forced
-  on whenever Page Counter is not Off).
+  on whenever Page Counter is not Off). Content scrolling up passes under it.
 - The cover's color is the theme's measured page color (`ArticleThemeColorStore`),
   which is `background-color` on `body`, else `html`; see `article-color-pipeline.md`.
-- No shared CSS compensates: `env(safe-area-inset-top)` appears in no
-  `core.css` or default `stylesheet.css` rule.
+- No shared CSS compensates and none is needed: `env(safe-area-inset-top)` appears in no
+  `core.css` or default `stylesheet.css` rule, and `page.html` has no `viewport-fit=cover`.
 
-What keeps the default theme safe is structure, not a rule: its header table
-(`.headerTable { height: 68px }`) sits above the title, so the title starts at
-least 68px down the page. A theme whose template puts the title first, or whose
-header is shorter than the device's top inset, starts the title inside that
-area. That is inferred from the code above, not reproduced on a device.
+History: earlier builds cancelled the top inset (`updateTopSafeAreaForFullScreen()`), which put
+page y=0 under the cover and forced every theme to add about 68px above the title. That
+function is gone. Bundles written under the old rule may still carry a trailing
+`html{padding-top:Npx}` "Full-screen clearance" rule, a `.t` or wrapper `padding-top` of 66 to
+76px, or a running head that was only there to supply the space; those are leftovers that now
+add blank space at the top of the page. Do not add them to a new theme. See
+`theme-fullscreen-audit.md` for the status of the cleanup.
 
 Requirements for every theme:
 
-1. At least **68px of space above the first line of the title** in the
-   theme's own markup and CSS (a header at least that tall, or equivalent
-   `padding-top`/`margin-top` on the topmost wrapper), including themes that hide
-   or drop the header.
-2. Do not rely on `env(safe-area-inset-top)` to supply it.
-3. Title elements must not use `overflow: hidden`, a fixed `height`, a
-   `line-height` under 1, or `white-space: nowrap` with `text-overflow`.
-   Ornaments on the title may not take the space away.
+1. Title elements must not use `overflow: hidden`, a fixed `height`, a `line-height` under 1,
+   or `white-space: nowrap` with `text-overflow`. Ornaments on the title may not take the
+   space away.
+2. Do not rely on `env(safe-area-inset-top)`; it is 0 in the reader.
 
-Verify on a device with a notch or Dynamic Island: turn on Page Counter (forces
-notch hiding), open a long-titled work, enter full-screen reading, scroll to
-the top, and confirm the whole title is visible. Audit status, by template shape (see
-"Custom template.html"). Shape B: the mockups were measured in headless Chromium (see
-`theme-mockups.md`, "Full-screen title check"), with the first title line 87px to 155px down
-with the running head. Conversion moves a title up to 12px (`10px` top padding instead of
-`22px`), so the converted bundles should clear 68px by that arithmetic; that is inferred,
-and neither the bundles nor the mockups have been checked on a device. Without the `.rh`
-band, 59 of the 65 mockups fell under 68px. Shapes A, C and D were measured later with
-`buildscripts/theme-audit/check_fullscreen_top.py` (results and the head decision in
-`theme-fullscreen-audit.md`); no test enforces this rule and the script is not run in CI. Shape A
-themes do not set a `.headerTable` height of their own.
+Verify on a device with a notch or Dynamic Island: turn on Page Counter (forces notch
+hiding), open a long-titled work, enter full-screen reading, scroll to the top, and confirm
+the whole title is visible and sits just below the cover. This was changed by reading code and
+has not yet been confirmed on a device.
 
 ## Theme mockups and mockup-to-bundle conversion
 
@@ -618,8 +605,8 @@ Moved to `theme-mockups.md`: the fixed sample page and layout order, the shared 
 the review page and full-screen title check, how to make a mockup, and the two conversion
 routes that produced the shape B bundles (with the mockup-to-bundle contract table). That
 material describes tooling that is not in this repo and part of it is history, so it no
-longer sits in the authoring reference. The one rule from it every author needs, 68px above
-the title, stays in "Full-screen reading: space above the title" above.
+longer sits in the authoring reference. The old 68px
+title-clearance rule it fed is retired; see "Full-screen reading: space above the title" above.
 
 ## Where a theme lives: `Themes/` vs `gallery-themes/`
 

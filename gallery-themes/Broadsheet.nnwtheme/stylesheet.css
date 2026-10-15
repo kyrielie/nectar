@@ -721,6 +721,3 @@ a.footnote:hover,
 .articleBody a {
 	color: var(--nnw-link);
 }
-
-/* Full-screen clearance: in full-screen reading the page starts under the notch cover, so the title needs at least 68px above it (docs/nnwtheme-format.md). */
-html{padding-top:48px}

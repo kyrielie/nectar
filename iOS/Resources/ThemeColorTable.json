@@ -45,7 +45,7 @@
       }
     },
     "High Contrast" : {
-      "key" : "7992ec13823b730fcee4bb537438d9f6b2f4ebba1a6c415bcae71e62e4070c11",
+      "key" : "75a74211ba145c108342bd9a253d9e10e97c7212ef5315ace8ca5491a7f8d9e9",
       "measurement" : {
         "hasDarkModeVariant" : true,
         "inkDark" : "#FFFFFF",
@@ -115,7 +115,7 @@
       }
     },
     "Reversi" : {
-      "key" : "fd7e424bf7436c1449b3c1a2a4bab94ff86c6cdc83981f9680b88e325b98b0aa",
+      "key" : "11cdb2d9223fb4087beee8ddfec15ba8ebc6f9704d73e5bc833daca6f3688183",
       "measurement" : {
         "hasDarkModeVariant" : false,
         "inkDark" : "#EEEEEE",
