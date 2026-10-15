@@ -167,12 +167,17 @@ hr {
 	margin: 0 1em 0 0;
 }
 
-/* Each short label/value pair is one unbreakable unit; a zero-width space
-   after it (generated content, so annotations ignore it) is the only place
-   the line may wrap. Without it the browser splits "2026-01-01" mid-value. */
+/* Each short value stays on one line when it fits, so the browser does not split
+   "2026-01-01" mid-value. It is an inline-block that shrinks to the line (max-width),
+   not `white-space: nowrap`: nowrap made "No Archive Warnings Apply" unbreakable, and at
+   the largest accessibility text size it was wider than the screen (ArticleThemeCheckMatrixTests
+   reported body scrollWidth 1154 on a 390 wide page). A zero-width space after it
+   (generated content, so annotations ignore it) marks where lines may wrap. */
 .rv #ao3Preface dd:not(.wide),
 .rv #ao3SyntheticPreface dd:not(.wide) {
-	white-space: nowrap;
+	display: inline-block;
+	max-width: 100%;
+	vertical-align: top;
 }
 
 .rv #ao3Preface dd:not(.wide)::after,
