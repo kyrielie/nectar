@@ -190,6 +190,45 @@ struct ArticleThemeColorStoreTests {
 		#expect(ThemeColorStoreCore.bundledMeasurements(from: Data("junk".utf8)).isEmpty)
 	}
 
+	@Test func bundledTableGeneratedAgainstAnotherCoreCSSIsNotTrusted() async {
+		let bundled = ["k": measurement(page: "#B00001")]
+		let core = ThemeColorStoreCore(fileURL: nil, bundledLoader: { bundled }, bundledCoreCSSHashLoader: { "table-hash" })
+
+		// No environment yet, so the hash cannot be compared and the table is used.
+		#expect(core.measurement(forKey: "k")?.pageLight == "#B00001")
+
+		core.setEnvironment(await environment(coreHash: "different-hash"))
+		#expect(core.measurement(forKey: "k") == nil)
+
+		core.setEnvironment(await environment(coreHash: "table-hash"))
+		#expect(core.measurement(forKey: "k")?.pageLight == "#B00001")
+	}
+
+	@Test func bundledCoreCSSHashIsReadFromTheTable() throws {
+		let table = ThemeColorBundledTable(probeVersion: 1, coreCSSHash: "h", themes: [:])
+		#expect(ThemeColorStoreCore.bundledCoreCSSHash(from: try JSONEncoder().encode(table)) == "h")
+		#expect(ThemeColorStoreCore.bundledCoreCSSHash(from: Data("junk".utf8)) == nil)
+	}
+
+	@Test func writesLandInTheOrderTheyWereRequested() async throws {
+		let file = tempFile()
+		defer { try? FileManager.default.removeItem(at: file) }
+		let core = ThemeColorStoreCore(fileURL: file, bundledLoader: nil)
+		for index in 0..<25 {
+			core.store(measurement(page: String(format: "#%06X", index)), forKey: "k\(index)")
+		}
+		// The last write holds every entry, so none of the earlier snapshots overwrote it.
+		var count = 0
+		for _ in 0..<60 {
+			if let data = try? Data(contentsOf: file), let envelope = try? JSONDecoder().decode(ThemeColorCacheEnvelope.self, from: data) {
+				count = envelope.entries.count
+				if count == 25 { break }
+			}
+			try await Task.sleep(nanoseconds: 50_000_000)
+		}
+		#expect(count == 25)
+	}
+
 	@Test func measurementConvertsToThemeColors() throws {
 		let colors = try #require(ArticleThemeColorStore.themeColors(from: measurement(page: "#FFFFFF")))
 		#expect(colors.hasDarkModeVariant)

@@ -38,10 +38,14 @@ Application Support Themes folder (imported) contains:
   license status (e.g. NewsFax, Ember). Nothing in Swift reads it; format and
   expected contents are in `nnwtheme-format.md`.
 
-Nectar ships these themes in `Themes/`: the eight NetNewsWire-origin themes
-(Appanoose, Biblioteca, Hyperlegible, NewsFax, Promenade, Sepia, Tiqoe Dark,
-Verdana Revival) plus six Nectar customs (Black & White, Duskbloom, Ember,
-Powder Pink, Tumblr Blue, Vintage Letter Green). Only `Themes/` is copied into
+Nectar ships ten themes in `Themes/`: System, Reversi, Duskbloom, Midnight Blue,
+OLED Black, Night Amber, Solarized, Dark Academia, Nectar and High Contrast
+(`gallery/build.py`'s `BUNDLED` set must equal this list; `gallery/test_build.py`
+checks it). The eight NetNewsWire-origin themes (Appanoose, Biblioteca,
+Hyperlegible, NewsFax, Promenade, Sepia, Tiqoe Dark, Verdana Revival) and the
+other earlier customs are gallery-only now. The fresh-install theme is the
+built-in `Default` (`ArticleThemesManager.defaultThemeName`), which has the same
+design as the bundled System theme. Only `Themes/` is copied into
 the app bundle (`project.yml`). Every other authored theme lives in
 `gallery-themes/`, is not in the app, and is published only on the theme
 gallery (`gallery/build.py`), from which a person installs them via the
@@ -53,7 +57,7 @@ structural CSS/HTML template with per-theme palette and font data. Its theme
 table covers 13 entries (the Rosé Pine Moon/Dawn ports, the ZerafinaCSS "neos"
 recolors Black & White, Charcoal Rose, Dusky Purple, Midnight Teal, Powder Pink
 and Tumblr Blue, Constellations, Dracula, Moonlit Wisteria, Pastel Whimsy and
-Poudre et Plume), and only three of those are in `SHIPPED` (so written to
+Poudre et Plume), and only one of those (Midnight Blue) is in `SHIPPED` (so written to
 `Themes/`); the rest go to `gallery-themes/`. Everything it emits uses the
 NetNewsWire header-table template shape ("shape A" in `nnwtheme-format.md`).
 Beacon, Beetlejuice, Mystery, Perseus, Pinerose, Rosé Pine, and Twilight use that
@@ -167,6 +171,20 @@ replaces or deletes an installed theme. `ArticleThemeImporter.importTheme` also
 validates before it reads the bundle for the install alert, and offers "Show
 Website" only when `CreatorHomePage` is an http or https address.
 `deleteTheme(themeName:)` removes an installed bundle by resolved path.
+
+**Built-in names are reserved.** Lookups prefer the app bundle, so an installed
+theme named like a bundled theme (or `Default`) could never be selected.
+`isBuiltInThemeName(_:)` / `isBuiltInThemeFilename(_:)` report those names;
+`importTheme(filename:)` throws `ArticleThemesManagerError.nameReservedByBuiltInTheme`
+for one, `ArticleThemeImporter` throws it before showing the install alert, and
+backup restore skips such a theme (see `backup-restore.md`).
+
+**Load cache.** `articleThemeWithThemeName(_:)` keeps each loaded theme in memory,
+keyed by bundle path, and reuses it while the modification date and size of
+`Info.plist`, `stylesheet.css` and `template.html` are unchanged. Loading otherwise
+reads three files and hashes two, and the theme picker asks for every theme on
+every render. A changed, added or removed file gives a new fingerprint and a
+fresh load.
 
 ## Third-party theme download and import
 
@@ -360,13 +378,34 @@ theme's own specificity/declaration order — every declaration is
   on) always wins over an inherited `body` rule regardless of `!important` —
   targeting only `body` would silently fail to override `line-height`
   specifically while still working for font/color.
+- **Fonts.** The override pickers offer only the short list in
+  `ArticleThemeOverrides.FontChoice.all`: fonts iOS provides to web content (Avenir
+  Next, Charter, Georgia, Helvetica Neue, Iowan Old Style, New York, Palatino, Times
+  New Roman) and the system font (`-apple-system`, shown as San Francisco). Any other
+  font is a theme's job, since a theme can load any font with `@import`. Each choice
+  carries a full fallback stack, so a missing font degrades to something close. The
+  persisted value is the choice's `id`, unchanged from earlier versions. The Books-only
+  fonts earlier versions offered (Athelas, Canela, Proxima Nova, Publico, Seravek) are
+  not available to WebKit; a preference naming one, or any other unlisted name, emits
+  nothing, and the settings screen shows that font toggle off. The system font keyword
+  is written unquoted, because a quoted `-apple-system` is a family name lookup, not
+  the system font.
+- **Validation.** `cssOverrideBlock` interpolates persisted values, including ones
+  restored from a backup, so it only emits colors that are `#` plus 3, 4, 6 or 8 hex
+  digits and clamps every number to its `*Range`; anything else counts as unset. An
+  invalid dark color falls back to the light color.
+- **Justify.** Alignment is set on text blocks inside `#workskin` (`p`, `li`,
+  `blockquote`, `dd`), not on every descendant, and skips elements the author aligned
+  on purpose (an `align` attribute, a `center`/`centre`/`centered` class, or an inline
+  `text-align`), so the setting never moves centered dividers or poems. Hyphenation
+  still goes on every descendant. The cost: a paragraph with an inline `text-align`
+  keeps the author's alignment even when the override is on.
 - Chrome-text font overrides use a **hand-maintained allowlist** of
   selectors (`chromeSelectors`) rather than a generic mechanism, because
-  chrome class names aren't standardized across bundled themes (the default
-  theme uses `.feedlink`/`.articleDateline`/etc.; Vintage Letter Green uses
-  its own `.letter-*` classes). This is a known-fragile part of the design;
-  a shared `--font-main`/`--font-body` CSS variable convention across all
-  themes would remove the need for it, but doesn't exist yet.
+  chrome class names aren't standardized across themes (the default
+  template uses `.feedlink`/`.articleDateline`/etc.; Vintage Letter Green, now
+  gallery-only, uses its own `.letter-*` classes). This is a known-fragile part of
+  the design; themes that read `--nnw-font-chrome` do not depend on it.
 - `justifyText`/`hyphenate` explicit-`false` states are real "off" states
   (emitting `text-align: left` / `hyphens: none`), not just "don't add" —
   needed because some themes justify or hyphenate natively and an override
@@ -398,7 +437,8 @@ theme's own specificity/declaration order — every declaration is
   header, preface and series links are never recolored. The dark rule sets only
   `color`.
 - **Chrome font.** `chromeSelectors` stays for the NetNewsWire-origin bundles
-  and Vintage Letter Green; tokenized themes read `--nnw-font-chrome` themselves.
+  and Vintage Letter Green (both now installable from the gallery rather than bundled);
+  tokenized themes read `--nnw-font-chrome` themselves.
 
 ## Page composer and sample content
 

@@ -81,6 +81,28 @@ the JSON. A new file under `iOS/` is bundled by the next project generation
 (`project.yml` bundles everything under `iOS`); `tableIsBundledAndDecodes` is the
 check that this actually happened.
 
+### Regenerating step by step
+
+1. `xcodegen generate` if `NetNewsWire.xcodeproj` is missing or older than `project.yml`
+   (the project is generated; see `project.yml`).
+2. Run the `xcodebuild` command above. The suite hosts a simulator `WKWebView` and
+   takes a few minutes for a full set of themes. Look for `Wrote N themes to ...` in the
+   output, where N is the number of `Themes/` bundles plus one for Default.
+3. Confirm `iOS/Resources/ThemeColorTable.json` exists and `git diff` shows only that
+   file. If the test failed, nothing was written: the failure message names the theme
+   that did not pass the probe's sanity check.
+4. `xcodegen generate` again so the new file is part of the app target.
+5. Run `ThemeColorTableGuardTests` (add
+   `-only-testing:Nectar-iOSTests/ThemeColorTableGuardTests` to the same command
+   without the environment variable), then commit the JSON.
+
+From the Xcode UI instead: select the Nectar-iOS scheme, open the test navigator, run
+`ThemeColorTableGeneratorTests` > `regenerateTable`, and give the test process
+`REGENERATE_THEME_COLOR_TABLE=1` as an environment variable in the scheme's Test action
+(or in the active test plan's configuration, if the scheme uses one). The `TEST_RUNNER_`
+prefix is only for `xcodebuild`. Remove the variable afterwards, or the test rewrites the
+file on every run.
+
 ### When to bump `ArticleThemeColorProbe.version`
 
 Only when the probe's own logic changes (what it reads, how it normalizes, the

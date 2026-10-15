@@ -123,26 +123,54 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 	public static let marginHorizontalRange: ClosedRange<Double> = 0...80
 	public static let marginTopRange: ClosedRange<Double> = 0...80
 
+	/// A font the override pickers offer. The list is deliberately short and limited to
+	/// fonts iOS itself provides to web content (plus the system-font keywords). Any other
+	/// font is a theme's job: themes can load whatever they like with `@import`, and a
+	/// person who wants one picks a theme that uses it. Fonts Apple licenses only for the
+	/// Books app (Athelas, Canela, Proxima Nova, Publico, Seravek) are not available to
+	/// WebKit and were removed from the list.
+	///
+	/// `id` is the value persisted in `serifFontFamilyName`/`sansFontFamilyName`. The
+	/// values match what earlier versions stored, so existing preferences keep working.
+	/// `cssStack` is the complete, already-valid `font-family` value, with fallbacks so a
+	/// missing font degrades to something close instead of the browser default.
+	public struct FontChoice: Equatable, Sendable, Identifiable {
+		public let id: String
+		public let displayName: String
+		public let cssStack: String
+
+		/// The fonts offered, in display order. The same list serves the prose (serif) and
+		/// chrome (sans) pickers.
+		public static let all: [FontChoice] = [
+			FontChoice(id: "Avenir Next", displayName: "Avenir Next", cssStack: "\"Avenir Next\", \"Helvetica Neue\", sans-serif"),
+			FontChoice(id: "Charter", displayName: "Charter", cssStack: "Charter, Georgia, serif"),
+			FontChoice(id: "Georgia", displayName: "Georgia", cssStack: "Georgia, \"Times New Roman\", serif"),
+			FontChoice(id: "Helvetica Neue", displayName: "Helvetica Neue", cssStack: "\"Helvetica Neue\", Helvetica, Arial, sans-serif"),
+			FontChoice(id: "Iowan Old Style", displayName: "Iowan", cssStack: "\"Iowan Old Style\", Palatino, Georgia, serif"),
+			FontChoice(id: "New York", displayName: "New York", cssStack: "ui-serif, \"New York\", Georgia, serif"),
+			FontChoice(id: "Palatino", displayName: "Palatino", cssStack: "Palatino, \"Palatino Linotype\", Georgia, serif"),
+			FontChoice(id: "-apple-system", displayName: "San Francisco", cssStack: "-apple-system, system-ui, \"Helvetica Neue\", sans-serif"),
+			FontChoice(id: "Times New Roman", displayName: "Times New Roman", cssStack: "\"Times New Roman\", Times, serif")
+		]
+
+		/// The choice for a persisted name, or nil for a name that is not offered (an old
+		/// Books-only font, or a value that did not come from the picker).
+		public static func choice(forStoredName name: String?) -> FontChoice? {
+			guard let name else {
+				return nil
+			}
+			return all.first { $0.id == name }
+		}
+	}
+
 	/// Hand-maintained allowlist of chrome-text selectors, because class names for
-	/// chrome aren't standardized across the bundled themes: the default theme uses
-	/// `.headerContainer`/`.header`/`.feedlink`/`.articleDateline`/
-	/// `.articleDatelineTitle`, Vintage Letter Green uses
-	/// `.letter-header`/`.letter-byline`/`.letter-source`/`.letter-dateline`. Verified
-	/// directly against `Shared/Article Rendering/template.html` and
-	/// `Themes/Vintage Letter Green.nnwtheme/template.html` -- an earlier, unverified
-	/// draft of this allowlist included `.headerBar`/`.datelineBar`/`.masthead`/
-	/// `.editionLine`/`#nnwFooter`/`.footer`, none of which exist in the default
-	/// template (the first two are real only inside some hand-written themes' own
-	/// bundles; the default template has no footer element at all). This pass scopes
-	/// the chrome-font override to the default theme plus the one other bundled theme
-	/// with genuinely custom chrome class names; it is not a general mechanism for
-	/// every theme's own bespoke chrome, which is the known fragile part of this
-	/// design -- a future retrofit of all bundled themes to a shared `--font-main`/
-	/// `--font-body` CSS variable convention would remove the need for an allowlist
-	/// entirely, but no such convention currently exists across themes (confirmed:
-	/// Hyperlegible hardcodes its font per-selector with no variable at all;
-	/// Biblioteca uses its own `--font-sans`/`--font-serif`/`--font-mono` names, not
-	/// shared with any other theme) -- that retrofit is separate, larger scope.
+	/// chrome aren't standardized across themes. `.headerContainer`, `.header`,
+	/// `.feedlink`, `.articleDateline` and `.articleDatelineTitle` are the default
+	/// template's chrome (the `System` theme and the generated header-table themes use
+	/// them); the `.letter-*` names belong to Vintage Letter Green, which now ships
+	/// only through the gallery but can be installed. Themes that read
+	/// `--nnw-font-chrome` do not depend on this list. It is not a general mechanism for
+	/// every theme's own bespoke chrome, which is the known fragile part of this design.
 	private static let chromeSelectors = """
 	.headerContainer, .header, .feedlink, .articleDateline, .articleDatelineTitle, \
 	.letter-header, .letter-byline, .letter-source, .letter-dateline
@@ -168,6 +196,30 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 	/// appearance changes without any Swift-side trait-collection plumbing.
 	public var cssOverrideBlock: String { cssOverrideBlock(themeCSS: nil) }
 
+	/// Text blocks inside the AO3 work skin that justify/ragged-right applies to, minus
+	/// anything the author aligned deliberately.
+	private static let workskinTextBlockSelectors: String = {
+		let exclusions = ":not([align]):not(.center):not(.centre):not(.centered):not([style*=\"text-align\"])"
+		return ["p", "li", "blockquote", "dd"]
+			.map { "#bodyContainer #workskin \($0)\(exclusions)" }
+			.joined(separator: ",\n")
+	}()
+
+	private static func clamped(_ value: Double?, to range: ClosedRange<Double>) -> Double? {
+		guard let value, value.isFinite else {
+			return nil
+		}
+		return min(max(value, range.lowerBound), range.upperBound)
+	}
+
+	/// The string when it is a `#` followed by 3, 4, 6 or 8 hex digits, otherwise nil.
+	private static func validHex(_ hex: String?) -> String? {
+		guard let hex, hex.range(of: #"^#([0-9A-Fa-f]{3,4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$"#, options: .regularExpression) != nil else {
+			return nil
+		}
+		return hex
+	}
+
 	/// True when the theme declares its own `--gx` horizontal inset variable (shape B and
 	/// the migrated Nectar bundles). Such a theme gets the horizontal-margin override as
 	/// `--gx`; one without it (the NetNewsWire-origin bundles) gets it as `body` padding.
@@ -190,6 +242,25 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		guard !isEmpty else { return "" }
 		let usesInset = Self.usesInsetVariable(themeCSS)
 
+		// Everything interpolated below is checked first, because these values come from
+		// persisted preferences (including a restored backup) and go into CSS verbatim.
+		// Fonts must be one of `FontChoice.all`; colors must be `#` hex; numbers are
+		// clamped to the slider ranges. Anything else is treated as not set.
+		let serifStack = FontChoice.choice(forStoredName: serifFontFamilyName)?.cssStack
+		let sansStack = FontChoice.choice(forStoredName: sansFontFamilyName)?.cssStack
+		let fontSize = Self.clamped(self.fontSize, to: Self.fontSizeRange)
+		let lineHeight = Self.clamped(self.lineHeight, to: Self.lineHeightRange)
+		let paragraphSpacing = Self.clamped(self.paragraphSpacing, to: Self.paragraphSpacingRange)
+		let paragraphIndent = Self.clamped(self.paragraphIndent, to: Self.paragraphIndentRange)
+		let marginHorizontal = Self.clamped(self.marginHorizontal, to: Self.marginHorizontalRange)
+		let marginTop = Self.clamped(self.marginTop, to: Self.marginTopRange)
+		let textColorHex = Self.validHex(self.textColorHex)
+		let textColorDarkHex = Self.validHex(self.textColorDarkHex)
+		let backgroundColorHex = Self.validHex(self.backgroundColorHex)
+		let backgroundColorDarkHex = Self.validHex(self.backgroundColorDarkHex)
+		let linkColorHex = Self.validHex(self.linkColorHex)
+		let linkColorDarkHex = Self.validHex(self.linkColorDarkHex)
+
 		var css = ""
 
 		// Variable block. Tokenized themes read these (see nnwtheme-format.md); the
@@ -208,8 +279,8 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		if let linkColorHex {
 			rootDeclarations.append("--nnw-link: \(linkColorHex) !important;")
 		}
-		if let sansFontFamilyName {
-			rootDeclarations.append("--nnw-font-chrome: \"\(sansFontFamilyName)\" !important;")
+		if let sansStack {
+			rootDeclarations.append("--nnw-font-chrome: \(sansStack) !important;")
 		}
 		if usesInset, let marginHorizontal {
 			rootDeclarations.append("--gx: \(marginHorizontal)px !important;")
@@ -219,8 +290,8 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		}
 
 		var bodyDeclarations = [String]()
-		if let serifFontFamilyName {
-			bodyDeclarations.append("font-family: \"\(serifFontFamilyName)\" !important;")
+		if let serifStack {
+			bodyDeclarations.append("font-family: \(serifStack) !important;")
 		}
 		if let fontSize {
 			bodyDeclarations.append("font-size: \(fontSize)px !important;")
@@ -240,8 +311,8 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		}
 
 		var chromeDeclarations = [String]()
-		if let sansFontFamilyName {
-			chromeDeclarations.append("font-family: \"\(sansFontFamilyName)\" !important;")
+		if let sansStack {
+			chromeDeclarations.append("font-family: \(sansStack) !important;")
 		}
 		if !chromeDeclarations.isEmpty {
 			css += "\(Self.chromeSelectors) {\n\t\(chromeDeclarations.joined(separator: "\n\t"))\n}\n"
@@ -258,38 +329,51 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 			css += ".articleBody p {\n\t\(paragraphDeclarations.joined(separator: "\n\t"))\n}\n"
 		}
 
-		var articleBodyDeclarations = [String]()
+		// Alignment and hyphenation are separate lists because they reach the work skin
+		// differently (see below).
+		var alignmentDeclarations = [String]()
+		var hyphenDeclarations = [String]()
 		if justifyText == true {
-			articleBodyDeclarations.append("text-align: justify !important;")
+			alignmentDeclarations.append("text-align: justify !important;")
 		} else if justifyText == false {
 			// Explicit off beats any theme (bundled or imported) whose own stylesheet.css
 			// sets text-align: justify directly on .articleBody -- without this, "off"
 			// only ever meant "don't add justify," never "remove it," so a theme that
 			// justifies natively couldn't be overridden to ragged-right at all.
-			articleBodyDeclarations.append("text-align: left !important;")
+			alignmentDeclarations.append("text-align: left !important;")
 		}
 		if hyphenate == true {
-			articleBodyDeclarations.append("hyphens: auto !important;")
-			articleBodyDeclarations.append("-webkit-hyphens: auto !important;")
+			hyphenDeclarations.append("hyphens: auto !important;")
+			hyphenDeclarations.append("-webkit-hyphens: auto !important;")
 		} else if hyphenate == false {
 			// Explicit off beats stylesheet.css's iOS-only @supports block, which
 			// hardcodes -webkit-hyphens: auto unconditionally for the default theme
 			// (see Shared/Article Rendering/stylesheet.css) -- an override the person
 			// never touched shouldn't silently re-enable hyphenation for them.
-			articleBodyDeclarations.append("hyphens: none !important;")
-			articleBodyDeclarations.append("-webkit-hyphens: none !important;")
+			hyphenDeclarations.append("hyphens: none !important;")
+			hyphenDeclarations.append("-webkit-hyphens: none !important;")
 		}
+		let articleBodyDeclarations = alignmentDeclarations + hyphenDeclarations
 		if !articleBodyDeclarations.isEmpty {
 			css += ".articleBody {\n\t\(articleBodyDeclarations.joined(separator: "\n\t"))\n}\n"
-			// #workskin content sits inside #bodyContainer (see template.html) and
-			// AO3 work skins are commonly authored with their own !important
-			// text-align/hyphens rules scoped under #workskin -- a single-ID
-			// selector like that beats a plain .articleBody rule even when both
-			// sides use !important, because ID specificity outranks class
-			// specificity regardless of source order. #bodyContainer #workskin
-			// uses two IDs, which outranks any #workskin .foo rule no matter how
-			// many classes it chains.
-			css += "#bodyContainer #workskin, #bodyContainer #workskin * {\n\t\(articleBodyDeclarations.joined(separator: "\n\t"))\n}\n"
+		}
+		// #workskin content sits inside #bodyContainer (see template.html) and AO3 work
+		// skins are commonly authored with their own !important text-align/hyphens rules
+		// scoped under #workskin -- a single-ID selector like that beats a plain
+		// .articleBody rule even when both sides use !important, because ID specificity
+		// outranks class specificity regardless of source order. #bodyContainer #workskin
+		// uses two IDs, which outranks any #workskin .foo rule no matter how many classes
+		// it chains.
+		//
+		// Hyphenation is inherited and harmless, so it goes on every descendant. Alignment
+		// goes only on text blocks, and skips anything the author centered or aligned on
+		// purpose (the `align` attribute, a center class, an inline text-align), so turning
+		// justify on or off never moves centered dividers, poems or headings.
+		if !hyphenDeclarations.isEmpty {
+			css += "#bodyContainer #workskin, #bodyContainer #workskin * {\n\t\(hyphenDeclarations.joined(separator: "\n\t"))\n}\n"
+		}
+		if !alignmentDeclarations.isEmpty {
+			css += "\(Self.workskinTextBlockSelectors) {\n\t\(alignmentDeclarations.joined(separator: "\n\t"))\n}\n"
 		}
 
 		if let linkColorHex {
