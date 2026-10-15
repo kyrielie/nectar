@@ -407,7 +407,14 @@ private extension LocalAccountDelegate {
 		if isAO3ListingURL {
 			feedURLString = url.absoluteString
 		} else {
-			let feedSpecifiers = try await FeedFinder.find(url: url)
+			// Surface the account layer's own not-found error so callers (the Add AO3 Feed
+			// sheet) have a single case to present with its recovery suggestion.
+			let feedSpecifiers: Set<FeedSpecifier>
+			do {
+				feedSpecifiers = try await FeedFinder.find(url: url)
+			} catch FeedFinderError.feedNotFound {
+				throw AccountError.createErrorNotFound
+			}
 			guard let bestFeedSpecifier = FeedSpecifier.bestFeed(in: feedSpecifiers) else {
 				throw AccountError.createErrorNotFound
 			}

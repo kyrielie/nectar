@@ -6,10 +6,10 @@
 <title>Anatomy of a rendered Nectar theme</title>
 <style>
 :root{--bg:#f4f1ea;--card:#fff;--ink:#23201b;--mute:#6b645a;--line:#ddd5c6;
---tpl:#1b6fb5;--gen:#b36b00;--opt:#2f7d4f;--req:#b3261e;--page:#fbf9f4;--pink:#23201b;
+--tpl:#1b6fb5;--gen:#b36b00;--opt:#2f7d4f;--req:#b3261e;--page:#fbf9f4;--lnk:#1a5e9a;--pl:#b9ae96;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121110;--card:#1d1b18;--ink:#ece6da;--mute:#a39b8c;--line:#3a352c;--tpl:#6db3f2;--gen:#ffb74d;--opt:#7ddba0;--req:#ff8a80;--page:#17150f}}
-:root[data-theme="dark"]{--bg:#121110;--card:#1d1b18;--ink:#ece6da;--mute:#a39b8c;--line:#3a352c;--tpl:#6db3f2;--gen:#ffb74d;--opt:#7ddba0;--req:#ff8a80;--page:#17150f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121110;--card:#1d1b18;--ink:#ece6da;--mute:#a39b8c;--line:#3a352c;--tpl:#6db3f2;--gen:#ffb74d;--opt:#7ddba0;--req:#ff8a80;--page:#17150f;--lnk:#7fb8ee;--pl:#5a5242}}
+:root[data-theme="dark"]{--bg:#121110;--card:#1d1b18;--ink:#ece6da;--mute:#a39b8c;--line:#3a352c;--tpl:#6db3f2;--gen:#ffb74d;--opt:#7ddba0;--req:#ff8a80;--page:#17150f;--lnk:#7fb8ee;--pl:#5a5242}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
 main{max-width:1040px;margin:0 auto;padding:18px 14px 40px}
@@ -34,7 +34,6 @@ dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font:12.5px
 h3.ch{margin:4px 0;font:700 16px Georgia,serif}
 p{margin:6px 0}
 mark{background:color-mix(in srgb,#ffd84d 70%,transparent);color:inherit}
-.vs{float:left;font:700 34px/0.9 Georgia,serif;padding:3px 5px 0 0}
 sup{color:var(--tpl)}
 .list{display:flex;flex-direction:column;gap:8px}
 .it{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer}
@@ -45,6 +44,36 @@ sup{color:var(--tpl)}
 .it code{font:12.5px ui-monospace,Menlo,Consolas,monospace;background:color-mix(in srgb,var(--c) 10%,transparent);border-radius:4px;padding:0 4px}
 .it p{margin:4px 0 0 30px;font-size:13.5px;color:var(--mute)}
 .bd{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--c);color:var(--c);border-radius:5px;padding:0 6px;margin-left:auto}
+
+.phone a{color:var(--lnk);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
+.mod{border:1px solid var(--pl);border-radius:3px;padding:6px 8px;margin:0}
+.mod h4.hd{margin:0 0 3px;font:700 12.5px -apple-system,sans-serif}
+.mod p{margin:3px 0;font-size:13px}
+.pf dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 9px;font:12px/1.4 -apple-system,sans-serif}
+.pf dt{font-weight:600;white-space:nowrap;color:var(--ink)}
+.pf dt.w,.pf dd.w{grid-column:1/-1}.pf dt.w{white-space:normal}
+.pf dd{margin:0}
+.wt{text-align:center;margin:2px 0}
+.wt .t{font:700 19px/1.25 Georgia,serif;margin:0}
+.wt .by{font:13px -apple-system,sans-serif;margin:2px 0 0;color:var(--mute)}
+.jump{font-size:12px;font-style:italic;margin:4px 0 0}
+p.op:has(> .versalCap:first-child)::first-letter{float:left;font:700 40px/0.85 Georgia,serif;padding:3px 5px 0 0}
+.versalCap{font-variant:small-caps;letter-spacing:.03em}
+.sl{display:block;margin-top:.2em;font-size:.95em}
+.sf{font:12px/1.4 -apple-system,sans-serif;border-top:1px solid var(--pl);padding-top:8px}
+.sfh{margin:0 0 5px;font-weight:600}
+.sfe{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px;padding:5px 9px;background:color-mix(in srgb,var(--ink) 4%,transparent);border-radius:5px}
+.sfn{font-weight:500}.sfl{white-space:nowrap;font-size:.95em}.off{opacity:.45}
+.sr{font:12px/1.5 -apple-system,sans-serif!important}.sr .pos{display:block}
+.vars{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px}
+.vars h4{margin:0 0 4px;font-size:14.5px}.vars p{margin:2px 0 6px;color:var(--mute)}
+.vars table{width:100%;border-collapse:collapse}.vars td{padding:3px 6px 3px 0;border-top:1px solid var(--line);vertical-align:top}
+.vars td:first-child{white-space:nowrap}.vars td:last-child{text-align:right;white-space:nowrap;color:var(--mute)}
+.vars code{font:12px ui-monospace,Menlo,Consolas,monospace}
+.fn{font-size:11px;vertical-align:super}
+.also{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13.5px}
+.also h4{margin:0 0 4px;font-size:14.5px}.also p{margin:4px 0;color:var(--mute)}
+.also code{font:12.5px ui-monospace,Menlo,Consolas,monospace;background:color-mix(in srgb,var(--mute) 14%,transparent);border-radius:4px;padding:0 4px}
 </style>
 </head>
 <body>
@@ -61,20 +90,40 @@ sup{color:var(--tpl)}
 <div class="phone" id="phone" aria-label="Annotated mock article page">
 <div class="zone"><span class="pin z" style="--c:var(--req)">1</span>notch / Dynamic Island: 68px</div>
 <div class="pad">
-<div class="b" data-k="tpl" data-n="2"><span class="pin">2</span><span class="feed">Feed name &middot; byline</span></div>
-<div class="b" data-k="tpl" data-n="3"><span class="pin">3</span><h2 class="ttl">The Lighthouse Keeper's Letters</h2></div>
+<div class="b" data-k="tpl" data-n="2"><span class="pin">2</span><span class="feed">Feed name</span></div>
+<div class="b" data-k="tpl" data-n="3"><span class="pin">3</span><h2 class="ttl">The Lighthouse Keeper's Letters</h2><div class="dl">by <a href="#" rel="author">saltandlamp</a></div></div>
 <div class="b" data-k="tpl" data-n="4"><span class="pin">4</span><span class="dl">Oct 14, 2026 &middot; external link</span></div>
 <div class="b" data-k="req" data-n="5" style="padding:8px">
 <span class="pin">5</span>
-<div class="b" data-k="gen" data-n="6"><span class="pin">6</span><dl><dt>Rating</dt><dd>General</dd><dt>Fandom</dt><dd>Original</dd><dt>Words</dt><dd>42,310</dd></dl></div>
-<div class="b" data-k="gen" data-n="7"><span class="pin">7</span><em>Summary and notes: a keeper writes to the sea.</em></div>
-<div class="b" data-k="opt" data-n="8"><span class="pin">8</span><div class="dv" aria-hidden="true">&#10087;</div></div>
-<div class="b" data-k="gen" data-n="9"><span class="pin">9</span><h3 class="ch">Chapter 1: Tide Tables</h3></div>
-<div class="b" data-k="opt" data-n="10"><span class="pin">10</span><span class="vs">T</span>he first lamp went out on a Tuesday, and nobody on the mainland noticed. <mark>She counted the days by the ships that did not come.</mark><sup>1</sup></div>
-<div class="b" data-k="gen" data-n="11" style="background:transparent"><span class="pin">11</span><mark>Highlighted passage</mark> and footnote popover share the page.</div>
+<div class="b pf" data-k="gen" data-n="6"><span class="pin">6</span><div class="mod"><dl>
+<dt>Rating:</dt><dd><a href="#">Teen And Up Audiences</a></dd>
+<dt class="w">Archive Warning:</dt><dd class="w"><a href="#">No Archive Warnings Apply</a></dd>
+<dt>Category:</dt><dd><a href="#">M/M</a></dd>
+<dt class="w">Fandom:</dt><dd class="w"><a href="#">Original Work</a>, <a href="#">Coastal Gothic (Webcomic)</a></dd>
+<dt class="w">Relationships:</dt><dd class="w"><a href="#">Keeper/Sea</a>, <a href="#">Keeper &amp; Ferryman</a></dd>
+<dt class="w">Characters:</dt><dd class="w"><a href="#">The Keeper</a>, <a href="#">The Ferryman</a>, <a href="#">Various Gulls</a></dd>
+<dt class="w">Additional Tags:</dt><dd class="w" id="tags"></dd>
+<dt>Language:</dt><dd>English</dd>
+<dt class="w">Series:</dt><dd class="w">Part 2 of <a href="#">The Lamp Cycle</a><span class="sl"><a href="#">First</a> &middot; <a href="#">Previous</a> &middot; <a href="#">Next</a></span></dd>
+<dt>Published:</dt><dd>2026-07-07</dd>
+<dt>Updated:</dt><dd>2026-08-01</dd>
+<dt>Words:</dt><dd>42,310</dd>
+<dt>Chapters:</dt><dd>12/19</dd>
+<dt>Hits:</dt><dd>1,776</dd>
+</dl></div></div>
+<div class="b" data-k="gen" data-n="7"><span class="pin">7</span><div class="wt"><p class="t">The Lighthouse Keeper's Letters</p><p class="by">by <a href="#" rel="author">saltandlamp</a></p></div></div>
+<div class="b" data-k="gen" data-n="8"><span class="pin">8</span><div class="mod"><h4 class="hd">Summary:</h4><p>A keeper writes to the sea, and the sea, eventually, writes back.</p></div></div>
+<div class="b" data-k="gen" data-n="9"><span class="pin">9</span><div class="mod"><h4 class="hd">Notes:</h4><p>Thanks to <a href="#">a patient beta</a> for the tide tables.</p><p class="jump">(See the end of the work for <a href="#">more notes</a>.)</p></div></div>
+<div class="b" data-k="opt" data-n="10"><span class="pin">10</span><div class="dv" aria-hidden="true">&#10087;</div></div>
+<div class="b" data-k="gen" data-n="11"><span class="pin">11</span><h3 class="ch">Chapter 1: Tide Tables</h3></div>
+<div class="b" data-k="opt" data-n="12"><span class="pin">12</span><p class="op" style="margin:0"><span class="versalCap">The first lamp went out on a Tuesday, and nobody on the mainland noticed. </span>She counted the days by the ships that did not come, and by the letters she did not send.</p></div>
+<div class="b" data-k="gen" data-n="13" style="background:transparent"><span class="pin">13</span><mark>Highlighted passage</mark> and a footnote<a href="#" class="fn">1</a> share the page.</div>
+<div class="b" data-k="gen" data-n="14"><span class="pin">14</span><div class="mod"><h4 class="hd">Notes:</h4><p>Come say hi on <a href="#">Tumblr</a>.</p></div></div>
+<div class="b" data-k="gen" data-n="15"><span class="pin">15</span><div class="mod sm"><h4 class="hd">Series this work belongs to:</h4><p class="sr"><a href="#">&#8592; Previous Work</a> <a href="#">Next Work &#8594;</a> <span class="pos">Part 2 of <a href="#">The Lamp Cycle</a></span></p></div></div>
+<div class="b" data-k="gen" data-n="16"><span class="pin">16</span><div class="mod sm"><h4 class="hd">Works inspired by this one</h4><p>Lamp Out, a podfic of this work, by <a href="#" rel="author">gullvoice</a></p></div></div>
 </div>
-<div class="b" data-k="gen" data-n="12"><span class="pin">12</span><span class="dl">Series footer: Previous &middot; Next</span></div>
-<div class="b" data-k="opt" data-n="13"><span class="pin">13</span><span class="dl">#nnwFooter (custom templates only)</span></div>
+<div class="b" data-k="gen" data-n="17"><span class="pin">17</span><div class="sf"><p class="sfh">This work is part of a series:</p><div class="sfe"><span class="sfn">Part 2 of The Lamp Cycle</span><span class="sfl"><a href="#">First</a> &middot; <a href="#">Previous</a> &middot; <span class="off">Next</span></span></div></div></div>
+<div class="b" data-k="opt" data-n="18"><span class="pin">18</span><span class="dl">#nnwFooter (custom templates only)</span></div>
 </div>
 </div>
 <div class="list" id="list"></div>
@@ -83,23 +132,44 @@ sup{color:var(--tpl)}
 <script>
 var N=[
 [1,"req","Space above the title","68px, supplied by the theme","Full-screen reading hides the notch area, so the first line of the title must start at least 68px down. With no header, you supply it (padding or an opening ornament). Docs only: no test enforces it, and shapes A, C, D were never audited. Do not rely on env(safe-area-inset-top)."],
-[2,"tpl","Header: feed link and byline","optional","[[feed_link]], [[feed_link_title]], [[byline]]. Leave out unless the design uses it. Avatar [[avatar_src]] never renders."],
-[3,"tpl","Title",".articleTitle","[[title]] and [[preferred_link]]. No overflow:hidden, fixed height, line-height under 1, or nowrap with ellipsis. Ornaments may not eat the 68px."],
-[4,"tpl","Dateline and external link",".articleDateline / .externalLink","[[dateline_style]], [[datetime_*]], [[external_link*]]. All optional."],
-[5,"req","Body container","#bodyContainer.articleBody","Required: keep the id and the articleBody class (gallery build checks it; overrides and color probe key off it). [[body]] goes here. Everything numbered 6 to 11 is inside it."],
-[6,"gen","Preface","#ao3Preface, dl.tags","Built by Nectar. You restyle through --ao3-preface-* variables; core.css supplies fallbacks."],
-[7,"gen","Summary and notes",".summary.module, .notes.module","Generated. Style them, do not rename or restructure."],
-[8,"opt","Chapter divider","data-chapter-divider*","Opt in on #bodyContainer with -char and -class together, or it silently no-ops. Inserted by main.js before each chapter heading, never by an inline script. Works with any template layout."],
-[9,"gen","Chapter heading","h2.heading","Generated (h3.title is rewritten into it). Direct child of div.chapter.preface.group; the table of contents depends on that."],
-[10,"opt","Drop cap / versal","data-versal-target, span.versalCap","Opt in with data-versal-target on #bodyContainer. No-ops if absent. Inline scripts are blocked in the real reader."],
-[11,"gen","Highlights and footnotes","mark.nnw-highlight, a.footnote","Colors come from --nnw-highlight-* variables set by the app; footnote popover comes from newsfoot.js."],
-[12,"gen","Series footer","#ao3SeriesFooter","Appended after the work; absent for works with no series."],
-[13,"opt","Page footer","#nnwFooter","Optional, custom templates only. Not in the default template."]
+[2,"tpl","Header: feed link","optional","[[feed_link]], [[feed_link_title]]. Leave out unless the design uses it. The stock template also puts [[byline]] here, but most themes move the author into the title block (3). Many themes put the date here too (see Template variables below). Avatar [[avatar_src]] never renders."],
+[3,"tpl","Title and author",".articleTitle, [[byline]]","[[title]], [[preferred_link]] and [[byline]]. Most theme templates place the author directly under the title (the byline is HTML with the author name or names, linked when the feed gives a link). In a read of the 168 bundled and gallery templates, all use [[byline]], 132 of them within a few lines of [[title]]. Check the title block still starts below the 68px. No overflow:hidden, fixed height, line-height under 1, or nowrap with ellipsis on the title. Ornaments may not eat the 68px."],
+[4,"tpl","Dateline and external link",".articleDateline / .externalLink","[[dateline_style]] (class articleDateline, or articleDatelineTitle when the article has a title) and the date tokens: [[datetime_*]], [[date_*]], [[time_*]]. The date does not have to sit under the title: in the bundled templates a date token usually appears before [[title]], in a header or running head. External link: [[external_link]], [[external_link_label]], [[external_link_stripped]]. All optional."],
+[5,"req","Body container","#bodyContainer.articleBody","Required: keep the id and the articleBody class (gallery build checks it; overrides and color probe key off it). [[body]] goes here. Everything numbered 6 to 16 is inside it, in this order: preface, then #workskin (title, byline, summary, notes, chapters, then the afterword)."],
+[6,"gen","Preface: metadata and stats","#ao3Preface, dl.tags, dt/dd, dt.wide/dd.wide","Comes first, before the work title. One flat dl.tags grid: Rating, Archive Warning, Category, Fandom, Relationships, Characters, Additional Tags, Language, Series, Collections, then stats (Published, Updated, Words, Chapters, Comments, Kudos, Bookmarks, Hits), one dt/dd pair per row. The mock shows five stats. Fandom, Relationships, Characters, Additional Tags, Warning, Collections and Series are .wide: the label sits on its own line and the value spans the full width. Values are comma-joined links; Additional Tags can run to dozens. Restyle through the --ao3-preface-* variables; core.css supplies fallbacks. The Series row is one wide pair per series: Part N of, then the linked name, then First \u00b7 Previous \u00b7 Next on its own block line below (.ao3SeriesPrefaceLinks). A missing neighbor renders as span.ao3SeriesNavDisabled, not a link. Before the first fetch, #ao3SyntheticPreface has the same shape with plain text, no links."],
+[7,"gen","Work title and author","#workskin .preface.group h2.title, h3.byline.heading a[rel=author]","Comes after the preface, inside #workskin. Themes commonly center both. The title is h2.title (its heading class is stripped so it stays out of the table of contents). The author is a link. Author markup is left untouched: style it, do not restructure it."],
+[8,"gen","Summary",".summary.module, h3.heading, blockquote.userstuff","Generated. Style them, do not rename or restructure. Usually bordered or tinted."],
+[9,"gen","Start notes and end-notes pointer",".notes.module, p.jump","Optional on the work. When the author also wrote end notes, a p.jump line follows: \"See the end of the work for more notes.\" with a link to #work_endnotes."],
+[10,"opt","Chapter divider","data-chapter-divider*","Opt in on #bodyContainer with -char and -class together, or it silently no-ops. Inserted by main.js before each chapter heading, never by an inline script. Works with any template layout."],
+[11,"gen","Chapter heading","h2.heading","Generated (h3.title is rewritten into it). Direct child of div.chapter.preface.group; the table of contents depends on that. Single-chapter works have none."],
+[12,"opt","Initial and first sentence (book-style themes only)","data-versal-target, span.versalCap","Optional, and meant for book-like themes only. Most themes should skip it and leave the opening paragraph as plain body text. Opt in with data-versal-target on #bodyContainer. No-ops if absent. main.js wraps the first sentence of the work and of each chapter in span.versalCap. Theme CSS then styles two parts: the initial letter (a drop cap via p:has(> .versalCap:first-child)::first-letter) and the rest of the sentence (usually font-variant: small-caps). Inline scripts are blocked in the real reader."],
+[13,"gen","Highlights and footnotes","mark.nnw-highlight, a.footnote","Colors come from --nnw-highlight-* variables set by the app; footnote popover comes from newsfoot.js."],
+[14,"gen","End notes",".afterword.preface.group, #work_endnotes.end.notes.module","After the last chapter. Same markup as the start notes, so most themes share one rule with .notes.module. Biblioteca and Kelmscott style .end.notes.module explicitly."],
+[15,"gen","AO3 series links","#series.series.module, span.series a.previous, a.next, span.position","Inside the afterword, after the end notes, so it ships with the work and Nectar does not build it. Heading \"Series this work belongs to:\", then one li per series: a Previous Work arrow link, a Next Work arrow link (each only when that neighbor exists), then Part N of the series link. Different from #ao3SeriesFooter below, which Nectar adds; a work in a series can show both. Real fixtures confirm the Previous and Next spans in the preface markup, and the module with Previous in the afterword. Style the arrows as links."],
+[16,"gen","Works inspired by this one","dl in .afterword (Calibre/Ambrosia shape)","Lists derivative works (podfics, remixes) as links to each work and its author. Confirmed only in the Ambrosia fixture (a dl with the dt \"Works inspired by this one\", each a title link followed by by and author links). AO3's own page markup for this block is not in the repo fixtures, so its class names are unverified. Absent when no one has linked the work."],
+[17,"gen","Series footer","#ao3SeriesFooter","Appended after the work, outside #workskin; absent for works with no series. A top-bordered block: a heading, then one flex row per series with the plain-text name \"Part N of Series\" on the left (.ao3SeriesFooterName) and the nowrap First \u00b7 Previous \u00b7 Next cluster on the right (.ao3SeriesFooterLinks). The row wraps on narrow screens. Disabled ends use .ao3SeriesNavDisabled; the tint comes from --ao3-preface-background-color."],
+[18,"opt","Page footer","#nnwFooter","Optional, custom templates only. Not in the default template."]
 ];
+var T=["Getting Together","Slow Burn","Isolation","Letters","Lighthouses","Weather as a Character","Unreliable Tides","Found Family","Gulls","Epistolary","Hurt/Comfort","Alternate Universe - Coastal","Fix-It","Happy Ending","Mild Peril"];
+document.getElementById("tags").innerHTML=T.map(function(t){return '<a href="#">'+t+'</a>'}).join(", ");
 var L={tpl:"Template",gen:"Generated",opt:"Opt-in",req:"Required"};
 var list=document.getElementById("list");
 N.forEach(function(r){var d=document.createElement("div");d.className="it";d.dataset.k=r[1];d.dataset.n=r[0];
-d.innerHTML='<h4><span class="n">'+r[0]+'</span>'+r[2]+'<span class="bd">'+L[r[1]]+'</span></h4><p><code>'+r[3].replace(/</g,"&lt;")+'</code> '+r[4].replace(/</g,"&lt;")+'</p>';list.appendChild(d)});
+d.innerHTML='<h4><span class="n">'+r[0]+'</span>'+r[2]+'<span class="bd">'+L[r[1]]+'</span></h4><p><code>'+r[3].replace(/`/g,"").replace(/</g,"&lt;")+'</code> '+r[4].replace(/</g,"&lt;")+'</p>';list.appendChild(d)});
+var al=document.createElement("div");al.className="also";al.innerHTML='<h4>Also commonly styled</h4><p><b>Links.</b> Every tag, the author, the series name and the notes pointer are plain <code>a</code> elements inside the body. Tag links carry no class when Nectar renders the preface. Style <code>a</code>, <code>a:visited</code> and <code>a:hover</code> inside <code>#bodyContainer</code>, and keep them distinguishable from body text in dark mode.</p><p><b>Borders.</b> The preface block, <code>.summary.module</code>, <code>.notes.module</code> and <code>.end.notes.module</code> are the usual bordered boxes. A page frame must belong to the article, not the viewport (see Ornaments in nnwtheme-format.md).</p>';list.appendChild(al);
+var V=[
+["title","Article title",168],["preferred_link","Best link for the article",168],["byline","Author HTML, linked when the feed gives a link",168],["body","The article body",168],
+["feed_link_title","Feed name (empty when the feed name is off)",156],["feed_link","Feed home page URL",156],
+["date_medium","Publish date, medium (date only)",118],["datetime_long","Publish date, long (date only)",117],["datetime_medium","Publish date, medium (date only)",31],
+["date_long","Publish date, long",7],["date_short","Publish date, short",1],["datetime_short","Publish date, short (date only)",1],
+["dateline_style","Class name: articleDateline or articleDatelineTitle",33],
+["external_link","External link URL (empty if none)",47],["external_link_label","Localized label, e.g. Link:",44],["external_link_stripped","External link without http(s)://",44],
+["avatar_src","Feed icon URL (the image never renders)",37],["text_size_class","Legacy, stays literal text; kept in the body class list",168],
+["time_long, time_medium, time_short","Publish time; defined by the renderer, unused by any bundled template",0]];
+var vd=document.createElement("div");vd.className="vars";
+vd.innerHTML='<h4>Template variables</h4><p>Everything the renderer fills in. Usage is the number of the 168 bundled and gallery templates that contain the token.</p><table>'+V.map(function(v){return '<tr><td><code>[['+v[0]+']]</code></td><td>'+v[1]+'</td><td>'+v[2]+'</td></tr>'}).join("")+'</table>';
+list.appendChild(vd);
+
 function sel(n){document.querySelectorAll(".b,.it").forEach(function(e){e.classList.toggle("on",e.dataset.n==n)});
 var t=document.querySelector(".it.on");if(t&&window.innerWidth>820)t.scrollIntoView({block:"nearest",behavior:"smooth"})}
 document.addEventListener("click",function(e){var x=e.target.closest(".b,.it");if(x){e.stopPropagation();sel(x.dataset.n)}});

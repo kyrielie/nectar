@@ -40,25 +40,30 @@ therefore means renaming its key. When a key is still used elsewhere (see
 "What stays in RSS terminology on purpose"), the old entry stays and the
 new one is added beside it.
 
-## Import Link and Import AO3 Links
+## The add menu
 
-Two adjacent items in the sidebar's add menu look alike and do different
-things:
+The sidebar's `+` menu has three items, built once by
+`MainFeedCollectionViewController.addMenuItems()` and shared by the
+tap action sheet and the long-press menu:
 
-- **Import Link** opens `AddFeedViewController`. It is the general
-  entry point: one URL, an optional title, a folder. What is pasted is
-  either an AO3 listing page (tag results, search results, an author's
-  works, bookmarks, marked-for-later, subscriptions, collections, series)
-  or an ordinary RSS/Atom URL that goes through feed autodiscovery.
-  Either way the result is a shelf that keeps refreshing.
-- **Import AO3 Links…** opens `AO3LinkListImportView`. It is the specific
-  entry point: pasted text containing individual work links, imported
-  once. The result is not a shelf and does not refresh; its own footer
-  says so.
+- **Add AO3 Feed** opens `AddFeedViewController`. One URL, an
+  optional title, a folder. The result is a shelf that keeps refreshing.
+  The sheet still accepts every AO3 listing page (tag results, search
+  results, an author's works, bookmarks, marked-for-later, subscriptions,
+  collections, series) and ordinary RSS/Atom/JSON Feed URLs through feed
+  autodiscovery. A URL for a single AO3 work is not subscribed to; the
+  sheet offers a one-time import instead.
+- **Import AO3 Work Links** opens `AO3LinkListImportView`. Pasted text
+  containing individual work links, imported once. The result is not a
+  shelf and does not refresh; its own footer says so.
+- **New Folder** opens `AddFolderViewController`.
 
-The difference the pair has to teach is subscribe versus one-time import.
-Keep "Import" for both and let "Link" versus "AO3 Links…" carry the
-distinction. Don't reuse "Import" for a third action that does neither.
+The pair has to teach subscribe versus one-time import: "Add ... Feed"
+subscribes, "Import ... Links" is one-time. Don't reuse "Import" for an
+action that subscribes, or "Add" for one that doesn't.
+
+OPML import and export are not in this menu. They live in Settings, in the
+Feeds section ("Import OPML File", "Export OPML File").
 
 ## The one exception: Annotations' scope picker
 

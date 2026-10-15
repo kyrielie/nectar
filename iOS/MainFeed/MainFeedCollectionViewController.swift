@@ -685,72 +685,8 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		} else {
 			setFilterButtonToInactive()
 		}
-		addNewItemButton?.isEnabled = !AccountManager.shared.activeAccounts.isEmpty
 
-		updateEmptyStateVisibility()
 		configureContextMenu()
-	}
-
-	/// Shows a placeholder view instead of the (otherwise blank) timeline/feed list
-	/// when no account exists yet — e.g. on a genuinely fresh install. Once any
-	/// account exists, this has no effect and the normal collection view content
-	/// is shown as usual.
-	func updateEmptyStateVisibility() {
-		if AccountManager.shared.accounts.isEmpty {
-			collectionView.backgroundView = noLibraryEmptyStateView
-		} else {
-			collectionView.backgroundView = nil
-		}
-	}
-
-	private lazy var noLibraryEmptyStateView: UIView = {
-		let container = UIView()
-
-		let messageLabel = UILabel()
-		messageLabel.text = NSLocalizedString("No library connected yet.", comment: "Empty state message")
-		messageLabel.textAlignment = .center
-		messageLabel.numberOfLines = 0
-		messageLabel.font = .preferredFont(forTextStyle: .headline)
-		messageLabel.textColor = .secondaryLabel
-
-		let importButton = UIButton(type: .system)
-		importButton.setTitle(NSLocalizedString("Import OPML…", comment: "Import OPML button"), for: .normal)
-		importButton.addTarget(self, action: #selector(importOPMLFromEmptyState(_:)), for: .touchUpInside)
-
-		// Manual pairing entry point: type a paired server's URL directly (e.g.
-		// http://192.168.1.5:8765). There's no token or credential involved — the
-		// server has no auth — so this just needs to reach the account's endpointURL.
-		let serverURLButton = UIButton(type: .system)
-		serverURLButton.setTitle(NSLocalizedString("Enter Server URL…", comment: "Enter server URL button"), for: .normal)
-		serverURLButton.addTarget(self, action: #selector(enterServerURLFromEmptyState(_:)), for: .touchUpInside)
-
-		let stack = UIStackView(arrangedSubviews: [messageLabel, importButton, serverURLButton])
-		stack.axis = .vertical
-		stack.spacing = 16
-		stack.alignment = .center
-		stack.translatesAutoresizingMaskIntoConstraints = false
-		container.addSubview(stack)
-
-		NSLayoutConstraint.activate([
-			stack.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-			stack.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 32),
-			stack.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -32),
-			stack.centerXAnchor.constraint(equalTo: container.centerXAnchor)
-		])
-
-		return container
-	}()
-
-	/// If no account exists yet, a local-only account is created first so the import has
-	/// somewhere to go -- this fork restricts account creation to `.onMyMac` regardless.
-	/// With exactly one active account now guaranteed, OPMLImportCoordinator.start() skips
-	/// its account picker and goes straight to the document picker.
-	@objc func importOPMLFromEmptyState(_ sender: Any) {
-		if AccountManager.shared.accounts.isEmpty {
-			_ = AccountManager.shared.createAccount(type: .onMyMac)
-			updateEmptyStateVisibility()
-		}
-		OPMLImportCoordinator.begin(presentingController: self, sourceView: sender as? UIView)
 	}
 
 	/// Manual pairing entry point. There's no token or credential to enter — the
@@ -758,7 +694,13 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 	/// the server's current LAN address. We fetch `/feeds.opml` from it (the same
 	/// endpoint the OPML-file import flow reads, just fetched over the network
 	/// instead of picked from disk) to import the library's feeds right away.
-	@objc func enterServerURLFromEmptyState(_ sender: Any) {
+	///
+	/// Nothing calls this right now. Its only entry point was the empty state's
+	/// "Enter Server URL..." button, removed because an account always exists
+	/// (`AccountManager.init` creates the on-device one), so the empty state could
+	/// never show. It is kept, not deleted, because it is the only code that sets
+	/// `account.endpointURL`; attach it to a Settings row or remove it deliberately.
+	func enterServerURL() {
 		let alert = UIAlertController(
 			title: NSLocalizedString("Enter Server URL", comment: "Enter Server URL"),
 			message: NSLocalizedString("Enter the address shown in your library app's preferences, e.g. http://192.168.1.5:8765", comment: "Enter Server URL message"),
@@ -788,14 +730,10 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 			return
 		}
 
-		if AccountManager.shared.accounts.isEmpty {
-			_ = AccountManager.shared.createAccount(type: .onMyMac)
-		}
 		guard let account = AccountManager.shared.accounts.first else {
 			return
 		}
 		account.endpointURL = baseURL
-		updateEmptyStateVisibility()
 
 		let opmlURL = baseURL.lastPathComponent.hasSuffix(".opml") ? baseURL : baseURL.appendingPathComponent("feeds.opml")
 
@@ -1097,42 +1035,60 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 
 	// MARK: - Actions
 
+	/// One entry in the add (`+`) menu. The tap-to-open action sheet (`add(_:)`) and the
+	/// long-press `UIMenu` (`configureContextMenu`) are both built from `addMenuItems()`,
+	/// so the two can't drift apart.
+	private struct AddMenuItem {
+		let title: String
+		let image: UIImage?
+		let handler: () -> Void
+	}
+
+	/// Visual order, top to bottom:
+	/// 1. Add AO3 Feed  (subscribes; keeps refreshing)
+	/// 2. Import AO3 Work Links (one-time; not a shelf)
+	/// 3. New Folder
+	/// OPML import/export lives in Settings -> Feeds only.
+	private func addMenuItems() -> [AddMenuItem] {
+		var items: [AddMenuItem] = []
+
+		items.append(AddMenuItem(
+			title: NSLocalizedString("Add AO3 Feed", comment: "Add menu: subscribe to an AO3 search/tag/author listing or feed URL"),
+			image: Assets.Images.plus
+		) { [weak self] in
+			self?.coordinator.showAddFeed()
+		})
+
+		items.append(AddMenuItem(
+			title: NSLocalizedString("Import AO3 Work Links", comment: "Add menu: one-time import of pasted AO3 work links"),
+			image: UIImage(systemName: "link")
+		) { [weak self] in
+			self?.present(UIHostingController(rootView: AO3LinkListImportView()), animated: true)
+		})
+
+		let anyActiveAccountSupportsFolders = AccountManager.shared.activeAccounts.contains {
+			!$0.behaviors.contains(.disallowFolderManagement)
+		}
+		if anyActiveAccountSupportsFolders {
+			items.append(AddMenuItem(
+				title: NSLocalizedString("New Folder", comment: "Add menu: create a folder"),
+				image: Assets.Images.folderOutlinePlus
+			) { [weak self] in
+				self?.coordinator.showAddFolder()
+			})
+		}
+
+		return items
+	}
+
 	@objc func configureContextMenu(_: Any? = nil) {
-		/*
-			Context Menu Order:
-			1. Add Feed
-			2. Add Folder
-			3. Import OPML…
-		*/
-
-		var menuItems: [UIAction] = []
-
-		let addFeedActionTitle = NSLocalizedString("Import Link", comment: "Add Feed")
-		let addFeedAction = UIAction(title: addFeedActionTitle, image: Assets.Images.plus) { _ in
-			self.coordinator.showAddFeed()
+		let actions = addMenuItems().map { item in
+			UIAction(title: item.title, image: item.image) { _ in item.handler() }
 		}
-		menuItems.append(addFeedAction)
-
-		let addFolderActionTitle = NSLocalizedString("Add Folder", comment: "Add Folder")
-		let addFolderAction = UIAction(title: addFolderActionTitle, image: Assets.Images.folderOutlinePlus) { _ in
-			self.coordinator.showAddFolder()
-		}
-
-		menuItems.append(addFolderAction)
-
-		let importOPMLActionTitle = NSLocalizedString("Import OPML…", comment: "Import OPML")
-		let importOPMLAction = UIAction(title: importOPMLActionTitle, image: Assets.Images.opmlImport) { [weak self] _ in
-			guard let self else { return }
-			OPMLImportCoordinator.begin(presentingController: self, barButtonItem: self.addNewItemButton)
-		}
-		menuItems.append(importOPMLAction)
-
-		// menuItems.reversed(): the last item appended ends up first in the menu, so
-		// this list is built bottom-to-top of the visual order documented above --
-		// Import OPML appended last lands after Add Folder, at the bottom.
-		let contextMenu = UIMenu(title: "", image: nil, identifier: nil, options: [], children: menuItems.reversed())
-
-		self.addNewItemButton.menu = contextMenu
+		// Reversed: carried over from the previous implementation, which built the
+		// list bottom-to-top. Not verified on device in this pass; if the menu
+		// renders upside down, drop the `.reversed()`.
+		addNewItemButton.menu = UIMenu(title: "", image: nil, identifier: nil, options: [], children: actions.reversed())
 	}
 
 	@objc func refreshAccounts(_ sender: Any) {
@@ -1148,48 +1104,10 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 	@IBAction func add(_ sender: UIBarButtonItem) {
 		let alertController = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
 
-		let cancelTitle = NSLocalizedString("Cancel", comment: "Cancel button")
-		let cancelAction = UIAlertAction(title: cancelTitle, style: .cancel)
-
-		let addFeedActionTitle = NSLocalizedString("Import Link", comment: "Add Feed")
-		let addFeedAction = UIAlertAction(title: addFeedActionTitle, style: .default) { _ in
-			self.coordinator.showAddFeed()
+		for item in addMenuItems() {
+			alertController.addAction(UIAlertAction(title: item.title, style: .default) { _ in item.handler() })
 		}
-
-		alertController.addAction(addFeedAction)
-
-		let anyActiveAccountSupportsFolders: Bool = {
-			for account in AccountManager.shared.activeAccounts {
-				if !account.behaviors.contains(.disallowFolderManagement) {
-					return true
-				}
-			}
-			return false
-		}()
-		if anyActiveAccountSupportsFolders {
-			let addFolderActionTitle = NSLocalizedString("Add Folder", comment: "Add Folder")
-			let addFolderAction = UIAlertAction(title: addFolderActionTitle, style: .default) { _ in
-				self.coordinator.showAddFolder()
-			}
-			alertController.addAction(addFolderAction)
-		}
-
-		let importOPMLActionTitle = NSLocalizedString("Import OPML…", comment: "Import OPML")
-		let importOPMLAction = UIAlertAction(title: importOPMLActionTitle, style: .default) { [weak self] _ in
-			guard let self else { return }
-			OPMLImportCoordinator.begin(presentingController: self, barButtonItem: sender)
-		}
-		alertController.addAction(importOPMLAction)
-
-		let importAO3LinksActionTitle = NSLocalizedString("Import AO3 Links…", comment: "Import pasted AO3 link list")
-		let importAO3LinksAction = UIAlertAction(title: importAO3LinksActionTitle, style: .default) { [weak self] _ in
-			guard let self else { return }
-			let hosting = UIHostingController(rootView: AO3LinkListImportView())
-			present(hosting, animated: true)
-		}
-		alertController.addAction(importAO3LinksAction)
-
-		alertController.addAction(cancelAction)
+		alertController.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel button"), style: .cancel))
 
 		alertController.popoverPresentationController?.barButtonItem = sender
 
