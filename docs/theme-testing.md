@@ -58,6 +58,10 @@ regenerating the table in the same change.
 
 ### Regenerating
 
+Shortcut: `scripts/regenerate-theme-colors.sh` runs the steps below and verifies the result. The manual
+`Regenerate theme color table` workflow (`.github/workflows/theme-color-table.yml`) runs the script on a
+macOS runner and opens a pull request with the JSON.
+
 `ThemeColorTableGeneratorTests.regenerateTable` measures every shipped theme with
 the probe and rewrites the file in the repo checkout (located through
 `#filePath`, so run it from the simulator against this checkout). It is skipped
@@ -124,35 +128,31 @@ cache hits.
 
 ## CI scope
 
-The Nectar-CI plan always runs everything except the heavy theme suites and the
-performance tests:
+The Nectar-CI plan runs everything except the theme suites and the performance tests:
 
-- **Heavy theme suites** (`ArticleThemeCheckMatrixTests`, `ArticleThemeSmokeTests`,
-  `ArticleThemeRenderDiffTests`). The `ios-simulator-test` job in `ci.yml` passes
-  `-skip-testing:Nectar-iOSTests/<Suite>` for all three unless its `Decide whether to run
-  the theme suites` step sets `run=true`. That happens when the `theme_suites` input is true
-  (the default for a manual `workflow_dispatch`, false when `release.yml` calls `ci.yml`),
-  when there is no previous release tag (`git describe --tags --match 'v[0-9]*' HEAD^`), or
-  when `git diff --name-only <previous tag>..HEAD` touches any of: `Themes/`,
-  `gallery-themes/`, `Shared/Article Rendering/`, `Modules/ArticleTheming/`,
-  `iOS/Resources/ThemeColorTable.json`, `Tests/NetNewsWire-iOSTests/ArticleTheme*`,
-  `Tests/NetNewsWire-iOSTests/Fixtures/ThemeCheck/`, `.../Fixtures/ThemeColorProbe/`,
-  `ThemeColorTableTests.swift`. The path list is in the workflow; keep it and this list
-  together. A release with none of those changes skips the suites (accepted decision).
-  The step summary says which way it went and why.
-- **The suites that stay in the gate**: `ArticleThemeColorProbeTests`,
-  `ArticleThemeColorStoreAppTests`, `ArticleThemesManagerGateTests`,
-  `ArticleThemeCheckFixtureTests`, `ThemeColorTableGuardTests` and the other theme tests.
-  They are small next to the matrix.
+- **Theme suites, skipped in CI by default**: `ArticleThemeCheckMatrixTests`,
+  `ArticleThemeSmokeTests`, `ArticleThemeRenderDiffTests`, `ArticleThemeColorProbeTests` and
+  `ThemeColorTableGuardTests`. The `ios-simulator-test` job in `ci.yml` passes
+  `-skip-testing:Nectar-iOSTests/<Suite>` for all five unless the `theme_suites` input is true.
+  The input defaults to false for both `release.yml`'s call and a manual `workflow_dispatch`, so the
+  release gate never runs them. They take 10+ minutes, so run them locally before a release that
+  touches themes. The old "did a theme file change since the last tag" decision step was removed.
+- **Theme suites that stay in the gate**: `ArticleThemeColorStoreAppTests`,
+  `ArticleThemesManagerGateTests`, `ArticleThemeCheckFixtureTests` and the other theme tests,
+  plus the package's `ArticleThemingTests`.
 - **Performance tests**: the 31 XCTest `measure` tests in RSParser (26) and RSCore (5) are
   listed under `skippedTests` for `RSParserTests` and `RSCoreTests` in `Nectar-CI.xctestplan`
   and are the `selectedTests` of `Nectar-Performance.xctestplan`. Run them with
   `./test.sh performance` or by choosing that plan in Xcode. Nothing runs them
   automatically. If a performance test is added or renamed, update both plans.
 
+Because the guard tests are skipped in CI, a stale or missing `ThemeColorTable.json` is no longer
+caught by the release gate. Regenerate it with `scripts/regenerate-theme-colors.sh` (or the
+`Regenerate theme color table` workflow, which opens a pull request) after theme or `core.css` edits.
+
 Locally, `./test.sh` runs the whole Nectar-CI plan including the theme suites. To skip them
-the same way CI does, add the three `-skip-testing:` flags to the `xcodebuild` command. To run
-only them: `-only-testing:Nectar-iOSTests/ArticleThemeCheckMatrixTests` (and the other two).
+the same way CI does, add the five `-skip-testing:` flags to the `xcodebuild` command. To run
+only them: `-only-testing:Nectar-iOSTests/ArticleThemeCheckMatrixTests` (and the others).
 Whether Xcode 26.3 accepts a Swift Testing suite name in `-skip-testing:` and
 `-only-testing:` in the `Nectar-iOSTests/<Suite>` form has not been confirmed in a CI run;
 if a suite still runs, check the log for its name.
