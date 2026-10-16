@@ -221,6 +221,16 @@ missing at launch. Tests: `ArticleThemesManagerGateTests`.
 Tests: the package's `ArticleThemeColorStoreTests` and the app's
 `ArticleThemeColorStoreAppTests` (written without being run in Xcode).
 
-**Open investigation:** whether WKWebView's `prefers-color-scheme` media query has
-re-evaluated by the time the native trait-change handler fires is tracked in
-`docs/investigate-later.md`; read it before re-investigating.
+**Native colors and `prefers-color-scheme`.** The native colors read `isDark` from the view
+controller, and the article CSS follows `@media (prefers-color-scheme: dark)`, which WKWebView
+evaluates from the web view's own trait. The pooled `PreloadedWebView`'s inherited trait can lag
+one trait-change cycle, so that lag would affect the CSS side, not the native side.
+`applyResolvedBackgroundColors()` therefore sets `webView.overrideUserInterfaceStyle` from the same
+`isDark` value on every call (`renderPage`, the trait-change handler and `viewDidAppear`), so a
+reused pooled web view is re-pinned and the native chrome and the page's CSS derive from one value.
+Precedent: `ArticleThemePreviewWebView` pins its web view the same way. **Not confirmed on a
+device.** Check: with an article open, flip Settings, Appearance between Light and Dark and flip the
+system appearance, five times each, screen-recording at 60 fps, and confirm no frame where the notch
+cover, page counter and body background disagree. If a mismatch remains, the fallback is a
+`matchMedia("(prefers-color-scheme: dark)")` change listener that posts a message so native applies
+colors when it arrives.

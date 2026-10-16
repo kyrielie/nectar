@@ -582,10 +582,9 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 
 		// iPad popover anchor -- match the existing `MarkAsReadAlertController.alert(sourceType:)`
 		// pattern (it accepts UIBarButtonItem/UIView/CGRect via a small protocol) rather than
-		// reinventing anchor logic; this app is not iPad-only-safe to skip, since
-		// TARGETED_DEVICE_FAMILY = 1,2 still builds for iPad, and overall iPad-readiness is an
-		// open question tracked in docs/investigate-later.md ("iPad support status") -- but the
-		// popover anchor here must not crash on iPad regardless of how that's resolved.
+		// reinventing anchor logic; iPad is supported at functional parity
+		// (TARGETED_DEVICE_FAMILY = 1,2; see docs/module-layout.md, "Platform scope"), so every
+		// action sheet needs a popover anchor to avoid a crash on iPad.
 		if let barButtonItem = sourceType as? UIBarButtonItem {
 			alert.popoverPresentationController?.barButtonItem = barButtonItem
 		}

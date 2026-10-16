@@ -65,16 +65,14 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 	/// doesn't set up; only the feed-name behavior this screen's override actually affects
 	/// is reproduced.
 	/// Also removes the feed icon (`#nnwImageIcon`, always rendered by every bundled
-	/// and third-party theme's `template.html`), matching how a real article's
-	/// icon and feed name are governed by the same `showFeedNameInReaderView`
-	/// setting from the reader's point of view -- see `removeArticleIconAvatar()`
-	/// in `main.js`, which removes it unconditionally there since real articles
-	/// never show a per-feed icon in the reader at all.
+	/// and third-party theme's `template.html`) unless the `<img>` carries
+	/// `data-nnw-keep`, the same per-element opt-in `removeArticleIconAvatar()` in
+	/// `main.js` honors. The removal does not depend on `showFeedName`.
 	private static let removeFeedNameLinkScript = """
 	<script>
 	function removeArticleIconAvatar() {
 		var icon = document.getElementById("nnwImageIcon");
-		if (icon) { icon.remove(); }
+		if (icon && !icon.hasAttribute("data-nnw-keep")) { icon.remove(); }
 	}
 	function removeFeedNameLink() {
 		var links = document.querySelectorAll("a[href]");
@@ -105,11 +103,9 @@ struct ArticleThemePreviewWebView: UIViewRepresentable {
 	/// way the real reader does -- still demonstrates a theme's drop-cap/versal
 	/// and chapter-divider treatment rather than silently showing neither.
 	/// Deliberately not just embedding the whole of `main.js` here: that file's
-	/// `processPage()` unconditionally strips `#nnwImageIcon`
-	/// (`removeArticleIconAvatar()`), which would fight this preview's own,
-	/// intentionally different, icon-visibility behavior above (kept when
-	/// `showFeedName` is true, to demonstrate a theme's icon styling -- the real
-	/// reader never shows a per-feed icon at all, preview does on purpose).
+	/// `processPage()` strips `#nnwImageIcon` (`removeArticleIconAvatar()`) and
+	/// prunes kept avatars through the nnwimageicon: scheme, which this preview
+	/// does not register.
 	/// Keep this in sync with `applyVersalCaps`/`applyChapterDividers` in
 	/// `main.js` if either changes -- see docs/nnwtheme-format.md.
 	private static let versalAndDividerScript = """

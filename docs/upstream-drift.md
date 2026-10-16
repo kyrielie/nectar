@@ -307,7 +307,7 @@ This project's own documentation set (including this file). Declared as
 6 files as of this audit's original snapshot; the topic-doc set has grown
 substantially since (new docs split out, `console-warnings.md` added,
 then `investigate-later.md` added during a later vibecoding-cleanup
-pass) and was not kept in sync here — see the correction note above for
+pass and since removed) and was not kept in sync here — see the correction note above for
 `nectar-architecture.md`'s deletion, which is one but not the only cause.
 The overall Summary table's 224 Nectar-original total has not been
 recomputed to reflect this specific +16; treat it as a further stale

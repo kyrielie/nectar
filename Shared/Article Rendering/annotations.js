@@ -1166,6 +1166,102 @@
 		return toBase64(JSON.stringify(computeTextEditPlan(args)));
 	}
 
+	// The inverse of computeTextEditPlan, for deleting a row that carries a
+	// text edit (docs/annotations.md, "Reverting an edit"). Non-mutating:
+	// WebViewController calls it before revertTextEdit, while the live DOM
+	// still shows replacementText, persists the result, and only then
+	// reverts the DOM.
+	//
+	// Coordinate space: saving an edit shifts every row at or after the
+	// edit's end by delta, so after a save those rows are stored in the
+	// space of the live (edited) DOM, where the replacement occupies
+	// [startOffset, startOffset + replacementText.length). The edit row's own
+	// endOffset is not used: it still describes the original span. A row is
+	// shifted back when it starts at or after the replacement's end, by
+	// delta = originalText.length - replacementText.length, and its
+	// quote/prefix/suffix are re-sliced from the simulated reverted text
+	// (originalText spliced over the replacement span).
+	//
+	// args: {
+	//   annotationID, startOffset, originalText, replacementText,
+	//   otherAnnotations: [{annotationID, startOffset, endOffset}],
+	//   rootSelector
+	// }
+	//
+	// Returns { status: "ok", delta, shifted: [...] } in the same shape as
+	// computeTextEditPlan, or { status: "mismatch", delta: 0, shifted: [] }
+	// when the live text at the replacement span is not replacementText (the
+	// DOM and the stored row disagree, so nothing is shifted and the quote
+	// fallback in renderAnnotations remains the safety net).
+	function computeRevertPlan(args) {
+		var rootSelector = args.rootSelector || DEFAULT_ROOT_SELECTOR;
+		var root = document.querySelector(rootSelector);
+		if (!root) {
+			return { status: "ok", delta: 0, shifted: [] };
+		}
+
+		var originalText = args.originalText || "";
+		var replacementText = args.replacementText || "";
+		var delta = originalText.length - replacementText.length;
+		var replacementEnd = args.startOffset + replacementText.length;
+
+		var index = buildTextIndex(root);
+		if (index.text.slice(args.startOffset, replacementEnd) !== replacementText) {
+			return { status: "mismatch", delta: 0, shifted: [] };
+		}
+		if (delta === 0) {
+			return { status: "ok", delta: 0, shifted: [] };
+		}
+
+		var headingIndex = buildHeadingIndex(root, index.entries);
+		function chapterTitleAtNewOffset(newOffset) {
+			var best = null;
+			for (var h = 0; h < headingIndex.length; h++) {
+				var headingOffset = headingIndex[h].offset >= replacementEnd
+					? headingIndex[h].offset + delta
+					: headingIndex[h].offset;
+				if (headingOffset <= newOffset) {
+					best = headingIndex[h].title;
+				} else {
+					break;
+				}
+			}
+			return best;
+		}
+
+		var newText = index.text.slice(0, args.startOffset) + originalText + index.text.slice(replacementEnd);
+
+		var others = args.otherAnnotations || [];
+		var shifted = [];
+		for (var j = 0; j < others.length; j++) {
+			var candidate = others[j];
+			if (candidate.startOffset < replacementEnd) continue;
+			var newStart = candidate.startOffset + delta;
+			var newEnd = candidate.endOffset + delta;
+			shifted.push({
+				annotationID: candidate.annotationID,
+				startOffset: newStart,
+				endOffset: newEnd,
+				quoteExact: newText.slice(newStart, newEnd),
+				quotePrefix: newText.slice(Math.max(0, newStart - CONTEXT_CHARS), newStart),
+				quoteSuffix: newText.slice(newEnd, newEnd + CONTEXT_CHARS),
+				chapterTitle: chapterTitleAtNewOffset(newStart)
+			});
+		}
+
+		return { status: "ok", delta: delta, shifted: shifted };
+	}
+
+	function computeRevertPlanEncoded(encodedArgs) {
+		var args;
+		try {
+			args = JSON.parse(fromBase64(encodedArgs));
+		} catch (e) {
+			return toBase64(JSON.stringify({ status: "ok", delta: 0, shifted: [] }));
+		}
+		return toBase64(JSON.stringify(computeRevertPlan(args)));
+	}
+
 	// Returns rootSelector's full canonicalized inner text -- the same
 	// text buildTextIndex produces for every other offset-based
 	// operation in this file, exposed read-only so Swift-side code (the
@@ -1193,6 +1289,7 @@
 		initAnnotations: initAnnotations,
 		scrollToAnnotation: scrollToAnnotation,
 		computeTextEditPlanEncoded: computeTextEditPlanEncoded,
+		computeRevertPlanEncoded: computeRevertPlanEncoded,
 		getArticleText: getArticleText,
 
 		// Exposed for headless unit testing (annotations.test.js) of the
@@ -1215,6 +1312,7 @@
 			buildHeadingIndex: buildHeadingIndex,
 			nearestChapterTitle: nearestChapterTitle,
 			computeTextEditPlan: computeTextEditPlan,
+			computeRevertPlan: computeRevertPlan,
 			annotationWrapperSelector: annotationWrapperSelector,
 			HIGHLIGHT_CLASS: HIGHLIGHT_CLASS,
 			EDIT_ONLY_CLASS: EDIT_ONLY_CLASS,

@@ -52,7 +52,7 @@ task**, not this whole index cover-to-cover.
 - **A recurring Auto Layout / UIKit console warning** (before re-investigating one from scratch) → `console-warnings.md`
 - **`fastlane snapshot` screenshots, offline UI-test demo data, `-UITestSeedDemoData`, `appstore/screenshots`** → `ui-test-demo-data.md`
 - **Cutting a release: `release.yml`, tag creation, `source.json`, `scripts/update_source.py`, `ci.yml`'s App Store assets check** → `release-pipeline.md`
-- **An open question that used to have temporary debug logging attached to it** → `investigate-later.md`
+- **Whether iPad is supported, and how far** (supported at functional parity, not layout polish) → `module-layout.md` ("Platform scope")
 
 If nothing above fits, grep the codebase before assuming it's
 undocumented — this split is complete as of the date below, but the

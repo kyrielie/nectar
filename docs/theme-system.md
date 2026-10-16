@@ -17,7 +17,9 @@ Application Support Themes folder (imported) contains:
   `title`, `preferred_link`, `byline`, `avatar_src`, `dateline_style`,
   `datetime_long/medium/short`, `external_link*`, `feed_link*`, `body`, and
   a legacy always-literal `text_size_class` token that's inherited from
-  upstream NetNewsWire and never substituted).
+  upstream NetNewsWire and never substituted). `main.js` strips every
+  `nnwimageicon:` `avatar_src` image unless the `<img>` has `data-nnw-keep`;
+  see `nnwtheme-format.md`.
 - `stylesheet.css` — the theme's CSS. May start with one or more `@import`
   statements (e.g. a Google Fonts `@import url(...)`), which are handled
   specially (see below).

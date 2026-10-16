@@ -83,7 +83,7 @@ protocol SmallIconProvider {
 		return false
 	}
 
-	private static let archiveOfOurOwnIcon: IconImage? = {
+	static let archiveOfOurOwnIcon: IconImage? = {
 		guard let image = UIImage(named: "archiveOfOurOwnFeedIcon") else { return nil }
 		return IconImage(image, isBackgroundSuppressed: true)
 	}()
@@ -92,5 +92,21 @@ protocol SmallIconProvider {
 @MainActor extension Folder: SmallIconProvider {
 	var smallIcon: IconImage? {
 		Assets.Images.mainFolder
+	}
+}
+
+/// Which image the reader's `nnwimageicon:` avatar uses for an article (a theme opts in
+/// with `data-nnw-keep`; see docs/nnwtheme-format.md). Kept separate from
+/// `IconImageCache.imageForArticle`, so timeline and feed-row icons are unchanged.
+enum ArticleAvatarChoice {
+
+	/// True when the article's own link is on a recognized AO3 host. Ambrosia items link to
+	/// AO3 works while their feed URL is the Ambrosia server, so the feed-level AO3 rule
+	/// does not reach them.
+	static func usesAO3Mark(articleLink: String?) -> Bool {
+		guard let articleLink, let url = URL(string: articleLink) else {
+			return false
+		}
+		return AO3Link.isAO3Host(url)
 	}
 }

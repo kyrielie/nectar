@@ -214,8 +214,8 @@ Not added as starters:
 
 - **A (header table).** It is the stock NetNewsWire layout, whose source is
   `Shared/Article Rendering/template.html`. It is not a starter because no mockup pipeline
-  or title check exists for it, not because it cannot carry a design. Its avatar never renders
-  and its header height is unaudited, but the stock template sets no versal or divider
+  or title check exists for it, not because it cannot carry a design. Its avatar is stripped
+  unless the `<img>` carries `data-nnw-keep` (see the avatar row below), and its header height is unaudited, but the stock template sets no versal or divider
   attributes only because it was not written to; add them to `#bodyContainer` as in
   "Chapter dividers" if the design wants them (Beacon does). Use A for a faithful port, or
   for an original design that wants the header table as its masthead; for the latter, check
@@ -243,7 +243,7 @@ breaks every row here (see `theme-system.md`, "Two tiers").
 | `img, ... { max-width: 100% }` rule in the CSS | Required in practice | `build.py` only warns, but `ArticleThemeOverflowSafetyTests` fails on it |
 | Space above the title for the notch | Not needed | Nothing |
 | `Family`, `FamilyVariant`, `License.md` | Optional (`License.md` expected for ports) | Nothing |
-| `[[avatar_src]]` | Optional | Shape B omits it; `main.js` strips the image anyway |
+| `[[avatar_src]]` | Optional | Shape B omits it; `main.js` strips the image unless the `<img>` carries `data-nnw-keep` |
 | `[[dateline_style]]`, `[[datetime_*]]`, `[[date_*]]` | Optional | Shape B uses only `[[date_medium]]` and `[[datetime_long]]` |
 | `[[external_link*]]` | Optional | Shape B omits it |
 | The running head (`div.rh`), `[[feed_link]]`, `[[feed_link_title]]`, `[[date_medium]]`, `[[datetime_long]]` | Optional; leave out unless the design uses them | Nothing requires them; `removeFeedNameLink` only acts on anchors that exist |
@@ -494,7 +494,7 @@ style it. Verified against `Shared/Article Rendering/template.html`,
 | Block | Selector(s) | Source | Notes |
 |---|---|---|---|
 | Page / body | `body`, `html` | template + `core.css` | `core.css` sets `html { scrollbar-gutter: stable }` and `html, body { overflow-x: hidden }`, so anything wider than the page is clipped, not scrolled. |
-| Header (feed name, byline, avatar) | `.headerContainer`, `.headerTable`, `.header`, `.feedlink`, `.avatar img`, `#nnwImageIcon` | template | Default header is a 68px-tall table. `main.js` runs `removeArticleIconAvatar()` at load, which removes every `img` whose `src` starts with `nnwimageicon:` (so the avatar `<img>` in a template never renders), and `removeFeedNameLink()`, which removes any `a[href]` with a non-empty href and empty text (what the feed-name anchor becomes when `showFeedNameInReaderView` is off). Neither depends on theme markup. See "Full-screen reading" below before shrinking or removing it. |
+| Header (feed name, byline, avatar) | `.headerContainer`, `.headerTable`, `.header`, `.feedlink`, `.avatar img`, `#nnwImageIcon` | template | Default header is a 68px-tall table. `main.js` runs `removeArticleIconAvatar()` at load, which removes every `img` whose `src` starts with `nnwimageicon:` unless it carries `data-nnw-keep` (a theme opts in per element; a kept avatar that fails to load is removed too, so no broken-image glyph shows), and `removeFeedNameLink()`, which removes any `a[href]` with a non-empty href and empty text (what the feed-name anchor becomes when `showFeedNameInReaderView` is off). Neither depends on theme markup. A kept avatar is drawn by `ArticleIconSchemeHandler` at 192 points square and aspect-fit, so size it with CSS or `width`/`height`; for an article whose own link is an AO3 host (including Ambrosia items) it is the bundled AO3 mark, otherwise a single author's avatar or the regular article icon, and a transparent image when none exists. Timeline and feed-row icons are unchanged. See "Full-screen reading" below before shrinking or removing it. |
 | Title | `.articleTitle`, `.articleTitle h1`, `.articleTitle a` | template | Not clipped by overflow or fixed height; the app keeps the page below the notch cover. |
 | Dateline | `.articleDateline` or `.articleDatelineTitle` | template (`[[dateline_style]]`) | Which class is used depends on whether the article has a title. |
 | External link | `.externalLink` | template | |

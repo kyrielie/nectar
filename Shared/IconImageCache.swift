@@ -98,6 +98,19 @@ import Images
 		return imageForFeed(feed)
 	}
 
+	/// The image for the reader's avatar (`nnwimageicon:`): a single author's cached
+	/// avatar, then the AO3 mark when the article's own link is an AO3 URL, then the
+	/// regular article icon. Used only by `ArticleIconSchemeHandler`.
+	func imageForArticleAvatar(_ article: Article) -> IconImage? {
+		if let iconImage = imageForAuthors(article.authors) {
+			return iconImage
+		}
+		if ArticleAvatarChoice.usesAO3Mark(articleLink: article.link), let mark = Feed.archiveOfOurOwnIcon {
+			return mark
+		}
+		return imageForArticle(article)
+	}
+
 	func emptyCache() {
 		smartFeedIconImageCache.removeAll()
 		feedIconImageCache.removeAll()
