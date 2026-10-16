@@ -108,7 +108,7 @@ keepHighlight:account:)` persists the result:
 order (rightmost/latest first) so an earlier row's write is never
 computed relative to a not-yet-applied later shift —
 `TextReplacementOffsetShift.descendingApplicationOrder` exists in
-`Modules/Articles` for exactly this ordering requirement, pure and
+`Modules/AnnotationsKit` for exactly this ordering requirement, pure and
 independently testable, alongside `shiftedAnchors`/
 `shiftedAnchorsForRevert`/`firstOverlap`, the Swift-side counterparts to
 the same arithmetic `computeTextEditPlan` performs in JS. Each shifted
@@ -295,7 +295,7 @@ apostrophe); Custom Rules (a person's own `in`/`out` pairs,
 
 ### Per-work override
 
-`TextReplacementPerWorkOverride` (`Modules/Articles`) is a person-editable
+`TextReplacementPerWorkOverride` (`Modules/AnnotationsKit`) is a person-editable
 `[bookKey: TextReplacementRuleTable]` map, layered ahead of (never
 replacing) the global reader-insert table via
 `mergedReaderInsertTable(forBookKey:global:)` — the override's rows are
@@ -402,7 +402,7 @@ is no `Kind` switch anywhere in this rendering path.
 The sentence-reconstruction logic itself — given
 `quotePrefix`/`quoteExact`/`quoteSuffix`, find the surrounding sentence and
 the quote's location within it — lives in `SentenceContext`
-(`Modules/Articles`), extracted out of what used to be `AnnotationRow`'s
+(`Modules/AnnotationsKit`), extracted out of what used to be `AnnotationRow`'s
 own private `sentenceContext` computed property. `SentenceContext` returns
 plain `String`/`Range<String.Index>`, not `AttributedString`: this module
 has no SwiftUI/UIKit dependency (see `TextReplacementRuleTable`'s own
@@ -671,10 +671,29 @@ Pulled into `RSCore` (rather than left as a private method on
   `annotationWrapperSelector`, so it finds either wrapper shape
   (`mark.nnw-highlight` or `span.nnw-edit-only`) — before unwrapping, so the
   edited wording doesn't stay stuck in the rendered article after the row
-  itself is gone. This does not currently re-run
-  `TextReplacementOffsetShift.shiftedAnchorsForRevert` against any *other*
-  row whose offsets were shifted by this edit at save time — a gap flagged,
-  not fixed, here.
+  itself is gone. Before that swap, `WebViewController.persistRevertShift`
+  undoes the offset shift the edit applied to other rows at save time:
+  `Annotations.computeRevertPlanEncoded` (non-mutating, run against the live
+  DOM that still shows the replacement) returns the same
+  `{status, delta, shifted}` shape as `computeTextEditPlan`, and each shifted
+  row is persisted with `account.reanchorAnnotation` in descending-offset
+  order. **Coordinate space.** After a save, rows at or after the edit's end
+  are stored in the live (edited) text's space, where the replacement spans
+  `[startOffset, startOffset + replacementText.length)`; the edit row's own
+  `endOffset` still describes the original span and is not used. A row is
+  shifted back when its `startOffset` is at or after the replacement's end,
+  by `originalText.length - replacementText.length`, and its quote, prefix,
+  suffix and `chapterTitle` are re-sliced from the simulated reverted text.
+  If the live text at the replacement span is not `replacementText`, the plan
+  returns `status: "mismatch"` and nothing is written; the quote fallback in
+  `renderAnnotations` is then the only safety net. The production path uses
+  the JS plan rather than `TextReplacementOffsetShift.shiftedAnchorsForRevert`,
+  whose `revertedEditOriginalEndOffset` filter is in pre-edit coordinates and
+  would miss rows in the first `-delta` characters after a shortening edit;
+  that function remains as the pure, tested Swift counterpart and has no
+  production caller. Covered by `Tests/JS/annotations/revert-plan.test.js`
+  (round trips for lengthening, shortening and two stacked edits reverted in
+  both orders). Not confirmed on a device.
 
   **`AnnotationsListView`'s own swipe-to-delete is a separate call site and
   now shares this fix via a presenter callback.** The revert logic itself
@@ -991,7 +1010,7 @@ in scope here — that's a change to a server not in this repository.
   clone` and non-zero vertical padding, so a future edit to that rule
   doesn't silently drop the fix described under "Multi-line highlight
   clipping" below.
-- `Modules/Articles/Tests/ArticlesTests/TextReplacementOffsetShiftTests.swift`:
+- `Modules/AnnotationsKit/Tests/AnnotationsKitTests/TextReplacementOffsetShiftTests.swift`:
   `firstOverlap` (genuine overlap, touching boundaries, no conflict),
   `shiftedAnchors` (only rows at or after `editEndOffset` shift, positive/
   negative delta arithmetic, the zero-delta no-op fast path,
@@ -1000,7 +1019,7 @@ in scope here — that's a change to a server not in this repository.
   guarantee — pinned by a test that applies two edits in the mandated
   descending order and checks the resulting offsets are correct, not just
   that the sort itself produces the right order.
-- `Modules/Articles/Tests/ArticlesTests/TextReplacementRuleTableTests.swift`:
+- `Modules/AnnotationsKit/Tests/AnnotationsKitTests/TextReplacementRuleTableTests.swift`:
   word-boundary/case-insensitive matching (including the false-positive
   guard — `teh` inside `tehcnically` must not match), comma-separated
   multi-token rules, regex-escaping of special characters in a token,
@@ -1024,6 +1043,12 @@ in scope here — that's a change to a server not in this repository.
   `initAnnotations` posts `annotationWasTapped` for a click on a
   `span.nnw-edit-only`, and `scrollToAnnotation` finds, scrolls to, and
   flashes one the same way it does for a `<mark>`.
+- `Tests/JS/annotations/revert-plan.test.js`: `computeRevertPlan` round
+  trips (apply through `computeTextEditPlan`, revert, assert every other
+  row's offsets equal the originals) for a lengthening edit, a shortening
+  edit, a row touching the replacement's end, rows before the edit, a
+  same-length edit, two stacked edits reverted in both orders, the
+  `mismatch` status, and the base64 bridge.
 - `Tests/JS/annotations/text-replacement-edit-plan.test.js`:
   `computeTextEditPlan`/`getArticleText` — same-length no-op, overlap
   detection short-circuiting before any shift is computed, lengthening
@@ -1032,7 +1057,7 @@ in scope here — that's a change to a server not in this repository.
   touching the edit's `endOffset` exactly still being included, a row
   entirely before the edit never being shifted, the `rootSelector`
   default, and `computeTextEditPlanEncoded`'s malformed-input fallback.
-- `Modules/Articles/Tests/ArticlesTests/TextReplacementQuoteConversionTests.swift`:
+- `Modules/AnnotationsKit/Tests/AnnotationsKitTests/TextReplacementQuoteConversionTests.swift`:
   balanced-pair dialogue-quote detection and conversion, and the
   contraction/possessive cases a naive `'`-to-curly-quote pass would get
   wrong (a contraction immediately adjacent to a real quote boundary, an
@@ -1051,7 +1076,7 @@ in scope here — that's a change to a server not in this repository.
   pre-existing chapter-title-vs-book-title fallback (sanity-checked
   alongside the new columns, not changed by them), and row-count/empty-list
   sanity.
-- `Modules/Articles/Tests/ArticlesTests/TextReplacementPerWorkOverrideTests.swift`:
+- `Modules/AnnotationsKit/Tests/AnnotationsKitTests/TextReplacementPerWorkOverrideTests.swift`:
   precedence (a per-work override's rule wins over the global table for a
   token it covers), no-leak-to-other-works (an override set for one
   `bookKey` never affects another), and partial-overlap (a token the
@@ -1059,7 +1084,7 @@ in scope here — that's a change to a server not in this repository.
   through the real `TextReplacementRuleEngine` via
   `mergedReaderInsertTable(forBookKey:global:)`, not just asserted against
   row order.
-- `Modules/Articles/Tests/ArticlesTests/SentenceContextTests.swift`:
+- `Modules/AnnotationsKit/Tests/AnnotationsKitTests/SentenceContextTests.swift`:
   regression coverage for the `sentenceContext` extraction out of
   `AnnotationRow` — sentence reconstruction from
   `quotePrefix`/`quoteExact`/`quoteSuffix`, clipping to only the sentence

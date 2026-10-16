@@ -159,16 +159,24 @@ observe either notification — they have no article/theme concept and don't
 support `.blend` at all (see "Toolbar Style" below), so there's nothing on
 those screens for these notifications to invalidate.
 
-**Open investigation, not yet resolved:** `applySurfacePaletteNavigationBarAppearance()`
-was carrying temporary diagnostic logging ("top-toolbar-colors-wrong-on-live-switch
-investigation") tracing which adopting screen actually repaints, and when,
-during a live in-app palette switch. The logging has been removed as part
-of a vibecoding cleanup pass (it was cheap to re-add and had accumulated
-alongside other stale scaffolding) — the underlying question is still
-open and is now tracked in `docs/investigate-later.md` instead of inline
-logging. See that doc for the working theory (same observer-list gap the
-Accent Color paragraph above describes) and what re-adding the logging
-would take if this needs to be picked back up.
+**Live repaint audit (code reading; not confirmed on a device).** The earlier theory, that
+one adopting screen lacks an observer, is not supported by the code. All three adopting screens
+observe `.surfaceTintDidChange` and call `applySurfacePaletteNavigationBarAppearance()`
+(Article through `applyToolbarStyle()`), and all three repaint on a live appearance change through
+`registerForTraitChanges`. Accent Color changes do not affect the palette nav bar paths (tinted
+reads `surfaceTint`, blend reads article colors); the screens re-tint their own controls in
+`accentColorDidChange`. `applyOpaqueNavigationBarAppearance` assigns the standard, compact and
+scroll-edge appearances and tints the bar button items that exist at the time of the call, so one
+code-level risk remains: bar button items assigned after an apply do not receive the explicit tint
+until the next apply.
+
+**Device matrix still open.** For each screen (Feed, Timeline, Article) and each toolbar style
+(System, Tinted, Blend), change Surface Palette once at scroll top and once mid-scroll; on Article
+only, also change the article theme with the article open; toggle appearance with each screen open.
+Pass: the top bar and, on Article, the bottom toolbar repaint immediately, including bar button icon
+colors, with no re-entry needed. Then trigger a state that swaps bar items on each screen (for
+example the filter or activity button on Feed and Timeline) and confirm their tint matches. If it
+fails, suspect the late-assigned bar items first, then scroll-edge appearance caching.
 
 `SurfacePalette.HexSet` originally also carried `controlBackground` and
 `sectionHeader` fields; both were removed (along with the corresponding

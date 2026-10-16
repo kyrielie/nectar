@@ -181,14 +181,26 @@ function removeWpSmiley() {
 	}
 }
 
-// The feed icon/avatar (#nnwImageIcon) is just the generic fallback icon rendered
-// as a raster image via the nnwImageIcon:// URL scheme (see ArticleRenderer.swift
-// and ArticleIconSchemeHandler.swift) — it never shows a real per-feed icon.
-// Every bundled and third-party theme's template.html renders this element, so it
-// is removed here in the shared rendering pipeline rather than in each template,
-// which lets user-installed NetNewsWire themes keep working unmodified.
+// The feed icon/avatar (#nnwImageIcon) is the generic fallback icon rendered as a
+// raster image via the nnwImageIcon:// URL scheme (see ArticleRenderer.swift and
+// ArticleIconSchemeHandler.swift). Every bundled and third-party theme's
+// template.html renders this element, so it is removed here in the shared rendering
+// pipeline rather than in each template, which lets user-installed NetNewsWire
+// themes keep working unmodified. A theme opts in per element by putting
+// data-nnw-keep on the <img>; kept avatars are then pruned if they fail to load,
+// so a theme never shows a broken-image glyph.
 function removeArticleIconAvatar() {
-	document.querySelectorAll('img[src^="nnwimageicon:" i]').forEach(img => img.remove());
+	document.querySelectorAll('img[src^="nnwimageicon:" i]:not([data-nnw-keep])').forEach(img => img.remove());
+	pruneKeptArticleIconAvatars();
+}
+
+function pruneKeptArticleIconAvatars() {
+	document.querySelectorAll('img[src^="nnwimageicon:" i][data-nnw-keep]').forEach(img => {
+		img.addEventListener("error", () => img.remove());
+		if (img.complete && img.naturalWidth === 0) {
+			img.remove();
+		}
+	});
 }
 
 // The feed-name link (populated from ArticleRenderer's feed_link /

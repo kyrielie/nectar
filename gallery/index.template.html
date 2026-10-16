@@ -135,7 +135,7 @@ const SUB = {title: "The Prancing Pony", preferred_link: "#", external_link_labe
 /* Runs inside each preview frame. Mirrors applyVersalCaps/applyChapterDividers in Shared/Article Rendering/main.js. */
 function frameScript() {
   const box = document.getElementById("bodyContainer");
-  const icon = document.getElementById("nnwImageIcon"); if (icon) icon.remove();
+  const icon = document.getElementById("nnwImageIcon"); if (icon && !icon.hasAttribute("data-nnw-keep")) icon.remove();
   document.addEventListener("click", e => { if (e.target.closest("a")) e.preventDefault(); });
   if (!box) return;
   const apparatus = p => !!p.closest(".summary,.notes,.preface,#ao3SyntheticPreface,#ao3Preface");

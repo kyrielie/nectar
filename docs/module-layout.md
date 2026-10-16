@@ -169,6 +169,23 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
 Note: several `#if os(macOS)` branches survive from the upstream NetNewsWire
 codebase but nothing macOS is currently built or shipped for Nectar.
 
+## Platform scope
+
+iPad is supported at functional parity, not layout polish. `TARGETED_DEVICE_FAMILY = 1,2`
+(`xcconfig/common/NetNewsWire_ios_target_common.xcconfig`) stays. In scope: no crashes, no unusable
+layouts, and article reading working in split view and full screen. Layout polish beyond that is out of
+scope until the owner says otherwise. iPad-aware code that exists: the `UISplitViewController` size
+workaround for `WKWebView` in `WebViewController`, `isSidebarHidden(for:)` in
+`MainTimelineModernViewController`, and a persisted `splitViewPreferredDisplayMode`.
+
+**Smoke audit.** Static portion done by reading code: all 16 `UIAlertController(... .actionSheet)`
+sites in `iOS/` set a popover anchor within the presenting scope (checked with a 70-line window
+search for `popoverPresentationController`, so it is a heuristic), and the three
+`UIActivityViewController` presentations (the fourth match is the `ShareAO3SeriesLinkActivity` `UIActivity` subclass, which presents nothing) set one. **Not run:** the simulator pass (iPad 11-inch and
+13-inch, portrait and landscape, Stage Manager resizing): article paging in split view with the
+sidebar hidden and shown, annotation popovers, the annotation editor and the table of contents, and
+theme width on a wide window. File defects found there as separate issues.
+
 ## Lint size ratchet
 
 `.swiftlint.yml` enables `file_length` and `type_body_length` as

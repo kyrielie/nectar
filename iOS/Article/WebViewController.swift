@@ -1440,16 +1440,13 @@ extension WebViewController {
 	func revertOrUnwrapAnnotationDOM(_ annotation: Annotation) {
 		if let originalText = annotation.originalText {
 			// A text-edit row: applyTextEdit already mutated the DOM at render time, so
-			// unwrapping alone would leave the replacement text. revertTextEdit restores
-			// originalText first, then unwraps (see annotations.js).
-			let args: [String: String] = ["annotationID": annotation.annotationID, "originalText": originalText]
-			guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else { return }
-			let encodedArgs = argsJSON.base64EncodedString()
-
-			webView?.evaluateJavaScript("Annotations.revertTextEdit(\"\(encodedArgs)\")") { _, error in
-				if let error {
-					Self.logger.error("deleteAnnotation: Annotations.revertTextEdit() JS call failed: \(error.localizedDescription, privacy: .public)")
-				}
+			// unwrapping alone would leave the replacement text. Rows after the edit were
+			// shifted by its length delta when it was saved, so shift them back first
+			// (computeRevertPlan reads the live, still-edited DOM), then let
+			// revertTextEdit restore originalText and unwrap (see annotations.js).
+			Task {
+				await self.persistRevertShift(for: annotation, originalText: originalText)
+				self.revertTextEditInDOM(annotation, originalText: originalText)
 			}
 		} else {
 			// Highlight-only row: the text was never touched, so unwrap the <mark> and
@@ -1461,6 +1458,83 @@ extension WebViewController {
 			}
 		}
 
+	}
+
+	private func revertTextEditInDOM(_ annotation: Annotation, originalText: String) {
+		let args: [String: String] = ["annotationID": annotation.annotationID, "originalText": originalText]
+		guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else { return }
+		let encodedArgs = argsJSON.base64EncodedString()
+
+		webView?.evaluateJavaScript("Annotations.revertTextEdit(\"\(encodedArgs)\")") { _, error in
+			if let error {
+				Self.logger.error("deleteAnnotation: Annotations.revertTextEdit() JS call failed: \(error.localizedDescription, privacy: .public)")
+			}
+		}
+	}
+
+	/// Inverse of saveTextEdit's shift (docs/annotations.md, "Reverting an edit"): asks
+	/// annotations.js (computeRevertPlan, non-mutating, against the live DOM that still
+	/// shows the replacement) where every row after the edit moves back to, and persists
+	/// each via account.reanchorAnnotation. Any failure or a "mismatch" status writes
+	/// nothing; renderAnnotations' quote fallback then remains the safety net.
+	private func persistRevertShift(for annotation: Annotation, originalText: String) async {
+		guard let account = article?.account, let webView else { return }
+		let articleID = annotation.articleID
+
+		let others = await account.fetchAnnotations(forArticleID: articleID)
+			.filter { $0.annotationID != annotation.annotationID }
+		let otherPayload = others.map { [
+			"annotationID": $0.annotationID,
+			"startOffset": $0.startOffset,
+			"endOffset": $0.endOffset
+		] as [String: Any] }
+
+		let args: [String: Any] = [
+			"annotationID": annotation.annotationID,
+			"startOffset": annotation.startOffset,
+			"originalText": originalText,
+			"replacementText": annotation.replacementText ?? "",
+			"otherAnnotations": otherPayload,
+			"rootSelector": annotation.rootSelector
+		]
+		guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else {
+			Self.logger.error("deleteAnnotation: failed to serialize computeRevertPlan args")
+			return
+		}
+		let encodedArgs = argsJSON.base64EncodedString()
+
+		let plan: TextEditPlan
+		do {
+			let result = try await webView.evaluateJavaScript("Annotations.computeRevertPlanEncoded(\"\(encodedArgs)\")")
+			guard let b64 = result as? String,
+				  let data = Data(base64Encoded: b64),
+				  let decoded = try? JSONDecoder().decode(TextEditPlan.self, from: data) else {
+				Self.logger.error("deleteAnnotation: computeRevertPlanEncoded() returned an unexpected result")
+				return
+			}
+			plan = decoded
+		} catch {
+			Self.logger.error("deleteAnnotation: computeRevertPlanEncoded() JS call failed: \(error.localizedDescription, privacy: .public)")
+			return
+		}
+
+		guard plan.status == "ok" else {
+			Self.logger.info("deleteAnnotation: revert plan status \(plan.status, privacy: .public); leaving other rows to the quote fallback")
+			return
+		}
+
+		// Same descending order as saveTextEdit.
+		for shifted in plan.shifted.sorted(by: { $0.startOffset > $1.startOffset }) {
+			await account.reanchorAnnotation(
+				annotationID: shifted.annotationID,
+				startOffset: shifted.startOffset,
+				endOffset: shifted.endOffset,
+				quoteExact: shifted.quoteExact,
+				quotePrefix: shifted.quotePrefix,
+				quoteSuffix: shifted.quoteSuffix,
+				chapterTitle: shifted.chapterTitle
+			)
+		}
 	}
 
 }
@@ -1847,6 +1921,11 @@ private extension WebViewController {
 		// to light shows the dark override, then back shows the light one) until a third
 		// toggle resyncs.
 		let isDark = Self.isDarkForColorResolution(selfTraitCollection: traitCollection, webViewTraitCollection: webView.traitCollection)
+		// Pin the web view's own interface style to the same value, so its prefers-color-scheme
+		// CSS and the native colors below come from one source instead of the pooled web view's
+		// inherited trait (docs/article-color-pipeline.md). Re-applied on every call, so a reused
+		// pooled web view is re-pinned.
+		webView.overrideUserInterfaceStyle = isDark ? .dark : .light
 		let colors = Self.resolvedArticleColors(isDark: isDark)
 		webView.backgroundColor = colors.background
 		webView.underPageBackgroundColor = colors.background
