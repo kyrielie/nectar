@@ -687,3 +687,7 @@ redoing the one-off version used to generate this file.
   are out-of-scope macOS/widget/extension targets Nectar doesn't build; 254
   are genuinely deleted backends/features, itemized under "Deleted from
   upstream" above).
+
+## Theme state hooks
+
+Nectar adds a hidden `#nectarState` span at the start of the article body, a `setNectarState` function in `main.js`, and `data-kind`/`data-value` attributes on AO3 preface rows. Upstream NetNewsWire has none of these. See `nnwtheme-format.md`, "Nectar state hooks".

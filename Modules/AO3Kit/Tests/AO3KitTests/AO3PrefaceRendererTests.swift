@@ -130,4 +130,67 @@ import Testing
 		// Next still links normally -- only First is affected by index == 1.
 		#expect(html?.contains("href='nectar-series:next?ao3id=4242&amp;workurl=https://archiveofourown.org/works/999'") == true)
 	}
+
+	// MARK: - data-kind / data-value theme hooks
+
+	@Test func kindRendersOnBothDtAndDd() {
+		let row = AO3PrefaceRow(label: "Additional Tags:", values: [AO3TagEntry(text: "Fluff", href: "/tags/1")], isWide: true, kind: "freeform")
+		let html = AO3PrefaceRenderer.html(id: "ao3Preface", data: AO3PrefaceData(rows: [row], statsRows: []))
+		#expect(html?.contains("<dt class='wide' data-kind='freeform'>Additional Tags:</dt><dd class='wide' data-kind='freeform'><a href='/tags/1'>Fluff</a></dd>") == true)
+	}
+
+	@Test func kindRendersOnNonWideRow() {
+		let row = AO3PrefaceRow(label: "Rating:", values: [AO3TagEntry(text: "Teen And Up Audiences")], kind: "rating")
+		let html = AO3PrefaceRenderer.html(id: "ao3Preface", data: AO3PrefaceData(rows: [row], statsRows: []))
+		#expect(html?.contains("<dt data-kind='rating'>Rating:</dt><dd data-kind='rating'>Teen And Up Audiences</dd>") == true)
+	}
+
+	@Test func nilKindLeavesOutputUnchanged() {
+		let row = AO3PrefaceRow(label: "Rating:", values: [AO3TagEntry(text: "General Audiences")])
+		let html = AO3PrefaceRenderer.html(id: "ao3Preface", data: AO3PrefaceData(rows: [row], statsRows: []))
+		#expect(html?.contains("<dt>Rating:</dt><dd>General Audiences</dd>") == true)
+		#expect(html?.contains("data-kind") != true)
+	}
+
+	@Test func seriesRowCarriesKind() {
+		let entries = [AO3TagEntry(text: "Series One", href: "/series/1", prefix: "Part 1 of ", ao3ID: "1", index: 1)]
+		let row = AO3PrefaceRow(label: "Series:", values: entries, isSeriesNavigation: true, kind: "series")
+		let html = AO3PrefaceRenderer.html(id: "ao3Preface", data: AO3PrefaceData(rows: [row], statsRows: []))
+		#expect(html?.contains("<dt class='wide' data-kind='series'>Series:</dt><dd class='wide' data-kind='series'>") == true)
+	}
+
+	@Test func categoryLinksCarryDataValueFromFixedSlugMap() {
+		let entries = [
+			AO3TagEntry(text: "F/F", href: "/tags/ff"),
+			AO3TagEntry(text: "F/M", href: "/tags/fm"),
+			AO3TagEntry(text: "M/M", href: "/tags/mm"),
+			AO3TagEntry(text: "Gen", href: "/tags/gen"),
+			AO3TagEntry(text: "Multi", href: "/tags/multi"),
+			AO3TagEntry(text: "Other", href: "/tags/other")
+		]
+		let row = AO3PrefaceRow(label: "Categories:", values: entries, kind: "category")
+		let html = AO3PrefaceRenderer.html(id: "ao3Preface", data: AO3PrefaceData(rows: [row], statsRows: [])) ?? ""
+		for (text, slug) in [("F/F", "ff"), ("F/M", "fm"), ("M/M", "mm"), ("Gen", "gen"), ("Multi", "multi"), ("Other", "other")] {
+			#expect(html.contains("data-value='\(slug)'>\(text)</a>"))
+		}
+	}
+
+	@Test func categoryPlainTextIsWrappedInSpanWithDataValue() {
+		let row = AO3PrefaceRow(label: "Category:", values: [AO3TagEntry(text: "Gen")], kind: "category")
+		let html = AO3PrefaceRenderer.html(id: "ao3SyntheticPreface", data: AO3PrefaceData(rows: [row], statsRows: []))
+		#expect(html?.contains("<dd data-kind='category'><span data-value='gen'>Gen</span></dd>") == true)
+	}
+
+	@Test func unknownCategoryTextGetsNoDataValue() {
+		let row = AO3PrefaceRow(label: "Category:", values: [AO3TagEntry(text: "Something New", href: "/tags/x")], kind: "category")
+		let html = AO3PrefaceRenderer.html(id: "ao3Preface", data: AO3PrefaceData(rows: [row], statsRows: []))
+		#expect(html?.contains("data-value") != true)
+		#expect(html?.contains("<a href='/tags/x'>Something New</a>") == true)
+	}
+
+	@Test func dataValueOnlyAppliesToCategoryRows() {
+		let row = AO3PrefaceRow(label: "Additional Tags:", values: [AO3TagEntry(text: "Gen", href: "/tags/gen")], isWide: true, kind: "freeform")
+		let html = AO3PrefaceRenderer.html(id: "ao3Preface", data: AO3PrefaceData(rows: [row], statsRows: []))
+		#expect(html?.contains("data-value") != true)
+	}
 }

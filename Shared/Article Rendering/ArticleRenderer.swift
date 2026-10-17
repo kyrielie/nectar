@@ -117,6 +117,11 @@ import ArticleTheming
 		self.title = ArticleStringFormatter.sanitizedTitle(article?.title, forHTML: true) ?? ""
 
 		var bodyPrefix = ""
+		if let article {
+			// Hidden, attribute-only state marker for theme CSS. First thing in the
+			// body so it precedes both the synthetic and the fetched preface.
+			bodyPrefix += Self.nectarStateMarkerHTML(for: article)
+		}
 		if let article, let prefaceHTML = Self.ao3SyntheticPrefaceHTML(for: article) {
 			bodyPrefix += prefaceHTML
 		}
@@ -169,6 +174,23 @@ import ArticleTheming
 			}
 			Self.logger.debug("ArticleRenderer: articleID=\(article.articleID, privacy: .public) bodySource=\(source, privacy: .public) contentHTMLLength=\(article.contentHTML?.count ?? -1, privacy: .public) contentTextLength=\(article.contentText?.count ?? -1, privacy: .public)")
 		}
+	}
+
+	/// Hidden, attribute-only element carrying per-article state for theme CSS
+	/// (`#nectarState[data-starred="true"] ~ #ao3Preface`). Contains no text
+	/// node, so annotation offsets, find-in-page and word counts ignore it.
+	/// `data-restricted` is omitted when `isRestricted` is nil. Built on every
+	/// render and never stored in `contentHTML`, so it cannot go stale; star and
+	/// love changes after render are pushed by `setNectarState` in main.js.
+	nonisolated static func nectarStateMarkerHTML(for article: Article) -> String {
+		var attributes = [
+			"data-starred=\"\(article.status.starred)\"",
+			"data-loved=\"\(article.status.loved)\""
+		]
+		if let isRestricted = article.isRestricted {
+			attributes.append("data-restricted=\"\(isRestricted)\"")
+		}
+		return "<span id=\"nectarState\" \(attributes.joined(separator: " ")) hidden aria-hidden=\"true\"></span>"
 	}
 
 	// MARK: - API
@@ -491,27 +513,27 @@ extension ArticleRenderer {
 		}
 
 		var rows: [AO3PrefaceRow] = []
-		func appendRow(_ label: String, _ values: [String]?, isWide: Bool = false) {
+		func appendRow(_ label: String, _ values: [String]?, kind: String, isWide: Bool = false) {
 			guard let values, !values.isEmpty else {
 				return
 			}
-			rows.append(AO3PrefaceRow(label: label, values: values.map { AO3TagEntry(text: $0) }, isWide: isWide))
+			rows.append(AO3PrefaceRow(label: label, values: values.map { AO3TagEntry(text: $0) }, isWide: isWide, kind: kind))
 		}
 
-		appendRow("Rating:", article.ratings)
+		appendRow("Rating:", article.ratings, kind: "rating")
 		// isWide: matches AO3ChapterHTMLExtractor's real-fetch path -- see
 		// its comment on the "warning" class token for why (long fixed
 		// AO3 phrases, often two or three at once, not merely many
 		// values).
-		appendRow("Archive Warning:", article.warnings, isWide: true)
-		appendRow("Category:", article.categories)
+		appendRow("Archive Warning:", article.warnings, kind: "warning", isWide: true)
+		appendRow("Category:", article.categories, kind: "category")
 		// Fandom/Relationships/Characters render wide (full preface width,
 		// own line below the label) -- matching AO3ChapterHTMLExtractor's
 		// real-fetch path, since these can carry dozens of values just as
 		// easily in Ambrosia's own parsed fields as off a live AO3 page.
-		appendRow("Fandom:", article.fandoms, isWide: true)
-		appendRow("Relationships:", article.relationships, isWide: true)
-		appendRow("Characters:", article.characters, isWide: true)
+		appendRow("Fandom:", article.fandoms, kind: "fandom", isWide: true)
+		appendRow("Relationships:", article.relationships, kind: "relationship", isWide: true)
+		appendRow("Characters:", article.characters, kind: "character", isWide: true)
 		// Additional Tags (AO3's freeform tags) has no home on Article at
 		// all -- Workstream 1 doesn't parse a distinct freeform-tags bucket
 		// from the Atom feed, so there's nothing to synthesize this row
@@ -533,7 +555,7 @@ extension ArticleRenderer {
 			let entries = series.map { entry in
 				AO3TagEntry(text: entry.name, prefix: "Part \(entry.index) of ", ao3ID: entry.ao3ID, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL, index: entry.index)
 			}
-			rows.append(AO3PrefaceRow(label: "Series:", values: entries, isSeriesNavigation: true))
+			rows.append(AO3PrefaceRow(label: "Series:", values: entries, isSeriesNavigation: true, kind: "series"))
 		}
 
 		// Collections: deliberately not synthesized here -- flagged as an

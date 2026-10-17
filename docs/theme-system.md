@@ -56,7 +56,7 @@ directory rules and `docs/theme-gallery.md` for the gallery page itself.
 Only a minority of themes are **generated** now. The single generator,
 `buildscripts/theme-generation/generate_ported_themes.py`, fills a shared
 structural CSS/HTML template with per-theme palette and font data. Its theme
-table covers 13 entries (the Rosé Pine Moon/Dawn ports, the ZerafinaCSS "neos"
+table covers 13 entries (the Rosé Pine Moon/Dawn themes, the ZerafinaCSS "neos"
 recolors Black & White, Charcoal Rose, Dusky Purple, Midnight Teal, Powder Pink
 and Tumblr Blue, Constellations, Dracula, Moonlit Wisteria, Pastel Whimsy and
 Poudre et Plume), and only one of those (Midnight Blue) is in `SHIPPED` (so written to
@@ -523,3 +523,5 @@ actually renders, and the constraints imposed by
 theme (e.g. don't invent selectors that don't exist in the shared template;
 prefer reusing an existing muted color over inventing a new one). See also
 `docs/nnwtheme-format.md` for the theme-family convention.
+
+Themes can also style on star, love and restricted state and on preface row types; see `nnwtheme-format.md`, "Nectar state hooks".

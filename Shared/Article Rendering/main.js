@@ -119,6 +119,18 @@ function reloadArticleImage(imageSrc) {
 	}
 }
 
+// Pushes per-article state to the hidden #nectarState marker without a re-render
+// (a re-render would lose scroll position and annotation overlays). Keys become
+// data-* attributes, e.g. {starred: true} sets data-starred="true". No-op when
+// the page has no marker.
+function setNectarState(state) {
+	var marker = document.getElementById("nectarState");
+	if (!marker) { return; }
+	Object.keys(state).forEach(function (key) {
+		marker.setAttribute("data-" + key, String(state[key]));
+	});
+}
+
 function stopMediaPlayback() {
 	document.querySelectorAll("iframe").forEach(element => {
 		var iframeSrc = element.src;

@@ -59,7 +59,7 @@ where one exists.
 | Beetlejuice | [NCFC-Wiki/Beetlejuice-theme-for-AO3](https://github.com/NCFC-Wiki/Beetlejuice-theme-for-AO3) | MIT |
 | Black & White, Charcoal Rose, Dusky Purple, Midnight Teal, Powder Pink, Midnight Blue (the `tumblr-blue` variant) | [ZerafinaCSS/neos](https://github.com/ZerafinaCSS/neos) | MIT |
 | Dracula | [dracula/archive-of-our-own](https://github.com/dracula/archive-of-our-own) | MIT |
-| Rosé Pine, Rosé Pine Dawn, Rosé Pine Moon | [Wolfbatcat/ao3-rose-pine](https://github.com/Wolfbatcat/ao3-rose-pine) | |
+| Rosé Pine, Rosé Pine Dawn, Rosé Pine Moon | [Wolfbatcat/ao3-rose-pine](https://github.com/Wolfbatcat/ao3-rose-pine) | None stated; inspired by, values reimplemented |
 | Vintage Letter Green | [Wolfbatcat/Vintage-Letter-Green-AO3-Skin](https://github.com/Wolfbatcat/Vintage-Letter-Green-AO3-Skin) | MIT |
 | Moonlit Wisteria, Pastel Whimsy, Poudre et Plume | intothisshadow ([github](https://github.com/intothisshadow)) | |
 | Constellations | [thevalkyrieismakingao3skinsig/constellations-ao3-skin](https://github.com/thevalkyrieismakingao3skinsig/constellations-ao3-skin) | |

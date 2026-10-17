@@ -1,7 +1,9 @@
-Ported from the AO3 workskin "Rosé Pine — Closer to Home" by BlackBatCat,
-[Wolfbatcat/ao3-rose-pine](https://github.com/Wolfbatcat/ao3-rose-pine),
-cited MIT in this theme's `stylesheet.css` comments.
+Inspired by the AO3 workskin "Rosé Pine — Closer to Home" by BlackBatCat,
+[Wolfbatcat/ao3-rose-pine](https://github.com/Wolfbatcat/ao3-rose-pine). The values here are reimplemented for
+Nectar; this is not a port. No license is stated for that repository.
 
-Structure follows the bundled `Sepia.nnwtheme` exactly (same selectors,
-same iOS/macOS `@supports` split); only the color values are ported, pulled
-from the source skin's `:root` palette (`theme_rosepine_cth.css`).
+Structure follows the bundled `Sepia.nnwtheme` (same selectors, same
+iOS/macOS `@supports` split).
+
+Palette values are the Rosé Pine project's published colors
+(rosepinetheme.com).

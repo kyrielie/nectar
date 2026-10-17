@@ -372,3 +372,5 @@ concurrency group, so one queuing doesn't cancel the other). It force-syncs
 `pages/themes` from the fresh build output on every run rather than diffing,
 so a theme removed from `gallery-themes/` also disappears from the published
 site on the next push.
+
+The gallery `SAMPLE` in `gallery/index.template.html` carries a `#nectarState` span (starred, restricted) and `data-kind` on its warning row, so themes that style the Nectar state hooks show them in previews. See `nnwtheme-format.md`, "Nectar state hooks".

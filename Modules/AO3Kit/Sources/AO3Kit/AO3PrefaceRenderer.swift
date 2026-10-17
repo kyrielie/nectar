@@ -71,11 +71,21 @@ public struct AO3PrefaceRow: Sendable, Equatable {
 	/// this flag rather than joining `values` with the generic renderer.
 	public let isSeriesNavigation: Bool
 
-	public init(label: String, values: [AO3TagEntry], isWide: Bool = false, isSeriesNavigation: Bool = false) {
+	/// Row type for theme styling: one of `rating`, `category`, `warning`,
+	/// `fandom`, `relationship`, `character`, `freeform`, `language`,
+	/// `series`, `collections`. Rendered as `data-kind` on the row's `<dt>`
+	/// and `<dd>`; nil renders nothing, so output for a row without a kind
+	/// is unchanged. Themes must treat a missing `data-kind` as the default
+	/// (single-color) look, because preface HTML already stored in
+	/// `contentHTML` predates this attribute until its next refetch.
+	public let kind: String?
+
+	public init(label: String, values: [AO3TagEntry], isWide: Bool = false, isSeriesNavigation: Bool = false, kind: String? = nil) {
 		self.label = label
 		self.values = values
 		self.isWide = isWide
 		self.isSeriesNavigation = isSeriesNavigation
+		self.kind = kind
 	}
 }
 
@@ -129,10 +139,12 @@ public enum AO3PrefaceRenderer {
 				rowsHTML += seriesNavigationRowsHTML(row)
 				continue
 			}
-			let joined = row.values.map(renderedEntry).joined(separator: ", ")
+			let isCategory = row.kind == "category"
+			let joined = row.values.map { isCategory ? renderedCategoryEntry($0) : renderedEntry($0) }.joined(separator: ", ")
 			guard !joined.isEmpty else { continue }
 			let classAttribute = row.isWide ? " class='wide'" : ""
-			rowsHTML += "<dt\(classAttribute)>\(escape(row.label))</dt><dd\(classAttribute)>\(joined)</dd>"
+			let kindAttr = kindAttribute(for: row)
+			rowsHTML += "<dt\(classAttribute)\(kindAttr)>\(escape(row.label))</dt><dd\(classAttribute)\(kindAttr)>\(joined)</dd>"
 		}
 		for stat in data.statsRows {
 			guard !stat.value.isEmpty else { continue }
@@ -170,7 +182,8 @@ public enum AO3PrefaceRenderer {
 			// where .ao3SeriesPrefaceLinks's white-space: nowrap would
 			// otherwise push the row (and the whole preface) past the
 			// container's width.
-			result += "<dt class='wide'>\(escape(row.label))</dt><dd class='wide'><span class='ao3SeriesPrefaceEntry'>\(nameHTML)</span> <span class='ao3SeriesPrefaceLinks'>\(linksHTML)</span></dd>"
+			let kindAttr = kindAttribute(for: row)
+			result += "<dt class='wide'\(kindAttr)>\(escape(row.label))</dt><dd class='wide'\(kindAttr)><span class='ao3SeriesPrefaceEntry'>\(nameHTML)</span> <span class='ao3SeriesPrefaceLinks'>\(linksHTML)</span></dd>"
 		}
 		return result
 	}
@@ -182,6 +195,35 @@ public enum AO3PrefaceRenderer {
 			return prefix + text
 		}
 		return "\(prefix)<a href='\(escapeAttribute(href))'>\(text)</a>"
+	}
+
+	private static func kindAttribute(for row: AO3PrefaceRow) -> String {
+		guard let kind = row.kind, !kind.isEmpty else {
+			return ""
+		}
+		return " data-kind='\(escapeAttribute(kind))'"
+	}
+
+	/// Fixed AO3 category label to `data-value` slug map. Unknown text gets
+	/// no attribute and renders exactly like `renderedEntry`.
+	private static let categorySlugs: [String: String] = [
+		"F/F": "ff", "F/M": "fm", "M/M": "mm", "Gen": "gen", "Multi": "multi", "Other": "other"
+	]
+
+	/// Category values carry `data-value` so a theme can color each one
+	/// (F/F, Gen, and so on). A linked value gets the attribute on its `<a>`;
+	/// plain text (the pre-fetch synthetic preface) is wrapped in a `<span>`
+	/// carrying it.
+	private static func renderedCategoryEntry(_ entry: AO3TagEntry) -> String {
+		guard let slug = categorySlugs[entry.text] else {
+			return renderedEntry(entry)
+		}
+		let prefix = escape(entry.prefix)
+		let text = escape(entry.text)
+		guard let href = entry.href else {
+			return "\(prefix)<span data-value='\(slug)'>\(text)</span>"
+		}
+		return "\(prefix)<a href='\(escapeAttribute(href))' data-value='\(slug)'>\(text)</a>"
 	}
 
 	static func escape(_ string: String) -> String {

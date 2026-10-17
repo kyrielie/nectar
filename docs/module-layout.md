@@ -248,3 +248,7 @@ so the setting only applies to local runs.
 Packages with no test target today: `Images`, `HTMLMetadata`, `RSTree`.
 The `AppChrome`, `ReadingStats` and `ReadingTime` targets each hold only a
 small smoke test, so a green run there says little about the moved code.
+
+## Page-state push (`main.js`)
+
+`setNectarState(state)` in `Shared/Article Rendering/main.js` sets `data-*` attributes on the hidden `#nectarState` marker (built by `ArticleRenderer.nectarStateMarkerHTML`). `WebViewController.statusesDidChange` calls it with the article's starred and loved values so themes can react without a re-render. Covered by `Tests/JS/nectar-state/`. See `nnwtheme-format.md`, "Nectar state hooks".

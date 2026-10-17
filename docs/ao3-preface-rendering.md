@@ -261,3 +261,21 @@ became invalid and the author's rule was silently dropped.
 `precedingStyleElement`, because `HTMLScanner` discards comments before the
 tree builder sees them.
 
+
+## Row kinds (`data-kind`) and category values (`data-value`)
+
+`AO3PrefaceRow.kind` (nil by default) renders as `data-kind='...'` on both the `<dt>` and
+`<dd>` of the row, including each per-entry pair of the series row. Producers:
+`AO3ChapterHTMLExtractor.parseWorkHeader` (from each `dt`'s class token; `language`,
+`series` and `collections` are set directly) and `ArticleRenderer.ao3SyntheticPrefaceHTML`
+(`appendRow` takes a `kind`; the synthetic preface has no freeform, language or collections
+rows). Values: `rating`, `category`, `warning`, `fandom`, `relationship`, `character`,
+`freeform`, `language`, `series`, `collections`. A nil kind renders exactly as before.
+
+In a `category` row each value carries `data-value` from a fixed map (`F/F` ff, `F/M` fm,
+`M/M` mm, `Gen` gen, `Multi` multi, `Other` other): on the `<a>` when linked, on a wrapping
+`<span>` when plain text. Text outside the map gets nothing.
+
+Caveat: the fetched preface is baked into stored `contentHTML`, so items fetched before this
+change keep class-less rows until their next refetch. See `nnwtheme-format.md`, "Nectar state
+hooks". The hidden `#nectarState` marker is separate: it is built per render and not stored.

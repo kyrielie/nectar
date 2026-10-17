@@ -125,7 +125,7 @@ const zipURL = t => D.base + t.zip;
 const deepLink = t => D.scheme + "://theme/add?url=" + encodeURIComponent(zipURL(t));
 
 /* Same structure as the sample in iOS/Settings/ArticleThemePreviewWebView.swift, with shorter text so more of each theme fits in a thumbnail. */
-const SAMPLE = `<div id="ao3SyntheticPreface"><dl class="tags"><dt>Warnings:</dt><dd>No Archive Warnings Apply</dd><dt>Chapters:</dt><dd>2/2</dd></dl></div>
+const SAMPLE = `<span id="nectarState" data-starred="true" data-loved="false" data-restricted="true" hidden aria-hidden="true"></span><div id="ao3SyntheticPreface"><dl class="tags"><dt data-kind="warning">Warnings:</dt><dd data-kind="warning">No Archive Warnings Apply</dd><dt>Chapters:</dt><dd>2/2</dd></dl></div>
 <div class="summary module"><h3 class="heading">Summary:</h3><blockquote class="userstuff"><p>Frodo meets a ranger in Bree.</p></blockquote></div>
 <div class="notes module"><h3 class="heading">Notes:</h3><blockquote class="userstuff"><p>Written at Bag End.</p></blockquote></div>
 <div class="chapter preface group"><h3 class="title">Chapter 2: A Sample Heading</h3></div>

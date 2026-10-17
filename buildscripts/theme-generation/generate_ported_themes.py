@@ -5,6 +5,11 @@
 # Whimsy, Poudre et Plume). Only the bundles in SHIPPED are written to
 # Themes/; the rest are written to gallery-themes/. Run from the repo root:
 # `python3 buildscripts/theme-generation/generate_ported_themes.py`.
+# Rosé Pine Moon and Rosé Pine Dawn are no longer reproducible from this script: their
+# committed stylesheets carry the Rosé Pine redesign (card, pills, ornaments, --nnw-* tokens)
+# that the template below does not emit, and are now maintained by hand alongside
+# gallery-themes/Rosé Pine.nnwtheme. Regenerating them reverts that work; the two entries
+# are kept only for their credit strings and palette notes.
 # Re-running overwrites each generated bundle's Info.plist, stylesheet.css and
 # template.html in place (an existing License.md is kept). Bundles not
 # generated here are hand-written and untouched. The committed Black & White,
@@ -494,8 +499,8 @@ themes = [
         name="Rosé Pine Moon",
         identifier="rosepinemoon",
         homepage="https://github.com/Wolfbatcat/ao3-rose-pine",
-        creator='Ported from the "Rosé Pine Moon" variant of BlackBatCat\'s AO3 workskin "Rosé Pine — Closer to Home" (MIT licensed)',
-        credit_comment="ported from the Rosé Pine Moon variant of the ao3-rose-pine workskin (BlackBatCat, MIT). Same family as the bundled Rosé Pine theme, one step darker/more saturated -- its own standalone theme rather than a dark-mode variant of Rosé Pine, matching how the source skin ships it.",
+        creator='Inspired by BlackBatCat\'s AO3 workskin "Rosé Pine — Closer to Home" (values reimplemented; no license stated for the source)',
+        credit_comment="inspired by the ao3-rose-pine workskin (Wolfbatcat/ao3-rose-pine); values reimplemented, no license stated for that repository. Same family as the bundled Rosé Pine theme, one step darker/more saturated -- its own standalone theme rather than a dark-mode variant of Rosé Pine, matching how the source skin ships it.",
         differentiation_comment="Differentiation from Rosé Pine: dotted (not solid) link underline, and italicized article titles -- Moon leans slightly more literary/nocturnal than the base theme.",
         bg="#232136", text="#e0def4", link="#eb6f92",
         header_border="#36324e", table_border="#36324e", header_text="#908caa",
@@ -519,8 +524,8 @@ themes = [
         name="Rosé Pine Dawn",
         identifier="rosepinedawn",
         homepage="https://github.com/Wolfbatcat/ao3-rose-pine",
-        creator='Ported from the "Rosé Pine Dawn" variant of BlackBatCat\'s AO3 workskin "Rosé Pine — Closer to Home" (MIT licensed)',
-        credit_comment="ported from the Rosé Pine Dawn (light) variant of the ao3-rose-pine workskin (BlackBatCat, MIT). Same link hue as the other two Rosé Pine themes on a warm cream background instead of ink.",
+        creator='Inspired by BlackBatCat\'s AO3 workskin "Rosé Pine — Closer to Home" (values reimplemented; no license stated for the source)',
+        credit_comment="inspired by the ao3-rose-pine workskin (Wolfbatcat/ao3-rose-pine); values reimplemented, no license stated for that repository. Same link hue as the other two Rosé Pine themes on a warm cream background instead of ink.",
         differentiation_comment="Differentiation: solid underline (not dotted) since it's a light theme where dotted underlines read as weaker against cream than they do against ink; slightly heavier preface card treatment (light background tint + rounded corners) rather than a bare rule.",
         bg="#faf4ed", text="#575279", link="#eb6f92",
         header_border="#e7d3cb", table_border="#e7d3cb", header_text="#797593",

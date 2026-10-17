@@ -104,3 +104,5 @@ page counter is readable.
 ## 6. Share it
 
 Zip the bundle folder and link it as `nectar://theme/add?url=<zip URL>` (`theme-gallery.md`).
+
+Optional: state and row-type hooks (`#nectarState`, `data-kind`) are described in `nnwtheme-format.md`, "Nectar state hooks".

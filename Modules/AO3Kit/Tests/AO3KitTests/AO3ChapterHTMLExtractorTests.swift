@@ -451,7 +451,7 @@ import Testing
 		// #6, series row overflow): each pair now renders on its own
 		// full-width line, same as Fandom/Relationships/etc.
 		let prefaceHTML = String(result.contentHTML[result.contentHTML.startIndex..<workskinRange.lowerBound])
-		let dtCount = prefaceHTML.components(separatedBy: "<dt class='wide'>Series:</dt>").count - 1
+		let dtCount = prefaceHTML.components(separatedBy: "<dt class='wide' data-kind='series'>Series:</dt>").count - 1
 		#expect(dtCount == 2)
 		#expect(prefaceHTML.contains("href='nectar-series:first?ao3id=1001'"))
 		#expect(prefaceHTML.contains("href='nectar-series:next?ao3id=1001&amp;workurl=https://archiveofourown.org/works/222'"))
@@ -826,5 +826,51 @@ import Testing
 		#expect(live.isRestricted == true)
 		guard let reExtracted = extractSuccess(live.contentHTML) else { return }
 		#expect(reExtracted.isRestricted != true)
+	}
+
+	@Test func storedPrefaceCarriesDataKindForEachRowType() throws {
+		let html = """
+		<html><body>
+		<dl class="work meta group">
+		<dt class="rating tags">Rating:</dt>
+		<dd class="rating tags"><ul class="commas"><li><a class="tag" href="/tags/r">Teen And Up Audiences</a></li></ul></dd>
+		<dt class="warning tags">Archive Warning:</dt>
+		<dd class="warning tags"><ul class="commas"><li><a class="tag" href="/tags/w">No Archive Warnings Apply</a></li></ul></dd>
+		<dt class="category tags">Category:</dt>
+		<dd class="category tags"><ul class="commas"><li><a class="tag" href="/tags/c">F/F</a></li></ul></dd>
+		<dt class="fandom tags">Fandom:</dt>
+		<dd class="fandom tags"><ul class="commas"><li><a class="tag" href="/tags/f">Some Fandom</a></li></ul></dd>
+		<dt class="relationship tags">Relationships:</dt>
+		<dd class="relationship tags"><ul class="commas"><li><a class="tag" href="/tags/rel">A/B</a></li></ul></dd>
+		<dt class="character tags">Characters:</dt>
+		<dd class="character tags"><ul class="commas"><li><a class="tag" href="/tags/ch">A</a></li></ul></dd>
+		<dt class="freeform tags">Additional Tags:</dt>
+		<dd class="freeform tags"><ul class="commas"><li><a class="tag" href="/tags/ff">Fluff</a></li></ul></dd>
+		<dt class="language">Language:</dt>
+		<dd class="language">English</dd>
+		<dt class="series">Series:</dt>
+		<dd class="series"><span class="series"><span class="position">Part 1 of <a href="/series/1001">Series One</a></span></span></dd>
+		<dt class="collections">Collections:</dt>
+		<dd class="collections"><a href="/collections/x">Some Collection</a></dd>
+		</dl>
+		<div id="workskin">
+		<div class="chapter" id="chapter-1">
+		<div class="chapter preface group"><h3 class="title">Chapter 1</h3></div>
+		<div class="userstuff module" role="article">Body text.</div>
+		</div>
+		</div>
+		</body></html>
+		"""
+		let outcome = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html)
+		guard case .success(let result) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+		let content = result.contentHTML
+		for kind in ["rating", "warning", "category", "fandom", "relationship", "character", "freeform", "language", "series", "collections"] {
+			#expect(content.contains("<dt class='wide' data-kind='\(kind)'>") || content.contains("<dt data-kind='\(kind)'>"), "missing dt data-kind for \(kind)")
+			#expect(content.contains("<dd class='wide' data-kind='\(kind)'>") || content.contains("<dd data-kind='\(kind)'>"), "missing dd data-kind for \(kind)")
+		}
+		#expect(content.contains("data-value='ff'>F/F</a>"))
 	}
 }

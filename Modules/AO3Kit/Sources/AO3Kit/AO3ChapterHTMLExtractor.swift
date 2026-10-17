@@ -835,7 +835,9 @@ private extension AO3ChapterHTMLExtractor {
 				// carry two or three at once -- wide for the same reason
 				// as the others, just long text instead of many entries.
 				let isWide = classTokens.contains("fandom") || classTokens.contains("relationship") || classTokens.contains("character") || classTokens.contains("freeform") || classTokens.contains("warning")
-				rows.append(AO3PrefaceRow(label: label, values: entries, isWide: isWide))
+				let kinds = ["rating", "category", "warning", "fandom", "relationship", "character", "freeform"]
+				let kind = kinds.first(where: { classTokens.contains($0) })
+				rows.append(AO3PrefaceRow(label: label, values: entries, isWide: isWide, kind: kind))
 
 				// Same rows, discrete text values -- for
 				// AO3FetchPolicy.rebuildParsedItem, independent of the
@@ -863,7 +865,7 @@ private extension AO3ChapterHTMLExtractor {
 				let text = flattenedText(dd).trimmingCharacters(in: .whitespacesAndNewlines)
 				guard !text.isEmpty else { continue }
 				language = text
-				rows.append(AO3PrefaceRow(label: label, values: [AO3TagEntry(text: text)]))
+				rows.append(AO3PrefaceRow(label: label, values: [AO3TagEntry(text: text)], kind: "language"))
 			} else if classTokens.contains("series") {
 				let spanResults = seriesEntriesWithNavigation(fromDD: dd)
 				guard !spanResults.isEmpty else { continue }
@@ -879,7 +881,7 @@ private extension AO3ChapterHTMLExtractor {
 				let displayEntries = spanResults.map { result in
 					AO3TagEntry(text: result.entry.name, href: result.href, prefix: result.prefix, ao3ID: result.entry.ao3ID, previousWorkURL: result.entry.previousWorkURL, nextWorkURL: result.entry.nextWorkURL, index: result.entry.index)
 				}
-				rows.append(AO3PrefaceRow(label: label, values: displayEntries, isSeriesNavigation: true))
+				rows.append(AO3PrefaceRow(label: label, values: displayEntries, isSeriesNavigation: true, kind: "series"))
 				seriesEntries = spanResults
 			} else if classTokens.contains("collections") {
 				// Plain comma-separated <a> links directly in the dd, no
@@ -896,7 +898,7 @@ private extension AO3ChapterHTMLExtractor {
 					guard !entry.text.isEmpty else { return nil }
 					return ParsedCollectionEntry(name: entry.text, slug: collectionSlug(fromHref: entry.href))
 				}
-				rows.append(AO3PrefaceRow(label: label, values: entries, isWide: true))
+				rows.append(AO3PrefaceRow(label: label, values: entries, isWide: true, kind: "collections"))
 			} else if classTokens.contains("stats") {
 				guard let statsDL = firstDescendant(of: dd, where: { $0.tag == "dl" && $0.attributes["class"] == "stats" }) else {
 					continue

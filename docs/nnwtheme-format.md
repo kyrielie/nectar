@@ -52,6 +52,7 @@ Bundles shipped in `Themes/` or the gallery are held to every level.
 | `img, figure, video, div, object { max-width: 100% }` | Required in practice | Test (`ArticleThemeOverflowSafetyTests`); build only warns | `stylesheet.css` |
 | `--nnw-bg`, `--nnw-ink`, `--nnw-link` as literals in `:root` and the dark `:root`; page color as `background-color` on `body` | Required for shipped bundles | Docs only | Color tokens and the page color |
 | `--ao3-preface-*` variables | Optional | Nothing (`core.css` supplies fallbacks) | Styleable blocks |
+| `#nectarState` attributes (`data-starred`, `data-loved`, `data-restricted`) and preface `data-kind`/`data-value` | Optional | Nothing | Nectar state hooks |
 | `@media (prefers-color-scheme: dark)` block | Optional | Nothing. Without it the gallery classifies by `body` background luminance | Color tokens and the page color |
 | `--gx`, `--u`, `--font-*`, the iOS and macOS `@supports` split | Convention | Nothing | `stylesheet.css` |
 | `License.md` | Optional; expected for ports | Nothing (no code reads it) | `License.md` |
@@ -500,7 +501,9 @@ style it. Verified against `Shared/Article Rendering/template.html`,
 | External link | `.externalLink` | template | |
 | Body container | `#bodyContainer.articleBody` | template | Hard constraint: keep the id and the `articleBody` class. Everything below is inside it. |
 | Fetch notice | `p.ao3ChapterFetchNotice` | generated (`ArticleRenderer`) | "Full text unavailable: ..." line prepended to the body when `contentHTML` is nil. |
-| Preface | `#ao3Preface` (fetched) / `#ao3SyntheticPreface` (pre-fetch), `dl.tags`, `dt`, `dd`, `dt.wide`, `dd.wide` | generated (`AO3PrefaceRenderer`) | Structure and defaults live in `core.css`; themes restyle through the `--ao3-preface-*` variables below. `.wide` rows span the full preface width on their own line. Ambrosia items may carry their own embedded preface markup instead. |
+| Preface | `#ao3Preface` (fetched) / `#ao3SyntheticPreface` (pre-fetch), `dl.tags`, `dt`, `dd`, `dt.wide`, `dd.wide` | generated (`AO3PrefaceRenderer`) | Structure and defaults live in `core.css`; themes restyle through the `--ao3-preface-*` variables below. `.wide` rows span the full preface width on their own line. Rows carry `data-kind` (see "Nectar state hooks"). Ambrosia items may carry their own embedded preface markup instead and get no hooks. |
+| Nectar state marker | `#nectarState[data-starred]`, `[data-loved]`, `[data-restricted]` | generated (`ArticleRenderer.nectarStateMarkerHTML`) | Hidden, empty `<span>` first in the body, only for a real article. Select preface styling from it with sibling selectors; see "Nectar state hooks". |
+| Preface row kinds | `dt[data-kind]`, `dd[data-kind]`, `[data-value]` on category values | generated (`AO3PrefaceRenderer`) | Row type for per-type colors; absent on prefaces stored before the hook existed. |
 | Preface series row | `.ao3SeriesPrefaceEntry`, `.ao3SeriesPrefaceLinks`, `.ao3SeriesNavDisabled` | generated | One `dt`/`dd` pair per series entry; the First/Previous/Next links sit on a block line under the name. |
 | Author work skin | `#workskin`, plus the author's own `<style>` ahead of it | generated | Author markup and rules are left untouched on purpose; do not restyle `#workskin` descendants broadly. |
 | Work summary | `.summary.module`, `h3.heading`, `blockquote.userstuff` | generated | Inside the work-level `div.preface.group`. |
@@ -518,6 +521,49 @@ style it. Verified against `Shared/Article Rendering/template.html`,
 | System message | `.systemMessage` | generated | Absolutely positioned in the default stylesheet. |
 | Page footer | `#nnwFooter` | template, custom templates only | Not in the default template. All 13 shape C themes (below) add one. |
 
+## Nectar state hooks
+
+Themes can style on per-article state through one hidden element and on row types
+through attributes on the preface. Both are optional; nothing enforces them.
+
+**Marker.** `ArticleRenderer.nectarStateMarkerHTML(for:)` emits
+`<span id="nectarState" data-starred="..." data-loved="..." data-restricted="..." hidden aria-hidden="true"></span>`
+as the first thing in the body, ahead of both `#ao3SyntheticPreface` and the fetched
+`#ao3Preface` (the first element of stored `contentHTML`). It has no text node, so
+annotation offsets, find-in-page and word counts ignore it. It is built on every render and
+is never stored in `contentHTML`, so it cannot go stale. Empty-state pages (no article,
+multiple selection, loading) get no marker.
+
+- `data-starred` is Nectar's star, the "Add to Read Later" state, not AO3's Mark for Later.
+- `data-restricted` is tri-state: omitted when AO3 restriction is unknown (`isRestricted` nil).
+  `[data-restricted="true"]` is the only selector a theme needs.
+- Select with the general-sibling combinator, which works for both preface paths without
+  `:has()`: `#nectarState[data-starred="true"] ~ #ao3Preface`.
+- Live update: `setNectarState({starred, loved})` in `main.js`, called from
+  `WebViewController.statusesDidChange`, rewrites the attributes in place (no re-render, so
+  scroll position and highlights survive). `restricted` has no live path; a chapter fetch
+  that changes it re-renders the page.
+- No preface, no card: Ambrosia items with their own embedded preface, and synthetic prefaces
+  while the stats-visibility setting is off, have nothing for a sibling selector to style.
+
+**Row kinds.** `AO3PrefaceRow.kind` renders as `data-kind` on both the `dt` and the `dd`:
+`rating`, `category`, `warning`, `fandom`, `relationship`, `character`, `freeform`,
+`language`, `series`, `collections`. Category values also carry `data-value`
+(`ff`, `fm`, `mm`, `gen`, `multi`, `other`): on the link when the value is linked, on a
+wrapping `<span>` in the synthetic preface. Unknown category text gets no `data-value`.
+
+**Reference implementation.** The three Rosé Pine bundles in `gallery-themes/` (Main, Moon, Dawn)
+use all of it: ribbons on the preface card (lock when `data-restricted="true"`, star when
+`data-starred="true"`, built from `::before`/`::after` on the preface with `clip-path` and a layered
+`data:` URI glyph), and typed tag pills keyed on `data-kind`/`data-value`. Ribbons are not
+verified on a device. Pills apply to linked values only (the fetched preface); the pre-fetch
+synthetic preface is plain text and shows the card and ribbons but no pills. The pill rules use
+`dd:has(> a)` so text-only rows (Words, Language) are untouched.
+
+**Stored-preface fallback.** A fetched preface is baked into stored `contentHTML`, so existing
+library items have no `data-kind` or `data-value` until their next refetch. Write typed rules
+as overrides on a single-color default so those items still look right.
+
 ## Ornaments: where they go
 
 Ornaments (rules, flourishes, corner marks, dingbats, borders) belong in a
@@ -530,6 +576,7 @@ annotations, or with the notch.
 | Between header and body | An `aria-hidden` element in `template.html` or `::after` on the dateline. |
 | Before each chapter heading | The shared `data-chapter-divider*` mechanism (see above), in any template shape (Vintage Letter Green, Beacon). Never an inline `<script>`. |
 | Edges of the preface, summary and notes blocks | `::before`/`::after` on `#ao3Preface`/`#ao3SyntheticPreface`, `.summary.module`, `.notes.module`, `.end.notes.module`. |
+| Ribbons on the preface card | `::before`/`::after` on `#ao3Preface`/`#ao3SyntheticPreface`, chosen with `#nectarState` sibling selectors. These are the same pseudo-elements as the "edges of the preface" slot, so a theme that draws both must assign each pseudo-element to one job. |
 | End of the work | `::before` on `#ao3SeriesFooter`, `::after` on `.end.notes.module`, or `#nnwFooter` in a custom template. |
 | Opening letter | The versal mechanism (`data-versal-target`) -- see "Drop caps / versal treatments". |
 
