@@ -992,16 +992,16 @@ private extension AO3ChapterHTMLExtractor {
 		formatter.dateFormat = "yyyy-MM-dd"
 		return formatter.date(from: value)
 	}
+}
 
-	/// `<a class="tag" href="...">Name</a>` entries, wherever they sit
-	/// (inside `ul.commas > li`, or directly in the dd for
-	/// language/collections rows) -- descendant search finds either shape
-	/// without needing to special-case the wrapper.
+// Internal rather than private so `@testable import AO3Kit` tests can reach it.
+extension AO3ChapterHTMLExtractor {
+
 	/// The `<slug>` of a `/collections/<slug>` (or absolute
 	/// `https://.../collections/<slug>`) link, percent-decoded, or nil when
 	/// the href does not have that shape. The slug is what AO3 builds the
 	/// collection URL from; the link text is the editable display title.
-	internal static func collectionSlug(fromHref href: String?) -> String? {
+	static func collectionSlug(fromHref href: String?) -> String? {
 		guard let href else { return nil }
 		let path = href.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? href
 		let parts = path.split(separator: "/").map(String.init)
@@ -1010,7 +1010,14 @@ private extension AO3ChapterHTMLExtractor {
 		let slug = raw.removingPercentEncoding ?? raw
 		return slug.isEmpty ? nil : slug
 	}
+}
 
+private extension AO3ChapterHTMLExtractor {
+
+	/// `<a class="tag" href="...">Name</a>` entries, wherever they sit
+	/// (inside `ul.commas > li`, or directly in the dd for
+	/// language/collections rows) -- descendant search finds either shape
+	/// without needing to special-case the wrapper.
 	static func tagEntries(fromLinksIn dd: HTMLLiteElement) -> [AO3TagEntry] {
 		descendants(of: dd, where: { $0.tag == "a" }).map {
 			AO3TagEntry(text: flattenedText($0).trimmingCharacters(in: .whitespacesAndNewlines), href: $0.attributes["href"])
