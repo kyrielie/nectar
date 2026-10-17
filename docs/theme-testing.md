@@ -257,3 +257,8 @@ against Nectar.
    the generated avatar).
 4. Convert the TOML to JSON as above if it should join the matrix.
 
+## Nectar state hooks
+
+`#nectarState` is hidden and `data-kind` adds no CSS, so the check matrix and the color probe are unaffected by the hooks themselves. Swift coverage: `ArticleRendererNectarStateTests`, the `data-kind` cases in `AO3PrefaceRendererTests` and `AO3ChapterHTMLExtractorTests`. JS coverage: `Tests/JS/nectar-state/`. `ArticleThemeSampleContent` does not yet carry the marker or `data-kind` rows.
+
+Rosé Pine Main, Moon and Dawn were redesigned against the approved mockup and verified only by `gallery/build.py` and `python3 -m unittest discover -s gallery`; the Xcode theme suites and a device pass for the ribbons are still to run.

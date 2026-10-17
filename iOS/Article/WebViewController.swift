@@ -369,6 +369,10 @@ final class WebViewController: UIViewController {
 		}
 		if articleIDs.contains(article.articleID) {
 			refreshVisibleContextMenu()
+			// Push star/love to the page's #nectarState marker; a re-render would lose
+			// scroll position and annotation overlays. `restricted` has no live path:
+			// it only changes via a chapter fetch, which re-renders.
+			webView?.evaluateJavaScript("setNectarState({starred: \(article.status.starred), loved: \(article.status.loved)})")
 		}
 	}
 

@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Source+Serif+4:ital,wght@0,400..700;1,400..700&family=Inter:wght@400..700&display=swap');
-/* Rosé Pine -- ported from the AO3 workskin "Rosé Pine — Closer to Home" by
-   BlackBatCat (github.com/Wolfbatcat/ao3-rose-pine, MIT licensed). Structure
-   follows the bundled Sepia.nnwtheme exactly (same selectors, same
-   iOS/macOS @supports split); only the color values are ported, pulled from
-   that skin's :root palette (theme_rosepine_cth.css) rather than invented
-   fresh, so this reads as an extension of the same palette AO3 readers of
-   that skin would already recognize:
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Victor+Mono:wght@400;600&display=swap');
+/* Rosé Pine -- inspired by the AO3 workskin "Rosé Pine — Closer to Home" by
+   BlackBatCat (github.com/Wolfbatcat/ao3-rose-pine); the values are
+   reimplemented here, not ported. No license is stated for that repository.
+   Structure follows the bundled Sepia.nnwtheme (same selectors, same
+   iOS/macOS @supports split). The palette is the Rosé Pine project's
+   published colors, chosen to match the same palette readers of that skin
+   would already recognize:
      body background  <- --bg1  (#191724)
      body text         <- --txt-main (#e0def4)
      link              <- --link (#eb6f92)
@@ -31,16 +31,13 @@ body {
 	color: var(--nnw-ink);
 }
 
+/* Links: no underline; hover sets weight 600 (and, for prose links, a
+   lighter tint -- see `.articleBody a:hover` at the end). */
 [href] {
-	text-decoration-style: underline;
-	text-decoration-color: var(--link-underline-color);
-	text-decoration-thickness: 1px;
-	text-underline-offset: 0.15em;
+	text-decoration: none;
 }
 [href]:hover {
-	text-shadow: 0 1px rgba(0, 0, 0, 0.4);
-	opacity: 0.85;
-	color: color-mix(in hsl, var(--link-underline-color), white 20%);
+	font-weight: 600;
 }
 
 
@@ -56,7 +53,7 @@ body {
 :root {
 	--header-table-border-color: #2c283d;
 	--header-color: #908caa;
-	--body-code-color: #ebbcba;
+	--body-code-color: #ea9a97;
 	--system-message-color: #9ccfd8;
 	--feedlink-color: #e0def4;
 	--article-title-color: #e0def4;
@@ -71,11 +68,26 @@ body {
 	   one theme-overridable hook that shared, non-theme-specific file
 	   exposes (see core.css's comment on why the preface layout itself
 	   lives there instead of here). */
-	--ao3-preface-border-color: #2c283d;
+	--ao3-preface-border-color: #2e2a47;
 	--nnw-bg: #191724;
 	--nnw-ink: #e0def4;
-	--nnw-link: #9ccfd8;
+	--nnw-link: #eb6f92;
 	--u: calc(1rem / 15);
+	--r: 0.75rem;
+	--shadow: 0 8px 28px rgba(25, 23, 36, 0.6), 0 4px 0 rgba(25, 23, 36, 0.32);
+	--shadow-sm: 0 3px 10px rgba(25, 23, 36, 0.6), 0 2px 0 rgba(25, 23, 36, 0.32);
+	--petal: linear-gradient(135deg, #ebbcba 0%, #ea9a97 33%, #eb6f92 100%);
+	--rp-card: #1f1d2e;
+	--rp-b2: #2e2a47;
+	--rp-b3: #332e45;
+	--rp-tf: #302d47;
+	--rp-tfi: #e0def4;
+	--rp-love: #eb6f92;
+	--rp-foam: #9ccfd8;
+	--rp-warn: #ebbcba;
+	--rp-pine: #3e8fb0;
+	--rp-ink-dark: #191724;
+	--ao3-preface-background-color: #1f1d2e;
 }
 
 /* ArticleThemeColorExtractor.exactSelectorValue only matches an exact `a` or
@@ -98,7 +110,7 @@ a {
 body a,
 body a:visited,
 body a * {
-	color: var(--secondary-accent-color);
+	color: var(--nnw-link);
 }
 
 body > header {
@@ -119,7 +131,7 @@ body > header .headerTable th {
 	color: var(--header-color);
 	padding: 0.2em;
 	border: none;
-	font-family: var(--nnw-font-chrome, Inter, sans-serif);
+	font-family: var(--nnw-font-chrome, Figtree, Helvetica, "Trebuchet MS", Arial, sans-serif);
 	font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
 }
 
@@ -175,7 +187,7 @@ body > .systemMessage {
 }
 
 .articleDatelineTitle [href] {
-	color: var(--article-title-color);
+	color: var(--article-date-color);
 }
 
 .externalLink {
@@ -215,10 +227,9 @@ pre {
 
 code,
 pre {
-	font-family: "JetBrains Mono", "SF Mono", Menlo, "Courier New", Courier, monospace;
+	font-family: "Victor Mono", "SF Mono", Menlo, Consolas, "Courier New", Courier, monospace;
 	font-size: calc(var(--u) * 12.75);
-	letter-spacing: -0.027em;
-	-webkit-hyphens: none;
+		-webkit-hyphens: none;
 }
 
 .nnw-overflow {
@@ -366,33 +377,36 @@ blockquote {
 /* Newsfoot theme -- dark-mode-appropriate colors, unlike Sepia's light-only
    set, since this theme has no separate dark variant of its own. */
 .newsfoot-footnote-popover {
-	background: #26233a;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 3px 6px rgba(0, 0, 0, 0.25);
+	background: var(--rp-card);
+	border-radius: var(--r);
+	box-shadow: var(--shadow-sm);
 	color: #e0def4;
 	padding: 1px;
 }
 
 .newsfoot-footnote-popover-arrow {
-	background: #1f1d2e;
-	border: 1px solid #332e45;
+	background: var(--rp-card);
+	border: 1px solid var(--rp-b3);
 }
 
 .newsfoot-footnote-popover-inner {
-	background: #1f1d2e;
+	background: var(--rp-card);
+	border-radius: var(--r);
 }
 
 body a.footnote,
 body a.footnote:visited,
 .newsfoot-footnote-popover + a.footnote:hover {
-	background: #332e45;
+	background: var(--rp-b3);
 	color: #e0def4;
+	border-radius: 1em;
 	transition: background-color 200ms ease-out;
 }
 
 a.footnote:hover,
 .newsfoot-footnote-popover + a.footnote {
-	background: #eb6f92;
-	color: #191724;
+	background: var(--petal);
+	color: #fff;
 	transition: background-color 200ms ease-out;
 }
 
@@ -407,7 +421,7 @@ a.footnote:hover,
 		word-break: break-word;
 		-webkit-hyphens: auto;
 		-webkit-text-size-adjust: none;
-		font-family: "Source Serif 4", Charter, Georgia, serif;
+		font-family: Figtree, Helvetica, "Trebuchet MS", Arial, sans-serif;
 		font-size: [[font-size]]px;
 	}
 
@@ -444,7 +458,7 @@ a.footnote:hover,
 
 	.articleDateline,
 	.articleDatelineTitle {
-		font-family: var(--nnw-font-chrome, "Source Serif 4", Charter, Georgia, serif);
+		font-family: var(--nnw-font-chrome, Figtree, Helvetica, "Trebuchet MS", Arial, sans-serif);
 	}
 
 	:root {
@@ -459,7 +473,7 @@ a.footnote:hover,
 		margin-bottom: 64px;
 		padding-left: 48px;
 		padding-right: 48px;
-		font-family: "Source Serif 4", Charter, Georgia, serif;
+		font-family: Figtree, Helvetica, "Trebuchet MS", Arial, sans-serif;
 	}
 
 	.smallText {
@@ -492,6 +506,196 @@ a.footnote:hover,
 	}
 }
 
+/* Preface card, tag pills, summary, ornaments, series entry. Added for the
+   Rosé Pine redesign; mirrors the approved reader mockup. Typed tag colors key
+   off data-kind / data-value (see docs/nnwtheme-format.md, "Nectar state
+   hooks"); a preface stored before those attributes existed has neither, so
+   every tag link falls back to the single-color pill defined first. Pills
+   apply to linked values only: the pre-fetch synthetic preface is plain text
+   and keeps its comma-joined list. Pseudo-elements carry content only, never
+   real text. */
+#ao3Preface,
+#ao3SyntheticPreface {
+	margin: 12px 0 1.5em 0;
+	padding: 0.9rem 1rem;
+	border: 1px solid var(--rp-b2);
+	border-radius: var(--r);
+	box-shadow: var(--shadow);
+}
+
+/* Ribbons on the preface card (see docs/nnwtheme-format.md, "Nectar state
+   hooks"). Selected from the hidden #nectarState marker with sibling
+   selectors, so a star toggle repaints with no re-render. Geometry follows
+   the approved mockup: 28 by 54, 10px in from the right, extending 10px
+   above the card, 7px rounded top, V-notch bottom. Each ribbon is one
+   pseudo-element: clip-path for the shape, a glyph data-URI layered over
+   the fill. These two pseudo-elements are the preface's only ones in this
+   theme. No preface card, no ribbon. */
+#nectarState ~ #ao3Preface,
+#nectarState ~ #ao3SyntheticPreface {
+	position: relative;
+}
+#nectarState[data-restricted="true"] ~ #ao3Preface::before,
+#nectarState[data-restricted="true"] ~ #ao3SyntheticPreface::before,
+#nectarState[data-starred="true"] ~ #ao3Preface::after,
+#nectarState[data-starred="true"] ~ #ao3SyntheticPreface::after {
+	content: "";
+	position: absolute;
+	top: -10px;
+	width: 28px;
+	height: 54px;
+	border-radius: 7px 7px 0 0;
+	clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 10px), 0 100%);
+}
+#nectarState[data-restricted="true"] ~ #ao3Preface::before,
+#nectarState[data-restricted="true"] ~ #ao3SyntheticPreface::before {
+	right: 10px;
+	background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='3' y='7' width='10' height='7.5' rx='1.5' fill='%23fff'/%3E%3Cpath d='M5 7V5a3 3 0 0 1 6 0v2' fill='none' stroke='%23fff' stroke-width='1.8'/%3E%3C/svg%3E") 6px 24px / 16px 16px no-repeat, var(--rp-love);
+}
+#nectarState[data-starred="true"] ~ #ao3Preface::after,
+#nectarState[data-starred="true"] ~ #ao3SyntheticPreface::after {
+	right: 44px;
+	background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.5l2 4.3 4.7.6-3.4 3.2.9 4.6L8 11.8 3.8 14.2l.9-4.6L1.3 6.4 6 5.8z' fill='%23191724'/%3E%3C/svg%3E") 6px 24px / 16px 16px no-repeat, var(--rp-warn);
+}
+/* A lone star ribbon moves to the right edge. */
+#nectarState:not([data-restricted="true"])[data-starred="true"] ~ #ao3Preface::after,
+#nectarState:not([data-restricted="true"])[data-starred="true"] ~ #ao3SyntheticPreface::after {
+	right: 10px;
+}
+/* Keep the first rows' text clear of the ribbons: right padding only in the
+   states that show one. */
+#nectarState[data-restricted="true"] ~ #ao3Preface,
+#nectarState[data-restricted="true"] ~ #ao3SyntheticPreface,
+#nectarState[data-starred="true"] ~ #ao3Preface,
+#nectarState[data-starred="true"] ~ #ao3SyntheticPreface {
+	padding-right: 46px;
+}
+#nectarState[data-restricted="true"][data-starred="true"] ~ #ao3Preface,
+#nectarState[data-restricted="true"][data-starred="true"] ~ #ao3SyntheticPreface {
+	padding-right: 80px;
+}
+
+/* Single-color pill (default). font-size: 0 on the row hides the ", " text
+   between links; each pill restores its own size. */
+#ao3Preface dd:has(> a),
+#ao3SyntheticPreface dd:has(> a) {
+	font-size: 0;
+}
+#ao3Preface dd:has(> a) a,
+#ao3SyntheticPreface dd:has(> a) a {
+	display: inline-block;
+	vertical-align: top;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+	font-size: var(--ao3-preface-font-size, 0.9rem);
+	line-height: 1.25;
+	padding: 0.15em 0.5em;
+	margin: 0 0.3em 0.35em 0;
+	border: 1px solid rgba(128, 128, 128, 0.15);
+	border-radius: 0 15px 15px 15px;
+	background-color: var(--rp-tf);
+	color: var(--rp-tfi);
+	transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+/* Typed overrides. */
+#ao3Preface dd[data-kind="fandom"] a,
+#ao3SyntheticPreface dd[data-kind="fandom"] a {
+	background-color: var(--rp-love);
+	color: #fff;
+}
+#ao3Preface dd[data-kind="warning"] a,
+#ao3SyntheticPreface dd[data-kind="warning"] a,
+#ao3Preface dd[data-kind="category"] a[data-value="ff"],
+#ao3SyntheticPreface dd[data-kind="category"] a[data-value="ff"] {
+	background-color: var(--rp-warn);
+	color: var(--rp-ink-dark);
+}
+#ao3Preface dd[data-kind="relationship"] a,
+#ao3SyntheticPreface dd[data-kind="relationship"] a,
+#ao3Preface dd[data-kind="category"] a[data-value="gen"],
+#ao3SyntheticPreface dd[data-kind="category"] a[data-value="gen"] {
+	background-color: var(--rp-foam);
+	color: var(--rp-ink-dark);
+}
+#ao3Preface dd[data-kind="character"] a,
+#ao3SyntheticPreface dd[data-kind="character"] a,
+#ao3Preface dd[data-kind="rating"] a,
+#ao3SyntheticPreface dd[data-kind="rating"] a {
+	background-color: var(--rp-pine);
+	color: #fff;
+}
+#ao3Preface dd[data-kind="freeform"] a::after,
+#ao3SyntheticPreface dd[data-kind="freeform"] a::after {
+	content: "\00a0\00a0\273F";
+}
+
+#ao3Preface dd:has(> a) a:hover,
+#ao3SyntheticPreface dd:has(> a) a:hover {
+	transform: translateY(-1px);
+	font-weight: 400;
+	color: #fff;
+	background-image: var(--petal);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Summary: 2px left rule. */
+.summary.module {
+	margin-top: 0.9rem;
+	padding-left: 0.8rem;
+	border-left: 2px solid var(--rp-b3);
+}
+.summary.module blockquote.userstuff {
+	padding-inline-start: 0;
+	border-inline-start: 0;
+}
+
+/* Ornaments. */
+.articleTitle h1::after {
+	content: "\00a0\273F";
+	color: var(--rp-love);
+	font-size: 0.75em;
+}
+.chapter.preface.group > h2.heading::before {
+	content: "\273F";
+	display: block;
+	text-align: center;
+	font-weight: 400;
+	margin-bottom: 0.4rem;
+	color: var(--rp-love);
+}
+.end.notes.module::after {
+	content: "\273F";
+	display: block;
+	text-align: center;
+	margin-top: 1.5rem;
+	color: var(--rp-love);
+}
+
+/* Code block and series entry as cards. */
+body pre {
+	background-color: var(--rp-card);
+	border: 1px solid var(--rp-b2);
+	border-radius: var(--r);
+	padding: 0.8rem;
+}
+.ao3SeriesFooterEntry {
+	padding: 0.6rem 0.9rem;
+	background-color: var(--rp-card);
+	border: 1px solid var(--rp-b2);
+	border-radius: var(--r);
+	box-shadow: var(--shadow);
+}
+.ao3SeriesFooterLinks a {
+	padding: 0.1em 0.6em;
+	margin-left: 0.3rem;
+	border-radius: var(--r);
+}
+.ao3SeriesFooterLinks a:hover {
+	background-image: var(--petal);
+	color: #fff;
+}
+
 /* Theme contract: exact selectors read by ArticleThemeColorExtractor. */
 .articleBody {
 	color: var(--nnw-ink);
@@ -499,4 +703,8 @@ a.footnote:hover,
 
 .articleBody a {
 	color: var(--nnw-link);
+}
+
+.articleBody a:hover {
+	color: color-mix(in srgb, var(--nnw-link), white 15%);
 }

@@ -1,17 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Source+Serif+4:ital,wght@0,400..700;1,400..700&family=Inter:wght@400..700&display=swap');
-/* Rosé Pine Dawn -- ported from the Rosé Pine Dawn (light) variant of the ao3-rose-pine workskin (BlackBatCat, MIT). Same link hue as the other two Rosé Pine themes on a warm cream background instead of ink.
-   Palette:
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Victor+Mono:wght@400;600&display=swap');
+/* Rosé Pine Dawn -- inspired by the ao3-rose-pine workskin (Wolfbatcat/ao3-rose-pine); values reimplemented, no license stated for that repository. Light variant on a warm cream page.
+   Palette (Rosé Pine project's published Dawn colors):
      body background   <- #faf4ed
      body text          <- #575279
-     link                <- #eb6f92
-     header border        <- #e7d3cb
-     table/rule border     <- #e7d3cb
-   Differentiation: solid underline (not dotted) since it's a light theme where dotted underlines read as weaker against cream than they do against ink; slightly heavier preface card treatment (light background tint + rounded corners) rather than a bare rule.
+     link                <- #b4637a (official Dawn love; #eb6f92 is too low
+                            contrast on cream for body-size text)
+     card                 <- #fffaf5
+     preface border        <- #e4d1c9
+     header border          <- #e7d3cb
+     table/rule border       <- #d7bfb6
+   Typed tags: gold warning/F-F, foam relationship/Gen, pine character/rating.
+   Same structure and ornaments as Rosé Pine (Main); only the palette differs.
    Structure follows the bundled Sepia.nnwtheme (same selectors, same
-   iOS/macOS @supports split); shared iOS/macOS structural rules (max-width,
-   hyphens, footnote popover, table borders, etc.) are the same base every
-   bundled theme needs so embeds/footnotes/tables don't fall back to
-   unstyled defaults. */
+   iOS/macOS @supports split). */
 
 body {
 	margin-left: auto;
@@ -22,16 +23,13 @@ body {
 	color: var(--nnw-ink);
 }
 
+/* Links: no underline; hover sets weight 600 (and, for prose links, a
+   lighter tint -- see `.articleBody a:hover` at the end). */
 [href] {
-	text-decoration-line: underline;
-	text-decoration-style: solid;
-	text-decoration-color: var(--link-underline-color);
-	text-decoration-thickness: 1px;
-	text-underline-offset: 0.15em;
+	text-decoration: none;
 }
 [href]:hover {
-	opacity: 0.75;
-	color: color-mix(in hsl, var(--link-underline-color), black 15%);
+	font-weight: 600;
 }
 
 
@@ -48,35 +46,63 @@ body {
 	--header-table-border-color: #e7d3cb;
 	--header-color: #797593;
 	--body-code-color: #d7827e;
-	--system-message-color: #797593;
+	--system-message-color: #56949f;
 	--feedlink-color: #575279;
 	--article-title-color: #575279;
 	--article-date-color: #797593;
-	--table-cell-border-color: #e7d3cb;
+	--table-cell-border-color: #d7bfb6;
 	--primary-accent-color: #eb6f92;
-	--secondary-accent-color: #eb6f92;
-	--block-quote-border-color: #e7d3cb;
+	--secondary-accent-color: #56949f;
+	--block-quote-border-color: #d7bfb6;
 	--link-underline-color: color-mix(in hsl, currentColor, transparent 40%);
 	--link-underline-special: color-mix(in hsl, currentColor, transparent 80%);
-	/* Consumed by core.css's #ao3SyntheticPreface/#ao3Preface rules. */
-	--ao3-preface-border-color: rgba(87, 82, 121, 0.15);
+	/* Consumed by core.css's #ao3SyntheticPreface/#ao3Preface rules -- the
+	   one theme-overridable hook that shared, non-theme-specific file
+	   exposes (see core.css's comment on why the preface layout itself
+	   lives there instead of here). */
+	--ao3-preface-border-color: #e4d1c9;
 	--nnw-bg: #faf4ed;
 	--nnw-ink: #575279;
-	--nnw-link: #eb6f92;
+	--nnw-link: #b4637a;
 	--u: calc(1rem / 15);
+	--r: 0.75rem;
+	--shadow: 0 8px 28px rgba(87, 82, 121, 0.2), 0 4px 0 rgba(87, 82, 121, 0.1);
+	--shadow-sm: 0 3px 10px rgba(87, 82, 121, 0.2), 0 2px 0 rgba(87, 82, 121, 0.1);
+	--petal: linear-gradient(135deg, #ebbcba 0%, #ea9a97 33%, #eb6f92 100%);
+	--rp-card: #fffaf5;
+	--rp-b2: #e4d1c9;
+	--rp-b3: #d7bfb6;
+	--rp-tf: #9ccfd8;
+	--rp-tfi: #191724;
+	--rp-love: #eb6f92;
+	--rp-foam: #56949f;
+	--rp-warn: #f6c177;
+	--rp-pine: #3e8fb0;
+	--rp-ink-dark: #191724;
+	--ao3-preface-background-color: #fffaf5;
 }
 
-/* Exact-selector fallback for ArticleThemeColorExtractor -- additive only,
-   higher-specificity 'body a' below still wins the cascade. See the fix
-   applied to Ember/Sepia/Tiqoe Dark/Rose Pine for why this is needed. */
+/* ArticleThemeColorExtractor.exactSelectorValue only matches an exact `a` or
+   `.articleBody a` selector in a comma-split selector list -- `body a, body
+   a:visited, body a *` alone is invisible to it (the same pre-existing gap
+   flagged in Sepia.nnwtheme). This rule is redundant with the one below for
+   rendering (higher-specificity `body a` still wins the cascade regardless
+   of source order) but gives the extractor something to find. */
 a {
 	color: var(--nnw-link);
+}
+
+/* §2: preface/body link-color split -- tag/meta links in the preface use
+   the palette's iris hue, distinct from the prose link color above. */
+#ao3Preface a,
+#ao3SyntheticPreface a {
+	color: #907aa9;
 }
 
 body a,
 body a:visited,
 body a * {
-	color: #eb6f92;
+	color: var(--nnw-link);
 }
 
 body > header {
@@ -97,7 +123,7 @@ body > header .headerTable th {
 	color: var(--header-color);
 	padding: 0.2em;
 	border: none;
-	font-family: var(--nnw-font-chrome, Inter, sans-serif);
+	font-family: var(--nnw-font-chrome, Figtree, Helvetica, "Trebuchet MS", Arial, sans-serif);
 	font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
 }
 
@@ -153,7 +179,7 @@ body > .systemMessage {
 }
 
 .articleDatelineTitle [href] {
-	color: var(--article-title-color);
+	color: var(--article-date-color);
 }
 
 .externalLink {
@@ -164,6 +190,7 @@ body > .systemMessage {
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
+
 
 .articleBody {
 	margin-top: 20px;
@@ -184,15 +211,17 @@ pre {
 	overflow-y: hidden;
 	word-wrap: normal;
 	word-break: normal;
+}
+
+pre {
 	line-height: 1.4286em;
 }
 
 code,
 pre {
-	font-family: "JetBrains Mono", "SF Mono", Menlo, "Courier New", Courier, monospace;
+	font-family: "Victor Mono", "SF Mono", Menlo, Consolas, "Courier New", Courier, monospace;
 	font-size: calc(var(--u) * 12.75);
-	letter-spacing: -0.027em;
-	-webkit-hyphens: none;
+		-webkit-hyphens: none;
 }
 
 .nnw-overflow {
@@ -202,7 +231,7 @@ pre {
 .nnw-overflow table {
 	margin-bottom: 1px;
 	border-spacing: 0;
-	border: 1px solid var(--table-cell-border-color);
+	border: 1px solid var(--secondary-accent-color);
 	font-size: inherit;
 }
 
@@ -268,7 +297,6 @@ figure {
 figcaption {
 	font-size: 14px;
 	line-height: 1.3em;
-	color: var(--header-color);
 }
 
 sup {
@@ -338,59 +366,40 @@ blockquote {
 	font-size: 66%;
 }
 
-/* Newsfoot theme */
+/* Newsfoot theme -- dark-mode-appropriate colors, unlike Sepia's light-only
+   set, since this theme has no separate dark variant of its own. */
 .newsfoot-footnote-popover {
-	background: #fffaf3;
-	box-shadow: 0 2px 4px rgba(87, 82, 121, 0.15), 0 3px 6px rgba(87, 82, 121, 0.08);
+	background: var(--rp-card);
+	border-radius: var(--r);
+	box-shadow: var(--shadow-sm);
 	color: #575279;
 	padding: 1px;
 }
 
 .newsfoot-footnote-popover-arrow {
-	background: #f2e9e1;
-	border: 1px solid var(--table-cell-border-color);
+	background: var(--rp-card);
+	border: 1px solid var(--rp-b3);
 }
 
 .newsfoot-footnote-popover-inner {
-	background: #f2e9e1;
+	background: var(--rp-card);
+	border-radius: var(--r);
 }
 
 body a.footnote,
 body a.footnote:visited,
 .newsfoot-footnote-popover + a.footnote:hover {
-	background: var(--table-cell-border-color);
+	background: var(--rp-b3);
 	color: #575279;
+	border-radius: 1em;
 	transition: background-color 200ms ease-out;
 }
 
 a.footnote:hover,
 .newsfoot-footnote-popover + a.footnote {
-	background: #eb6f92;
-	color: #faf4ed;
+	background: var(--petal);
+	color: #fff;
 	transition: background-color 200ms ease-out;
-}
-
-/* AO3 direct-reading preface (#ao3SyntheticPreface/#ao3Preface structural
-   rules live in core.css -- this theme only supplies appearance). */
-#ao3SyntheticPreface,
-#ao3Preface {
-	border: 1px solid var(--ao3-preface-border-color);
-	border-radius: 8px;
-	padding: 0.8em 1em 1em 1em;
-	background: rgba(87, 82, 121, 0.03);
-}
-#ao3SyntheticPreface dt,
-#ao3Preface dt {
-}
-
-.ao3ChapterFetchNotice {
-	margin: 0 0 1em 0;
-	padding: 0.6em 0.8em;
-	border-left: 3px solid rgba(87, 82, 121, 0.3);
-	background: rgba(87, 82, 121, 0.06);
-	font-size: 0.9em;
-	font-style: italic;
-	color: var(--header-color);
 }
 
 /* iOS Specific */
@@ -404,7 +413,7 @@ a.footnote:hover,
 		word-break: break-word;
 		-webkit-hyphens: auto;
 		-webkit-text-size-adjust: none;
-		font-family: "Source Serif 4", Charter, Georgia, serif;
+		font-family: Figtree, Helvetica, "Trebuchet MS", Arial, sans-serif;
 		font-size: [[font-size]]px;
 	}
 
@@ -413,12 +422,12 @@ a.footnote:hover,
 	}
 
 	pre {
-		border: 1px solid var(--table-cell-border-color);
+		border: 1px solid var(--secondary-accent-color);
 		padding: 5px;
 	}
 
 	.nnw-overflow table {
-		border: 1px solid var(--table-cell-border-color);
+		border: 1px solid var(--secondary-accent-color);
 	}
 
 	html {
@@ -441,7 +450,7 @@ a.footnote:hover,
 
 	.articleDateline,
 	.articleDatelineTitle {
-		font-family: var(--nnw-font-chrome, "Source Serif 4", Charter, Georgia, serif);
+		font-family: var(--nnw-font-chrome, Figtree, Helvetica, "Trebuchet MS", Arial, sans-serif);
 	}
 
 	:root {
@@ -456,7 +465,7 @@ a.footnote:hover,
 		margin-bottom: 64px;
 		padding-left: 48px;
 		padding-right: 48px;
-		font-family: "Source Serif 4", Charter, Georgia, serif;
+		font-family: Figtree, Helvetica, "Trebuchet MS", Arial, sans-serif;
 	}
 
 	.smallText {
@@ -480,13 +489,214 @@ a.footnote:hover,
 	}
 
 	pre {
-		border: 1px solid #eb6f92;
+		border: 1px solid var(--primary-accent-color);
 		padding: 10px;
 	}
 
 	.nnw-overflow table {
-		border: 1px solid #eb6f92;
+		border: 1px solid var(--primary-accent-color);
 	}
+}
+
+/* Fetch-failure notice (kept from the previous bundle). */
+.ao3ChapterFetchNotice {
+	margin: 0 0 1em 0;
+	padding: 0.6em 0.8em;
+	border-left: 3px solid rgba(87, 82, 121, 0.3);
+	background: rgba(87, 82, 121, 0.06);
+	font-size: 0.9em;
+	font-style: italic;
+	color: var(--header-color);
+}
+
+/* Preface card, tag pills, summary, ornaments, series entry. Added for the
+   Rosé Pine redesign; mirrors the approved reader mockup. Typed tag colors key
+   off data-kind / data-value (see docs/nnwtheme-format.md, "Nectar state
+   hooks"); a preface stored before those attributes existed has neither, so
+   every tag link falls back to the single-color pill defined first. Pills
+   apply to linked values only: the pre-fetch synthetic preface is plain text
+   and keeps its comma-joined list. Pseudo-elements carry content only, never
+   real text. */
+#ao3Preface,
+#ao3SyntheticPreface {
+	margin: 12px 0 1.5em 0;
+	padding: 0.9rem 1rem;
+	border: 1px solid var(--rp-b2);
+	border-radius: var(--r);
+	box-shadow: var(--shadow);
+}
+
+/* Ribbons on the preface card (see docs/nnwtheme-format.md, "Nectar state
+   hooks"). Selected from the hidden #nectarState marker with sibling
+   selectors, so a star toggle repaints with no re-render. Geometry follows
+   the approved mockup: 28 by 54, 10px in from the right, extending 10px
+   above the card, 7px rounded top, V-notch bottom. Each ribbon is one
+   pseudo-element: clip-path for the shape, a glyph data-URI layered over
+   the fill. These two pseudo-elements are the preface's only ones in this
+   theme. No preface card, no ribbon. */
+#nectarState ~ #ao3Preface,
+#nectarState ~ #ao3SyntheticPreface {
+	position: relative;
+}
+#nectarState[data-restricted="true"] ~ #ao3Preface::before,
+#nectarState[data-restricted="true"] ~ #ao3SyntheticPreface::before,
+#nectarState[data-starred="true"] ~ #ao3Preface::after,
+#nectarState[data-starred="true"] ~ #ao3SyntheticPreface::after {
+	content: "";
+	position: absolute;
+	top: -10px;
+	width: 28px;
+	height: 54px;
+	border-radius: 7px 7px 0 0;
+	clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 10px), 0 100%);
+}
+#nectarState[data-restricted="true"] ~ #ao3Preface::before,
+#nectarState[data-restricted="true"] ~ #ao3SyntheticPreface::before {
+	right: 10px;
+	background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='3' y='7' width='10' height='7.5' rx='1.5' fill='%23fff'/%3E%3Cpath d='M5 7V5a3 3 0 0 1 6 0v2' fill='none' stroke='%23fff' stroke-width='1.8'/%3E%3C/svg%3E") 6px 24px / 16px 16px no-repeat, var(--rp-love);
+}
+#nectarState[data-starred="true"] ~ #ao3Preface::after,
+#nectarState[data-starred="true"] ~ #ao3SyntheticPreface::after {
+	right: 44px;
+	background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.5l2 4.3 4.7.6-3.4 3.2.9 4.6L8 11.8 3.8 14.2l.9-4.6L1.3 6.4 6 5.8z' fill='%23191724'/%3E%3C/svg%3E") 6px 24px / 16px 16px no-repeat, var(--rp-warn);
+}
+/* A lone star ribbon moves to the right edge. */
+#nectarState:not([data-restricted="true"])[data-starred="true"] ~ #ao3Preface::after,
+#nectarState:not([data-restricted="true"])[data-starred="true"] ~ #ao3SyntheticPreface::after {
+	right: 10px;
+}
+/* Keep the first rows' text clear of the ribbons: right padding only in the
+   states that show one. */
+#nectarState[data-restricted="true"] ~ #ao3Preface,
+#nectarState[data-restricted="true"] ~ #ao3SyntheticPreface,
+#nectarState[data-starred="true"] ~ #ao3Preface,
+#nectarState[data-starred="true"] ~ #ao3SyntheticPreface {
+	padding-right: 46px;
+}
+#nectarState[data-restricted="true"][data-starred="true"] ~ #ao3Preface,
+#nectarState[data-restricted="true"][data-starred="true"] ~ #ao3SyntheticPreface {
+	padding-right: 80px;
+}
+
+/* Single-color pill (default). font-size: 0 on the row hides the ", " text
+   between links; each pill restores its own size. */
+#ao3Preface dd:has(> a),
+#ao3SyntheticPreface dd:has(> a) {
+	font-size: 0;
+}
+#ao3Preface dd:has(> a) a,
+#ao3SyntheticPreface dd:has(> a) a {
+	display: inline-block;
+	vertical-align: top;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+	font-size: var(--ao3-preface-font-size, 0.9rem);
+	line-height: 1.25;
+	padding: 0.15em 0.5em;
+	margin: 0 0.3em 0.35em 0;
+	border: 1px solid rgba(128, 128, 128, 0.15);
+	border-radius: 0 15px 15px 15px;
+	background-color: var(--rp-tf);
+	color: var(--rp-tfi);
+	transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+/* Typed overrides. */
+#ao3Preface dd[data-kind="fandom"] a,
+#ao3SyntheticPreface dd[data-kind="fandom"] a {
+	background-color: var(--rp-love);
+	color: #fff;
+}
+#ao3Preface dd[data-kind="warning"] a,
+#ao3SyntheticPreface dd[data-kind="warning"] a,
+#ao3Preface dd[data-kind="category"] a[data-value="ff"],
+#ao3SyntheticPreface dd[data-kind="category"] a[data-value="ff"] {
+	background-color: var(--rp-warn);
+	color: var(--rp-ink-dark);
+}
+#ao3Preface dd[data-kind="relationship"] a,
+#ao3SyntheticPreface dd[data-kind="relationship"] a,
+#ao3Preface dd[data-kind="category"] a[data-value="gen"],
+#ao3SyntheticPreface dd[data-kind="category"] a[data-value="gen"] {
+	background-color: var(--rp-foam);
+	color: var(--rp-ink-dark);
+}
+#ao3Preface dd[data-kind="character"] a,
+#ao3SyntheticPreface dd[data-kind="character"] a,
+#ao3Preface dd[data-kind="rating"] a,
+#ao3SyntheticPreface dd[data-kind="rating"] a {
+	background-color: var(--rp-pine);
+	color: #fff;
+}
+#ao3Preface dd[data-kind="freeform"] a::after,
+#ao3SyntheticPreface dd[data-kind="freeform"] a::after {
+	content: "\00a0\00a0\273F";
+}
+
+#ao3Preface dd:has(> a) a:hover,
+#ao3SyntheticPreface dd:has(> a) a:hover {
+	transform: translateY(-1px);
+	font-weight: 400;
+	color: #fff;
+	background-image: var(--petal);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Summary: 2px left rule. */
+.summary.module {
+	margin-top: 0.9rem;
+	padding-left: 0.8rem;
+	border-left: 2px solid var(--rp-b3);
+}
+.summary.module blockquote.userstuff {
+	padding-inline-start: 0;
+	border-inline-start: 0;
+}
+
+/* Ornaments. */
+.articleTitle h1::after {
+	content: "\00a0\273F";
+	color: var(--rp-love);
+	font-size: 0.75em;
+}
+.chapter.preface.group > h2.heading::before {
+	content: "\273F";
+	display: block;
+	text-align: center;
+	font-weight: 400;
+	margin-bottom: 0.4rem;
+	color: var(--rp-love);
+}
+.end.notes.module::after {
+	content: "\273F";
+	display: block;
+	text-align: center;
+	margin-top: 1.5rem;
+	color: var(--rp-love);
+}
+
+/* Code block and series entry as cards. */
+body pre {
+	background-color: var(--rp-card);
+	border: 1px solid var(--rp-b2);
+	border-radius: var(--r);
+	padding: 0.8rem;
+}
+.ao3SeriesFooterEntry {
+	padding: 0.6rem 0.9rem;
+	background-color: var(--rp-card);
+	border: 1px solid var(--rp-b2);
+	border-radius: var(--r);
+	box-shadow: var(--shadow);
+}
+.ao3SeriesFooterLinks a {
+	padding: 0.1em 0.6em;
+	margin-left: 0.3rem;
+	border-radius: var(--r);
+}
+.ao3SeriesFooterLinks a:hover {
+	background-image: var(--petal);
+	color: #fff;
 }
 
 /* Theme contract: exact selectors read by ArticleThemeColorExtractor. */
@@ -496,4 +706,8 @@ a.footnote:hover,
 
 .articleBody a {
 	color: var(--nnw-link);
+}
+
+.articleBody a:hover {
+	color: color-mix(in srgb, var(--nnw-link), black 15%);
 }
