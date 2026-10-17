@@ -11,6 +11,8 @@
 # Powder Pink in gallery-themes/ and Midnight Blue in Themes/ carry edits beyond
 # this template (--nnw-* tokens, --u sizing), so regenerating them reverts those
 # edits; run it in a scratch copy of the repo and compare before using its output.
+# The stylesheet template no longer emits the `#nnwImageIcon` size rule or the `td.avatar` width
+# rule (the avatar cell is gone from the templates it copies; see docs/nnwtheme-format.md).
 # The committed bundles no longer carry the old `html{padding-top:Npx}` full-screen clearance
 # rule (retired; the app keeps the page below the notch cover), so nothing needs re-adding.
 import os
@@ -50,12 +52,6 @@ body {{
 }}
 [href]:hover {{
 {link_hover_css}
-}}
-
-#nnwImageIcon {{
-\twidth: 32px;
-\theight: 32px;
-\tmargin-right: 0.2em;
 }}
 
 .systemMessage {{
@@ -119,9 +115,6 @@ body > header .headerTable th {{
 \tfont-family: {header_font};
 \tfont-size: 0.9rem;
 {header_extra}}}
-body > header .headerTable td.avatar {{
-\twidth: 33%;
-}}
 
 body code,
 body pre {{

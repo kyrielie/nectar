@@ -346,7 +346,11 @@ Each delta carries a reason. Permanent ones: Appanoose's `ThemeIdentifier` (upst
 `[[time_short]]` line (the renderer strips the time only from `datetime_*`), and
 Biblioteca's appended AO3 CSS and its `#bodyContainer`/`articleBody` container (the
 color probe loads no `main.js`, so a runtime fix would leave the probe without
-`.articleBody`). Entries marked `PENDING REVERT` are scanner-driven or redundant edits
+`.articleBody`), and the removal of the dead avatar markup (the `nnwImageIcon` cell or
+`[[avatar_src]]` image, and in Sepia and Tiqoe Dark the two CSS rules that only styled it)
+in all seven upstream-origin bundles that had it, with the `Version` bump that
+`--check-release-identity` requires on each (`main.js` strips the image unless it carries
+`data-nnw-keep`). Entries marked `PENDING REVERT` are scanner-driven or redundant edits
 waiting on the probe check described in `theme-testing.md`.
 
 After an intentional bundle change, run `python3 gallery/test_upstream_pins.py --print`

@@ -2529,15 +2529,6 @@ internal struct FindInArticleState: Codable {
 
 extension WebViewController {
 
-	/// Isolates the "which trait collection is authoritative" decision behind
-	/// applyResolvedBackgroundColors() as a dependency-free function, so tests can
-	/// reproduce the self-vs-webView divergence without a live view hierarchy. Ignores
-	/// webViewTraitCollection on purpose; it stays a parameter so call sites show which
-	/// value was considered and rejected. Lives in this internal extension, not the
-	/// private one, because members of a `private extension` can't be more accessible
-	/// than it. `nonisolated` because it touches no actor-isolated state; otherwise it
-	/// inherits @MainActor and can't be called from a synchronous test. See
-	/// article-color-pipeline.md.
 	/// True when `url` points at a fragment of the document the page was loaded from: same
 	/// URL once fragments are removed, and a non-empty fragment on the target. Pure so it can
 	/// be unit tested without a web view.
@@ -2553,6 +2544,15 @@ extension WebViewController {
 		return target.string == document.string
 	}
 
+	/// Isolates the "which trait collection is authoritative" decision behind
+	/// applyResolvedBackgroundColors() as a dependency-free function, so tests can
+	/// reproduce the self-vs-webView divergence without a live view hierarchy. Ignores
+	/// webViewTraitCollection on purpose; it stays a parameter so call sites show which
+	/// value was considered and rejected. Lives in this internal extension, not the
+	/// private one, because members of a `private extension` can't be more accessible
+	/// than it. `nonisolated` because it touches no actor-isolated state; otherwise it
+	/// inherits @MainActor and can't be called from a synchronous test. See
+	/// article-color-pipeline.md.
 	nonisolated static func isDarkForColorResolution(selfTraitCollection: UITraitCollection, webViewTraitCollection: UITraitCollection) -> Bool {
 		return selfTraitCollection.userInterfaceStyle == .dark
 	}

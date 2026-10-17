@@ -687,11 +687,11 @@ Pulled into `RSCore` (rather than left as a private method on
   If the live text at the replacement span is not `replacementText`, the plan
   returns `status: "mismatch"` and nothing is written; the quote fallback in
   `renderAnnotations` is then the only safety net. The production path uses
-  the JS plan rather than `TextReplacementOffsetShift.shiftedAnchorsForRevert`,
-  whose `revertedEditOriginalEndOffset` filter is in pre-edit coordinates and
-  would miss rows in the first `-delta` characters after a shortening edit;
-  that function remains as the pure, tested Swift counterpart and has no
-  production caller. Covered by `Tests/JS/annotations/revert-plan.test.js`
+  the JS plan. `TextReplacementOffsetShift.shiftedAnchorsForRevert` is the
+  pure, tested Swift counterpart with no production caller; its
+  `revertedEditAppliedEndOffset` is the same threshold (the replacement's end
+  in the edited space, original `endOffset + delta`), pinned by a boundary
+  test for a row starting exactly there after a shortening edit. Covered by `Tests/JS/annotations/revert-plan.test.js`
   (round trips for lengthening, shortening and two stacked edits reverted in
   both orders). Not confirmed on a device.
 
