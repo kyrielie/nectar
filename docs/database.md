@@ -76,9 +76,9 @@ CREATE TABLE if not EXISTS articles (
   datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT,
   wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL,
   fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT,
-  categories TEXT, additionalTags TEXT, series TEXT
+  categories TEXT, additionalTags TEXT, series TEXT,
+  isRestricted BOOL, language TEXT, collections TEXT
   -- plus columns added by later ALTER TABLE migrations, see below
-  -- (isRestricted BOOL, schema 7, is one of them: nullable, NULL = unknown)
 );
 
 CREATE TABLE if not EXISTS statuses (
@@ -115,12 +115,17 @@ has reached the current version, launch skips it entirely, so a new
 `currentSchemaVersion`, or it never runs on an already-migrated install.
 Because the block as a whole re-runs on every bump, a step that rewrites data
 (rather than adding a column or index) must be gated on `existingVersion`;
-the schema 6 clear of `ao3ConfirmedMissingAt` is, so a version 6 install
-moving to 7 does not lose flags set since. Version history: 3 `chapterTitle`,
-4 `dateBookmarked`, 5 annotation text-replacement columns, 6 clear stale
-`ao3ConfirmedMissingAt`, 7 `isRestricted`. A fresh install starts at version 0
-and runs every step in one pass, which is why new columns are not added to the
-`CREATE TABLE` literal.
+the schema 6 clear of `ao3ConfirmedMissingAt` is, so a later bump does not
+lose flags set since. Version history: 3 `chapterTitle`, 4 `dateBookmarked`,
+5 annotation text-replacement columns, 6 clear stale `ao3ConfirmedMissingAt`.
+A fresh install starts at version 0 and runs every step in one pass.
+
+Exception while the app is in heavy development: `isRestricted`, `language`
+and `collections` are in the `CREATE TABLE` literal with no migration and no
+version bump. An existing database does not gain them; carry it across with a
+backup and restore into a fresh install, whose merge fills any column the
+backup lacks with `NULL` (`backup-restore.md`). Before a release that real
+users upgrade into, these need a guarded `ALTER TABLE` step and a bump.
 
 Migrations of note, in the order they were added (each documents its own
 rationale extensively in the source):
@@ -142,7 +147,9 @@ rationale extensively in the source):
 | `additionalTags` | articles | structured AO3/JSON-feed tag metadata |
 | `dateBookmarked` | articles | AO3 bookmark-row date, distinct from work dates |
 | `ao3ConfirmedMissingAt` | articles | timestamp for confirmed missing AO3 works |
-| `isRestricted` | articles | AO3 archive lock, nullable BOOL (`NULL` = unknown), schema 7. Written when the incoming value is non-nil and differs (`Article+Database.changesFrom`), so an unlocked work moves `true` to `false` and `nil` never blanks a stored value. Sources and the live-fetch-only rule: `ao3-feeds.md`, "Archive lock" |
+| `isRestricted` | articles | AO3 archive lock, nullable BOOL (`NULL` = unknown), in the `CREATE TABLE` literal, no migration. Written when the incoming value is non-nil and differs (`Article+Database.changesFrom`), so an unlocked work moves `true` to `false` and `nil` never blanks a stored value. Sources and the live-fetch-only rule: `ao3-feeds.md`, "Archive lock" |
+| `language` | articles | AO3 display language name (`English`), nullable TEXT (`NULL` = unknown). In the `CREATE TABLE` literal, no migration. Written when the incoming value is non-nil and differs. Not a language code and not fed from `ParsedItem.language` (see `ao3-feeds.md`, "Language and collections") |
+| `collections` | articles | AO3 collections, JSON array of `{name, slug}` in TEXT. `NULL` = unknown, `[]` = known to be in none. In the `CREATE TABLE` literal, no migration. Unlike the tag groups, an empty array is written, so a removed membership clears; `nil` never writes |
 
 The `articles_searchRowID` index was added alongside the search-row migration
 to keep article-to-FTS lookups indexed. The Swift `ParsedItem.bookKey` and SQL

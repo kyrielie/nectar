@@ -29,7 +29,7 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   across feeds/re-subscriptions/re-imports — see `book-identity.md`.
   `ParsedItem` separately carries a cluster of AO3-native fields that are
   **not** part of `_ambrosia` at all — `commentCount`/`kudosCount`/
-  `bookmarkCount`/`hitCount`/`isRestricted`/`dateBookmarked` — populated from a live AO3
+  `bookmarkCount`/`hitCount`/`isRestricted`/`ao3Language`/`collections`/`dateBookmarked` — populated from a live AO3
   fetch or listing-page scrape rather than the feed itself; see
   `ambrosia-feed.md` for the distinction and `ao3-feeds.md` for where each
   one is read.

@@ -58,9 +58,14 @@ struct DatabaseKey {
 	static let kudosCount = "kudosCount"
 	static let bookmarkCount = "bookmarkCount"
 	static let hitCount = "hitCount"
-	// AO3 archive lock ("Restricted"), schema version 7. Nullable BOOL;
-	// NULL means unknown.
+	// AO3 archive lock ("Restricted"). Nullable BOOL in the CREATE TABLE
+	// literal, no migration; NULL means unknown.
 	static let isRestricted = "isRestricted"
+	// AO3's display language name ("English"), TEXT, and the work's
+	// collections, a JSON array of {name, slug} in TEXT. Both NULL = unknown;
+	// a collections value of "[]" = known to be in none.
+	static let language = "language"
+	static let collections = "collections"
 	// Date this article was bookmarked -- AO3 bookmarks-page rows only,
 	// via AO3SearchResultsExtractor.dateBookmarked(fromLI:). Not part of
 	// the four stats above (those come from a live chapter fetch; this

@@ -681,6 +681,8 @@ private extension AO3SeriesNavigator {
 			bookmarkCount: sourceArticle.bookmarkCount,
 			hitCount: sourceArticle.hitCount,
 			isRestricted: sourceArticle.isRestricted,
+			ao3Language: sourceArticle.language,
+			collections: sourceArticle.collections.map { $0.map { ParsedCollectionEntry(name: $0.name, slug: $0.slug) } },
 			lastPrefaceFetchDate: sourceArticle.lastPrefaceFetchDate,
 			ao3WorkID: workID
 		)
@@ -748,6 +750,7 @@ private extension AO3SeriesNavigator {
 			warnings: entry.warnings.isEmpty ? nil : entry.warnings,
 			categories: entry.categories.isEmpty ? nil : entry.categories,
 			isRestricted: entry.isRestricted,
+			ao3Language: entry.language,
 			ao3WorkID: entry.workID
 		)
 	}

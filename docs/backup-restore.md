@@ -139,7 +139,7 @@ set.
      `BackupSQLiteImportTable.importBackup` (see "Merge guarantees" per
      table, below). The backup's `DB.sqlite3` is merged as-is, never
      migrated first, so one from an older app version can lack a column
-     added since (`isRestricted`, schema 7, for example). The articles
+     added since (`isRestricted`, `language` or `collections`, for example). The articles
      merge reads the backup's own `PRAGMA table_info(articles)` and selects
      `NULL` for any optional column the backup lacks
      (`BackupSQLiteImportTable.articlesMergeSQL`); a backup missing

@@ -164,8 +164,10 @@ public enum AO3FetchPolicy {
 	/// already has -- those are Workstream 1's (feed-derived) territory, and
 	/// a partial chapter fetch shouldn't be used to infer completion.
 	///
-	/// `language` has no persisted home on `Article`, so it is passed through
-	/// as nil; this doesn't blank anything that was ever actually stored.
+	/// `ParsedItem.language` (the feed-level language code) has no persisted
+	/// home on `Article` and is passed through as nil. The work's AO3 display
+	/// language travels separately as `ao3Language` and falls back to the
+	/// stored value when the live page had no language row.
 	/// `tags` carries the work's freeform Additional Tags, which
 	/// `Article.additionalTags` persists.
 	///
@@ -226,6 +228,12 @@ public enum AO3FetchPolicy {
 		// persisted as Article.additionalTags.
 		let additionalTags: Set<String>? = metadata.additionalTags.isEmpty ? nil : Set(metadata.additionalTags)
 
+		// Collections: nil means the live page had no parsed header, so keep
+		// the stored value; an empty array is a real "in no collections" and
+		// replaces it, so a removed membership clears.
+		let collections: [ParsedCollectionEntry]? = metadata.collections
+			?? existingArticle.collections.map { $0.map { ParsedCollectionEntry(name: $0.name, slug: $0.slug) } }
+
 		// Inline series navigation: prefer the existing article's own
 		// already-known series membership, carried through unchanged
 		// (name/index/ao3ID *and*, now, previousWorkURL/nextWorkURL --
@@ -284,6 +292,8 @@ public enum AO3FetchPolicy {
 			bookmarkCount: applyStatsUpdate ? extraction.bookmarkCount : existingArticle.bookmarkCount,
 			hitCount: applyStatsUpdate ? extraction.hitCount : existingArticle.hitCount,
 			isRestricted: extraction.isRestricted ?? existingArticle.isRestricted,
+			ao3Language: metadata.language ?? existingArticle.language,
+			collections: collections,
 			// rebuildParsedItem only runs on a successful extraction (it's
 			// handed the extraction.chapters/stats result), so "now" is
 			// correct here regardless of caller -- a failed fetch never

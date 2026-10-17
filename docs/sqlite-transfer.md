@@ -37,7 +37,7 @@ surfaced via the Activity Log, not (yet) as distinct per-feed UI state in
 the feed list.
 
 The Ambrosia import leaves out the AO3-native columns that an Ambrosia server
-has no data for: the four stats counts and `isRestricted` (the archive lock).
+has no data for: the four stats counts, `isRestricted` (the archive lock), `language` and `collections`.
 They stay `NULL`, and a later live AO3 fetch or listing row fills them in.
 
 `AmbrosiaSQLiteImportTable.copyItems`'s bulk `INSERT OR REPLACE ... SELECT`

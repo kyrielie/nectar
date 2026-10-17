@@ -75,6 +75,9 @@ AO3-native and **not** part of `_ambrosia`: an Ambrosia feed leaves it `nil`
 (unknown) and an Ambrosia SQLite import does not write it. It comes from a
 live work-page fetch or an AO3 listing row (see `ao3-feeds.md`, "Archive
 lock").
+`ParsedItem.ao3Language`/`collections` (the AO3 display language and collections)
+follow the same rule: AO3-native, `nil` from an Ambrosia feed, not written by an
+Ambrosia SQLite import.
 
 `ParsedItem.dateBookmarked`/`Article.dateBookmarked` is in the same
 category as the four stats fields above — AO3-native metadata, **not**

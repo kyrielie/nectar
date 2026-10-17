@@ -78,6 +78,18 @@ public struct ParsedItem: Hashable, Sendable {
 	// unknown (no heading was seen, or the source carries no lock data, as
 	// with RSS/Atom and Ambrosia feeds), never "not restricted".
 	public let isRestricted: Bool?
+	// AO3's own display name for the work's language (for example
+	// "English"), read from `dd.language` on a work page, listing row or
+	// blurb. Deliberately separate from `language` above: that field is the
+	// feed-level language each parser reports (an Atom `xml:lang`, an RSS
+	// channel language, a JSON Feed item language) and is a language *code*
+	// for non-AO3 sources, so persisting it would mix codes and display
+	// names in one column. Only AO3 page/listing extractors set this.
+	public let ao3Language: String?
+	// Collections the work belongs to (work page only). Tri-state: nil is
+	// unknown (no work-page header was parsed, or the source carries no
+	// collection data), an empty array is "parsed, in no collections".
+	public let collections: [ParsedCollectionEntry]?
 	// Date this article was bookmarked, distinct from dateModified (the
 	// work's own last-updated date). Only ever populated from an AO3
 	// bookmarks-page row (`div.user p.datetime`, see
@@ -181,6 +193,8 @@ public struct ParsedItem: Hashable, Sendable {
 	            bookmarkCount: Int? = nil,
 	            hitCount: Int? = nil,
 	            isRestricted: Bool? = nil,
+	            ao3Language: String? = nil,
+	            collections: [ParsedCollectionEntry]? = nil,
 	            dateBookmarked: Date? = nil,
 	            lastPrefaceFetchDate: Date? = nil,
 	            ao3WorkID: String? = nil,
@@ -221,6 +235,8 @@ public struct ParsedItem: Hashable, Sendable {
 		self.bookmarkCount = bookmarkCount
 		self.hitCount = hitCount
 		self.isRestricted = isRestricted
+		self.ao3Language = ao3Language
+		self.collections = collections
 		self.dateBookmarked = dateBookmarked
 		self.lastPrefaceFetchDate = lastPrefaceFetchDate
 		self.ao3WorkID = ao3WorkID

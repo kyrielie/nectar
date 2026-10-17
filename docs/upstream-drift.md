@@ -169,8 +169,13 @@ or absent).
 
 - **`Article.isRestricted`.** Nectar adds a nullable `isRestricted` (AO3 archive lock) to
   `Article` (`Modules/Articles`), `ParsedItem` (`Modules/RSParser`) and the `articles` table
-  (schema 7), and includes it in `Article`'s `==`. Upstream has no such field. See
+  (in the `CREATE TABLE` literal), and includes it in `Article`'s `==`. Upstream has no such field. See
   `ao3-feeds.md` ("Archive lock") and `database.md`.
+- **`Article.language` and `Article.collections`.** Nectar adds a nullable AO3 display
+  `language` (text) and `collections` (`[ArticleCollectionEntry]`, name and slug) to `Article`,
+  `ParsedItem` (as `ao3Language` and `collections`) and the `articles` table, and includes both
+  in `Article`'s `==`. Upstream has neither. See `ao3-feeds.md` ("Language and collections")
+  and `database.md`.
 
 ## Nectar-original (no upstream counterpart)
 

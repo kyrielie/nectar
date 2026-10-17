@@ -130,7 +130,7 @@ enum BackupSQLiteImportTable {
 	/// ArticlesDatabase.swift only carries a subset of the columns this table
 	/// actually has today -- `bookKey`, `isAmbrosiaItem`, the four AO3 Work
 	/// Header stats columns (`commentCount`/`kudosCount`/`bookmarkCount`/
-	/// `hitCount`), `isRestricted`, `previousWorkURL`/`nextWorkURL`, `lastPrefaceFetchDate`,
+	/// `hitCount`), `previousWorkURL`/`nextWorkURL`, `lastPrefaceFetchDate`,
 	/// and the Task 8 pending-update/regression-guard columns
 	/// (`pendingUpdateContentHTML`/`pendingUpdateDetectedAt`/
 	/// `wordCountRegressionFlaggedAt`/`ao3ConfirmedMissingAt`) all arrive via
@@ -174,7 +174,7 @@ enum BackupSQLiteImportTable {
 
 	/// Every other column the merge copies. A backup is unzipped and merged
 	/// as-is, never migrated, so one made by an older app version can lack a
-	/// column added since (for example `isRestricted`, schema 7). Any column
+	/// column added since (for example `isRestricted`, `language` or `collections`). Any column
 	/// missing from the backup is selected as NULL, which is the "unknown"
 	/// state for each of them. A future column belongs in this list too.
 	static let articleMergeOptionalColumns = [
@@ -183,7 +183,7 @@ enum BackupSQLiteImportTable {
 		"authors", "wordCount", "chapterCurrent", "chapterTotal", "isComplete",
 		"fandoms", "relationships", "characters", "ratings", "warnings", "categories", "additionalTags", "series",
 		"bookKey", "isAmbrosiaItem",
-		"commentCount", "kudosCount", "bookmarkCount", "hitCount", "isRestricted",
+		"commentCount", "kudosCount", "bookmarkCount", "hitCount", "isRestricted", "language", "collections",
 		"previousWorkURL", "nextWorkURL", "lastPrefaceFetchDate",
 		"pendingUpdateContentHTML", "pendingUpdateDetectedAt", "wordCountRegressionFlaggedAt", "ao3ConfirmedMissingAt"
 	]
