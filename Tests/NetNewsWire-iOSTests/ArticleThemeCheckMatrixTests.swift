@@ -258,6 +258,10 @@ struct ConsecutiveNilBreaker {
 											  injectionTime: .atDocumentEnd,
 											  forMainFrameOnly: true))
 		controller.add(run, name: handlerName)
+		// Same blocker as the probe: a theme's remote `@import` font stylesheet must not stall the load.
+		if let blocker = await ArticleThemeColorProbe.remoteLoadBlocker() {
+			controller.add(blocker)
+		}
 		configuration.userContentController = controller
 
 		let webView = WKWebView(frame: frame, configuration: configuration)
@@ -322,6 +326,33 @@ struct ConsecutiveNilBreaker {
 	(function () {
 		function post(value) {
 			window.webkit.messageHandlers.themeCheckMatrix.postMessage(JSON.stringify(value));
+		}
+		// Content JavaScript is off here, so the app's `main.js` `processPage()` never runs. Mirror the steps
+		// that change layout or selector matches, or the checks measure a page the reader never shows:
+		// `wrapFrames`, `wrapTables` (the `.nnw-overflow` scroller) and `styleLocalFootnotes` (the `footnote`
+		// class that theme rules such as `body a.footnote { background: ... }` key off).
+		// Transitions are switched off first: `a.footnote` themes declare `transition: background-color`, and
+		// without this a read right after the class is added sees the transition's transparent start value.
+		function applyReaderSteps() {
+			var style = document.createElement("style");
+			style.textContent = "*, *::before, *::after { transition: none !important; }";
+			document.head.appendChild(style);
+			Array.prototype.forEach.call(document.querySelectorAll("iframe"), function (frame) {
+				if (parseInt(frame.height) > 0) { return; }
+				var wrapper = document.createElement("div");
+				wrapper.classList.add("iframeWrap");
+				frame.parentNode.insertBefore(wrapper, frame);
+				wrapper.appendChild(frame);
+			});
+			Array.prototype.forEach.call(document.querySelectorAll("div.articleBody table"), function (table) {
+				var wrapper = document.createElement("div");
+				wrapper.className = "nnw-overflow";
+				table.parentNode.insertBefore(wrapper, table);
+				wrapper.appendChild(table);
+			});
+			Array.prototype.forEach.call(document.querySelectorAll("sup > a[href*='#fn'], sup > div > a[href*='#fn']"), function (link) {
+				if (link.hash.indexOf("#fn") === 0 && link.href.indexOf(document.baseURI) === 0) { link.classList.add("footnote"); }
+			});
 		}
 		function footnoteFailures() {
 			var failures = [];
@@ -391,6 +422,7 @@ struct ConsecutiveNilBreaker {
 		}
 		function run() {
 			try {
+				applyReaderSteps();
 				var root = document.documentElement;
 				var out = {};
 				out.dark = window.matchMedia("(prefers-color-scheme: dark)").matches;

@@ -1001,7 +1001,7 @@ private extension AO3ChapterHTMLExtractor {
 	/// `https://.../collections/<slug>`) link, percent-decoded, or nil when
 	/// the href does not have that shape. The slug is what AO3 builds the
 	/// collection URL from; the link text is the editable display title.
-	static func collectionSlug(fromHref href: String?) -> String? {
+	internal static func collectionSlug(fromHref href: String?) -> String? {
 		guard let href else { return nil }
 		let path = href.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? href
 		let parts = path.split(separator: "/").map(String.init)

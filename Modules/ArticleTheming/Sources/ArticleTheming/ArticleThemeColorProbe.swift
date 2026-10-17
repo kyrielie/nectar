@@ -142,6 +142,9 @@ import RSCore
 											  injectionTime: .atDocumentEnd,
 											  forMainFrameOnly: true))
 		controller.add(run, name: messageHandlerName)
+		if let blocker = await remoteLoadBlocker() {
+			controller.add(blocker)
+		}
 		configuration.userContentController = controller
 
 		let webView = WKWebView(frame: webViewFrame, configuration: configuration)
@@ -172,6 +175,32 @@ import RSCore
 			log.error("\(dark ? "dark" : "light", privacy: .public) pass: undecodable read-back \(String(message.prefix(300)), privacy: .public)")
 			return nil
 		}
+	}
+
+	/// Blocks every remote subresource (`http(s)` stylesheets, fonts, images, scripts, media). Theme
+	/// stylesheets begin with `@import url(https://fonts.googleapis.com/...)`; unblocked, that fetch
+	/// delays the load past the pass timeout when the network is slow or absent, and the probe and the
+	/// theme check matrix report no read-back for themes that are fine. Colors never depend on a
+	/// remote resource, and the pages carry their images as `data:` URIs. Compiled once per process;
+	/// nil if compilation fails, in which case the page loads unblocked as before.
+	static let remoteLoadBlockerRules = #"""
+	[{"trigger": {"url-filter": "^https?://", "resource-type": ["image", "style-sheet", "script", "font", "raw", "svg-document", "media"]}, "action": {"type": "block"}}]
+	"""#
+
+	private static var remoteLoadBlockerList: WKContentRuleList?
+	private static var remoteLoadBlockerCompiled = false
+
+	static func remoteLoadBlocker() async -> WKContentRuleList? {
+		if remoteLoadBlockerCompiled {
+			return remoteLoadBlockerList
+		}
+		do {
+			remoteLoadBlockerList = try await WKContentRuleListStore.default().compileContentRuleList(forIdentifier: "ThemeProbeBlockRemoteLoads", encodedContentRuleList: remoteLoadBlockerRules)
+			remoteLoadBlockerCompiled = true
+		} catch {
+			log.error("could not compile the remote load blocker: \(error.localizedDescription, privacy: .public)")
+		}
+		return remoteLoadBlockerList
 	}
 
 	/// A 1x1 window in the first foreground-active scene, so the web view has
@@ -288,6 +317,9 @@ enum ThemeColorProbeLogic {
 		var link: RGBA?
 		var dark: Bool?
 		var error: String?
+		/// The first link's own `background-color`. Themes that draw links as highlighter chips set
+		/// one, and the link color is then meant to contrast with the chip, not with the page.
+		var linkBackground: RGBA?
 	}
 
 	struct PassResult: Equatable, Sendable {
@@ -295,6 +327,12 @@ enum ThemeColorProbeLogic {
 		var ink: RGB
 		var link: RGB
 		var pageWasPainted: Bool
+		/// The link's own background composited over the page, nil when the link paints none.
+		var linkGround: RGB? = nil
+
+		/// The color to report as the link color: the link's own background when it is drawn as a chip
+		/// (its text color is chosen to sit on the chip, so it can be invisible on the page), else the text color.
+		var accent: RGB { linkGround ?? link }
 	}
 
 	/// Minimum WCAG contrast of ink and of link against the page.
@@ -323,7 +361,8 @@ enum ThemeColorProbeLogic {
 			  raw.dark == requestedDark,
 			  let html = raw.html, let body = raw.body, let ink = raw.ink,
 			  isValid(html), isValid(body), isValid(ink),
-			  raw.link.map(isValid) ?? true else {
+			  raw.link.map(isValid) ?? true,
+			  raw.linkBackground.map(isValid) ?? true else {
 			return nil
 		}
 		let fallback = legacyFallback(isDark: requestedDark)
@@ -336,8 +375,9 @@ enum ThemeColorProbeLogic {
 		}
 		// Text is composited onto the page so every stored value is opaque.
 		let inkRGB = composite(ink, over: page)
-		let linkRGB = raw.link.map { composite($0, over: page) } ?? inkRGB
-		return PassResult(page: page, ink: inkRGB, link: linkRGB, pageWasPainted: pageWasPainted)
+		let linkGround = raw.linkBackground.flatMap { $0.a > 0 ? composite($0, over: page) : nil }
+		let linkRGB = raw.link.map { composite($0, over: linkGround ?? page) } ?? inkRGB
+		return PassResult(page: page, ink: inkRGB, link: linkRGB, pageWasPainted: pageWasPainted, linkGround: linkGround)
 	}
 
 	static func relativeLuminance(_ c: RGB) -> Double {
@@ -354,21 +394,22 @@ enum ThemeColorProbeLogic {
 		return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
 	}
 
-	/// Ink and page differ, and both ink and link reach the contrast floor.
+	/// Ink and page differ, ink reaches the contrast floor against the page, and the link reaches it
+	/// against what it is drawn on: its own background when it paints one (a link chip), else the page.
 	static func isSane(_ pass: PassResult) -> Bool {
 		pass.ink != pass.page
 			&& contrastRatio(pass.ink, pass.page) >= minimumContrast
-			&& contrastRatio(pass.link, pass.page) >= minimumContrast
+			&& contrastRatio(pass.link, pass.linkGround ?? pass.page) >= minimumContrast
 	}
 
 	static func assemble(light: PassResult, dark: PassResult) -> ArticleThemeColorMeasurement {
 		ArticleThemeColorMeasurement(
 			pageLight: light.page.hex, pageDark: dark.page.hex,
 			inkLight: light.ink.hex, inkDark: dark.ink.hex,
-			linkLight: light.link.hex, linkDark: dark.link.hex,
+			linkLight: light.accent.hex, linkDark: dark.accent.hex,
 			pageWasPaintedLight: light.pageWasPainted,
 			pageWasPaintedDark: dark.pageWasPainted,
-			hasDarkModeVariant: light.page != dark.page || light.ink != dark.ink || light.link != dark.link)
+			hasDarkModeVariant: light.page != dark.page || light.ink != dark.ink || light.accent != dark.accent)
 	}
 
 	/// Runs at document end in the page world, reads computed colors,
@@ -431,6 +472,7 @@ enum ThemeColorProbeLogic {
 	      body: computed(document.body, 'backgroundColor'),
 	      ink: computed(inkEl, 'color'),
 	      link: linkEl ? computed(linkEl, 'color') : null,
+	      linkBackground: linkEl ? computed(linkEl, 'backgroundColor') : null,
 	      dark: window.matchMedia('(prefers-color-scheme: dark)').matches
 	    });
 	  } catch (e) {
