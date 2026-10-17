@@ -142,6 +142,10 @@ final class BackupRestoreCoordinator: NSObject {
 			let format = NSLocalizedString("Installed %d custom theme(s).", comment: "Restore summary — themes installed")
 			lines.append(String(format: format, result.installedThemeFilenames.count))
 		}
+		if result.ignoreRulesAdded > 0 {
+			let format = NSLocalizedString("Added %d ignore rule(s).", comment: "Restore summary — ignore rules added")
+			lines.append(String(format: format, result.ignoreRulesAdded))
+		}
 		lines.append(NSLocalizedString("AO3 sign-in isn't included in backups — you'll need to sign in again.", comment: "AO3 sign-in-again notice, restore summary"))
 
 		let alert = UIAlertController(

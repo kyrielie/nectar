@@ -36,10 +36,10 @@ private final class InMemoryBackupSettingsStore: BackupSettingsStoring {
 }
 
 /// `manifest.json`'s shape. `schemaVersion` is what makes a future
-/// additive change (e.g. backing up the AO3 ignore list, see docs/backup-restore.md)
-/// non-breaking -- a backup written before that field exists simply omits
-/// it, and any importer reading an older backup already has to treat
-/// "field absent" as a normal case.
+/// additive change non-breaking -- a backup written before a field exists
+/// simply omits it, and any importer reading an older backup already has to
+/// treat "field absent" as a normal case. `ignoreListIncluded` is such a
+/// field (optional, so older backups decode with nil).
 public struct BackupManifest: Codable, Sendable {
 	public static let currentSchemaVersion = 1
 
@@ -49,14 +49,17 @@ public struct BackupManifest: Codable, Sendable {
 	public let exportDate: Date
 	public let accountFolderNames: [String]
 	public let settingsIncluded: Bool
+	/// Whether `IgnoreList.json` was written. Informational: import goes by the file itself.
+	public let ignoreListIncluded: Bool?
 
-	public init(schemaVersion: Int, appVersion: String, appBuild: String, exportDate: Date, accountFolderNames: [String], settingsIncluded: Bool) {
+	public init(schemaVersion: Int, appVersion: String, appBuild: String, exportDate: Date, accountFolderNames: [String], settingsIncluded: Bool, ignoreListIncluded: Bool? = nil) {
 		self.schemaVersion = schemaVersion
 		self.appVersion = appVersion
 		self.appBuild = appBuild
 		self.exportDate = exportDate
 		self.accountFolderNames = accountFolderNames
 		self.settingsIncluded = settingsIncluded
+		self.ignoreListIncluded = ignoreListIncluded
 	}
 }
 
@@ -94,11 +97,14 @@ public struct BackupImportResult: Sendable {
 	public let settingsApplied: Bool
 	public let installedThemeFilenames: [String]
 	public let skippedThemeFilenames: [String]
+	/// Ignored works and authors from the backup that were not already on this device.
+	public let ignoreRulesAdded: Int
 }
 
 @MainActor
 public enum BackupManager {
 	public static var settingsStore: BackupSettingsStoring = InMemoryBackupSettingsStore()
+	public static var ignoreListStore: BackupIgnoreListStoring = InMemoryBackupIgnoreListStore()
 
 	private static let logger = Logger(subsystem: "Nectar", category: "BackupManager")
 
@@ -167,6 +173,10 @@ public enum BackupManager {
 			try FileManager.default.copyItem(atPath: themesSourceFolder, toPath: themesDestination.path)
 		}
 
+		// IgnoreList.json -- user content like the themes above, so not gated
+		// by includeSettings. Skipped when there are no rules.
+		let ignoreListIncluded = try writeIgnoreList(to: workingDirectory)
+
 		// Settings.plist -- gated by includeSettings, filtered through the
 		// explicit backupEligibleKeys allowlist (Stage 2), not "every key
 		// minus known system prefixes."
@@ -192,7 +202,8 @@ public enum BackupManager {
 			appBuild: appBuild,
 			exportDate: Date(),
 			accountFolderNames: accountFolderNames,
-			settingsIncluded: includeSettings
+			settingsIncluded: includeSettings,
+			ignoreListIncluded: ignoreListIncluded
 		)
 		let encoder = JSONEncoder()
 		encoder.dateEncodingStrategy = .iso8601
@@ -361,6 +372,11 @@ public enum BackupManager {
 			}
 		}
 
+		// IgnoreList.json: merged in, never replacing -- see
+		// BackupIgnoreListSnapshot.merged(into:). Goes by the file's presence,
+		// not the manifest's informational flag, and not by includeSettings.
+		let ignoreRulesAdded = importIgnoreList(from: workingDirectory)
+
 		// Accounts: matched by folder name (== "<type>_<accountID>", the same
 		// naming AccountManager already uses for account.dataFolder's last
 		// path component -- see BackupManager.exportBackup's own use of this
@@ -438,7 +454,47 @@ public enum BackupManager {
 			unmatchedAccountFolderNames: unmatchedAccountFolderNames,
 			settingsApplied: shouldApplySettings,
 			installedThemeFilenames: installedThemeFilenames,
-			skippedThemeFilenames: skippedThemeFilenames
+			skippedThemeFilenames: skippedThemeFilenames,
+			ignoreRulesAdded: ignoreRulesAdded
 		)
+	}
+
+	// MARK: - Ignore list
+
+	/// Writes `IgnoreList.json` into `directory` and returns true, or returns false and writes
+	/// nothing when the live ignore list has no rules.
+	@discardableResult
+	static func writeIgnoreList(to directory: URL) throws -> Bool {
+		let snapshot = ignoreListStore.snapshot().normalized()
+		guard !snapshot.isEmpty else {
+			return false
+		}
+		let encoder = JSONEncoder()
+		encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+		try encoder.encode(snapshot).write(to: directory.appendingPathComponent(BackupIgnoreListSnapshot.fileName))
+		return true
+	}
+
+	/// Merges `IgnoreList.json` from an unzipped backup into the live ignore list and returns how
+	/// many rules were new. No file, or an unreadable one, adds nothing: the restore carries on
+	/// (logged), as for a theme that fails to install.
+	static func importIgnoreList(from directory: URL) -> Int {
+		let fileURL = directory.appendingPathComponent(BackupIgnoreListSnapshot.fileName)
+		guard FileManager.default.fileExists(atPath: fileURL.path) else {
+			return 0
+		}
+		let backup: BackupIgnoreListSnapshot
+		do {
+			backup = try JSONDecoder().decode(BackupIgnoreListSnapshot.self, from: Data(contentsOf: fileURL))
+		} catch {
+			Self.logger.error("BackupManager: importBackup could not read the ignore list: \(error.localizedDescription, privacy: .public)")
+			return 0
+		}
+		let local = ignoreListStore.snapshot().normalized()
+		let merged = backup.merged(into: local)
+		if merged.result != local {
+			ignoreListStore.apply(merged.result)
+		}
+		return merged.rulesAdded
 	}
 }
