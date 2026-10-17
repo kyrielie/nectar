@@ -174,8 +174,15 @@ public struct AO3WorkPageMetadata: Sendable {
 	/// Carried to `ParsedItem.tags` by `AO3FetchPolicy.rebuildParsedItem` and
 	/// persisted as `Article.additionalTags`.
 	public let additionalTags: [String]
+	/// `dd.language` text (for example "English"), nil when the header had
+	/// no language row or no header was parsed.
+	public let language: String?
+	/// `dd.collections` links. Tri-state: nil when no work-page header was
+	/// parsed (unknown), an empty array when the header was parsed and the
+	/// work is in no collections, so a removed membership can clear.
+	public let collections: [ParsedCollectionEntry]?
 
-	public init(authors: Set<ParsedAuthor> = [], summary: String? = nil, datePublished: Date? = nil, dateModified: Date? = nil, fandoms: [String] = [], relationships: [String] = [], characters: [String] = [], ratings: [String] = [], warnings: [String] = [], categories: [String] = [], additionalTags: [String] = []) {
+	public init(authors: Set<ParsedAuthor> = [], summary: String? = nil, datePublished: Date? = nil, dateModified: Date? = nil, fandoms: [String] = [], relationships: [String] = [], characters: [String] = [], ratings: [String] = [], warnings: [String] = [], categories: [String] = [], additionalTags: [String] = [], language: String? = nil, collections: [ParsedCollectionEntry]? = nil) {
 		self.authors = authors
 		self.summary = summary
 		self.datePublished = datePublished
@@ -187,6 +194,8 @@ public struct AO3WorkPageMetadata: Sendable {
 		self.warnings = warnings
 		self.categories = categories
 		self.additionalTags = additionalTags
+		self.language = language
+		self.collections = collections
 	}
 }
 
@@ -604,7 +613,9 @@ private extension AO3ChapterHTMLExtractor {
 				ratings: workHeader.ratings,
 				warnings: workHeader.warnings,
 				categories: workHeader.categories,
-				additionalTags: workHeader.additionalTags
+				additionalTags: workHeader.additionalTags,
+				language: workHeader.language,
+				collections: workHeader.collections
 			)
 		}
 		if let styleElement = precedingStyleElement(parent: workSkinParent, beforeIndex: workSkinIndex) {
@@ -717,6 +728,10 @@ struct AO3WorkHeaderExtraction {
 	let warnings: [String]
 	let categories: [String]
 	let additionalTags: [String]
+	let language: String?
+	// Always non-nil here: a parsed header with no dd.collections means the
+	// work is in no collections.
+	let collections: [ParsedCollectionEntry]
 	// dl.stats' Published:/Updated:(or Completed:) rows, parsed as Date --
 	// distinct from the four count fields above, which come from the same
 	// dl.stats but stay Int.
@@ -783,6 +798,8 @@ private extension AO3ChapterHTMLExtractor {
 		var warnings: [String] = []
 		var categories: [String] = []
 		var additionalTags: [String] = []
+		var language: String?
+		var collections: [ParsedCollectionEntry] = []
 		var datePublished: Date?
 		var dateModified: Date?
 
@@ -845,6 +862,7 @@ private extension AO3ChapterHTMLExtractor {
 			} else if classTokens.contains("language") {
 				let text = flattenedText(dd).trimmingCharacters(in: .whitespacesAndNewlines)
 				guard !text.isEmpty else { continue }
+				language = text
 				rows.append(AO3PrefaceRow(label: label, values: [AO3TagEntry(text: text)]))
 			} else if classTokens.contains("series") {
 				let spanResults = seriesEntriesWithNavigation(fromDD: dd)
@@ -874,6 +892,10 @@ private extension AO3ChapterHTMLExtractor {
 				// full width.
 				let entries = tagEntries(fromLinksIn: dd)
 				guard !entries.isEmpty else { continue }
+				collections = entries.compactMap { entry in
+					guard !entry.text.isEmpty else { return nil }
+					return ParsedCollectionEntry(name: entry.text, slug: collectionSlug(fromHref: entry.href))
+				}
 				rows.append(AO3PrefaceRow(label: label, values: entries, isWide: true))
 			} else if classTokens.contains("stats") {
 				guard let statsDL = firstDescendant(of: dd, where: { $0.tag == "dl" && $0.attributes["class"] == "stats" }) else {
@@ -946,6 +968,8 @@ private extension AO3ChapterHTMLExtractor {
 			warnings: warnings,
 			categories: categories,
 			additionalTags: additionalTags,
+			language: language,
+			collections: collections,
 			datePublished: datePublished,
 			dateModified: dateModified
 		)
@@ -971,6 +995,20 @@ private extension AO3ChapterHTMLExtractor {
 	/// (inside `ul.commas > li`, or directly in the dd for
 	/// language/collections rows) -- descendant search finds either shape
 	/// without needing to special-case the wrapper.
+	/// The `<slug>` of a `/collections/<slug>` (or absolute
+	/// `https://.../collections/<slug>`) link, percent-decoded, or nil when
+	/// the href does not have that shape. The slug is what AO3 builds the
+	/// collection URL from; the link text is the editable display title.
+	static func collectionSlug(fromHref href: String?) -> String? {
+		guard let href else { return nil }
+		let path = href.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? href
+		let parts = path.split(separator: "/").map(String.init)
+		guard let index = parts.lastIndex(of: "collections"), index + 1 < parts.count else { return nil }
+		let raw = parts[index + 1]
+		let slug = raw.removingPercentEncoding ?? raw
+		return slug.isEmpty ? nil : slug
+	}
+
 	static func tagEntries(fromLinksIn dd: HTMLLiteElement) -> [AO3TagEntry] {
 		descendants(of: dd, where: { $0.tag == "a" }).map {
 			AO3TagEntry(text: flattenedText($0).trimmingCharacters(in: .whitespacesAndNewlines), href: $0.attributes["href"])

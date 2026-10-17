@@ -242,6 +242,31 @@ navigation links (superseding an earlier design that collapsed multiple
 series memberships into one article-wide previous/next pair, which lost
 information for a work belonging to more than one series).
 
+### Language and collections (`Article.language`, `Article.collections`)
+
+Both come from AO3 pages, never from feed-level metadata.
+
+- **Language** is AO3's display name (`English`), text only. `ParsedItem.language`
+  is deliberately not used: it carries each parser's feed-level language *code*
+  (an Atom `xml:lang`, an RSS channel language, a JSON Feed item language), so
+  persisting it would mix codes and display names in one column. The AO3
+  extractors set the separate `ParsedItem.ao3Language` instead. Sources:
+  work page `dd.language` (`AO3WorkPageMetadata.language`), search/bookmarks
+  blurbs, and series listing rows (`WorkListingEntry.language`, carried into
+  `AO3SeriesNavigator.placeholderStub(from:feedID:)`). RSS/Atom summaries do
+  parse a "Language:" stat, but it is not wired to `ao3Language`; those rows stay
+  `nil` until a page or listing supplies it. Update rule: write when non-nil and
+  different, and a live page with no language row keeps the stored value
+  (`AO3FetchPolicy.rebuildParsedItem`).
+- **Collections** are read from the work page's `dd.collections` links as
+  `{name, slug}`. The slug is the percent-decoded `<slug>` of
+  `/collections/<slug>` (`AO3ChapterHTMLExtractor.collectionSlug(fromHref:)`),
+  the stable identifier; the name is the editable display title. Tri-state:
+  `nil` when no work-page header was parsed (unknown, keeps the stored value),
+  `[]` when the header was parsed and the work is in no collections (replaces
+  the stored value, so a removed membership clears). Listings, RSS/Atom and
+  Ambrosia carry no collection data and leave it `nil`.
+
 ### Archive lock (`isRestricted`)
 
 AO3 marks a work visible only to signed-in users with a lock `<img>`

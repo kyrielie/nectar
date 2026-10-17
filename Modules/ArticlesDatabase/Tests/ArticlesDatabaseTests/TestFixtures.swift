@@ -43,7 +43,10 @@ enum TestFixtures {
 		seriesName: String? = nil,
 		datePublished: Date? = nil,
 		dateModified: Date? = nil,
-		isRestricted: Bool? = nil
+		isRestricted: Bool? = nil,
+		language: String? = nil,
+		ao3Language: String? = nil,
+		collections: [ParsedCollectionEntry]? = nil
 	) -> ParsedItem {
 		ParsedItem(
 			syncServiceID: nil,
@@ -52,7 +55,7 @@ enum TestFixtures {
 			url: nil,
 			externalURL: nil,
 			title: title,
-			language: nil,
+			language: language,
 			contentHTML: contentHTML,
 			contentText: nil,
 			markdown: nil,
@@ -68,6 +71,8 @@ enum TestFixtures {
 			wordCount: wordCount,
 			fandoms: fandoms,
 			isRestricted: isRestricted,
+			ao3Language: ao3Language,
+			collections: collections,
 			ao3WorkID: ao3WorkID,
 			isAnthology: isAnthology,
 			ao3SeriesID: ao3SeriesID,

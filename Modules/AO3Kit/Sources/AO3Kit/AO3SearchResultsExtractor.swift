@@ -305,6 +305,7 @@ private extension AO3SearchResultsExtractor {
 			bookmarkCount: bookmarkCount,
 			hitCount: hitCount,
 			isRestricted: isRestricted,
+			ao3Language: language,
 			dateBookmarked: dateBookmarked,
 			ao3WorkID: workID
 		)
@@ -378,7 +379,9 @@ extension AO3SearchResultsExtractor {
 
 // MARK: - Language
 
-private extension AO3SearchResultsExtractor {
+// `internal`, not `private`: AO3SeriesListingExtractor reads the same
+// `dd.language` off the identical row shape.
+extension AO3SearchResultsExtractor {
 
 	/// `dd.language` -- plain text (e.g. "English"), same dl.stats block
 	/// as words/chapters/comments/kudos/bookmarks/hits below, just not

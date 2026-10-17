@@ -348,7 +348,7 @@ struct BackupSQLiteImportTableTests {
 		#expect(fetched.first?.replacementText == "yourself")
 	}
 
-	// MARK: - articles: isRestricted (schema 7)
+	// MARK: - articles: isRestricted, language, collections
 
 	@Test("isRestricted true and false in the backup are restored on rows added by the merge")
 	func restoresIsRestrictedFromBackup() async throws {
@@ -371,7 +371,7 @@ struct BackupSQLiteImportTableTests {
 		#expect(restored("unknown") == .some(nil))
 	}
 
-	@Test("a backup from before schema 7, with no isRestricted column, still merges and restores the row as unknown")
+	@Test("a backup made before isRestricted, language and collections existed still merges and restores them as unknown")
 	func olderBackupWithoutIsRestrictedColumnStillMerges() async throws {
 		let localDB = TestFixtures.makeDatabase()
 		let backupDB = TestFixtures.makeDatabase()
@@ -385,6 +385,8 @@ struct BackupSQLiteImportTableTests {
 		let raw = try #require(FMDatabase(path: backupPath))
 		try #require(raw.open())
 		raw.executeStatements("ALTER TABLE articles DROP COLUMN isRestricted;")
+		raw.executeStatements("ALTER TABLE articles DROP COLUMN language;")
+		raw.executeStatements("ALTER TABLE articles DROP COLUMN collections;")
 		raw.close()
 
 		try localDB.importBackupSnapshot(backupDatabasePath: backupPath)
@@ -392,6 +394,31 @@ struct BackupSQLiteImportTableTests {
 		let articleID = Article.calculatedArticleID(feedID: "feed-a", uniqueID: "old")
 		let article = try #require(localDB.fetchArticles(articleIDs: [articleID]).first)
 		#expect(article.isRestricted == nil)
+		#expect(article.language == nil)
+		#expect(article.collections == nil)
+	}
+
+	@Test("language and collections in the backup, including an empty collections list, are restored")
+	func restoresLanguageAndCollectionsFromBackup() async throws {
+		let localDB = TestFixtures.makeDatabase()
+		let backupDB = TestFixtures.makeDatabase()
+		let items = [
+			TestFixtures.makeParsedItem(uniqueID: "full", feedURL: "https://example.com/feed-a", ao3Language: "English", collections: [ParsedCollectionEntry(name: "Voiceteam 2025", slug: "Voiceteam2025")]),
+			TestFixtures.makeParsedItem(uniqueID: "none", feedURL: "https://example.com/feed-a", ao3Language: "English", collections: []),
+			TestFixtures.makeParsedItem(uniqueID: "unknown", feedURL: "https://example.com/feed-a")
+		]
+		_ = await backupDB.updateAsync(parsedItems: items, feedID: "feed-a", deleteOlder: false)
+
+		try mergeBackup(of: backupDB, into: localDB)
+
+		func restored(_ uniqueID: String) -> Article? {
+			localDB.fetchArticles(articleIDs: [Article.calculatedArticleID(feedID: "feed-a", uniqueID: uniqueID)]).first
+		}
+		#expect(restored("full")?.language == "English")
+		#expect(restored("full")?.collections == [ArticleCollectionEntry(name: "Voiceteam 2025", slug: "Voiceteam2025")])
+		#expect(restored("none")?.collections == [])
+		#expect(restored("unknown")?.language == nil)
+		#expect(restored("unknown")?.collections == nil)
 	}
 
 	@Test("articlesMergeSQL selects NULL for an optional column the backup lacks and b.<column> for the rest")

@@ -68,6 +68,8 @@ extension Article {
 		// navigation is per-series now, inside `series` itself.
 		let lastPrefaceFetchDate = row.date(forColumn: DatabaseKey.lastPrefaceFetchDate)
 		let isRestricted = row.columnIsNull(DatabaseKey.isRestricted) ? nil : row.bool(forColumn: DatabaseKey.isRestricted)
+		let language = row.swiftString(forColumn: DatabaseKey.language)
+		let collections = Self.collectionsFromRow(row)
 		let isAmbrosiaItem = row.columnIsNull(DatabaseKey.isAmbrosiaItem) ? false : row.bool(forColumn: DatabaseKey.isAmbrosiaItem)
 
 		// Task 8: pendingUpdateContentHTML gets the same compression
@@ -77,7 +79,7 @@ extension Article {
 		let wordCountRegressionFlaggedAt = row.date(forColumn: DatabaseKey.wordCountRegressionFlaggedAt)
 		let ao3ConfirmedMissingAt = row.date(forColumn: DatabaseKey.ao3ConfirmedMissingAt)
 
-		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, additionalTags: additionalTags, series: series, commentCount: commentCount, kudosCount: kudosCount, bookmarkCount: bookmarkCount, hitCount: hitCount, isRestricted: isRestricted, dateBookmarked: dateBookmarked, lastPrefaceFetchDate: lastPrefaceFetchDate, pendingUpdateContentHTML: pendingUpdateContentHTML, pendingUpdateDetectedAt: pendingUpdateDetectedAt, wordCountRegressionFlaggedAt: wordCountRegressionFlaggedAt, ao3ConfirmedMissingAt: ao3ConfirmedMissingAt, isAmbrosiaItem: isAmbrosiaItem, bookKey: bookKey, status: status)
+		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, additionalTags: additionalTags, series: series, commentCount: commentCount, kudosCount: kudosCount, bookmarkCount: bookmarkCount, hitCount: hitCount, isRestricted: isRestricted, language: language, collections: collections, dateBookmarked: dateBookmarked, lastPrefaceFetchDate: lastPrefaceFetchDate, pendingUpdateContentHTML: pendingUpdateContentHTML, pendingUpdateDetectedAt: pendingUpdateDetectedAt, wordCountRegressionFlaggedAt: wordCountRegressionFlaggedAt, ao3ConfirmedMissingAt: ao3ConfirmedMissingAt, isAmbrosiaItem: isAmbrosiaItem, bookKey: bookKey, status: status)
 	}
 
 	private static func authorsFromRow(_ row: FMResultSet) -> Set<Author>? {
@@ -97,6 +99,15 @@ extension Article {
 			return nil
 		}
 		return try? JSONDecoder().decode([String].self, from: data)
+	}
+
+	/// nil for a NULL or empty column (unknown); a stored "[]" decodes to an
+	/// empty array (known to be in no collections).
+	private static func collectionsFromRow(_ row: FMResultSet) -> [ArticleCollectionEntry]? {
+		guard let json = row.swiftString(forColumn: DatabaseKey.collections), !json.isEmpty, let data = json.data(using: .utf8) else {
+			return nil
+		}
+		return try? JSONDecoder().decode([ArticleCollectionEntry].self, from: data)
 	}
 
 	private static func seriesFromRow(_ row: FMResultSet) -> [ArticleSeriesEntry]? {
@@ -147,7 +158,7 @@ extension Article {
 		// themselves didn't change.
 		let additionalTags = parsedItem.tags.map { $0.sorted() }
 
-		self.init(accountID: accountID, articleID: parsedItem.syncServiceID, feedID: feedID, uniqueID: parsedItem.uniqueID, title: parsedItem.title, contentHTML: parsedItem.contentHTML, contentText: parsedItem.contentText, markdown: parsedItem.markdown, url: parsedItem.url, externalURL: parsedItem.externalURL, summary: parsedItem.summary, imageURL: parsedItem.imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: parsedItem.wordCount, chapterCurrent: parsedItem.chapterCurrent, chapterTotal: parsedItem.chapterTotal, isComplete: parsedItem.isComplete, fandoms: parsedItem.fandoms, relationships: parsedItem.relationships, characters: parsedItem.characters, ratings: parsedItem.ratings, warnings: parsedItem.warnings, categories: parsedItem.categories, additionalTags: additionalTags, series: series, commentCount: parsedItem.commentCount, kudosCount: parsedItem.kudosCount, bookmarkCount: parsedItem.bookmarkCount, hitCount: parsedItem.hitCount, isRestricted: parsedItem.isRestricted, dateBookmarked: parsedItem.dateBookmarked, lastPrefaceFetchDate: parsedItem.lastPrefaceFetchDate, isAmbrosiaItem: parsedItem.isAmbrosiaItem, bookKey: parsedItem.bookKey, status: status)
+		self.init(accountID: accountID, articleID: parsedItem.syncServiceID, feedID: feedID, uniqueID: parsedItem.uniqueID, title: parsedItem.title, contentHTML: parsedItem.contentHTML, contentText: parsedItem.contentText, markdown: parsedItem.markdown, url: parsedItem.url, externalURL: parsedItem.externalURL, summary: parsedItem.summary, imageURL: parsedItem.imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: parsedItem.wordCount, chapterCurrent: parsedItem.chapterCurrent, chapterTotal: parsedItem.chapterTotal, isComplete: parsedItem.isComplete, fandoms: parsedItem.fandoms, relationships: parsedItem.relationships, characters: parsedItem.characters, ratings: parsedItem.ratings, warnings: parsedItem.warnings, categories: parsedItem.categories, additionalTags: additionalTags, series: series, commentCount: parsedItem.commentCount, kudosCount: parsedItem.kudosCount, bookmarkCount: parsedItem.bookmarkCount, hitCount: parsedItem.hitCount, isRestricted: parsedItem.isRestricted, language: parsedItem.ao3Language, collections: parsedItem.collections?.map { ArticleCollectionEntry(name: $0.name, slug: $0.slug) }, dateBookmarked: parsedItem.dateBookmarked, lastPrefaceFetchDate: parsedItem.lastPrefaceFetchDate, isAmbrosiaItem: parsedItem.isAmbrosiaItem, bookKey: parsedItem.bookKey, status: status)
 	}
 
 	private func addPossibleStringChangeWithKeyPath(_ comparisonKeyPath: KeyPath<Article, String?>, _ otherArticle: Article, _ key: String, _ dictionary: inout DatabaseDictionary) {
@@ -288,6 +299,17 @@ extension Article {
 		// blanks a stored value.
 		if isRestricted != existingArticle.isRestricted, let isRestricted {
 			d[DatabaseKey.isRestricted] = isRestricted
+		}
+		// language: same non-nil-and-differs rule as isRestricted.
+		if language != existingArticle.language, let language {
+			d[DatabaseKey.language] = language
+		}
+		// collections: unlike the tag groups above, an empty array IS written.
+		// It is "parsed, in no collections" (nil is the unknown state and never
+		// writes), so a membership the author or a moderator removed clears
+		// instead of showing forever.
+		if collections != existingArticle.collections, let collections, let json = Self.jsonString(collections) {
+			d[DatabaseKey.collections] = json
 		}
 		// Same "always take the newest known non-nil value" rule as the
 		// four stats above -- a re-extraction that doesn't touch a
@@ -430,6 +452,12 @@ extension Article {
 		}
 		if let isRestricted {
 			d[DatabaseKey.isRestricted] = isRestricted
+		}
+		if let language {
+			d[DatabaseKey.language] = language
+		}
+		if let collections, let json = Self.jsonString(collections) {
+			d[DatabaseKey.collections] = json
 		}
 		if let dateBookmarked {
 			d[DatabaseKey.dateBookmarked] = dateBookmarked

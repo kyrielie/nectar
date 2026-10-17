@@ -125,11 +125,10 @@ public struct ArticleAttentionInfo: Sendable {
 	/// existing install catching up.
 	///
 	/// History: 3 chapterTitle, 4 dateBookmarked, 5 annotation text
-	/// replacement columns, 6 clear stale ao3ConfirmedMissingAt, 7
-	/// isRestricted. Every step re-runs on a bump, so a step that rewrites
+	/// replacement columns, 6 clear stale ao3ConfirmedMissingAt. Every step re-runs on a bump, so a step that rewrites
 	/// data (rather than adding a column or index) must be gated on
 	/// `existingVersion` to avoid repeating on every later upgrade.
-	nonisolated private static let currentSchemaVersion: UInt32 = 7
+	nonisolated private static let currentSchemaVersion: UInt32 = 6
 
 	public init(databaseFilePath: String, accountID: String, retentionStyle: RetentionStyle) {
 		Self.logger.debug("Articles Database init \(accountID, privacy: .public)")
@@ -455,16 +454,6 @@ public struct ArticleAttentionInfo: Sendable {
 			// fetch. Restoring a backup can reintroduce old flags; accepted.
 			if existingVersion < 6 {
 				database.executeStatements("UPDATE articles SET ao3ConfirmedMissingAt = NULL WHERE ao3ConfirmedMissingAt IS NOT NULL;")
-			}
-
-			// Schema version 7: isRestricted (AO3 archive-locked work).
-			// Nullable, no default; existing rows read back as nil (unknown)
-			// until a live fetch or listing row sets them. Not added to the
-			// CREATE TABLE literal: a fresh install runs this block from
-			// version 0.
-			if !self.articlesTable.containsColumn(DatabaseKey.isRestricted, in: database) {
-				Self.logger.debug("ArticlesDatabase: adding isRestricted column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.isRestricted) BOOL;")
 			}
 
 			database.setUserVersion(Self.currentSchemaVersion)
@@ -1324,7 +1313,7 @@ public struct ArticleAttentionInfo: Sendable {
 private extension ArticlesDatabase {
 
 	static let tableCreationStatements = """
-	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, additionalTags TEXT, series TEXT);
+	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, additionalTags TEXT, series TEXT, isRestricted BOOL, language TEXT, collections TEXT);
 
 	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOLEAN NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE);
 
