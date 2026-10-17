@@ -106,7 +106,20 @@ public struct AO3ChapterExtractionResult: Sendable {
 	/// source of truth.
 	public let metadata: AO3WorkPageMetadata
 
-	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, wordCount: Int? = nil, csrfToken: String? = nil, seriesEntries: [AO3SeriesSpanResult] = [], title: String? = nil, metadata: AO3WorkPageMetadata = AO3WorkPageMetadata()) {
+	/// AO3 archive lock ("Restricted": visible only to signed-in users),
+	/// read from the lock icon in the work-level title heading. Tri-state:
+	/// `true` when the icon was present, `false` when the heading was found
+	/// without it, `nil` when the heading itself was missing (unknown, not
+	/// "not restricted").
+	///
+	/// Only meaningful on a result extracted from a live fetch. The icon is
+	/// stripped from `contentHTML` at extraction time, so re-extracting
+	/// stored `contentHTML` (as `AO3FetchPolicy.detectRegression` does)
+	/// reports `false` even for a locked work. Never read this from a
+	/// re-extract of stored HTML.
+	public let isRestricted: Bool?
+
+	public init(contentHTML: String, chapters: [AO3ExtractedChapter], commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, wordCount: Int? = nil, csrfToken: String? = nil, seriesEntries: [AO3SeriesSpanResult] = [], title: String? = nil, metadata: AO3WorkPageMetadata = AO3WorkPageMetadata(), isRestricted: Bool? = nil) {
 		self.contentHTML = contentHTML
 		self.chapters = chapters
 		self.commentCount = commentCount
@@ -118,6 +131,7 @@ public struct AO3ChapterExtractionResult: Sendable {
 		self.seriesEntries = seriesEntries
 		self.title = title
 		self.metadata = metadata
+		self.isRestricted = isRestricted
 	}
 }
 
@@ -157,11 +171,8 @@ public struct AO3WorkPageMetadata: Sendable {
 	public let warnings: [String]
 	public let categories: [String]
 	/// Freeform "Additional Tags" -- `dt.freeform.tags`/`dd.freeform.tags`.
-	/// Distinct from the other tag groups above in that `Article` has no
-	/// persisted field for it yet (see `ParsedItem.tags`'s own doc
-	/// comment on why the JSON Feed `tags` field is parsed but dropped
-	/// everywhere else in the app) -- kept here regardless, ready for
-	/// that field to be added.
+	/// Carried to `ParsedItem.tags` by `AO3FetchPolicy.rebuildParsedItem` and
+	/// persisted as `Article.additionalTags`.
 	public let additionalTags: [String]
 
 	public init(authors: Set<ParsedAuthor> = [], summary: String? = nil, datePublished: Date? = nil, dateModified: Date? = nil, fandoms: [String] = [], relationships: [String] = [], characters: [String] = [], ratings: [String] = [], warnings: [String] = [], categories: [String] = [], additionalTags: [String] = []) {
@@ -256,11 +267,13 @@ public enum AO3ChapterHTMLExtractor {
 			})
 			if !chapterDivs.isEmpty {
 				let title = stripPhantomTitleHeadingClass(inWorkSkin: workSkinDiv)
+				// Must run before serializedContentHTML, which serializes workSkinDiv.
+				let isRestricted = captureAndStripRestrictedMarker(inWorkSkin: workSkinDiv)
 
 				let chapters = chapterDivs.compactMap(extractedChapter)
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries, title: title, metadata: assembled.metadata))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries, title: title, metadata: assembled.metadata, isRestricted: isRestricted))
 			}
 
 			// Single-chapter works carry no per-chapter <div class="chapter">
@@ -298,12 +311,13 @@ public enum AO3ChapterHTMLExtractor {
 				// one. Do not reintroduce that without also accounting
 				// for template.html's own heading.
 				let singleChapterTitle = stripPhantomTitleHeadingClass(inWorkSkin: workSkinDiv)
+				let isRestricted = captureAndStripRestrictedMarker(inWorkSkin: workSkinDiv)
 				stripLandmarkHeading(from: chaptersDiv)
 
 				let chapters = [AO3ExtractedChapter(id: "chapter-1", title: "Chapter 1")]
 				let assembled = serializedContentHTML(root: root, workSkinParent: workSkinParent, workSkinIndex: workSkinIndex, workSkinDiv: workSkinDiv)
 
-				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries, title: singleChapterTitle, metadata: assembled.metadata))
+				return .success(AO3ChapterExtractionResult(contentHTML: assembled.contentHTML, chapters: chapters, commentCount: assembled.commentCount, kudosCount: assembled.kudosCount, bookmarkCount: assembled.bookmarkCount, hitCount: assembled.hitCount, wordCount: assembled.wordCount, csrfToken: csrfToken(root: root), seriesEntries: assembled.seriesEntries, title: singleChapterTitle, metadata: assembled.metadata, isRestricted: isRestricted))
 			}
 		}
 
@@ -476,6 +490,38 @@ private extension AO3ChapterHTMLExtractor {
 		let title = flattenedText(titleHeading).trimmingCharacters(in: .whitespacesAndNewlines)
 		titleHeading.attributes["class"] = "title"
 		return title.isEmpty ? nil : title
+	}
+}
+
+// MARK: - Archive lock
+
+private extension AO3ChapterHTMLExtractor {
+
+	/// Reads AO3's archive-lock icon from the work-level title `h2` and
+	/// removes it from the tree, so the stored `contentHTML` never carries
+	/// the icon or its relative `/images/lockblue.png` src.
+	///
+	/// Scoped to the work-level heading only: other "Restricted" text on the
+	/// page (the `[Restricted Work]` items in an inspired-by list) describes
+	/// a different work. Only direct children of the heading are removed; if
+	/// a real capture shows the icon wrapped in another element, extend this.
+	///
+	/// Returns `true` (icon found), `false` (heading found, no icon), or
+	/// `nil` (heading missing, so unknown rather than "not restricted").
+	@discardableResult
+	static func captureAndStripRestrictedMarker(inWorkSkin workSkinDiv: HTMLLiteElement) -> Bool? {
+		guard let preface = workPreface(workSkinDiv),
+		      let titleHeading = firstDescendant(of: preface, where: { $0.tag == "h2" }) else {
+			return nil
+		}
+		let found = !descendants(of: titleHeading, where: AO3HTMLHelpers.isRestrictedMarker).isEmpty
+		titleHeading.children.removeAll {
+			if case .element(let element) = $0 {
+				return AO3HTMLHelpers.isRestrictedMarker(element)
+			}
+			return false
+		}
+		return found
 	}
 }
 

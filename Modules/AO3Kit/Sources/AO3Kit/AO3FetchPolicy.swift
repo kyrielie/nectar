@@ -164,9 +164,19 @@ public enum AO3FetchPolicy {
 	/// already has -- those are Workstream 1's (feed-derived) territory, and
 	/// a partial chapter fetch shouldn't be used to infer completion.
 	///
-	/// `tags` and `language` have no persisted home on `Article` at all (see
-	/// ParsedItem/Article field lists), so both are passed through as nil --
-	/// this doesn't blank anything that was ever actually stored.
+	/// `language` has no persisted home on `Article`, so it is passed through
+	/// as nil; this doesn't blank anything that was ever actually stored.
+	/// `tags` carries the work's freeform Additional Tags, which
+	/// `Article.additionalTags` persists.
+	///
+	/// `isRestricted` (the AO3 archive lock) takes this fetch's value when
+	/// the live page had a title heading to read it from, and falls back to
+	/// `existingArticle`'s value when it didn't (`nil` means unknown, so it
+	/// never blanks a stored `true`). It is deliberately not gated on
+	/// `applyStatsUpdate`: that flag protects only the Ambrosia local-only
+	/// stats counts, and the lock is metadata where the live page wins, like
+	/// the tag groups. A login-wall failure never reaches this function, so
+	/// a stored `true` survives a signed-out fetch.
 	///
 	/// `applyStatsUpdate` is the Ambrosia local-only toggle
 	/// (`AmbrosiaAO3NetworkPreference.updatesEnabled`) -- always true for
@@ -212,12 +222,8 @@ public enum AO3FetchPolicy {
 		let ratings = metadata.ratings.isEmpty ? existingArticle.ratings : metadata.ratings
 		let warnings = metadata.warnings.isEmpty ? existingArticle.warnings : metadata.warnings
 		let categories = metadata.categories.isEmpty ? existingArticle.categories : metadata.categories
-		// Additional Tags (freeform): ParsedItem.tags is the only carrier
-		// today -- Article has no persisted field for it yet (see
-		// ParsedItem.tags's own doc comment). Passed through regardless,
-		// ready for that field once it exists; currently dropped
-		// downstream the same way every other source of ParsedItem.tags
-		// already is.
+		// Additional Tags (freeform): carried on ParsedItem.tags and
+		// persisted as Article.additionalTags.
 		let additionalTags: Set<String>? = metadata.additionalTags.isEmpty ? nil : Set(metadata.additionalTags)
 
 		// Inline series navigation: prefer the existing article's own
@@ -277,6 +283,7 @@ public enum AO3FetchPolicy {
 			kudosCount: applyStatsUpdate ? extraction.kudosCount : existingArticle.kudosCount,
 			bookmarkCount: applyStatsUpdate ? extraction.bookmarkCount : existingArticle.bookmarkCount,
 			hitCount: applyStatsUpdate ? extraction.hitCount : existingArticle.hitCount,
+			isRestricted: extraction.isRestricted ?? existingArticle.isRestricted,
 			// rebuildParsedItem only runs on a successful extraction (it's
 			// handed the extraction.chapters/stats result), so "now" is
 			// correct here regardless of caller -- a failed fetch never

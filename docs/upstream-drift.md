@@ -167,6 +167,11 @@ or absent).
   for imported themes. The edit bumped each changed bundle's `Version` and re-keyed the
   Default, System, Duskbloom and Midnight Blue entries of `ThemeColorTable.json`. See `nnwtheme-format.md`.
 
+- **`Article.isRestricted`.** Nectar adds a nullable `isRestricted` (AO3 archive lock) to
+  `Article` (`Modules/Articles`), `ParsedItem` (`Modules/RSParser`) and the `articles` table
+  (schema 7), and includes it in `Article`'s `==`. Upstream has no such field. See
+  `ao3-feeds.md` ("Archive lock") and `database.md`.
+
 ## Nectar-original (no upstream counterpart)
 
 Files that are wholly new in Nectar -- new features, not modifications of

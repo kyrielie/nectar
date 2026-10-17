@@ -36,6 +36,10 @@ deciding whether it matters. A `.incomplete` transfer is currently only
 surfaced via the Activity Log, not (yet) as distinct per-feed UI state in
 the feed list.
 
+The Ambrosia import leaves out the AO3-native columns that an Ambrosia server
+has no data for: the four stats counts and `isRestricted` (the archive lock).
+They stay `NULL`, and a later live AO3 fetch or listing row fills them in.
+
 `AmbrosiaSQLiteImportTable.copyItems`'s bulk `INSERT OR REPLACE ... SELECT`
 moves most `items` columns straight across because their wire type already
 matches the local `articles` column's storage type (TEXT-to-TEXT,

@@ -70,6 +70,12 @@ hand — that preference only controls whether a *new* live AO3 network
 request is allowed to happen at all, not whether already-downloaded metadata
 gets displayed.
 
+`ParsedItem.isRestricted`/`Article.isRestricted` (AO3's archive lock) is also
+AO3-native and **not** part of `_ambrosia`: an Ambrosia feed leaves it `nil`
+(unknown) and an Ambrosia SQLite import does not write it. It comes from a
+live work-page fetch or an AO3 listing row (see `ao3-feeds.md`, "Archive
+lock").
+
 `ParsedItem.dateBookmarked`/`Article.dateBookmarked` is in the same
 category as the four stats fields above — AO3-native metadata, **not**
 part of the `_ambrosia` extension object. It has only one source, though:

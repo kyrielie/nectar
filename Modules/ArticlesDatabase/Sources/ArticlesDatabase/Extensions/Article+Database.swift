@@ -67,6 +67,7 @@ extension Article {
 		// fields (see Article.swift's doc comment) -- previous/next
 		// navigation is per-series now, inside `series` itself.
 		let lastPrefaceFetchDate = row.date(forColumn: DatabaseKey.lastPrefaceFetchDate)
+		let isRestricted = row.columnIsNull(DatabaseKey.isRestricted) ? nil : row.bool(forColumn: DatabaseKey.isRestricted)
 		let isAmbrosiaItem = row.columnIsNull(DatabaseKey.isAmbrosiaItem) ? false : row.bool(forColumn: DatabaseKey.isAmbrosiaItem)
 
 		// Task 8: pendingUpdateContentHTML gets the same compression
@@ -76,7 +77,7 @@ extension Article {
 		let wordCountRegressionFlaggedAt = row.date(forColumn: DatabaseKey.wordCountRegressionFlaggedAt)
 		let ao3ConfirmedMissingAt = row.date(forColumn: DatabaseKey.ao3ConfirmedMissingAt)
 
-		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, additionalTags: additionalTags, series: series, commentCount: commentCount, kudosCount: kudosCount, bookmarkCount: bookmarkCount, hitCount: hitCount, dateBookmarked: dateBookmarked, lastPrefaceFetchDate: lastPrefaceFetchDate, pendingUpdateContentHTML: pendingUpdateContentHTML, pendingUpdateDetectedAt: pendingUpdateDetectedAt, wordCountRegressionFlaggedAt: wordCountRegressionFlaggedAt, ao3ConfirmedMissingAt: ao3ConfirmedMissingAt, isAmbrosiaItem: isAmbrosiaItem, bookKey: bookKey, status: status)
+		self.init(accountID: accountID, articleID: articleID, feedID: feedID, uniqueID: uniqueID, title: title, contentHTML: contentHTML, contentText: contentText, markdown: markdown, url: url, externalURL: externalURL, summary: summary, imageURL: imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: wordCount, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal, isComplete: isComplete, fandoms: fandoms, relationships: relationships, characters: characters, ratings: ratings, warnings: warnings, categories: categories, additionalTags: additionalTags, series: series, commentCount: commentCount, kudosCount: kudosCount, bookmarkCount: bookmarkCount, hitCount: hitCount, isRestricted: isRestricted, dateBookmarked: dateBookmarked, lastPrefaceFetchDate: lastPrefaceFetchDate, pendingUpdateContentHTML: pendingUpdateContentHTML, pendingUpdateDetectedAt: pendingUpdateDetectedAt, wordCountRegressionFlaggedAt: wordCountRegressionFlaggedAt, ao3ConfirmedMissingAt: ao3ConfirmedMissingAt, isAmbrosiaItem: isAmbrosiaItem, bookKey: bookKey, status: status)
 	}
 
 	private static func authorsFromRow(_ row: FMResultSet) -> Set<Author>? {
@@ -146,7 +147,7 @@ extension Article {
 		// themselves didn't change.
 		let additionalTags = parsedItem.tags.map { $0.sorted() }
 
-		self.init(accountID: accountID, articleID: parsedItem.syncServiceID, feedID: feedID, uniqueID: parsedItem.uniqueID, title: parsedItem.title, contentHTML: parsedItem.contentHTML, contentText: parsedItem.contentText, markdown: parsedItem.markdown, url: parsedItem.url, externalURL: parsedItem.externalURL, summary: parsedItem.summary, imageURL: parsedItem.imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: parsedItem.wordCount, chapterCurrent: parsedItem.chapterCurrent, chapterTotal: parsedItem.chapterTotal, isComplete: parsedItem.isComplete, fandoms: parsedItem.fandoms, relationships: parsedItem.relationships, characters: parsedItem.characters, ratings: parsedItem.ratings, warnings: parsedItem.warnings, categories: parsedItem.categories, additionalTags: additionalTags, series: series, commentCount: parsedItem.commentCount, kudosCount: parsedItem.kudosCount, bookmarkCount: parsedItem.bookmarkCount, hitCount: parsedItem.hitCount, dateBookmarked: parsedItem.dateBookmarked, lastPrefaceFetchDate: parsedItem.lastPrefaceFetchDate, isAmbrosiaItem: parsedItem.isAmbrosiaItem, bookKey: parsedItem.bookKey, status: status)
+		self.init(accountID: accountID, articleID: parsedItem.syncServiceID, feedID: feedID, uniqueID: parsedItem.uniqueID, title: parsedItem.title, contentHTML: parsedItem.contentHTML, contentText: parsedItem.contentText, markdown: parsedItem.markdown, url: parsedItem.url, externalURL: parsedItem.externalURL, summary: parsedItem.summary, imageURL: parsedItem.imageURL, datePublished: datePublished, dateModified: dateModified, authors: authors, wordCount: parsedItem.wordCount, chapterCurrent: parsedItem.chapterCurrent, chapterTotal: parsedItem.chapterTotal, isComplete: parsedItem.isComplete, fandoms: parsedItem.fandoms, relationships: parsedItem.relationships, characters: parsedItem.characters, ratings: parsedItem.ratings, warnings: parsedItem.warnings, categories: parsedItem.categories, additionalTags: additionalTags, series: series, commentCount: parsedItem.commentCount, kudosCount: parsedItem.kudosCount, bookmarkCount: parsedItem.bookmarkCount, hitCount: parsedItem.hitCount, isRestricted: parsedItem.isRestricted, dateBookmarked: parsedItem.dateBookmarked, lastPrefaceFetchDate: parsedItem.lastPrefaceFetchDate, isAmbrosiaItem: parsedItem.isAmbrosiaItem, bookKey: parsedItem.bookKey, status: status)
 	}
 
 	private func addPossibleStringChangeWithKeyPath(_ comparisonKeyPath: KeyPath<Article, String?>, _ otherArticle: Article, _ key: String, _ dictionary: inout DatabaseDictionary) {
@@ -281,6 +282,12 @@ extension Article {
 		}
 		if hitCount != existingArticle.hitCount, let hitCount {
 			d[DatabaseKey.hitCount] = hitCount
+		}
+		// Write when the incoming value is non-nil and differs, so an author
+		// unlocking a work moves true to false, and nil (unknown) never
+		// blanks a stored value.
+		if isRestricted != existingArticle.isRestricted, let isRestricted {
+			d[DatabaseKey.isRestricted] = isRestricted
 		}
 		// Same "always take the newest known non-nil value" rule as the
 		// four stats above -- a re-extraction that doesn't touch a
@@ -420,6 +427,9 @@ extension Article {
 		}
 		if let hitCount {
 			d[DatabaseKey.hitCount] = hitCount
+		}
+		if let isRestricted {
+			d[DatabaseKey.isRestricted] = isRestricted
 		}
 		if let dateBookmarked {
 			d[DatabaseKey.dateBookmarked] = dateBookmarked

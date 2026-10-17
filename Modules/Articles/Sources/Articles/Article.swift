@@ -40,12 +40,10 @@ public final class Article: Hashable, Sendable {
 	public let categories: [String]?
 	// Freeform "Additional Tags" -- distinct from the fandom/relationship/
 	// character/rating/warning/category groups above, which each map to
-	// AO3's own discrete `dl.work.meta.group` row. Added alongside those
-	// (rather than when they were originally added) because nothing wrote
-	// it before AO3ChapterHTMLExtractor's AO3WorkPageMetadata started
-	// parsing it -- see ParsedItem.tags's own doc comment on why the
-	// standard JSON Feed `tags` field was, until now, parsed and
-	// discarded everywhere in this app.
+	// AO3's own discrete `dl.work.meta.group` row. Filled from
+	// ParsedItem.tags (an AO3 search/series row's freeform tags, or the
+	// work page's Additional Tags via AO3WorkPageMetadata) and stored as a
+	// JSON-encoded array.
 	public let additionalTags: [String]?
 	public let series: [ArticleSeriesEntry]?
 	// Comments/Kudos/Bookmarks/Hits, read off AO3's live dl.stats block by
@@ -58,6 +56,11 @@ public final class Article: Hashable, Sendable {
 	public let kudosCount: Int?
 	public let bookmarkCount: Int?
 	public let hitCount: Int?
+	// AO3 archive lock ("Restricted": visible only to signed-in users).
+	// Tri-state: nil means unknown (never fetched with lock data, or the
+	// source carries none), never "not restricted". Only a live work-page
+	// fetch or an AO3 listing row sets it; see AO3ChapterExtractionResult.
+	public let isRestricted: Bool?
 	// Date this article was bookmarked (AO3 bookmarks-page rows only,
 	// via ParsedItem.dateBookmarked) -- distinct from dateModified. nil
 	// for every article not sourced from a bookmarks listing.
@@ -121,7 +124,7 @@ public final class Article: Hashable, Sendable {
 	public let bookKey: String
 	public let status: ArticleStatus
 
-	public init(accountID: String, articleID: String?, feedID: String, uniqueID: String, title: String?, contentHTML: String?, contentText: String?, markdown: String?, url: String?, externalURL: String?, summary: String?, imageURL: String?, datePublished: Date?, dateModified: Date?, authors: Set<Author>?, wordCount: Int? = nil, chapterCurrent: Int? = nil, chapterTotal: Int? = nil, isComplete: Bool? = nil, fandoms: [String]? = nil, relationships: [String]? = nil, characters: [String]? = nil, ratings: [String]? = nil, warnings: [String]? = nil, categories: [String]? = nil, additionalTags: [String]? = nil, series: [ArticleSeriesEntry]? = nil, commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, dateBookmarked: Date? = nil, lastPrefaceFetchDate: Date? = nil, pendingUpdateContentHTML: String? = nil, pendingUpdateDetectedAt: Date? = nil, wordCountRegressionFlaggedAt: Date? = nil, ao3ConfirmedMissingAt: Date? = nil, isAmbrosiaItem: Bool = false, bookKey: String? = nil, status: ArticleStatus) {
+	public init(accountID: String, articleID: String?, feedID: String, uniqueID: String, title: String?, contentHTML: String?, contentText: String?, markdown: String?, url: String?, externalURL: String?, summary: String?, imageURL: String?, datePublished: Date?, dateModified: Date?, authors: Set<Author>?, wordCount: Int? = nil, chapterCurrent: Int? = nil, chapterTotal: Int? = nil, isComplete: Bool? = nil, fandoms: [String]? = nil, relationships: [String]? = nil, characters: [String]? = nil, ratings: [String]? = nil, warnings: [String]? = nil, categories: [String]? = nil, additionalTags: [String]? = nil, series: [ArticleSeriesEntry]? = nil, commentCount: Int? = nil, kudosCount: Int? = nil, bookmarkCount: Int? = nil, hitCount: Int? = nil, isRestricted: Bool? = nil, dateBookmarked: Date? = nil, lastPrefaceFetchDate: Date? = nil, pendingUpdateContentHTML: String? = nil, pendingUpdateDetectedAt: Date? = nil, wordCountRegressionFlaggedAt: Date? = nil, ao3ConfirmedMissingAt: Date? = nil, isAmbrosiaItem: Bool = false, bookKey: String? = nil, status: ArticleStatus) {
 		self.accountID = accountID
 		self.feedID = feedID
 		self.uniqueID = uniqueID
@@ -152,6 +155,7 @@ public final class Article: Hashable, Sendable {
 		self.kudosCount = kudosCount
 		self.bookmarkCount = bookmarkCount
 		self.hitCount = hitCount
+		self.isRestricted = isRestricted
 		self.dateBookmarked = dateBookmarked
 		self.lastPrefaceFetchDate = lastPrefaceFetchDate
 		self.pendingUpdateContentHTML = pendingUpdateContentHTML
@@ -182,7 +186,7 @@ public final class Article: Hashable, Sendable {
 	// MARK: - Equatable
 
 	static public func ==(lhs: Article, rhs: Article) -> Bool {
-		return lhs.articleID == rhs.articleID && lhs.accountID == rhs.accountID && lhs.feedID == rhs.feedID && lhs.uniqueID == rhs.uniqueID && lhs.title == rhs.title && lhs.contentHTML == rhs.contentHTML && lhs.contentText == rhs.contentText && lhs.rawLink == rhs.rawLink && lhs.rawExternalLink == rhs.rawExternalLink && lhs.summary == rhs.summary && lhs.rawImageLink == rhs.rawImageLink && lhs.datePublished == rhs.datePublished && lhs.dateModified == rhs.dateModified && lhs.authors == rhs.authors && lhs.wordCount == rhs.wordCount && lhs.chapterCurrent == rhs.chapterCurrent && lhs.chapterTotal == rhs.chapterTotal && lhs.isComplete == rhs.isComplete && lhs.fandoms == rhs.fandoms && lhs.relationships == rhs.relationships && lhs.characters == rhs.characters && lhs.ratings == rhs.ratings && lhs.warnings == rhs.warnings && lhs.categories == rhs.categories && lhs.additionalTags == rhs.additionalTags && lhs.series == rhs.series && lhs.commentCount == rhs.commentCount && lhs.kudosCount == rhs.kudosCount && lhs.bookmarkCount == rhs.bookmarkCount && lhs.hitCount == rhs.hitCount && lhs.dateBookmarked == rhs.dateBookmarked && lhs.lastPrefaceFetchDate == rhs.lastPrefaceFetchDate && lhs.pendingUpdateContentHTML == rhs.pendingUpdateContentHTML && lhs.pendingUpdateDetectedAt == rhs.pendingUpdateDetectedAt && lhs.wordCountRegressionFlaggedAt == rhs.wordCountRegressionFlaggedAt && lhs.ao3ConfirmedMissingAt == rhs.ao3ConfirmedMissingAt && lhs.isAmbrosiaItem == rhs.isAmbrosiaItem && lhs.bookKey == rhs.bookKey
+		return lhs.articleID == rhs.articleID && lhs.accountID == rhs.accountID && lhs.feedID == rhs.feedID && lhs.uniqueID == rhs.uniqueID && lhs.title == rhs.title && lhs.contentHTML == rhs.contentHTML && lhs.contentText == rhs.contentText && lhs.rawLink == rhs.rawLink && lhs.rawExternalLink == rhs.rawExternalLink && lhs.summary == rhs.summary && lhs.rawImageLink == rhs.rawImageLink && lhs.datePublished == rhs.datePublished && lhs.dateModified == rhs.dateModified && lhs.authors == rhs.authors && lhs.wordCount == rhs.wordCount && lhs.chapterCurrent == rhs.chapterCurrent && lhs.chapterTotal == rhs.chapterTotal && lhs.isComplete == rhs.isComplete && lhs.fandoms == rhs.fandoms && lhs.relationships == rhs.relationships && lhs.characters == rhs.characters && lhs.ratings == rhs.ratings && lhs.warnings == rhs.warnings && lhs.categories == rhs.categories && lhs.additionalTags == rhs.additionalTags && lhs.series == rhs.series && lhs.commentCount == rhs.commentCount && lhs.kudosCount == rhs.kudosCount && lhs.bookmarkCount == rhs.bookmarkCount && lhs.hitCount == rhs.hitCount && lhs.isRestricted == rhs.isRestricted && lhs.dateBookmarked == rhs.dateBookmarked && lhs.lastPrefaceFetchDate == rhs.lastPrefaceFetchDate && lhs.pendingUpdateContentHTML == rhs.pendingUpdateContentHTML && lhs.pendingUpdateDetectedAt == rhs.pendingUpdateDetectedAt && lhs.wordCountRegressionFlaggedAt == rhs.wordCountRegressionFlaggedAt && lhs.ao3ConfirmedMissingAt == rhs.ao3ConfirmedMissingAt && lhs.isAmbrosiaItem == rhs.isAmbrosiaItem && lhs.bookKey == rhs.bookKey
 	}
 }
 

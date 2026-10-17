@@ -48,6 +48,18 @@ by this one" module (`div#children.children.module`, last in the afterword) is
 left as AO3 wrote it; `AO3ChapterHTMLExtractorTests` pins that the extractor
 ships it (the fixture is hand-built from AO3's source, not captured).
 
+The work's archive-lock icon (in the work-level title `h2`) is the one piece
+of `#workskin` the extractor removes before serializing: it is read into
+`AO3ChapterExtractionResult.isRestricted` and dropped from `contentHTML`
+(see `ao3-feeds.md`, "Archive lock"). Consequence for
+`AO3FetchPolicy.detectRegression`, which re-extracts stored `contentHTML`:
+that re-extract reports `isRestricted == false` for a locked work, so the
+flag is read only from a live fetch, never from re-extracted stored HTML.
+`AO3FetchPolicy.rebuildParsedItem` takes the live value and falls back to the
+stored one when the live value is `nil`; it is not gated on
+`applyStatsUpdate`, and a login-wall failure never reaches it, so a stored
+`true` survives a signed-out fetch.
+
 Each row of that shared markup is either bounded (renders inside the
 label-adjacent value column) or wide (`AO3PrefaceRow.isWide`, renders
 `class='wide'` on both `<dt>`/`<dd>`, spanning the preface's full width on

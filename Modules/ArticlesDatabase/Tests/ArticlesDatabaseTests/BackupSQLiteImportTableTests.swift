@@ -347,4 +347,69 @@ struct BackupSQLiteImportTableTests {
 		#expect(fetched.first?.originalText == "urself")
 		#expect(fetched.first?.replacementText == "yourself")
 	}
+
+	// MARK: - articles: isRestricted (schema 7)
+
+	@Test("isRestricted true and false in the backup are restored on rows added by the merge")
+	func restoresIsRestrictedFromBackup() async throws {
+		let localDB = TestFixtures.makeDatabase()
+		let backupDB = TestFixtures.makeDatabase()
+		let items = [
+			TestFixtures.makeParsedItem(uniqueID: "locked", feedURL: "https://example.com/feed-a", isRestricted: true),
+			TestFixtures.makeParsedItem(uniqueID: "open", feedURL: "https://example.com/feed-a", isRestricted: false),
+			TestFixtures.makeParsedItem(uniqueID: "unknown", feedURL: "https://example.com/feed-a", isRestricted: nil)
+		]
+		_ = await backupDB.updateAsync(parsedItems: items, feedID: "feed-a", deleteOlder: false)
+
+		try mergeBackup(of: backupDB, into: localDB)
+
+		func restored(_ uniqueID: String) -> Bool?? {
+			localDB.fetchArticles(articleIDs: [Article.calculatedArticleID(feedID: "feed-a", uniqueID: uniqueID)]).first.map(\.isRestricted)
+		}
+		#expect(restored("locked") == .some(true))
+		#expect(restored("open") == .some(false))
+		#expect(restored("unknown") == .some(nil))
+	}
+
+	@Test("a backup from before schema 7, with no isRestricted column, still merges and restores the row as unknown")
+	func olderBackupWithoutIsRestrictedColumnStillMerges() async throws {
+		let localDB = TestFixtures.makeDatabase()
+		let backupDB = TestFixtures.makeDatabase()
+		_ = await backupDB.updateAsync(parsedItems: [TestFixtures.makeParsedItem(uniqueID: "old", feedURL: "https://example.com/feed-a", isRestricted: true)], feedID: "feed-a", deleteOlder: false)
+
+		let backupPath = tempPath()
+		defer { try? FileManager.default.removeItem(atPath: backupPath) }
+		try backupDB.exportFullSnapshot(toPath: backupPath)
+
+		// Rebuild the older shape. Relies on SQLite ALTER TABLE DROP COLUMN (3.35+).
+		let raw = try #require(FMDatabase(path: backupPath))
+		try #require(raw.open())
+		raw.executeStatements("ALTER TABLE articles DROP COLUMN isRestricted;")
+		raw.close()
+
+		try localDB.importBackupSnapshot(backupDatabasePath: backupPath)
+
+		let articleID = Article.calculatedArticleID(feedID: "feed-a", uniqueID: "old")
+		let article = try #require(localDB.fetchArticles(articleIDs: [articleID]).first)
+		#expect(article.isRestricted == nil)
+	}
+
+	@Test("articlesMergeSQL selects NULL for an optional column the backup lacks and b.<column> for the rest")
+	func mergeSQLSubstitutesNullForMissingOptionalColumn() throws {
+		var columns = Set((BackupSQLiteImportTable.articleMergeRequiredColumns + BackupSQLiteImportTable.articleMergeOptionalColumns).map { $0.lowercased() })
+		columns.remove("isrestricted")
+		let sql = try BackupSQLiteImportTable.articlesMergeSQL(backupColumns: columns)
+		#expect(sql.contains("b.hitCount"))
+		#expect(!sql.contains("b.isRestricted"))
+		#expect(sql.contains("NULL"))
+	}
+
+	@Test("articlesMergeSQL throws when the backup lacks an identity column")
+	func mergeSQLThrowsWithoutIdentityColumn() {
+		let columns = Set(BackupSQLiteImportTable.articleMergeOptionalColumns.map { $0.lowercased() })
+		#expect(throws: BackupSQLiteImportError.self) {
+			_ = try BackupSQLiteImportTable.articlesMergeSQL(backupColumns: columns)
+		}
+	}
 }
+

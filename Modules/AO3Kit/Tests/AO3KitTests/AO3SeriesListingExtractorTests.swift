@@ -176,4 +176,26 @@ import Testing
 		#expect(hasNextPage == true)
 		#expect(totalPages == nil)
 	}
+
+	@Test func entriesCarryRestrictedFlagFromHeading() {
+		let html = """
+		<html><body>
+		<ul class="series work index group">
+		<li id="work_1" class="work blurb group work-1 user-1" role="article">
+		<h4 class="heading"><a href="/works/1">Locked work</a> <img alt="(Restricted)" title="Restricted" src="/images/lockblue.png" width="15" height="15" /></h4>
+		</li>
+		<li id="work_2" class="work blurb group work-2 user-1" role="article">
+		<h4 class="heading"><a href="/works/2">Open work</a></h4>
+		</li>
+		</ul>
+		</body></html>
+		"""
+		let (works, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
+		#expect(works.map(\.isRestricted) == [true, false])
+	}
+
+	@Test func handBuiltEntryDefaultsRestrictedToNil() {
+		let entry = AO3SeriesListingExtractor.WorkListingEntry(workID: "1", permalink: "https://archiveofourown.org/works/1", title: "T")
+		#expect(entry.isRestricted == nil)
+	}
 }

@@ -123,7 +123,13 @@ public struct ArticleAttentionInfo: Sendable {
 	/// schema change; a fresh install starts at user_version 0 and runs
 	/// every step up to currentSchemaVersion in one pass, same as an
 	/// existing install catching up.
-	nonisolated private static let currentSchemaVersion: UInt32 = 6
+	///
+	/// History: 3 chapterTitle, 4 dateBookmarked, 5 annotation text
+	/// replacement columns, 6 clear stale ao3ConfirmedMissingAt, 7
+	/// isRestricted. Every step re-runs on a bump, so a step that rewrites
+	/// data (rather than adding a column or index) must be gated on
+	/// `existingVersion` to avoid repeating on every later upgrade.
+	nonisolated private static let currentSchemaVersion: UInt32 = 7
 
 	public init(databaseFilePath: String, accountID: String, retentionStyle: RetentionStyle) {
 		Self.logger.debug("Articles Database init \(accountID, privacy: .public)")
@@ -334,7 +340,7 @@ public struct ArticleAttentionInfo: Sendable {
 			// AO3ChapterHTMLExtractor's AO3WorkPageMetadata alongside the
 			// other tag-group columns (fandoms/relationships/etc, added
 			// earlier as part of the Ambrosia extension group above), but
-			// added separately here since nothing wrote it before now --
+			// added separately here, after those columns --
 			// see Article.additionalTags's own doc comment. Same additive,
 			// containsColumn-guarded ALTER TABLE pattern, TEXT (JSON-encoded
 			// array) like the other tag-group columns.
@@ -438,13 +444,28 @@ public struct ArticleAttentionInfo: Sendable {
 			database.executeStatements("CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);")
 			database.executeStatements("DROP TABLE if EXISTS tags;DROP INDEX if EXISTS tags_tagName_index;DROP INDEX if EXISTS articles_feedID_index;DROP INDEX if EXISTS statuses_read_index;DROP TABLE if EXISTS attachments;DROP TABLE if EXISTS attachmentsLookup;")
 
-			// Schema 6: clear every existing ao3ConfirmedMissingAt. Those
+			// Schema 6 (gated on existingVersion: this is a data rewrite, and
+			// the whole block re-runs on every later version bump, which would
+			// otherwise wipe flags legitimately set since): clear every
+			// existing ao3ConfirmedMissingAt. Those
 			// values predate classification of interstitials (Cloudflare
 			// challenge and AO3 503 pages were once treated as "work
 			// missing"), so a real flag cannot be told apart from a false
 			// one. A work that is genuinely gone is re-flagged on its next
 			// fetch. Restoring a backup can reintroduce old flags; accepted.
-			database.executeStatements("UPDATE articles SET ao3ConfirmedMissingAt = NULL WHERE ao3ConfirmedMissingAt IS NOT NULL;")
+			if existingVersion < 6 {
+				database.executeStatements("UPDATE articles SET ao3ConfirmedMissingAt = NULL WHERE ao3ConfirmedMissingAt IS NOT NULL;")
+			}
+
+			// Schema version 7: isRestricted (AO3 archive-locked work).
+			// Nullable, no default; existing rows read back as nil (unknown)
+			// until a live fetch or listing row sets them. Not added to the
+			// CREATE TABLE literal: a fresh install runs this block from
+			// version 0.
+			if !self.articlesTable.containsColumn(DatabaseKey.isRestricted, in: database) {
+				Self.logger.debug("ArticlesDatabase: adding isRestricted column \(accountID, privacy: .public)")
+				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.isRestricted) BOOL;")
+			}
 
 			database.setUserVersion(Self.currentSchemaVersion)
 		}

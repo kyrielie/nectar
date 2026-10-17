@@ -42,7 +42,8 @@ enum TestFixtures {
 		ao3SeriesID: String? = nil,
 		seriesName: String? = nil,
 		datePublished: Date? = nil,
-		dateModified: Date? = nil
+		dateModified: Date? = nil,
+		isRestricted: Bool? = nil
 	) -> ParsedItem {
 		ParsedItem(
 			syncServiceID: nil,
@@ -66,6 +67,7 @@ enum TestFixtures {
 			isAmbrosiaItem: isAmbrosiaItem,
 			wordCount: wordCount,
 			fandoms: fandoms,
+			isRestricted: isRestricted,
 			ao3WorkID: ao3WorkID,
 			isAnthology: isAnthology,
 			ao3SeriesID: ao3SeriesID,

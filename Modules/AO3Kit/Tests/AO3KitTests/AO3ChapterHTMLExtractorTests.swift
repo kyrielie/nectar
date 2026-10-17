@@ -760,4 +760,71 @@ import Testing
 		#expect(result.metadata.datePublished == nil)
 		#expect(result.metadata.fandoms.isEmpty)
 	}
+
+	// MARK: - Archive lock (isRestricted)
+
+	// The restricted fixture is synthetic: ao3-work-single-chapter.html with
+	// the lock <img> injected into the work-level title h2. Replace with a
+	// real signed-in capture when one is available.
+	private func extractSuccess(_ html: String) -> AO3ChapterExtractionResult? {
+		guard case .success(let result) = AO3ChapterHTMLExtractor.extract(fromWorkPageHTML: html) else {
+			Issue.record("Expected .success")
+			return nil
+		}
+		return result
+	}
+
+	@Test func lockedSingleChapterWorkReportsRestrictedAndStripsIcon() {
+		guard let result = extractSuccess(htmlFixtureString("ao3-work-restricted-synthetic.html")) else { return }
+		#expect(result.isRestricted == true)
+		#expect(!result.contentHTML.contains("lockblue"))
+		#expect(result.title == "[podfic] Shut The God Damn Door")
+	}
+
+	@Test func unlockedSingleChapterWorkReportsNotRestricted() {
+		guard let result = extractSuccess(htmlFixtureString("ao3-work-single-chapter.html")) else { return }
+		#expect(result.isRestricted == false)
+	}
+
+	@Test func unlockedMultiChapterWorkReportsNotRestricted() {
+		guard let result = extractSuccess(htmlFixtureString("ao3-work-multi-chapter.html")) else { return }
+		#expect(result.isRestricted == false)
+	}
+
+	@Test func lockedMultiChapterWorkReportsRestrictedAndStripsIcon() {
+		// Synthetic: multi-chapter fixture with the lock injected into the
+		// work-level title heading.
+		let source = htmlFixtureString("ao3-work-multi-chapter.html")
+		let range = source.range(of: "<div class=\"preface group\">")
+		guard let range, let headingOpen = source.range(of: "<h2 class=\"title heading\">", range: range.upperBound..<source.endIndex) else {
+			Issue.record("Multi-chapter fixture lacks the expected work-level heading")
+			return
+		}
+		let lock = "<img alt=\"(Restricted)\" title=\"Restricted\" src=\"/images/lockblue.png\" width=\"15\" height=\"15\" />"
+		let html = source.replacingCharacters(in: headingOpen.upperBound..<headingOpen.upperBound, with: lock)
+		guard let result = extractSuccess(html) else { return }
+		#expect(result.isRestricted == true)
+		#expect(!result.contentHTML.contains("lockblue"))
+	}
+
+	@Test func missingTitleHeadingReportsUnknown() {
+		let html = "<html><body><div id=\"workskin\"><div class=\"chapter\" id=\"chapter-1\"><div class=\"userstuff module\" role=\"article\"><p>Text.</p></div></div></div></body></html>"
+		guard let result = extractSuccess(html) else { return }
+		#expect(result.isRestricted == nil)
+	}
+
+	@Test func inspiredByRestrictedWorkItemsDoNotSetFlag() {
+		guard let result = extractSuccess(htmlFixtureString("ao3-work-inspired-by.html")) else { return }
+		#expect(result.isRestricted == false)
+	}
+
+	@Test func reExtractingStoredHTMLOfLockedWorkReportsNotRestricted() {
+		// Documents the rule on AO3ChapterExtractionResult.isRestricted: the
+		// icon is stripped at extraction, so the lock is only knowable from a
+		// live fetch, never from a re-extract of stored contentHTML.
+		guard let live = extractSuccess(htmlFixtureString("ao3-work-restricted-synthetic.html")) else { return }
+		#expect(live.isRestricted == true)
+		guard let reExtracted = extractSuccess(live.contentHTML) else { return }
+		#expect(reExtracted.isRestricted != true)
+	}
 }
