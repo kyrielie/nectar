@@ -73,6 +73,11 @@ public struct ParsedItem: Hashable, Sendable {
 	public let kudosCount: Int?
 	public let bookmarkCount: Int?
 	public let hitCount: Int?
+	// AO3 archive lock ("Restricted": visible only to signed-in users),
+	// read from the lock icon beside the work's title. Tri-state: nil means
+	// unknown (no heading was seen, or the source carries no lock data, as
+	// with RSS/Atom and Ambrosia feeds), never "not restricted".
+	public let isRestricted: Bool?
 	// Date this article was bookmarked, distinct from dateModified (the
 	// work's own last-updated date). Only ever populated from an AO3
 	// bookmarks-page row (`div.user p.datetime`, see
@@ -175,6 +180,7 @@ public struct ParsedItem: Hashable, Sendable {
 	            kudosCount: Int? = nil,
 	            bookmarkCount: Int? = nil,
 	            hitCount: Int? = nil,
+	            isRestricted: Bool? = nil,
 	            dateBookmarked: Date? = nil,
 	            lastPrefaceFetchDate: Date? = nil,
 	            ao3WorkID: String? = nil,
@@ -214,6 +220,7 @@ public struct ParsedItem: Hashable, Sendable {
 		self.kudosCount = kudosCount
 		self.bookmarkCount = bookmarkCount
 		self.hitCount = hitCount
+		self.isRestricted = isRestricted
 		self.dateBookmarked = dateBookmarked
 		self.lastPrefaceFetchDate = lastPrefaceFetchDate
 		self.ao3WorkID = ao3WorkID

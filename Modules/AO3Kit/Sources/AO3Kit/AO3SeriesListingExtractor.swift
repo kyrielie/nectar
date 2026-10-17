@@ -104,7 +104,8 @@ public enum AO3SeriesListingExtractor {
 				warnings: AO3SearchResultsExtractor.symbolTexts(in: li, classToken: "warnings"),
 				ratings: AO3SearchResultsExtractor.symbolTexts(in: li, classToken: "rating"),
 				categories: AO3SearchResultsExtractor.symbolTexts(in: li, classToken: "category"),
-				wordCount: AO3SearchResultsExtractor.intValue(fromDD: li, classToken: "words")
+				wordCount: AO3SearchResultsExtractor.intValue(fromDD: li, classToken: "words"),
+				isRestricted: !descendants(of: headingH4, where: AO3HTMLHelpers.isRestrictedMarker).isEmpty
 			)
 		}
 
@@ -135,8 +136,11 @@ public enum AO3SeriesListingExtractor {
 		public let ratings: [String]
 		public let categories: [String]
 		public let wordCount: Int?
+		/// AO3 archive lock read from the row's `h4.heading`. Always non-nil
+		/// for a parsed row; nil only for hand-built entries with no lock data.
+		public let isRestricted: Bool?
 
-		public init(workID: String, permalink: String, title: String, summary: String? = nil, fandoms: [String] = [], relationships: [String] = [], characters: [String] = [], freeformTags: [String] = [], warnings: [String] = [], ratings: [String] = [], categories: [String] = [], wordCount: Int? = nil) {
+		public init(workID: String, permalink: String, title: String, summary: String? = nil, fandoms: [String] = [], relationships: [String] = [], characters: [String] = [], freeformTags: [String] = [], warnings: [String] = [], ratings: [String] = [], categories: [String] = [], wordCount: Int? = nil, isRestricted: Bool? = nil) {
 			self.workID = workID
 			self.permalink = permalink
 			self.title = title
@@ -149,6 +153,7 @@ public enum AO3SeriesListingExtractor {
 			self.ratings = ratings
 			self.categories = categories
 			self.wordCount = wordCount
+			self.isRestricted = isRestricted
 		}
 	}
 }

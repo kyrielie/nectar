@@ -289,6 +289,44 @@ import RSParser
 		#expect(item.contentHTML == extraction.contentHTML)
 	}
 
+	// MARK: - rebuildParsedItem: isRestricted
+
+	private static func restrictedExtraction(_ isRestricted: Bool?) -> AO3ChapterExtractionResult {
+		AO3ChapterExtractionResult(contentHTML: "<div id=\"workskin\"></div>", chapters: [AO3ExtractedChapter(id: "chapter-1", title: "Chapter 1")], isRestricted: isRestricted)
+	}
+
+	@Test(arguments: [true, false])
+	func rebuildTakesLiveRestrictedValue(live: Bool) {
+		let existing = Self.makeArticle(contentHTML: "<p>x</p>", isRestricted: nil)
+		let item = AO3FetchPolicy.rebuildParsedItem(from: existing, workID: "999", extraction: Self.restrictedExtraction(live), applyStatsUpdate: true)
+		#expect(item.isRestricted == live)
+	}
+
+	@Test func rebuildFallsBackToExistingWhenLiveValueUnknown() {
+		let existing = Self.makeArticle(contentHTML: "<p>x</p>", isRestricted: true)
+		let item = AO3FetchPolicy.rebuildParsedItem(from: existing, workID: "999", extraction: Self.restrictedExtraction(nil), applyStatsUpdate: true)
+		#expect(item.isRestricted == true)
+	}
+
+	@Test func rebuildStaysNilWhenBothUnknown() {
+		let existing = Self.makeArticle(contentHTML: "<p>x</p>", isRestricted: nil)
+		let item = AO3FetchPolicy.rebuildParsedItem(from: existing, workID: "999", extraction: Self.restrictedExtraction(nil), applyStatsUpdate: true)
+		#expect(item.isRestricted == nil)
+	}
+
+	@Test func rebuildAcceptsTrueToFalseForAnUnlockedWork() {
+		let existing = Self.makeArticle(contentHTML: "<p>x</p>", isRestricted: true)
+		let item = AO3FetchPolicy.rebuildParsedItem(from: existing, workID: "999", extraction: Self.restrictedExtraction(false), applyStatsUpdate: true)
+		#expect(item.isRestricted == false)
+	}
+
+	@Test(arguments: [true, false])
+	func rebuildRestrictedIsIndependentOfApplyStatsUpdate(applyStatsUpdate: Bool) {
+		let existing = Self.makeArticle(contentHTML: "<p>x</p>", isAmbrosiaItem: true, isRestricted: false)
+		let item = AO3FetchPolicy.rebuildParsedItem(from: existing, workID: "999", extraction: Self.restrictedExtraction(true), applyStatsUpdate: applyStatsUpdate)
+		#expect(item.isRestricted == true)
+	}
+
 	@Test func rebuildFillsMetadataForNilStub() throws {
 		// A series-navigation stub has summary/authors/dates/tags all nil.
 		// The live fetch must populate every one of them, including
@@ -399,7 +437,7 @@ import RSParser
 		return "\(metaGroup)<div id=\"workskin\">\(preface)\(chapterDivs(chapterCount))</div>"
 	}
 
-	private static func makeArticle(contentHTML: String?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false, lastPrefaceFetchDate: Date? = nil, pendingUpdateContentHTML: String? = nil, wordCountRegressionFlaggedAt: Date? = nil, ao3ConfirmedMissingAt: Date? = nil, bookKeyOverride: String? = nil, summary: String? = "A test summary.", authors: Set<Author>? = nil, datePublished: Date? = nil, dateModified: Date? = nil, fandoms: [String]? = nil, additionalTags: [String]? = nil) -> Article {
+	private static func makeArticle(contentHTML: String?, ao3WorkID: String? = "999", isAmbrosiaItem: Bool = false, lastPrefaceFetchDate: Date? = nil, pendingUpdateContentHTML: String? = nil, wordCountRegressionFlaggedAt: Date? = nil, ao3ConfirmedMissingAt: Date? = nil, bookKeyOverride: String? = nil, summary: String? = "A test summary.", authors: Set<Author>? = nil, datePublished: Date? = nil, dateModified: Date? = nil, fandoms: [String]? = nil, additionalTags: [String]? = nil, isRestricted: Bool? = nil) -> Article {
 		let articleID = "test-article-id-\(UUID().uuidString)"
 		let status = ArticleStatus(articleID: articleID, read: false, starred: false, dateArrived: Date())
 		let bookKey: String? = bookKeyOverride ?? ao3WorkID.map { "ao3-work:\($0)" }
@@ -421,6 +459,7 @@ import RSParser
 			authors: authors,
 			fandoms: fandoms,
 			additionalTags: additionalTags,
+			isRestricted: isRestricted,
 			lastPrefaceFetchDate: lastPrefaceFetchDate,
 			pendingUpdateContentHTML: pendingUpdateContentHTML,
 			wordCountRegressionFlaggedAt: wordCountRegressionFlaggedAt,

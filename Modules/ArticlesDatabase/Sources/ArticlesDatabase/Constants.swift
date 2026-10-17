@@ -58,6 +58,9 @@ struct DatabaseKey {
 	static let kudosCount = "kudosCount"
 	static let bookmarkCount = "bookmarkCount"
 	static let hitCount = "hitCount"
+	// AO3 archive lock ("Restricted"), schema version 7. Nullable BOOL;
+	// NULL means unknown.
+	static let isRestricted = "isRestricted"
 	// Date this article was bookmarked -- AO3 bookmarks-page rows only,
 	// via AO3SearchResultsExtractor.dateBookmarked(fromLI:). Not part of
 	// the four stats above (those come from a live chapter fetch; this

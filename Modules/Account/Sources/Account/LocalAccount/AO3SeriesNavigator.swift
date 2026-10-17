@@ -680,6 +680,7 @@ private extension AO3SeriesNavigator {
 			kudosCount: sourceArticle.kudosCount,
 			bookmarkCount: sourceArticle.bookmarkCount,
 			hitCount: sourceArticle.hitCount,
+			isRestricted: sourceArticle.isRestricted,
 			lastPrefaceFetchDate: sourceArticle.lastPrefaceFetchDate,
 			ao3WorkID: workID
 		)
@@ -746,6 +747,7 @@ private extension AO3SeriesNavigator {
 			ratings: entry.ratings.isEmpty ? nil : entry.ratings,
 			warnings: entry.warnings.isEmpty ? nil : entry.warnings,
 			categories: entry.categories.isEmpty ? nil : entry.categories,
+			isRestricted: entry.isRestricted,
 			ao3WorkID: entry.workID
 		)
 	}

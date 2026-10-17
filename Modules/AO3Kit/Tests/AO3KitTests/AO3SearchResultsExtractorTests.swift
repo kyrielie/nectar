@@ -272,4 +272,31 @@ import Testing
 	private enum TestError: Error {
 		case unexpectedOutcome
 	}
+
+	// MARK: - Archive lock (isRestricted)
+
+	@Test func restrictedRowReportsTrueAndOthersFalse() throws {
+		// Real capture: exactly one row in this page carries the lock icon
+		// (work 15082802).
+		let html = htmlFixtureString("ao3-search-results-tdwp.html")
+		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
+		guard case .success(let items, _, _, _) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+		#expect(items.allSatisfy { $0.isRestricted != nil })
+		#expect(items.filter { $0.isRestricted == true }.map(\.ao3WorkID) == ["15082802"])
+		#expect(items.filter { $0.isRestricted == false }.count == items.count - 1)
+	}
+
+	@Test func rowWithoutLockMarkupReportsFalse() throws {
+		let html = htmlFixtureString("ao3-search-results.html")
+		let outcome = AO3SearchResultsExtractor.extract(fromResultsPageHTML: html, feedURL: feedURL)
+		guard case .success(let items, _, _, _) = outcome else {
+			Issue.record("Expected .success, got \(outcome)")
+			return
+		}
+		#expect(!items.isEmpty)
+		#expect(items.allSatisfy { $0.isRestricted == false })
+	}
 }

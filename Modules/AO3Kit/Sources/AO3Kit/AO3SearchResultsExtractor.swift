@@ -264,6 +264,11 @@ private extension AO3SearchResultsExtractor {
 		let bookmarkCount = intValue(fromDD: li, classToken: "bookmarks")
 		let hitCount = intValue(fromDD: li, classToken: "hits")
 
+		// Lock icon lives inside the row's own h4.heading. Scoped to the
+		// heading so no other "Restricted" markup in the row can match. The
+		// heading is guaranteed present here, so this is true or false.
+		let isRestricted = !descendants(of: headingH4, where: AO3HTMLHelpers.isRestrictedMarker).isEmpty
+
 		return ParsedItem(
 			syncServiceID: nil,
 			uniqueID: permalink,
@@ -299,6 +304,7 @@ private extension AO3SearchResultsExtractor {
 			kudosCount: kudosCount,
 			bookmarkCount: bookmarkCount,
 			hitCount: hitCount,
+			isRestricted: isRestricted,
 			dateBookmarked: dateBookmarked,
 			ao3WorkID: workID
 		)

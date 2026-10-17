@@ -130,7 +130,7 @@ enum BackupSQLiteImportTable {
 	/// ArticlesDatabase.swift only carries a subset of the columns this table
 	/// actually has today -- `bookKey`, `isAmbrosiaItem`, the four AO3 Work
 	/// Header stats columns (`commentCount`/`kudosCount`/`bookmarkCount`/
-	/// `hitCount`), `previousWorkURL`/`nextWorkURL`, `lastPrefaceFetchDate`,
+	/// `hitCount`), `isRestricted`, `previousWorkURL`/`nextWorkURL`, `lastPrefaceFetchDate`,
 	/// and the Task 8 pending-update/regression-guard columns
 	/// (`pendingUpdateContentHTML`/`pendingUpdateDetectedAt`/
 	/// `wordCountRegressionFlaggedAt`/`ao3ConfirmedMissingAt`) all arrive via
@@ -139,10 +139,13 @@ enum BackupSQLiteImportTable {
 	/// CREATE TABLE literal. Both the live DB and a backup produced by this
 	/// app version have every one of these columns, since
 	/// `exportFullSnapshot` runs `VACUUM INTO` against the already-migrated
-	/// live schema -- so this list is the full, current column set (verified
-	/// against every `ALTER TABLE articles add column` in
+	/// live schema -- so the column lists below are the full, current column
+	/// set (verified against every `ALTER TABLE articles add column` in
 	/// ArticlesDatabase.swift and DatabaseKey's declarations), not just the
-	/// base CREATE TABLE's subset.
+	/// base CREATE TABLE's subset. A backup made by an older app version is
+	/// not migrated before the merge and may lack newer columns; the SELECT
+	/// list is therefore built from the backup's own `table_info` (see
+	/// `articlesMergeSQL`), substituting NULL for a missing optional column.
 	///
 	/// `searchRowID` is deliberately excluded from both the column list and
 	/// the SELECT -- it's not portable article data, it's a foreign-key-like
@@ -158,31 +161,67 @@ enum BackupSQLiteImportTable {
 	/// via the existing `indexUnindexedArticles()` path, not something this
 	/// import needs to special-case.
 	private static func mergeArticles(database: FMDatabase) throws {
-		let sql = """
-		INSERT OR IGNORE INTO articles (
-		  articleID, feedID, uniqueID, title, contentHTML, contentText, markdown,
-		  url, externalURL, summary, imageURL, bannerImageURL, datePublished, dateModified,
-		  authors, wordCount, chapterCurrent, chapterTotal, isComplete,
-		  fandoms, relationships, characters, ratings, warnings, categories, additionalTags, series,
-		  bookKey, isAmbrosiaItem,
-		  commentCount, kudosCount, bookmarkCount, hitCount,
-		  previousWorkURL, nextWorkURL, lastPrefaceFetchDate,
-		  pendingUpdateContentHTML, pendingUpdateDetectedAt, wordCountRegressionFlaggedAt, ao3ConfirmedMissingAt
-		)
-		SELECT
-		  b.articleID, b.feedID, b.uniqueID, b.title, b.contentHTML, b.contentText, b.markdown,
-		  b.url, b.externalURL, b.summary, b.imageURL, b.bannerImageURL, b.datePublished, b.dateModified,
-		  b.authors, b.wordCount, b.chapterCurrent, b.chapterTotal, b.isComplete,
-		  b.fandoms, b.relationships, b.characters, b.ratings, b.warnings, b.categories, b.additionalTags, b.series,
-		  b.bookKey, b.isAmbrosiaItem,
-		  b.commentCount, b.kudosCount, b.bookmarkCount, b.hitCount,
-		  b.previousWorkURL, b.nextWorkURL, b.lastPrefaceFetchDate,
-		  b.pendingUpdateContentHTML, b.pendingUpdateDetectedAt, b.wordCountRegressionFlaggedAt, b.ao3ConfirmedMissingAt
-		FROM \(attachedSchemaName).articles AS b;
-		"""
+		let backupColumns = try backupArticleColumns(database: database)
+		let sql = try articlesMergeSQL(backupColumns: backupColumns)
 		guard database.executeUpdate(sql, withArgumentsIn: []) else {
 			throw BackupSQLiteImportError.importFailed("articles merge: \(database.lastErrorMessage() ?? "unknown error")")
 		}
+	}
+
+	/// Identity columns every backup's `articles` table must have; the merge
+	/// cannot key a row without them.
+	static let articleMergeRequiredColumns = ["articleID", "feedID", "uniqueID"]
+
+	/// Every other column the merge copies. A backup is unzipped and merged
+	/// as-is, never migrated, so one made by an older app version can lack a
+	/// column added since (for example `isRestricted`, schema 7). Any column
+	/// missing from the backup is selected as NULL, which is the "unknown"
+	/// state for each of them. A future column belongs in this list too.
+	static let articleMergeOptionalColumns = [
+		"title", "contentHTML", "contentText", "markdown",
+		"url", "externalURL", "summary", "imageURL", "bannerImageURL", "datePublished", "dateModified",
+		"authors", "wordCount", "chapterCurrent", "chapterTotal", "isComplete",
+		"fandoms", "relationships", "characters", "ratings", "warnings", "categories", "additionalTags", "series",
+		"bookKey", "isAmbrosiaItem",
+		"commentCount", "kudosCount", "bookmarkCount", "hitCount", "isRestricted",
+		"previousWorkURL", "nextWorkURL", "lastPrefaceFetchDate",
+		"pendingUpdateContentHTML", "pendingUpdateDetectedAt", "wordCountRegressionFlaggedAt", "ao3ConfirmedMissingAt"
+	]
+
+	/// Lowercased column names of the attached backup's `articles` table.
+	private static func backupArticleColumns(database: FMDatabase) throws -> Set<String> {
+		guard let resultSet = database.executeQuery("PRAGMA \(attachedSchemaName).table_info(articles);", withArgumentsIn: []) else {
+			throw BackupSQLiteImportError.importFailed("articles merge: could not read backup columns: \(database.lastErrorMessage() ?? "unknown error")")
+		}
+		defer { resultSet.close() }
+		var names = Set<String>()
+		while resultSet.next() {
+			if let name = resultSet.string(forColumn: "name") {
+				names.insert(name.lowercased())
+			}
+		}
+		return names
+	}
+
+	/// The `INSERT OR IGNORE ... SELECT` for the articles merge, selecting
+	/// `b.<column>` for every column the backup has and `NULL` for every
+	/// optional one it lacks. `backupColumns` is lowercased.
+	static func articlesMergeSQL(backupColumns: Set<String>) throws -> String {
+		for column in articleMergeRequiredColumns where !backupColumns.contains(column.lowercased()) {
+			throw BackupSQLiteImportError.importFailed("articles merge: backup articles table has no \(column) column")
+		}
+		let columns = articleMergeRequiredColumns + articleMergeOptionalColumns
+		let selected = columns.map { column in
+			backupColumns.contains(column.lowercased()) ? "b.\(column)" : "NULL"
+		}
+		return """
+		INSERT OR IGNORE INTO articles (
+		  \(columns.joined(separator: ", "))
+		)
+		SELECT
+		  \(selected.joined(separator: ", "))
+		FROM \(attachedSchemaName).articles AS b;
+		"""
 	}
 
 	// MARK: - statuses

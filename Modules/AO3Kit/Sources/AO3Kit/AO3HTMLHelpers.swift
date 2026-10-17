@@ -87,6 +87,25 @@ enum AO3HTMLHelpers {
 		return flattenedText(signinDiv).contains("This work is only available to registered users of the Archive.")
 	}
 
+	// MARK: - Archive lock
+
+	/// `element` is AO3's archive-lock marker: the `<img>` shown beside a
+	/// work's title when the work is visible only to signed-in users
+	/// (`alt="(Restricted)" title="Restricted"`). Matched on `title`/`alt`,
+	/// not `src`, since `src` is a filename AO3 can rename.
+	///
+	/// Callers must scope the search to the work's own title heading (the
+	/// work-level `h2` on a work page, `h4.heading` in a listing row). Other
+	/// "Restricted" text on a page, such as the `[Restricted Work]` items in
+	/// an inspired-by list, describes a different work and is not this lock.
+	static func isRestrictedMarker(_ element: HTMLLiteElement) -> Bool {
+		guard element.tag == "img" else {
+			return false
+		}
+		return element.attributes["title"]?.lowercased() == "restricted"
+			|| element.attributes["alt"]?.lowercased() == "(restricted)"
+	}
+
 	// MARK: - Page copy matching
 
 	/// `html` with the three apostrophe spellings AO3 pages can carry

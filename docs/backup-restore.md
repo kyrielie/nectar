@@ -137,7 +137,15 @@ set.
    - **`DB.sqlite3`** — `Account.importBackupSnapshot(backupDatabasePath:)`
      → `ArticlesDatabase.importBackupSnapshot(backupDatabasePath:)` →
      `BackupSQLiteImportTable.importBackup` (see "Merge guarantees" per
-     table, below). `articlesTable.emptyCaches()` runs afterward, since
+     table, below). The backup's `DB.sqlite3` is merged as-is, never
+     migrated first, so one from an older app version can lack a column
+     added since (`isRestricted`, schema 7, for example). The articles
+     merge reads the backup's own `PRAGMA table_info(articles)` and selects
+     `NULL` for any optional column the backup lacks
+     (`BackupSQLiteImportTable.articlesMergeSQL`); a backup missing
+     `articleID`/`feedID`/`uniqueID` fails the merge. A column added to
+     `articles` later must be added to `articleMergeOptionalColumns`.
+     `articlesTable.emptyCaches()` runs afterward, since
      this import bypasses `ArticlesTable`/`StatusesTable`'s normal save
      paths entirely via raw SQL against the attached backup file, and any
      cached `Article` for an articleID a conflict-merge just touched
@@ -177,7 +185,7 @@ opt-in and off by default specifically so it never happens by accident.
 
 | Data | Rule | Why |
 |---|---|---|
-| `articles` | Keep both; new-only rows added, existing rows untouched | An article's content is immutable once fetched. |
+| `articles` | Keep both; new-only rows added, existing rows untouched. Columns the backup lacks restore as `NULL` (unknown) | An article's content is immutable once fetched. |
 | `statuses` (read, starred, loved) | OR the booleans | A real action should never un-happen because the other copy hadn't caught up. |
 | `statuses` (scrollPosition, readingProgress) | Later `lastOpenedAt` wins (the only real per-row timestamp `statuses` has) | Genuinely has one "correct current value." |
 | `bookState` (read, starred, loved) | OR the booleans | Same reasoning as `statuses`. |

@@ -43,7 +43,7 @@ struct AO3ConfirmedMissingMigrationTests {
 		return database.userVersion()
 	}
 
-	@Test("a version 5 database loses its missing flags on reopen and moves to version 6")
+	@Test("a version 5 database loses its missing flags on reopen and moves to version 7")
 	func clearsFlagsAndBumpsVersion() async throws {
 		let path = makeTemporaryPath()
 		defer { try? FileManager.default.removeItem(atPath: path) }
@@ -64,10 +64,10 @@ struct AO3ConfirmedMissingMigrationTests {
 		let reopened = open(path)
 		let article = try #require(await reopened.fetchArticlesAsync(articleIDs: [articleID]).first)
 		#expect(article.ao3ConfirmedMissingAt == nil)
-		#expect(try readUserVersion(path: path) == 6)
+		#expect(try readUserVersion(path: path) == 7)
 	}
 
-	@Test("a version 6 database keeps flags set after the migration")
+	@Test("a version 6 database keeps flags set when upgrading to version 7")
 	func laterFlagsSurviveReopen() async throws {
 		let path = makeTemporaryPath()
 		defer { try? FileManager.default.removeItem(atPath: path) }
@@ -80,8 +80,12 @@ struct AO3ConfirmedMissingMigrationTests {
 			await db.setAO3ConfirmedMissingAsync(articleID: articleID)
 		}
 
+		// The schema 6 clear must not repeat when a version 6 install moves to 7.
+		try setUserVersion(6, path: path)
+
 		let reopened = open(path)
 		let article = try #require(await reopened.fetchArticlesAsync(articleIDs: [articleID]).first)
 		#expect(article.ao3ConfirmedMissingAt != nil)
+		#expect(try readUserVersion(path: path) == 7)
 	}
 }

@@ -234,13 +234,50 @@ from `Article.wordCount` (this one exists purely to feed
 `AO3ChapterFetcher`'s content-regression guard — see `ao3-integration.md`
 — by comparing the fetched page's own count against the stored content's
 re-derived one, independent of whatever the originating feed reported),
-`csrfToken` (scraped from AO3's `<meta name="csrf-token">`, present on
+`isRestricted: Bool?` (AO3's archive lock, see below), `csrfToken` (scraped from AO3's `<meta name="csrf-token">`, present on
 every page regardless of sign-in state, used for the kudos-on-like
 feature), and `seriesEntries: [AO3SeriesSpanResult]` — per-series-membership
 previous/next-work data read off each `<span class="series">` block's own
 navigation links (superseding an earlier design that collapsed multiple
 series memberships into one article-wide previous/next pair, which lost
 information for a work belonging to more than one series).
+
+### Archive lock (`isRestricted`)
+
+AO3 marks a work visible only to signed-in users with a lock `<img>`
+(`alt="(Restricted)" title="Restricted"`) beside the title. The value is
+tri-state `Bool?` end to end: `nil` is "unknown" (no heading was seen, or
+the source carries no lock data), never "not restricted".
+`AO3HTMLHelpers.isRestrictedMarker` matches on `title`/`alt`, not `src`, and
+every caller scopes it to the work's own title heading:
+
+- **Work page** (`AO3ChapterHTMLExtractor.captureAndStripRestrictedMarker`):
+  the work-level `h2` in `div.preface.group`. Returns `true`/`false`, or `nil`
+  when that heading is missing. It also removes the icon (direct children of
+  the heading only) from the tree before `serializedContentHTML`, so stored
+  `contentHTML` never carries it or its relative `/images/lockblue.png` src.
+  Both success branches (multi-chapter and single-chapter) call it.
+- **Search/bookmarks blurb** (`AO3SearchResultsExtractor.parsedItem`): the
+  row's `h4.heading`; always `true` or `false` for a parsed row.
+- **Series listing** (`AO3SeriesListingExtractor.WorkListingEntry.isRestricted`,
+  carried into `AO3SeriesNavigator.placeholderStub(from:feedID:)`).
+- RSS/Atom (`AO3SummaryExtractor`) and Ambrosia JSON feeds carry no lock and
+  leave it `nil`.
+
+The `[Restricted Work]` items in a work's "inspired by" list are parent works
+the viewer cannot see, not this work's lock, and do not set the flag (the
+work-level heading scope excludes them).
+
+Because the icon is stripped, `isRestricted` is only valid on an extraction
+of a live fetch. Re-extracting stored `contentHTML` (as
+`AO3FetchPolicy.detectRegression` does) reports `false` for a locked work, so
+the value must never be read from such a re-extract.
+
+The fixtures: the blurb case is covered by the real
+`ao3-search-results-tdwp.html`; the work-page case uses
+`ao3-work-restricted-synthetic.html`, a single-chapter fixture with the icon
+injected, until a real signed-in capture replaces it. Whether the icon is ever
+wrapped in another element inside the heading is unconfirmed.
 
 ## `AO3PrefaceRenderer` — synthesizing the preface
 
