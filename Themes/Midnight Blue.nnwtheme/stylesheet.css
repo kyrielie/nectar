@@ -32,11 +32,6 @@ body {
 	text-underline-offset: 0.15em;
 }
 
-#nnwImageIcon {
-	width: 32px;
-	height: 32px;
-	margin-right: 0.2em;
-}
 
 .systemMessage {
 	position: absolute;
@@ -102,9 +97,6 @@ body > header .headerTable th {
 	border: none;
 	font-family: var(--nnw-font-chrome, Inter, -apple-system, "Segoe UI", sans-serif);
 	font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
-}
-body > header .headerTable td.avatar {
-	width: 33%;
 }
 
 body code,

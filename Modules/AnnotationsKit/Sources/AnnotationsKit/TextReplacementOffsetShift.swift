@@ -124,19 +124,24 @@ public enum TextReplacementOffsetShift {
 	/// relative to the reverted edit's presence, scoped to rows whose
 	/// offset is after the reverted edit's *original* position (before it
 	/// was ever applied) -- adding back the length delta instead of
-	/// subtracting it. `revertedEditOriginalEndOffset` is the edit's
-	/// startOffset/endOffset as they were before the edit was first
-	/// applied (i.e. the position in the fully-original, pre-edit text),
-	/// not its current (possibly further-shifted-by-later-edits) stored
-	/// position. `otherAnnotations` must exclude the row being reverted.
+	/// subtracting it. Rows are stored in the edited text's coordinate
+	/// space once an edit is saved, where the replacement occupies
+	/// [startOffset, startOffset + replacementLength).
+	/// `revertedEditAppliedEndOffset` is therefore the end of the
+	/// *replacement* in that space (`startOffset + replacementLength`,
+	/// i.e. the edit's original `endOffset + delta`), not its original
+	/// `endOffset`: a row that started exactly at the original end is
+	/// stored at `endOffset + delta`, which for a shortening edit is
+	/// below the original end and would be skipped by that filter.
+	/// `otherAnnotations` must exclude the row being reverted.
 	public static func shiftedAnchorsForRevert(
-		revertedEditOriginalEndOffset: Int,
+		revertedEditAppliedEndOffset: Int,
 		delta: Int,
 		otherAnnotations: [Annotation],
 		sliceQuote: (_ startOffset: Int, _ endOffset: Int) -> (quoteExact: String, quotePrefix: String, quoteSuffix: String, chapterTitle: String?)
 	) -> [ShiftedAnchor] {
 		shiftedAnchors(
-			editEndOffset: revertedEditOriginalEndOffset,
+			editEndOffset: revertedEditAppliedEndOffset,
 			delta: -delta,
 			otherAnnotations: otherAnnotations,
 			sliceQuote: sliceQuote

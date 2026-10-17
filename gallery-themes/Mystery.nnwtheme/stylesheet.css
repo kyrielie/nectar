@@ -34,12 +34,6 @@ body {
 	opacity: 0.85;
 }
 
-#nnwImageIcon {
-	width: 32px;
-	height: 32px;
-	margin-right: 0.2em;
-	border-radius: 2px;
-}
 
 .systemMessage {
 	position: absolute;
@@ -102,9 +96,6 @@ body > header .headerTable th {
 	font-family: var(--nnw-font-chrome, "Special Elite", "Courier New", monospace);
 	font-size: calc(var(--u) * 13.5 * var(--nnw-detail-scale, 1));
 
-}
-body > header .headerTable td.avatar {
-	width: 33%;
 }
 
 body code,
@@ -407,9 +398,6 @@ a.footnote:hover,
 
 body {
 	background-image: radial-gradient(circle at 6% 4%, rgba(169,120,47,0.10), transparent 40%);
-}
-#nnwImageIcon {
-	border: 1px solid var(--header-table-border-color);
 }
 
 /* iOS Specific */

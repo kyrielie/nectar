@@ -150,6 +150,23 @@ or absent).
   and Nectar matches upstream here. Nectar adds `notchCoverView` on top of that. See
   `nnwtheme-format.md`, "Full-screen reading".
 
+- **Feed image (`#nnwImageIcon`).** Upstream renders it in every theme, draws it through
+  `IconView` at 48x48 (the request fails when there is no image), and makes it tappable:
+  `showFeedInspectorSetup()` in `main_ios.js` gives it `role=button` and an aria label
+  (`nnwGetFeedInfoLabel`, injected from `WebViewConfiguration`) and posts `showFeedInspector`.
+  Nectar strips every `nnwimageicon:` image in `main.js` unless the `<img>` has
+  `data-nnw-keep`, draws it directly at 192 points (a transparent PNG when there is none,
+  the AO3 mark for AO3 links; `ArticleIconSchemeHandler`, `IconImageCache.imageForArticleAvatar`),
+  and `reloadArticleImage()` finds the image by its `nnwimageicon:` source rather than by id.
+  `showFeedInspectorSetup` and the `nnwGetFeedInfoLabel` script are absent, so no image opens
+  Feed Info; the Swift `showFeedInspector` handler in `WebViewController` is still registered
+  but nothing posts to it. Whether the removal was deliberate is not recorded. The built-in
+  `template.html`, the bundled templates and the gallery templates no longer carry
+  `[[avatar_src]]` except Birdsite and Watch Later (so `Themes/System.nnwtheme` still equals
+  the built-in template, as `gallery/test_build.py` requires), and the strip step only matters
+  for imported themes. The edit bumped each changed bundle's `Version` and re-keyed the
+  Default, System, Duskbloom and Midnight Blue entries of `ThemeColorTable.json`. See `nnwtheme-format.md`.
+
 ## Nectar-original (no upstream counterpart)
 
 Files that are wholly new in Nectar -- new features, not modifications of

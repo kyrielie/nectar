@@ -20,11 +20,6 @@ body {
 	opacity: 1;	
 	}
 
-#nnwImageIcon {
-	width: 32px;
-	height: 32px;
-	margin-right: 0.2em;
-}
 
 .systemMessage {
 	position: absolute;
@@ -89,9 +84,6 @@ body > header .headerTable th {
 	border: none;
 	font-family: sans-serif;
 	font-size: 0.9rem;
-}
-body > header .headerTable td.avatar {
-	width: 33%;
 }
 
 body code,

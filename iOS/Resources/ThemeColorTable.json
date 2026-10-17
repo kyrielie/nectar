@@ -17,7 +17,7 @@
       }
     },
     "Default" : {
-      "key" : "8424498bb62c7bdc27aa19f4d491063d3d93a0f31dfe5456cfa015a6cbbdacaa",
+      "key" : "fda290829c890dd71c1d1f95a9f73bb2b7cf0dd42f371f4734297da29b6c0f87",
       "measurement" : {
         "hasDarkModeVariant" : true,
         "inkDark" : "#FFFFFF",
@@ -31,7 +31,7 @@
       }
     },
     "Duskbloom" : {
-      "key" : "7ad6918847f2924c9460e236157d7b7fa0259b683a605ea01990e9e083305d30",
+      "key" : "64dec131a3a6a91a3e815e1ca06112906faaa84cb07adfc551129b558bf0179f",
       "measurement" : {
         "hasDarkModeVariant" : true,
         "inkDark" : "#D3C5C8",
@@ -59,7 +59,7 @@
       }
     },
     "Midnight Blue" : {
-      "key" : "3adff266d3f040d0818b6cb9912cf15556ae0e199d2aec8cfe76c9be17563e98",
+      "key" : "cc2af7cda9c5e90464dd631031dea9c404ae342d65e1558fd3d2a865b1c8cbc7",
       "measurement" : {
         "hasDarkModeVariant" : false,
         "inkDark" : "#B3B3B3",
@@ -143,7 +143,7 @@
       }
     },
     "System" : {
-      "key" : "8424498bb62c7bdc27aa19f4d491063d3d93a0f31dfe5456cfa015a6cbbdacaa",
+      "key" : "fda290829c890dd71c1d1f95a9f73bb2b7cf0dd42f371f4734297da29b6c0f87",
       "measurement" : {
         "hasDarkModeVariant" : true,
         "inkDark" : "#FFFFFF",

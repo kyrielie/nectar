@@ -121,13 +121,6 @@ body > .systemMessage {
 	color: var(--ink);
 }
 
-.kelmscottAvatar {
-	height: 1.6em !important;
-	width: 1.6em;
-	min-width: 1.6em;
-	margin: 0 0.6em 0 0 !important;
-	border-radius: 2px;
-}
 
 .kelmscottFeedlink, .kelmscottFeedlink:link, .kelmscottFeedlink:visited {
 	color: var(--ink) !important;

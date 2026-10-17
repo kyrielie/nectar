@@ -71,6 +71,7 @@
 		3285C1FDAE9B53072301A90A /* PreloadedWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1750E93026BC13F09F692030 /* PreloadedWebView.swift */; };
 		32ECBE801B07B26BDAF76F54 /* InspectorIconHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B3244A2DB3E5474DF7A69FC /* InspectorIconHeaderView.swift */; };
 		33CFA5150EFD45D6C88775EB /* ArticleFeedNaming.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE3B190386F7EB708028C0C3 /* ArticleFeedNaming.swift */; };
+		34A0B6AD46E728AF9230BC6A /* WebViewControllerAnchorNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DB49284BFA566643F3C9B14 /* WebViewControllerAnchorNavigationTests.swift */; };
 		35ABAA14B41EF11D49CDF39B /* ArticleViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D133E112B098068EC5B50D35 /* ArticleViewController.swift */; };
 		36656B3628AD4F3A2EE7F40B /* AnnotationEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52313268826EC9571DFA5D8B /* AnnotationEditorView.swift */; };
 		367BAA7CB425C1079495AFB0 /* ArticleThemeImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3108BD305F30192D74F96693 /* ArticleThemeImporter.swift */; };
@@ -98,6 +99,7 @@
 		40D7F3BB19AA40BD8ED2C8D7 /* tos-academy-days.atom in Resources */ = {isa = PBXBuildFile; fileRef = 0DC0BA5EFC5CC383D0C9E71D /* tos-academy-days.atom */; };
 		419591A8A19FC7CDF0D8D604 /* SearchTimelineFeedDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311EE70B912DAC45FDB832D1 /* SearchTimelineFeedDelegate.swift */; };
 		4353A54EACCD5DD51F8C1065 /* ReadingStreaksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C622FEA25BF146AD6451ECF /* ReadingStreaksView.swift */; };
+		43AEE263AA89A5A7AFD6B958 /* ArticleAvatarChoiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC155DEB06B6FFEA8196C513 /* ArticleAvatarChoiceTests.swift */; };
 		44DBF519E16D065A86BD8235 /* SettingsAvailabilityLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E07EBBC22B9309D68CCFEC78 /* SettingsAvailabilityLabelTests.swift */; };
 		46300F45F768706E9A3BAD60 /* ReadingStatsTrackerAccountingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 239343E4229A8937BD4C0C3B /* ReadingStatsTrackerAccountingTests.swift */; };
 		46760DEB140945380E11FF6C /* ErrorHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F4665A8DDB114A0CD115297 /* ErrorHandler.swift */; };
@@ -573,6 +575,7 @@
 		784CE2613B17D0CE900FEADC /* StarredFeedDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarredFeedDelegate.swift; sourceTree = "<group>"; };
 		7BAE10E60861568C8E559341 /* NetNewsWire-iOS.xctestplan */ = {isa = PBXFileReference; path = "NetNewsWire-iOS.xctestplan"; sourceTree = "<group>"; };
 		7CE6D393FC4AFCF322513FB2 /* FetchRequestOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchRequestOperation.swift; sourceTree = "<group>"; };
+		7DB49284BFA566643F3C9B14 /* WebViewControllerAnchorNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewControllerAnchorNavigationTests.swift; sourceTree = "<group>"; };
 		7DE280DE15D62A0E4A8F6B8B /* ArticleThemePreviewSampleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemePreviewSampleTests.swift; sourceTree = "<group>"; };
 		7F4665A8DDB114A0CD115297 /* ErrorHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorHandler.swift; sourceTree = "<group>"; };
 		7FFCEB05EC8D1B2083C8DB5A /* AO3WorksNeedingAttentionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3WorksNeedingAttentionView.swift; sourceTree = "<group>"; };
@@ -684,6 +687,7 @@
 		D98FEEC37A686C5E1E9746E3 /* SFSafariViewController+Extras.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "SFSafariViewController+Extras.m"; sourceTree = "<group>"; };
 		D9CF9FA05BD676DCDB04BB7D /* AddFeedSelectFolderTableViewCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = AddFeedSelectFolderTableViewCell.xib; sourceTree = "<group>"; };
 		DB79A313A40374F5270E6874 /* ReadingTime */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ReadingTime; path = Modules/ReadingTime; sourceTree = SOURCE_ROOT; };
+		DC155DEB06B6FFEA8196C513 /* ArticleAvatarChoiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleAvatarChoiceTests.swift; sourceTree = "<group>"; };
 		DCA57155E1031F62F5374F38 /* GuideOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideOverlayView.swift; sourceTree = "<group>"; };
 		DD5CC56732A2595AAA4BED8C /* FullScreenReadingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullScreenReadingViewController.swift; sourceTree = "<group>"; };
 		DDA9AC367F429D5F973731F2 /* ActivityLog */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ActivityLog; path = Modules/ActivityLog; sourceTree = SOURCE_ROOT; };
@@ -973,6 +977,7 @@
 				051601A1A7AC84C267B13A2E /* AO3SettingsModelTests.swift */,
 				CD7DDBFB8421AFB48AA90755 /* AO3WorksNeedingAttentionViewModelTests.swift */,
 				6599CCD898569EB339E5E470 /* AppDefaultsBackupTests.swift */,
+				DC155DEB06B6FFEA8196C513 /* ArticleAvatarChoiceTests.swift */,
 				9A44B1DC23B3CF47E3C80D76 /* ArticleCSVExporterTests.swift */,
 				6DD2BC954F0CC18E69FE0F7B /* ArticleLogicalDatePublishedTests.swift */,
 				EA2128B7B0AB3E4DD1AF8006 /* ArticlePageComposerTests.swift */,
@@ -1015,6 +1020,7 @@
 				E1131AC6CD60A71F96D32E15 /* TimelineCustomizerCellAccentTintTests.swift */,
 				B6BEA6D5FCFD4890557A5237 /* ToolbarFunctionTests.swift */,
 				D252BA34B0990FE286CB70CB /* ToolbarStylePickerSelectionTests.swift */,
+				7DB49284BFA566643F3C9B14 /* WebViewControllerAnchorNavigationTests.swift */,
 				18BE7D20FC2E7C29F28A0762 /* WebViewControllerAppearanceToggleTests.swift */,
 			);
 			path = "NetNewsWire-iOSTests";
@@ -1948,6 +1954,7 @@
 				85240EF87A627D9879337CD8 /* AnnotationCSVExporterTests.swift in Sources */,
 				DA35BB2EB7AD6E800787F3BD /* AnnotationsListViewScopeTests.swift in Sources */,
 				9F3568488EA8BC9855836296 /* AppDefaultsBackupTests.swift in Sources */,
+				43AEE263AA89A5A7AFD6B958 /* ArticleAvatarChoiceTests.swift in Sources */,
 				B969EB6D6447E0689D0096E0 /* ArticleCSVExporterTests.swift in Sources */,
 				327E5443D552FC5EBD79FF7B /* ArticleLogicalDatePublishedTests.swift in Sources */,
 				E3254D7F042997CFC257B851 /* ArticlePageComposerTests.swift in Sources */,
@@ -1990,6 +1997,7 @@
 				5762A9C29875C984347305CC /* TimelineCustomizerCellAccentTintTests.swift in Sources */,
 				71068C503DE73C124520FD20 /* ToolbarFunctionTests.swift in Sources */,
 				E42A6B51E35DC22A93CE27B6 /* ToolbarStylePickerSelectionTests.swift in Sources */,
+				34A0B6AD46E728AF9230BC6A /* WebViewControllerAnchorNavigationTests.swift in Sources */,
 				9D0236F1E062AD8B329FA1E8 /* WebViewControllerAppearanceToggleTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

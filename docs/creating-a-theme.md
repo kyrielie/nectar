@@ -48,7 +48,8 @@ The gallery build fails on a missing required key. The app's loader is lenient a
   authority.
 - Optional avatar: `main.js` removes every `nnwimageicon:` image unless the `<img>` has
   `data-nnw-keep` (for example `<img src="[[avatar_src]]" data-nnw-keep width="48" height="48">`).
-  Without the attribute nothing changes. See `nnwtheme-format.md`.
+  Without the attribute nothing changes. Birdsite and Watch Later are the examples: they lay the
+  image over a CSS placeholder disc, which shows when there is no image. See `nnwtheme-format.md`.
 - Opt-in attributes on `#bodyContainer`: `data-versal-target`; `data-chapter-divider` together
   with both `data-chapter-divider-char` and `data-chapter-divider-class`.
 - No inline `<script>`: the real reader blocks it.

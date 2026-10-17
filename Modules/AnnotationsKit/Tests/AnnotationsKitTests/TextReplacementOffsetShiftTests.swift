@@ -155,7 +155,7 @@ import Testing
 	@Test func revertAppliesTheInverseDelta() {
 		let row = annotation(id: "a", start: 25, end: 35)
 		let shifted = TextReplacementOffsetShift.shiftedAnchorsForRevert(
-			revertedEditOriginalEndOffset: 10,
+			revertedEditAppliedEndOffset: 15,
 			delta: 5,
 			otherAnnotations: [row],
 			sliceQuote: { _, _ in (quoteExact: "q", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
@@ -164,6 +164,25 @@ import Testing
 		// Reverting a +5 edit should subtract 5 back off.
 		#expect(shifted[0].startOffset == 20)
 		#expect(shifted[0].endOffset == 30)
+	}
+
+	@Test func revertShiftsARowStartingExactlyAtTheReplacementEndAfterAShorteningEdit() {
+		// Edit span [10, 20) replaced by 5 characters (delta -5). A row that
+		// began at the original end (20) is stored at 15 once the edit is
+		// saved, i.e. exactly at the replacement's end. Reverting must move
+		// it back to 20. A threshold in pre-edit coordinates (20) would skip
+		// it, which is what this pins. A row before the edit never moves.
+		let before = annotation(id: "before", start: 2, end: 8)
+		let atBoundary = annotation(id: "boundary", start: 15, end: 22)
+		let reverted = TextReplacementOffsetShift.shiftedAnchorsForRevert(
+			revertedEditAppliedEndOffset: 15, // 20 + delta -5
+			delta: -5,
+			otherAnnotations: [before, atBoundary],
+			sliceQuote: { _, _ in (quoteExact: "q", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
+		)
+		#expect(reverted.map(\.annotationID) == ["boundary"])
+		#expect(reverted[0].startOffset == 20)
+		#expect(reverted[0].endOffset == 27)
 	}
 
 	// MARK: descendingApplicationOrder
@@ -256,7 +275,7 @@ import Testing
 
 		let shiftedRow = annotation(id: "row", start: applied[0].startOffset, end: applied[0].endOffset)
 		let reverted = TextReplacementOffsetShift.shiftedAnchorsForRevert(
-			revertedEditOriginalEndOffset: 12,
+			revertedEditAppliedEndOffset: 15, // 12 + delta 3
 			delta: 3,
 			otherAnnotations: [shiftedRow],
 			sliceQuote: { _, _ in (quoteExact: original.quoteExact, quotePrefix: original.quotePrefix, quoteSuffix: original.quoteSuffix, chapterTitle: original.chapterTitle) }
@@ -286,7 +305,7 @@ import Testing
 
 		let shiftedRow = annotation(id: "row", start: applied[0].startOffset, end: applied[0].endOffset)
 		let reverted = TextReplacementOffsetShift.shiftedAnchorsForRevert(
-			revertedEditOriginalEndOffset: 40,
+			revertedEditAppliedEndOffset: 36, // 40 + delta -4
 			delta: -4,
 			otherAnnotations: [shiftedRow],
 			sliceQuote: { _, _ in (quoteExact: original.quoteExact, quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }
@@ -331,7 +350,7 @@ import Testing
 		// each subtracting its own delta back off.
 		for (edit, delta) in TextReplacementOffsetShift.descendingApplicationOrder([editA, editB]).map({ ($0, $0.annotationID == "editA" ? 3 : 2) }) {
 			let reverted = TextReplacementOffsetShift.shiftedAnchorsForRevert(
-				revertedEditOriginalEndOffset: edit.endOffset,
+				revertedEditAppliedEndOffset: edit.endOffset + delta,
 				delta: delta,
 				otherAnnotations: [annotation(id: "row", start: currentStart, end: currentEnd)],
 				sliceQuote: { _, _ in (quoteExact: "q", quotePrefix: "", quoteSuffix: "", chapterTitle: nil) }

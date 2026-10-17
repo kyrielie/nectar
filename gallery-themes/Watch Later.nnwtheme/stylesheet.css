@@ -61,6 +61,9 @@ p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;f
 .t15 h1{font-size:max(calc(var(--u) * 18 * var(--nnw-detail-scale, 1)), calc(var(--nnw-prose-size, calc(var(--u) * 14)) * 1.285));font-weight:500;padding:8px 20px 0}
 .t15 .by{padding:0 20px;display:flex;align-items:center;font-size:calc(var(--u) * 13 * var(--nnw-detail-scale, 1))}
 .t15 .by::before{content:"";width:28px;height:28px;border-radius:50%;background:#065fd4;margin-right:8px}
+/* the feed image sits over the placeholder disc; if there is no image (or it fails to load) main.js removes it and the disc shows */
+.t15 .by{position:relative}
+.t15 .by .av{position:absolute;left:20px;top:50%;margin-top:-14px;width:28px;height:28px;max-width:none;border-radius:50%;object-fit:cover;background:#065fd4;z-index:1}
 .t15 .by::after{content:"Subscribe";margin-left:auto;background:var(--a);color:#fff;font-weight:500;padding:4px 12px;border-radius:2px}
 .t15 #bodyContainer dl.tags{display:flex;flex-wrap:wrap;gap:4px 8px;font-size:calc(var(--u) * 13 * var(--nnw-detail-scale, 1))}
 .t15 #bodyContainer dl.tags dt{opacity:.7;font-weight:400}

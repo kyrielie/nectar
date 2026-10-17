@@ -59,24 +59,76 @@ UPSTREAM = {
 # Files that differ from upstream on purpose: path -> (SHA-256 of the Nectar file, reason).
 INTENTIONAL_DELTAS = {
     "Appanoose.nnwtheme/Info.plist": (
-        "139b754f1b24ad97edf77b7144a84a57dd8ed38e8a91a7155a4ed273ee6e088e",
-        "ThemeIdentifier is com.netnewswire.themes.appanoose, not upstream's com.netnewswire.themes.starter. Permanent: gallery/test_build.py test_no_placeholder_metadata rejects any identifier containing \"starter\".",
+        "788e8664a87a92428001219174e2ec51f90992271f32b18538d42aa8155c4818",
+        "ThemeIdentifier is com.netnewswire.themes.appanoose, not upstream's com.netnewswire.themes.starter. Permanent: gallery/test_build.py test_no_placeholder_metadata rejects any identifier containing \"starter\". Version is 2, not upstream's 1: bumped with the template.html change (build.py --check-release-identity requires a higher Version when stylesheet.css or template.html changes).",
     ),
     "Appanoose.nnwtheme/template.html": (
-        "cce7f570995c57357efa3f14b84e7c9b2e324b2fa7afdee2630f757564a0fb3f",
-        "Drops the [[time_short]] line. Permanent: ArticleRenderer strips the time only from datetime_*; time_short is still filled, and every article's time is a meaningless 12:00.",
+        "019c4f1c22860d7036285889bdaba890fc478f3a9ba74a138d22614755fffc1b",
+        "Drops the [[time_short]] line and the avatar image. Permanent: ArticleRenderer strips the time only from datetime_*; time_short is still filled, and every article's time is a meaningless 12:00. Main.js strips the avatar image unless it carries data-nnw-keep, so the markup was dead.",
+    ),
+    "Biblioteca.nnwtheme/Info.plist": (
+        "315f370fe4689a00c3f81d56c18eeb0afd054ba513e3501de77fce9de60eab38",
+        "Version is 2, not upstream's 1: bumped with the template.html change (build.py --check-release-identity requires a higher Version when stylesheet.css or template.html changes).",
     ),
     "Biblioteca.nnwtheme/stylesheet.css": (
         "76aae27b34b1858e4e839b80b78134b74fef29918ed7f7919d1bcb72eb29d05e",
         "Appends about 90 lines of AO3 block styling (summary, notes, chapter headings). Permanent: a pure append, nothing upstream is edited.",
     ),
     "Biblioteca.nnwtheme/template.html": (
-        "10ed149e8f3f7aeb88ebc89ab2171ce4bbf42f3a049c500743f1fcf9703ee590",
-        "Container becomes id=bodyContainer with class articleBody. Permanent: core.css, annotations, ArticleThemeOverrides and main.js all key on them, and the color probe loads no main.js.",
+        "5152dc02a93db99dbf362502ff83353cac6bf13ae62a68675f929032574773f6",
+        "Container becomes id=bodyContainer with class articleBody. Permanent: core.css, annotations, ArticleThemeOverrides and main.js all key on them, and the color probe loads no main.js. Also drops the .feed-icon avatar div: main.js strips the avatar image unless it carries data-nnw-keep, so the markup was dead.",
+    ),
+    "Hyperlegible.nnwtheme/Info.plist": (
+        "6937b99b0597471016c401aaefd410b0bc03bc91b3726b41d2ac415ef890ddea",
+        "Version is 2, not upstream's 1: bumped with the template.html change (build.py --check-release-identity requires a higher Version when stylesheet.css or template.html changes).",
     ),
     "Hyperlegible.nnwtheme/stylesheet.css": (
         "d681c1c3a9749852ce0507e9eb3d348b9e325ffba6b2e3c6ed8f39235163cc1a",
-        "Fixes the two upstream `font: font-family:` typos. Permanent. The base64 Atkinson Hyperlegible font is upstream\'s own and is kept as is.",
+        "Fixes the two upstream `font: font-family:` typos. Permanent. The base64 Atkinson Hyperlegible font is upstream's own and is kept as is.",
+    ),
+    "Hyperlegible.nnwtheme/template.html": (
+        "f12aa240558bd3d8018593bb37e9d9c4ffe0fb457d3fdc0916f86350444938ca",
+        "Drops the avatar cell of the header table. Permanent: main.js strips the avatar image unless it carries data-nnw-keep, so the markup was dead.",
+    ),
+    "Promenade.nnwtheme/Info.plist": (
+        "8bf03f130388dc3819a10ba79069e651111bf9cc6cf4a9581bf8b6506bebd101",
+        "Version is 15, not upstream's 14: bumped with the template.html change (build.py --check-release-identity requires a higher Version when stylesheet.css or template.html changes).",
+    ),
+    "Promenade.nnwtheme/template.html": (
+        "51bfcbb4ada735de6007ccf0551567255bbac914654a68ea3a453a892b2151d1",
+        "Drops the avatar cell of the header table. Permanent: main.js strips the avatar image unless it carries data-nnw-keep, so the markup was dead.",
+    ),
+    "Sepia.nnwtheme/Info.plist": (
+        "9a860b76870c946f87c230d9a592c838e4bb8c672e9dda2ebcfca1cb754e878d",
+        "Version is 2, not upstream's 1: bumped with the stylesheet.css and template.html change (build.py --check-release-identity requires a higher Version when stylesheet.css or template.html changes).",
+    ),
+    "Sepia.nnwtheme/stylesheet.css": (
+        "d5da95043e740cb669524e755b0454b05cf5951fa370504db89e2406c07de028",
+        "Drops the #nnwImageIcon size rule and the td.avatar width rule, which only styled the removed avatar. Permanent: main.js strips the avatar image unless it carries data-nnw-keep, so the markup was dead.",
+    ),
+    "Sepia.nnwtheme/template.html": (
+        "e8b7f707485fcb517ed8a938ba398600bdbbf4afcf68877bd22096409305ad8d",
+        "Drops the avatar cell of the header table. Permanent: main.js strips the avatar image unless it carries data-nnw-keep, so the markup was dead.",
+    ),
+    "Tiqoe Dark.nnwtheme/Info.plist": (
+        "aed0c64691bb989d214e48f4bc9893c1c9ddf0b6bf651b9ba313b188133f678a",
+        "Version is 2, not upstream's 1: bumped with the stylesheet.css and template.html change (build.py --check-release-identity requires a higher Version when stylesheet.css or template.html changes).",
+    ),
+    "Tiqoe Dark.nnwtheme/stylesheet.css": (
+        "99c9b31b799c8fbec56225e418eab27798171d3ba88d7432ecc447c52257cd0b",
+        "Drops the #nnwImageIcon size rule and the td.avatar width rule, which only styled the removed avatar. Permanent: main.js strips the avatar image unless it carries data-nnw-keep, so the markup was dead.",
+    ),
+    "Tiqoe Dark.nnwtheme/template.html": (
+        "acb9c5bcc220b0cc080510e4fb76696ddf22d042b2da5db24d1256d72df9b908",
+        "Drops the avatar cell of the header table. Permanent: main.js strips the avatar image unless it carries data-nnw-keep, so the markup was dead.",
+    ),
+    "Verdana Revival.nnwtheme/Info.plist": (
+        "40b7f713859fb63c7f5e999857f901e147b041f8dd7334705b6cc95009b174d2",
+        "Version is 2, not upstream's 1: bumped with the template.html change (build.py --check-release-identity requires a higher Version when stylesheet.css or template.html changes).",
+    ),
+    "Verdana Revival.nnwtheme/template.html": (
+        "b2e6d29e2477cb403dfca7c6f45c6776060015b005e5cbfa0db19b4943400f97",
+        "Drops the avatar image. Permanent: main.js strips the avatar image unless it carries data-nnw-keep, so the markup was dead.",
     ),
 }
 
