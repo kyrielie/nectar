@@ -14,6 +14,8 @@
 //  not wrong-looking on its own.
 //
 
+import Account
+import AO3Kit
 import Testing
 @testable import Nectar
 
@@ -73,14 +75,14 @@ import Testing
 		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.splitViewPreferredDisplayMode))
 	}
 
-	// MARK: - Device-capability flag, not person-set
+	// MARK: - Fullscreen reading switch
 
-	@Test func articleFullscreenAvailableIsExcluded() {
-		// Gates whether the articleFullscreenEnabled toggle even applies
-		// on this device -- not itself a preference. The actual toggle,
-		// articleFullscreenEnabled, IS included; see
-		// articleFullscreenEnabledIsIncluded below.
-		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.articleFullscreenAvailable))
+	@Test func articleFullscreenAvailableIsIncluded() {
+		// Despite the name, this is the person-set "Show full screen articles"
+		// switch (FullScreenReadingViewController). The device check (phone idiom)
+		// is separate, in WebViewController.isFullScreenAvailable. Excluding it
+		// made a restore leave full screen reading off.
+		#expect(AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.articleFullscreenAvailable))
 	}
 
 	// MARK: - Ephemeral "Add Feed" sheet state
@@ -113,10 +115,6 @@ import Testing
 		#expect(!AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.readingTimeLastResignDate))
 	}
 
-	// MARK: - Sanity: the toggle counterpart to articleFullscreenAvailable
-	// IS included, so the exclusion above is a deliberate distinction,
-	// not a copy/paste of the wrong key name.
-
 	@Test func articleFullscreenEnabledIsIncluded() {
 		#expect(AppDefaults.backupEligibleKeys.contains(AppDefaults.Key.articleFullscreenEnabled))
 	}
@@ -139,7 +137,6 @@ import Testing
 			AppDefaults.Key.feedsHidingReadArticles,
 			AppDefaults.Key.foldersShowingReadArticles,
 			AppDefaults.Key.splitViewPreferredDisplayMode,
-			AppDefaults.Key.articleFullscreenAvailable,
 			AppDefaults.Key.addFeedAccountID,
 			AppDefaults.Key.addFeedFolderPath,
 			AppDefaults.Key.addFolderAccountID,
@@ -182,7 +179,7 @@ import Testing
 			AppDefaults.Key.selectedSidebarItem, AppDefaults.Key.hideReadFeeds,
 			AppDefaults.Key.expandedContainers, AppDefaults.Key.smartFeedsHidingReadArticles,
 			AppDefaults.Key.feedsHidingReadArticles, AppDefaults.Key.foldersShowingReadArticles,
-			AppDefaults.Key.splitViewPreferredDisplayMode, AppDefaults.Key.articleFullscreenAvailable,
+			AppDefaults.Key.splitViewPreferredDisplayMode,
 			AppDefaults.Key.addFeedAccountID, AppDefaults.Key.addFeedFolderPath,
 			AppDefaults.Key.addFolderAccountID,
 			AppDefaults.Key.readingTimeRecurringBreakEndDate, AppDefaults.Key.readingTimeSecondsSinceLastBreak,
@@ -190,5 +187,35 @@ import Testing
 		]
 		let accountedFor = excluded.union(AppDefaults.backupEligibleKeys)
 		#expect(declaredKeys == accountedFor, "Every AppDefaults.Key must be explicitly included or excluded. Missing: \(declaredKeys.subtracting(accountedFor)); unexpected: \(accountedFor.subtracting(declaredKeys))")
+	}
+
+	// MARK: - App-group preferences
+
+	/// Each app-group key must be the one its preference type really reads and writes, or the
+	/// setting silently drops out of backups.
+	@Test func appGroupBackupKeysMatchTheirPreferenceTypes() {
+		let defaults = NectarAppGroupUserDefaults.store
+		let originals = AppDefaults.appGroupBackupEligibleKeys.map { ($0, defaults.object(forKey: $0)) }
+		defer {
+			for (key, value) in originals {
+				if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+			}
+		}
+		let store = AppDefaults.shared
+
+		AO3KudosOnLikePreference.isEnabled = true
+		#expect(store.object(forKey: "ao3KudosOnLikeEnabled") as? Bool == true)
+		AO3PrefetchNewWorksPreference.isEnabled = true
+		#expect(store.object(forKey: "ao3PrefetchNewWorksEnabled") as? Bool == true)
+		AmbrosiaAO3NetworkPreference.updatesEnabled = true
+		#expect(store.object(forKey: "ambrosiaAO3StatsUpdatesEnabled") as? Bool == true)
+		AO3PrefaceRefetchPreference.current = .daily
+		#expect(store.object(forKey: "ao3PrefaceRefetchInterval") as? String == AO3PrefaceRefetchInterval.daily.rawValue)
+		AmbrosiaTransferFormatPreference.current = .sqlite
+		#expect(store.object(forKey: "ambrosiaTransferFormat") as? String == AmbrosiaTransferFormat.sqlite.rawValue)
+	}
+
+	@Test func appGroupKeysAreNeverAlsoAppDefaultsKeys() {
+		#expect(Set(AppDefaults.appGroupBackupEligibleKeys).isDisjoint(with: AppDefaults.backupEligibleKeys))
 	}
 }

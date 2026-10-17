@@ -538,10 +538,6 @@ final class AppDefaults: Sendable {
 	///   `feedsHidingReadArticles`, `foldersShowingReadArticles`,
 	///   `splitViewPreferredDisplayMode`: back `StateRestorationInfo`
 	///   (sidebar/timeline UI state), not a Settings-screen row.
-	/// - `articleFullscreenAvailable`: a device-capability flag (is
-	///   fullscreen even possible on this device), not a person-set
-	///   preference -- `articleFullscreenEnabled`, the actual toggle, is
-	///   included below.
 	/// - `addFeedAccountID`, `addFeedFolderPath`, `addFolderAccountID`:
 	///   ephemeral last-used-account/folder state for the "Add Feed"
 	///   sheet, not something a person thinks of as a setting to back up.
@@ -566,6 +562,7 @@ final class AppDefaults: Sendable {
 		Key.statsVisible,
 		Key.timelineSortDirection,
 		Key.timelineSortField,
+		Key.articleFullscreenAvailable, // the "Show full screen articles" switch in Settings
 		Key.articleFullscreenEnabled,
 		Key.articleBackSwipeEnabled,
 		Key.articleFullscreenContextMenuEnabled,

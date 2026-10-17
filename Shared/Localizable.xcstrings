@@ -151,6 +151,9 @@
     "Add to Read Later" : {
       "comment" : "Command"
     },
+    "Added %d ignore rule(s)." : {
+      "comment" : "Restore summary — ignore rules added"
+    },
     "Added to Read Later" : {
       "comment" : "Read Later"
     },
