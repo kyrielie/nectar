@@ -439,4 +439,3 @@ struct BackupSQLiteImportTableTests {
 		}
 	}
 }
-

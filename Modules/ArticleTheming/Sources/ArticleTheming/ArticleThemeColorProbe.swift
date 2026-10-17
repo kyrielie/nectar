@@ -328,7 +328,7 @@ enum ThemeColorProbeLogic {
 		var link: RGB
 		var pageWasPainted: Bool
 		/// The link's own background composited over the page, nil when the link paints none.
-		var linkGround: RGB? = nil
+		var linkGround: RGB?
 
 		/// The color to report as the link color: the link's own background when it is drawn as a chip
 		/// (its text color is chosen to sit on the chip, so it can be invisible on the page), else the text color.
