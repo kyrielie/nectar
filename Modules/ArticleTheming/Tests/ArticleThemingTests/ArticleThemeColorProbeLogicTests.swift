@@ -24,9 +24,9 @@ struct ArticleThemeColorProbeLogicTests {
 	}
 
 	private func raw(html: Logic.RGBA? = nil, body: Logic.RGBA? = nil, ink: Logic.RGBA? = nil,
-	                 link: Logic.RGBA? = nil, dark: Bool = false, error: String? = nil) -> Logic.RawPass {
+	                 link: Logic.RGBA? = nil, linkBackground: Logic.RGBA? = nil, dark: Bool = false, error: String? = nil) -> Logic.RawPass {
 		Logic.RawPass(html: html ?? rgba(0, 0, 0, 0), body: body ?? rgba(0, 0, 0, 0),
-					  ink: ink ?? rgba(0, 0, 0), link: link, dark: dark, error: error)
+					  ink: ink ?? rgba(0, 0, 0), link: link, dark: dark, error: error, linkBackground: linkBackground)
 	}
 
 	// MARK: Decoding
@@ -143,6 +143,23 @@ struct ArticleThemeColorProbeLogicTests {
 	@Test func sanityAcceptsOrdinaryColors() {
 		let pass = Logic.PassResult(page: rgb(253, 246, 227), ink: rgb(51, 51, 51), link: rgb(6, 69, 173), pageWasPainted: true)
 		#expect(Logic.isSane(pass))
+	}
+
+	@Test func sanityJudgesALinkChipAgainstItsOwnBackground() {
+		// White link text on a black chip over a white page (1-Bit Desktop): fine, even though the link
+		// color equals the page color.
+		let chip = Logic.PassResult(page: rgb(255, 255, 255), ink: rgb(0, 0, 0), link: rgb(255, 255, 255), pageWasPainted: true, linkGround: rgb(0, 0, 0))
+		#expect(Logic.isSane(chip))
+		// A chip that does not contrast with its text is still rejected.
+		let weak = Logic.PassResult(page: rgb(255, 255, 255), ink: rgb(0, 0, 0), link: rgb(250, 250, 250), pageWasPainted: true, linkGround: rgb(255, 255, 255))
+		#expect(!Logic.isSane(weak))
+	}
+
+	@Test func resolveCompositesLinkBackgroundAndIgnoresTransparentOne() throws {
+		let chip = try #require(Logic.resolve(raw(body: rgba(255, 255, 255), ink: rgba(0, 0, 0), link: rgba(255, 255, 255), linkBackground: rgba(0, 0, 0)), requestedDark: false))
+		#expect(chip.linkGround == rgb(0, 0, 0))
+		let plain = try #require(Logic.resolve(raw(body: rgba(255, 255, 255), ink: rgba(0, 0, 0), link: rgba(0, 0, 200), linkBackground: rgba(0, 0, 0, 0)), requestedDark: false))
+		#expect(plain.linkGround == nil)
 	}
 
 	// MARK: Output

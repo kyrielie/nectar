@@ -354,7 +354,7 @@ struct BackupSQLiteImportTableTests {
 	func restoresIsRestrictedFromBackup() async throws {
 		let localDB = TestFixtures.makeDatabase()
 		let backupDB = TestFixtures.makeDatabase()
-		let items = [
+		let items: Set<ParsedItem> = [
 			TestFixtures.makeParsedItem(uniqueID: "locked", feedURL: "https://example.com/feed-a", isRestricted: true),
 			TestFixtures.makeParsedItem(uniqueID: "open", feedURL: "https://example.com/feed-a", isRestricted: false),
 			TestFixtures.makeParsedItem(uniqueID: "unknown", feedURL: "https://example.com/feed-a", isRestricted: nil)
@@ -402,7 +402,7 @@ struct BackupSQLiteImportTableTests {
 	func restoresLanguageAndCollectionsFromBackup() async throws {
 		let localDB = TestFixtures.makeDatabase()
 		let backupDB = TestFixtures.makeDatabase()
-		let items = [
+		let items: Set<ParsedItem> = [
 			TestFixtures.makeParsedItem(uniqueID: "full", feedURL: "https://example.com/feed-a", ao3Language: "English", collections: [ParsedCollectionEntry(name: "Voiceteam 2025", slug: "Voiceteam2025")]),
 			TestFixtures.makeParsedItem(uniqueID: "none", feedURL: "https://example.com/feed-a", ao3Language: "English", collections: []),
 			TestFixtures.makeParsedItem(uniqueID: "unknown", feedURL: "https://example.com/feed-a")
