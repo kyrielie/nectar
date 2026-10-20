@@ -161,8 +161,8 @@ footer a{color:var(--gold-ink)}
 <div>
 <p class="kick">An unofficial reader for Archive of Our Own</p>
 <h1>Nectar</h1>
-<p class="tag">Read fic the way you read a book. Keep your place, keep your library.</p>
-<p class="lede">Nectar is an iOS app that opens any AO3 work, saves your reading position and caches what you read, so a long fic is always waiting where you left it. It shows each work with its own author's styling, and adds notes, highlights, stats and themes on top.</p>
+<p class="tag">Read fanfiction the way you read books. As in a messy pile with tons of annotations and open face down to save your spot.</p>
+<p class="lede">Nectar is an iOS app that opens any AO3 work, automatically downloads it and saves your reading position. Every work is always waiting where you left it and you can fetch updates too. AO3 author styling is sort of supported. Do you annotate fanfiction, because yes you can edit grammar and add highlights to your heart's desire. Also track stats and themes and such internet staples.</p>
 <div class="cta" id="herocta">
 <a class="btn" href="{{alt_url}}">Add to AltStore</a>
 <a class="btn alt" href="{{repo_url}}">View on GitHub</a>
@@ -192,15 +192,15 @@ footer a{color:var(--gold-ink)}
 
 <section id="features">
 <div class="wrap">
-<div class="head"><div class="fleuron" aria-hidden="true"><i></i></div><h2 style="margin-top:.6em">What it does</h2><p>Everything here is in the app today.</p></div>
+<div class="head"><div class="fleuron" aria-hidden="true"><i></i></div><h2 style="margin-top:.6em">What it does</h2><p>Most things work. I think.</p></div>
 <div class="grid">
-<div class="card"><span class="n">I</span><h3>A timeline that knows fic</h3><p>Word count, chapters, completion, fandom, relationships, characters, ratings, warnings and series show on every card, with a progress bar drawn from how far you have scrolled.</p></div>
+<div class="card"><span class="n">I</span><h3>AO3 tag support first</h3><p>Word count, chapters, completion, fandom, relationships, characters, ratings, warnings and series show on every card, with a progress bar drawn from how far you have scrolled.</p></div>
 <div class="card"><span class="n">II</span><h3>Reads like AO3</h3><p>Each work loads with the creator's own styling on, then adds saved position, offline-friendly caching and a distraction-free reader.</p></div>
-<div class="card"><span class="n">III</span><h3>One book, many copies</h3><p>The same work in two collections, or re-imported from Calibre, is recognised as one book. Mark it read, starred or loved once and it applies everywhere.</p></div>
+<div class="card"><span class="n">III</span><h3>One book, many copies</h3><p>The same work in two collections is recognised as one book. Mark it read, starred or loved once and it applies everywhere.</p></div>
 <div class="card"><span class="n">IV</span><h3>Live chapters</h3><p>Fetch new chapters of an in-progress work on demand, with rate-limit backoff and a guard that will not overwrite good text with a short or bad fetch.</p></div>
 <div class="card"><span class="n">V</span><h3>Notes and highlights</h3><p>Save quotes and write notes as you read. Fix typos and grammar with text replacement, or swap Y/N for a name.</p></div>
 <div class="card"><span class="n">VI</span><h3>Stats and Reading Time</h3><p>Track your reading habits, or set yourself a limit. Both are kept on your phone.</p></div>
-<div class="card wide"><span class="n">VII</span><h3>Bring your own library</h3><p>Filter works on AO3 in your browser, paste the search link as a feed, or load a list of links to import your open tabs. Nectar also works with Ambrosia, a local fanfiction library, including large collections over a dedicated sync route.</p></div>
+<div class="card wide"><span class="n">VII</span><h3>AO3 page as a shelf</h3><p>Filter works on AO3 in your browser, paste the search link as a feed, or load a list of links to import your open tabs. Nectar doesn't have collections because you are meant to make bookmarks and collections on AO3.</p></div>
 <div class="card"><span class="n">VIII</span><h3>Back up everything</h3><p>Export your library, settings and reading history to a .zip, then restore or merge it later on this device or another.</p></div>
 </div>
 </div>
@@ -234,19 +234,19 @@ footer a{color:var(--gold-ink)}
 
 <section id="trust">
 <div class="wrap">
-<div class="head"><h2>Fair dealing</h2><p>What Nectar promises, and what it will not do.</p></div>
+<div class="head"><h2>Open Source</h2><p>Really trying not to be one of those bad AO3 apps.</p></div>
 <ul class="ledger">
-<li><span><strong>Free and open source.</strong> Always. Read the code, or build the app yourself.</span></li>
+<li><span><strong>Free and open source.</strong> This is a fun personal project! For safety reasons you can read the code and build the app yourself.</span></li>
 <li><span><strong>Does not distribute fics.</strong> Works are fetched from AO3 only when you open one.</span></li>
 <li><span><strong>Respects AO3.</strong> It does its best to honour AO3's terms of service, servers and policies.</span></li>
 <li><span><strong>Private by design.</strong> Sign-in happens in Safari and your login details stay on your phone. Your reading history never leaves it.</span></li>
 <li><span><strong>No account needed.</strong> You can read without ever logging in.</span></li>
 </ul>
-<h3 class="subhead">Good to know</h3>
+<h3 class="subhead">Warnings</h3>
 <ul class="ledger">
 <li><span><strong>Beta software.</strong> Expect rough edges while it is under active development.</span></li>
 <li><span><strong>Made for AO3 and Ambrosia.</strong> It should work with any RSS or JSON feed, but it is not a general feed reader.</span></li>
-<li><span><strong>It keeps what you open.</strong> The cache is archival and never cleans itself up, so subscribing to a busy news feed will fill your storage.</span></li>
+<li><span><strong>It keeps what you open.</strong> The cache is archival and never cleans itself up, so it may clutter your storage.</span></li>
 <li><span><strong>Sideloaded.</strong> It is not on the App Store, so installing takes a few extra steps.</span></li>
 </ul>
 </div>
@@ -254,7 +254,7 @@ footer a{color:var(--gold-ink)}
 
 <section id="faq">
 <div class="wrap">
-<div class="head"><h2>Questions</h2><p>The short answers.</p></div>
+<div class="head"><h2>Questions</h2><p>FAQ</p></div>
 <div class="faq">
 {{faq}}</div>
 </div>
@@ -279,7 +279,7 @@ footer a{color:var(--gold-ink)}
 <details><summary>I can't install a fourth sideloaded app</summary><div class="a">By default you can only install 3 sideloaded apps. <a href="https://github.com/LiveContainer/LiveContainer">LiveContainer</a> lets you install more.</div></details>
 <details><summary>I would rather not use AltStore</summary><div class="a">Sideloadly also works. Download <code>Nectar-unsigned.ipa</code> from the <a href="{{repo_url}}/releases/latest">latest release</a>, drag it into Sideloadly, and sign in with your Apple ID. You can also build it yourself from source; the README has the steps.</div></details>
 </div>
-<div class="warn"><strong>Read this first.</strong><p>Nectar is unofficial and not associated with Archive of Our Own. AO3 recommends using the site in your browser, and warns that a third-party app you sign in to could gain access to your username and password. Nectar does not require you to log in. Please read the AO3 post on why there is no official app before you decide.</p><p><a href="https://archiveofourown.org/admin_posts/35806">Why AO3 doesn't have an official app</a></p></div>
+<div class="warn"><strong>Disclaimer.</strong><p>Nectar is unofficial and not associated with Archive of Our Own. AO3 recommends using the site in your browser, and warns that a third-party app you sign in to could gain access to your username and password. Nectar does not require you to log in. Please read the AO3 post on why there is no official app before you decide.</p><p><a href="https://archiveofourown.org/admin_posts/35806">Why AO3 doesn't have an official app</a></p></div>
 </div>
 </section>
 
