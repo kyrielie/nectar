@@ -217,7 +217,9 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController, Se
 
 		switch indexPath.section {
 		case 0:
-			header.label.text = NSLocalizedString("Number of Lines", comment: "Number of Lines")
+			let count = AppDefaults.shared.timelineNumberOfLines
+			let format = NSLocalizedString("Number of Lines (%d)", comment: "Number of Lines with count")
+			header.label.text = String(format: format, count)
 		case 1:
 			header.label.text = NSLocalizedString("Tag Display", comment: "Tag Display")
 		case statsVisibilitySection:

@@ -108,11 +108,25 @@ struct AnnotationsSettingsView: View {
 			}
 
 			Section {
+				Picker(selection: Binding(
+					get: { HighlightPalette(rawValue: highlightPaletteRawValue) ?? .default },
+					set: {
+						highlightPaletteRawValue = $0.rawValue
+						AppDefaults.shared.highlightPalette = $0
+					}
+				)) {
+					ForEach(HighlightPalette.allCases, id: \.self) { palette in
+						Text(palette.description).tag(palette)
+					}
+				} label: {
+					Text("Highlight Palette", comment: "Annotations settings: highlight palette picker label")
+				}
+
 				colorPicker
 			} header: {
-				Text("Default Highlight Color", comment: "Annotations settings: default color section header")
+				Text("Palette & Default Color", comment: "Annotations settings: default color section header")
 			} footer: {
-				Text("Used by both Popup and Native Menu -- Popup's default swatch, and Native Menu's only color, both track this. To change what these five colors actually look like, use Highlight Palette under Settings → Appearance → Accent Color.", comment: "Annotations settings: default color section footer")
+				Text("Choose a highlight palette to customize how colors appear in your articles, and select your default color for text selection.", comment: "Annotations settings: default color section footer")
 			}
 
 			Section {

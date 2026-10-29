@@ -149,11 +149,7 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		]
 
 		for (mode, label) in options {
-			var actionTitle = label
-			if mode == AppDefaults.shared.pageCounterDisplayMode {
-				actionTitle = "✓ " + actionTitle
-			}
-			let action = UIAlertAction(title: actionTitle, style: .default) { [weak self] _ in
+			let action = UIAlertAction(title: label, style: .default) { [weak self] _ in
 				AppDefaults.shared.pageCounterDisplayMode = mode
 				self?.updatePageCounterDisplayModeLabel()
 				self?.updateHideNotchAvailability()
@@ -181,11 +177,7 @@ final class FullScreenReadingViewController: UITableViewController, SettingsPale
 		}
 
 		for mode in ArticleScrollbarVisibility.allCases {
-			var actionTitle = mode.title
-			if mode == AppDefaults.shared.articleScrollbarVisibility {
-				actionTitle = "✓ " + actionTitle
-			}
-			let action = UIAlertAction(title: actionTitle, style: .default) { [weak self] _ in
+			let action = UIAlertAction(title: mode.title, style: .default) { [weak self] _ in
 				AppDefaults.shared.articleScrollbarVisibility = mode
 				self?.updateArticleScrollbarVisibilityLabel()
 			}

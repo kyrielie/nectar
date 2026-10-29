@@ -45,29 +45,35 @@ struct AboutView: View {
 					AboutCreditView(contributorType: "Featuring additional contributions from", contributors: [.danielJalkut, .joeHeck, .olofHellman, .rizwanMohamedIbrahim, .philViso, .others])
 				}
 
-				VStack(spacing: 6) {
+				VStack(alignment: .leading, spacing: 6) {
 					Text(verbatim: "Open Source")
 						.bold()
 						.foregroundStyle(.secondary)
 						.padding(.top, 16)
 					Text("Nectar is a fork of [NetNewsWire](https://github.com/Ranchero-Software/NetNewsWire) (MIT) and is the companion app for [Ambrosia](https://github.com/kyrielie/ambrosia) (MIT). Thanks also to the [Organization for Transformative Works](https://github.com/otwcode/otwarchive) (GPL-2.0-or-later), nianeyna's [ao3downloader](https://github.com/nianeyna/ao3downloader) (GPL-3.0), and ArmindoFlores's [ao3_api](https://github.com/ArmindoFlores/ao3_api) (MIT), for AO3 parsing reference. The Streaks and Monthly sections of Reading Stats are adapted from [Aidoku](https://github.com/Aidoku/Aidoku) (GPL-3.0). Several bundled article themes are inspired by community AO3 workskins, including work by [ZerafinaCSS](https://github.com/ZerafinaCSS/neos), the [Dracula Theme](https://github.com/dracula/archive-of-our-own) project, and [BlackBatCat](https://github.com/Wolfbatcat/ao3-rose-pine), among others. Full attribution for every theme and third-party code reference is in [`THIRD-PARTY-NOTICES.md`](https://github.com/kyrielie/nectar/blob/main/THIRD-PARTY-NOTICES.md) in the source repository. Broadsheet theme from [here](https://github.com/stuartbreckenridge/NNWThemesBroadsheet).")
+						.multilineTextAlignment(.leading)
 				}
+				.frame(maxWidth: .infinity, alignment: .leading)
 
-				VStack(spacing: 6) {
+				VStack(alignment: .leading, spacing: 6) {
 					Text(verbatim: "Thanks")
 						.bold()
 						.foregroundStyle(.secondary)
 						.padding(.top, 16)
 					Text("Thanks to Sheila and my family; thanks to my friends in Seattle and around the globe; thanks to the ever-patient and ever-awesome NetNewsWire beta testers.\n\nThanks to [Gus Mueller](https://shapeof.com/) for [FMDB](https://github.com/ccgus/fmdb) by [Flying Meat Software](http://flyingmeat.com/). Thanks to [GitHub](https://github.com) and [Discourse](https://discourse.com) for making open source collaboration easy and fun. Thanks to [Ben Ubois](https://benubois.com/) at [Feedbin](https://feedbin.com) for all the extra help with syncing and article rendering — and [for hosting the server for the Reader view](https://feedbin.com/blog/2019/03/11/the-future-of-full-content/).")
+						.multilineTextAlignment(.leading)
 				}
+				.frame(maxWidth: .infinity, alignment: .leading)
 
-				VStack(spacing: 6) {
+				VStack(alignment: .leading, spacing: 6) {
 					Text(verbatim: "Dedication")
 						.bold()
 						.foregroundStyle(.secondary)
 						.padding(.top, 16)
 					Text("NetNewsWire 7 is dedicated to everyone working to save democracy in the United States and around the world.")
+						.multilineTextAlignment(.leading)
 				}
+				.frame(maxWidth: .infinity, alignment: .leading)
 
 				Text(verbatim: "Copyright © 2002-2026 Brent Simmons")
 					.font(.caption)
@@ -76,7 +82,6 @@ struct AboutView: View {
 			}
 			.scenePadding(.horizontal)
 		}
-		.multilineTextAlignment(.center)
 		.navigationTitle(Text(verbatim: "About Nectar"))
     }
 }

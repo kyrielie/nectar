@@ -15,19 +15,20 @@ import ActivityLog
 import Articles
 import ArticleTheming
 import BackupRestore
+import AO3Kit
 
 final class SettingsViewController: UITableViewController, SettingsPaletteBackgroundHosting {
 
 	var paletteBackgroundView: UIView { tableView }
 
 	private enum Section: Int {
-		case feeds = 0
-		case timeline = 1
-		case articles = 2
-		case appearance = 3
-		case troubleshooting = 4
-		case help = 5
-		case ao3Account = 6
+		case ao3Account = 0
+		case feeds = 1
+		case timeline = 2
+		case articles = 3
+		case appearance = 4
+		case troubleshooting = 5
+		case help = 6
 		case backup = 7
 	}
 
@@ -141,6 +142,9 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		// palette change while this screen is already visible needs an
 		// explicit repaint of the rows already on screen.
 		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
+		NotificationCenter.default.addObserver(forName: .ao3SessionDidChange, object: nil, queue: .main) { [weak self] _ in
+			self?.tableView.reloadData()
+		}
 
 		tableView.register(UINib(nibName: "SettingsComboTableViewCell", bundle: nil), forCellReuseIdentifier: "SettingsComboTableViewCell")
 		tableView.register(UINib(nibName: "SettingsTableViewCell", bundle: nil), forCellReuseIdentifier: "SettingsTableViewCell")
@@ -153,6 +157,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 
 	override func viewWillAppear(_ animated: Bool) {
 		super.viewWillAppear(animated)
+		tableView.reloadData()
 
 		updateTimelineSortLabels()
 
@@ -424,6 +429,10 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 
 	override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
 		applySettingsCellBackground(to: cell)
+		if Section(rawValue: indexPath.section) == .ao3Account {
+			let status = AO3SessionStore.isSignedIn ? NSLocalizedString("Signed In", comment: "AO3 status: signed in") : NSLocalizedString("Not Signed In", comment: "AO3 status: not signed in")
+			cell.detailTextLabel?.text = status
+		}
 	}
 
 	override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
@@ -1010,11 +1019,7 @@ private extension SettingsViewController {
 		}
 
 		for field in ArticleSorter.SortField.allCases {
-			var actionTitle = field.displayName
-			if field == AppDefaults.shared.timelineSortField {
-				actionTitle = "✓ " + actionTitle
-			}
-			let action = UIAlertAction(title: actionTitle, style: .default) { [weak self] _ in
+			let action = UIAlertAction(title: field.displayName, style: .default) { [weak self] _ in
 				AppDefaults.shared.timelineSortField = field
 				self?.updateTimelineSortLabels()
 			}
@@ -1043,11 +1048,7 @@ private extension SettingsViewController {
 		]
 
 		for (direction, label) in directions {
-			var actionTitle = label
-			if direction == AppDefaults.shared.timelineSortDirection {
-				actionTitle = "✓ " + actionTitle
-			}
-			let action = UIAlertAction(title: actionTitle, style: .default) { [weak self] _ in
+			let action = UIAlertAction(title: label, style: .default) { [weak self] _ in
 				AppDefaults.shared.timelineSortDirection = direction
 				self?.updateTimelineSortLabels()
 			}

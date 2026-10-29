@@ -29,11 +29,8 @@ struct ArticleThemeListView: View {
 
 	@State private var isImporterPresented = false
 	@State private var themeNamesRefreshToken = false
-	/// The theme the person just picked, shown as selected right away. The manager may
-	/// measure an unmeasured theme before switching to it, which takes a moment; this keeps
-	/// the picker from snapping back meanwhile. Cleared when the current theme changes.
-	@State private var pendingSelection: String?
 	@State private var isDeleteCurrentThemeAlertPresented = false
+	@State private var isResetAlertPresented = false
 
 	/// Preview-only -- not part of `ArticleThemeOverrides`, doesn't get saved. Lets the
 	/// preview show either appearance of a light+dark theme regardless of the device's
@@ -158,13 +155,7 @@ struct ArticleThemeListView: View {
 		Form {
 			themeSection
 			previewSection
-			fontSection
-			fontSizeSection
-			lineHeightSection
-			paragraphSpacingSection
-			paragraphIndentSection
-			marginsSection
-			justificationSection
+			typographyAndLayoutSection
 			colorsSection
 			resetSection
 		}
@@ -196,11 +187,22 @@ struct ArticleThemeListView: View {
 			let localizedMessageText = NSLocalizedString("Are you sure you want to delete the theme “%@”?.", comment: "Delete Theme Message")
 			Text(NSString.localizedStringWithFormat(localizedMessageText as NSString, ArticleThemesManager.shared.currentTheme.name) as String)
 		}
+		.alert(Text("Reset Theme Overrides?", comment: "Reset Theme Overrides"), isPresented: $isResetAlertPresented) {
+			Button(role: .cancel) { } label: {
+				Text("Cancel", comment: "Cancel button")
+			}
+			Button(role: .destructive) {
+				resetToThemeDefaults()
+			} label: {
+				Text("Reset", comment: "Reset button")
+			}
+		} message: {
+			Text("This will discard all custom font, layout, and color overrides for “\(ArticleThemesManager.shared.currentTheme.name)”.", comment: "Reset Theme Overrides message")
+		}
 		.onReceive(NotificationCenter.default.publisher(for: .ArticleThemeNamesDidChangeNotification)) { _ in
 			themeNamesRefreshToken.toggle()
 		}
 		.onReceive(NotificationCenter.default.publisher(for: .CurrentArticleThemeDidChangeNotification)) { _ in
-			pendingSelection = nil
 			themeNamesRefreshToken.toggle()
 		}
 		.onChange(of: snapshot) { _, _ in save() }
@@ -304,12 +306,15 @@ struct ArticleThemeListView: View {
 		let currentTheme = ArticleThemesManager.shared.currentTheme
 
 		Section {
-			Picker(selection: themeNameBinding) {
-				ForEach(themeNames, id: \.self) { themeName in
-					Text(themeName).tag(themeName)
-				}
+			NavigationLink {
+				ArticleThemePickerView()
 			} label: {
-				Text("Theme", comment: "Theme picker label")
+				HStack {
+					Text("Theme", comment: "Theme picker label")
+					Spacer()
+					Text(currentTheme.name)
+						.foregroundStyle(.secondary)
+				}
 			}
 
 			if !currentTheme.isAppTheme {
@@ -322,27 +327,6 @@ struct ArticleThemeListView: View {
 		} footer: {
 			Text(themeAppearanceDescription(for: currentTheme))
 		}
-	}
-
-	/// The built-in fallback is displayed as "System", the same name as the bundled System
-	/// theme, and `themeNames` can still hold the "Default" sentinel before the first folder
-	/// scan. Drop the sentinel and de-duplicate, because `ForEach(id: \.self)` would otherwise
-	/// see two rows with the same id. Picking "System" stores that name, which resolves to
-	/// the bundled theme (the same design as the fallback).
-	private var themeNames: [String] {
-		var seen = Set<String>()
-		return ([ArticleTheme.defaultTheme.name] + ArticleThemesManager.shared.themeNames)
-			.filter { $0 != ArticleThemesManager.defaultThemeName && seen.insert($0).inserted }
-	}
-
-	private var themeNameBinding: Binding<String> {
-		Binding(
-			get: { pendingSelection ?? ArticleThemesManager.shared.currentTheme.name },
-			set: {
-				pendingSelection = $0
-				ArticleThemesManager.shared.currentThemeName = $0
-			}
-		)
 	}
 
 	private func themeAppearanceDescription(for theme: ArticleTheme) -> String {
@@ -401,8 +385,59 @@ struct ArticleThemeListView: View {
 		}
 	}
 
+	private var fontSizeRow: some View {
+		HStack {
+			Slider(value: $fontSize, in: ArticleThemeOverrides.fontSizeRange, step: 1)
+			Text(fontSize, format: .number.precision(.fractionLength(0)))
+				.monospacedDigit()
+				.frame(width: 32, alignment: .trailing)
+				.foregroundStyle(.secondary)
+		}
+	}
+
+	private var lineHeightRow: some View {
+		HStack {
+			Slider(value: $lineHeight, in: ArticleThemeOverrides.lineHeightRange, step: 0.1)
+			Text(lineHeight, format: .number.precision(.fractionLength(1)))
+				.monospacedDigit()
+				.frame(width: 32, alignment: .trailing)
+				.foregroundStyle(.secondary)
+		}
+	}
+
+	private var paragraphSpacingRow: some View {
+		HStack {
+			Slider(value: $paragraphSpacing, in: ArticleThemeOverrides.paragraphSpacingRange, step: 0.1)
+			Text(paragraphSpacing, format: .number.precision(.fractionLength(1)))
+				.monospacedDigit()
+				.frame(width: 32, alignment: .trailing)
+				.foregroundStyle(.secondary)
+		}
+	}
+
+	private var paragraphIndentRow: some View {
+		HStack {
+			Slider(value: $paragraphIndent, in: ArticleThemeOverrides.paragraphIndentRange, step: 0.1)
+			Text(paragraphIndent, format: .number.precision(.fractionLength(1)))
+				.monospacedDigit()
+				.frame(width: 32, alignment: .trailing)
+				.foregroundStyle(.secondary)
+		}
+	}
+
+	private func marginRow(title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
+		HStack {
+			Text(title)
+			Slider(value: value, in: range, step: 1)
+			Text(value.wrappedValue, format: .number.precision(.fractionLength(0)))
+				.monospacedDigit()
+				.frame(width: 32, alignment: .trailing)
+				.foregroundStyle(.secondary)
+		}
+	}
+
 	@ViewBuilder
-	private var fontSection: some View {
+	private var typographyAndLayoutSection: some View {
 		Section {
 			Toggle(isOn: $useCustomSerifFont) {
 				Text("Custom Reading Font", comment: "Custom Reading Font toggle")
@@ -429,142 +464,43 @@ struct ArticleThemeListView: View {
 					Text("Interface Font", comment: "Interface Font picker label")
 				}
 			}
-		} header: {
-			Text("Font", comment: "Font section header")
-		} footer: {
-			Text("Reading Font applies to the work text. Interface Font applies to the byline, dateline, and other chrome.", comment: "Font section footer explaining serif/sans split")
-		}
-	}
 
-	private var fontSizeRow: some View {
-		HStack {
-			Slider(value: $fontSize, in: ArticleThemeOverrides.fontSizeRange, step: 1)
-			Text(fontSize, format: .number.precision(.fractionLength(0)))
-				.monospacedDigit()
-				.frame(width: 32, alignment: .trailing)
-				.foregroundStyle(.secondary)
-		}
-	}
-
-	@ViewBuilder
-	private var fontSizeSection: some View {
-		Section {
 			Toggle(isOn: $useCustomFontSize) {
 				Text("Custom Font Size", comment: "Custom Font Size toggle")
 			}
 			if useCustomFontSize {
 				fontSizeRow
 			}
-		} header: {
-			Text("Font Size", comment: "Font Size section header")
-		}
-	}
 
-	private var lineHeightRow: some View {
-		HStack {
-			Slider(value: $lineHeight, in: ArticleThemeOverrides.lineHeightRange, step: 0.1)
-			Text(lineHeight, format: .number.precision(.fractionLength(1)))
-				.monospacedDigit()
-				.frame(width: 32, alignment: .trailing)
-				.foregroundStyle(.secondary)
-		}
-	}
-
-	@ViewBuilder
-	private var lineHeightSection: some View {
-		Section {
 			Toggle(isOn: $useCustomLineHeight) {
-				Text("Custom Line Height", comment: "Custom Line Height toggle")
+				Text("Custom Line Spacing", comment: "Custom Line Spacing toggle")
 			}
 			if useCustomLineHeight {
 				lineHeightRow
 			}
-		} header: {
-			Text("Line Height", comment: "Line Height section header")
-		}
-	}
 
-	private var paragraphSpacingRow: some View {
-		HStack {
-			Slider(value: $paragraphSpacing, in: ArticleThemeOverrides.paragraphSpacingRange, step: 0.1)
-			Text(paragraphSpacing, format: .number.precision(.fractionLength(1)))
-				.monospacedDigit()
-				.frame(width: 32, alignment: .trailing)
-				.foregroundStyle(.secondary)
-		}
-	}
-
-	@ViewBuilder
-	private var paragraphSpacingSection: some View {
-		Section {
 			Toggle(isOn: $useCustomParagraphSpacing) {
 				Text("Custom Paragraph Spacing", comment: "Custom Paragraph Spacing toggle")
 			}
 			if useCustomParagraphSpacing {
 				paragraphSpacingRow
 			}
-		} header: {
-			Text("Paragraph Spacing", comment: "Paragraph Spacing section header")
-		}
-	}
 
-	private var paragraphIndentRow: some View {
-		HStack {
-			Slider(value: $paragraphIndent, in: ArticleThemeOverrides.paragraphIndentRange, step: 0.1)
-			Text(paragraphIndent, format: .number.precision(.fractionLength(1)))
-				.monospacedDigit()
-				.frame(width: 32, alignment: .trailing)
-				.foregroundStyle(.secondary)
-		}
-	}
-
-	@ViewBuilder
-	private var paragraphIndentSection: some View {
-		Section {
 			Toggle(isOn: $useCustomParagraphIndent) {
 				Text("Custom Paragraph Indent", comment: "Custom Paragraph Indent toggle")
 			}
 			if useCustomParagraphIndent {
 				paragraphIndentRow
 			}
-		} header: {
-			Text("Paragraph Indent", comment: "Paragraph Indent section header")
-		}
-	}
 
-	private func marginRow(title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
-		HStack {
-			Text(title)
-			Slider(value: value, in: range, step: 1)
-			Text(value.wrappedValue, format: .number.precision(.fractionLength(0)))
-				.monospacedDigit()
-				.frame(width: 32, alignment: .trailing)
-				.foregroundStyle(.secondary)
-		}
-	}
-
-	@ViewBuilder
-	private var marginsSection: some View {
-		Section {
 			Toggle(isOn: $useCustomMargins) {
-				Text("Custom Margins", comment: "Custom Margins toggle")
+				Text("Custom Page Margins", comment: "Custom Page Margins toggle")
 			}
 			if useCustomMargins {
 				marginRow(title: NSLocalizedString("Left & Right", comment: "Left & Right margin label"), value: $marginHorizontal, range: ArticleThemeOverrides.marginHorizontalRange)
 				marginRow(title: NSLocalizedString("Top", comment: "Top margin label"), value: $marginTop, range: ArticleThemeOverrides.marginTopRange)
 			}
-		} header: {
-			Text("Page Margins", comment: "Page Margins section header")
-		} footer: {
-			if useCustomMargins && marginHorizontal < 20 {
-				Text("Below 20px, text can run edge-to-edge on some devices. Most themes treat 20px as the minimum comfortable margin.", comment: "Margin below recommended floor footer warning")
-			}
-		}
-	}
 
-	@ViewBuilder
-	private var justificationSection: some View {
-		Section {
 			Toggle(isOn: $useCustomJustifyText) {
 				Text("Override Justification", comment: "Override Justification toggle")
 			}
@@ -573,6 +509,7 @@ struct ArticleThemeListView: View {
 					Text("Justify Text", comment: "Justify Text toggle")
 				}
 			}
+
 			Toggle(isOn: $useCustomHyphenate) {
 				Text("Override Hyphenation", comment: "Override Hyphenation toggle")
 			}
@@ -581,8 +518,10 @@ struct ArticleThemeListView: View {
 					Text("Hyphenate", comment: "Hyphenate toggle")
 				}
 			}
+		} header: {
+			Text("Typography & Text Layout", comment: "Typography & Text Layout section header")
 		} footer: {
-			Text("Some themes justify text on their own. Turn on Override Justification to force it on or off regardless of the theme. Hyphenation works best paired with justified text on narrow screens.", comment: "Justification/hyphenation footer")
+			Text("Reading Font applies to the work text. Interface Font applies to the byline, dateline, and other chrome. Margin below 20px may run edge-to-edge.", comment: "Typography and Layout section footer")
 		}
 	}
 
@@ -659,7 +598,7 @@ struct ArticleThemeListView: View {
 	private var resetSection: some View {
 		Section {
 			Button(role: .destructive) {
-				resetToThemeDefaults()
+				isResetAlertPresented = true
 			} label: {
 				Text("Reset to Theme Default", comment: "Reset to Theme Default button")
 			}

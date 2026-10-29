@@ -16,6 +16,8 @@ enum SliderConfiguration {
 final class TimelineCustomizerCell: UICollectionViewCell {
 	@IBOutlet var slider: TickMarkSlider!
 
+	private var segmentedControl: UISegmentedControl?
+
 	var sliderConfiguration: SliderConfiguration! {
 		didSet {
 			// Settings.storyboard binds the slider's thumbTintColor to the static
@@ -28,6 +30,8 @@ final class TimelineCustomizerCell: UICollectionViewCell {
 			slider.thumbTintColor = Assets.Colors.primaryAccent
 			switch sliderConfiguration {
 			case .numberOfLines:
+				slider.isHidden = false
+				segmentedControl?.isHidden = true
 				slider.minimumValue = 1
 				slider.maximumValue = 6
 				if #available(iOS 26, *) {
@@ -36,17 +40,43 @@ final class TimelineCustomizerCell: UICollectionViewCell {
 				slider.value = Float(AppDefaults.shared.timelineNumberOfLines)
 				slider.addTickMarks()
 			case .tagDisplayMode:
-				slider.minimumValue = 1
-				slider.maximumValue = 3
-				if #available(iOS 26, *) {
-					slider.trackConfiguration = .init(allowsTickValuesOnly: true, numberOfTicks: 3)
+				slider.isHidden = true
+				let control = setupSegmentedControlIfNeeded()
+				control.isHidden = false
+				let modes: [TagDisplayMode] = [.compact, .expanded, .badges]
+				if let index = modes.firstIndex(of: AppDefaults.shared.timelineTagDisplayMode) {
+					control.selectedSegmentIndex = index
 				}
-				slider.value = Float(AppDefaults.shared.timelineTagDisplayMode.rawValue)
-				slider.addTickMarks()
 			case .none:
 				return
 			}
 		}
+	}
+
+	private func setupSegmentedControlIfNeeded() -> UISegmentedControl {
+		if let segmentedControl { return segmentedControl }
+		let items = [
+			TagDisplayMode.compact.description,
+			TagDisplayMode.expanded.description,
+			TagDisplayMode.badges.description
+		]
+		let control = UISegmentedControl(items: items)
+		control.translatesAutoresizingMaskIntoConstraints = false
+		control.addTarget(self, action: #selector(segmentedControlChanged(_:)), for: .valueChanged)
+		contentView.addSubview(control)
+		NSLayoutConstraint.activate([
+			control.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+			control.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+			control.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
+		])
+		self.segmentedControl = control
+		return control
+	}
+
+	@objc private func segmentedControlChanged(_ sender: UISegmentedControl) {
+		let modes: [TagDisplayMode] = [.compact, .expanded, .badges]
+		guard sender.selectedSegmentIndex >= 0, sender.selectedSegmentIndex < modes.count else { return }
+		AppDefaults.shared.timelineTagDisplayMode = modes[sender.selectedSegmentIndex]
 	}
 
 	@IBAction func sliderValueChanges(_ sender: Any) {

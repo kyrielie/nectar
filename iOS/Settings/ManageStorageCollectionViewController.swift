@@ -20,7 +20,6 @@ final class ManageStorageCollectionViewController: UICollectionViewController, S
 
 	private enum Item: Hashable {
 		case summary
-		case footerNote
 		case article(String) // articleID
 	}
 
@@ -93,6 +92,7 @@ final class ManageStorageCollectionViewController: UICollectionViewController, S
 
 	private func configureCollectionView() {
 		var config = UICollectionLayoutListConfiguration(appearance: .insetGrouped)
+		config.footerMode = .supplementary
 		config.trailingSwipeActionsConfigurationProvider = { [weak self] indexPath in
 			self?.trailingSwipeActionsConfiguration(forRowAt: indexPath)
 		}
@@ -107,24 +107,6 @@ final class ManageStorageCollectionViewController: UICollectionViewController, S
 			var content = cell.defaultContentConfiguration()
 			content.text = NSLocalizedString("Total Storage Used", comment: "Manage Storage total row")
 			content.secondaryText = self?.formattedSize(self?.viewModel.totalStoredContentHTMLSize ?? 0)
-			cell.contentConfiguration = content
-			cell.accessories = []
-		}
-
-		// Clearing content here only nulls
-		// the cleared rows' columns -- it doesn't shrink the on-disk
-		// database file, since SQLite only reclaims freed page space on
-		// VACUUM, which this screen never runs (an explicit, infrequent
-		// operation, not something to trigger on every swipe-to-clear).
-		// Account Statistics' database-size figure is therefore expected
-		// to stay flat immediately after a clear here; this note exists so
-		// that isn't read as the clear having silently failed.
-		let footerNoteCellRegistration = UICollectionView.CellRegistration<UICollectionViewListCell, Item> { cell, _, _ in
-			var content = cell.defaultContentConfiguration()
-			content.text = NSLocalizedString("Clearing content here frees space inside the database file, but the file itself won't shrink until it's compacted -- so the size shown in Account Statistics won't drop right away.", comment: "Manage Storage VACUUM explanation")
-			content.textProperties.font = .preferredFont(forTextStyle: .caption1)
-			content.textProperties.color = .secondaryLabel
-			content.textProperties.numberOfLines = 0
 			cell.contentConfiguration = content
 			cell.accessories = []
 		}
@@ -144,11 +126,25 @@ final class ManageStorageCollectionViewController: UICollectionViewController, S
 			switch item {
 			case .summary:
 				return collectionView.dequeueConfiguredReusableCell(using: summaryCellRegistration, for: indexPath, item: item)
-			case .footerNote:
-				return collectionView.dequeueConfiguredReusableCell(using: footerNoteCellRegistration, for: indexPath, item: item)
 			case .article:
 				return collectionView.dequeueConfiguredReusableCell(using: articleCellRegistration, for: indexPath, item: item)
 			}
+		}
+
+		let footerRegistration = UICollectionView.SupplementaryRegistration<UICollectionViewListCell>(
+			elementKind: UICollectionView.elementKindSectionFooter
+		) { supplementaryView, _, indexPath in
+			guard indexPath.section == 0 else {
+				supplementaryView.contentConfiguration = nil
+				return
+			}
+			var content = UIListContentConfiguration.groupedFooter()
+			content.text = NSLocalizedString("Clearing content here frees space inside the database file, but the file itself won't shrink until it's compacted -- so the size shown in Account Statistics won't drop right away.", comment: "Manage Storage VACUUM explanation")
+			supplementaryView.contentConfiguration = content
+		}
+
+		dataSource.supplementaryViewProvider = { collectionView, _, indexPath in
+			collectionView.dequeueConfiguredReusableSupplementary(using: footerRegistration, for: indexPath)
 		}
 	}
 
@@ -157,7 +153,7 @@ final class ManageStorageCollectionViewController: UICollectionViewController, S
 
 		var snapshot = NSDiffableDataSourceSnapshot<Int, Item>()
 		snapshot.appendSections([0, 1])
-		snapshot.appendItems([.summary, .footerNote], toSection: 0)
+		snapshot.appendItems([.summary], toSection: 0)
 		snapshot.appendItems(viewModel.rows.map { .article($0.articleID) }, toSection: 1)
 		dataSource.apply(snapshot, animatingDifferences: true)
 	}

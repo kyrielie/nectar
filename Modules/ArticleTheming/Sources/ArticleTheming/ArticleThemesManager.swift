@@ -218,7 +218,7 @@ public final class ArticleThemesManager: NSObject, NSFilePresenter, Sendable {
 	/// per broken theme per render, rather than only on an actual import attempt.
 	/// Callers that perform a user-initiated import already report their own
 	/// failures at the call site.
-	func articleThemeWithThemeName(_ themeName: String) -> ArticleTheme? {
+	public func articleThemeWithThemeName(_ themeName: String) -> ArticleTheme? {
 		if themeName == Self.defaultThemeName {
 			return ArticleTheme.defaultTheme
 		}
