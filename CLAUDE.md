@@ -70,6 +70,13 @@ codebase moves faster than docs do. See "Keeping this current" below.
 - **Cross-references by filename**, e.g. `see book-identity.md`, not "see
   above/below" — these docs are meant to be read individually, not as
   chapters of one long file.
+- **AO3 fetching invariant.** Routine feed refreshes (`LocalAccountRefresher`)
+  must NEVER fetch AO3 work HTML or chapter bodies. Subscribed feeds only ingest
+  XML metadata stubs (`contentHTML = nil`). Full HTML fetches are strictly
+  on-demand on reader open (`WebViewController.setArticle` → `AO3ChapterFetcher.fetchIfNeeded`)
+  or via the bounded, opt-in `AO3PrefetchQueue` (max 20 works, 5s delay). Never
+  add bulk AO3 scraping to background refresh cycles (see `refresh-throttling.md`
+  and `ao3-direct-feed-ingestion.md`).
 - **A "dangling reference" pattern is called out, not silently fixed,
   wherever found.** Several docs note in-code comments citing a planning
   file (`docs/nectar-audit-remediation-plan.md`,

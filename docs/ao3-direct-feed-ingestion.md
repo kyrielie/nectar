@@ -73,3 +73,7 @@ numbers confirm this is a deliberate, planned feature, not incidental.
 AO3-specific summary extraction and ignore-list filtering are supplied to
 RSParser through `AO3FeedExtensionPoint`. RSParser remains independent of
 AO3Kit; the app registers `AO3FeedExtension` before the first refresh.
+
+> [!IMPORTANT]
+> **No Work Content Fetching During Ingestion**:
+> Ingestion via the RSS/Atom route creates article stubs in the local database with `contentHTML = nil`. It never fetches the underlying AO3 work or chapter HTML. Actual work content is retrieved on-demand when the reader opens the article (`WebViewController.setArticle` → `AO3ChapterFetcher.fetchIfNeeded`), or optionally through the paced and capped `AO3PrefetchQueue` (off by default). See `refresh-throttling.md`.

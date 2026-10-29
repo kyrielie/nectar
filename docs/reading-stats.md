@@ -23,15 +23,14 @@ position ever reached for this book," used only to seed the *next*
 session's baseline. It's written via `max(existing, clamped)` in
 `recordProgress(_:)`, so it only ever grows for a given book.
 
-**Known gap:** because `readingStatsProgressByBookKey` only ever grows,
-once a book's persisted mark reaches 1.0 (fully read), every future
-session's baseline reseeds at 1.0 regardless of where the person actually
-restarts reading — so re-reading a finished work does **not** currently
-credit new words, contrary to what might be assumed from the session
-model below. This was implemented exactly per spec; flagged here as a
-follow-up rather than silently changed, since fixing it would need a
-product decision (e.g. a separate "high-water mark since last full
-read-through," or an explicit re-read affordance).
+### Re-reading completed works
+
+When an article has previously reached completion (`persistedHighWaterMark >= completionThreshold`),
+`ReadingStatsEngine` recognizes a re-read when the reader re-opens or scrolls near the beginning
+(`progress < 0.2`). Rather than pinning the baseline at 1.0, `sessionStartProgress` and
+`sessionBaseline` reset to the re-read starting point. Forward scroll displacement then
+credits words read as the reader progresses through the work again, bounded by the 500 wpm
+speed cap.
 
 ## Per-sample cap
 

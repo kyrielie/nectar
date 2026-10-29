@@ -136,19 +136,7 @@ import ReadingStats
 		#expect(!history.values.contains { $0.completedBookKeys.contains("book-threshold-below") })
 	}
 
-	/// NOTE ON PLAN DISCREPANCY: the plan's own 3c prose claims re-reading a
-	/// finished work "now credits again" because "sessionStart resets to
-	/// the low re-read position at the start of the new session" -- but
-	/// the literal 3a formula (`max(persisted, article.status.readingProgress)`)
-	/// contradicts that: `readingStatsProgressByBookKey` only ever grows
-	/// (via `max` in recordProgress), so once a book reaches 1.0 there,
-	/// every future session's baseline re-seeds at 1.0 regardless of where
-	/// the reader actually re-starts, permanently blocking re-read credit
-	/// for that book. This test pins the plan's *literal* code's actual
-	/// behavior (no re-read credit once persisted progress hits 1.0), not
-	/// the prose's claimed behavior -- flagged for follow-up, see the
-	/// implementation notes.
-	@Test func sessionReread_literalPlanFormula_doesNotCreditAfterFullCompletion() {
+	@Test func sessionReread_creditsWordsAfterFullCompletion() {
 		resetState()
 		defer { resetState() }
 
@@ -165,12 +153,18 @@ import ReadingStats
 		ReadingStatsTracker.shared.setArticle(nil)
 		let later = start.addingTimeInterval(60)
 		ReadingStatsTracker.now = { later }
-		ReadingStatsTracker.shared.setArticle(article) // status.readingProgress still nil in this fixture
+		let rereadArticle = makeArticle(bookKey: "book-3", wordCount: 1_000, readingProgress: 0.0)
+		ReadingStatsTracker.shared.setArticle(rereadArticle)
 		let beforeReread = AppDefaults.shared.readingStatsAllTimeWords
+		ReadingStatsTracker.shared.recordProgress(0.0)
+
+		// 60 seconds later, read to 50%
+		let readTime = later.addingTimeInterval(60)
+		ReadingStatsTracker.now = { readTime }
 		ReadingStatsTracker.shared.recordProgress(0.5)
 
-		// As specified, this does NOT credit -- see the NOTE above.
-		#expect(AppDefaults.shared.readingStatsAllTimeWords == beforeReread)
+		// Net displacement credits 500 words for the re-read session
+		#expect(AppDefaults.shared.readingStatsAllTimeWords == beforeReread + 500)
 	}
 
 	@Test func migration_preMigrationHistoryDecodesWithEmptyWorksBreakdown() {
