@@ -385,12 +385,15 @@ nonisolated extension AO3ChapterFetcher {
 	/// interstitial body (Cloudflare challenge, AO3's 503 page) is vetoed from
 	/// its cache so a transient block is never replayed.
 	private static func anonymousFetch(url: URL) async throws -> AO3WorkPageFetch {
-		let downloadResponse = try await Downloader.shared.download(url, shouldCache: { data, _ in
-			guard let data, let html = String(data: data, encoding: .utf8) else {
-				return true
-			}
-			return !AO3WorkPageClassifier.isInterstitial(html)
-		})
+		let downloadResponse = try await AO3RequestCoordinator.shared.withSlot {
+			try await AO3Pacer.shared.pace()
+			return try await Downloader.shared.download(url, shouldCache: { data, _ in
+				guard let data, let html = String(data: data, encoding: .utf8) else {
+					return true
+				}
+				return !AO3WorkPageClassifier.isInterstitial(html)
+			})
+		}
 		let statusCode = downloadResponse.response?.forcedStatusCode
 		return AO3WorkPageFetch(result: AO3WorkPageClassifier.classify(data: downloadResponse.data, statusCode: statusCode), data: downloadResponse.data, returnedFromCache: downloadResponse.returnedFromCache)
 	}

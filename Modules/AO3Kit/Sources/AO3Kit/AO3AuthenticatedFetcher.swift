@@ -114,9 +114,12 @@ public enum AO3AuthenticatedFetcher {
 
 		logger.debug("Requesting AO3: GET \(url.absoluteString, privacy: .public) (authenticated)")
 
-		let (data, response) = try await session.data(for: request)
-		guard let httpResponse = response as? HTTPURLResponse else {
-			throw URLError(.badServerResponse)
+		let (data, httpResponse) = try await AO3RequestCoordinator.shared.execute(url: url) {
+			let (d, r) = try await session.data(for: request)
+			guard let hr = r as? HTTPURLResponse else {
+				throw URLError(.badServerResponse)
+			}
+			return (d, hr)
 		}
 
 		if httpResponse.statusCode == HTTPResponseCode.tooManyRequests {

@@ -30,7 +30,9 @@ construction site in both parsers:
   (`workDisplayName(id:)`, `authorDisplayName(url:)`). Labels never affect
   matching. Rules are not retroactive: nothing already stored is touched.
   The person manages them in AO3 settings under Ignored Works and Authors
-  (`AO3IgnoreListView`, swipe to remove). Rules are added from the open
+  (`AO3IgnoreListView`, swipe to remove). Rules are backed up in
+  `IgnoreList.json` during device backup and union-merged on restore (see
+  `backup-restore.md`). Rules are added from the open
   article in two places that share one implementation
   (`ArticleIgnoreActions`, `iOS/Article/ArticleIgnoreActions.swift`):
   "Ignore This Work", and "Ignore Author" when the article's author has an
@@ -57,7 +59,7 @@ construction site in both parsers:
 - AO3 listing pages — search/tag results, an author's works, someone's
   bookmarks, marked-for-later, subscriptions, a collection, or a series
   (see `ao3-feeds.md`'s `AO3SearchResultsExtractor` section and
-  `nectar-toolbar-ao3-listing-feeds.md` for the full URL-shape table) —
+  `ao3-link.md` for the full URL-shape table) —
   get their own pagination and refresh-skip handling — see
   `refresh-throttling.md`.
 

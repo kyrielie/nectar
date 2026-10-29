@@ -124,19 +124,22 @@ public enum AO3SearchResultsFetcher {
 				if let clearanceCookieHeaderValue {
 					request.setValue(clearanceCookieHeaderValue, forHTTPHeaderField: "Cookie")
 				}
-				let downloadResponse = try await Downloader.shared.download(request, shouldCache: { data, _ in
-					// See Downloader's own doc comment on the caching check:
-					// a Cloudflare challenge page is a 200, so it needs its
-					// own veto here on top of Downloader's status-code check,
-					// or it gets cached and replayed as a false "success" on
-					// every subsequent call to this URL, including the
-					// clearance-cookie retry a few lines below on a future
-					// attempt.
-					guard let data, let html = String(data: data, encoding: .utf8) else {
-						return true
-					}
-					return !isCloudflareChallenge(html)
-				})
+				let downloadResponse = try await AO3RequestCoordinator.shared.withSlot {
+					try await AO3Pacer.shared.pace()
+					return try await Downloader.shared.download(request, shouldCache: { data, _ in
+						// See Downloader's own doc comment on the caching check:
+						// a Cloudflare challenge page is a 200, so it needs its
+						// own veto here on top of Downloader's status-code check,
+						// or it gets cached and replayed as a false "success" on
+						// every subsequent call to this URL, including the
+						// clearance-cookie retry a few lines below on a future
+						// attempt.
+						guard let data, let html = String(data: data, encoding: .utf8) else {
+							return true
+						}
+						return !isCloudflareChallenge(html)
+					})
+				}
 
 				guard let response = downloadResponse.response else {
 					throw AO3SearchResultsFetchError.exhaustedRetries
