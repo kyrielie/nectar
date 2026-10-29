@@ -47,21 +47,11 @@ struct ReadingTimeSettingsView: View {
 				Toggle("Enable Reading Time", isOn: $enabled)
 					.onChange(of: enabled) { _, value in
 						AppDefaults.shared.readingTimeEnabled = value
-						if value {
-							pendingConfirmation = PendingConfirmation(
-								kind: .readingTimeEnable,
-								message: "Reading will be blocked immediately once today's limit or bedtime window is reached.",
-								revert: {
-									enabled = false
-									AppDefaults.shared.readingTimeEnabled = false
-								}
-							)
-						}
 					}
-			} footer: { Text("When enabled, reading is blocked immediately after the daily limit or bedtime window begins. Turn Reading Time off to change limits, bedtime, or Take a Break settings — they're locked while it's on so a change can't land mid-session and cause a different lockout than the one you started with.") }
+			} footer: { Text("When enabled, reading is blocked immediately once today's limit or bedtime window is reached. Configure your limits, bedtime, and break reminders below.") }
 
-			Section("Daily limits") {
-				Toggle("Enable daily limit", isOn: $dailyLimitEnabled)
+			Section("Daily Limits") {
+				Toggle("Enable Daily Limit", isOn: $dailyLimitEnabled)
 					.onChange(of: dailyLimitEnabled) { _, value in AppDefaults.shared.readingTimeDailyLimitEnabled = value }
 				ForEach(1...7, id: \.self) { weekday in
 					NavigationLink {
@@ -84,29 +74,23 @@ struct ReadingTimeSettingsView: View {
 					}
 				}
 			}
-			// Locked (not editable) while Reading Time is on -- editing a
-			// limit or bedtime mid-session could silently change what's
-			// currently blocking (or about to block) reading without the
-			// person realizing why; turning Reading Time off first makes
-			// that impossible. Same treatment applied to Bedtime and
-			// takeABreakSection below.
-			.disabled(enabled)
-			.opacity(enabled ? 0.4 : 1)
+			.disabled(!enabled)
+			.opacity(enabled ? 1 : 0.4)
 
 			Section("Bedtime") {
-				Toggle("Enable bedtime", isOn: $bedtimeEnabled)
+				Toggle("Enable Bedtime", isOn: $bedtimeEnabled)
 					.onChange(of: bedtimeEnabled) { _, value in AppDefaults.shared.readingTimeBedtimeEnabled = value }
 				DatePicker("Starts", selection: $start, displayedComponents: .hourAndMinute)
 					.onChange(of: start) { _, value in updateBedtimeStart(value) }
 				DatePicker("Ends", selection: $end, displayedComponents: .hourAndMinute)
 					.onChange(of: end) { _, value in updateBedtimeEnd(value) }
 			}
-			.disabled(enabled)
-			.opacity(enabled ? 0.4 : 1)
+			.disabled(!enabled)
+			.opacity(enabled ? 1 : 0.4)
 
 			takeABreakSection
-				.disabled(enabled)
-				.opacity(enabled ? 0.4 : 1)
+				.disabled(!enabled)
+				.opacity(enabled ? 1 : 0.4)
 
 			Section {
 				Toggle("Show indicator while reading", isOn: $indicatorEnabled)

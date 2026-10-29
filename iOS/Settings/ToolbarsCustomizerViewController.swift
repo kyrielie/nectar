@@ -157,7 +157,17 @@ class ToolbarsCustomizerViewController: UICollectionViewController, SettingsPale
 	}
 
 	@objc private func resetTapped() {
-		AppDefaults.shared.resetToolbarDefaults(for: activeBar)
+		let alert = UIAlertController(
+			title: NSLocalizedString("Reset Toolbar?", comment: "Reset toolbar confirmation"),
+			message: NSLocalizedString("This will restore the default buttons and order for this bar.", comment: "Reset toolbar confirmation message"),
+			preferredStyle: .alert
+		)
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel button"), style: .cancel))
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Reset", comment: "Reset button"), style: .destructive) { [weak self] _ in
+			guard let self else { return }
+			AppDefaults.shared.resetToolbarDefaults(for: self.activeBar)
+		})
+		present(alert, animated: true)
 	}
 
 	@objc private func activeBarChanged() {
