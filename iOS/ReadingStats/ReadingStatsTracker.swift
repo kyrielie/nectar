@@ -7,44 +7,13 @@ import Account
 @MainActor final class ReadingStatsTracker {
 	static let shared = ReadingStatsTracker()
 	static var now: () -> Date = { Date() }
+	static var maxWordsPerMinute: Double { ReadingStatsEngine.maxWordsPerMinute }
 
-	struct ArticleSnapshot: Sendable {
-		let bookKey: String
-		let wordCount: Int
-		let fandoms: [String]
-		let tags: [String]
-	}
+	typealias ArticleSnapshot = ReadingStatsArticle
 
 	private let ticker = ForegroundTicker()
 	private let activeTime = ActiveTimeAccumulator(isActive: UIApplication.shared.applicationState != .background)
-	private var currentArticle: ArticleSnapshot?
-	private var sessionBaseline: Double = 0
-
-	// Session state (Phase 3c): credit is tracked per-session net
-	// displacement from where the session started, not against a
-	// persistent all-time high-water mark -- so re-reading a finished
-	// work credits again. sessionStartProgress == nil means no session is
-	// currently open (nothing to credit progress against).
-	private var sessionStartProgress: Double?
-	private var sessionCreditedWords: Int = 0
-
-	// Timestamp of the last recordProgress(_:) call. Doubles as the
-	// per-sample-cap elapsed-time reference (3b) and the interaction-gate/
-	// idle-session-end reference (3d/3c) -- both use the same 180s idle
-	// threshold so they can't disagree about what "idle" means.
-	private var lastSampleDate: Date?
-
-	/// Reading is credited using a plausible-fast-skimming upper bound so a
-	/// TOC jump, scroll-to-bottom, or scrollbar drag can't credit every
-	/// word it skips over. Also used as the interaction/idle-session
-	/// threshold's implicit pairing constant is separate (see idleSessionThresholdSeconds).
-	private static let maxWordsPerMinute = 500.0
-
-	/// Starting constant, not a researched value -- no source confirms an
-	/// exact idle threshold for this app's reading patterns. Used both to
-	/// end a session with no recent scroll sample (3c) and to gate
-	/// per-tick secondsActive credit on recent interaction (3d).
-	private static let idleSessionThresholdSeconds: TimeInterval = 180
+	private var session = ReadingStatsSession()
 
 	private init() {}
 
@@ -63,80 +32,61 @@ import Account
 	/// against stub content -- that's enforced at the call site, not here.
 	func setArticle(_ article: Article?) {
 		guard let article, let wordCount = article.wordCount, wordCount > 0 else {
-			endSession()
-			currentArticle = nil
+			session.endSession()
+			session.article = nil
 			return
 		}
 		let key = article.bookKey.isEmpty ? article.articleID : article.bookKey
-		if key != currentArticle?.bookKey {
-			endSession()
+		if key != session.article?.bookKey {
+			session.endSession()
 		}
-		currentArticle = ArticleSnapshot(bookKey: key, wordCount: wordCount, fandoms: article.fandoms ?? [], tags: article.additionalTags ?? [])
-		// Baseline seeds from whichever is further along: the persisted
-		// all-time high-water mark, or the article's own persisted reading
-		// progress (covers a fresh install / re-sync where the high-water
-		// mark dictionary hasn't caught up yet).
-		sessionBaseline = max(
-			AppDefaults.shared.readingStatsProgressByBookKey[key] ?? 0,
-			article.status.readingProgress ?? 0
+		session.article = ReadingStatsArticle(
+			bookKey: key,
+			wordCount: wordCount,
+			fandoms: article.fandoms ?? [],
+			tags: article.additionalTags ?? []
 		)
-		startSessionIfNeeded()
-	}
-
-	private func startSessionIfNeeded() {
-		guard sessionStartProgress == nil else { return }
-		sessionStartProgress = sessionBaseline
-		sessionCreditedWords = 0
-	}
-
-	private func endSession() {
-		sessionStartProgress = nil
-		sessionCreditedWords = 0
-		lastSampleDate = nil
+		let persistedHighWater = AppDefaults.shared.readingStatsProgressByBookKey[key]
+		session.sessionBaseline = ReadingStatsEngine.computeBaseline(
+			articleReadingProgress: article.status.readingProgress,
+			persistedHighWaterMark: persistedHighWater
+		)
+		if session.sessionStartProgress == nil {
+			session.sessionStartProgress = session.sessionBaseline
+			session.sessionCreditedWords = 0
+		}
 	}
 
 	func recordProgress(_ progress: Double) {
 		guard AppDefaults.shared.readingStatsTrackingEnabled,
-		      let article = currentArticle else { return }
-		startSessionIfNeeded()
-		guard let sessionStart = sessionStartProgress else { return }
-		let clamped = min(max(progress, 0), 1)
+		      let article = session.article else { return }
+
 		let now = Self.now()
-		let elapsedSinceLastSample = lastSampleDate.map { now.timeIntervalSince($0) } ?? 0
-		let isFirstSampleThisSession = lastSampleDate == nil
-		lastSampleDate = now
+		let persistedHighWater = AppDefaults.shared.readingStatsProgressByBookKey[article.bookKey]
 
-		let netDisplacement = max(0, clamped - sessionStart)
-		let totalWordsForSession = Int(netDisplacement * Double(article.wordCount))
-		let deltaWords = max(0, totalWordsForSession - sessionCreditedWords)
+		guard let result = ReadingStatsEngine.processSample(
+			session: &session,
+			progress: progress,
+			now: now,
+			persistedHighWaterMark: persistedHighWater
+		) else { return }
 
-		// Per-sample cap (3b): bound the credit by a plausible reading
-		// speed over the elapsed time since the last sample, except on
-		// the session's first sample, where there's no meaningful elapsed
-		// time yet and capping would wrongly zero out legitimate
-		// baseline-seeded credit from setArticle's sessionBaseline.
-		let maxWordsForElapsed = (elapsedSinceLastSample / 60.0) * Self.maxWordsPerMinute
-		let words = isFirstSampleThisSession ? deltaWords : min(deltaWords, Int(max(maxWordsForElapsed, 0)))
-		guard words > 0 else { return }
+		let words = result.words
+		let clamped = result.clampedProgress
 
-		sessionCreditedWords += words
-		// Persist current absolute position for baseline-seeding on the
-		// *next* session/app launch. This dictionary no longer means "the
-		// position this session started crediting from" -- it's purely
-		// "the furthest absolute position ever reached."
+		// Persist high water mark
 		var progressByKey = AppDefaults.shared.readingStatsProgressByBookKey
 		progressByKey[article.bookKey] = max(progressByKey[article.bookKey] ?? 0, clamped)
 		AppDefaults.shared.readingStatsProgressByBookKey = progressByKey
 
 		var history = AppDefaults.shared.readingStatsDailyHistory
-		let key = Self.dateKey(now)
+		let key = ReadingStatsEngine.dateKey(now)
 		var entry = history[key] ?? ReadingStatsDailyEntry()
 		entry.wordsRead += words
 		for fandom in article.fandoms { entry.wordsByFandom[fandom, default: 0] += words }
 		for tag in article.tags { entry.wordsByTag[tag, default: 0] += words }
-		// Same predicate WebViewController uses to mark the article read; see
-		// ReadingProgressEvaluator.completionThreshold.
-		if ReadingProgressEvaluator.isComplete(clamped) {
+
+		if result.isCompleted {
 			entry.completedBookKeys.insert(article.bookKey)
 			for fandom in article.fandoms { entry.worksByFandom[fandom, default: []].insert(article.bookKey) }
 			for tag in article.tags { entry.worksByTag[tag, default: []].insert(article.bookKey) }
@@ -153,28 +103,32 @@ import Account
 	@objc private func willResignActive() {
 		tick()
 		activeTime.resignActive()
-		endSession()
+		session.endSession()
 	}
-	@objc private func didBecomeActive() { activeTime.becomeActive(now: Self.now()); tick() }
+
+	@objc private func didBecomeActive() {
+		activeTime.becomeActive(now: Self.now())
+		tick()
+	}
+
 	@objc private func tick() {
-		guard AppDefaults.shared.readingStatsTrackingEnabled, currentArticle != nil else { return }
+		guard AppDefaults.shared.readingStatsTrackingEnabled, session.article != nil else { return }
 		let now = Self.now()
-		// Idle-session end (3c): no scroll sample in the idle window means
-		// the session is over even though the app is still foregrounded
-		// (e.g. the reader is sitting open, unscrolled, while the person
-		// does something else). The *next* recordProgress call opens a
-		// fresh session via startSessionIfNeeded().
-		if let lastSample = lastSampleDate, now.timeIntervalSince(lastSample) > Self.idleSessionThresholdSeconds {
-			endSession()
+
+		// Idle-session end: no scroll sample in the idle window means
+		// the session is over even though the app is still foregrounded.
+		if ReadingStatsEngine.shouldEndIdleSession(session: session, now: now) {
+			session.endSession()
 		}
+
 		guard let elapsed = activeTime.tick(now: now) else { return }
-		// Interaction-gated seconds (3d): only credit active time if
-		// there's been a scroll sample within the idle window -- sitting
-		// on a long, unscrolled viewport stops crediting reading time
-		// until the next scroll.
-		guard let lastSample = lastSampleDate, now.timeIntervalSince(lastSample) <= Self.idleSessionThresholdSeconds else { return }
+
+		// Interaction-gated seconds: only credit active time if
+		// there's been a scroll sample within the idle window.
+		guard ReadingStatsEngine.isInteractionActive(session: session, now: now) else { return }
+
 		var history = AppDefaults.shared.readingStatsDailyHistory
-		let key = Self.dateKey(now)
+		let key = ReadingStatsEngine.dateKey(now)
 		var entry = history[key] ?? ReadingStatsDailyEntry()
 		entry.secondsActive += elapsed
 		history[key] = entry
@@ -182,20 +136,9 @@ import Account
 		NotificationCenter.default.post(name: .readingStatsDidChange, object: self)
 	}
 
-	private static func dateKey(_ date: Date) -> String {
-		let formatter = DateFormatter()
-		formatter.locale = Locale(identifier: "en_US_POSIX")
-		formatter.dateFormat = "yyyy-MM-dd"
-		return formatter.string(from: date)
-	}
-
 #if DEBUG
 	func resetForTesting() {
-		currentArticle = nil
-		sessionBaseline = 0
-		sessionStartProgress = nil
-		sessionCreditedWords = 0
-		lastSampleDate = nil
+		session = ReadingStatsSession()
 		activeTime.resetForTesting(isActive: UIApplication.shared.applicationState != .background)
 	}
 #endif

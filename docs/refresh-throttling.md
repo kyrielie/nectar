@@ -101,6 +101,18 @@ someone actually opens) — it's sized to cover ordinary day-to-day feed
 activity, not to bound a large backlog import, and hasn't been tuned
 against real subscription sizes.
 
+## Architectural Invariant: Isolation of AO3 Work Content from Routine Feed Refreshes
+
+> [!IMPORTANT]
+> **Routine feed refreshes (`LocalAccountRefresher`) must NEVER fetch AO3 work HTML or chapter bodies.**
+>
+> 1. **Listing Feeds are Skipped**: All AO3 listing feeds (searches, tags, author works, bookmarks, subscriptions, collections, series) are permanently skipped after their initial add-time fetch (`feedShouldBeSkippedForAO3SearchResultsReasons`). They only refresh via explicit user pagination ("Load More") or manual check.
+> 2. **Atom/RSS Feeds are Metadata-Only**: Subscribed AO3 tag/user `.atom` feeds only download the lightweight XML feed. They ingest article metadata stubs (`contentHTML = nil`) without fetching work or chapter HTML.
+> 3. **Work Content is Strictly On-Demand**: Full work/chapter HTML is only fetched when a user actively opens an article in the reader (`WebViewController.setArticle` → `AO3ChapterFetcher.fetchIfNeeded`).
+> 4. **Prefetching is Opt-In and Bounded**: `AO3PrefetchQueue` is disabled by default (`AppDefaults.shared.ao3PrefetchNewWorks == false`). When enabled, it strictly limits background prefetching to a maximum of 20 works per refresh pass with a 5.0-second delay between requests (`AO3ChapterFetcher.secondsBetweenAO3PagedRequests`).
+>
+> **Warning for Future Modifications**: Do NOT attempt to add bulk or automatic chapter/work downloads into feed refresh routines or background tasks. Bypassing this isolation will trigger AO3 Cloudflare interstitials and HTTP 429 rate-limiting bans.
+
 ## Background refresh budget and interrupted-feed retry
 
 iOS background refresh runs on `BGTaskScheduler`
