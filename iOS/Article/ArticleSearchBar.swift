@@ -63,15 +63,7 @@ import UIKit
 		// state toggle and so don't need one. See app-chrome-palette.md.
 		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
 
-		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,
-		// IPHONEOS_DEPLOYMENT_TARGET = 17.0), so use registerForTraitChanges
-		// rather than the traitCollectionDidChange override it deprecated --
-		// same reasoning and pattern as WebViewController.viewDidLoad(). Was a
-		// traitCollectionDidChange override (see the comment this replaced,
-		// "Pre-existing gap, surfaced by moving barBackground onto an explicit
-		// trait collection") -- functionally unchanged, just off the
-		// non-deprecated API.
-		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: ArticleSearchBar, previousTraitCollection: UITraitCollection) in
+		observeTraits([.userInterfaceStyle]) { (self: ArticleSearchBar, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
 			self.updateBarBackground()
 		}

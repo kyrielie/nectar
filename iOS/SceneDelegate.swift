@@ -31,7 +31,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		// custom AccentColor (a fixed hex, deliberately the same in both
 		// appearances). Registering for UITraitUserInterfaceStyle here closes that
 		// gap explicitly instead of relying on that incidental behavior.
-		window!.registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (window: UIWindow, previousTraitCollection: UITraitCollection) in
+		window!.observeTraits([.userInterfaceStyle]) { (window: UIWindow, previousTraitCollection: UITraitCollection) in
 			guard window.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
 			window.tintColor = Assets.Colors.primaryAccent
 		}

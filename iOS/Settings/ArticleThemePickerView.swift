@@ -65,7 +65,7 @@ struct ArticleThemePickerView: View {
 			}
 
 			if filteredBuiltInThemes.isEmpty && filteredInstalledThemes.isEmpty {
-				ContentUnavailableView.search(text: searchText)
+				EmptyStateView.search(text: searchText)
 			}
 		}
 		.navigationTitle(Text("Choose Theme", comment: "Choose Theme navigation title"))

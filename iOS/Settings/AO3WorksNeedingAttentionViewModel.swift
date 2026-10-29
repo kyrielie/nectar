@@ -14,7 +14,7 @@
 //
 
 import Foundation
-import Observation
+import Combine
 import Account
 import ArticlesDatabase
 
@@ -75,21 +75,21 @@ enum AO3AttentionRetryOutcome: Sendable, Equatable {
 	case unavailable
 }
 
-@MainActor @Observable final class AO3WorksNeedingAttentionViewModel {
+@MainActor final class AO3WorksNeedingAttentionViewModel: ObservableObject {
 
 	typealias AccountInfo = (accountID: String, info: [ArticleAttentionInfo])
 
-	private(set) var rows = [AO3AttentionRowData]()
-	private(set) var hasLoaded = false
+	@Published private(set) var rows = [AO3AttentionRowData]()
+	@Published private(set) var hasLoaded = false
 	/// A message for the person after Retry Now, or nil.
-	var notice: String?
+	@Published var notice: String?
 
 	let displayLimit = 100
 	private static let perAccountFetchLimit = 200
 
-	@ObservationIgnored private let fetchAttention: @MainActor () async -> [AccountInfo]
-	@ObservationIgnored private let retryWork: @MainActor (AO3AttentionRowData) async -> AO3AttentionRetryOutcome
-	@ObservationIgnored private let clearWorkContent: @MainActor (AO3AttentionRowData) async -> Void
+	private let fetchAttention: @MainActor () async -> [AccountInfo]
+	private let retryWork: @MainActor (AO3AttentionRowData) async -> AO3AttentionRetryOutcome
+	private let clearWorkContent: @MainActor (AO3AttentionRowData) async -> Void
 
 	init(
 		fetchAttention: (@MainActor () async -> [AccountInfo])? = nil,

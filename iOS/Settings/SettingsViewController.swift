@@ -37,12 +37,12 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 	/// hosting controller's own `traitCollection` (never
 	/// `UITraitCollection.current` -- see `SurfacePaletteObserver`'s doc
 	/// comment). Shared by all six SwiftUI-hosted settings screens so the
-	/// observer/registerForTraitChanges wiring is written once.
+	/// observer/observeTraits wiring is written once.
 	private static func makeSurfacePaletteAwareHostingController<RootView: View>(rootView: RootView) -> UIHostingController<AnyView> {
 		let hostingController = UIHostingController(rootView: AnyView(rootView))
 		let observer = SurfacePaletteObserver(traitCollection: hostingController.traitCollection)
 		hostingController.rootView = AnyView(rootView.surfacePaletteAware(observer: observer))
-		hostingController.registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (vc: UIHostingController<AnyView>, previous: UITraitCollection) in
+		hostingController.observeTraits([.userInterfaceStyle]) { (vc: UIHostingController<AnyView>, previous: UITraitCollection) in
 			guard vc.traitCollection.userInterfaceStyle != previous.userInterfaceStyle else { return }
 			observer.refresh(for: vc.traitCollection)
 		}
@@ -142,9 +142,7 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 		// palette change while this screen is already visible needs an
 		// explicit repaint of the rows already on screen.
 		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
-		NotificationCenter.default.addObserver(forName: .ao3SessionDidChange, object: nil, queue: .main) { [weak self] _ in
-			self?.tableView.reloadData()
-		}
+		NotificationCenter.default.addObserver(self, selector: #selector(ao3SessionDidChange(_:)), name: .ao3SessionDidChange, object: nil)
 
 		tableView.register(UINib(nibName: "SettingsComboTableViewCell", bundle: nil), forCellReuseIdentifier: "SettingsComboTableViewCell")
 		tableView.register(UINib(nibName: "SettingsTableViewCell", bundle: nil), forCellReuseIdentifier: "SettingsTableViewCell")
@@ -612,6 +610,10 @@ final class SettingsViewController: UITableViewController, SettingsPaletteBackgr
 
 	@objc func surfaceTintDidChange(_ note: Notification) {
 		refreshPaletteCellBackgrounds()
+	}
+
+	@objc func ao3SessionDidChange(_ note: Notification) {
+		tableView.reloadData()
 	}
 
 	// SettingsPaletteBackgroundHosting -- also called on a light/dark trait

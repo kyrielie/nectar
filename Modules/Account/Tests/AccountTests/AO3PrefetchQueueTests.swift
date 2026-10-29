@@ -27,17 +27,20 @@ import XCTest
 import os
 import RSWeb
 import Articles
+import AO3Kit
 @testable import Account
 
 final class AO3PrefetchQueueTests: XCTestCase {
 
 	override func setUp() async throws {
 		TestingURLProtocol.reset()
+		await AO3Pacer.shared.reset()
 		await AO3PrefetchQueue.shared.resetForTesting()
 	}
 
 	override func tearDown() async throws {
 		TestingURLProtocol.reset()
+		await AO3Pacer.shared.reset()
 		await AO3PrefetchQueue.shared.resetForTesting()
 	}
 
@@ -57,6 +60,7 @@ final class AO3PrefetchQueueTests: XCTestCase {
 
 		await AO3PrefetchQueue.shared.enqueue(articles)
 		try await Self.waitUntilDrained()
+		try await Self.waitUntilRequested(workIDs: workIDs)
 
 		for workID in workIDs {
 			XCTAssertTrue(TestingURLProtocol.requestedURLs.contains {
@@ -142,6 +146,21 @@ final class AO3PrefetchQueueTests: XCTestCase {
 			try await Task.sleep(nanoseconds: 5_000_000)
 		}
 		XCTFail("AO3PrefetchQueue did not finish draining within \(timeout)s")
+	}
+
+	private static func waitUntilRequested(workIDs: [String], timeout: TimeInterval = 5.0) async throws {
+		let deadline = Date().addingTimeInterval(timeout)
+		while Date() < deadline {
+			let allFound = workIDs.allSatisfy { workID in
+				TestingURLProtocol.requestedURLs.contains {
+					$0.absoluteString.contains("archiveofourown.org/works/\(workID)")
+				}
+			}
+			if allFound {
+				return
+			}
+			try await Task.sleep(nanoseconds: 20_000_000)
+		}
 	}
 
 	/// AO3Link.workURL(id:...) requires an ASCII-digits-only id (see

@@ -11,6 +11,7 @@
 
 import Foundation
 import os
+import RSCore
 
 // MARK: - AO3 Pacer Actor
 
@@ -19,10 +20,14 @@ public actor AO3Pacer {
 	public static let shared = AO3Pacer()
 
 	private var nextAllowedRequestAt: Date = .distantPast
-	public let minRequestInterval: TimeInterval
+	public var minRequestInterval: TimeInterval
 
-	public init(minRequestInterval: TimeInterval = 0.6) {
-		self.minRequestInterval = minRequestInterval
+	public init(minRequestInterval: TimeInterval? = nil) {
+		if let minRequestInterval {
+			self.minRequestInterval = minRequestInterval
+		} else {
+			self.minRequestInterval = Platform.isRunningUnitTests ? 0.0 : 0.6
+		}
 	}
 
 	/// Pure computation extracted for testability without Task.sleep side-effects.

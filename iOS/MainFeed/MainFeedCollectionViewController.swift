@@ -202,8 +202,10 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		// non-sidebar list background when the surface palette changes.
 		NotificationCenter.default.addObserver(self, selector: #selector(surfaceTintDidChange(_:)), name: .surfaceTintDidChange, object: nil)
 
-		registerForTraitChanges([UITraitPreferredContentSizeCategory.self], target: self, action: #selector(preferredContentSizeCategoryDidChange))
-		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: MainFeedCollectionViewController, previousTraitCollection: UITraitCollection) in
+		observeTraits([.preferredContentSizeCategory]) { (self: MainFeedCollectionViewController, _: UITraitCollection) in
+			self.preferredContentSizeCategoryDidChange()
+		}
+		observeTraits([.userInterfaceStyle]) { (self: MainFeedCollectionViewController, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
 			self.applyListBackground()
 			self.applySurfacePaletteNavigationBarAppearance()

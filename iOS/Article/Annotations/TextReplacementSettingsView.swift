@@ -134,10 +134,10 @@ struct TextReplacementSettingsView: View {
 		}
 		.navigationTitle(Text("Text Replacement", comment: "Text replacement settings navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
-		.onChange(of: readerInsertTable) {
+		.onChange(of: readerInsertTable) { _ in
 			AppDefaults.shared.textReplacementReaderInsertTable = readerInsertTable
 		}
-		.onChange(of: customTable) {
+		.onChange(of: customTable) { _ in
 			AppDefaults.shared.textReplacementCustomTable = customTable
 		}
 		.task {

@@ -496,7 +496,7 @@ struct AnnotationsListView: View {
 		.task {
 			await loadRows()
 		}
-		.onChange(of: selectedScope) {
+		.onChange(of: selectedScope) { _ in
 			Task {
 				await loadRows()
 			}
@@ -507,14 +507,14 @@ struct AnnotationsListView: View {
 		// changes. A full loadRows() round-trip here would be wasted work
 		// (and would flash the ProgressView for no reason) for what's
 		// purely a display-order preference change.
-		.onChange(of: sortOrderRawValue) {
+		.onChange(of: sortOrderRawValue) { _ in
 			bookSections = Self.resort(sections: bookSections, by: sortOrder)
 		}
 	}
 
 	private var emptyState: some View {
-		ContentUnavailableView(
-			NSLocalizedString("No Highlights", comment: "Annotations list empty state title"),
+		EmptyStateView(
+			title: Text(verbatim: NSLocalizedString("No Highlights", comment: "Annotations list empty state title")),
 			systemImage: "highlighter",
 			description: Text("Select text in a work to highlight it.", comment: "Annotations list empty state message")
 		)
@@ -998,13 +998,15 @@ private struct AnnotationRow: View {
 	/// today).
 	private func editSummary(originalText: String, replacementText: String) -> some View {
 		(
+			// `Text.foregroundStyle` (returns Text, needed for `+`) is iOS 17; use
+			// `foregroundColor` with the matching semantic colors on iOS 16.
 			Text(SentenceContext.normalizedForDisplay(originalText))
 				.strikethrough()
-				.foregroundStyle(.secondary)
+				.foregroundColor(.secondary)
 			+ Text(" \u{2192} ")
-				.foregroundStyle(.tertiary)
+				.foregroundColor(Color(uiColor: .tertiaryLabel))
 			+ Text(SentenceContext.normalizedForDisplay(replacementText))
-				.foregroundStyle(.primary)
+				.foregroundColor(.primary)
 		)
 		.font(.callout)
 	}

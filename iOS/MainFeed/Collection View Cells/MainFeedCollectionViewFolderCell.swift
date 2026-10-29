@@ -100,7 +100,7 @@ class MainFeedCollectionViewFolderCell: UICollectionViewCell {
 	func updateUnreadCountVisibility(animated: Bool = true) {
 		let alpha: CGFloat = (!disclosureExpanded && unreadCount > 0) ? 1 : 0
 		if animated {
-			UIView.animate {
+			UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 1, initialSpringVelocity: 0, options: []) {
 				self.unreadCountLabel.alpha = alpha
 			}
 		} else {

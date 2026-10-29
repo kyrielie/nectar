@@ -177,6 +177,22 @@ or absent).
   in `Article`'s `==`. Upstream has neither. See `ao3-feeds.md` ("Language and collections")
   and `database.md`.
 
+- **iOS 16 Deployment Target & Compatibility Shims.** Upstream targets iOS 17+. Nectar
+  lowers `IPHONEOS_DEPLOYMENT_TARGET` to `16.0` (and `platforms: [.iOS(.v16)]` across all 21 module
+  packages under `Modules/`) with zero degradation on iOS 17+. Compatibility shims:
+  - `observeTraits`: Defined in `iOS/UIKit Extensions/TraitChangeObserving.swift`. Uses native
+    `registerForTraitChanges` on iOS 17+ and a zero-size hidden `TraitChangeObserverView`
+    (overriding `traitCollectionDidChange`) on iOS 16.
+  - `EmptyStateView`: Defined in `iOS/Shared/EmptyStateView.swift`. Renders native
+    `ContentUnavailableView` on iOS 17+ and falls back to `EmptyStateFallbackView` on iOS 16.
+  - `scrollClipDisabledIfAvailable()`: Defined in `iOS/Shared/ViewAvailability.swift`.
+  - Swift `Observation` backport: `DinosaursViewModel`, `AO3SettingsModel`, and `AO3WorksNeedingAttentionViewModel`
+    conform to `ObservableObject` with `@Published` and `Combine` publishers rather than iOS 17+ `@Observable`.
+  - `Tidemark` package removed from `Modules/RSParser/Package.swift` and `ParsedItem.swift` because
+    Tidemark's package requires iOS 17+. `ParsedItem.markdown` is preserved and carried without rendering.
+  - Isolated WebKit Data Store fallback: In `AO3AuthenticatedWebViewController`, iOS 17+ uses
+    `WKWebsiteDataStore(forIdentifier:)` while iOS 16 falls back to an app-lifetime `WKWebsiteDataStore.nonPersistent()`.
+
 ## Nectar-original (no upstream counterpart)
 
 Files that are wholly new in Nectar -- new features, not modifications of

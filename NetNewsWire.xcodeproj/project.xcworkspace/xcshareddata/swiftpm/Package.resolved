@@ -1,15 +1,6 @@
 {
-  "originHash" : "f2340c43c116e82c66715199592001b399bfedf650fee7d37e31909c55d5fa38",
+  "originHash" : "00e72bf36f87b6bc2a40ab785e7180c3f1aff8e15e5de51e8327046234eadd4d",
   "pins" : [
-    {
-      "identity" : "tidemark",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/brentsimmons/Tidemark",
-      "state" : {
-        "revision" : "2a5cd8a715ad1145d36009f5d3f146704d3f7ec0",
-        "version" : "1.0.1"
-      }
-    },
     {
       "identity" : "zip",
       "kind" : "remoteSourceControl",

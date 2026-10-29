@@ -147,12 +147,12 @@ struct ReadingHeatmapView: View {
 			.onAppear {
 				proxy.scrollTo("lastWeek")
 			}
-			.onChange(of: data) { _, _ in
+			.onChange(of: data) { _ in
 				proxy.scrollTo("lastWeek", anchor: .trailing)
 			}
 		}
 		.centeredScrollAnchor()
-		.scrollClipDisabled()
+		.scrollClipDisabledIfAvailable()
 	}
 
 	// do "quantile bucketing" to determine heatmap colors

@@ -79,7 +79,7 @@ struct TextReplacementPerWorkOverrideView: View {
 		}
 		.navigationTitle(Text("Override for This Work", comment: "Per-work override navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
-		.onChange(of: table) {
+		.onChange(of: table) { _ in
 			var override = AppDefaults.shared.textReplacementPerWorkOverride
 			override.setTable(table, forBookKey: bookKey)
 			AppDefaults.shared.textReplacementPerWorkOverride = override

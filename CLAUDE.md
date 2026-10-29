@@ -53,6 +53,7 @@ task**, not this whole index cover-to-cover.
 - **`fastlane snapshot` screenshots, offline UI-test demo data, `-UITestSeedDemoData`, `appstore/screenshots`** → `ui-test-demo-data.md`
 - **Cutting a release: `release.yml`, tag creation, `source.json`, `scripts/update_source.py`, `ci.yml`'s App Store assets check** → `release-pipeline.md`
 - **Whether iPad is supported, and how far** (supported at functional parity, not layout polish) → `module-layout.md` ("Platform scope")
+- **Minimum OS / iOS 16 support / trait change & empty state shims** → `module-layout.md` ("Minimum OS and compatibility shims"), `upstream-drift.md`
 
 If nothing above fits, grep the codebase before assuming it's
 undocumented — this split is complete as of the date below, but the
@@ -118,7 +119,8 @@ it's trusted by default. Specifically:
 | `AO3Link`, or any AO3 host check, id parse, hand-built AO3 URL, or listing-shape classifier | `ao3-link.md` |
 | `AO3WorksNeedingAttentionView`, `AO3WorksNeedingAttentionViewModel`, `ArticleAttentionInfo`, `fetchAO3AttentionInfo` | `ao3-works-needing-attention.md` |
 | `AO3SessionStore`, `AO3AuthenticatedFetcher`, `AO3AuthenticatedWebViewController`, `AO3ChallengeSessionStore`, `AO3KudosManager`, `AO3AccountSettingsView`, or any `NectarAppGroupUserDefaults`-backed AO3 preference | `ao3-authenticated-reading.md` |
-| `ArticleThemeColorExtractor`, `ArticleResolvedColors`, `WebViewController.applyResolvedBackgroundColors`/`registerForTraitChanges` | `article-color-pipeline.md` |
+| `ArticleThemeColorExtractor`, `ArticleResolvedColors`, `WebViewController.applyResolvedBackgroundColors`/`observeTraits` | `article-color-pipeline.md` |
+| `TraitChangeObserving.swift`, `EmptyStateView.swift`, `ViewAvailability.swift`, iOS 16 minimum deployment target | `module-layout.md`, `upstream-drift.md` |
 | `SurfacePalette`, `AccentColor`, `SurfacePaletteNavigationBarAware`, `ToolbarStyle`/`toolbarStyle`, `BadgeColorPalette`, `BadgeColorTable` | `app-chrome-palette.md` |
 | `.nnwtheme` bundles, `ArticleTheme`, `ArticleThemesManager`, `core.css`/`stylesheet.css` structure | `theme-system.md` |
 | `iOS/Resources/ThemeColorTable.json`, `ThemeColorTableGeneratorTests`/`ThemeColorTableGuardTests`, `ArticleThemeColorProbe.version`, editing `core.css` or a bundled theme's `stylesheet.css`/`template.html` (the table must be regenerated) | `theme-testing.md` (and `article-color-pipeline.md`) 

@@ -10,6 +10,9 @@ import SwiftUI
 import WebKit
 import Articles
 import Account
+import AnnotationsKit
+import AO3Kit
+import os
 
 // MARK: - Annotation Bridge Types
 
@@ -106,7 +109,7 @@ extension WebViewController {
 	///
 	/// Both light and dark values are always set; core.css's own
 	/// `@media (prefers-color-scheme: dark)` block switches between them live, so no
-	/// registerForTraitChanges hook is needed. Called from webView(_:didFinish:) on
+	/// observeTraits hook is needed. Called from webView(_:didFinish:) on
 	/// every render and from highlightPaletteDidChange(_:), where existing <mark>s
 	/// repaint for free because they read the custom property.
 	func applyHighlightPaletteColors() {

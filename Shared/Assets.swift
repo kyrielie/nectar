@@ -26,7 +26,7 @@ struct Assets {
 		// only, no internal rename, to keep the diff small and behavior unchanged).
 		static let starOpen = RSImage(symbol: "bookmark")!
 		static let starClosed = RSImage(symbol: "bookmark.fill")!
-		static let copy = RSImage(symbol: "document.on.document")
+		static let copy = RSImage(symbol: "doc.on.doc")
 		static var markAllAsRead: RSImage { RSImage(named: "markAllAsRead")! }
 		static let nextUnread = RSImage(symbol: "chevron.down.circle")!
 

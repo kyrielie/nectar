@@ -20,8 +20,11 @@ struct ErrorLogView: View {
 	var body: some View {
 		VStack(spacing: 0) {
 			if entries.isEmpty {
-				ContentUnavailableView(NSLocalizedString("No Errors Logged", comment: "Error log empty state"), systemImage: "checkmark.circle")
-					.frame(maxWidth: .infinity, maxHeight: .infinity)
+				EmptyStateView(
+					title: Text(verbatim: NSLocalizedString("No Errors Logged", comment: "Error log empty state")),
+					systemImage: "checkmark.circle"
+				)
+				.frame(maxWidth: .infinity, maxHeight: .infinity)
 			} else {
 				privacyWarning
 				Divider()

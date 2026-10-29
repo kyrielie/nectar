@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import Tidemark
 
 public struct ParsedItem: Hashable, Sendable {
 	public let syncServiceID: String? // Nil when not syncing
@@ -244,13 +243,8 @@ public struct ParsedItem: Hashable, Sendable {
 		self.ao3SeriesID = ao3SeriesID
 		self.seriesName = seriesName
 
-		// Render Markdown when present, else use contentHTML
-		if let markdown {
-			let rendered = Tidemark.markdownToHTML(markdown)
-			self.contentHTML = rendered.isEmpty ? contentHTML : rendered
-		} else {
-			self.contentHTML = contentHTML
-		}
+		// `markdown` is carried and persisted but not rendered (Tidemark was removed to allow an iOS 16 target).
+		self.contentHTML = contentHTML
 	}
 
 	// MARK: - Hashable

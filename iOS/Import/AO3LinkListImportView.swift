@@ -223,13 +223,13 @@ struct AO3LinkListImportView: View {
 					selectedAccount = accounts.first
 				}
 			}
-			.onChange(of: pastedText) { _, _ in
+			.onChange(of: pastedText) { _ in
 				// A result describes the text that produced it. Editing or
 				// pasting more makes it stale, and returns the toolbar to Import.
 				resultMessage = nil
 				importSummary = nil
 			}
-			.onChange(of: selectedAccount) { _, _ in
+			.onChange(of: selectedAccount) { _ in
 				// A folder chosen under one account means nothing under
 				// another -- fall back to the always-valid shared
 				// destination rather than carrying a stale Container
@@ -237,7 +237,7 @@ struct AO3LinkListImportView: View {
 				destinationMode = .sharedTopLevel
 				chosenFolder = nil
 			}
-			.onChange(of: destinationMode) { _, newMode in
+			.onChange(of: destinationMode) { newMode in
 				// Selecting a different destination row (e.g. tapping
 				// "Imported Links") doesn't itself resign the date
 				// field's focus -- @FocusState only reacts to the
@@ -274,7 +274,7 @@ struct AO3LinkListImportView: View {
 			TextField(NSLocalizedString("Folder name", comment: "New dated folder name field placeholder"), text: $newFolderName)
 				.foregroundStyle(destinationMode == .newFolder ? .primary : .secondary)
 				.focused($isNewFolderNameFocused)
-				.onChange(of: isNewFolderNameFocused) { _, isFocused in
+				.onChange(of: isNewFolderNameFocused) { isFocused in
 					if isFocused {
 						destinationMode = .newFolder
 					}

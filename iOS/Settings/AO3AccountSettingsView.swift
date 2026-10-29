@@ -16,7 +16,7 @@ import Account
 
 struct AO3AccountSettingsView: View {
 
-	@State private var model = AO3SettingsModel()
+	@StateObject private var model = AO3SettingsModel()
 	@State private var isShowingLogin = false
 	@State private var isShowingSignOutConfirmation = false
 	@State private var isShowingChallengeSolver = false
@@ -79,7 +79,7 @@ struct AO3AccountSettingsView: View {
 
 			Section {
 				Toggle(NSLocalizedString("Fetch AO3 Updates for Library Works", comment: "Ambrosia AO3 updates toggle label"), isOn: $isAmbrosiaUpdatesEnabled)
-					.onChange(of: isAmbrosiaUpdatesEnabled) { _, newValue in
+					.onChange(of: isAmbrosiaUpdatesEnabled) { newValue in
 						AmbrosiaAO3NetworkPreference.updatesEnabled = newValue
 					}
 				Picker(NSLocalizedString("Check for Updates", comment: "AO3 preface refetch cadence picker label"), selection: $refetchInterval) {
@@ -87,11 +87,11 @@ struct AO3AccountSettingsView: View {
 						Text(interval.description).tag(interval)
 					}
 				}
-				.onChange(of: refetchInterval) { _, newValue in
+				.onChange(of: refetchInterval) { newValue in
 					AO3PrefaceRefetchPreference.current = newValue
 				}
 				Toggle(NSLocalizedString("Fetch New Works Immediately", comment: "AO3 prefetch-on-arrival toggle label"), isOn: $isPrefetchNewWorksEnabled)
-					.onChange(of: isPrefetchNewWorksEnabled) { _, newValue in
+					.onChange(of: isPrefetchNewWorksEnabled) { newValue in
 						AO3PrefetchNewWorksPreference.isEnabled = newValue
 					}
 			} header: {
@@ -102,7 +102,7 @@ struct AO3AccountSettingsView: View {
 
 			Section {
 				Toggle(NSLocalizedString("Leave Kudos When You Love a Work", comment: "AO3 kudos-on-like toggle label"), isOn: $isKudosOnLikeEnabled)
-					.onChange(of: isKudosOnLikeEnabled) { _, newValue in
+					.onChange(of: isKudosOnLikeEnabled) { newValue in
 						AO3KudosOnLikePreference.isEnabled = newValue
 					}
 			} header: {

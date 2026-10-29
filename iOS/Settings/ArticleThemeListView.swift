@@ -205,7 +205,7 @@ struct ArticleThemeListView: View {
 		.onReceive(NotificationCenter.default.publisher(for: .CurrentArticleThemeDidChangeNotification)) { _ in
 			themeNamesRefreshToken.toggle()
 		}
-		.onChange(of: snapshot) { _, _ in save() }
+		.onChange(of: snapshot) { _ in save() }
 	}
 
 	/// Chaining a dozen-plus separate `.onChange` modifiers onto `body` (one per

@@ -45,14 +45,14 @@ struct ReadingTimeSettingsView: View {
 
 			Section {
 				Toggle("Enable Reading Time", isOn: $enabled)
-					.onChange(of: enabled) { _, value in
+					.onChange(of: enabled) { value in
 						AppDefaults.shared.readingTimeEnabled = value
 					}
 			} footer: { Text("When enabled, reading is blocked immediately once today's limit or bedtime window is reached. Configure your limits, bedtime, and break reminders below.") }
 
 			Section("Daily Limits") {
 				Toggle("Enable Daily Limit", isOn: $dailyLimitEnabled)
-					.onChange(of: dailyLimitEnabled) { _, value in AppDefaults.shared.readingTimeDailyLimitEnabled = value }
+					.onChange(of: dailyLimitEnabled) { value in AppDefaults.shared.readingTimeDailyLimitEnabled = value }
 				ForEach(1...7, id: \.self) { weekday in
 					NavigationLink {
 						DailyLimitDetailView(
@@ -79,11 +79,11 @@ struct ReadingTimeSettingsView: View {
 
 			Section("Bedtime") {
 				Toggle("Enable Bedtime", isOn: $bedtimeEnabled)
-					.onChange(of: bedtimeEnabled) { _, value in AppDefaults.shared.readingTimeBedtimeEnabled = value }
+					.onChange(of: bedtimeEnabled) { value in AppDefaults.shared.readingTimeBedtimeEnabled = value }
 				DatePicker("Starts", selection: $start, displayedComponents: .hourAndMinute)
-					.onChange(of: start) { _, value in updateBedtimeStart(value) }
+					.onChange(of: start) { value in updateBedtimeStart(value) }
 				DatePicker("Ends", selection: $end, displayedComponents: .hourAndMinute)
-					.onChange(of: end) { _, value in updateBedtimeEnd(value) }
+					.onChange(of: end) { value in updateBedtimeEnd(value) }
 			}
 			.disabled(!enabled)
 			.opacity(enabled ? 1 : 0.4)
@@ -94,7 +94,7 @@ struct ReadingTimeSettingsView: View {
 
 			Section {
 				Toggle("Show indicator while reading", isOn: $indicatorEnabled)
-					.onChange(of: indicatorEnabled) { _, value in
+					.onChange(of: indicatorEnabled) { value in
 						AppDefaults.shared.readingTimeIndicatorDisplayMode = value ? .pie : .off
 					}
 			} footer: {
@@ -133,7 +133,7 @@ struct ReadingTimeSettingsView: View {
 				Text("Reminder").tag(TakeABreakMode.reminder)
 				Text("Enforced").tag(TakeABreakMode.enforced)
 			}
-			.onChange(of: takeABreakMode) { _, value in AppDefaults.shared.readingTimeTakeABreakMode = value }
+			.onChange(of: takeABreakMode) { value in AppDefaults.shared.readingTimeTakeABreakMode = value }
 
 			if takeABreakMode != .off {
 				takeABreakTimerRow(
@@ -437,6 +437,20 @@ private struct CountDownTimerSettingView: View {
 
 /// Pushed per weekday from ReadingTimeSettingsView's "Daily limits"
 /// section -- the countDownTimer wheel (see CountDownTimerPicker) is too
+/// Decides when lowering a daily limit needs the "this is a strict limit"
+/// confirmation. Pure so it can be tested without a view.
+enum StrictLimitConfirmation {
+	/// Limits below this many minutes are "strict" and ask for confirmation.
+	static let thresholdMinutes = 120
+
+	/// True when a change crosses from at-or-above the threshold to below it.
+	static func needsConfirmation(from oldMinutes: Int, to newMinutes: Int) -> Bool {
+		newMinutes < thresholdMinutes && oldMinutes >= thresholdMinutes
+	}
+}
+
+/// Pushed per weekday from ReadingTimeSettingsView's "Daily limits"
+/// section -- the countDownTimer wheel (see CountDownTimerPicker) is too
 /// tall to sit inline in a Form row alongside six other weekdays, so each
 /// weekday gets its own screen, matching how Settings → Reading Time →
 /// App Limits → Add Limit is its own pushed screen in iOS Reading Time.
@@ -444,6 +458,11 @@ private struct DailyLimitDetailView: View {
 	let weekdayName: String
 	@Binding var minutes: Int
 	@State private var pendingConfirmation: PendingConfirmation?
+
+	/// The value `minutes` had before the latest change. `onChange` on iOS 16 only
+	/// reports the new value, so the old one is tracked here. Nil until the
+	/// view appears.
+	@State private var previousMinutes: Int?
 
 	private struct PendingConfirmation: Identifiable {
 		let id = UUID()
@@ -455,8 +474,11 @@ private struct DailyLimitDetailView: View {
 		Form {
 			Section {
 				CountDownTimerPicker(minutes: $minutes)
-					.onChange(of: minutes) { oldValue, newValue in
-						if newValue < 120, oldValue >= 120 {
+					.onAppear { previousMinutes = minutes }
+					.onChange(of: minutes) { newValue in
+						let oldValue = previousMinutes ?? newValue
+						previousMinutes = newValue
+						if StrictLimitConfirmation.needsConfirmation(from: oldValue, to: newValue) {
 							pendingConfirmation = PendingConfirmation(
 								message: "\(weekdayName) is set to \(durationString(newValue)). This is a strict limit — reading will be blocked once it's reached.",
 								revert: { minutes = oldValue }

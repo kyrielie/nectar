@@ -111,11 +111,12 @@ public enum AO3AuthenticatedFetcher {
 
 		var request = URLRequest(url: url)
 		request.setValue(cookieHeaderValue, forHTTPHeaderField: "Cookie")
+		let urlRequest = request
 
 		logger.debug("Requesting AO3: GET \(url.absoluteString, privacy: .public) (authenticated)")
 
 		let (data, httpResponse) = try await AO3RequestCoordinator.shared.execute(url: url) {
-			let (d, r) = try await session.data(for: request)
+			let (d, r) = try await session.data(for: urlRequest)
 			guard let hr = r as? HTTPURLResponse else {
 				throw URLError(.badServerResponse)
 			}

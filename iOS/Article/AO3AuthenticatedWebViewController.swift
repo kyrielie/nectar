@@ -53,13 +53,27 @@ final class AO3AuthenticatedWebViewController: UIViewController {
 	/// entirely -- this must never become `UUID()`.
 	private static let dataStoreIdentifier = UUID(uuidString: "8C6C7C7E-9A8B-4B2C-9C2E-2E6E9B7B9E4A")!
 
+	/// iOS 16 has no identifier-scoped persistent store (`WKWebsiteDataStore(forIdentifier:)`
+	/// is iOS 17+). Falling back to `.default()` would share cookies with the article reader's
+	/// web views, which render arbitrary feed HTML and JS, so iOS 16 uses one app-lifetime
+	/// non-persistent store instead: still isolated, shared across opens of this screen,
+	/// but the AO3 browser sign-in is lost when the app relaunches.
+	@MainActor private static let nonPersistentFallbackDataStore = WKWebsiteDataStore.nonPersistent()
+
+	@MainActor private static func makeDataStore() -> WKWebsiteDataStore {
+		if #available(iOS 17, *) {
+			return WKWebsiteDataStore(forIdentifier: dataStoreIdentifier)
+		}
+		return nonPersistentFallbackDataStore
+	}
+
 	/// Removes everything this browser's persistent data store holds
 	/// (cookies, local storage, caches), which signs the in-app AO3
 	/// browser out. Called from AO3AccountSettingsView's explicit Sign Out.
 	/// Reaches the same store through the same identifier the web view
 	/// uses, so it works whether or not a browser screen is currently open.
 	static func clearBrowserData() async {
-		let dataStore = WKWebsiteDataStore(forIdentifier: dataStoreIdentifier)
+		let dataStore = makeDataStore()
 		await dataStore.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast)
 	}
 
@@ -84,7 +98,7 @@ final class AO3AuthenticatedWebViewController: UIViewController {
 		navigationItem.rightBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "safari"), style: .plain, target: self, action: #selector(openInSafariTapped))
 
 		let configuration = WKWebViewConfiguration()
-		configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: Self.dataStoreIdentifier)
+		configuration.websiteDataStore = Self.makeDataStore()
 
 		let webView = WKWebView(frame: .zero, configuration: configuration)
 		webView.navigationDelegate = self

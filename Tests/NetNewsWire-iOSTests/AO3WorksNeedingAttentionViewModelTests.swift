@@ -7,6 +7,7 @@
 //  database, account or network is involved.
 //
 
+import Combine
 import Testing
 import Foundation
 import ArticlesDatabase
@@ -179,5 +180,25 @@ import ArticlesDatabase
 
 		#expect(recorder.cleared == ["1"])
 		#expect(model.rows.map(\.articleID) == ["2"])
+	}
+
+	// MARK: - Invalidation contract
+
+	/// The screen is driven by `@StateObject`, so published changes must
+	/// announce themselves through `objectWillChange` (what `@Observable` did per property).
+	@Test func publishedChangesSendObjectWillChange() async {
+		let recorder = Recorder()
+		recorder.data = [("a", [Self.info("1", pendingAt: Self.base, hasPending: true)])]
+		let model = makeModel(recorder)
+		var changeCount = 0
+		let subscription = model.objectWillChange.sink { changeCount += 1 }
+		defer { subscription.cancel() }
+
+		model.notice = "Changed"
+		#expect(changeCount == 1)
+
+		await model.refresh()
+		#expect(changeCount > 1)
+		#expect(!model.rows.isEmpty)
 	}
 }

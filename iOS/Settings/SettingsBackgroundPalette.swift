@@ -6,7 +6,7 @@
 //  every pushed Settings screen (and the root Settings screen itself) that
 //  paints its table/collection view background from
 //  Assets.Colors.settingsBackground(for:) -- same three-notification shape
-//  (viewDidLoad application, registerForTraitChanges, .surfaceTintDidChange
+//  (viewDidLoad application, observeTraits, .surfaceTintDidChange
 //  observer) ArticleViewController.applySurfacePaletteNavigationBarAppearance()
 //  already established, factored out once rather than repeated identically
 //  across five controllers.
@@ -40,7 +40,7 @@ extension SettingsPaletteBackgroundHosting {
 		applySettingsPaletteBackground()
 		refreshPaletteCellBackgrounds()
 
-		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, previousTraitCollection: UITraitCollection) in
+		observeTraits([.userInterfaceStyle]) { (self: Self, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
 			self.applySettingsPaletteBackground()
 			// Bug fix: this only used to repaint paletteBackgroundView (the
