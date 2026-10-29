@@ -68,7 +68,7 @@ struct ReadingStatsView: View {
 		List {
 			Section {
 				Toggle("Track reading activity", isOn: $trackingEnabled)
-					.onChange(of: trackingEnabled) { _, value in AppDefaults.shared.readingStatsTrackingEnabled = value }
+					.onChange(of: trackingEnabled) { value in AppDefaults.shared.readingStatsTrackingEnabled = value }
 			} footer: {
 				Text("When off, no new reading activity is recorded. Existing history is kept.")
 			}

@@ -25,8 +25,7 @@ struct DinosaurRowView: View {
 					Text(verbatim: dinosaur.feedName)
 						.font(.headline)
 					Text(verbatim: dinosaur.feedURL)
-						.font(.caption)
-						.monospaced()
+						.font(.system(.caption, design: .monospaced))
 					LabeledContent {
 						Text(verbatim: dinosaur.accountName)
 					} label: {

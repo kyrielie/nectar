@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
 	name: "RSParser",
-	platforms: [.iOS(.v17)],
+	platforms: [.iOS(.v16)],
 	products: [
 		.library(
 			name: "RSParser",
@@ -11,13 +11,12 @@ let package = Package(
 			targets: ["RSParser"])
 	],
 	dependencies: [
-		.package(url: "https://github.com/brentsimmons/Tidemark", from: "1.0.0"),
 		.package(path: "../RSCore")
 	],
 	targets: [
 		.target(
 			name: "RSParser",
-			dependencies: ["Tidemark", "RSCore"],
+			dependencies: ["RSCore"],
 			swiftSettings: [
 				.swiftLanguageMode(.v6),
 				.enableUpcomingFeature("NonisolatedNonsendingByDefault"),

@@ -334,11 +334,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange(_:)), name: .accentColorDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(readingTimeUsageDidChange(_:)), name: .readingTimeUsageDidChange, object: nil)
 
-		// Deployment target is iOS 17+ (xcconfig/NetNewsWire_project.xcconfig,
-		// IPHONEOS_DEPLOYMENT_TARGET = 17.0), so use registerForTraitChanges
-		// rather than the traitCollectionDidChange override it deprecated --
-		// same reasoning and pattern as WebViewController.viewDidLoad().
-		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: ArticleViewController, previousTraitCollection: UITraitCollection) in
+		observeTraits([.userInterfaceStyle]) { (self: ArticleViewController, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
 			self.applyToolbarStyle()
 		}

@@ -28,7 +28,7 @@ options:
   developmentLanguage: en
   autogenerateSchemes: false
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "16.0"
 
 configFiles:
   Debug: xcconfig/NetNewsWire_project_debug.xcconfig

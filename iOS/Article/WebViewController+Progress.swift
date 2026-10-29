@@ -8,6 +8,7 @@
 import UIKit
 import WebKit
 import Articles
+import os
 
 extension WebViewController: UIScrollViewDelegate {
 

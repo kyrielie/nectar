@@ -12,7 +12,7 @@ import RSCore
 struct DinosaursView: View {
 
 	// MARK: State
-	@State private var model = DinosaursViewModel()
+	@StateObject private var model = DinosaursViewModel()
 	@State private var dinosaurPendingDeletion: DinosaurRow?
 	@State private var showDeleteConfirmation = false
 	@State private var homePageURL: HomePageURL?
@@ -57,7 +57,7 @@ struct DinosaursView: View {
 									UIPasteboard.general.string = dinosaur.feedURL
 								} label: {
 									Text("Copy Feed URL", comment: "Command")
-									Image(systemName: "document.on.document")
+									Image(systemName: "doc.on.doc")
 								}
 							} label: {
 								Label("More", systemImage: "ellipsis")
@@ -78,7 +78,7 @@ struct DinosaursView: View {
 					}
 					.pickerStyle(.segmented)
 					.padding(.bottom, 12)
-					.onChange(of: model.monthThreshold) {
+					.onChange(of: model.monthThreshold) { _ in
 						Task { @MainActor in
 							await model.refresh()
 						}

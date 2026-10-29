@@ -193,7 +193,7 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 		configureCollectionView(dataSource!)
 		applyListBackground()
 		applySurfacePaletteNavigationBarAppearance()
-		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: MainTimelineModernViewController, previousTraitCollection: UITraitCollection) in
+		observeTraits([.userInterfaceStyle]) { (self: MainTimelineModernViewController, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
 			self.applyListBackground()
 			// applySurfacePaletteNavigationBarAppearance() also recolors

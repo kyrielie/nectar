@@ -8,6 +8,7 @@
 //  most tests use a private NotificationCenter and no Keychain.
 //
 
+import Combine
 import Testing
 import Foundation
 import UIKit
@@ -166,5 +167,24 @@ import RSWeb
 		AO3SessionStore.saveSession(cookieHeaderValue: "a=1")
 
 		#expect(await waitUntil { model.sessionEnded == nil })
+	}
+
+	// MARK: - Invalidation contract
+
+	/// The screen is driven by `@StateObject`, so a published change must
+	/// announce itself through `objectWillChange` (what `@Observable` did per property).
+	@Test func publishedChangeSendsObjectWillChange() async {
+		let sources = Sources()
+		let center = NotificationCenter()
+		let model = makeModel(sources, center: center)
+		var changeCount = 0
+		let subscription = model.objectWillChange.sink { changeCount += 1 }
+		defer { subscription.cancel() }
+
+		sources.isSignedIn = true
+		center.post(name: .ao3SessionDidChange, object: nil)
+
+		#expect(await waitUntil { model.isSignedIn })
+		#expect(changeCount >= 1)
 	}
 }

@@ -169,7 +169,7 @@ struct AnnotationEditorView: View {
 				} header: {
 					Text("Edit Text", comment: "Annotation editor: edit-text section header")
 				}
-				.onChange(of: editText) { _, newValue in
+				.onChange(of: editText) { newValue in
 					// Only a first-time edit's default reacts live -- see
 					// isFirstTimeEdit's doc comment. The moment the field
 					// starts diverging from the original quote, default

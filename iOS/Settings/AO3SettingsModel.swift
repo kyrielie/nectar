@@ -15,28 +15,28 @@
 //
 
 import Foundation
-import Observation
+import Combine
 import UIKit
 import AO3Kit
 import RSWeb
 
-@MainActor @Observable final class AO3SettingsModel {
+@MainActor final class AO3SettingsModel: ObservableObject {
 
-	private(set) var isSignedIn: Bool
-	private(set) var sessionEnded: (date: Date, reason: AO3SessionEndReason)?
-	private(set) var rateLimitResumeDate: Date?
-	private(set) var challengeCapturedAt: Date?
+	@Published private(set) var isSignedIn: Bool
+	@Published private(set) var sessionEnded: (date: Date, reason: AO3SessionEndReason)?
+	@Published private(set) var rateLimitResumeDate: Date?
+	@Published private(set) var challengeCapturedAt: Date?
 
-	@ObservationIgnored private let isSignedInProvider: @MainActor () -> Bool
-	@ObservationIgnored private let sessionEndedProvider: @MainActor () -> (date: Date, reason: AO3SessionEndReason)?
-	@ObservationIgnored private let rateLimitProvider: @MainActor () -> Date?
-	@ObservationIgnored private let challengeCapturedAtProvider: @MainActor () -> Date?
-	@ObservationIgnored private let now: @MainActor () -> Date
-	@ObservationIgnored private let sleeper: @MainActor (Date) async -> Void
+	private let isSignedInProvider: @MainActor () -> Bool
+	private let sessionEndedProvider: @MainActor () -> (date: Date, reason: AO3SessionEndReason)?
+	private let rateLimitProvider: @MainActor () -> Date?
+	private let challengeCapturedAtProvider: @MainActor () -> Date?
+	private let now: @MainActor () -> Date
+	private let sleeper: @MainActor (Date) async -> Void
 
 	// Touched from `deinit`, which is nonisolated.
-	@ObservationIgnored nonisolated(unsafe) private var observers = [NSObjectProtocol]()
-	@ObservationIgnored nonisolated(unsafe) private var sleepTask: Task<Void, Never>?
+	nonisolated(unsafe) private var observers = [NSObjectProtocol]()
+	nonisolated(unsafe) private var sleepTask: Task<Void, Never>?
 
 	init(
 		isSignedIn: @escaping @MainActor () -> Bool = { AO3SessionStore.isSignedIn },

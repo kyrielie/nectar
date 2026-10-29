@@ -33,10 +33,9 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   fetch or listing-page scrape rather than the feed itself; see
   `ambrosia-feed.md` for the distinction and `ao3-feeds.md` for where each
   one is read.
-  `ParsedItem` also carries a `markdown` field: when present, RSParser
-  renders it to HTML via `Tidemark.markdownToHTML` and uses that as
-  `contentHTML` (falling back to any provided `contentHTML` if the
-  rendered result is empty). `JSONFeedParser` also logs, via `os.Logger`
+  `ParsedItem` also carries a `markdown` field: `markdown` is carried and
+  persisted, but not rendered (the Tidemark package dependency was dropped to
+  enable iOS 16 deployment). `JSONFeedParser` also logs, via `os.Logger`
   (`.notice`), an item-count summary for every parse plus a reason for
   each individual dropped item (missing `uniqueID`, missing content) and
   each same-`uniqueID` collision within one feed — read this log first
@@ -252,3 +251,14 @@ small smoke test, so a green run there says little about the moved code.
 ## Page-state push (`main.js`)
 
 `setNectarState(state)` in `Shared/Article Rendering/main.js` sets `data-*` attributes on the hidden `#nectarState` marker (built by `ArticleRenderer.nectarStateMarkerHTML`). `WebViewController.statusesDidChange` calls it with the article's starred and loved values so themes can react without a re-render. Covered by `Tests/JS/nectar-state/`. See `nnwtheme-format.md`, "Nectar state hooks".
+
+## Minimum OS and compatibility shims
+
+Nectar's minimum deployment target is **iOS 16.0** (`IPHONEOS_DEPLOYMENT_TARGET = 16.0` in `xcconfig/NetNewsWire_project.xcconfig`, `project.yml`, and `.iOS(.v16)` across all 21 `Modules/*/Package.swift` manifests).
+
+To preserve zero degradation on iOS 17+ without scattering `#available` checks across UI call sites:
+- **`observeTraits`** (`iOS/UIKit Extensions/TraitChangeObserving.swift`): Polyfills `registerForTraitChanges` on iOS 16 using a hidden zero-size `TraitChangeObserverView` that overrides `traitCollectionDidChange`.
+- **`EmptyStateView`** (`iOS/Shared/EmptyStateView.swift`): Uses native `ContentUnavailableView` on iOS 17+ and falls back to centered `EmptyStateFallbackView` on iOS 16.
+- **`scrollClipDisabledIfAvailable()`** (`iOS/Shared/ViewAvailability.swift`): No-op on iOS 16; calls `scrollClipDisabled()` on iOS 17+.
+- **`ObservableObject`**: View models (`DinosaursViewModel`, `AO3SettingsModel`, `AO3WorksNeedingAttentionViewModel`) conform to `ObservableObject` with `@Published` and `Combine` rather than the Swift 5.9 `Observation` framework (`@Observable`).
+- **`WKWebsiteDataStore`**: In `AO3AuthenticatedWebViewController`, falls back to `WKWebsiteDataStore.nonPersistent()` on iOS 16 where `WKWebsiteDataStore(forIdentifier:)` is unavailable.

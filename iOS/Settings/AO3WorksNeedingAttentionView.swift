@@ -16,14 +16,14 @@ import SwiftUI
 
 struct AO3WorksNeedingAttentionView: View {
 
-	@State private var viewModel: AO3WorksNeedingAttentionViewModel
+	@StateObject private var viewModel: AO3WorksNeedingAttentionViewModel
 	private let onReviewUpdate: (_ accountID: String, _ articleID: String) -> Void
 
 	init(
 		viewModel: AO3WorksNeedingAttentionViewModel = AO3WorksNeedingAttentionViewModel(),
 		onReviewUpdate: @escaping (_ accountID: String, _ articleID: String) -> Void
 	) {
-		_viewModel = State(initialValue: viewModel)
+		_viewModel = StateObject(wrappedValue: viewModel)
 		self.onReviewUpdate = onReviewUpdate
 	}
 
@@ -31,8 +31,8 @@ struct AO3WorksNeedingAttentionView: View {
 		Group {
 			if viewModel.rows.isEmpty {
 				if viewModel.hasLoaded {
-					ContentUnavailableView(
-						NSLocalizedString("Nothing Needs Attention", comment: "Works Needing Attention: empty state title"),
+					EmptyStateView(
+						title: Text(verbatim: NSLocalizedString("Nothing Needs Attention", comment: "Works Needing Attention: empty state title")),
 						systemImage: "checkmark.circle",
 						description: Text(NSLocalizedString("Works with an update waiting for review, or that Nectar could not refresh from AO3, show up here.", comment: "Works Needing Attention: empty state description"))
 					)

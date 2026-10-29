@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
 	name: "AO3Kit",
-	platforms: [.iOS(.v17)],
+	platforms: [.iOS(.v16)],
 	products: [
 		.library(name: "AO3Kit", type: .dynamic, targets: ["AO3Kit"])
 	],

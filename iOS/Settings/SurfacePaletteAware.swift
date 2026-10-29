@@ -46,7 +46,7 @@ final class SurfacePaletteObserver: ObservableObject {
 		}
 	}
 
-	/// Called from the hosting controller's registerForTraitChanges
+	/// Called from the hosting controller's observeTraits
 	/// handler when userInterfaceStyle changes, since light/dark HexSet
 	/// selection depends on it.
 	func refresh(for traitCollection: UITraitCollection) {

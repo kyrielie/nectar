@@ -23,7 +23,8 @@ import ArticleTheming
 
 final class WebViewController: UIViewController {
 
-	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "WebViewController")
+	static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "WebViewController")
+	static let pageCounterLeadingInset: CGFloat = 44
 
 	private struct MessageName {
 		static let imageWasClicked = "imageWasClicked"
@@ -195,7 +196,7 @@ final class WebViewController: UIViewController {
 		// pageCounterLabel) on an Appearance change while an article is open. The
 		// article CSS repaints itself via prefers-color-scheme, but these colors
 		// otherwise only re-resolved on the next renderPage.
-		registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: WebViewController, previousTraitCollection: UITraitCollection) in
+		observeTraits([.userInterfaceStyle]) { (self: WebViewController, previousTraitCollection: UITraitCollection) in
 			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else {
 				return
 			}
@@ -232,7 +233,7 @@ final class WebViewController: UIViewController {
 	// settled: the restored article is pushed from
 	// SceneDelegate.scene(_:willConnectTo:options:) before the window is key. A wrong
 	// read disagrees with WKWebView's own prefers-color-scheme and nothing corrects
-	// it, since registerForTraitChanges only fires on a change. Most visible on
+	// it, since observeTraits only fires on a change. Most visible on
 	// themes with no explicit body background (e.g. Broadsheet), whose light and
 	// dark fallbacks are opposites; see article-color-pipeline.md.
 	//
@@ -926,7 +927,7 @@ private extension WebViewController {
 	// background from ArticleThemeColorStore (measured value if cached, else the
 	// legacy scanner, whose black/white fallback applies last).
 	//
-	// Also re-run on its own (no reload) from the registerForTraitChanges handler in
+	// Also re-run on its own (no reload) from the observeTraits handler in
 	// viewDidLoad, since these native colors otherwise go stale until the next
 	// renderPage. See article-color-pipeline.md.
 	private func applyResolvedBackgroundColors() {
@@ -934,7 +935,7 @@ private extension WebViewController {
 
 		// Read isDark from self, not webView: the pooled PreloadedWebView is reused and
 		// reattached outside the normal lifecycle, so its traitCollection can lag one
-		// trait-change cycle behind. The registerForTraitChanges handler has already
+		// trait-change cycle behind. The observeTraits handler has already
 		// confirmed self's is fresh. A stale read applies exactly one toggle behind (dark
 		// to light shows the dark override, then back shows the light one) until a third
 		// toggle resyncs.

@@ -86,12 +86,13 @@ struct AO3RequestCoordinatorTests {
 
 		let work: @Sendable () async throws -> Void = {
 			try await coordinator.withSlot {
-				activeCount.withLock {
-					$0 += 1
-					peakCount.withLock { peak in
-						if activeCount.withLock({ $0 }) > peak {
-							peak = activeCount.withLock { $0 }
-						}
+				let current = activeCount.withLock { count -> Int in
+					count += 1
+					return count
+				}
+				peakCount.withLock { peak in
+					if current > peak {
+						peak = current
 					}
 				}
 				try await Task.sleep(nanoseconds: 50_000_000) // 50ms

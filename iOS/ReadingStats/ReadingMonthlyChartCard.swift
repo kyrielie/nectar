@@ -88,7 +88,7 @@ struct ReadingMonthlyChartCard: View {
 						}
 					}
 					.padding(.horizontal)
-					.scrollClipDisabled()
+					.scrollClipDisabledIfAvailable()
 				}
 			}
 			.frame(

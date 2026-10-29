@@ -29,7 +29,7 @@ struct AboutCreditView: View {
 						.lineLimit(2)
 						.multilineTextAlignment(.leading)
 						.minimumScaleFactor(0.8)
-						.foregroundStyle(.link)
+						.foregroundColor(Color(uiColor: .link))
 						.onTapGesture {
 							UIApplication.shared.open(item.contributor.url)
 						}

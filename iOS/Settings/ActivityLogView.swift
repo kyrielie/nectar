@@ -19,8 +19,11 @@ struct ActivityLogView: View {
 	var body: some View {
 		VStack(spacing: 0) {
 			if isEmpty {
-				ContentUnavailableView(NSLocalizedString("No Activity Logged", comment: "Activity log empty state"), systemImage: "checkmark.circle")
-					.frame(maxWidth: .infinity, maxHeight: .infinity)
+				EmptyStateView(
+					title: Text(verbatim: NSLocalizedString("No Activity Logged", comment: "Activity log empty state")),
+					systemImage: "checkmark.circle"
+				)
+				.frame(maxWidth: .infinity, maxHeight: .infinity)
 			} else {
 				privacyWarning
 				Divider()

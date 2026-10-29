@@ -124,9 +124,10 @@ public enum AO3SearchResultsFetcher {
 				if let clearanceCookieHeaderValue {
 					request.setValue(clearanceCookieHeaderValue, forHTTPHeaderField: "Cookie")
 				}
+				let urlRequest = request
 				let downloadResponse = try await AO3RequestCoordinator.shared.withSlot {
 					try await AO3Pacer.shared.pace()
-					return try await Downloader.shared.download(request, shouldCache: { data, _ in
+					return try await Downloader.shared.download(urlRequest, shouldCache: { data, _ in
 						// See Downloader's own doc comment on the caching check:
 						// a Cloudflare challenge page is a 200, so it needs its
 						// own veto here on top of Downloader's status-code check,

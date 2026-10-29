@@ -23,9 +23,11 @@ struct AccountNotificationInspectorView: View {
 		NavigationStack {
 			if authorisationStatus == .notDetermined || authorisationStatus == .denied {
 				VStack {
-					ContentUnavailableView("Notifications Disabled",
-										   systemImage: "bell.slash",
-										   description: Text("Enable Notifications in Settings", comment: "Enable Notifications in Settings"))
+					EmptyStateView(
+						title: Text("Notifications Disabled", comment: "Notifications disabled empty state title"),
+						systemImage: "bell.slash",
+						description: Text("Enable Notifications in Settings", comment: "Enable Notifications in Settings")
+					)
 
 					Button {
 						UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!)

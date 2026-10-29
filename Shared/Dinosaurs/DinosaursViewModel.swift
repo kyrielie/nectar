@@ -5,6 +5,7 @@
 //  Created by Brent Simmons on 6/1/26.
 //
 
+import Combine
 import Foundation
 import os
 import Account
@@ -38,12 +39,11 @@ struct DinosaurRow: Identifiable {
 	let containers: [Container]
 }
 
-@Observable
-@MainActor final class DinosaursViewModel {
+@MainActor final class DinosaursViewModel: ObservableObject {
 
-	private(set) var rows = [DinosaurRow]()
-	private(set) var showAccountColumn = false
-	var monthThreshold = 6
+	@Published private(set) var rows = [DinosaurRow]()
+	@Published private(set) var showAccountColumn = false
+	@Published var monthThreshold = 6
 	private var sortDescriptor: NSSortDescriptor?
 
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "DinosaursViewModel")

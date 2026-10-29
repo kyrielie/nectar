@@ -130,7 +130,7 @@ enum BackupSQLiteImportTable {
 	/// ArticlesDatabase.swift only carries a subset of the columns this table
 	/// actually has today -- `bookKey`, `isAmbrosiaItem`, the four AO3 Work
 	/// Header stats columns (`commentCount`/`kudosCount`/`bookmarkCount`/
-	/// `hitCount`), `previousWorkURL`/`nextWorkURL`, `lastPrefaceFetchDate`,
+	/// `hitCount`), `dateBookmarked`, `lastPrefaceFetchDate`,
 	/// and the Task 8 pending-update/regression-guard columns
 	/// (`pendingUpdateContentHTML`/`pendingUpdateDetectedAt`/
 	/// `wordCountRegressionFlaggedAt`/`ao3ConfirmedMissingAt`) all arrive via
@@ -184,7 +184,7 @@ enum BackupSQLiteImportTable {
 		"fandoms", "relationships", "characters", "ratings", "warnings", "categories", "additionalTags", "series",
 		"bookKey", "isAmbrosiaItem",
 		"commentCount", "kudosCount", "bookmarkCount", "hitCount", "isRestricted", "language", "collections",
-		"previousWorkURL", "nextWorkURL", "lastPrefaceFetchDate",
+		"dateBookmarked", "lastPrefaceFetchDate",
 		"pendingUpdateContentHTML", "pendingUpdateDetectedAt", "wordCountRegressionFlaggedAt", "ao3ConfirmedMissingAt"
 	]
 
