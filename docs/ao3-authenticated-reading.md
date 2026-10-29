@@ -41,7 +41,7 @@ others' storage or transport:
      ends the stored session with `AO3SessionStore.endSession(reason: .rejectedByAO3)`,
      which records when and why and posts `.ao3SessionDidChange`.
    - `AO3SearchResultsFetcher.fetchRequiringSignIn(url:feedURL:isAlwaysAuthenticatedListing:activityContext:)`
-     (see `ao3-feeds.md`, `nectar-toolbar-ao3-listing-feeds.md`), fired for
+     (see `ao3-feeds.md`, `ao3-link.md`), fired for
      any AO3 listing page when a session is stored, and always fired
      (session or not) for the two listing types that are always private
      to the signed-in account — subscriptions and marked-for-later

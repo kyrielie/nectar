@@ -76,9 +76,10 @@ codebase moves faster than docs do. See "Keeping this current" below.
   `docs/nectar-implementation-plan.md`, `ao3-merged-plan.md`,
   `ao3-merged-plan-nectar.md`, `nectar-ao3-features-plan-FINAL.md`,
   `nectar-theme-background-toolbar-plan.md`, `toolbar-style-plan.md`,
-  `nectar-navbar-toggle-plan.md`, and — present in one snapshot of this
+  `nectar-navbar-toggle-plan.md`, `nectar-toolbar-ao3-listing-feeds.md`,
+  and — present in one snapshot of this
   repo, absent from a later one — `nectar-fixes-plan-3.md`) that is not
-  present anywhere in the current tree. This is now an eight-plus-file
+  present anywhere in the current tree. This is now a nine-plus-file
   pattern, not a one-off. `.gitignore` only excludes
   `plans/`, not `docs/`, so gitignore status alone doesn't explain it —
   treat the cause as an open question (see "Keeping this current" below),
@@ -127,7 +128,7 @@ it's trusted by default. Specifically:
 | `ReadingTimeTracker`, `ReadingTimeEnforcementOverlay`, `ReadingTimeSettingsView` | `reading-time.md` |
 | `ReadingStatsTracker`, `ReadingStatsView`, how completed works are counted | `reading-stats.md` |
 | Any new or renamed user-facing string, or a decision about which vocabulary (UI vs. code) a screen should use | `terminology.md` |
-| `BackupManager`, `BackupRestoreCoordinator`, the backup zip's file layout | `backup-restore.md` |
+| `BackupManager`, `BackupRestoreCoordinator`, `BackupIgnoreList`, `BackupIgnoreListStore`, `IgnoreList.json`, the backup zip's file layout | `backup-restore.md` |
 | `GuideOverlayView`, `GuideContent`, `HelpRow.guide` | `guide.md` |
 | `HTMLMetadata`/favicon extraction | `metadata-extraction.md` |
 | `AnnotationsTable`, `Annotation`, `AnnotationsKit`, `annotations.js`, the `textWasSelected`/`annotationWasTapped` message-handler cases, `AnnotationCSVExporter`, the `annotations` table in `ArticleSQLiteExportTable` | `annotations.md` |

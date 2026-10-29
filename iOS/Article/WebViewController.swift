@@ -40,34 +40,34 @@ final class WebViewController: UIViewController {
 	// decidePolicyFor navigationAction. See docs/ao3-feeds.md.
 	private static let nectarSeriesScheme = "nectar-series"
 
-	private var topShowBarsView: UIView!
-	private var bottomShowBarsView: UIView!
-	private var topShowBarsViewConstraint: NSLayoutConstraint!
-	private var bottomShowBarsViewConstraint: NSLayoutConstraint!
+	var topShowBarsView: UIView!
+	var bottomShowBarsView: UIView!
+	var topShowBarsViewConstraint: NSLayoutConstraint!
+	var bottomShowBarsViewConstraint: NSLayoutConstraint!
 
 	// Notch mask and page counter for fullscreen reading (see
 	// updateNotchAndPageCounterVisibility for the visibility rules). Unlike
 	// topShowBarsView, an invisible tap target moved off-screen in fullscreen,
 	// the cover is a persistent mask over the notch itself.
-	private var notchCoverView: UIView!
-	private var notchCoverViewHeightConstraint: NSLayoutConstraint!
-	private var pageCounterLabel: UILabel!
-	private var readingTimePieIndicatorView: ReadingTimePieIndicatorView!
+	var notchCoverView: UIView!
+	var notchCoverViewHeightConstraint: NSLayoutConstraint!
+	var pageCounterLabel: UILabel!
+	var readingTimePieIndicatorView: ReadingTimePieIndicatorView!
 
 	// The single authoritative reference to the current webview. Not derived from
 	// view.subviews[0], which could return the wrong view if two were ever
 	// inserted (see loadWebViewGeneration).
-	private var webView: PreloadedWebView?
+	var webView: PreloadedWebView?
 
 	/// Non-nil (view coordinates) only in .nativeMenu mode while a live, non-empty
 	/// selection exists. Set/cleared in textWasSelected(body:); backs
 	/// isSelectionHighlightable, which buildMenu(with:) uses to decide whether to
 	/// offer "Highlight". Stays nil in .popup/.off.
-	private var currentSelectionRect: CGRect?
+	var currentSelectionRect: CGRect?
 
 	/// Backing storage for awaitNextPageLoad(), resumed from webView(_:didFinish:).
 	/// An array so concurrent awaiters are all resumed rather than one dropped.
-	private var nextPageLoadContinuations: [CheckedContinuation<Void, Never>] = []
+	var nextPageLoadContinuations: [CheckedContinuation<Void, Never>] = []
 
 	// Per-(series, direction) in-flight/failure state for the inline series nav
 	// links. Keyed on SeriesNavKey so different series' links (or one series'
@@ -89,10 +89,10 @@ final class WebViewController: UIViewController {
 	// (windowScrollY still 0) and setArticle's post-scroll-fetch loadWebView each
 	// saw webView == nil and each inserted a webview; which one ended up on top
 	// was timing-dependent.
-	private var loadWebViewGeneration = 0
+	var loadWebViewGeneration = 0
 
-	private lazy var contextMenuInteraction = UIContextMenuInteraction(delegate: self)
-	private var isFullScreenAvailable: Bool {
+	lazy var contextMenuInteraction = UIContextMenuInteraction(delegate: self)
+	var isFullScreenAvailable: Bool {
 		return AppDefaults.shared.articleFullscreenAvailable && traitCollection.userInterfaceIdiom == .phone
 	}
 	private lazy var articleIconSchemeHandler = ArticleIconSchemeHandler(coordinator: coordinator)
@@ -122,7 +122,7 @@ final class WebViewController: UIViewController {
 	// Last scroll position / reading progress confirmed via the JS bridge in
 	// scrollPositionDidChange(). Plain properties so viewWillDisappear can flush a
 	// final save synchronously, without an async JS round trip racing teardown.
-	private var lastKnownReadingProgress: Double?
+	var lastKnownReadingProgress: Double?
 	// Diagnostic only (traces duplicate renderPage reports); loadWebViewGeneration gates behavior.
 	private var loadWebViewCallCount = 0
 	// True from the start of renderPage() until page.html reports
@@ -130,22 +130,22 @@ final class WebViewController: UIViewController {
 	// While true, scroll samples are noise (WKWebView's native reset to (0,0), or
 	// restore attempts before the document reaches final height) and must not be
 	// written to windowScrollY or persisted.
-	private var isRestoringScrollPosition = false
+	var isRestoringScrollPosition = false
 
 	// True while the rendered content is a not-yet-fetched AO3 stub (see
 	// isProvisionalAO3Stub) or a fetched chapter is being swapped in. Scroll
 	// samples then don't reflect the real document and must not be recorded as
 	// progress or Reading Stats credit; see scrollPositionDidChange.
-	private var isContentProvisional = false
+	var isContentProvisional = false
 
 	// Safety net so scroll saves aren't blocked forever if page.html's completion
 	// message never arrives (JS error, print preview, etc.).
-	private var scrollRestoreFailsafeWorkItem: DispatchWorkItem?
+	var scrollRestoreFailsafeWorkItem: DispatchWorkItem?
 
 	// Per-load high-water mark of document height. Defense in depth against
 	// persisting a sample taken against a shorter-than-final document after
 	// isRestoringScrollPosition clears (e.g. a late embed reflow). Reset in renderPage.
-	private var maxObservedScrollHeight: Double = 0
+	var maxObservedScrollHeight: Double = 0
 
 	// Set by setArticle before its async scroll-position fetch and cleared just
 	// before that Task calls loadWebView. While true, viewDidLoad skips its own
@@ -157,7 +157,7 @@ final class WebViewController: UIViewController {
 	/// Session-only stack of pre-jump windowScrollY values, pushed before each
 	/// programmatic jump (scrollToHeading, scrollToAnnotation); see scrollBack().
 	/// Large manual scroll deltas are not detected as jumps (docs/reading-progress.md).
-	private var scrollJumpHistory: [Double] = []
+	var scrollJumpHistory: [Double] = []
 
 	/// URL the current page was loaded with (set in renderPage). nil when the article has no
 	/// usable base URL. Used to recognise links that only change the fragment (same-document).
@@ -386,12 +386,6 @@ final class WebViewController: UIViewController {
 		loadWebView(reason: "ao3ChapterFetchDidFail(\(fetchedArticleID))")
 	}
 
-	// MARK: Actions
-
-	@objc func showBars(_ sender: Any) {
-		showBars()
-	}
-
 	// MARK: API
 
 	/// True for an AO3-sourced article still on an RSS/Atom stub (`contentHTML`
@@ -493,50 +487,6 @@ final class WebViewController: UIViewController {
 		loadWebView(reason: "fullReload", replaceExistingWebView: true)
 	}
 
-	func showBars(animated: Bool = true) {
-		AppDefaults.shared.articleFullscreenEnabled = false
-		coordinator.showStatusBar()
-		topShowBarsViewConstraint?.constant = 0
-		bottomShowBarsViewConstraint?.constant = 0
-		navigationController?.setNavigationBarHidden(false, animated: animated)
-		navigationController?.setToolbarHidden(false, animated: animated)
-		additionalSafeAreaInsets.bottom = 0
-		additionalSafeAreaInsets.top = 0
-		setBottomScrollEdgeEffectHidden(false)
-		configureContextMenuInteraction()
-		updateNotchAndPageCounterVisibility()
-		updateScrollbarVisibility()
-		// setNavigationBarHidden/setToolbarHidden reset the pop gesture recognizers'
-		// isEnabled to true, overriding articleBackSwipeEnabled = false; re-apply the gate.
-		coordinator.applyArticleBackSwipeGating()
-	}
-
-	func hideBars() {
-		if isFullScreenAvailable {
-			AppDefaults.shared.articleFullscreenEnabled = true
-			coordinator.hideStatusBar()
-			topShowBarsViewConstraint?.constant = -44.0
-			bottomShowBarsViewConstraint?.constant = 44.0
-			navigationController?.setNavigationBarHidden(true, animated: true)
-			navigationController?.setToolbarHidden(true, animated: true)
-			// Mirror showBars()'s synchronous inset reset instead of relying on the reactive
-			// viewSafeAreaInsetsDidChange path; otherwise adjustedContentInset.bottom can stay
-			// stale for a beat and shift the visible scroll position.
-			updateBottomSafeAreaForFullScreen()
-			// Top side: the notch inset is deliberately left in place so the page starts
-			// below notchCoverView (docs/nnwtheme-format.md, "Full-screen reading").
-			// Assigning 0 synchronously keeps webView.safeAreaInsets.top from carrying a
-			// stale cancelled value into textWasSelected; see also the clamp in
-			// presentHighlightColorPopover.
-			additionalSafeAreaInsets.top = 0
-			setBottomScrollEdgeEffectHidden(true)
-			configureContextMenuInteraction()
-			updateNotchAndPageCounterVisibility()
-			updateScrollbarVisibility()
-			coordinator.applyArticleBackSwipeGating()
-		}
-	}
-
 	func stopWebViewActivity() {
 		if let webView = webView {
 			stopMediaPlayback(webView)
@@ -595,73 +545,6 @@ final class WebViewController: UIViewController {
 			openURLInAppBrowser(url)
 		}
 	}
-}
-
-// MARK: UIContextMenuInteractionDelegate
-
-extension WebViewController: UIContextMenuInteractionDelegate {
-    func contextMenuInteraction(_ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint) -> UIContextMenuConfiguration? {
-
-		return UIContextMenuConfiguration(identifier: nil, previewProvider: contextMenuPreviewProvider) { [weak self] _ in
-			self?.buildContextMenu()
-        }
-    }
-
-	func contextMenuInteraction(_ interaction: UIContextMenuInteraction, willPerformPreviewActionForMenuWith configuration: UIContextMenuConfiguration, animator: UIContextMenuInteractionCommitAnimating) {
-		coordinator.showBrowserForCurrentArticle()
-	}
-
-	/// Builds the full press-and-hold context menu. Shared by the elements provider
-	/// and refreshVisibleContextMenu so both build the same menu.
-	private func buildContextMenu() -> UIMenu {
-		var menus = [UIMenu]()
-
-		var navActions = [UIAction]()
-		if let action = prevArticleAction() {
-			navActions.append(action)
-		}
-		if let action = nextArticleAction() {
-			navActions.append(action)
-		}
-		if !navActions.isEmpty {
-			menus.append(UIMenu(title: "", options: .displayInline, children: navActions))
-		}
-
-		var toggleActions = [UIAction]()
-		if let action = toggleReadAction() {
-			toggleActions.append(action)
-		}
-		toggleActions.append(toggleStarredAction())
-		toggleActions.append(toggleLovedAction())
-		menus.append(UIMenu(title: "", options: .displayInline, children: toggleActions))
-
-		if let action = nextUnreadArticleAction() {
-			menus.append(UIMenu(title: "", options: .displayInline, children: [action]))
-		}
-
-		if let action = checkForUpdatesAction() {
-			menus.append(UIMenu(title: "", options: .displayInline, children: [action]))
-		}
-
-		let ignoreMenuActions = ignoreActions()
-		if !ignoreMenuActions.isEmpty {
-			menus.append(UIMenu(title: "", options: .displayInline, children: ignoreMenuActions))
-		}
-
-		menus.append(UIMenu(title: "", options: .displayInline, children: [shareAction()]))
-
-		return UIMenu(title: "", children: menus)
-	}
-
-	/// Rebuilds the presented menu in place after a toggle tap. The toggles set
-	/// `keepsMenuPresented`, but UIKit doesn't re-run the elements provider on its
-	/// own; `updateVisibleMenu` swaps the contents so icons/titles show the new state.
-	private func refreshVisibleContextMenu() {
-		contextMenuInteraction.updateVisibleMenu { [weak self] _ in
-			self?.buildContextMenu() ?? UIMenu(title: "")
-		}
-	}
-
 }
 
 // MARK: WKNavigationDelegate
@@ -849,721 +732,6 @@ extension WebViewController: WKScriptMessageHandler {
 
 }
 
-// MARK: Annotations (highlights + notes)
-
-extension WebViewController {
-
-	/// Wires annotations.js's `selectionchange`/tap listeners for the loaded document,
-	/// so selections post `textWasSelected` and taps on a `<mark>` post
-	/// `annotationWasTapped`. Runs on every navigation, not only when annotations
-	/// exist, since a chapter with none still needs to support creating its first.
-	///
-	/// Reads annotationCreationMethod fresh each call (not cached), like the other
-	/// per-dequeue settings, so a change applies on the next article load but not
-	/// retroactively to what's on screen.
-	func initAnnotations() {
-		let mode = AppDefaults.shared.annotationCreationMethod
-		guard let argsJSON = try? JSONSerialization.data(withJSONObject: ["mode": mode.rawValue]) else { return }
-		let encodedArgs = argsJSON.base64EncodedString()
-
-		webView?.evaluateJavaScript("Annotations.initAnnotations(\"\(encodedArgs)\")") { _, error in
-			if let error {
-				Self.logger.error("initAnnotations: Annotations.initAnnotations() JS call failed: \(error.localizedDescription, privacy: .public)")
-			}
-		}
-	}
-
-	/// Sets the ten --nnw-highlight-* CSS custom properties (light + dark per
-	/// Annotation.Color) on the document root from AppDefaults.shared.highlightPalette,
-	/// so core.css's mark.nnw-highlight rules resolve against the selected palette
-	/// instead of their hardcoded fallback hex. See docs/annotations.md, "Color palette".
-	///
-	/// Both light and dark values are always set; core.css's own
-	/// `@media (prefers-color-scheme: dark)` block switches between them live, so no
-	/// registerForTraitChanges hook is needed. Called from webView(_:didFinish:) on
-	/// every render and from highlightPaletteDidChange(_:), where existing <mark>s
-	/// repaint for free because they read the custom property.
-	func applyHighlightPaletteColors() {
-		let palette = AppDefaults.shared.highlightPalette
-		let light = palette.lightHexSet
-		let dark = palette.darkHexSet
-
-		var declarations = ""
-		for color in Annotation.Color.allCases {
-			declarations += "document.documentElement.style.setProperty('--nnw-highlight-\(color.rawValue)', '\(light[color])');"
-			declarations += "document.documentElement.style.setProperty('--nnw-highlight-\(color.rawValue)-dark', '\(dark[color])');"
-		}
-
-		webView?.evaluateJavaScript(declarations) { _, error in
-			if let error {
-				Self.logger.error("applyHighlightPaletteColors: JS injection failed: \(error.localizedDescription, privacy: .public)")
-			}
-		}
-	}
-
-	@objc func highlightPaletteDidChange(_ note: Notification) {
-		applyHighlightPaletteColors()
-	}
-
-	/// First-run rule-driven text replacement (categories 1 and 3; see
-	/// docs/annotations.md, "Storage shape"). Applies the typo table, reader-insert
-	/// table and custom rules to the article's canonical text, writing one edit row
-	/// (`hasHighlight = false`) per match through the same pipeline saveTextEdit uses.
-	///
-	/// "First time" is detected by absence: if any edit row with `hasHighlight == false`
-	/// and a non-nil `originalText` exists, this already ran (or a person reverted a row
-	/// that is still reviewable in Edit History). Re-running would duplicate matches or
-	/// resurrect a reverted one, so it only runs when that set is empty. Called before
-	/// loadAndRenderAnnotations() on every load so new matches render the same load.
-	@MainActor
-	func applyTextReplacementRulesIfNeeded() async {
-		guard AppDefaults.shared.textReplacementApplyAutomatically else { return }
-		guard let article, let account = article.account else { return }
-		let articleID = article.articleID
-
-		let existing = await account.fetchAnnotations(forArticleID: articleID)
-		let alreadyRan = existing.contains { !$0.hasHighlight && $0.originalText != nil }
-		guard !alreadyRan else { return }
-
-		var table = TextReplacementRuleTable()
-		if AppDefaults.shared.textReplacementTypoFixesEnabled {
-			table.rules.append(contentsOf: AppDefaults.shared.textReplacementTypoTable.rules)
-		}
-		// A per-work override takes precedence over the global reader-insert table:
-		// prepending its rules suffices because TextReplacementRuleEngine lets the earlier
-		// rule win an overlap (see TextReplacementPerWorkOverride.mergedReaderInsertTable).
-		// A nil bookKey falls through to the global table.
-		let mergedReaderInsertTable = AppDefaults.shared.textReplacementPerWorkOverride.mergedReaderInsertTable(
-			forBookKey: article.bookKey,
-			global: AppDefaults.shared.textReplacementReaderInsertTable
-		)
-		table.rules.append(contentsOf: mergedReaderInsertTable.rules)
-		table.rules.append(contentsOf: AppDefaults.shared.textReplacementCustomTable.rules)
-		let quoteConversionEnabled = AppDefaults.shared.textReplacementQuoteConversionEnabled
-		guard !table.rules.isEmpty || quoteConversionEnabled else { return }
-
-		guard let textResult = try? await self.webView?.evaluateJavaScript("Annotations.getArticleText(\".articleBody\")"),
-			  let text = textResult as? String, !text.isEmpty else {
-			return
-		}
-
-		// Rule-table matches (categories 1/3) and quote conversion (category 2) are found
-		// independently. On an overlapping span the rule-table match wins and the quote
-		// candidate is dropped: a rule is an explicit correction, quote conversion a
-		// blanket style pass.
-		var matches = TextReplacementRuleEngine.findMatches(applying: table, to: text)
-		if quoteConversionEnabled {
-			let ruleRanges = matches.map { NSRange(location: $0.startOffset, length: $0.endOffset - $0.startOffset) }
-			let quoteMatches = TextReplacementQuoteConversion.findMatches(in: text).filter { quoteMatch in
-				let quoteRange = NSRange(location: quoteMatch.startOffset, length: quoteMatch.endOffset - quoteMatch.startOffset)
-				return !ruleRanges.contains { NSIntersectionRange($0, quoteRange).length > 0 }
-			}
-			matches.append(contentsOf: quoteMatches)
-		}
-		guard !matches.isEmpty else { return }
-
-		// Capture prefix/suffix as selectorForRange does in JS (CONTEXT_CHARS = 200). Empty
-		// values would starve resolveAnnotation's disambiguation (scoreCandidate) if this
-		// quote later needs multi-match resolution.
-		let nsText = text as NSString
-		let contextChars = 200
-
-		// Apply in descending offset order (as for manual edits) so an earlier match's
-		// offset is never invalidated by a later match's length delta.
-		let descending = matches.sorted { $0.startOffset > $1.startOffset }
-		var appliedCount = 0
-		for match in descending {
-			let prefixStart = max(0, match.startOffset - contextChars)
-			let quotePrefix = nsText.substring(with: NSRange(location: prefixStart, length: match.startOffset - prefixStart))
-			let suffixEnd = min(nsText.length, match.endOffset + contextChars)
-			let quoteSuffix = nsText.substring(with: NSRange(location: match.endOffset, length: suffixEnd - match.endOffset))
-
-			let annotationID = UUID().uuidString
-			let now = Date()
-			let annotation = Annotation(
-				annotationID: annotationID,
-				articleID: articleID,
-				bookKey: nil,
-				quoteExact: match.originalText,
-				quotePrefix: quotePrefix,
-				quoteSuffix: quoteSuffix,
-				startOffset: match.startOffset,
-				endOffset: match.endOffset,
-				color: .yellow,
-				note: nil,
-				hasHighlight: false,
-				originalText: match.originalText,
-				replacementText: match.replacementText,
-				createdAt: now,
-				updatedAt: now
-			)
-			await account.saveAnnotation(annotation)
-			appliedCount += 1
-		}
-
-		if appliedCount > 0 {
-			Self.logger.debug("applyTextReplacementRulesIfNeeded: applied \(appliedCount, privacy: .public) rule-driven replacements for articleID=\(articleID, privacy: .public)")
-			// Surface a one-time summary banner via ArticleViewController. The debug log above
-			// is kept for diagnosing reports of unexpected replacements. A nil closure just
-			// means no visible banner; the pass has already completed and persisted.
-			onTextReplacementReplacementsApplied?(appliedCount)
-		}
-	}
-
-	/// Fetches saved annotations and hands them to annotations.js's
-	/// renderAnnotationsEncoded, which resolves each against the fresh DOM and draws it.
-	/// "Moved" annotations get their stored anchor updated so the next render hits the
-	/// stored-offset fast path; "orphaned" ones are marked (Annotation.orphanedAt),
-	/// never deleted, so a note is not silently lost.
-	func loadAndRenderAnnotations() {
-		guard let article, let account = article.account else { return }
-		let articleID = article.articleID
-
-		Task {
-			let annotations = await account.fetchAnnotations(forArticleID: articleID)
-			guard !annotations.isEmpty else { return }
-
-			// Discard if the person navigated to a different article during the fetch.
-			guard self.article?.articleID == articleID else {
-				Self.logger.debug("loadAndRenderAnnotations: articleID changed before annotation fetch resolved, discarding for articleID=\(articleID, privacy: .public)")
-				return
-			}
-
-			guard let json = try? JSONEncoder().encode(annotations) else { return }
-			let encoded = json.base64EncodedString()
-
-			do {
-				let result = try await self.webView?.evaluateJavaScript("Annotations.renderAnnotationsEncoded(\"\(encoded)\")")
-				guard let b64 = result as? String, let data = Data(base64Encoded: b64) else {
-					Self.logger.error("loadAndRenderAnnotations: renderAnnotationsEncoded() returned an unexpected result type or invalid base64")
-					return
-				}
-				guard let report = try? JSONDecoder().decode(ReanchorReport.self, from: data) else {
-					Self.logger.error("loadAndRenderAnnotations: failed to decode ReanchorReport from renderAnnotationsEncoded() result")
-					return
-				}
-				self.reconcile(report, account: account)
-			} catch {
-				Self.logger.error("loadAndRenderAnnotations: renderAnnotationsEncoded() JS call failed: \(error.localizedDescription, privacy: .public)")
-			}
-		}
-	}
-
-	private func reconcile(_ report: ReanchorReport, account: Account) {
-		Task {
-			for moved in report.moved {
-				await account.reanchorAnnotation(
-					annotationID: moved.annotationID,
-					startOffset: moved.startOffset,
-					endOffset: moved.endOffset,
-					quoteExact: moved.quoteExact,
-					quotePrefix: moved.quotePrefix,
-					quoteSuffix: moved.quoteSuffix,
-					chapterTitle: moved.chapterTitle
-				)
-			}
-			for orphanedID in report.orphanedIDs {
-				await account.markAnnotationOrphaned(annotationID: orphanedID, at: Date())
-			}
-		}
-	}
-
-	/// Scrolls to and briefly flashes the annotation's highlight via annotations.js.
-	/// That file is cross-platform and exposes plain-argument functions on the global
-	/// `Annotations` object, so no base64 encoding is needed for a single ID (unlike
-	/// main_ios.js's scrollToHeading). Fire-and-forget; no-op if the mark isn't in the DOM.
-	func scrollToAnnotation(annotationID: String) {
-		scrollJumpHistory.append(Double(windowScrollY))
-		let escaped = annotationID.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-		webView?.evaluateJavaScript("Annotations.scrollToAnnotation(\"\(escaped)\")") { _, error in
-			if let error {
-				Self.logger.error("scrollToAnnotation: Annotations.scrollToAnnotation() JS call failed: \(error.localizedDescription, privacy: .public)")
-			}
-		}
-	}
-
-	/// Resolves when this controller's page finishes loading. Used by
-	/// ArticleViewController.navigateToAnnotation: article selection resolves well
-	/// before the new controller's didFinish, and the mark to scroll to doesn't exist
-	/// until then. If the page already loaded, this waits for the next load rather
-	/// than hanging, since callers want the result of a navigation.
-	func awaitNextPageLoad() async {
-		await withCheckedContinuation { continuation in
-			nextPageLoadContinuations.append(continuation)
-		}
-	}
-
-	/// Resumes every pending awaitNextPageLoad() caller; called from webView(_:didFinish:).
-	/// Storage is a stored property on the class, since extensions can't add them.
-	fileprivate func resumeAwaitingPageLoads() {
-		let continuations = nextPageLoadContinuations
-		nextPageLoadContinuations = []
-		for continuation in continuations {
-			continuation.resume()
-		}
-	}
-
-	/// annotations.js reports new selections (with a rect) and selection-cleared events
-	/// (`{cleared: true}`) through this handler. Behavior depends on
-	/// annotationCreationMethod, read fresh (see initAnnotations()):
-	///  - .popup: a non-empty selection presents HighlightColorPopover; `cleared` is ignored.
-	///  - .nativeMenu: never presents the popover. Tracks whether a highlightable
-	///    selection exists (currentSelectionRect), exposed via isSelectionHighlightable
-	///    so buildMenu(with:) knows whether to offer "Highlight". `cleared` resets it to nil.
-	///  - .off: shouldn't fire (annotations.js doesn't wire selectionchange), but a stale
-	///    message after a mid-session mode change is ignored.
-	func textWasSelected(body: [String: Any]?) {
-		guard let body else { return }
-
-		if body["cleared"] as? Bool == true {
-			currentSelectionRect = nil
-			return
-		}
-
-		guard let webView,
-			  let x = body["x"] as? Double,
-			  let y = body["y"] as? Double,
-			  let width = body["width"] as? Double,
-			  let height = body["height"] as? Double else {
-			return
-		}
-
-		// Same safe-area offset and conversion as showFullScreenImage: the JS rect is in
-		// web content coordinates, not this controller's.
-		let adjustedY = CGFloat(y) + webView.safeAreaInsets.top
-		let rect = CGRect(x: CGFloat(x), y: adjustedY, width: CGFloat(width), height: CGFloat(height))
-		let convertedRect = webView.convert(rect, to: view)
-
-		switch AppDefaults.shared.annotationCreationMethod {
-		case .popup:
-			presentHighlightColorPopover(sourceRect: convertedRect)
-		case .nativeMenu:
-			// No popover; just record that a highlightable selection exists. buildMenu(with:)
-			// reads isSelectionHighlightable when the system next rebuilds its menu.
-			currentSelectionRect = convertedRect
-		case .off:
-			break
-		}
-	}
-
-	private func presentHighlightColorPopover(sourceRect: CGRect) {
-		let popover = HighlightColorPopover(
-			onSelectColor: { [weak self] color in
-				self?.dismiss(animated: true)
-				self?.saveHighlightFromSelection(color: color)
-			}
-		)
-
-		let hostingController = UIHostingController(rootView: popover)
-		hostingController.modalPresentationStyle = .popover
-		// Sized for 3 swatches (3*28 + 2*14 + 2*16 = 144); fewer just leave it slightly
-		// wider than its content, since SwiftUI centers the HStack.
-		hostingController.preferredContentSize = CGSize(width: 144, height: 56)
-		if let presentationController = hostingController.popoverPresentationController {
-			presentationController.sourceView = view
-			// Defensive clamp: if sourceRect falls outside view.bounds (a short selection's
-			// small rect triggered this), UIPopoverPresentationController silently never
-			// presents. Clamping anchors at the nearest valid edge instead. Independent of
-			// the full-screen top inset handling in hideBars().
-			presentationController.sourceRect = sourceRect.intersects(view.bounds)
-				? sourceRect
-				: sourceRect.clamped(toBounds: view.bounds)
-			presentationController.permittedArrowDirections = [.up, .down]
-			presentationController.delegate = self
-		}
-		present(hostingController, animated: true)
-	}
-
-	/// Calls annotations.js's addHighlightFromSelection to resolve the live selection
-	/// into a selector and draw the highlight, then persists it. Does nothing if the
-	/// selection didn't survive (popover dismissed, scrolled, etc.); there is no stale
-	/// selector to fall back on, since the live selection is the only authority.
-	///
-	/// Save-only for both callers (popup swatch tap, native menu "Highlight"). A note
-	/// is added later by tapping the mark, which routes to annotationWasTapped.
-	private func saveHighlightFromSelection(color: Annotation.Color) {
-		guard let article, let account = article.account else { return }
-
-		let annotationID = UUID().uuidString
-		let args: [String: String] = ["annotationID": annotationID, "color": color.rawValue]
-		guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else { return }
-		let encodedArgs = argsJSON.base64EncodedString()
-
-		webView?.evaluateJavaScript("Annotations.addHighlightFromSelection(\"\(encodedArgs)\")") { [weak self] result, error in
-			guard self != nil else { return }
-			if let error {
-				Self.logger.error("saveHighlightFromSelection: addHighlightFromSelection() JS call failed: \(error.localizedDescription, privacy: .public)")
-				return
-			}
-			guard let b64 = result as? String, let data = Data(base64Encoded: b64) else {
-				Self.logger.error("saveHighlightFromSelection: addHighlightFromSelection() returned an unexpected result type or invalid base64")
-				return
-			}
-			guard let selector = try? JSONDecoder().decode(AnnotationSelector.self, from: data) else {
-				// Not necessarily an error -- addHighlightFromSelection legitimately
-				// returns base64("null") when the selection didn't survive.
-				return
-			}
-
-			let now = Date()
-			let annotation = Annotation(
-				annotationID: selector.annotationID,
-				articleID: article.articleID,
-				bookKey: nil, // resolved from articleID at save time -- see ArticlesTable.saveAnnotationAsync
-				quoteExact: selector.quoteExact,
-				quotePrefix: selector.quotePrefix,
-				quoteSuffix: selector.quoteSuffix,
-				rootSelector: selector.rootSelector,
-				startOffset: selector.startOffset,
-				endOffset: selector.endOffset,
-				color: color,
-				note: nil,
-				chapterTitle: selector.chapterTitle,
-				createdAt: now,
-				updatedAt: now
-			)
-
-			Task {
-				await account.saveAnnotation(annotation)
-			}
-		}
-	}
-
-	/// The person tapped an existing highlight: open its note editor
-	/// (creating one if this highlight has no note yet).
-	func annotationWasTapped(body: [String: Any]?) {
-		guard let article, let account = article.account,
-			  let body, let annotationID = body["annotationID"] as? String else {
-			return
-		}
-
-		Task {
-			let annotations = await account.fetchAnnotations(forArticleID: article.articleID)
-			guard let annotation = annotations.first(where: { $0.annotationID == annotationID }) else { return }
-			self.openNoteEditor(for: annotation)
-		}
-	}
-
-	/// "Highlight" chosen from the native selection menu (.nativeMenu mode). Reuses
-	/// the popup's save path against the still-live selection (the system menu doesn't
-	/// clear it), with the default color since there is no picker in this mode. See
-	/// PreloadedWebView.buildMenu.
-	func nativeMenuHighlightWasTapped() {
-		saveHighlightFromSelection(color: AppDefaults.shared.defaultAnnotationColor)
-	}
-
-	/// Presents the note-editor half-sheet; a fresh highlight's mark tap and an
-	/// existing <mark> tap both converge here.
-	private func openNoteEditor(for annotation: Annotation) {
-		guard let article, let account = article.account else { return }
-
-		let editorView = AnnotationEditorView(
-			annotation: annotation,
-			onSave: { [weak self] note, color, editedText, keepHighlight in
-				self?.saveNoteEdit(annotation: annotation, note: note, color: color, account: account)
-				if let editedText {
-					self?.saveTextEdit(annotation: annotation, replacementText: editedText, keepHighlight: keepHighlight, account: account)
-				} else if keepHighlight != annotation.hasHighlight, annotation.originalText != nil {
-					// Text unchanged but "keep highlight" moved on a row that already has an edit.
-					// No offset shift or overlap is possible, so skip saveTextEdit's pipeline and
-					// persist hasHighlight directly. The `originalText != nil` guard matters:
-					// unchecking on a never-edited row would write hasHighlight == false with
-					// originalText == nil, violating the Validity rule (docs/annotations.md, "Storage
-					// shape"). That case is a no-op here rather than a silent delete or invalid row.
-					self?.saveHasHighlightChange(annotation: annotation, hasHighlight: keepHighlight, account: account)
-				}
-			},
-			onDelete: { [weak self] in
-				self?.deleteAnnotation(annotation, account: account)
-			}
-		)
-
-		let hostingController = UIHostingController(rootView: editorView)
-		if let sheet = hostingController.sheetPresentationController {
-			sheet.detents = [.medium(), .large()]
-			sheet.prefersGrabberVisible = true
-		}
-		present(hostingController, animated: true)
-	}
-
-	private func saveNoteEdit(annotation: Annotation, note: String?, color: Annotation.Color, account: Account) {
-		let colorChanged = color != annotation.color
-		let noteChanged = note != annotation.note
-
-		if colorChanged {
-			webView?.evaluateJavaScript("Annotations.updateAnnotationColor(\"\(annotation.annotationID)\", \"\(color.rawValue)\")") { _, error in
-				if let error {
-					Self.logger.error("saveNoteEdit: Annotations.updateAnnotationColor() JS call failed: \(error.localizedDescription, privacy: .public)")
-				}
-			}
-		}
-
-		Task {
-			if colorChanged {
-				await account.updateAnnotationColor(annotationID: annotation.annotationID, color: color)
-			}
-			if noteChanged {
-				await account.updateAnnotationNote(annotationID: annotation.annotationID, note: note)
-			}
-		}
-	}
-
-	/// Handles the "Edit text" field and "Keep highlight" checkbox from
-	/// AnnotationEditorView (docs/annotations.md, "Manual edit UI"). Called only when
-	/// the text actually changed.
-	///
-	/// Pipeline (docs/annotations.md, "Applying edits"): fetch the other annotations,
-	/// ask annotations.js (computeTextEditPlan, non-mutating, against the live DOM) to
-	/// check for overlap and compute shifted anchors, then persist this row's edit
-	/// fields and each shifted row's new anchor via account.reanchorAnnotation in
-	/// descending-offset order (write order matters for the same reason as
-	/// TextReplacementOffsetShift). Finally loadAndRenderAnnotations() re-renders; the
-	/// DOM mutation (applyTextEdit) happens there, not here.
-	///
-	/// An overlap shows a blocking alert and writes nothing.
-	private func saveTextEdit(annotation: Annotation, replacementText: String, keepHighlight: Bool, account: Account) {
-		guard let article else { return }
-		let articleID = article.articleID
-		let originalText = annotation.replacementText ?? annotation.quoteExact
-		let replacementLength = replacementText.count
-
-		// Validity rule (docs/annotations.md, "Storage shape"): hasHighlight == true OR
-		// originalText != nil. AnnotationEditorView only calls this for a real text
-		// change, so no extra guard is needed here.
-
-		Task {
-			let allAnnotations = await account.fetchAnnotations(forArticleID: articleID)
-			let others = allAnnotations.filter { $0.annotationID != annotation.annotationID }
-
-			let otherPayload = others.map { [
-				"annotationID": $0.annotationID,
-				"startOffset": $0.startOffset,
-				"endOffset": $0.endOffset
-			] as [String: Any] }
-
-			let args: [String: Any] = [
-				"annotationToEditID": annotation.annotationID,
-				"startOffset": annotation.startOffset,
-				"endOffset": annotation.endOffset,
-				"replacementLength": replacementLength,
-				"otherAnnotations": otherPayload,
-				"rootSelector": annotation.rootSelector
-			]
-			guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else {
-				Self.logger.error("saveTextEdit: failed to serialize computeTextEditPlan args")
-				return
-			}
-			let encodedArgs = argsJSON.base64EncodedString()
-
-			let plan: TextEditPlan
-			do {
-				let result = try await self.webView?.evaluateJavaScript("Annotations.computeTextEditPlanEncoded(\"\(encodedArgs)\")")
-				guard let b64 = result as? String, let data = Data(base64Encoded: b64) else {
-					Self.logger.error("saveTextEdit: computeTextEditPlanEncoded() returned an unexpected result type or invalid base64")
-					return
-				}
-				guard let decoded = try? JSONDecoder().decode(TextEditPlan.self, from: data) else {
-					Self.logger.error("saveTextEdit: failed to decode TextEditPlan from computeTextEditPlanEncoded() result")
-					return
-				}
-				plan = decoded
-			} catch {
-				Self.logger.error("saveTextEdit: computeTextEditPlanEncoded() JS call failed: \(error.localizedDescription, privacy: .public)")
-				return
-			}
-
-			if plan.status == "overlap" {
-				self.presentTextEditOverlapAlert()
-				return
-			}
-
-			// Write this row's edit fields first; its offsets don't change.
-			await account.setAnnotationEditFields(
-				annotationID: annotation.annotationID,
-				hasHighlight: keepHighlight,
-				originalText: originalText,
-				replacementText: replacementText
-			)
-
-			// Persist shifted rows in descending offset order (see TextReplacementOffsetShift).
-			let shiftedDescending = plan.shifted.sorted { $0.startOffset > $1.startOffset }
-			for shifted in shiftedDescending {
-				await account.reanchorAnnotation(
-					annotationID: shifted.annotationID,
-					startOffset: shifted.startOffset,
-					endOffset: shifted.endOffset,
-					quoteExact: shifted.quoteExact,
-					quotePrefix: shifted.quotePrefix,
-					quoteSuffix: shifted.quoteSuffix,
-					chapterTitle: shifted.chapterTitle
-				)
-			}
-
-			self.loadAndRenderAnnotations()
-		}
-	}
-
-	/// Persists a `hasHighlight`-only change (checkbox flipped, text untouched).
-	/// Bypasses saveTextEdit's plan pipeline: this row's anchor doesn't move, so there
-	/// is no overlap to check and nothing to reanchor. originalText/replacementText
-	/// carry through. The re-render wraps/unwraps the <mark> since renderAnnotations
-	/// re-evaluates hasHighlight per row (docs/annotations.md, "Storage shape").
-	private func saveHasHighlightChange(annotation: Annotation, hasHighlight: Bool, account: Account) {
-		Task {
-			await account.setAnnotationEditFields(
-				annotationID: annotation.annotationID,
-				hasHighlight: hasHighlight,
-				originalText: annotation.originalText,
-				replacementText: annotation.replacementText
-			)
-			self.loadAndRenderAnnotations()
-		}
-	}
-
-	/// Blocking alert for the overlap case (docs/annotations.md, "Applying edits").
-	private func presentTextEditOverlapAlert() {
-		let alert = UIAlertController(
-			title: NSLocalizedString("Can’t Edit This Text", comment: "Text-edit overlap alert title"),
-			message: NSLocalizedString("This text is part of an existing highlight or edit. Remove or resize it first.", comment: "Text-edit overlap alert message"),
-			preferredStyle: .alert
-		)
-		alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "OK button"), style: .default))
-		present(alert, animated: true)
-	}
-
-	private func deleteAnnotation(_ annotation: Annotation, account: Account) {
-		revertOrUnwrapAnnotationDOM(annotation)
-
-		Task {
-			await account.deleteAnnotation(annotationID: annotation.annotationID)
-		}
-	}
-
-	/// Reverts the live DOM only when the row belongs to this web view's
-	/// currently displayed article. Persistence remains owned by the caller.
-	func revertOrUnwrapAnnotationDOM(_ annotation: Annotation) {
-		if let originalText = annotation.originalText {
-			// A text-edit row: applyTextEdit already mutated the DOM at render time, so
-			// unwrapping alone would leave the replacement text. Rows after the edit were
-			// shifted by its length delta when it was saved, so shift them back first
-			// (computeRevertPlan reads the live, still-edited DOM), then let
-			// revertTextEdit restore originalText and unwrap (see annotations.js).
-			Task {
-				await self.persistRevertShift(for: annotation, originalText: originalText)
-				self.revertTextEditInDOM(annotation, originalText: originalText)
-			}
-		} else {
-			// Highlight-only row: the text was never touched, so unwrap the <mark> and
-			// normalize the text nodes (see annotations.js).
-			webView?.evaluateJavaScript("Annotations.removeAnnotationHighlight(\"\(annotation.annotationID)\")") { _, error in
-				if let error {
-					Self.logger.error("deleteAnnotation: Annotations.removeAnnotationHighlight() JS call failed: \(error.localizedDescription, privacy: .public)")
-				}
-			}
-		}
-
-	}
-
-	private func revertTextEditInDOM(_ annotation: Annotation, originalText: String) {
-		let args: [String: String] = ["annotationID": annotation.annotationID, "originalText": originalText]
-		guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else { return }
-		let encodedArgs = argsJSON.base64EncodedString()
-
-		webView?.evaluateJavaScript("Annotations.revertTextEdit(\"\(encodedArgs)\")") { _, error in
-			if let error {
-				Self.logger.error("deleteAnnotation: Annotations.revertTextEdit() JS call failed: \(error.localizedDescription, privacy: .public)")
-			}
-		}
-	}
-
-	/// Inverse of saveTextEdit's shift (docs/annotations.md, "Reverting an edit"): asks
-	/// annotations.js (computeRevertPlan, non-mutating, against the live DOM that still
-	/// shows the replacement) where every row after the edit moves back to, and persists
-	/// each via account.reanchorAnnotation. Any failure or a "mismatch" status writes
-	/// nothing; renderAnnotations' quote fallback then remains the safety net.
-	private func persistRevertShift(for annotation: Annotation, originalText: String) async {
-		guard let account = article?.account, let webView else { return }
-		let articleID = annotation.articleID
-
-		let others = await account.fetchAnnotations(forArticleID: articleID)
-			.filter { $0.annotationID != annotation.annotationID }
-		let otherPayload = others.map { [
-			"annotationID": $0.annotationID,
-			"startOffset": $0.startOffset,
-			"endOffset": $0.endOffset
-		] as [String: Any] }
-
-		let args: [String: Any] = [
-			"annotationID": annotation.annotationID,
-			"startOffset": annotation.startOffset,
-			"originalText": originalText,
-			"replacementText": annotation.replacementText ?? "",
-			"otherAnnotations": otherPayload,
-			"rootSelector": annotation.rootSelector
-		]
-		guard let argsJSON = try? JSONSerialization.data(withJSONObject: args) else {
-			Self.logger.error("deleteAnnotation: failed to serialize computeRevertPlan args")
-			return
-		}
-		let encodedArgs = argsJSON.base64EncodedString()
-
-		let plan: TextEditPlan
-		do {
-			let result = try await webView.evaluateJavaScript("Annotations.computeRevertPlanEncoded(\"\(encodedArgs)\")")
-			guard let b64 = result as? String,
-				  let data = Data(base64Encoded: b64),
-				  let decoded = try? JSONDecoder().decode(TextEditPlan.self, from: data) else {
-				Self.logger.error("deleteAnnotation: computeRevertPlanEncoded() returned an unexpected result")
-				return
-			}
-			plan = decoded
-		} catch {
-			Self.logger.error("deleteAnnotation: computeRevertPlanEncoded() JS call failed: \(error.localizedDescription, privacy: .public)")
-			return
-		}
-
-		guard plan.status == "ok" else {
-			Self.logger.info("deleteAnnotation: revert plan status \(plan.status, privacy: .public); leaving other rows to the quote fallback")
-			return
-		}
-
-		// Same descending order as saveTextEdit.
-		for shifted in plan.shifted.sorted(by: { $0.startOffset > $1.startOffset }) {
-			await account.reanchorAnnotation(
-				annotationID: shifted.annotationID,
-				startOffset: shifted.startOffset,
-				endOffset: shifted.endOffset,
-				quoteExact: shifted.quoteExact,
-				quotePrefix: shifted.quotePrefix,
-				quoteSuffix: shifted.quoteSuffix,
-				chapterTitle: shifted.chapterTitle
-			)
-		}
-	}
-
-}
-
-extension WebViewController: UIPopoverPresentationControllerDelegate {
-
-	func adaptivePresentationStyle(for controller: UIPresentationController) -> UIModalPresentationStyle {
-		// Force a true popover on compact width, where UIKit would adapt to a sheet.
-		.none
-	}
-
-}
-
-// MARK: PreloadedWebViewAnnotationDelegate
-
-extension WebViewController: PreloadedWebViewAnnotationDelegate {
-
-	/// Backed by currentSelectionRect, which is only set in .nativeMenu mode, so this
-	/// is false by construction in .popup/.off.
-	var isSelectionHighlightable: Bool {
-		currentSelectionRect != nil
-	}
-
-}
-
 // MARK: UIViewControllerTransitioningDelegate
 
 extension WebViewController: UIViewControllerTransitioningDelegate {
@@ -1579,83 +747,6 @@ extension WebViewController: UIViewControllerTransitioningDelegate {
 	}
 }
 
-// MARK:
-
-extension WebViewController: UIScrollViewDelegate {
-
-	func scrollViewDidScroll(_ scrollView: UIScrollView) {
-		scrollPositionQueue.add(self, #selector(scrollPositionDidChange))
-	}
-
-	@objc func scrollPositionDidChange() {
-		webView?.evaluateJavaScript("({ scrollY: window.scrollY, scrollHeight: document.body.scrollHeight, innerHeight: window.innerHeight })") { (result, error) in
-			guard error == nil, let result = result as? [String: Any] else {
-				Self.logger.debug("scrollPositionDidChange: evaluateJavaScript failed, error=\(String(describing: error), privacy: .public)")
-				return
-			}
-			let javascriptScrollY = result["scrollY"] as? Int ?? 0
-			// I don't know why this value gets returned sometimes, but it is in error
-			guard javascriptScrollY != 33554432 else {
-				Self.logger.debug("scrollPositionDidChange: discarding known-bad sentinel scrollY value")
-				return
-			}
-			guard !self.isRestoringScrollPosition else {
-				Self.logger.debug("scrollPositionDidChange: discarding sample during restore settling (scrollY=\(javascriptScrollY, privacy: .public)) -- not yet confirmed via scrollRestoreComplete")
-				return
-			}
-			if let scrollHeight = result["scrollHeight"] as? Double, scrollHeight > 0 {
-				if scrollHeight < self.maxObservedScrollHeight - 1 {
-					Self.logger.debug("scrollPositionDidChange: discarding sample, scrollHeight shrank (observed=\(scrollHeight, privacy: .public) max=\(self.maxObservedScrollHeight, privacy: .public)) -- unsettled reflow")
-					return
-				}
-				self.maxObservedScrollHeight = max(self.maxObservedScrollHeight, scrollHeight)
-			}
-			// Stub or still-settling provisional content: don't write position, credit
-			// Reading Stats, mark read, or persist.
-			guard !self.isContentProvisional else {
-				Self.logger.debug("scrollPositionDidChange: discarding sample, content is provisional (scrollY=\(javascriptScrollY, privacy: .public))")
-				return
-			}
-			self.windowScrollY = javascriptScrollY
-
-			// Mark read once the viewport bottom reaches ReadingProgressEvaluator.completionThreshold
-			// (shared with ReadingStatsTracker). The math lives there so it is testable without a WKWebView.
-			if let scrollHeight = result["scrollHeight"] as? Double,
-			   let innerHeight = result["innerHeight"] as? Double,
-			   let sample = ReadingProgressEvaluator.sample(scrollY: Double(javascriptScrollY), scrollHeight: scrollHeight, viewportHeight: innerHeight) {
-				ReadingStatsTracker.shared.recordProgress(sample.rawFraction)
-				if sample.isComplete {
-					self.coordinator.markCurrentArticleAsReadFromScrollCompletion()
-				}
-
-				// Page counter; reuses this JS payload rather than a second round trip.
-				switch AppDefaults.shared.pageCounterDisplayMode {
-				case .off:
-					break
-				case .percentage:
-					self.pageCounterLabel.text = "\(sample.percentRounded)%"
-				case .pageCount:
-					// nil when the viewport reports zero height; leave the label as-is
-					// rather than converting an infinite ratio to Int.
-					if let page = ReadingProgressEvaluator.pageCounter(for: sample) {
-						self.pageCounterLabel.text = "\(page.current)/\(page.total)"
-					}
-				}
-
-				// Visible reading progress; reuses the same payload (sample.fraction is the 0...1 value).
-				if let article = self.article, let account = article.account {
-					let articleID = article.articleID
-					let readingProgress = sample.fraction
-					self.lastKnownReadingProgress = readingProgress
-					Task {
-						await account.saveReadingProgress(readingProgress, forArticleID: articleID)
-					}
-				}
-			}
-		}
-	}
-}
-
 // MARK: JSON
 
 private struct ImageClickMessage: Codable {
@@ -1667,86 +758,9 @@ private struct ImageClickMessage: Codable {
 	let imageURL: String
 }
 
-/// Shapes returned by annotations.js (renderAnnotationsEncoded/addHighlightFromSelection)
-/// over the base64-JSON bridge: `AnnotationSelector` is a live selection resolved to a
-/// selector; `ReanchorReport` is a render's {moved, orphanedIDs} report.
-private struct AnnotationSelector: Codable {
-	let annotationID: String
-	let color: String
-	let quoteExact: String
-	let quotePrefix: String
-	let quoteSuffix: String
-	let rootSelector: String
-	let startOffset: Int
-	let endOffset: Int
-	/// See Annotation.chapterTitle; computed by annotations.js's nearestChapterTitle.
-	let chapterTitle: String?
-}
-
-private struct ReanchorReport: Codable {
-	struct Moved: Codable {
-		let annotationID: String
-		let startOffset: Int
-		let endOffset: Int
-		let quoteExact: String
-		let quotePrefix: String
-		let quoteSuffix: String
-		let chapterTitle: String?
-	}
-	let moved: [Moved]
-	let orphanedIDs: [String]
-}
-
-/// Shape returned by annotations.js's computeTextEditPlanEncoded: an overlap
-/// conflict, or the other rows an edit's length delta shifts, with
-/// quote/prefix/suffix/chapterTitle already recomputed against the simulated
-/// post-edit text. See docs/annotations.md, "Applying edits".
-private struct TextEditPlan: Codable {
-	struct Shifted: Codable {
-		let annotationID: String
-		let startOffset: Int
-		let endOffset: Int
-		let quoteExact: String
-		let quotePrefix: String
-		let quoteSuffix: String
-		let chapterTitle: String?
-	}
-	let status: String
-	let delta: Int?
-	let shifted: [Shifted]
-	let conflictingAnnotationID: String?
-
-	private enum CodingKeys: String, CodingKey {
-		case status, delta, shifted, conflictingAnnotationID
-	}
-
-	init(from decoder: Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		status = try container.decode(String.self, forKey: .status)
-		delta = try container.decodeIfPresent(Int.self, forKey: .delta)
-		shifted = try container.decodeIfPresent([Shifted].self, forKey: .shifted) ?? []
-		conflictingAnnotationID = try container.decodeIfPresent(String.self, forKey: .conflictingAnnotationID)
-	}
-}
-
 // MARK: Private
 
 private extension WebViewController {
-
-	/// Synchronously persists the last known scroll position/progress (no JS evaluation,
-	/// so nothing races view teardown). See viewWillDisappear.
-	func flushLastKnownScrollState() {
-		guard let article, let account = article.account else { return }
-		let articleID = article.articleID
-		let scrollY = windowScrollY
-		let readingProgress = lastKnownReadingProgress
-		Task {
-			await account.saveScrollPosition(Double(scrollY), forArticleID: articleID)
-			if let readingProgress {
-				await account.saveReadingProgress(readingProgress, forArticleID: articleID)
-			}
-		}
-	}
 
 	func loadWebView(reason: String, replaceExistingWebView: Bool = false) {
 		guard isViewLoaded else {
@@ -1955,21 +969,6 @@ private extension WebViewController {
 		return luminance <= 0.6
 	}
 
-	/// Applies articleScrollbarVisibility to the live webview. Called from
-	/// applyResolvedBackgroundColors() (fresh load/dequeue) and showBars()/hideBars()
-	/// (so .whenNotFullScreen re-evaluates live).
-	func updateScrollbarVisibility() {
-		guard let webView else { return }
-		switch AppDefaults.shared.articleScrollbarVisibility {
-		case .off:
-			webView.scrollView.showsVerticalScrollIndicator = false
-		case .always:
-			webView.scrollView.showsVerticalScrollIndicator = true
-		case .whenNotFullScreen:
-			webView.scrollView.showsVerticalScrollIndicator = !AppDefaults.shared.articleFullscreenEnabled
-		}
-	}
-
 	/// Precedence: override background, then the theme's background from
 	/// ArticleThemeColorStore (measured if cached, else the legacy scanner, whose
 	/// black/white fallback applies last). Shared by
@@ -2044,292 +1043,6 @@ private extension WebViewController {
 
 	func cancelImageLoad(_ webView: WKWebView) {
 		webView.evaluateJavaScript("cancelImageLoad();")
-	}
-
-	func configureTopShowBarsView() {
-		topShowBarsView = UIView()
-		topShowBarsView.backgroundColor = .clear
-		topShowBarsView.translatesAutoresizingMaskIntoConstraints = false
-		view.addSubview(topShowBarsView)
-
-		if AppDefaults.shared.logicalArticleFullscreenEnabled {
-			topShowBarsViewConstraint = view.topAnchor.constraint(equalTo: topShowBarsView.bottomAnchor, constant: -44.0)
-		} else {
-			topShowBarsViewConstraint = view.topAnchor.constraint(equalTo: topShowBarsView.bottomAnchor, constant: 0.0)
-		}
-
-		NSLayoutConstraint.activate([
-			topShowBarsViewConstraint,
-			view.leadingAnchor.constraint(equalTo: topShowBarsView.leadingAnchor),
-			view.trailingAnchor.constraint(equalTo: topShowBarsView.trailingAnchor),
-			topShowBarsView.heightAnchor.constraint(equalToConstant: 44.0)
-		])
-		topShowBarsView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(showBars(_:))))
-	}
-
-	func configureBottomShowBarsView() {
-		bottomShowBarsView = UIView()
-		bottomShowBarsView.backgroundColor = .clear
-		bottomShowBarsView.translatesAutoresizingMaskIntoConstraints = false
-		view.addSubview(bottomShowBarsView)
-		if AppDefaults.shared.logicalArticleFullscreenEnabled {
-			bottomShowBarsViewConstraint = view.bottomAnchor.constraint(equalTo: bottomShowBarsView.topAnchor, constant: 44.0)
-		} else {
-			bottomShowBarsViewConstraint = view.bottomAnchor.constraint(equalTo: bottomShowBarsView.topAnchor, constant: 0.0)
-		}
-		NSLayoutConstraint.activate([
-			bottomShowBarsViewConstraint,
-			view.leadingAnchor.constraint(equalTo: bottomShowBarsView.leadingAnchor),
-			view.trailingAnchor.constraint(equalTo: bottomShowBarsView.trailingAnchor),
-			bottomShowBarsView.heightAnchor.constraint(equalToConstant: 44.0)
-		])
-		bottomShowBarsView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(showBars(_:))))
-	}
-
-	// notchCoverView spans the top safe-area inset (the notch/Dynamic Island footprint).
-	// pageCounterLabel sits on it, leading-aligned (one label, not mirrored).
-	func configureNotchCoverView() {
-		notchCoverView = UIView()
-		notchCoverView.isHidden = true
-		notchCoverView.translatesAutoresizingMaskIntoConstraints = false
-		view.addSubview(notchCoverView)
-
-		// Deliberately not safeAreaLayoutGuide.topAnchor: a fixed height kept in sync with
-		// the top inset in viewSafeAreaInsetsDidChange is immune to the guide changing
-		// while the bars animate.
-		notchCoverViewHeightConstraint = notchCoverView.heightAnchor.constraint(equalToConstant: view.safeAreaInsets.top)
-		NSLayoutConstraint.activate([
-			notchCoverView.topAnchor.constraint(equalTo: view.topAnchor),
-			notchCoverViewHeightConstraint,
-			notchCoverView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-			notchCoverView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
-		])
-
-		// The cover sits above topShowBarsView's tap zone and would swallow the tap that
-		// brings the bars back, so give it the same reveal gesture.
-		notchCoverView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(showBars(_:))))
-
-		pageCounterLabel = UILabel()
-		pageCounterLabel.font = .preferredFont(forTextStyle: .caption2)
-		pageCounterLabel.textColor = .label
-		pageCounterLabel.isHidden = true
-		pageCounterLabel.translatesAutoresizingMaskIntoConstraints = false
-		view.addSubview(pageCounterLabel)
-
-		NSLayoutConstraint.activate([
-			pageCounterLabel.centerYAnchor.constraint(equalTo: notchCoverView.centerYAnchor),
-			// NOTE: the old 20pt inset was still clipped by corner curvature on iPhone 17 in the
-			// simulator; pageCounterLeadingInset (44pt, topShowBarsView's tap-zone height) is a
-			// starting point. Re-check on an iPhone 17 simulator/device; don't adjust blind.
-			pageCounterLabel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: Self.pageCounterLeadingInset)
-		])
-
-		// Trailing counterpart to pageCounterLabel: same vertical placement, mirrored
-		// inset, sized to roughly match the label's cap height.
-		readingTimePieIndicatorView = ReadingTimePieIndicatorView()
-		readingTimePieIndicatorView.tintColor = pageCounterLabel.textColor
-		readingTimePieIndicatorView.isHidden = true
-		readingTimePieIndicatorView.translatesAutoresizingMaskIntoConstraints = false
-		view.addSubview(readingTimePieIndicatorView)
-
-		NSLayoutConstraint.activate([
-			readingTimePieIndicatorView.centerYAnchor.constraint(equalTo: notchCoverView.centerYAnchor),
-			readingTimePieIndicatorView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -Self.pageCounterLeadingInset),
-			readingTimePieIndicatorView.widthAnchor.constraint(equalToConstant: 16),
-			readingTimePieIndicatorView.heightAnchor.constraint(equalToConstant: 16)
-		])
-	}
-
-	private static let pageCounterLeadingInset: CGFloat = 44
-
-	/// Called from showBars()/hideBars() (no args: reuses the last resolved color) and
-	/// from renderPage() (explicit args, so the cover/label track the theme on every render).
-	///
-	/// notchCoverView is gated on isFullScreenAvailable (device + "Enable Full Screen
-	/// Articles"), not the momentary articleFullscreenEnabled flag: the cover sits above a
-	/// revealed nav bar, so keeping it up while peeking causes no conflict, and tying it
-	/// to the peek state made it flicker. pageCounterLabel is fullscreen-reading chrome,
-	/// so it is additionally gated on articleFullscreenEnabled.
-	func updateNotchAndPageCounterVisibility(resolvedBackground: UIColor? = nil, resolvedText: UIColor? = nil) {
-		let pageCounterOn = AppDefaults.shared.pageCounterDisplayMode != .off
-		// A visible page counter implies hiding the notch, without needing hideNotchInFullScreen.
-		let shouldHideNotch = AppDefaults.shared.hideNotchInFullScreen || pageCounterOn
-
-		// Prefer the just-resolved theme color; else reuse webView.backgroundColor (kept
-		// theme-accurate between renders) rather than the stale .systemBackground default.
-		if let resolvedBackground {
-			notchCoverView.backgroundColor = resolvedBackground
-		} else if let webViewBackground = webView?.backgroundColor {
-			notchCoverView.backgroundColor = webViewBackground
-		}
-		if let resolvedText {
-			pageCounterLabel.textColor = resolvedText
-		}
-		notchCoverView.isHidden = !(shouldHideNotch && isFullScreenAvailable)
-		// Page counter is fullscreen-reading chrome: also gate on the bars actually being hidden.
-		pageCounterLabel.isHidden = !(pageCounterOn && isFullScreenAvailable && AppDefaults.shared.articleFullscreenEnabled)
-		updateReadingTimePieIndicatorView(resolvedText: resolvedText)
-	}
-
-	/// Shares pageCounterLabel's fullscreen-chrome visibility rule so the two can't drift;
-	/// additionally hidden when there is no active daily limit to show progress against.
-	private func updateReadingTimePieIndicatorView(resolvedText: UIColor? = nil) {
-		if let resolvedText {
-			readingTimePieIndicatorView.tintColor = resolvedText
-		}
-		guard AppDefaults.shared.readingTimeEnabled, AppDefaults.shared.readingTimeDailyLimitEnabled else {
-			readingTimePieIndicatorView.isHidden = true
-			return
-		}
-		let weekday = Calendar.current.component(.weekday, from: Date())
-		let limitSeconds = AppDefaults.shared.readingTimeDailyLimitMinutes(for: weekday) * 60
-		let usedSeconds = AppDefaults.shared.readingTimeMinutesUsedTodaySeconds
-		readingTimePieIndicatorView.fraction = limitSeconds > 0 ? CGFloat(usedSeconds) / CGFloat(limitSeconds) : 0
-		// Own display-mode toggle, gated like pageCounterLabel above.
-		let indicatorModeOn = AppDefaults.shared.readingTimeIndicatorDisplayMode != .off
-		readingTimePieIndicatorView.isHidden = !(indicatorModeOn && isFullScreenAvailable && AppDefaults.shared.articleFullscreenEnabled)
-	}
-
-	@objc private func readingTimeUsageDidChange(_ note: Notification) {
-		updateReadingTimePieIndicatorView()
-	}
-
-	func updateBottomSafeAreaForFullScreen() {
-		let rawBottom = view.safeAreaInsets.bottom - additionalSafeAreaInsets.bottom
-		additionalSafeAreaInsets.bottom = -rawBottom
-	}
-
-	/// Hides or shows the toolbar scroll edge effect at the bottom of the web view;
-	/// hidden in fullscreen so a residual effect doesn't obscure the article.
-	///
-	/// <https://github.com/Ranchero-Software/NetNewsWire/issues/5298>
-	func setBottomScrollEdgeEffectHidden(_ hidden: Bool) {
-		guard #available(iOS 26, *) else {
-			return
-		}
-		guard let scrollView = webView?.scrollView else {
-			return
-		}
-		scrollView.bottomEdgeEffect.isHidden = hidden
-	}
-
-	func configureContextMenuInteraction() {
-		guard AppDefaults.shared.articleFullscreenContextMenuEnabled else {
-			webView?.removeInteraction(contextMenuInteraction)
-			return
-		}
-		if isFullScreenAvailable {
-			if navigationController?.isNavigationBarHidden ?? false {
-				webView?.addInteraction(contextMenuInteraction)
-			} else {
-				webView?.removeInteraction(contextMenuInteraction)
-			}
-		}
-	}
-
-	func contextMenuPreviewProvider() -> UIViewController {
-		let previewProvider = UIStoryboard.main.instantiateController(ofType: ContextMenuPreviewViewController.self)
-		previewProvider.article = article
-		return previewProvider
-	}
-
-	func prevArticleAction() -> UIAction? {
-		guard coordinator.isPrevArticleAvailable else { return nil }
-		let title = NSLocalizedString("Previous Work", comment: "Previous Article")
-		return UIAction(title: title, image: Assets.Images.prevArticle) { [weak self] _ in
-			self?.coordinator.selectPrevArticle()
-		}
-	}
-
-	func nextArticleAction() -> UIAction? {
-		guard coordinator.isNextArticleAvailable else { return nil }
-		let title = NSLocalizedString("Next Work", comment: "Next Article")
-		return UIAction(title: title, image: Assets.Images.nextArticle) { [weak self] _ in
-			self?.coordinator.selectNextArticle()
-		}
-	}
-
-	func toggleReadAction() -> UIAction? {
-		guard let article = article, !article.status.read || article.isAvailableToMarkUnread else { return nil }
-
-		let title = article.status.read ? NSLocalizedString("Mark as Unread", comment: "Command") : NSLocalizedString("Mark as Read", comment: "Command")
-		// Icons match ArticleViewController's toolbar convention (read: circleOpen).
-		let readImage = article.status.read ? Assets.Images.circleOpen : Assets.Images.circleClosed
-		let action = UIAction(title: title, image: readImage, attributes: .keepsMenuPresented) { [weak self] _ in
-			// Menu rebuild happens from statusesDidChange(_:) once the toggle's
-			// async write actually lands -- see that method's doc comment.
-			self?.coordinator.toggleReadForCurrentArticle()
-		}
-		return action
-	}
-
-	func toggleStarredAction() -> UIAction {
-		let starred = article?.status.starred ?? false
-		let title = starred ? NSLocalizedString("Remove from Read Later", comment: "Command") : NSLocalizedString("Add to Read Later", comment: "Command")
-		// Icons match ArticleViewController's toolbar convention (starred: starClosed).
-		let starredImage = starred ? Assets.Images.starClosed : Assets.Images.starOpen
-		let action = UIAction(title: title, image: starredImage, attributes: .keepsMenuPresented) { [weak self] _ in
-			// Menu rebuild happens from statusesDidChange(_:) once the toggle's
-			// async write actually lands -- see that method's doc comment.
-			self?.coordinator.toggleStarredForCurrentArticle()
-		}
-		return action
-	}
-
-	func toggleLovedAction() -> UIAction {
-		let loved = article?.status.loved ?? false
-		let title = loved ? NSLocalizedString("Remove from Loved", comment: "Command") : NSLocalizedString("Add to Loved", comment: "Command")
-		// Icons match ArticleViewController's toolbar convention (loved: heartClosed).
-		let lovedImage = loved ? Assets.Images.heartClosed : Assets.Images.heartOpen
-		let action = UIAction(title: title, image: lovedImage, attributes: .keepsMenuPresented) { [weak self] _ in
-			// Menu rebuild happens from statusesDidChange(_:) once the toggle's
-			// async write actually lands -- see that method's doc comment.
-			self?.coordinator.toggleLovedForCurrentArticle()
-		}
-		return action
-	}
-
-	func nextUnreadArticleAction() -> UIAction? {
-		guard coordinator.isNextUnreadAvailable else { return nil }
-		let title = NSLocalizedString("Next Unread Work", comment: "Next Unread Article")
-		return UIAction(title: title, image: Assets.Images.nextUnread) { [weak self] _ in
-			self?.coordinator.selectNextUnread()
-		}
-	}
-
-	/// Explicit per-article "Check for updates" for a single AO3 work (not an anthology
-	/// or combined-series bookKey) with no unresolved pending update. Deliberately no
-	/// bulk equivalent.
-	///
-	/// For an Ambrosia article with `AmbrosiaAO3NetworkPreference.updatesEnabled` off,
-	/// the action is returned disabled with an explanatory label rather than nil, so the
-	/// row explains why it's inert instead of vanishing.
-	func checkForUpdatesAction() -> UIAction? {
-		// A pending update blocks re-checking, which would leave the menu empty for the
-		// state that most needs action; offer the review alert instead.
-		if let article, article.pendingUpdateContentHTML != nil, article.account != nil {
-			let title = NSLocalizedString("Review Pending Update", comment: "Command: a fetched AO3 update is waiting for the person to accept or keep")
-			return UIAction(title: title, image: Assets.Images.checkForUpdates) { [weak self] _ in
-				self?.presentPendingContentUpdateAlertIfNeeded()
-			}
-		}
-		guard let article, AO3FetchPolicy.canCheckForUpdates(for: article) else { return nil }
-		guard AO3FetchPolicy.isNetworkRequestAllowed(for: article) else {
-			let title = NSLocalizedString("Check for Updates (Enable AO3 Updates in Settings)", comment: "Command, disabled: Ambrosia article with the AO3 network toggle off")
-			return UIAction(title: title, image: Assets.Images.checkForUpdates, attributes: .disabled) { _ in }
-		}
-		let title = NSLocalizedString("Check for Updates", comment: "Command")
-		return UIAction(title: title, image: Assets.Images.checkForUpdates) { [weak self] _ in
-			guard let article = self?.article else { return }
-			AO3ChapterFetcher.shared.checkForUpdates(for: article)
-		}
-	}
-
-	/// "Ignore This Work" and "Ignore Author" for the press-and-hold context menu; empty
-	/// for anything that is not a single AO3 work. The actions themselves live in
-	/// `ArticleIgnoreActions`, shared with the toolbar's Ignore function.
-	func ignoreActions() -> [UIAction] {
-		return ArticleIgnoreActions.actions(for: article, presenter: self)
 	}
 
 	/// Handles a tap on a `nectar-series:` link that `AO3PrefaceRenderer` builds into the
@@ -2461,13 +1174,6 @@ private extension WebViewController {
 		webView?.evaluateJavaScript("updateNectarSeriesLink(\"\(encoded)\");")
 	}
 
-	func shareAction() -> UIAction {
-		let title = NSLocalizedString("Share", comment: "Share button")
-		return UIAction(title: title, image: Assets.Images.share) { [weak self] _ in
-			self?.showActivityDialog()
-		}
-	}
-
 	// If the resource cannot be opened with an installed app, present the web view.
 	func openURL(_ url: URL) {
 		UIApplication.shared.open(url, options: [.universalLinksOnly: true]) { didOpen in
@@ -2503,34 +1209,6 @@ private extension WebViewController {
 	}
 }
 
-// MARK: Find in Article
-
-private struct FindInArticleOptions: Codable {
-	var text: String
-	var caseSensitive = false
-	var regex = false
-}
-
-internal struct FindInArticleState: Codable {
-	struct WebViewClientRect: Codable {
-		let x: Double
-		let y: Double
-		let width: Double
-		let height: Double
-	}
-
-	struct FindInArticleResult: Codable {
-		let rects: [WebViewClientRect]
-		let bounds: WebViewClientRect
-		let index: UInt
-		let matchGroups: [String]
-	}
-
-	let index: UInt?
-	let results: [FindInArticleResult]
-	let count: UInt
-}
-
 extension WebViewController {
 
 	/// True when `url` points at a fragment of the document the page was loaded from: same
@@ -2559,36 +1237,6 @@ extension WebViewController {
 	/// article-color-pipeline.md.
 	nonisolated static func isDarkForColorResolution(selfTraitCollection: UITraitCollection, webViewTraitCollection: UITraitCollection) -> Bool {
 		return selfTraitCollection.userInterfaceStyle == .dark
-	}
-
-	func searchText(_ searchText: String, completionHandler: @escaping (FindInArticleState) -> Void) {
-		guard let json = try? JSONEncoder().encode(FindInArticleOptions(text: searchText)) else {
-			return
-		}
-		let encoded = json.base64EncodedString()
-
-		webView?.evaluateJavaScript("updateFind(\"\(encoded)\")") { (result, error) in
-			guard error == nil,
-				let b64 = result as? String,
-				let rawData = Data(base64Encoded: b64),
-				let findState = try? JSONDecoder().decode(FindInArticleState.self, from: rawData) else {
-					return
-			}
-
-			completionHandler(findState)
-		}
-	}
-
-	func endSearch() {
-		webView?.evaluateJavaScript("endFind()")
-	}
-
-	func selectNextSearchResult() {
-		webView?.evaluateJavaScript("selectNextResult()")
-	}
-
-	func selectPreviousSearchResult() {
-		webView?.evaluateJavaScript("selectPreviousResult()")
 	}
 
 }
@@ -2643,7 +1291,7 @@ extension WebViewController {
 
 	/// Opens an http(s) link in the system browser, a universal-link app, or the in-app
 	/// browser, per the useSystemBrowser setting.
-	private func openExternalLink(_ url: URL) {
+	func openExternalLink(_ url: URL) {
 		if AppDefaults.shared.useSystemBrowser {
 			UIApplication.shared.open(url, options: [:])
 		} else {
@@ -2654,60 +1302,6 @@ extension WebViewController {
 				self.openURLInAppBrowser(url)
 			}
 		}
-	}
-
-	/// Scrolls to the element a same-document fragment link points at. The origin is captured
-	/// before the jump and pushed onto scrollJumpHistory only when the target exists, so Scroll
-	/// Back works. When the id is not in the page, the link behaves as it did before this path
-	/// existed (opens externally, unless disableArticleLinks is on) instead of going dead:
-	/// decisionHandler has to be answered synchronously, so the existence check happens here.
-	private func handleSameDocumentAnchor(_ url: URL) {
-		guard let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?.fragment,
-			  let json = try? JSONEncoder().encode(["id": id]) else {
-			return
-		}
-		let encoded = json.base64EncodedString()
-		let originY = Double(windowScrollY)
-		webView?.evaluateJavaScript("scrollToAnchor(\"\(encoded)\")") { [weak self] result, _ in
-			guard let self else {
-				return
-			}
-			if (result as? Bool) == true {
-				self.scrollJumpHistory.append(originY)
-			} else if !AppDefaults.shared.disableArticleLinks {
-				self.openExternalLink(url)
-			}
-		}
-	}
-
-	func scrollToHeading(tocIndex: Int) {
-		scrollJumpHistory.append(Double(windowScrollY))
-		guard let json = try? JSONEncoder().encode(["tocIndex": tocIndex]) else { return }
-		let encoded = json.base64EncodedString()
-		webView?.evaluateJavaScript("scrollToHeading(\"\(encoded)\")")
-	}
-
-	/// Pops the most recent pre-jump position (pushed by scrollToHeading/scrollToAnnotation)
-	/// and scrolls back to it; no-op if none. Callers wiring this to a toolbar item should
-	/// hide or disable it based on scrollJumpHistory.isEmpty.
-	func scrollBack() {
-		guard let previousY = scrollJumpHistory.popLast() else { return }
-		let payload = ["y": previousY]
-		guard let json = try? JSONEncoder().encode(payload) else { return }
-		let encoded = json.base64EncodedString()
-		webView?.evaluateJavaScript("scrollToWindowY(\"\(encoded)\")")
-	}
-
-	var isScrollBackAvailable: Bool {
-		!scrollJumpHistory.isEmpty
-	}
-
-	func scrollToTop() {
-		webView?.evaluateJavaScript("window.scrollTo({ top: 0, behavior: 'instant' });")
-	}
-
-	func scrollToBottom() {
-		webView?.evaluateJavaScript("window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });")
 	}
 
 }

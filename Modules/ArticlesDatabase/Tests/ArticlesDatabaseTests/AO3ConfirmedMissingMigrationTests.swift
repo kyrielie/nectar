@@ -2,9 +2,7 @@
 //  AO3ConfirmedMissingMigrationTests.swift
 //  ArticlesDatabaseTests
 //
-//  Schema 6 clears every ao3ConfirmedMissingAt written before interstitial
-//  classification existed. Needs a file-backed database so it can be closed
-//  and reopened at a forced user_version.
+//  Baseline schema v1 initialization and persistence.
 //
 
 import Testing
@@ -14,7 +12,7 @@ import Articles
 import RSDatabaseObjC
 @testable import ArticlesDatabase
 
-@Suite("ao3ConfirmedMissingAt schema 6 migration")
+@Suite("ArticlesDatabase schema v1 baseline")
 @MainActor
 struct AO3ConfirmedMissingMigrationTests {
 
@@ -22,18 +20,11 @@ struct AO3ConfirmedMissingMigrationTests {
 	private static let feedURL = "https://example.com/feed"
 
 	private func makeTemporaryPath() -> String {
-		NSTemporaryDirectory() + "ao3-missing-migration-\(UUID().uuidString).sqlite3"
+		NSTemporaryDirectory() + "ao3-schema-baseline-\(UUID().uuidString).sqlite3"
 	}
 
 	private func open(_ path: String) -> ArticlesDatabase {
 		ArticlesDatabase(databaseFilePath: path, accountID: "test-account", retentionStyle: .feedBased)
-	}
-
-	private func setUserVersion(_ version: Int, path: String) throws {
-		let database = try #require(FMDatabase(path: path))
-		try #require(database.open())
-		database.executeStatements("PRAGMA user_version = \(version);")
-		database.close()
 	}
 
 	private func readUserVersion(path: String) throws -> UInt32 {
@@ -43,8 +34,32 @@ struct AO3ConfirmedMissingMigrationTests {
 		return database.userVersion()
 	}
 
-	@Test("a version 5 database loses its missing flags on reopen and moves to version 6")
-	func clearsFlagsAndBumpsVersion() async throws {
+	@Test("a fresh database initializes at version 1 with complete schema")
+	func initializesAtVersion1() async throws {
+		let path = makeTemporaryPath()
+		defer { try? FileManager.default.removeItem(atPath: path) }
+
+		let db = open(path)
+		#expect(try readUserVersion(path: path) == 1)
+
+		let articleID = Article.calculatedArticleID(feedID: Self.feedID, uniqueID: "u1")
+		let item = TestFixtures.makeParsedItem(
+			uniqueID: "u1",
+			feedURL: Self.feedURL,
+			wordCount: 1500,
+			isRestricted: true,
+			ao3Language: "English"
+		)
+		_ = await db.updateAsync(parsedItems: [item], feedID: Self.feedID, deleteOlder: false)
+
+		let stored = try #require(await db.fetchArticlesAsync(articleIDs: [articleID]).first)
+		#expect(stored.wordCount == 1500)
+		#expect(stored.isRestricted == true)
+		#expect(stored.language == "English")
+	}
+
+	@Test("a database reopens cleanly and preserves flags at version 1")
+	func reopensPreservingData() async throws {
 		let path = makeTemporaryPath()
 		defer { try? FileManager.default.removeItem(atPath: path) }
 
@@ -58,34 +73,9 @@ struct AO3ConfirmedMissingMigrationTests {
 			try #require(flagged.ao3ConfirmedMissingAt != nil)
 		}
 
-		try setUserVersion(5, path: path)
-		#expect(try readUserVersion(path: path) == 5)
-
-		let reopened = open(path)
-		let article = try #require(await reopened.fetchArticlesAsync(articleIDs: [articleID]).first)
-		#expect(article.ao3ConfirmedMissingAt == nil)
-		#expect(try readUserVersion(path: path) == 6)
-	}
-
-	@Test("a version 6 database keeps flags set on reopen")
-	func laterFlagsSurviveReopen() async throws {
-		let path = makeTemporaryPath()
-		defer { try? FileManager.default.removeItem(atPath: path) }
-
-		let articleID = Article.calculatedArticleID(feedID: Self.feedID, uniqueID: "u1")
-		do {
-			let db = open(path)
-			let item = TestFixtures.makeParsedItem(uniqueID: "u1", feedURL: Self.feedURL, wordCount: 100)
-			_ = await db.updateAsync(parsedItems: [item], feedID: Self.feedID, deleteOlder: false)
-			await db.setAO3ConfirmedMissingAsync(articleID: articleID)
-		}
-
-		// A version 6 install is current: the schema 6 clear must not repeat.
-		try setUserVersion(6, path: path)
-
 		let reopened = open(path)
 		let article = try #require(await reopened.fetchArticlesAsync(articleIDs: [articleID]).first)
 		#expect(article.ao3ConfirmedMissingAt != nil)
-		#expect(try readUserVersion(path: path) == 6)
+		#expect(try readUserVersion(path: path) == 1)
 	}
 }

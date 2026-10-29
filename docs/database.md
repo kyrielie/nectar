@@ -66,7 +66,7 @@ that account's folder. This is the largest and most actively evolved
 database in the app — its schema carries the marks of Nectar's AO3/Ambrosia
 features layered on top of upstream NetNewsWire's original article model.
 
-### Schema
+### Schema (v1.0 Public Baseline)
 
 ```sql
 CREATE TABLE if not EXISTS articles (
@@ -76,9 +76,12 @@ CREATE TABLE if not EXISTS articles (
   datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT,
   wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL,
   fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT,
-  categories TEXT, additionalTags TEXT, series TEXT,
-  isRestricted BOOL, language TEXT, collections TEXT
-  -- plus columns added by later ALTER TABLE migrations, see below
+  categories TEXT, additionalTags TEXT, series TEXT, commentCount INTEGER,
+  kudosCount INTEGER, bookmarkCount INTEGER, hitCount INTEGER, isRestricted BOOL,
+  language TEXT, collections TEXT, dateBookmarked DATE, lastPrefaceFetchDate DATE,
+  isAmbrosiaItem BOOL, bookKey TEXT, pendingUpdateContentHTML TEXT,
+  pendingUpdateDetectedAt DATE, wordCountRegressionFlaggedAt DATE,
+  ao3ConfirmedMissingAt DATE
 );
 
 CREATE TABLE if not EXISTS statuses (
@@ -96,39 +99,33 @@ CREATE TABLE if not EXISTS bookState (
   kudosAttemptedAuthenticated BOOL NOT NULL DEFAULT 0
 );
 
+CREATE TABLE if not EXISTS annotations (
+  annotationID TEXT NOT NULL PRIMARY KEY, articleID TEXT NOT NULL, bookKey TEXT,
+  quoteExact TEXT NOT NULL, quotePrefix TEXT NOT NULL DEFAULT '',
+  quoteSuffix TEXT NOT NULL DEFAULT '', rootSelector TEXT NOT NULL DEFAULT '.articleBody',
+  startOffset INTEGER NOT NULL, endOffset INTEGER NOT NULL, color TEXT NOT NULL DEFAULT 'yellow',
+  note TEXT, createdAt DATE NOT NULL, updatedAt DATE NOT NULL, orphanedAt DATE,
+  lastReanchoredAt DATE, chapterTitle TEXT, hasHighlight BOOL NOT NULL DEFAULT 1,
+  originalText TEXT, replacementText TEXT
+);
+
 CREATE VIRTUAL TABLE if not EXISTS search using fts4(title, body);
 ```
 
 Indexes: `articles(feedID, datePublished, articleID)`,
-`statuses(starred)`, `articles(searchRowID)`, and (added later, see below)
-`articles(bookKey)` and `articles(uniqueID)`.
+`articles(bookKey)`, `articles(uniqueID)`, `articles(searchRowID)`,
+`statuses(starred)`, `annotations(articleID)`, and `annotations(bookKey)`.
 
-`ArticlesDatabase.init` runs the base `CREATE TABLE`/`CREATE INDEX`
-statements via `runCreateStatements`, then **synchronously** (not via the
-normal async `runInDatabase`, specifically to guarantee every migration has
-actually run before `init()` returns and callers can start querying) runs a
-long, additive sequence of `containsColumn`-guarded `ALTER TABLE` statements.
-The whole block is gated by `PRAGMA user_version` against
-`ArticlesDatabase.currentSchemaVersion` (currently **7**): once an install
-has reached the current version, launch skips it entirely, so a new
-`ALTER TABLE` needs both its `containsColumn`-guarded block *and* a bump of
-`currentSchemaVersion`, or it never runs on an already-migrated install.
-Because the block as a whole re-runs on every bump, a step that rewrites data
-(rather than adding a column or index) must be gated on `existingVersion`;
-the schema 6 clear of `ao3ConfirmedMissingAt` is, so a later bump does not
-lose flags set since. Version history: 3 `chapterTitle`, 4 `dateBookmarked`,
-5 annotation text-replacement columns, 6 clear stale `ao3ConfirmedMissingAt`.
-A fresh install starts at version 0 and runs every step in one pass.
+`ArticlesDatabase.init` runs `tableCreationStatements` via
+`runCreateStatements`. On a fresh install (`user_version == 0`), it stamps
+`PRAGMA user_version = 1` and returns immediately. Future migrations are gated
+on `currentSchemaVersion` (version **1** is the canonical public baseline). Because
+all columns, indexes, and triggers are defined directly in the canonical
+schema, app launch performs zero main-thread `ALTER TABLE` probing queries.
 
-Exception while the app is in heavy development: `isRestricted`, `language`
-and `collections` are in the `CREATE TABLE` literal with no migration and no
-version bump. An existing database does not gain them; carry it across with a
-backup and restore into a fresh install, whose merge fills any column the
-backup lacks with `NULL` (`backup-restore.md`). Before a release that real
-users upgrade into, these need a guarded `ALTER TABLE` step and a bump.
+### Columns Inventory
 
-Migrations of note, in the order they were added (each documents its own
-rationale extensively in the source):
+| Columns | Table | Purpose |
 
 | Columns | Table | Purpose |
 |---|---|---|

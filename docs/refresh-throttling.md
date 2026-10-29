@@ -23,7 +23,7 @@ three independent reasons in order:
    `AO3Link.isListingFeed` — renamed from `isAO3SearchResultsFeed` once it
    broadened past search/tag results, see `ao3-feeds.md`'s
    `AO3SearchResultsExtractor` section and
-   `nectar-toolbar-ao3-listing-feeds.md`) — a normal
+   `ao3-link.md`) — a normal
    scheduled/background/pull-to-refresh pass never re-fetches page 1 of
    any AO3 listing feed (search/tag results, author works, bookmarks,
    marked-for-later, subscriptions, a collection, or a series) once it's

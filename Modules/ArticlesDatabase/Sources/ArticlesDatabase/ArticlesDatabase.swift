@@ -107,28 +107,10 @@ public struct ArticleAttentionInfo: Sendable {
 	nonisolated private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "ArticlesDatabase")
 
 	/// Gates the one-time migration block in `init` below, via `PRAGMA
-	/// user_version` on this database's own "main" schema (distinct from
-	/// `AmbrosiaSQLiteImportTable.readWireFormatVersion`'s use of the same
-	/// pragma name against a standalone-opened transfer file, and from
-	/// whatever `user_version` an ATTACH DATABASE'd transfer file carries
-	/// under its own alias schema -- unqualified `PRAGMA user_version`
-	/// always addresses "main", so these don't collide). Read/written via
-	/// FMDB's own `FMDatabaseAdditions` category (`userVersion`/
-	/// `setUserVersion:`, bridged as `UInt32`) rather than a hand-rolled
-	/// `PRAGMA user_version` query -- that category already exists on
-	/// `FMDatabase`, and a second Swift `userVersion()` here previously
-	/// collided with it ("ambiguous use of 'userVersion()'"). Bump this and
-	/// add the new migration statements inside the existing `guard
-	/// existingVersion < Self.currentSchemaVersion` block for any future
-	/// schema change; a fresh install starts at user_version 0 and runs
-	/// every step up to currentSchemaVersion in one pass, same as an
-	/// existing install catching up.
-	///
-	/// History: 3 chapterTitle, 4 dateBookmarked, 5 annotation text
-	/// replacement columns, 6 clear stale ao3ConfirmedMissingAt. Every step re-runs on a bump, so a step that rewrites
-	/// data (rather than adding a column or index) must be gated on
-	/// `existingVersion` to avoid repeating on every later upgrade.
-	nonisolated private static let currentSchemaVersion: UInt32 = 6
+	/// Schema version tracking on this database's own "main" schema.
+	/// Version 1 is the pristine public v1.0 baseline containing all modern
+	/// tables, columns, indexes, and FTS search triggers in tableCreationStatements.
+	nonisolated private static let currentSchemaVersion: UInt32 = 1
 
 	public init(databaseFilePath: String, accountID: String, retentionStyle: RetentionStyle) {
 		Self.logger.debug("Articles Database init \(accountID, privacy: .public)")
@@ -141,320 +123,22 @@ public struct ArticleAttentionInfo: Sendable {
 		self.accountID = accountID
 
 		queue.runCreateStatements(ArticlesDatabase.tableCreationStatements)
-		// Must run synchronously: runInDatabase dispatches asynchronously and
-		// returns immediately, so init() could return -- and callers could
-		// start querying articles/statuses -- before these ALTER TABLE
-		// migrations (e.g. pendingUpdateContentHTML/pendingUpdateDetectedAt/
-		// wordCountRegressionFlaggedAt below) have actually run, producing
-		// "no such column" warnings on every early read.
 		queue.runInDatabaseSync { database in
-			Self.logger.debug("ArticlesDatabase: creating tables \(accountID, privacy: .public)")
+			Self.logger.debug("ArticlesDatabase: checking schema version \(accountID, privacy: .public)")
 
-			// The containsColumn-guarded ALTER TABLEs and the one-time
-			// bookKey data-fix below are additive/idempotent, but each
-			// containsColumn check is its own `select * from ... limit 1`
-			// query -- roughly 25 of them, plus the JOIN/UPDATE data-fix --
-			// and this whole block runs synchronously on the main thread
-			// (required, see comment above) on every single launch,
-			// forever, even once a database is fully migrated. Skip
-			// straight past all of it once user_version shows this launch
-			// has nothing left to do; only a version bump (new migration
-			// work added below) makes it run again.
 			let existingVersion = database.userVersion()
 			guard existingVersion < Self.currentSchemaVersion else {
 				return
 			}
 
-			if !self.articlesTable.containsColumn("searchRowID", in: database) {
-				database.executeStatements("ALTER TABLE articles add column searchRowID INTEGER;")
-			}
-			if !self.articlesTable.containsColumn("markdown", in: database) {
-				Self.logger.debug("ArticlesDatabase: adding markdown column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column markdown TEXT;")
-			}
-			if !self.articlesTable.containsColumn("authors", in: database) {
-				Self.logger.debug("ArticlesDatabase: adding authors column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column authors TEXT;")
+			// Newly created database: stamp baseline version 1 and return.
+			if existingVersion == 0 {
+				database.setUserVersion(Self.currentSchemaVersion)
+				return
 			}
 
-			// Ambrosia extension columns. Additive only — every column here is
-			// nullable, so a fresh ALTER TABLE per missing column is safe to
-			// run unconditionally on every launch via the containsColumn guard.
-			let ambrosiaIntegerColumns = ["wordCount", "chapterCurrent", "chapterTotal"]
-			for column in ambrosiaIntegerColumns {
-				if !self.articlesTable.containsColumn(column, in: database) {
-					Self.logger.debug("ArticlesDatabase: adding \(column, privacy: .public) column \(accountID, privacy: .public)")
-					database.executeStatements("ALTER TABLE articles add column \(column) INTEGER;")
-				}
-			}
-			if !self.articlesTable.containsColumn("isComplete", in: database) {
-				Self.logger.debug("ArticlesDatabase: adding isComplete column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column isComplete BOOL;")
-			}
-			let ambrosiaTextColumns = ["fandoms", "relationships", "characters", "ratings", "warnings", "categories", "series"]
-			for column in ambrosiaTextColumns {
-				if !self.articlesTable.containsColumn(column, in: database) {
-					Self.logger.debug("ArticlesDatabase: adding \(column, privacy: .public) column \(accountID, privacy: .public)")
-					database.executeStatements("ALTER TABLE articles add column \(column) TEXT;")
-				}
-			}
-
-			// AO3 Work Header stats (Comments/Kudos/Bookmarks/Hits), read off
-			// AO3's live dl.stats block by AO3ChapterHTMLExtractor on each
-			// successful chapter fetch -- not part of the `_ambrosia`
-			// extension object above, so a separate additive-only column
-			// group, same containsColumn-guarded ALTER TABLE pattern.
-			let ao3StatsColumns = ["commentCount", "kudosCount", "bookmarkCount", "hitCount"]
-			for column in ao3StatsColumns {
-				if !self.articlesTable.containsColumn(column, in: database) {
-					Self.logger.debug("ArticlesDatabase: adding \(column, privacy: .public) column \(accountID, privacy: .public)")
-					database.executeStatements("ALTER TABLE articles add column \(column) INTEGER;")
-				}
-			}
-
-			// Task 10 ("Prev/next/first navigation") -- previous/next work
-			// URLs, read off the same live work-page fetch as the stats
-			// above, but stored as TEXT (URLs, not counts). Same additive,
-			// containsColumn-guarded pattern. Superseded by per-series
-			// navigation: Article no longer writes
-			// or reads these columns, but the migration stays so an
-			// existing install's schema doesn't change shape, and the
-			// column names stay reserved (see Constants.swift).
-			let ao3SeriesNavigationColumns = ["previousWorkURL", "nextWorkURL"]
-			for column in ao3SeriesNavigationColumns {
-				if !self.articlesTable.containsColumn(column, in: database) {
-					Self.logger.debug("ArticlesDatabase: adding \(column, privacy: .public) column \(accountID, privacy: .public)")
-					database.executeStatements("ALTER TABLE articles add column \(column) TEXT;")
-				}
-			}
-
-			// lastPrefaceFetchDate (AO3ChapterFetcher's own "when did this last
-			// succeed" bookkeeping, for the refetch-cadence setting) and
-			// isAmbrosiaItem (an Ambrosia-vs-native-AO3 marker, needed so
-			// AO3ChapterFetcher/ArticleRenderer can tell a failed refetch should
-			// leave Ambrosia's own preface alone). Same additive, containsColumn-
-			// guarded pattern as the columns above.
-			if !self.articlesTable.containsColumn("lastPrefaceFetchDate", in: database) {
-				Self.logger.debug("ArticlesDatabase: adding lastPrefaceFetchDate column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column lastPrefaceFetchDate DATE;")
-			}
-			if !self.articlesTable.containsColumn("isAmbrosiaItem", in: database) {
-				Self.logger.debug("ArticlesDatabase: adding isAmbrosiaItem column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column isAmbrosiaItem BOOL;")
-			}
-
-			// Task 8 (pending-update diff/regression guard): read/written throughout
-			// ArticlesTable/Article+Database (setPendingContentUpdate,
-			// resolvePendingContentUpdate, changesFrom, row hydration in Article.init)
-			// but never migrated in here -- on a real pre-Task-8 database these three
-			// columns don't exist, so every read/write against them throws a SQLite
-			// "no such column" error, and Article.init reads all three unconditionally
-			// on every row hydration, so this broke on first launch after upgrade.
-			// Same additive, containsColumn-guarded ALTER TABLE pattern as
-			// lastPrefaceFetchDate/isAmbrosiaItem above. pendingUpdateContentHTML is
-			// TEXT (compressed via ContentHTMLCompression, same as contentHTML/
-			// contentText); the two *At columns are DATE, both nullable (nil = no
-			// pending diff / no regression flagged).
-			if !self.articlesTable.containsColumn(DatabaseKey.pendingUpdateContentHTML, in: database) {
-				Self.logger.debug("ArticlesDatabase: adding pendingUpdateContentHTML column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.pendingUpdateContentHTML) TEXT;")
-			}
-			if !self.articlesTable.containsColumn(DatabaseKey.pendingUpdateDetectedAt, in: database) {
-				Self.logger.debug("ArticlesDatabase: adding pendingUpdateDetectedAt column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.pendingUpdateDetectedAt) DATE;")
-			}
-			if !self.articlesTable.containsColumn(DatabaseKey.wordCountRegressionFlaggedAt, in: database) {
-				Self.logger.debug("ArticlesDatabase: adding wordCountRegressionFlaggedAt column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.wordCountRegressionFlaggedAt) DATE;")
-			}
-			if !self.articlesTable.containsColumn(DatabaseKey.ao3ConfirmedMissingAt, in: database) {
-				Self.logger.debug("ArticlesDatabase: adding ao3ConfirmedMissingAt column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.ao3ConfirmedMissingAt) DATE;")
-			}
-
-			// Phase 2 (reading behavior): per-article scroll position, replacing the old
-			// single-global AppDefaults.shared.articleWindowScrollY. Additive/nullable-with-
-			// default, so the same containsColumn-guarded ALTER TABLE pattern as the columns
-			// above applies here, just against the statuses table instead of articles.
-			if !self.statusesTableContainsScrollPositionColumn(database) {
-				Self.logger.debug("ArticlesDatabase: adding scrollPosition column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE statuses add column scrollPosition REAL NOT NULL DEFAULT 0;")
-			}
-
-			// Phase A1 (visible reading progress): fraction (0...1) of the article read.
-			// Nullable with no default -- nil/NULL means "never computed," distinct from
-			// 0 ("computed, at the very top"), so this can't use the NOT NULL DEFAULT 0
-			// pattern the scrollPosition column above uses.
-			if !self.statusesTableContainsReadingProgressColumn(database) {
-				Self.logger.debug("ArticlesDatabase: adding readingProgress column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE statuses add column readingProgress REAL;")
-			}
-
-			// Phase 5 (loved status): a second, independent boolean status, same tier
-			// as starred -- same containsColumn-guarded ALTER TABLE pattern.
-			if !self.statusesTableContainsLovedColumn(database) {
-				Self.logger.debug("ArticlesDatabase: adding loved column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE statuses add column loved BOOLEAN NOT NULL DEFAULT 0;")
-			}
-
-			// Last Opened smart feed: per-articleID denormalized copy of bookState's
-			// lastOpenedAt, propagated the same way loved/starred are, so the
-			// timeline can query/order by it with a plain WHERE/ORDER BY -- same
-			// reasoning as the loved column above.
-			if !self.statusesTableContainsLastOpenedAtColumn(database) {
-				Self.logger.debug("ArticlesDatabase: adding lastOpenedAt column (statuses) \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE statuses add column lastOpenedAt DATE;")
-			}
-			if !self.bookStateTableContainsLastOpenedAtColumn(database) {
-				Self.logger.debug("ArticlesDatabase: adding lastOpenedAt column (bookState) \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE bookState add column lastOpenedAt DATE;")
-			}
-
-			// Task 6 (kudos-on-like): forward-only kudos-attempt tracking per
-			// book, bookState-only (no statuses-table mirror -- see the
-			// DatabaseKey.kudosAttemptedAt doc comment). kudosAttemptedAt
-			// nullable (nil = never attempted); kudosAttemptedAuthenticated
-			// records guest vs logged-in once an attempt has happened, which
-			// the re-attempt policy in Task 6 depends on. Same
-			// containsColumn-guarded ALTER TABLE pattern as lastOpenedAt above.
-			if !self.bookStateTableContainsKudosAttemptedAtColumn(database) {
-				Self.logger.debug("ArticlesDatabase: adding kudosAttemptedAt column (bookState) \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE bookState add column kudosAttemptedAt DATE;")
-			}
-			if !self.bookStateTableContainsKudosAttemptedAuthenticatedColumn(database) {
-				Self.logger.debug("ArticlesDatabase: adding kudosAttemptedAuthenticated column (bookState) \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE bookState add column kudosAttemptedAuthenticated BOOL NOT NULL DEFAULT 0;")
-			}
-
-			// Phase 6 (book-level read state): identity key used to dedup a book's
-			// read state across collection feeds and re-subscriptions. Nullable --
-			// existing rows read back as nil and Article falls back to uniqueID
-			// until the article is next re-parsed and picks up a real bookKey.
-			if !self.articlesTable.containsColumn("bookKey", in: database) {
-				Self.logger.debug("ArticlesDatabase: adding bookKey column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column bookKey TEXT;")
-			}
-
-			// additionalTags (freeform "Additional Tags"): parsed by
-			// AO3ChapterHTMLExtractor's AO3WorkPageMetadata alongside the
-			// other tag-group columns (fandoms/relationships/etc, added
-			// earlier as part of the Ambrosia extension group above), but
-			// added separately here, after those columns --
-			// see Article.additionalTags's own doc comment. Same additive,
-			// containsColumn-guarded ALTER TABLE pattern, TEXT (JSON-encoded
-			// array) like the other tag-group columns.
-			if !self.articlesTable.containsColumn(DatabaseKey.additionalTags, in: database) {
-				Self.logger.debug("ArticlesDatabase: adding additionalTags column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.additionalTags) TEXT;")
-			}
-
-			// One-time data fix for the ParsedItem.bookKey routing change (series-group
-			// items now route to "ao3-series:<id>" like an anthology-with-a-series-id
-			// does, instead of falling through to the bare uniqueID -- see
-			// ParsedItem.swift's bookKey doc comment). Only bookKey itself is a stored
-			// column here; ao3SeriesID/isAnthology/seriesName are ParsedItem-only
-			// fields consumed at parse/import time and never persisted to `articles`,
-			// so this can't be driven off an ao3SeriesID column the way this fix
-			// originally assumed. Instead it's driven off Ambrosia's own wire
-			// id scheme for a series-group item, "ambrosia-series-ao3:<id>" (confirmed
-			// against Ambrosia's LocalFeedServer output, not against anything in this
-			// repo) -- a pre-fix row still sitting on its old bookKey == uniqueID
-			// fallback is recognized by that prefix and repointed directly, since it
-			// would otherwise only self-heal on that feed's next refresh (which
-			// ArticlesTable.update's diff-and-update path already handles for the
-			// articles.bookKey column, per Article's == including bookKey -- this
-			// block exists only because BookStateTable has no such self-heal: it's
-			// keyed by value with no relationship to article identity). Self-limiting/
-			// idempotent via the WHERE clause below, same as AuthorsSchemaMigration's
-			// approach elsewhere in this init -- no separate one-shot flag needed,
-			// since a row this UPDATE has already fixed no longer matches it.
-			let seriesGroupUniqueIDPrefix = "ambrosia-series-ao3:"
-			database.executeStatements("""
-				INSERT OR IGNORE INTO bookState (bookKey, read, starred, loved, scrollPosition, readingProgress, lastOpenedAt, updatedAt, kudosAttemptedAt, kudosAttemptedAuthenticated)
-				SELECT '\(BookKeyPrefix.ao3Series)' || substr(a.uniqueID, \(seriesGroupUniqueIDPrefix.count + 1)), b.read, b.starred, b.loved, b.scrollPosition, b.readingProgress, b.lastOpenedAt, b.updatedAt, b.kudosAttemptedAt, b.kudosAttemptedAuthenticated
-				FROM articles a
-				JOIN bookState b ON b.bookKey = a.uniqueID
-				WHERE a.isAmbrosiaItem = 1 AND a.bookKey = a.uniqueID AND a.uniqueID LIKE '\(seriesGroupUniqueIDPrefix)%';
-
-				DELETE FROM bookState WHERE bookKey IN (
-				  SELECT a.uniqueID FROM articles a
-				  WHERE a.isAmbrosiaItem = 1 AND a.bookKey = a.uniqueID AND a.uniqueID LIKE '\(seriesGroupUniqueIDPrefix)%'
-				);
-
-				UPDATE articles SET bookKey = '\(BookKeyPrefix.ao3Series)' || substr(uniqueID, \(seriesGroupUniqueIDPrefix.count + 1))
-				WHERE isAmbrosiaItem = 1 AND bookKey = uniqueID AND uniqueID LIKE '\(seriesGroupUniqueIDPrefix)%';
-				""")
-
-			// nectarfixes #3: bookKeysForArticleIDs/articleIDsForBookKeys (ArticlesTable)
-			// run a WHERE bookKey IN (...) and a WHERE uniqueID IN (...) lookup on every
-			// single read/starred/loved toggle now, to write through to the book-level
-			// state tables and live-propagate to sibling copies of the same book. Neither
-			// column had an index, so both lookups were full table scans of `articles` --
-			// on every tap, regardless of library size. Indexing them turns the toggle's
-			// DB transaction back into an index lookup instead of O(n).
-			database.executeStatements("CREATE INDEX if not EXISTS articles_bookKey_index on articles(bookKey);")
-			database.executeStatements("CREATE INDEX if not EXISTS articles_uniqueID_index on articles(uniqueID);")
-
-			// Schema version 3: chapterTitle on annotations (docs/annotations.md).
-			// Nullable, same containsColumn-guarded ALTER TABLE pattern as
-			// bookKey above -- existing annotations get chapterTitle = nil
-			// until the next time their article is opened/re-anchored,
-			// self-healing the same way an upgraded quotePrefix/quoteSuffix
-			// capture window does.
-			if !self.articlesTable.annotationsTable.containsColumn("chapterTitle", in: database) {
-				Self.logger.debug("ArticlesDatabase: adding chapterTitle column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE annotations add column chapterTitle TEXT;")
-			}
-
-			// Schema version 4: dateBookmarked (docs/ao3-feeds.md,
-			// docs/database.md) -- the date an AO3 bookmarks-page row was
-			// bookmarked, distinct from the work's own dateModified. Own
-			// single-column block since it's DATE, not INTEGER like the
-			// four AO3 stats columns above -- same containsColumn-guarded
-			// ALTER TABLE pattern as lastPrefaceFetchDate/
-			// wordCountRegressionFlaggedAt.
-			if !self.articlesTable.containsColumn(DatabaseKey.dateBookmarked, in: database) {
-				Self.logger.debug("ArticlesDatabase: adding dateBookmarked column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE articles add column \(DatabaseKey.dateBookmarked) DATE;")
-			}
-
-			// Schema version 5: hasHighlight/originalText/replacementText on
-			// annotations (docs/annotations.md, "Storage shape") -- the local
-			// diff/override layer text replacement is built on top of. Same
-			// containsColumn-guarded ALTER TABLE pattern as chapterTitle above.
-			// hasHighlight defaults every existing row to true at the SQL
-			// level -- correct, since every row that predates this migration
-			// is a highlight -- so no backfill pass is needed.
-			// originalText/replacementText are nullable and paired: non-nil
-			// exactly when this row also carries a text replacement.
-			if !self.articlesTable.annotationsTable.containsColumn(DatabaseKey.hasHighlight, in: database) {
-				Self.logger.debug("ArticlesDatabase: adding hasHighlight column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE annotations add column \(DatabaseKey.hasHighlight) BOOL NOT NULL DEFAULT 1;")
-			}
-			if !self.articlesTable.annotationsTable.containsColumn(DatabaseKey.originalText, in: database) {
-				Self.logger.debug("ArticlesDatabase: adding originalText column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE annotations add column \(DatabaseKey.originalText) TEXT;")
-			}
-			if !self.articlesTable.annotationsTable.containsColumn(DatabaseKey.replacementText, in: database) {
-				Self.logger.debug("ArticlesDatabase: adding replacementText column \(accountID, privacy: .public)")
-				database.executeStatements("ALTER TABLE annotations add column \(DatabaseKey.replacementText) TEXT;")
-			}
-
-			database.executeStatements("CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);")
-			database.executeStatements("DROP TABLE if EXISTS tags;DROP INDEX if EXISTS tags_tagName_index;DROP INDEX if EXISTS articles_feedID_index;DROP INDEX if EXISTS statuses_read_index;DROP TABLE if EXISTS attachments;DROP TABLE if EXISTS attachmentsLookup;")
-
-			// Schema 6 (gated on existingVersion: this is a data rewrite, and
-			// the whole block re-runs on every later version bump, which would
-			// otherwise wipe flags legitimately set since): clear every
-			// existing ao3ConfirmedMissingAt. Those
-			// values predate classification of interstitials (Cloudflare
-			// challenge and AO3 503 pages were once treated as "work
-			// missing"), so a real flag cannot be told apart from a false
-			// one. A work that is genuinely gone is re-flagged on its next
-			// fetch. Restoring a backup can reintroduce old flags; accepted.
-			if existingVersion < 6 {
-				database.executeStatements("UPDATE articles SET ao3ConfirmedMissingAt = NULL WHERE ao3ConfirmedMissingAt IS NOT NULL;")
-			}
+			// Future migrations will be gated here:
+			// if existingVersion < 2 { ... }
 
 			database.setUserVersion(Self.currentSchemaVersion)
 		}
@@ -1313,20 +997,22 @@ public struct ArticleAttentionInfo: Sendable {
 private extension ArticlesDatabase {
 
 	static let tableCreationStatements = """
-	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, additionalTags TEXT, series TEXT, isRestricted BOOL, language TEXT, collections TEXT);
+	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, additionalTags TEXT, series TEXT, commentCount INTEGER, kudosCount INTEGER, bookmarkCount INTEGER, hitCount INTEGER, isRestricted BOOL, language TEXT, collections TEXT, dateBookmarked DATE, lastPrefaceFetchDate DATE, isAmbrosiaItem BOOL, bookKey TEXT, pendingUpdateContentHTML TEXT, pendingUpdateDetectedAt DATE, wordCountRegressionFlaggedAt DATE, ao3ConfirmedMissingAt DATE);
 
 	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOLEAN NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE);
 
 	CREATE TABLE if not EXISTS bookState (bookKey TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOL NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE, updatedAt DATE NOT NULL, kudosAttemptedAt DATE, kudosAttemptedAuthenticated BOOL NOT NULL DEFAULT 0);
 
-	CREATE TABLE if not EXISTS annotations (annotationID TEXT NOT NULL PRIMARY KEY, articleID TEXT NOT NULL, bookKey TEXT, quoteExact TEXT NOT NULL, quotePrefix TEXT NOT NULL DEFAULT '', quoteSuffix TEXT NOT NULL DEFAULT '', rootSelector TEXT NOT NULL DEFAULT '.articleBody', startOffset INTEGER NOT NULL, endOffset INTEGER NOT NULL, color TEXT NOT NULL DEFAULT 'yellow', note TEXT, createdAt DATE NOT NULL, updatedAt DATE NOT NULL, orphanedAt DATE, lastReanchoredAt DATE);
+	CREATE TABLE if not EXISTS annotations (annotationID TEXT NOT NULL PRIMARY KEY, articleID TEXT NOT NULL, bookKey TEXT, quoteExact TEXT NOT NULL, quotePrefix TEXT NOT NULL DEFAULT '', quoteSuffix TEXT NOT NULL DEFAULT '', rootSelector TEXT NOT NULL DEFAULT '.articleBody', startOffset INTEGER NOT NULL, endOffset INTEGER NOT NULL, color TEXT NOT NULL DEFAULT 'yellow', note TEXT, createdAt DATE NOT NULL, updatedAt DATE NOT NULL, orphanedAt DATE, lastReanchoredAt DATE, chapterTitle TEXT, hasHighlight BOOL NOT NULL DEFAULT 1, originalText TEXT, replacementText TEXT);
 
 	CREATE INDEX if not EXISTS articles_feedID_datePublished_articleID on articles (feedID, datePublished, articleID);
+	CREATE INDEX if not EXISTS articles_bookKey_index on articles(bookKey);
+	CREATE INDEX if not EXISTS articles_uniqueID_index on articles(uniqueID);
+	CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);
 
 	CREATE INDEX if not EXISTS statuses_starred_index on statuses (starred);
 
 	CREATE INDEX if not EXISTS annotations_articleID_index on annotations(articleID);
-
 	CREATE INDEX if not EXISTS annotations_bookKey_index on annotations(bookKey);
 
 	CREATE VIRTUAL TABLE if not EXISTS search using fts4(title, body);
@@ -1342,76 +1028,6 @@ private extension ArticlesDatabase {
 		// 24-hour window of dateArrived (when something entered the library),
 		// not datePublished. Should not actually empty out at midnight.
 		return Date(timeIntervalSinceNow: -(60 * 60 * 24)) // This does not need to be more precise.
-	}
-
-	/// Mirrors DatabaseTable.containsColumn's logic (see RSDatabase), but against the
-	/// statuses table specifically. ArticlesDatabase only holds a reference to
-	/// articlesTable (whose containsColumn is hardwired to the "articles" table via its
-	/// own `name`), not statusesTable, so it's duplicated here rather than plumbed through.
-	nonisolated func statusesTableContainsScrollPositionColumn(_ database: FMDatabase) -> Bool {
-		guard let resultSet = database.executeQuery("select * from statuses limit 1;", withArgumentsIn: nil),
-			  let columnMap = resultSet.columnNameToIndexMap else {
-			return false
-		}
-		return columnMap["scrollposition"] != nil
-	}
-
-	/// Same approach as `statusesTableContainsScrollPositionColumn` above.
-	nonisolated func statusesTableContainsReadingProgressColumn(_ database: FMDatabase) -> Bool {
-		guard let resultSet = database.executeQuery("select * from statuses limit 1;", withArgumentsIn: nil),
-			  let columnMap = resultSet.columnNameToIndexMap else {
-			return false
-		}
-		return columnMap["readingprogress"] != nil
-	}
-
-	/// Same approach as `statusesTableContainsScrollPositionColumn` above.
-	nonisolated func statusesTableContainsLovedColumn(_ database: FMDatabase) -> Bool {
-		guard let resultSet = database.executeQuery("select * from statuses limit 1;", withArgumentsIn: nil),
-			  let columnMap = resultSet.columnNameToIndexMap else {
-			return false
-		}
-		return columnMap["loved"] != nil
-	}
-
-	/// Same approach as `statusesTableContainsScrollPositionColumn` above.
-	nonisolated func statusesTableContainsLastOpenedAtColumn(_ database: FMDatabase) -> Bool {
-		guard let resultSet = database.executeQuery("select * from statuses limit 1;", withArgumentsIn: nil),
-			  let columnMap = resultSet.columnNameToIndexMap else {
-			return false
-		}
-		return columnMap["lastopenedat"] != nil
-	}
-
-	/// Same approach as `statusesTableContainsScrollPositionColumn` above, against
-	/// bookState instead. ArticlesDatabase only holds a reference to articlesTable
-	/// (whose containsColumn is hardwired to the "articles" table), not
-	/// bookStateTable, so this is duplicated here rather than plumbed through --
-	/// same reasoning as the statuses-table helpers above.
-	nonisolated func bookStateTableContainsLastOpenedAtColumn(_ database: FMDatabase) -> Bool {
-		guard let resultSet = database.executeQuery("select * from bookState limit 1;", withArgumentsIn: nil),
-			  let columnMap = resultSet.columnNameToIndexMap else {
-			return false
-		}
-		return columnMap["lastopenedat"] != nil
-	}
-
-	/// Same approach as `statusesTableContainsScrollPositionColumn` above, against
-	/// bookState instead. Task 6's two kudos-attempt columns.
-	nonisolated func bookStateTableContainsKudosAttemptedAtColumn(_ database: FMDatabase) -> Bool {
-		guard let resultSet = database.executeQuery("select * from bookState limit 1;", withArgumentsIn: nil),
-			  let columnMap = resultSet.columnNameToIndexMap else {
-			return false
-		}
-		return columnMap["kudosattemptedat"] != nil
-	}
-
-	nonisolated func bookStateTableContainsKudosAttemptedAuthenticatedColumn(_ database: FMDatabase) -> Bool {
-		guard let resultSet = database.executeQuery("select * from bookState limit 1;", withArgumentsIn: nil),
-			  let columnMap = resultSet.columnNameToIndexMap else {
-			return false
-		}
-		return columnMap["kudosattemptedauthenticated"] != nil
 	}
 
 	// MARK: - Operations
