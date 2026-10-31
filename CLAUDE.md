@@ -45,7 +45,7 @@ task**, not this whole index cover-to-cover.
 - **Reading Time limits / bedtime lockout / enforcement overlay** → `reading-time.md`
 - **Reading Stats (words/time tracking, streaks)** → `reading-stats.md`
 - **UI vocabulary (Shelf/Chapter/Work/Library) vs. the underlying Feed/Article code vocabulary, or wording for a new user-facing string** → `terminology.md`
-- **Full device backup / restore, the Backup settings section** → `backup-restore.md`
+- **Full device backup / restore, the Backup settings section, and backup size optimization** → `backup-restore.md`, `backup-size-optimization-plan.md`
 - **The in-app Guide (Settings → Help → Guide), its overlay presentation, or its static page content** → `guide.md`
 - **Favicon / page metadata extraction** → `metadata-extraction.md`
 - **"What differs from upstream NetNewsWire"** → `upstream-drift.md`
@@ -137,7 +137,7 @@ it's trusted by default. Specifically:
 | `ReadingTimeTracker`, `ReadingTimeEnforcementOverlay`, `ReadingTimeSettingsView` | `reading-time.md` |
 | `ReadingStatsTracker`, `ReadingStatsView`, how completed works are counted | `reading-stats.md` |
 | Any new or renamed user-facing string, or a decision about which vocabulary (UI vs. code) a screen should use | `terminology.md` |
-| `BackupManager`, `BackupRestoreCoordinator`, `BackupIgnoreList`, `BackupIgnoreListStore`, `IgnoreList.json`, the backup zip's file layout | `backup-restore.md` |
+| `BackupManager`, `BackupRestoreCoordinator`, `BackupIgnoreList`, `BackupIgnoreListStore`, `IgnoreList.json`, the backup zip's file layout, `scripts/nectar_backup_to_epub.py`, backup size optimization planning | `backup-restore.md`, `backup-size-optimization-plan.md` |
 | `GuideOverlayView`, `GuideContent`, `HelpRow.guide` | `guide.md` |
 | `HTMLMetadata`/favicon extraction | `metadata-extraction.md` |
 | `AnnotationsTable`, `Annotation`, `AnnotationsKit`, `annotations.js`, the `textWasSelected`/`annotationWasTapped` message-handler cases, `AnnotationCSVExporter`, the `annotations` table in `ArticleSQLiteExportTable` | `annotations.md` |
