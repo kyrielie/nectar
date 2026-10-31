@@ -58,7 +58,9 @@ chosen.
    and `FeedSettings.db` as-is; write `DB.sqlite3` via
    `account.exportFullSnapshot(toPath:)` (`ArticlesDatabaseFullSnapshotExportTable`'s
    `VACUUM INTO`, see `database.md`) — atomic, consistent, and the only
-   export path that includes `bookState` and the FTS `search` table.
+   export path that includes `bookState` and the FTS `search` table (see
+   `backup-size-optimization-plan.md` for deferred optimization planning around
+   stripping this search index to halve archive size).
 2. Copy the custom-installed `Themes` folder
    (`ArticleThemesManager.shared.folderPath`) into `Themes/` —
    unconditional, not gated by `includeSettings`: a custom theme file is
@@ -280,3 +282,78 @@ extend `BackupIgnoreListSnapshot` with a new optional collection and give it
 the same union-merge treatment, or add a sibling file and a manifest flag.
 Every new `AO3IgnoreList` property has to be added to `AO3IgnoreListBackupStore`
 and `BackupIgnoreListSnapshot` by hand, or it silently stays out of backups.
+
+## Converting a backup to EPUBs (`scripts/nectar_backup_to_epub.py`)
+
+A standalone tool (`scripts/nectar_backup_to_epub.py`) converts a Nectar backup
+zip (or raw `DB.sqlite3`) into standard, Calibre/AO3-compliant EPUB files
+organized into a clean directory tree:
+
+```text
+<output_dir>/
+  <Fandom>/
+    <Author>/
+      <Series Name>/
+        01 - <Work Title>.epub
+        02 - <Work Title>.epub
+      <Author> — <Work Title>.epub
+```
+
+### Architecture & Format Parity
+
+1. **At-rest LZFSE decompression**: Nectar compresses `contentHTML` in
+   `DB.sqlite3` using Apple's LZFSE algorithm followed by Base64 encoding
+   (`ContentHTMLCompression.swift`). The script hooks directly into macOS's native
+   `/usr/lib/libcompression.dylib` using standard `ctypes`, requiring **zero pip
+   dependencies**.
+2. **AO3 / Calibre EPUB format compliance**:
+   - `mimetype`: Uncompressed (`ZIP_STORED`) at byte 0.
+   - `content.opf`: Dublin Core metadata (`dc:title`, `dc:creator`, `dc:subject` for
+     fandoms, tags, characters, relationships), along with Calibre series tags
+     (`<meta name="calibre:series">` and `<meta name="calibre:series_index">`).
+   - `toc.ncx`: Hierarchical Table of Contents mapping to split XHTML chapters.
+   - Content splits:
+     - `split_000.xhtml`: Metadata preface containing AO3's `<dl class="tags">` and stats.
+     - `split_001.xhtml`: Work title, author byline, summary, and work notes.
+     - `split_002.xhtml` ... `split_NNN.xhtml`: Chapters (multi-chapter works are
+       split by `<div class="chapter" id="chapter-N">` for clean pagination).
+     - Afterword / work endnotes if present.
+   - Styles: Shipped with standard AO3 / Calibre styling (`stylesheet.css` and
+     `page_styles.css`) and extracts any custom workskin `<style>` blocks.
+3. **Full metadata preservation (beyond default AO3 EPUBs)**:
+   - **Extended stats**: Default AO3 EPUB exports omit dynamic stats, but Nectar
+     tracks them locally. The script preserves `kudosCount`, `commentCount`,
+     `bookmarkCount`, `hitCount`, `dateBookmarked`, `isRestricted` (archive lock),
+     and `collections` directly in the preface's `<dl class="tags">` and in OPF metadata.
+     The preface remains clean and authentic to AO3's layout (personal reading state
+     such as read/unread or progress is kept out of the preface).
+   - **Personal reader annotations**: Highlights and notes taken in Nectar (`annotations`
+     table) can be preserved into a dedicated `split_annotations.xhtml` ("Reader Highlights & Notes")
+     with quotes, note comments, color badges, chapter titles, and timestamps (omitted with
+     `--no-annotations`).
+4. **Zero stub EPUBs guarantee**: Works without body story text (such as unopened
+   feed metadata subscriptions or empty bodies) are strictly skipped rather than
+   generating empty shell/stub EPUBs. When `--fetch-missing` is enabled, the script
+   downloads the full, official EPUB directly from AO3.
+5. **Filesystem sanitization**: Strips illegal path characters (`/`, `:`, `\`,
+   `?`, `*`, `"`, `<`, `>`, `|`) and normalizes whitespace while bounding length.
+
+### Usage
+
+```bash
+# Basic conversion from a Nectar backup zip:
+python3 scripts/nectar_backup_to_epub.py /path/to/NectarBackup.zip -o ~/Documents/MyFicLibrary
+
+# Or point directly to an unzipped backup folder or DB.sqlite3:
+python3 scripts/nectar_backup_to_epub.py Accounts/Local_accountID/DB.sqlite3 -o ~/Documents/MyFicLibrary
+
+# Exclude personal notes and highlights:
+python3 scripts/nectar_backup_to_epub.py /path/to/NectarBackup.zip -o ~/Documents/MyFicLibrary --no-annotations
+
+# Download missing/uncached stubs from AO3 (rate-limited at 5s/work):
+python3 scripts/nectar_backup_to_epub.py /path/to/NectarBackup.zip -o ~/Documents/MyFicLibrary --fetch-missing
+
+# Download restricted works using your AO3 session cookie:
+python3 scripts/nectar_backup_to_epub.py /path/to/NectarBackup.zip -o ~/Documents/MyFicLibrary --fetch-missing --ao3-cookie "<cookie_value>"
+```
+
