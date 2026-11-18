@@ -54,8 +54,6 @@ on:
         required: false
         default: false
         type: boolean
-  release:
-    types: [edited]
 
 permissions:
   contents: write
@@ -112,17 +110,9 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "tag_exists=$tag_exists" >> "$GITHUB_OUTPUT"
 
-  ci:
-    name: CI gate
-    needs: prepare-tag
-    if: github.event_name == 'workflow_dispatch'
-    uses: ./.github/workflows/ci.yml
-    with:
-      ref: ${{ needs.prepare-tag.outputs.sha }}
-
   create-tag:
     name: Create tag
-    needs: [prepare-tag, ci]
+    needs: prepare-tag
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:

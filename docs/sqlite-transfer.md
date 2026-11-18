@@ -36,9 +36,17 @@ deciding whether it matters. A `.incomplete` transfer is currently only
 surfaced via the Activity Log, not (yet) as distinct per-feed UI state in
 the feed list.
 
-The Ambrosia import leaves out the AO3-native columns that an Ambrosia server
-has no data for: the four stats counts, `isRestricted` (the archive lock), `language` and `collections`.
-They stay `NULL`, and a later live AO3 fetch or listing row fills them in.
+The SQLite wire table currently omits several AO3 fields. The four work
+statistics (comments, kudos, bookmarks, hits), `isRestricted` (archive lock),
+AO3 display `language`, AO3 work `collections`, and a distinct structured
+`additionalTags` field are not imported. In particular, Ambrosia does extract
+language and AO3 collections from EPUB metadata, but its current transfer
+builder does not serialize them. The `tags_json` column is also not mapped to
+`Article.additionalTags`; it does not preserve the AO3 tag groups as a
+structured field. These values stay unknown on the imported article until a
+later AO3 listing or live work-page fetch supplies them. Multiple series,
+completion, chapter counts, and fandoms (from which crossover status can be
+derived) are represented in the transfer.
 
 `AmbrosiaSQLiteImportTable.copyItems`'s bulk `INSERT OR REPLACE ... SELECT`
 moves most `items` columns straight across because their wire type already

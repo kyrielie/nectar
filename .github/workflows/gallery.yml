@@ -20,24 +20,10 @@ name: Publish site (landing page and theme gallery)
 # The file keeps its old name (gallery.yml) so existing references stay valid.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "landing/**"
-      - "appstore/source.template.json"
-      - "appstore/screenshots/**"
-      - "gallery/**"
-      - "gallery-themes/**"
-      - "Themes/**"
-      - "Shared/Article Rendering/core.css"
-      - "demo-feeds/**"
-      - ".github/workflows/gallery.yml"
   # The demo feed's item dates are relative to publish time (demo-feeds/build.py)
   # because the app ignores articles older than 90 days. Republish daily so the
   # feed never ages out. This means one small commit to gh-pages per day (the
   # dates change), while the landing page and themes stay unchanged.
-  schedule:
-    - cron: "17 6 * * *"
   workflow_dispatch:
 
 permissions:

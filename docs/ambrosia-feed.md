@@ -5,14 +5,37 @@ repository) that exposes a person's Calibre-managed fic library — typically
 AO3 works downloaded as epub — as a feed Nectar can subscribe to on the same
 LAN. Nectar treats Ambrosia as just another Local-account feed source, but
 one that carries a rich, fic-specific extension of the article model
-(word count, chapters, fandoms/relationships/characters/ratings, AO3 series,
-kudos/comment/bookmark/hit stats) and, for large libraries, a dedicated
+(word count, chapters, fandoms/relationships/characters/ratings, AO3 series)
+and, for large libraries, a dedicated
 paginated SQLite bulk-transfer route that bypasses ordinary feed parsing
 entirely.
 
 There are two independent transfer routes for the same data, selected by a
 single app-wide setting (`AmbrosiaTransferFormatPreference.current`, `.json`
 or `.sqlite`, no per-feed override):
+
+## AO3 metadata coverage and known transfer gaps
+
+The two wire formats do not carry the same AO3 fields. This table describes
+what Ambrosia currently emits, not what Nectar's article schema can store.
+Missing fields remain unknown on an imported article until Nectar obtains
+them from an AO3 listing or work-page request.
+
+| AO3 field | JSON Feed (`_ambrosia` / item fields) | SQLite transfer (`items`) | Notes |
+|---|---|---|---|
+| AO3 display language | Missing | Missing | Ambrosia extracts it from EPUB metadata, but neither transfer exports it. Nectar stores AO3's display name separately from feed language. |
+| AO3 collection memberships | Missing | Missing | Ambrosia extracts these, but neither transfer exports them. Nectar stores `{name, slug}` entries; these are distinct from Ambrosia's user-defined library collections. |
+| Multiple AO3 series memberships | `series` array | `series_json` array | Supported as a list; do not collapse this to a single series name or ID. |
+| Completion and chapter counts | `is_complete`, `chapter_current`, `chapter_total` | `is_complete`, `chapter_current`, `chapter_total` | Present in both formats. |
+| Crossover marker | No dedicated field | No dedicated field | Derivable from more than one entry in `fandoms`; no separate boolean is needed unless a consumer needs a stable serialized flag. |
+| Work statistics (comments, kudos, bookmarks, hits) | Missing | Missing | The current Ambrosia builders do not export these counts, even where extraction has some of them. Nectar can fetch them from AO3. |
+| Structured freeform/additional tags | Not a distinct field; merged into JSON Feed `tags` | Not a distinct column | The SQLite importer does not map `tags_json` into `Article.additionalTags`. Nectar can recover structured groups from a later AO3 fetch. |
+| Bookmark date | Missing | Missing | This is specific to AO3 bookmark-listing rows, not the work's publication/update dates. |
+
+Ambrosia's own library collections (`collections` / `collection_members`)
+are a separate feature from an AO3 work's membership in AO3 collections.
+The former organize books inside Ambrosia and are not currently serialized as
+per-work metadata in either transfer.
 
 ## Route 1: JSON Feed extension
 
@@ -38,8 +61,7 @@ extra key, recognized by the presence of `Key.ambrosia = "_ambrosia"`.
     "warnings": ["No Archive Warnings Apply"],
     "categories": ["M/M"],
     "series": [{ "name": "The Long Way Home Series", "index": 2, "ao3_id": "987654" }],
-    "date_modified": "2024-06-15T08:30:00Z",
-    "comment_count": 57, "kudos_count": 1203, "bookmark_count": 88, "hit_count": 15420
+    "date_modified": "2024-06-15T08:30:00Z"
   }
 }
 ```
@@ -55,20 +77,15 @@ book with zero AO3 metadata is not the same as a non-book item.
 Parsed fields land in `ParsedItem` (`Modules/RSParser/Sources/RSParser/Feeds/ParsedItem.swift`):
 `isAmbrosiaItem`, `wordCount`, `chapterCurrent`/`chapterTotal`, `isComplete`,
 `fandoms`/`relationships`/`characters`/`ratings`/`warnings`/`categories`,
-`series: [ParsedSeriesEntry]?`, the four stat counts, and identity fields
+`series: [ParsedSeriesEntry]?`, and identity fields
 `ao3WorkID`, `isAnthology`, `ao3SeriesID`, `seriesName`. These map directly
 onto the Ambrosia extension columns added to `ArticlesDatabase`'s `articles`
 table (see `database.md`).
 
-Two independent sources can populate the AO3 stats fields
-(`commentCount`/`kudosCount`/`bookmarkCount`/`hitCount`): a self-hosted
-Ambrosia server publishing its own already-scraped numbers under
-`_ambrosia`, or `AO3FetchPolicy.rebuildParsedItem` populating them from a
-live AO3 chapter fetch. Neither source is gated by
-`AmbrosiaAO3NetworkPreference.updatesEnabled` once the data is already in
-hand — that preference only controls whether a *new* live AO3 network
-request is allowed to happen at all, not whether already-downloaded metadata
-gets displayed.
+The JSON Feed extension does not currently export comment, kudos, bookmark,
+or hit counts. Nectar's direct AO3 fetch can populate its own article
+statistics; those values come from Nectar's request path, not the Ambrosia
+wire contract.
 
 `ParsedItem.isRestricted`/`Article.isRestricted` (AO3's archive lock) is also
 AO3-native and **not** part of `_ambrosia`: an Ambrosia feed leaves it `nil`
@@ -79,14 +96,13 @@ lock").
 follow the same rule: AO3-native, `nil` from an Ambrosia feed, not written by an
 Ambrosia SQLite import.
 
-`ParsedItem.dateBookmarked`/`Article.dateBookmarked` is in the same
-category as the four stats fields above — AO3-native metadata, **not**
-part of the `_ambrosia` extension object. It has only one source, though:
+`ParsedItem.dateBookmarked`/`Article.dateBookmarked` is AO3-native metadata,
+**not** part of the `_ambrosia` extension object. It has only one source:
 `AO3SearchResultsExtractor.dateBookmarked(fromLI:)`, reading a
 `/users/<name>/bookmarks` row's `div.user p.datetime` (see `ao3-feeds.md`
 for the selector itself and its distinction from `dateModified`'s
 `div.header p.datetime`). It's `nil` for every article not sourced from a
-bookmarks listing, and — like the four stats fields — always takes the
+bookmarks listing, and always takes the
 newest known non-nil value on a later re-extraction rather than being
 regression-flagged.
 
