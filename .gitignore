@@ -117,6 +117,28 @@ fastlane/test_output
 /Modules/Secrets/Sources/Secrets/SecretKey.swift
 
 .claude/
+CLAUDE.local.md
 
 testresults.txt
 .agents/
+
+
+# Developer identity, local signing & personal settings
+*DeveloperSettings.xcconfig
+SharedXcodeSettings/
+*.cer
+*.p12
+*.mobileprovision
+*.pem
+*.key
+
+# Runtime, crash & debug logs
+*.log
+*logs.txt
+crash.txt
+
+# Scrape dumps, local test works, and scratch caches
+test-works/
+*.html.dump
+*.json.dump
+docs/mockups/scratch/

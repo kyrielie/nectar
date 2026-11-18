@@ -3,9 +3,10 @@
 Covers three related refresh-cycle concerns: per-feed skip logic, the
 background-refresh time budget, and the Last Opened smart feed (which
 `SceneCoordinator` updates on every article open, tying it to this same
-refresh/state-update cycle). See `ao3-direct-feed-ingestion.md` for the
-route that has an open gap in this throttling, and `refresh-throttling.md`'s
-own note below on the missing remediation-plan doc.
+refresh/state-update cycle). Distinguish AO3 HTML listing feeds from native
+AO3 RSS/Atom subscriptions: listing pages are skipped during routine refresh;
+tag/user RSS/Atom subscriptions still refresh with ordinary feeds. See
+`ao3-direct-feed-ingestion.md` for the latter's metadata-only ingestion path.
 
 `LocalAccountRefresher.feedShouldBeSkipped(_:_:)` runs once per feed per
 refresh pass and decides whether that feed is skipped this time, checking
@@ -53,27 +54,23 @@ with the comment "Nectar only ever refreshes feeds from the user's own
 local Ambrosia server... never a public site the app needs to be polite
 to."
 
-**Open gap, not yet resolved:** that removal comment is incomplete. AO3
-tag/user RSS/Atom feeds (see `ao3-direct-feed-ingestion.md`) *are* a
-public, non-Ambrosia site, and `AO3Link.isListingFeed`'s matching only
-covers AO3's HTML listing *pages* — not AO3's native
-`.atom`/RSS feed URLs, which is the actual direct-subscription route. A
-regular AO3 tag/user Atom feed subscription has no proactive
-skip/minimum-interval protection today; it refreshes on every
-scheduled/background/pull-to-refresh pass like an Ambrosia feed, backed
-only by `Downloader`'s *reactive* per-host 429/Cloudflare-challenge
-handling (see `ao3-preface-rendering.md`) as a backstop. This may be
-fine in practice given AO3's own aggressive rate limiting, but it's an
-open design question, not a settled one. In-code and this doc's prior
-version both point to `nectar-audit-remediation-plan.md` for tracking,
-but that file is not present anywhere in the current tree -- another
-dangling reference (see also the Wire Contract note in
-`sqlite-transfer.md`). Treat this as an open, untracked gap until that
-file is found or the gap is re-triaged.
+**Policy question, not a known defect:** AO3 tag/user RSS/Atom feeds (see
+`ao3-direct-feed-ingestion.md`) are public feed URLs, not AO3 HTML listing
+pages. They are not matched by `AO3Link.isListingFeed`; they refresh on
+scheduled/background/account refresh passes like other ordinary subscriptions.
+These requests download only feed metadata and are handled by
+`DownloadSession`, which limits connections to one per host per session and
+reacts to 429 responses. They do not use `AO3Pacer` or
+`AO3RequestCoordinator`. Whether to add a courtesy interval is an open policy
+question; no pacing change is currently approved or implied by this note.
+
+Do not conflate these with AO3 HTML listing feeds: those are skipped during
+routine refresh after add-time and are fetched by explicit pagination or
+manual check. Do not describe all AO3 feed refreshes as manual-only.
 
 ## AO3 prefetch queue budget
 
-Separate from, and not a fix for, the open gap above: `AO3PrefetchQueue`
+Separate from the RSS/Atom pacing policy above: `AO3PrefetchQueue`
 (backing `AO3PrefetchNewWorksPreference`, off by default — see
 `ao3-integration.md`'s "Fetch triggers, philosophy") is its own
 deliberately bounded and paced request source, not a general per-feed

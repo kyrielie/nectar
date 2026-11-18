@@ -52,21 +52,59 @@ import RSCore
 	/// Layout size of the probe web view. A realistic phone width keeps
 	/// width-dependent media queries on the reader's side of any breakpoint.
 	static let webViewFrame = CGRect(x: 0, y: 0, width: 390, height: 844)
+	private static var passRunners: [Bool: PassRunner]?
+	private static var passRunnerReleaseTask: Task<Void, Never>?
 
-	private static var gateTail: Task<Void, Never>?
+	/// WebKit is shared by the color probe and the simulator theme-render checks. Keep
+	/// their WebViews serialized even when Swift Testing runs different suites in parallel;
+	/// otherwise the simulator launches and tears down many WebContent processes at once.
+	private static var webViewPermitHeld = false
+	private static var webViewPermitWaiters = [CheckedContinuation<Void, Never>]()
+
+	/// Acquires the process-wide permit for simulator theme rendering. Test-only renderers
+	/// use the same permit via `@testable import ArticleTheming`.
+	static func acquireWebViewPermit() async {
+		await withCheckedContinuation { continuation in
+			if webViewPermitHeld {
+				webViewPermitWaiters.append(continuation)
+			} else {
+				webViewPermitHeld = true
+				continuation.resume()
+			}
+		}
+	}
+
+	static func releaseWebViewPermit() {
+		if webViewPermitWaiters.isEmpty {
+			webViewPermitHeld = false
+		} else {
+			webViewPermitWaiters.removeFirst().resume()
+		}
+	}
 
 	/// Renders `theme` in light and dark and returns what it painted, or nil if
 	/// anything was unreadable or implausible (see `ThemeColorProbeLogic.isSane`).
 	/// Calls are serialized: one measurement at a time.
 	public static func measure(_ theme: ArticleTheme,
 	                           environment: ArticleThemeProbeEnvironment) async -> ArticleThemeColorMeasurement? {
-		let previous = gateTail
-		let task = Task { @MainActor () -> ArticleThemeColorMeasurement? in
-			await previous?.value
-			return await performMeasurement(theme, environment: environment)
+		await acquireWebViewPermit()
+		defer { releaseWebViewPermit() }
+		defer { schedulePassRunnerRelease() }
+		return await performMeasurement(theme, environment: environment)
+	}
+
+	/// Keep the two probe views warm across a burst of theme measurements, then release their
+	/// WebKit processes after idle time so an occasional measurement does not pin them for the whole session.
+	private static func schedulePassRunnerRelease() {
+		passRunnerReleaseTask?.cancel()
+		passRunnerReleaseTask = Task { @MainActor in
+			try? await Task.sleep(for: .seconds(30))
+			guard !Task.isCancelled else {
+				return
+			}
+			passRunners = nil
+			passRunnerReleaseTask = nil
 		}
-		gateTail = Task { _ = await task.value }
-		return await task.value
 	}
 
 	// MARK: Internals
@@ -94,14 +132,31 @@ import RSCore
 	private static func performMeasurement(_ theme: ArticleTheme,
 	                                       environment: ArticleThemeProbeEnvironment) async -> ArticleThemeColorMeasurement? {
 		guard let html = try? composeHTML(for: theme, environment: environment) else {
+			log.error("could not compose probe HTML for theme \(theme.name, privacy: .public)")
 			return nil
 		}
-		guard let rawLight = await runPass(html: html, dark: false, environment: environment),
-			  let rawDark = await runPass(html: html, dark: true, environment: environment),
-			  let light = ThemeColorProbeLogic.resolve(rawLight, requestedDark: false),
-			  let dark = ThemeColorProbeLogic.resolve(rawDark, requestedDark: true),
-			  ThemeColorProbeLogic.isSane(light),
-			  ThemeColorProbeLogic.isSane(dark) else {
+		guard let rawLight = await runPass(html: html, dark: false, environment: environment) else {
+			log.error("light pass failed for theme \(theme.name, privacy: .public)")
+			return nil
+		}
+		guard let rawDark = await runPass(html: html, dark: true, environment: environment) else {
+			log.error("dark pass failed for theme \(theme.name, privacy: .public)")
+			return nil
+		}
+		guard let light = ThemeColorProbeLogic.resolve(rawLight, requestedDark: false) else {
+			log.error("light pass was invalid for theme \(theme.name, privacy: .public): dark=\(rawLight.dark.map { String($0) } ?? "nil", privacy: .public) error=\(rawLight.error ?? "nil", privacy: .public)")
+			return nil
+		}
+		guard let dark = ThemeColorProbeLogic.resolve(rawDark, requestedDark: true) else {
+			log.error("dark pass was invalid for theme \(theme.name, privacy: .public): dark=\(rawDark.dark.map { String($0) } ?? "nil", privacy: .public) error=\(rawDark.error ?? "nil", privacy: .public)")
+			return nil
+		}
+		guard ThemeColorProbeLogic.isSane(light) else {
+			log.error("light colors failed sanity for theme \(theme.name, privacy: .public): page=\(light.page.hex, privacy: .public) ink=\(light.ink.hex, privacy: .public) link=\(light.accent.hex, privacy: .public)")
+			return nil
+		}
+		guard ThemeColorProbeLogic.isSane(dark) else {
+			log.error("dark colors failed sanity for theme \(theme.name, privacy: .public): page=\(dark.page.hex, privacy: .public) ink=\(dark.ink.hex, privacy: .public) link=\(dark.accent.hex, privacy: .public)")
 			return nil
 		}
 		return ThemeColorProbeLogic.assemble(light: light, dark: dark)
@@ -132,36 +187,23 @@ import RSCore
 	private static func runPassOnce(html: String,
 	                                dark: Bool,
 	                                environment: ArticleThemeProbeEnvironment) async -> ThemeColorProbeLogic.RawPass? {
-		let run = ProbeRun()
-
-		let configuration = WKWebViewConfiguration()
-		configuration.websiteDataStore = .nonPersistent()
-		configuration.defaultWebpagePreferences = environment.makePagePreferences()
-		let controller = WKUserContentController()
-		controller.addUserScript(WKUserScript(source: ThemeColorProbeLogic.readbackScript,
-											  injectionTime: .atDocumentEnd,
-											  forMainFrameOnly: true))
-		controller.add(run, name: messageHandlerName)
-		if let blocker = await remoteLoadBlocker() {
-			controller.add(blocker)
+		let runner: PassRunner
+		if let existing = passRunners?[dark] {
+			runner = existing
+		} else {
+			let blocker = await remoteLoadBlocker()
+			runner = PassRunner(dark: dark, environment: environment, blocker: blocker)
+			if passRunners == nil {
+				passRunners = [:]
+			}
+			passRunners?[dark] = runner
 		}
-		configuration.userContentController = controller
-
-		let webView = WKWebView(frame: webViewFrame, configuration: configuration)
-		webView.navigationDelegate = run
-		let host = attachToHiddenWindow(webView)
-		webView.overrideUserInterfaceStyle = dark ? .dark : .light
-
-		let message = await run.load(html: html, in: webView, timeout: passTimeout)
-
-		controller.removeScriptMessageHandler(forName: messageHandlerName)
-		controller.removeAllUserScripts()
-		webView.navigationDelegate = nil
-		webView.stopLoading()
-		webView.removeFromSuperview()
-		host?.isHidden = true
+		let message = await runner.load(html: html)
 
 		guard let message, let data = message.data(using: .utf8) else {
+			// A WebContent process can exit during a simulator run. Do not keep a dead WebView
+			// for the retry or the next theme; the next pass gets a fresh runner.
+			passRunners?[dark] = nil
 			log.error("\(dark ? "dark" : "light", privacy: .public) pass: no read-back (timeout, navigation failure or process exit)")
 			return nil
 		}
@@ -172,8 +214,43 @@ import RSCore
 			}
 			return raw
 		} catch {
+			passRunners?[dark] = nil
 			log.error("\(dark ? "dark" : "light", privacy: .public) pass: undecodable read-back \(String(message.prefix(300)), privacy: .public)")
 			return nil
+		}
+	}
+
+	/// Reuses one WebView for each appearance. Theme probes may measure hundreds of bundles
+	/// during cache refresh or the smoke suite; constructing a fresh view for every pass makes
+	/// WebKit launch and tear down a WebContent process each time.
+	@MainActor private final class PassRunner {
+		private let run = ProbeRun()
+		private let webView: WKWebView
+		private let host: UIWindow?
+
+		init(dark: Bool, environment: ArticleThemeProbeEnvironment, blocker: WKContentRuleList?) {
+			let configuration = WKWebViewConfiguration()
+			configuration.websiteDataStore = .nonPersistent()
+			configuration.defaultWebpagePreferences = environment.makePagePreferences()
+			let controller = WKUserContentController()
+			controller.addUserScript(WKUserScript(source: ThemeColorProbeLogic.readbackScript,
+											  injectionTime: .atDocumentEnd,
+											  forMainFrameOnly: true))
+			controller.add(run, name: messageHandlerName)
+			if let blocker {
+				controller.add(blocker)
+			}
+			configuration.userContentController = controller
+			webView = WKWebView(frame: webViewFrame, configuration: configuration)
+			webView.navigationDelegate = run
+			host = attachToHiddenWindow(webView)
+			webView.overrideUserInterfaceStyle = dark ? .dark : .light
+		}
+
+		func load(html: String) async -> String? {
+			let message = await run.load(html: html, in: webView, timeout: passTimeout)
+			webView.stopLoading()
+			return message
 		}
 	}
 

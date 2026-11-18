@@ -7,18 +7,10 @@ retired monolithic doc. See `ao3-preface-rendering.md` for the anonymous
 chapter-fetch path this builds on, and `refresh-throttling.md` for the
 general AO3 request gating this cluster adds its own layer on top of.
 
-In-code comments attribute this work to "Workstream 3" (login), "Task 6"
-(kudos-on-like), and "Task 8" (an audit that fixed a gating leak — see
-below), citing `docs/ao3-merged-plan-nectar.md`,
-`docs/ao3-merged-plan.md`, and `nectar-ao3-features-plan-FINAL.md`
-respectively. **None of those three files exist anywhere in the current
-tree.** This is the same dangling-reference pattern flagged in
-`sqlite-transfer.md`, `refresh-throttling.md`, and `ao3-preface-rendering.md`
-— now five confirmed missing planning docs across the codebase (a sixth,
-`docs/nectar-fixes-plan-3.md`, is cited by `AO3AuthenticatedWebViewController.swift`
-below and *did* exist in an earlier snapshot of this repo, but is absent
-from the current one — worth confirming with whoever has the canonical
-history whether this was an intentional cleanup or an accidental loss).
+In-code comments attribute parts of this work to historical local plans.
+Those plans are not present in every checkout; treat the comments as
+provenance only. The current implementation and this document describe the
+behavior to maintain.
 
 ## Three separate, deliberately unshared credential mechanisms
 

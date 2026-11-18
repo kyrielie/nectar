@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Highlight rendering, four ways</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f2efe7;
+    --paper-raised: #fbf9f3;
+    --ink: #21231f;
+    --ink-soft: #52544c;
+    --rule: #d8d3c4;
+    --accent-hl: rgba(247, 195, 60, 0.62);
+    --accent-hl-flush: rgba(247, 195, 60, 0.85);
+    --accent-hl-solid: #caa11c;
+    --bad: #b3432b;
+    --bad-bg: #f4e2dc;
+    --warn: #8a6414;
+    --warn-bg: #f2e6c8;
+    --good: #2f6e5c;
+    --good-bg: #dfeee7;
+    --focus: #2f6e5c;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --paper: #17181a;
+      --paper-raised: #1f2124;
+      --ink: #e9e6dc;
+      --ink-soft: #a6a293;
+      --rule: #34362f;
+      --accent-hl: rgba(247, 195, 60, 0.4);
+      --accent-hl-flush: rgba(247, 195, 60, 0.62);
+      --accent-hl-solid: #f0c94a;
+      --bad: #e2755c;
+      --bad-bg: #3a2521;
+      --warn: #d9b25a;
+      --warn-bg: #38311c;
+      --good: #6cbba3;
+      --good-bg: #1e332c;
+      --focus: #6cbba3;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #17181a;
+    --paper-raised: #1f2124;
+    --ink: #e9e6dc;
+    --ink-soft: #a6a293;
+    --rule: #34362f;
+    --accent-hl: rgba(247, 195, 60, 0.4);
+    --accent-hl-flush: rgba(247, 195, 60, 0.62);
+    --accent-hl-solid: #f0c94a;
+    --bad: #e2755c;
+    --bad-bg: #3a2521;
+    --warn: #d9b25a;
+    --warn-bg: #38311c;
+    --good: #6cbba3;
+    --good-bg: #1e332c;
+    --focus: #6cbba3;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding: 28px 20px 60px;
+    line-height: 1.5;
+  }
+
+  .wrap { max-width: 980px; margin: 0 auto; }
+
+  h1 {
+    font-family: "Lora", Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    font-size: clamp(1.4rem, 3vw, 1.9rem);
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .intro {
+    color: var(--ink-soft);
+    max-width: 62ch;
+    font-size: 0.98rem;
+    margin: 0 0 26px;
+  }
+  .intro strong { color: var(--ink); font-weight: 600; }
+
+  .control-bar {
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 16px 18px 14px;
+    margin-bottom: 28px;
+  }
+  .control-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .control-row label {
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  input[type="range"] {
+    flex: 1 1 220px;
+    min-width: 160px;
+    accent-color: var(--accent-hl-solid);
+  }
+  #lhOut {
+    font-family: "IBM Plex Mono", Menlo, monospace;
+    font-size: 0.95rem;
+    min-width: 3.6ch;
+    text-align: right;
+    font-weight: 500;
+  }
+  .presets {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .presets button {
+    font-family: "IBM Plex Mono", Menlo, monospace;
+    font-size: 0.78rem;
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+    border-radius: 6px;
+    padding: 5px 9px;
+    cursor: pointer;
+  }
+  .presets button:hover { border-color: var(--accent-hl-solid); color: var(--ink); }
+  .presets button:focus-visible, input[type="range"]:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .presets button .tag {
+    color: var(--ink-soft);
+    font-size: 0.72rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    background: var(--paper-raised);
+    padding: 16px 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+  .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .panel-head h2 {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  .panel-head h2 code {
+    font-family: "IBM Plex Mono", Menlo, monospace;
+    font-size: 0.82em;
+    color: var(--ink-soft);
+    background: none;
+  }
+  .letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    border: 1px solid var(--rule);
+    font-family: "IBM Plex Mono", Menlo, monospace;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-right: 7px;
+    flex: none;
+  }
+
+  .badge {
+    font-family: "IBM Plex Mono", Menlo, monospace;
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex: none;
+  }
+  .badge.bad  { background: var(--bad-bg);  color: var(--bad); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.good { background: var(--good-bg); color: var(--good); }
+
+  .stage {
+    position: relative;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 14px 16px;
+    overflow: visible;
+  }
+  .prose {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    font-family: "Lora", Georgia, serif;
+    font-size: 1.02rem;
+    line-height: var(--lh, 1.4);
+    color: var(--ink);
+  }
+
+  /* --- variant-specific mark styling --- */
+  .mark {
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    border-radius: 3px;
+    color: inherit;
+    background: var(--accent-hl);
+  }
+  [data-variant="A"] .mark { padding: 0.12em 0.05em; line-height: inherit; }
+  [data-variant="B"] .mark { padding: 0.12em 0.05em; line-height: 1.5; }
+  [data-variant="C"] .mark { padding: 0; background: var(--accent-hl-flush); }
+
+  /* panel D: the wrapped phrase has zero box-model effect of its own */
+  .target { background: none; padding: 0; }
+  .overlay-rect {
+    position: absolute;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: 3px;
+    background: var(--accent-hl-flush);
+  }
+
+  .caption {
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    margin: 0;
+    line-height: 1.45;
+  }
+  .caption code {
+    font-family: "IBM Plex Mono", Menlo, monospace;
+    font-size: 0.92em;
+  }
+
+  footer {
+    max-width: 62ch;
+    margin: 30px auto 0;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    border-top: 1px solid var(--rule);
+    padding-top: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Four ways to draw a highlight that wraps a line break</h1>
+  <p class="intro">
+    Same sentence, same highlighted phrase, four different CSS/JS strategies &mdash;
+    all driven by <strong>one shared line-height</strong>. Drag the slider, or jump to a
+    value that already came up: your own <strong>1.2</strong>, the override's default of
+    <strong>1.4</strong>, or a bundled theme's default of <strong>1.6</strong>.
+  </p>
+
+  <div class="control-bar">
+    <div class="control-row">
+      <label for="lhSlider">line-height</label>
+      <input type="range" id="lhSlider" min="1.0" max="2.0" step="0.02" value="1.2">
+      <span id="lhOut">1.20</span>
+    </div>
+    <div class="presets" id="presets">
+      <button data-val="1.0">1.0 <span class="tag">floor</span></button>
+      <button data-val="1.2">1.2 <span class="tag">your setting</span></button>
+      <button data-val="1.4">1.4 <span class="tag">override default</span></button>
+      <button data-val="1.6">1.6 <span class="tag">theme default</span></button>
+      <button data-val="2.0">2.0 <span class="tag">spacious</span></button>
+    </div>
+  </div>
+
+  <div class="grid" id="grid">
+
+    <div class="panel" data-variant="A">
+      <div class="panel-head">
+        <h2><span class="letter">A</span><code>line-height: inherit</code></h2>
+        <span class="badge" data-badge>&mdash;</span>
+      </div>
+      <div class="stage">
+        <p class="prose" data-prose>The lamplighter shuffled down the foggy lane just after dusk, boots scraping on wet cobblestones. He paused beneath the flickering gaslight, <mark class="mark" data-mark>humming a gentle tune under the glowing yellow haze</mark>, before continuing toward the harbor where the ships lay quiet.</p>
+      </div>
+      <p class="caption">Current shipped rule. Padding paints outward from the glyphs but never reserves room &mdash; <code>clone</code> stops it smearing across the mark's own fragments, not into the paragraph's own leading.</p>
+    </div>
+
+    <div class="panel" data-variant="B">
+      <div class="panel-head">
+        <h2><span class="letter">B</span><code>line-height: 1.5</code></h2>
+        <span class="badge" data-badge>&mdash;</span>
+      </div>
+      <div class="stage">
+        <p class="prose" data-prose>The lamplighter shuffled down the foggy lane just after dusk, boots scraping on wet cobblestones. He paused beneath the flickering gaslight, <mark class="mark" data-mark>humming a gentle tune under the glowing yellow haze</mark>, before continuing toward the harbor where the ships lay quiet.</p>
+      </div>
+      <p class="caption">The proposed fix. Textbook <code>box-decoration-break</code> usage &mdash; never clips &mdash; but the highlighted line now disagrees with its own neighbors whenever the ambient line-height is under 1.5.</p>
+    </div>
+
+    <div class="panel" data-variant="C">
+      <div class="panel-head">
+        <h2><span class="letter">C</span>flush, no padding</h2>
+        <span class="badge" data-badge>&mdash;</span>
+      </div>
+      <div class="stage">
+        <p class="prose" data-prose>The lamplighter shuffled down the foggy lane just after dusk, boots scraping on wet cobblestones. He paused beneath the flickering gaslight, <mark class="mark" data-mark>humming a gentle tune under the glowing yellow haze</mark>, before continuing toward the harbor where the ships lay quiet.</p>
+      </div>
+      <p class="caption">Hypothesis / Genius-style. Nothing extends past the glyphs, so there's nothing to overflow at any line-height &mdash; at the cost of the "highlighter pen" cushion.</p>
+    </div>
+
+    <div class="panel" data-variant="D">
+      <div class="panel-head">
+        <h2><span class="letter">D</span>measured overlay</h2>
+        <span class="badge" data-badge>&mdash;</span>
+      </div>
+      <div class="stage">
+        <p class="prose" data-prose>The lamplighter shuffled down the foggy lane just after dusk, boots scraping on wet cobblestones. He paused beneath the flickering gaslight, <span class="target" data-target>humming a gentle tune under the glowing yellow haze</span>, before continuing toward the harbor where the ships lay quiet.</p>
+      </div>
+      <p class="caption"><code>Range.getClientRects()</code> per visual line, drawn as absolutely-positioned boxes clamped to whatever gap the current line-height actually leaves &mdash; the same idea TextKit gets for free, ported into the DOM.</p>
+    </div>
+
+  </div>
+
+  <footer>
+    Only C and D hold up all the way down to 1.0. A trades safety for a cushion at tight line-heights; B trades paragraph rhythm for a cushion that's always safe. C and D refuse that trade &mdash; one by giving up the cushion, the other by sizing it to whatever room genuinely exists.
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var slider = document.getElementById('lhSlider');
+  var lhOut = document.getElementById('lhOut');
+  var panels = Array.prototype.slice.call(document.querySelectorAll('.panel'));
+  var raf = null;
+
+  function mergeToLines(rectList, tol) {
+    tol = tol || 1.5;
+    var arr = Array.prototype.slice.call(rectList)
+      .filter(function (r) { return r.width > 0 && r.height > 0; })
+      .sort(function (a, b) { return a.top - b.top; });
+    var lines = [];
+    for (var i = 0; i < arr.length; i++) {
+      var r = arr[i], placed = false;
+      for (var j = 0; j < lines.length; j++) {
+        var line = lines[j];
+        var overlap = Math.min(line.bottom, r.bottom) - Math.max(line.top, r.top);
+        if (overlap > -tol) {
+          line.top = Math.min(line.top, r.top);
+          line.bottom = Math.max(line.bottom, r.bottom);
+          line.left = Math.min(line.left, r.left);
+          line.right = Math.max(line.right, r.right);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) lines.push({ top: r.top, bottom: r.bottom, left: r.left, right: r.right });
+    }
+    return lines.sort(function (a, b) { return a.top - b.top; });
+  }
+
+  function lineIndexFor(rect, lines) {
+    var bestIdx = 0, bestOverlap = -Infinity;
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      var overlap = Math.min(line.bottom, rect.bottom) - Math.max(line.top, rect.top);
+      if (overlap > bestOverlap) { bestOverlap = overlap; bestIdx = i; }
+    }
+    return bestIdx;
+  }
+
+  function rangeOverWholeText(el) {
+    var r = document.createRange();
+    r.selectNodeContents(el);
+    return r;
+  }
+
+  function setBadge(panel, cls, text) {
+    var b = panel.querySelector('[data-badge]');
+    if (!b) return;
+    b.className = 'badge ' + cls;
+    b.textContent = text;
+  }
+
+  function measureMarkPanel(panel, variant) {
+    try {
+      var prose = panel.querySelector('[data-prose]');
+      var mark = panel.querySelector('[data-mark]');
+      var paragraphLines = mergeToLines(rangeOverWholeText(prose).getClientRects());
+      var markRects = Array.prototype.slice.call(mark.getClientRects())
+        .sort(function (a, b) { return a.top - b.top; });
+      if (!markRects.length || paragraphLines.length < 2) {
+        setBadge(panel, 'good', 'measuring\u2026');
+        return;
+      }
+      var idx0 = lineIndexFor(markRects[0], paragraphLines);
+      var idxL = lineIndexFor(markRects[markRects.length - 1], paragraphLines);
+      var lineAbove = idx0 > 0 ? paragraphLines[idx0 - 1] : null;
+      var lineBelow = idxL < paragraphLines.length - 1 ? paragraphLines[idxL + 1] : null;
+
+      var collideTop = lineAbove && (markRects[0].top < lineAbove.bottom - 0.4);
+      var collideBottom = lineBelow && (markRects[markRects.length - 1].bottom > lineBelow.top + 0.4);
+      var clip = !!(collideTop || collideBottom);
+
+      var refLine = paragraphLines[0];
+      var refHeight = refLine.bottom - refLine.top;
+      var maxHl = 0;
+      for (var i = idx0; i <= idxL; i++) {
+        maxHl = Math.max(maxHl, paragraphLines[i].bottom - paragraphLines[i].top);
+      }
+      var bulge = maxHl - refHeight;
+
+      if (clip) {
+        setBadge(panel, 'bad', 'clipping into the next line');
+      } else if (bulge > 0.6) {
+        setBadge(panel, 'warn', 'bulges +' + bulge.toFixed(1) + 'px vs. neighbors');
+      } else {
+        setBadge(panel, 'good', 'matches the surrounding lines');
+      }
+    } catch (e) {
+      setBadge(panel, 'good', 'measuring\u2026');
+    }
+  }
+
+  function measureOverlayPanel(panel) {
+    try {
+      var stage = panel.querySelector('.stage');
+      var prose = panel.querySelector('[data-prose]');
+      var target = panel.querySelector('[data-target]');
+
+      var old = stage.querySelectorAll('.overlay-rect');
+      for (var k = 0; k < old.length; k++) old[k].remove();
+
+      var stageBox = stage.getBoundingClientRect();
+      var paragraphLines = mergeToLines(rangeOverWholeText(prose).getClientRects());
+      var targetRects = Array.prototype.slice.call(rangeOverWholeText(target).getClientRects())
+        .sort(function (a, b) { return a.top - b.top; });
+
+      if (!targetRects.length || paragraphLines.length < 2) {
+        setBadge(panel, 'good', 'measuring\u2026');
+        return;
+      }
+
+      var idx0 = lineIndexFor(targetRects[0], paragraphLines);
+      var idxL = lineIndexFor(targetRects[targetRects.length - 1], paragraphLines);
+      var lineAbove = idx0 > 0 ? paragraphLines[idx0 - 1] : null;
+      var lineBelow = idxL < paragraphLines.length - 1 ? paragraphLines[idxL + 1] : null;
+
+      var desiredPad = 4, desiredPadH = 3;
+      var gapAbove = lineAbove ? (targetRects[0].top - lineAbove.bottom) : Infinity;
+      var gapBelow = lineBelow ? (lineBelow.top - targetRects[targetRects.length - 1].bottom) : Infinity;
+      var padTop = Math.max(0, Math.min(desiredPad, gapAbove / 2));
+      var padBottom = Math.max(0, Math.min(desiredPad, gapBelow / 2));
+
+      for (var i = 0; i < targetRects.length; i++) {
+        var rect = targetRects[i];
+        var topExpand = (i === 0) ? padTop : desiredPad;
+        var bottomExpand = (i === targetRects.length - 1) ? padBottom : desiredPad;
+        var div = document.createElement('div');
+        div.className = 'overlay-rect';
+        div.style.left = (rect.left - stageBox.left - desiredPadH) + 'px';
+        div.style.top = (rect.top - stageBox.top - topExpand) + 'px';
+        div.style.width = (rect.width + 2 * desiredPadH) + 'px';
+        div.style.height = (rect.height + topExpand + bottomExpand) + 'px';
+        stage.appendChild(div);
+      }
+
+      var overlayEls = stage.querySelectorAll('.overlay-rect');
+      var overlayRects = Array.prototype.slice.call(overlayEls)
+        .map(function (e) { return e.getBoundingClientRect(); })
+        .sort(function (a, b) { return a.top - b.top; });
+      var collideTop = lineAbove && (overlayRects[0].top < lineAbove.bottom - 0.4);
+      var collideBottom = lineBelow && (overlayRects[overlayRects.length - 1].bottom > lineBelow.top + 0.4);
+      var clip = !!(collideTop || collideBottom);
+      var appliedMin = Math.min(padTop, padBottom, desiredPad);
+
+      if (clip) {
+        setBadge(panel, 'bad', 'unexpected collision');
+      } else {
+        setBadge(panel, 'good', 'cushion ' + appliedMin.toFixed(1) + 'px of ' + desiredPad + 'px, safe');
+      }
+    } catch (e) {
+      setBadge(panel, 'good', 'measuring\u2026');
+    }
+  }
+
+  function measureAll() {
+    panels.forEach(function (panel) {
+      var variant = panel.getAttribute('data-variant');
+      if (variant === 'D') measureOverlayPanel(panel);
+      else measureMarkPanel(panel, variant);
+    });
+  }
+
+  function applyLineHeight(lh) {
+    document.documentElement.style.setProperty('--lh', lh);
+    lhOut.textContent = lh.toFixed(2);
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(function () {
+      requestAnimationFrame(measureAll);
+    });
+  }
+
+  slider.addEventListener('input', function () {
+    applyLineHeight(parseFloat(slider.value));
+  });
+
+  document.getElementById('presets').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-val]');
+    if (!btn) return;
+    var val = parseFloat(btn.getAttribute('data-val'));
+    slider.value = val;
+    applyLineHeight(val);
+  });
+
+  window.addEventListener('resize', function () {
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(measureAll);
+  });
+
+  var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  fontsReady.then(function () {
+    applyLineHeight(parseFloat(slider.value));
+  });
+  applyLineHeight(parseFloat(slider.value));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;">Mockup of a Reading Stats page showing words read, words per hour, works read, and current streak for the week, a bar chart of words read per day, and additional session and all-time stats.</h2>
+<div style="background:var(--surface-1);border-radius:20px;padding:10px;max-width:380px;margin:0 auto;">
+  <div style="background:var(--surface-2);border-radius:14px;overflow:hidden;padding-bottom:8px;">
+    <div style="padding:10px 14px 0;">
+      <span style="color:var(--text-accent);font-size:15px;display:inline-flex;align-items:center;"><i class="ti ti-chevron-left" aria-hidden="true" style="font-size:18px;"></i>Settings</span>
+    </div>
+    <h1 style="font-size:26px;font-weight:500;padding:4px 16px 4px;margin:0;">Reading stats</h1>
+
+    <div style="display:flex;gap:6px;padding:0 16px 14px;">
+      <button class="pill on">This week</button>
+      <button class="pill">This month</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0 16px 16px;">
+      <div class="metric"><p class="mlabel">Words read</p><p class="mval">42,300</p></div>
+      <div class="metric"><p class="mlabel">Words / hour</p><p class="mval">318</p></div>
+      <div class="metric"><p class="mlabel">Works read</p><p class="mval">3</p></div>
+      <div class="metric"><p class="mlabel">Streak</p><p class="mval">5 days</p></div>
+    </div>
+
+    <div style="margin:0 16px 16px;display:flex;align-items:center;gap:6px;">
+      <i class="ti ti-arrow-up-right" aria-hidden="true" style="font-size:14px;color:var(--text-success);"></i>
+      <span style="font-size:13px;color:var(--text-success);">18% more words than last week</span>
+    </div>
+
+    <div style="margin:0 16px 8px;">
+      <p style="font-size:13px;color:var(--text-secondary);margin:0 0 8px;">Words per day</p>
+      <div style="display:flex;align-items:flex-end;gap:6px;height:100px;">
+        <div class="bar" style="height:43%;"></div>
+        <div class="bar" style="height:62%;"></div>
+        <div class="bar" style="height:40%;"></div>
+        <div class="bar today" style="height:73%;"></div>
+        <div class="bar" style="height:55%;"></div>
+        <div class="bar" style="height:100%;"></div>
+        <div class="bar" style="height:58%;"></div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:4px;">
+        <span class="daylabel">M</span><span class="daylabel">T</span><span class="daylabel">W</span><span class="daylabel">T</span><span class="daylabel">F</span><span class="daylabel">S</span><span class="daylabel">S</span>
+      </div>
+    </div>
+
+    <div style="margin:16px 16px 10px;">
+      <p style="font-size:13px;color:var(--text-secondary);padding:0 4px 6px;margin:0;">This week</p>
+      <div style="background:var(--surface-1);border-radius:10px;border:0.5px solid var(--border);">
+        <div class="row"><span>Average session</span><span class="val">34m</span></div>
+        <div class="row" style="border-top:0.5px solid var(--border);"><span>Longest session</span><span class="val">1h 42m</span></div>
+        <div class="row" style="border-top:0.5px solid var(--border);"><span>Most read fandom</span><span class="val">Good Omens</span></div>
+      </div>
+    </div>
+
+    <div style="margin:0 16px 4px;">
+      <p style="font-size:13px;color:var(--text-secondary);padding:0 4px 6px;margin:0;">All time</p>
+      <div style="background:var(--surface-1);border-radius:10px;border:0.5px solid var(--border);">
+        <div class="row"><span>Total words read</span><span class="val">1,204,500</span></div>
+        <div class="row" style="border-top:0.5px solid var(--border);"><span>Longest streak</span><span class="val">12 days</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+.row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;font-size:15px;color:var(--text-primary);}
+.val{color:var(--text-secondary);font-size:15px;}
+.metric{background:var(--surface-1);border-radius:10px;padding:12px;}
+.mlabel{font-size:12px;color:var(--text-secondary);margin:0 0 4px;}
+.mval{font-size:20px;font-weight:500;margin:0;color:var(--text-primary);}
+.pill{font-size:13px;padding:5px 12px;border-radius:14px;border:0.5px solid var(--border);background:var(--surface-1);color:var(--text-secondary);}
+.pill.on{background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent);}
+.bar{flex:1;background:var(--bg-accent);border-radius:4px 4px 0 0;}
+.bar.today{background:var(--text-accent);}
+.daylabel{flex:1;text-align:center;font-size:11px;color:var(--text-muted);}
+</style>

@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Guide popup — transparent overlay mockup</title>
+<style>
+  :root{
+    --box-cream:#fff7e6; --box-border:#a8703f; --box-border-dark:#7a4e28;
+    --text-brown:#4a3423; --accent:#5e9c5e; --accent-dark:#3f7a3f;
+    --dot-inactive:rgba(74,52,35,0.25); --shadow:rgba(74,52,35,0.35);
+    --settings-bg:#f2f2f7; --settings-cell:#ffffff; --settings-text:#000; --settings-secondary:#8a8a8e;
+    --settings-sep:#e3e3e8; --settings-accent:#086AEE;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --box-cream:#3a2f22; --box-border:#c99a5e; --box-border-dark:#e3b878;
+      --text-brown:#f3e6d0; --accent:#7fc97f; --accent-dark:#a3e0a3;
+      --dot-inactive:rgba(243,230,208,0.25); --shadow:rgba(0,0,0,0.6);
+      --settings-bg:#000; --settings-cell:#1c1c1e; --settings-text:#fff; --settings-secondary:#98989f;
+      --settings-sep:#2c2c2e; --settings-accent:#5E9EF4;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh;
+    background:#111; font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Helvetica,Arial,sans-serif;
+  }
+  .phone{
+    width:390px; height:844px; max-width:100%; max-height:100vh;
+    background:var(--settings-bg);
+    border-radius:44px; position:relative; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  /* ---- mock Settings screen behind the overlay ---- */
+  .settings-nav{
+    padding:54px 16px 8px; font-size:32px; font-weight:800; color:var(--settings-text);
+  }
+  .settings-section{ margin:0 16px 22px; }
+  .settings-header{ font-size:12.5px; color:var(--settings-secondary); text-transform:uppercase; letter-spacing:0.02em; padding:0 12px 6px; }
+  .settings-card{ background:var(--settings-cell); border-radius:10px; overflow:hidden; }
+  .settings-row{ display:flex; align-items:center; justify-content:space-between; padding:11px 14px; border-bottom:1px solid var(--settings-sep); font-size:15.5px; color:var(--settings-text); }
+  .settings-row:last-child{ border-bottom:none; }
+  .settings-row .chev{ color:var(--settings-secondary); font-size:13px; }
+  .settings-row.active{ background:rgba(8,106,238,0.08); }
+  .settings-row .label-wrap{ display:flex; align-items:center; gap:8px; }
+  .badge-dot{ width:7px; height:7px; border-radius:50%; background:#ff3b30; }
+
+  /* ---- transparent overlay ---- */
+  .scrim{
+    position:absolute; inset:0; background:rgba(0,0,0,0.28); z-index:5;
+    display:flex; align-items:flex-end; justify-content:center;
+    backdrop-filter:blur(0.5px);
+  }
+  .close-btn{
+    position:absolute; top:18px; right:18px; width:32px; height:32px; border-radius:50%;
+    background:rgba(255,255,255,0.65); border:none; display:flex; align-items:center; justify-content:center;
+    font-size:16px; color:var(--text-brown); z-index:10; cursor:pointer;
+  }
+
+  .critter-wrap{
+    position:absolute; bottom:258px; left:50%; transform:translateX(-90px);
+    animation: bob 2.4s ease-in-out infinite; z-index:6; pointer-events:none;
+    filter:drop-shadow(0 10px 14px rgba(0,0,0,0.35));
+  }
+  @keyframes bob{ 0%,100%{ transform:translateX(-90px) translateY(0);} 50%{ transform:translateX(-90px) translateY(-8px);} }
+
+  .dialogue-box{
+    position:relative; width:100%; margin:0 14px 28px; background:var(--box-cream);
+    border:3px solid var(--box-border); border-radius:22px; padding:18px 20px 16px;
+    box-shadow:0 8px 0 var(--box-border-dark), 0 14px 28px rgba(0,0,0,0.45);
+    z-index:6;
+  }
+  .speaker-tag{
+    position:absolute; top:-16px; left:22px; background:var(--accent); color:#fff;
+    padding:4px 14px; border-radius:999px; font-size:13px; font-weight:800; letter-spacing:0.02em;
+    border:2px solid var(--accent-dark); box-shadow:0 2px 0 rgba(0,0,0,0.15);
+  }
+  .dialogue-title{
+    font-size:15px; font-weight:800; color:var(--text-brown); margin:8px 0 6px;
+  }
+  .dialogue-text{
+    font-size:14.5px; line-height:1.55; color:var(--text-brown); min-height:66px;
+  }
+  .cursor{
+    display:inline-block; width:7px; height:14px; background:var(--text-brown); margin-left:2px;
+    vertical-align:-2px; animation: blink 0.8s steps(1) infinite;
+  }
+  .cursor.hidden{ display:none; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .bottom-row{
+    display:flex; align-items:center; justify-content:space-between; margin-top:10px;
+  }
+  .dots{ display:flex; gap:6px; }
+  .dot{ width:6px; height:6px; border-radius:50%; background:var(--dot-inactive); transition:background 0.2s, transform 0.2s; }
+  .dot.active{ background:var(--accent-dark); transform:scale(1.3); }
+
+  .advance{
+    display:flex; align-items:center; gap:4px; color:var(--accent-dark); font-size:12px; font-weight:700;
+    animation: nudge 1.1s ease-in-out infinite; cursor:pointer; user-select:none;
+  }
+  @keyframes nudge{ 0%,100%{ transform:translateX(0);} 50%{ transform:translateX(4px);} }
+  .advance svg{ width:11px; height:11px; }
+
+  .tap-target{ position:absolute; inset:0; cursor:pointer; }
+
+  .frame-caption{
+    color:#ddd; text-align:center; font-size:12px; margin-top:14px; max-width:390px;
+  }
+  .wrap-outer{ display:flex; flex-direction:column; align-items:center; }
+</style>
+</head>
+<body>
+<div class="wrap-outer">
+<div class="phone">
+
+  <!-- mock Settings screen, visible behind the transparent overlay -->
+  <div class="settings-nav">Settings</div>
+  <div class="settings-section">
+    <div class="settings-header">Articles</div>
+    <div class="settings-card">
+      <div class="settings-row"><span>Theme</span><span class="chev">Sepia ›</span></div>
+      <div class="settings-row"><span>Full Screen Reading</span><span class="chev">›</span></div>
+      <div class="settings-row"><span>Annotations</span><span class="chev">›</span></div>
+      <div class="settings-row"><span>Text Replacement</span><span class="chev">›</span></div>
+      <div class="settings-row"><span>Screen Time</span><span class="chev">›</span></div>
+      <div class="settings-row"><span>Reading Stats</span><span class="chev">›</span></div>
+    </div>
+  </div>
+  <div class="settings-section">
+    <div class="settings-header">Help</div>
+    <div class="settings-card">
+      <div class="settings-row"><span>About</span><span class="chev">›</span></div>
+      <div class="settings-row active">
+        <span class="label-wrap">Guide <span class="badge-dot"></span></span>
+        <span class="chev">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- transparent overlay: dims the app slightly but stays see-through -->
+  <div class="scrim" id="scrim">
+    <button class="close-btn" onclick="alert('Closes the Guide — reachable again anytime from Settings → Help → Guide.')">✕</button>
+
+    <div class="critter-wrap">
+      <!-- simple placeholder critter, swap for real mascot art later -->
+      <svg width="150" height="150" viewBox="0 0 150 150">
+        <ellipse cx="75" cy="120" rx="34" ry="10" fill="rgba(0,0,0,0.18)"/>
+        <ellipse cx="75" cy="90" rx="46" ry="42" fill="#e8c48a"/>
+        <circle cx="42" cy="52" r="15" fill="#e8c48a"/>
+        <circle cx="108" cy="52" r="15" fill="#e8c48a"/>
+        <circle cx="42" cy="52" r="7" fill="#f7dfae"/>
+        <circle cx="108" cy="52" r="7" fill="#f7dfae"/>
+        <ellipse cx="75" cy="96" rx="30" ry="26" fill="#f7dfae"/>
+        <circle cx="60" cy="86" r="5" fill="#4a3423"/>
+        <circle cx="90" cy="86" r="5" fill="#4a3423"/>
+        <ellipse cx="75" cy="102" rx="7" ry="5" fill="#c98a5e"/>
+        <path d="M62 112 Q75 120 88 112" stroke="#4a3423" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <circle cx="48" cy="98" r="6" fill="#f2a9a9" opacity="0.6"/>
+        <circle cx="102" cy="98" r="6" fill="#f2a9a9" opacity="0.6"/>
+      </svg>
+    </div>
+
+    <div class="dialogue-box" id="box">
+      <div class="speaker-tag" id="speakerTag">Nectar</div>
+      <div class="dialogue-title" id="pageTitle"></div>
+      <div class="dialogue-text" id="pageText"><span class="cursor" id="cursor"></span></div>
+      <div class="bottom-row">
+        <div class="dots" id="dots"></div>
+        <div class="advance" id="advance" onclick="onTap()">
+          <span id="advanceLabel">tap</span>
+          <svg viewBox="0 0 10 10" fill="none"><path d="M2 1l5 4-5 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+      <div class="tap-target" onclick="onTap()" style="z-index:-1;"></div>
+    </div>
+  </div>
+</div>
+<div class="frame-caption">
+  Settings screen is the real backdrop, dimmed but visible through the scrim — the box and mascot
+  float above it like a visual-novel overlay, not a full-screen sheet. Tap the box to fast-forward
+  text, tap again to advance. X dismisses back to Settings.
+</div>
+</div>
+
+<script>
+const pages = [
+  { title: "Annotations", body: "Highlight a line, add a note, and it stays put across re-reads. Tap and hold any text to get started." },
+  { title: "Text Replacement", body: "Typos in a fic bugging you? Set up a rule once and Nectar quietly fixes it everywhere, every time." },
+  { title: "Screen Time", body: "Set a daily reading limit or a bedtime window. Nectar will gently lock you out when it's time to sleep." },
+  { title: "New: Take a Break", body: "Reading for 15 minutes straight now prompts a short break reminder — dismiss it and it resets the clock." },
+];
+
+let pageIndex = 0;
+let charIndex = 0;
+let typing = null;
+const pageTextEl = document.getElementById('pageText');
+const pageTitleEl = document.getElementById('pageTitle');
+const cursorEl = document.getElementById('cursor');
+const dotsEl = document.getElementById('dots');
+const advanceLabel = document.getElementById('advanceLabel');
+
+function renderDots(){
+  dotsEl.innerHTML = '';
+  pages.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === pageIndex ? ' active' : '');
+    dotsEl.appendChild(d);
+  });
+}
+
+function startPage(){
+  pageTitleEl.textContent = pages[pageIndex].title;
+  pageTextEl.textContent = '';
+  pageTextEl.appendChild(cursorEl);
+  cursorEl.classList.remove('hidden');
+  charIndex = 0;
+  renderDots();
+  advanceLabel.textContent = pageIndex === pages.length - 1 ? 'done' : 'tap';
+  clearInterval(typing);
+  typing = setInterval(() => {
+    charIndex++;
+    const full = pages[pageIndex].body;
+    pageTextEl.textContent = full.slice(0, charIndex);
+    pageTextEl.appendChild(cursorEl);
+    if (charIndex >= full.length){
+      clearInterval(typing);
+      cursorEl.classList.add('hidden');
+    }
+  }, 22);
+}
+
+function onTap(){
+  const full = pages[pageIndex].body;
+  if (charIndex < full.length){
+    clearInterval(typing);
+    charIndex = full.length;
+    pageTextEl.textContent = full;
+    pageTextEl.appendChild(cursorEl);
+    cursorEl.classList.add('hidden');
+    return;
+  }
+  if (pageIndex < pages.length - 1){
+    pageIndex++;
+    startPage();
+  } else {
+    alert('End of Guide — dismisses back to Settings, transparently, no full-screen transition.');
+  }
+}
+
+startPage();
+</script>
+</body>
+</html>

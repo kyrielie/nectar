@@ -1,4 +1,4 @@
-# Nectar docs index
+# Nectar engineering guide
 
 Nectar is a private iOS fork of NetNewsWire, repointed at "Ambrosia" — a
 JSON Feed–based backend that extends the JSON Feed 1.1 spec with an
@@ -78,22 +78,10 @@ codebase moves faster than docs do. See "Keeping this current" below.
   or via the bounded, opt-in `AO3PrefetchQueue` (max 20 works, 5s delay). Never
   add bulk AO3 scraping to background refresh cycles (see `refresh-throttling.md`
   and `ao3-direct-feed-ingestion.md`).
-- **A "dangling reference" pattern is called out, not silently fixed,
-  wherever found.** Several docs note in-code comments citing a planning
-  file (`docs/nectar-audit-remediation-plan.md`,
-  `docs/nectar-implementation-plan.md`, `ao3-merged-plan.md`,
-  `ao3-merged-plan-nectar.md`, `nectar-ao3-features-plan-FINAL.md`,
-  `nectar-theme-background-toolbar-plan.md`, `toolbar-style-plan.md`,
-  `nectar-navbar-toggle-plan.md`, `nectar-toolbar-ao3-listing-feeds.md`,
-  and — present in one snapshot of this
-  repo, absent from a later one — `nectar-fixes-plan-3.md`) that is not
-  present anywhere in the current tree. This is now a nine-plus-file
-  pattern, not a one-off. `.gitignore` only excludes
-  `plans/`, not `docs/`, so gitignore status alone doesn't explain it —
-  treat the cause as an open question (see "Keeping this current" below),
-  not a solved mystery, and don't assume a missing file means the work
-  described around it didn't happen. The code and tests are the ground
-  truth; a missing plan doc is a missing citation, not missing evidence.
+- **Plans are local working material.** Keep active plans in the
+  gitignored `plans/` directory and completed plans in `plans/finished/`.
+  Put durable behavior and decisions in the tracked topic docs; don't cite
+  ignored plan files from tracked source or documentation.
 
 ## Keeping this current
 
@@ -158,13 +146,8 @@ in passing, even briefly, should still get its cross-reference or a
 one-line note refreshed if that mention goes stale, not just the doc
 that's "primarily about" that system.
 
-**On the dangling-reference problem specifically:** if you're about to
-cite a planning/spec doc in a comment (`// see docs/whatever-plan.md`),
-either (a) confirm the file exists in the tree first, or (b) fold the
-relevant decision directly into the nearest doc above instead of citing a
-scratch file that may not survive to the next snapshot. Six-plus missing
-citations in this codebase already is a sign this practice isn't working
-as a durable record.
+Plans are gitignored working material and may not exist in another
+checkout. Record lasting decisions in the relevant tracked topic doc.
 
 ## Files not covered by any topic doc
 

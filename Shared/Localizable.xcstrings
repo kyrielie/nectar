@@ -425,6 +425,9 @@
     "Copy Work Link" : {
       "comment" : "Command"
     },
+    "Could not extract any chapters from story text." : {
+      "comment" : "Error message"
+    },
     "Couldn’t Add Feed" : {
       "comment" : "Add AO3 Feed: no feed found alert title"
     },
@@ -611,6 +614,9 @@
     "Enter the address shown in your library app's preferences, e.g. http://192.168.1.5:8765" : {
       "comment" : "Enter Server URL message"
     },
+    "EPUB Export Failed" : {
+      "comment" : "Alert title"
+    },
     "Error" : {
       "comment" : "Error"
     },
@@ -646,6 +652,9 @@
     },
     "Export as CSV…" : {
       "comment" : "Annotations settings: CSV export row"
+    },
+    "Export as EPUB" : {
+      "comment" : "Export as EPUB\nExport work as EPUB file"
     },
     "Export as SQLite…" : {
       "comment" : "Annotations settings: SQLite export row"
@@ -1176,7 +1185,7 @@
       "comment" : "Article scrollbar: off\nHighlight creation method: off\nPage counter off\nToolbars: no buttons shown"
     },
     "OK" : {
-      "comment" : "OK\nOK button"
+      "comment" : "Dismiss\nDismiss button\nOK\nOK button"
     },
     "Oldest First" : {
       "comment" : "Ascending sort direction — date"
@@ -1629,6 +1638,9 @@
     "That work is already imported." : {
       "comment" : "Pasted AO3 link-list import: the one pasted work was imported before"
     },
+    "The cached content does not contain body text. Open the work to refresh chapters." : {
+      "comment" : "Error message"
+    },
     "The highlight and its note will be removed." : {
       "comment" : "Annotation editor: delete confirmation message, with note"
     },
@@ -1703,6 +1715,9 @@
     },
     "This work is no longer available." : {
       "comment" : "Works Needing Attention: account or article is gone"
+    },
+    "This work's story text has not been downloaded yet. Open the work in the reader first to load chapters." : {
+      "comment" : "Error message"
     },
     "Timeline Layout" : {
       "comment" : "Timeline Layout"

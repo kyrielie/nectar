@@ -717,8 +717,15 @@ extension MainTimelineModernViewController: UICollectionViewDelegate {
 				menuElements.append(UIMenu(title: "", options: .displayInline, children: [action]))
 			}
 
+			var shareActions = [UIAction]()
+			if let action = self.shareEPUBAction(article, indexPath: firstIndex) {
+				shareActions.append(action)
+			}
 			if let action = self.shareAction(article, indexPath: firstIndex) {
-				menuElements.append(UIMenu(title: "", options: .displayInline, children: [action]))
+				shareActions.append(action)
+			}
+			if !shareActions.isEmpty {
+				menuElements.append(UIMenu(title: "", options: .displayInline, children: shareActions))
 			}
 
 			return UIMenu(title: "", children: menuElements)
@@ -1889,6 +1896,38 @@ extension MainTimelineModernViewController {
 		popoverController?.sourceRect = CGRect(x: 0, y: 0, width: cell.frame.size.width, height: cell.frame.size.height)
 
 		present(activityViewController, animated: true)
+	}
+
+	func shareEPUBAction(_ article: Article, indexPath: IndexPath) -> UIAction? {
+		let title = NSLocalizedString("Export as EPUB", comment: "Export as EPUB")
+		let action = UIAction(title: title, image: UIImage(systemName: "book.pages")) { [weak self] _ in
+			guard let self else { return }
+			Task { @MainActor in
+				do {
+					let account = article.account
+					let epubURL = try await EPUB3Generator.generateEPUB(for: article, account: account)
+					let activityVC = UIActivityViewController(activityItems: [epubURL], applicationActivities: nil)
+					if let collectionView = self.collectionView,
+					   let cell = collectionView.cellForItem(at: indexPath) {
+						activityVC.popoverPresentationController?.sourceView = cell
+						activityVC.popoverPresentationController?.sourceRect = cell.bounds
+					} else {
+						activityVC.popoverPresentationController?.sourceView = self.view
+						activityVC.popoverPresentationController?.sourceRect = CGRect(x: self.view.bounds.midX, y: self.view.bounds.midY, width: 0, height: 0)
+					}
+					self.present(activityVC, animated: true)
+				} catch {
+					let alert = UIAlertController(
+						title: NSLocalizedString("EPUB Export Failed", comment: "Alert title"),
+						message: error.localizedDescription,
+						preferredStyle: .alert
+					)
+					alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Dismiss"), style: .default))
+					self.present(alert, animated: true)
+				}
+			}
+		}
+		return action
 	}
 
 	func shareAction(_ article: Article, indexPath: IndexPath) -> UIAction? {

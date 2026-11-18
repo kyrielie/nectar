@@ -63,6 +63,15 @@ construction site in both parsers:
   get their own pagination and refresh-skip handling — see
   `refresh-throttling.md`.
 
+**Refresh distinction:** these native RSS/Atom subscriptions are refreshed
+through the ordinary account feed-refresh path, including scheduled/background
+refresh. They are not AO3 HTML listing feeds and are not skipped by
+`AO3Link.isListingFeed`. Refresh downloads feed metadata only; the work/chapter
+HTML remains on-demand in the reader, with the separate opt-in bounded
+prefetch exception described below. AO3 HTML listing pages, by contrast, are
+skipped during routine refresh and require an explicit listing action after
+their initial fetch. See `refresh-throttling.md`.
+
 None of this is present in `JSONFeedParser`'s article-construction path;
 it only applies to feeds fetched as RSS/Atom. `RSSItem.swift`/
 `RSSParser.swift`/`AtomParser.swift` are otherwise upstream NetNewsWire

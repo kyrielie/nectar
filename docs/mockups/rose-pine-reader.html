@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rosé Pine reader mockup: Main, Moon, Dawn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Victor+Mono:wght@400;600&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:inherit}
+html,body{margin:0}
+[data-v="main"]{--bg:#191724;--card:#1f1d2e;--b1:#2c283d;--b2:#2e2a47;--b3:#332e45;--ink:#e0def4;--sub:#908caa;--love:#eb6f92;--foam:#9ccfd8;--iris:#c4a7e7;--rose:#ea9a97;--code:#ea9a97;--sh:rgba(25,23,36,.6);--sh2:rgba(25,23,36,.32);--ui:#252338;--tf:#302d47;--tfi:#e0def4;--warn:#ebbcba}
+[data-v="moon"]{--bg:#232136;--card:#2a273f;--b1:#36324e;--b2:#3f3857;--b3:#463e61;--ink:#e0def4;--sub:#908caa;--love:#eb6f92;--foam:#9ccfd8;--iris:#c4a7e7;--rose:#ea9a97;--code:#ea9a97;--sh:rgba(25,23,36,.6);--sh2:rgba(25,23,36,.32);--ui:#2e2c44;--tf:#393757;--tfi:#e0def4;--warn:#ebbcba}
+[data-v="dawn"]{--bg:#faf4ed;--card:#fffaf5;--b1:#e7d3cb;--b2:#e4d1c9;--b3:#d7bfb6;--ink:#575279;--sub:#797593;--love:#eb6f92;--foam:#56949f;--iris:#907aa9;--rose:#d7827e;--code:#d7827e;--sh:rgba(87,82,121,.2);--sh2:rgba(87,82,121,.1);--ui:#fffaf5;--tf:#9ccfd8;--tfi:#191724;--warn:#f6c177}
+body{font-family:Figtree,Helvetica,"Trebuchet MS",Arial,sans-serif;background:var(--bg);color:var(--ink);transition:background .2s}
+.bar{position:sticky;top:0;z-index:5;display:flex;gap:.5rem;justify-content:center;padding:.6rem;background:var(--card);border-bottom:1px solid var(--b1)}
+.bar button{font:inherit;color:var(--ink);background:var(--ui);border:1px solid var(--b3);border-radius:.75rem;padding:.25em .9em;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.25),0 2px 0 rgba(70,60,90,.15)}
+.bar button:hover,.bar button[aria-pressed=true]{background:linear-gradient(135deg,#ebbcba 0%,#ea9a97 33%,#eb6f92 100%);color:#fff;border-color:transparent;box-shadow:none}
+.wrap{max-width:44em;margin:0 auto;padding:1.5rem 1.25rem 3rem}
+a{color:var(--love);text-decoration:none}
+a:hover{font-weight:600;color:color-mix(in srgb,var(--love),white 15%)}
+.head{border-bottom:1px solid var(--b1);padding-bottom:.6rem;color:var(--sub);font-size:.9rem}
+.head a{color:var(--sub)}
+h1{font-size:1.6rem;line-height:1.2;margin:1.2rem 0 .3rem}
+h1 a{color:var(--ink)}
+h1::after{content:"\00a0\273F";color:var(--love);font-size:.75em}
+.date{font-weight:700;font-size:.95rem;color:var(--sub);margin-bottom:1rem}
+.preface{background:var(--card);border:1px solid var(--b2);border-radius:.75rem;padding:.9rem 1rem;font-size:.9rem;box-shadow:0 8px 28px var(--sh),0 4px 0 var(--sh2);margin-bottom:1.5rem}
+dl{display:grid;grid-template-columns:auto 1fr;gap:.4em .6em;margin:0}
+dt{font-weight:600}dd{margin:0}
+dt.w,dd.w{grid-column:1/-1}
+.preface a{color:var(--iris)}
+/* ribbons: flat, extend 10px above the card, rounded top, V-notch bottom */
+.preface{position:relative}
+.rib{display:none;position:absolute;top:-10px;width:28px;height:54px;border-radius:7px 7px 0 0;clip-path:polygon(0 0,100% 0,100% 100%,50% calc(100% - 10px),0 100%)}
+.rib svg{position:absolute;left:6px;top:24px;width:16px;height:16px;fill:currentColor}
+.r-lock{right:10px;background:var(--love);color:#fff}
+.r-star{right:44px;background:#ebbcba;color:#191724}
+[data-v=dawn] .r-star{background:#f6c177}
+[data-lock="1"] .r-lock,[data-star="1"] .r-star{display:block}
+[data-lock="0"] .r-star{right:10px}
+/* tags */
+.preface dd.k{font-size:0}
+.preface dd.k a{display:inline-flex;font-size:.9rem;line-height:1.25;padding:.15em .5em;margin:0 .3em .35em 0;border:1px solid rgba(128,128,128,.15);border-radius:0 15px 15px 15px;color:#fff;background:var(--tf);transition:transform .2s,background .2s,box-shadow .2s}
+.preface dd.k a:hover{font-weight:400;transform:translateY(-1px);color:#fff;background:linear-gradient(135deg,#ebbcba 0%,#ea9a97 33%,#eb6f92 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
+[data-tags=typed] dd.fandom a{background:var(--love)}
+[data-tags=typed] dd.warn a,[data-tags=typed] dd.cat-ff a{background:var(--warn);color:#191724}
+[data-tags=typed] dd.rel a,[data-tags=typed] dd.k a.g{background:var(--foam);color:#191724}
+[data-tags=typed] dd.char a,[data-tags=typed] dd.rate a{background:#3e8fb0}
+[data-tags=typed] dd.free a{background:var(--tf);color:var(--tfi)}
+[data-tags=typed] dd.free a::after{content:"\00a0\00a0\273F"}
+[data-tags=single] dd.k a{color:var(--tfi)}
+[data-tags=typed] dd.k a:hover,[data-tags=single] dd.k a:hover{color:#fff;background:linear-gradient(135deg,#ebbcba 0%,#ea9a97 33%,#eb6f92 100%)}
+.summary{margin-top:.9rem;padding-left:.8rem;border-left:2px solid var(--b3);font-size:.95rem}
+.summary b{display:block;margin-bottom:.2rem}
+h2{font-size:1.25rem;margin:2rem 0 .6rem}
+h2::before{content:"\273F";display:block;color:var(--love);text-align:center;font-weight:400;margin-bottom:.4rem}
+.prose{font-size:1.1rem;line-height:1.65}
+.prose p{margin:0 0 1em}
+blockquote{margin:0 0 1em;padding-inline-start:15px;border-inline-start:3px solid var(--b3)}
+code{font-family:"Victor Mono",Consolas,Courier,monospace;font-size:.85em;color:var(--code)}
+pre{font-family:"Victor Mono",Consolas,Courier,monospace;font-size:.85rem;background:var(--card);border:1px solid var(--b2);border-radius:.75rem;padding:.8rem;overflow:auto;color:var(--code);margin:0 0 1em}
+.fn{display:inline-block;font-size:.75em;line-height:1;padding:.15em .7em;border-radius:1em;background:var(--b3);color:var(--ink);vertical-align:top}
+.fn.hov{background:linear-gradient(135deg,#ebbcba 0%,#ea9a97 33%,#eb6f92 100%);color:#fff}
+.pop{display:inline-block;background:var(--card);border:1px solid var(--b3);border-radius:.75rem;padding:.5rem .8rem;font-size:.85rem;box-shadow:0 3px 10px var(--sh),0 2px 0 var(--sh2);margin:.2rem 0 1.2rem}
+.series{border-top:1px solid var(--b1);padding-top:1rem;margin-top:1.5rem;font-size:.9rem}
+.entry{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5em;background:var(--card);border:1px solid var(--b2);border-radius:.75rem;padding:.6rem .9rem;box-shadow:0 8px 28px var(--sh),0 4px 0 var(--sh2)}
+.entry .nav a{padding:.1em .6em;border-radius:.75rem;margin-left:.3rem}
+.entry .nav a.hov{background:linear-gradient(135deg,#ebbcba 0%,#ea9a97 33%,#eb6f92 100%);color:#fff}
+.end{text-align:center;color:var(--love);margin:1.5rem 0 0}
+.notes{margin:2.5rem 0 0;padding:1rem;border:1px dashed var(--b3);border-radius:.75rem;color:var(--sub);font-size:.85rem}
+.notes b{color:var(--ink)}
+.notes ul{margin:.4rem 0 0;padding-left:1.1rem}
+</style>
+</head>
+<body data-v="main" data-tags="typed" data-lock="1" data-star="1" id="root">
+<div class="bar" role="group" aria-label="Variant">
+<button data-v="main" aria-pressed="true">Rosé Pine</button>
+<button data-v="moon" aria-pressed="false">Moon</button>
+<button data-v="dawn" aria-pressed="false">Dawn</button>
+<span style="width:1rem"></span>
+<button data-t="typed" aria-pressed="true">Typed tags</button>
+<button data-t="single" aria-pressed="false">Single color</button>
+<span style="width:1rem"></span>
+<button data-r="lock" aria-pressed="true">Locked</button>
+<button data-r="star" aria-pressed="true">Starred</button>
+</div>
+<div class="wrap">
+<div class="head"><a href="#">Lantern Hours</a><br>by <a href="#">wintermoth</a></div>
+<h1><a href="#">The Long Way Home</a></h1>
+<div class="date">Oct 16, 2026</div>
+
+<div class="preface">
+<span class="rib r-lock" title="Archive locked"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="1.5"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></span>
+<span class="rib r-star" title="Starred in Nectar"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l2 4.3 4.7.6-3.4 3.2.9 4.6L8 11.8 3.8 14.2l.9-4.6L1.3 6.4 6 5.8z"/></svg></span>
+<dl>
+<dt>Rating:</dt><dd class="k rate"><a href="#">Teen And Up Audiences</a></dd>
+<dt>Category:</dt><dd class="k cat-ff"><a href="#">F/F</a><a href="#" class="g">Gen</a></dd>
+<dt class="w">Archive Warning:</dt><dd class="w k warn"><a href="#">Creator Chose Not To Use Archive Warnings</a></dd>
+<dt class="w">Fandom:</dt><dd class="w k fandom"><a href="#">Original Work</a></dd>
+<dt class="w">Relationships:</dt><dd class="w k rel"><a href="#">Mara/Ines</a></dd>
+<dt class="w">Characters:</dt><dd class="w k char"><a href="#">Mara</a><a href="#">Ines</a></dd>
+<dt class="w">Additional Tags:</dt><dd class="w k free"><a href="#">Slow Burn</a><a href="#">Found Family</a><a href="#">Lighthouses</a></dd>
+<dt>Words:</dt><dd>42,180</dd>
+<dt>Chapters:</dt><dd>12/20</dd>
+</dl>
+<div class="summary"><b>Summary</b>Two keepers, one lamp, and a winter that will not end.</div>
+</div>
+
+<h2>Chapter 1</h2>
+<div class="prose">
+<p>The light turned once every nine seconds, and Mara had stopped counting somewhere around the second week.<span class="fn">1</span></p>
+<blockquote><p>“You don’t have to stay up for it,” Ines said. “It runs itself.”</p></blockquote>
+<p>She kept the logbook in <code>ledger.txt</code>, a habit older than the lamp:</p>
+<pre>night 41: wind NW, glass falling
+night 42: wind NW, lamp lit 17:04</pre>
+<p>Footnote marker at rest above, hovered below, with its popover.</p>
+<p><span class="fn hov">2</span></p>
+<div class="pop">A lamp-room note, set on the card surface.</div>
+</div>
+
+<div class="series">
+<b>This work is part of a series:</b>
+<div class="entry"><span>Part 1 of Lantern Hours</span><span class="nav"><a href="#" class="hov">Previous</a><a href="#">Next</a></span></div>
+</div>
+<p class="end">&#10047;</p>
+
+<div class="notes"><b>What this mockup shows (reader only)</b>
+<ul>
+<li>Figtree body and chrome, Victor Mono code, links with no underline.</li>
+<li>0.75rem radius and two-layer shadow on preface, series entry, popover, code block.</li>
+<li>Petal gradient on hover (footnote marker, series nav link, buttons above).</li>
+<li>Preface as a card, summary with a 2px left rule, ✿ after the title and above chapter headings, end ornament.</li>
+<li>Preface tags as leaf pills: top-left square, other corners 15px. Toggle Typed tags (needs the small Swift change: row-label classes) or Single color (CSS only).</li>
+<li>Typed fills: fandom love, warning rose (gold on Dawn), relationship foam, character pine, freeform muted violet (foam on Dawn), with the ✿ on freeform only. Dark ink on the light fills, white elsewhere.</li>
+<li>Rating and category use the same pills with their brief colors. Category shows F/F in rose and Gen in foam.</li>
+<li>Ribbons on the preface card: flat, 28 by 54, 10px in from the right, 10px above the card, 7px rounded top, V-notch bottom. Padlock in love for archive locked, star in rose (gold on Dawn) for starred in Nectar. Toggle Locked and Starred above to see none, one or both (a single ribbon moves to the right edge).</li>
+<li>Glyph on the rose and gold ribbon is dark ink, not white, for contrast.</li>
+</ul></div>
+</div>
+<script>
+var root=document.getElementById('root');
+document.querySelectorAll('.bar button').forEach(function(b){
+b.addEventListener('click',function(){
+if(b.hasAttribute('data-r')){var on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on?'true':'false');root.setAttribute('data-'+b.getAttribute('data-r'),on?'1':'0');return;}
+var k=b.hasAttribute('data-v')?'data-v':'data-t';
+root.setAttribute(k==='data-v'?'data-v':'data-tags',b.getAttribute(k));
+document.querySelectorAll('.bar button['+k+']').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+});});
+</script>
+</body>
+</html>

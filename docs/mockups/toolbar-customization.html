@@ -1,0 +1,126 @@
+<div style="max-width:380px;margin:0 auto;background:var(--surface-1);border-radius:16px;padding:12px;">
+<h2 class="sr-only">Mockup of a unified toolbars settings screen with separate tabs for the top toolbar and the bottom toolbar</h2>
+
+<div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;overflow:hidden;">
+
+<div style="display:flex;align-items:center;padding:10px 14px;border-bottom:0.5px solid var(--border);">
+  <i class="ti ti-chevron-left" style="font-size:18px;color:var(--text-accent);margin-right:6px" aria-hidden="true"></i>
+  <span style="font-size:15px;color:var(--text-accent);">Settings</span>
+  <span style="flex:1;text-align:center;font-size:16px;font-weight:500;margin-right:24px;">Toolbars</span>
+</div>
+
+<div style="display:flex;padding:8px;gap:8px;">
+  <button id="tab-top" onclick="setTab('top')" style="flex:1;">Top toolbar</button>
+  <button id="tab-bottom" onclick="setTab('bottom')" style="flex:1;">Bottom toolbar</button>
+</div>
+
+<div id="preview"></div>
+<div id="list"></div>
+
+</div>
+</div>
+
+<script>
+const FUNCS = [
+  ["theme","Theme","ti-brightness"],["toc","Table of contents","ti-list-details"],
+  ["find","Find","ti-search"],["prevnext","Prev / next","ti-arrows-vertical"],
+  ["lock","Lock","ti-lock"],["annotations","Annotations","ti-highlight"],
+  ["settings","Settings","ti-settings"],["updates","Check for updates","ti-refresh"],
+  ["read","Mark read","ti-check"],["star","Star","ti-star"],
+  ["heart","Heart","ti-heart"],["nextunread","Next unread","ti-arrow-right"],
+  ["action","Share","ti-share"]
+];
+
+const state = {
+  top: {theme:true, toc:true, prevnext:true},
+  bottom: {read:true, star:true, heart:true, nextunread:true},
+  overflow: {
+    top:{on:true, picks:{annotations:true}},
+    bottom:{on:true, picks:{action:true}}
+  }
+};
+const CAP = {top:4, bottom:5};
+const LABEL = {top:"Top toolbar", bottom:"Bottom toolbar"};
+let activeTab = "top";
+
+function slotCost(id){ return id==="prevnext" ? 2 : 1; }
+
+function usedSlots(bar){
+  let n = state.overflow[bar].on ? 1 : 0;
+  for (const id of Object.keys(state[bar])) if (state[bar][id]) n += slotCost(id);
+  return n;
+}
+
+function setTab(bar){ activeTab = bar; renderAll(); }
+
+function render(){
+  const bar = activeTab;
+  const label = LABEL[bar];
+  const cap = CAP[bar];
+  const of = state.overflow[bar];
+  const used = usedSlots(bar);
+
+  document.getElementById("tab-top").style.cssText = activeTab==="top"
+    ? "flex:1;background:var(--fill-ghost-selected);border-color:var(--border-strong);"
+    : "flex:1;";
+  document.getElementById("tab-bottom").style.cssText = activeTab==="bottom"
+    ? "flex:1;background:var(--fill-ghost-selected);border-color:var(--border-strong);"
+    : "flex:1;";
+
+  const inline = FUNCS.filter(([id])=>state[bar][id]);
+  let icons = inline.map(([id,,icon])=>`<i class="ti ${icon}" style="font-size:18px" aria-hidden="true"></i>`).join("");
+  if (of.on) icons += `<i class="ti ti-dots" style="font-size:18px" aria-hidden="true"></i>`;
+  document.getElementById("preview").innerHTML = `
+    <div style="padding:14px;border-bottom:0.5px solid var(--border);">
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px;">${label} preview</p>
+      <div style="display:flex;justify-content:space-between;background:var(--surface-1);border-radius:8px;padding:10px 14px;">${icons}</div>
+    </div>`;
+
+  let rows = "";
+  FUNCS.forEach(([id,name,icon])=>{
+    const on = !!state[bar][id];
+    const wouldReach = used - (on?slotCost(id):0) + slotCost(id);
+    const disabled = !of.on && !on && wouldReach > cap;
+    rows += `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;${disabled?'opacity:0.4;':''}">
+      <span style="display:flex;align-items:center;gap:10px;font-size:14px;"><i class="ti ${icon}" style="font-size:16px" aria-hidden="true"></i>${name}</span>
+      <input type="checkbox" ${on?"checked":""} ${disabled?"disabled":""} onchange="toggle('${bar}','${id}')" />
+    </div>`;
+  });
+  let ofRows = "";
+  if (of.on){
+    const available = FUNCS.filter(([id]) => !state[bar][id]);
+    if (available.length === 0){
+      ofRows = `<div style="padding:9px 14px 9px 26px;font-size:13px;color:var(--text-muted);">All functions already placed in this bar.</div>`;
+    }
+    available.forEach(([id,name,icon])=>{
+      const on = !!of.picks[id];
+      ofRows += `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px 9px 26px;">
+        <span style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary);"><i class="ti ${icon}" style="font-size:15px" aria-hidden="true"></i>${name}</span>
+        <input type="checkbox" ${on?"checked":""} onchange="toggleOf('${bar}','${id}')" />
+      </div>`;
+    });
+  }
+  document.getElementById("list").innerHTML = `
+    <div style="padding:10px 14px 2px;display:flex;justify-content:space-between;align-items:baseline;">
+      <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">${label}</span>
+      <span style="font-size:12px;color:${used>cap?'var(--text-danger)':'var(--text-muted)'};">${used}/${cap}</span>
+    </div>
+    ${rows}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-top:0.5px solid var(--border);">
+      <span style="display:flex;align-items:center;gap:10px;font-size:14px;"><i class="ti ti-dots" style="font-size:16px" aria-hidden="true"></i>Overflow menu</span>
+      <input type="checkbox" ${of.on?"checked":""} onchange="toggleOfMenu('${bar}')" />
+    </div>
+    ${ofRows}
+  `;
+}
+
+function toggle(bar,id){
+  state[bar][id] = !state[bar][id];
+  if (state[bar][id]) delete state.overflow[bar].picks[id];
+  render();
+}
+function toggleOf(bar,id){ state.overflow[bar].picks[id] = !state.overflow[bar].picks[id]; render(); }
+function toggleOfMenu(bar){ state.overflow[bar].on = !state.overflow[bar].on; render(); }
+function renderAll(){ render(); }
+renderAll();
+</script>

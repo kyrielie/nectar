@@ -19,6 +19,18 @@ capture command are below.
 - Suites use Swift Testing. Suites in the app target were written without being
   run in Xcode; treat a first failure as possibly a test problem as well as a
   code problem.
+- Swift Testing may run different suites in parallel even when each suite is
+  marked `.serialized`. All simulator theme renderers therefore share one
+  WebKit permit across the probe and the check matrix. This prevents parallel
+  suites from creating and tearing down multiple WebContent processes at once.
+- The check matrix keeps one light and one dark `WKWebView` alive for its
+  entire run and reloads those views for each page. This avoids launching a
+  separate WebContent process for every matrix cell while preserving a stable
+  appearance for each pass.
+- The color probe also reuses one view per appearance across measurements. If
+  a WebContent process exits or returns an undecodable message, that runner is
+  discarded so the probe's retry starts with a fresh view. Both runners are
+  released after 30 seconds without a measurement.
 
 Relevant suites: `ArticleThemeColorProbeTests` (rendering),
 `ArticleThemeSmokeTests` (every bundle passes the probe's sanity check),

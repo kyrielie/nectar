@@ -1,0 +1,88 @@
+<h2 class="sr-only">Mockup of the redesigned Imported Links import sheet with a destination picker defaulting to the shared Imported Links timeline, a renamable dated folder option, and a link to the full folder picker</h2>
+<div style="background: var(--surface-1); border-radius: 12px; padding: 1rem; display: flex; justify-content: center;">
+<div style="width: 320px; background: var(--surface-2); border-radius: 20px; border: 0.5px solid var(--border); overflow: hidden; font-family: var(--font-sans);">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 0.5px solid var(--border);">
+    <span style="font-size: 15px; color: var(--text-accent);">Cancel</span>
+    <span style="font-size: 15px; font-weight: 500; color: var(--text-primary);">Import AO3 Links</span>
+    <span style="font-size: 15px; font-weight: 500; color: var(--text-accent);">Import</span>
+  </div>
+
+  <div style="padding: 16px 12px; display: flex; flex-direction: column; gap: 20px;">
+
+    <div>
+      <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; padding: 0 6px 6px;">Add to</div>
+      <div style="background: var(--surface-1); border-radius: 10px; overflow: hidden;">
+
+        <div class="destRow" data-row="shared" style="display: flex; align-items: center; padding: 10px 12px; border-bottom: 0.5px solid var(--border); cursor: pointer;">
+          <span class="checkmark" data-row="shared" style="width: 18px; margin-right: 10px; color: var(--text-accent); font-size: 15px;"><i class="ti ti-check" aria-hidden="true"></i></span>
+          <div style="flex: 1;">
+            <div style="font-size: 15px; color: var(--text-primary);">Imported Links</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Shared list, top level</div>
+          </div>
+        </div>
+
+        <div class="destRow" data-row="dated" style="display: flex; align-items: center; padding: 10px 12px; border-bottom: 0.5px solid var(--border); cursor: pointer;">
+          <span class="checkmark" data-row="dated" style="width: 18px; margin-right: 10px; color: var(--text-accent); font-size: 15px; visibility: hidden;"><i class="ti ti-check" aria-hidden="true"></i></span>
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <input id="datedInput" type="text" value="09-13-26" style="border: none; background: transparent; padding: 0; height: auto; font-size: 15px; color: var(--text-primary); width: 90px;" />
+              <i class="ti ti-pencil" style="font-size: 13px; color: var(--text-muted);" aria-hidden="true"></i>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted);">New dated folder</div>
+          </div>
+        </div>
+
+        <button id="chooseFolderRow" style="width: 100%; display: flex; align-items: center; padding: 10px 12px; border: none; background: transparent; text-align: left; border-radius: 0;">
+          <span style="width: 18px; margin-right: 10px;"></span>
+          <div style="flex: 1;">
+            <div id="chooseFolderLabel" style="font-size: 15px; color: var(--text-primary);">Choose folder</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Pick an existing folder</div>
+          </div>
+          <i class="ti ti-chevron-right" style="font-size: 14px; color: var(--text-muted);" aria-hidden="true"></i>
+        </button>
+
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; padding: 0 6px 6px;">Paste AO3 links</div>
+      <div style="background: var(--surface-1); border-radius: 10px; padding: 10px 12px; min-height: 100px;">
+        <span style="font-size: 15px; color: var(--text-muted);">archiveofourown.org/works/...</span>
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted); padding: 6px 6px 0; line-height: 1.5;">Paste any text containing AO3 work links — everything else is ignored. One-time import, not a feed.</div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+let selected = 'shared';
+const rows = document.querySelectorAll('.destRow');
+const marks = document.querySelectorAll('.checkmark');
+const chooseFolderRow = document.getElementById('chooseFolderRow');
+const chooseFolderLabel = document.getElementById('chooseFolderLabel');
+const datedInput = document.getElementById('datedInput');
+
+function select(row) {
+  selected = row;
+  marks.forEach(m => { m.style.visibility = (m.dataset.row === row) ? 'visible' : 'hidden'; });
+  chooseFolderRow.style.background = (row === 'folder') ? 'var(--surface-0)' : 'transparent';
+}
+
+rows.forEach(r => {
+  r.addEventListener('click', (e) => {
+    if (e.target === datedInput) return;
+    select(r.dataset.row);
+  });
+});
+
+datedInput.addEventListener('focus', () => select('dated'));
+
+chooseFolderRow.addEventListener('click', () => {
+  select('folder');
+  chooseFolderLabel.textContent = 'AO3 / Comfort Reads';
+  sendPrompt('Show me the choose folder picker screen this opens');
+});
+</script>

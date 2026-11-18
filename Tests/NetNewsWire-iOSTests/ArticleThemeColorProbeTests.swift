@@ -103,6 +103,9 @@ import WebKit
 	// MARK: 1. Dark-flag assertion
 
 	@Test func lightAndDarkPassesReportTheRequestedAppearance() async throws {
+		await ArticleThemeColorProbe.acquireWebViewPermit()
+		defer { ArticleThemeColorProbe.releaseWebViewPermit() }
+
 		let environment = Self.environment()
 		let html = try ArticleThemeColorProbe.composeHTML(for: try Self.fixtureTheme("StarterStyle"), environment: environment)
 		let light = await ArticleThemeColorProbe.runPass(html: html, dark: false, environment: environment)

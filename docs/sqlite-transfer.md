@@ -45,10 +45,8 @@ moves most `items` columns straight across because their wire type already
 matches the local `articles` column's storage type (TEXT-to-TEXT,
 INTEGER-to-INTEGER/BOOL). `date_published`/`date_modified` are the one
 column pair where that's not true: the wire format sends them as ISO 8601
-TEXT (`docs/nectar-implementation-plan.md` is cited in-code as the source for
-this Wire Contract, but that file is not present anywhere in the current
-tree — treat the field-name/type claim below as confirmed against the
-Swift/SQL source, not against that missing doc), but
+TEXT (the field names and types below are confirmed against the Swift/SQL
+source), but
 `articles.datePublished`/`dateModified` are read/written everywhere else as
 numeric `timeIntervalSince1970` doubles, via FMDB's automatic `Date`→double
 binding. A straight `SELECT`-and-copy of the TEXT column skipped that

@@ -217,6 +217,7 @@ struct ConsecutiveNilBreaker {
 	static let handlerName = "themeCheckMatrix"
 	static let frame = CGRect(x: 0, y: 0, width: 390, height: 844)
 	static let timeout: Duration = .seconds(10)
+	private static var session: Session?
 
 	/// Same host window as the probe: a 1x1 hidden window in the first
 	/// foreground-active scene, so `prefers-color-scheme` follows the override.
@@ -249,39 +250,68 @@ struct ConsecutiveNilBreaker {
 	}
 
 	static func measure(html: String, dark: Bool, environment: ArticleThemeProbeEnvironment) async -> ThemePageMetrics? {
-		let run = MatrixRun()
-		let configuration = WKWebViewConfiguration()
-		configuration.websiteDataStore = .nonPersistent()
-		configuration.defaultWebpagePreferences = environment.makePagePreferences()
-		let controller = WKUserContentController()
-		controller.addUserScript(WKUserScript(source: script,
+		await ArticleThemeColorProbe.acquireWebViewPermit()
+		defer { ArticleThemeColorProbe.releaseWebViewPermit() }
+
+		if session == nil {
+			// Same blocker as the probe: a theme's remote `@import` font stylesheet must not stall the load.
+			let blocker = await ArticleThemeColorProbe.remoteLoadBlocker()
+			session = Session(environment: environment, blocker: blocker)
+		}
+		return await session?.measure(html: html, dark: dark)
+	}
+
+	/// One test-run WKWebView for the whole matrix. Creating a fresh WebKit data store and
+	/// WebView for every matrix cell launched a new WebContent process per page on simulator.
+	/// The pages run no content scripts and have no persistent state, so reloading one view is
+	/// equivalent for these layout/color checks and avoids unbounded process churn.
+	@MainActor private final class Session {
+		private let lightRun = MatrixRun()
+		private let darkRun = MatrixRun()
+		private let lightWebView: WKWebView
+		private let darkWebView: WKWebView
+		private let lightHost: UIWindow?
+		private let darkHost: UIWindow?
+
+		init(environment: ArticleThemeProbeEnvironment, blocker: WKContentRuleList?) {
+			(lightWebView, lightHost) = Self.makeWebView(dark: false, run: lightRun,
+												 environment: environment, blocker: blocker)
+			(darkWebView, darkHost) = Self.makeWebView(dark: true, run: darkRun,
+												 environment: environment, blocker: blocker)
+		}
+
+		func measure(html: String, dark: Bool) async -> ThemePageMetrics? {
+			let webView = dark ? darkWebView : lightWebView
+			let run = dark ? darkRun : lightRun
+			let message = await run.load(html: html, in: webView, timeout: timeout)
+			webView.stopLoading()
+			guard let message, let data = message.data(using: .utf8) else {
+				return nil
+			}
+			return try? JSONDecoder().decode(ThemePageMetrics.self, from: data)
+		}
+
+		private static func makeWebView(dark: Bool, run: MatrixRun,
+		                                environment: ArticleThemeProbeEnvironment,
+		                                blocker: WKContentRuleList?) -> (WKWebView, UIWindow?) {
+			let configuration = WKWebViewConfiguration()
+			configuration.websiteDataStore = .nonPersistent()
+			configuration.defaultWebpagePreferences = environment.makePagePreferences()
+			let controller = WKUserContentController()
+			controller.addUserScript(WKUserScript(source: script,
 											  injectionTime: .atDocumentEnd,
-											  forMainFrameOnly: true))
-		controller.add(run, name: handlerName)
-		// Same blocker as the probe: a theme's remote `@import` font stylesheet must not stall the load.
-		if let blocker = await ArticleThemeColorProbe.remoteLoadBlocker() {
-			controller.add(blocker)
+										  forMainFrameOnly: true))
+			controller.add(run, name: handlerName)
+			if let blocker {
+				controller.add(blocker)
+			}
+			configuration.userContentController = controller
+			let webView = WKWebView(frame: frame, configuration: configuration)
+			webView.navigationDelegate = run
+			let host = attachToHiddenWindow(webView)
+			webView.overrideUserInterfaceStyle = dark ? .dark : .light
+			return (webView, host)
 		}
-		configuration.userContentController = controller
-
-		let webView = WKWebView(frame: frame, configuration: configuration)
-		webView.navigationDelegate = run
-		let host = attachToHiddenWindow(webView)
-		webView.overrideUserInterfaceStyle = dark ? .dark : .light
-
-		let message = await run.load(html: html, in: webView, timeout: timeout)
-
-		controller.removeScriptMessageHandler(forName: handlerName)
-		controller.removeAllUserScripts()
-		webView.navigationDelegate = nil
-		webView.stopLoading()
-		webView.removeFromSuperview()
-		host?.isHidden = true
-
-		guard let message, let data = message.data(using: .utf8) else {
-			return nil
-		}
-		return try? JSONDecoder().decode(ThemePageMetrics.self, from: data)
 	}
 
 	/// Composes the page for `theme` and `fixture` the way the reader does, with an optional

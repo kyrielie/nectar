@@ -533,7 +533,16 @@ final class WebViewController: UIViewController {
 
 	func showActivityDialog(popOverBarButtonItem: UIBarButtonItem? = nil) {
 		guard let url = article?.preferredURL else { return }
-		let activityViewController = UIActivityViewController(url: url, title: article?.title, applicationActivities: [FindInArticleActivity(), OpenInBrowserActivity(), ShareAO3SeriesLinkActivity(seriesURL: article?.ao3SeriesURL)])
+		let activityViewController = UIActivityViewController(
+			url: url,
+			title: article?.title,
+			applicationActivities: [
+				FindInArticleActivity(),
+				OpenInBrowserActivity(),
+				ShareAO3SeriesLinkActivity(seriesURL: article?.ao3SeriesURL),
+				ShareEPUBActivity(article: article, account: article?.account, presentingViewController: self)
+			]
+		)
 		activityViewController.popoverPresentationController?.barButtonItem = popOverBarButtonItem
 		present(activityViewController, animated: true)
 	}

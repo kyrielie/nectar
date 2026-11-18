@@ -21,14 +21,14 @@
 //
 import Foundation
 
-enum ContentHTMLCompression {
+public enum ContentHTMLCompression {
 
 	/// Compresses `html` for storage. Returns nil/empty input unchanged
 	/// (nothing to compress), and falls back to storing the original string
 	/// if LZFSE compression fails for some reason, rather than losing the
 	/// content, as opposed to the wire-transfer route's decompress step,
 	/// which is a hard failure by design.
-	static func compress(_ html: String?) -> String? {
+	public static func compress(_ html: String?) -> String? {
 		guard let html, !html.isEmpty else {
 			return html
 		}
@@ -42,7 +42,7 @@ enum ContentHTMLCompression {
 	/// Reverses `compress(_:)`. See the type-level doc comment for why a
 	/// decode/decompress failure falls back to the stored value as-is instead
 	/// of throwing.
-	static func decompress(_ stored: String?) -> String? {
+	public static func decompress(_ stored: String?) -> String? {
 		guard let stored, !stored.isEmpty else {
 			return stored
 		}

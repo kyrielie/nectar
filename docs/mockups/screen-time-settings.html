@@ -1,0 +1,59 @@
+<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;">Mockup of a Screen Time settings screen with an enable toggle, daily limit rows for weekdays and weekends, a bedtime section with start and end times, and a link to weekly usage.</h2>
+<div style="background:var(--surface-1);border-radius:20px;padding:10px;max-width:380px;margin:0 auto;">
+  <div style="background:var(--surface-2);border-radius:14px;overflow:hidden;padding-bottom:6px;">
+    <div style="padding:10px 14px 0;">
+      <span style="color:var(--text-accent);font-size:15px;display:inline-flex;align-items:center;"><i class="ti ti-chevron-left" aria-hidden="true" style="font-size:18px;"></i>Settings</span>
+    </div>
+    <h1 style="font-size:26px;font-weight:500;padding:4px 16px 14px;margin:0;">Screen time</h1>
+
+    <div style="margin:0 16px 18px;">
+      <div style="background:var(--surface-1);border-radius:10px;border:0.5px solid var(--border);">
+        <div class="row"><span>Screen time</span><button id="mainToggle" class="switch on" aria-label="Screen time" onclick="toggleMain()"></button></div>
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);padding:6px 4px 0;margin:0;">Limit daily reading time and set a bedtime.</p>
+    </div>
+
+    <div id="dependent">
+      <div style="margin:0 16px 18px;">
+        <p style="font-size:13px;color:var(--text-secondary);padding:0 4px 6px;margin:0;">Daily limit</p>
+        <div style="background:var(--surface-1);border-radius:10px;border:0.5px solid var(--border);">
+          <div class="row"><span>Weekdays</span><span class="val">2h 00m<i class="ti ti-chevron-right" aria-hidden="true"></i></span></div>
+          <div class="row" style="border-top:0.5px solid var(--border);"><span>Weekend</span><span class="val">3h 00m<i class="ti ti-chevron-right" aria-hidden="true"></i></span></div>
+        </div>
+      </div>
+
+      <div style="margin:0 16px 18px;">
+        <p style="font-size:13px;color:var(--text-secondary);padding:0 4px 6px;margin:0;">Bedtime</p>
+        <div style="background:var(--surface-1);border-radius:10px;border:0.5px solid var(--border);">
+          <div class="row"><span>Bedtime</span><button class="switch on" aria-label="Bedtime" onclick="this.classList.toggle('on')"></button></div>
+          <div class="row" style="border-top:0.5px solid var(--border);"><span>Starts</span><span class="val">10:00 PM<i class="ti ti-chevron-right" aria-hidden="true"></i></span></div>
+          <div class="row" style="border-top:0.5px solid var(--border);"><span>Ends</span><span class="val">7:00 AM<i class="ti ti-chevron-right" aria-hidden="true"></i></span></div>
+        </div>
+        <p style="font-size:13px;color:var(--text-secondary);padding:6px 4px 0;margin:0;">No exceptions once bedtime starts.</p>
+      </div>
+
+      <div style="margin:0 16px 4px;">
+        <div style="background:var(--surface-1);border-radius:10px;border:0.5px solid var(--border);">
+          <div class="row"><span>Weekly usage</span><i class="ti ti-chevron-right" aria-hidden="true" style="color:var(--text-secondary);"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+.row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;font-size:15px;color:var(--text-primary);}
+.val{color:var(--text-secondary);font-size:15px;display:flex;align-items:center;gap:2px;}
+.switch{width:44px;height:26px;border-radius:13px;border:none;position:relative;cursor:pointer;background:var(--border-strong);padding:0;}
+.switch.on{background:var(--text-accent);}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .15s;}
+.switch.on::after{left:20px;}
+</style>
+<script>
+function toggleMain(){
+  const btn = document.getElementById('mainToggle');
+  const on = btn.classList.toggle('on');
+  const dep = document.getElementById('dependent');
+  dep.style.opacity = on ? '1' : '0.35';
+  dep.style.pointerEvents = on ? 'auto' : 'none';
+}
+</script>

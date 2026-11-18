@@ -1,0 +1,54 @@
+<h2 class="sr-only">Revised mockup: highlighting is unchanged, and editing now lives inside the existing highlight sheet as a text field with a keep-highlight checkbox above the delete button</h2>
+<div style="background: var(--surface-1); border-radius: 16px; padding: 1.25rem; display: flex; flex-direction: column; gap: 1.5rem;">
+
+<div>
+  <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 8px;">Selection menu — unchanged</p>
+  <div style="background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px; padding: 1rem;">
+    <p style="font-size: 15px; line-height: 1.7; color: var(--text-primary); margin: 0;">She turned toward the door, hoping <span style="background: var(--bg-accent-muted, rgba(55,138,221,0.16)); border-radius: 3px; padding: 1px 2px;">he'd stil be</span> there when she looked back.</p>
+    <div style="margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 12px; background: var(--surface-3, var(--surface-2)); border: 0.5px solid var(--border); border-radius: 20px; padding: 8px 14px; width: fit-content; margin-left: auto; margin-right: auto;">
+      <div style="width: 22px; height: 22px; border-radius: 50%; background: #F5D33D; border: 0.5px solid var(--border-strong);"></div>
+      <div style="width: 22px; height: 22px; border-radius: 50%; background: var(--fill-accent);"></div>
+      <div style="width: 22px; height: 22px; border-radius: 50%; background: var(--fill-danger);"></div>
+    </div>
+  </div>
+</div>
+
+<div>
+  <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 8px;">Tap the highlight — edit lives here now</p>
+  <div style="background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 16px 16px 0 0; padding: 1rem 1.25rem 1.25rem;">
+    <div style="width: 36px; height: 4px; border-radius: 2px; background: var(--border-stronger); margin: 0 auto 14px;"></div>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+      <span style="font-size: 14px; color: var(--text-secondary);">Cancel</span>
+      <span style="font-size: 16px; font-weight: 500; color: var(--text-primary);">Highlight</span>
+      <span style="font-size: 14px; font-weight: 500; color: var(--text-accent);">Done</span>
+    </div>
+
+    <p style="font-size: 15px; line-height: 1.6; color: var(--text-primary); background: rgba(245,211,61,0.25); border-radius: var(--radius); padding: 10px 12px; margin: 0 0 16px;">he'd stil be</p>
+
+    <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 6px;">Note</p>
+    <input type="text" placeholder="Add a note" style="width: 100%; margin-bottom: 18px;" />
+
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+      <div style="width: 24px; height: 24px; border-radius: 50%; background: #F5D33D; border: 1.5px solid var(--border-stronger);"></div>
+      <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fill-danger);"></div>
+      <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fill-success);"></div>
+      <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fill-accent);"></div>
+      <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--fill-pro);"></div>
+    </div>
+
+    <div style="border-top: 0.5px solid var(--border); padding-top: 16px; margin-bottom: 16px;">
+      <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 6px;">Edit text</p>
+      <input type="text" value="he'd still be" style="width: 100%; margin-bottom: 10px;" />
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-primary); cursor: pointer;">
+        <input type="checkbox" style="width: 16px; height: 16px; margin: 0;" />
+        Keep highlight on the corrected text
+      </label>
+    </div>
+
+    <button style="width: 100%; color: var(--text-danger); border-color: var(--border-danger);">
+      <i class="ti ti-trash" style="font-size: 16px; vertical-align: -3px; margin-right: 6px;" aria-hidden="true"></i>Delete highlight
+    </button>
+  </div>
+</div>
+
+</div>

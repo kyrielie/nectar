@@ -283,11 +283,34 @@ the same union-merge treatment, or add a sibling file and a manifest flag.
 Every new `AO3IgnoreList` property has to be added to `AO3IgnoreListBackupStore`
 and `BackupIgnoreListSnapshot` by hand, or it silently stays out of backups.
 
+## EPUB Export & Backup Conversion
+
+Nectar supports EPUB 3.3 export through two coordinated channels conforming to the
+Standard Ebooks Manual of Style and AO3 specifications:
+1. **In-App Native Swift Exporter**: Per-book export directly to the iOS Share Sheet (`UIActivityViewController`), Apple Books, and Kindle app.
+2. **Desktop Archive Exporter (`scripts/nectar_backup_to_epub.py`)**: Full backup conversion and Calibre library ingestion.
+
+### In-App Native Swift Exporter (`iOS/Article/`)
+* **`EPUB3Generator.swift`**: Pure Swift generator producing valid EPUB 3.3 archives.
+  * Decompresses stored `contentHTML` via `ContentHTMLCompression.decompress`.
+  * Extracts author `<style>` blocks into `css/workskin.css` and injects dark-mode contrast guards.
+  * Retains `<div id="workskin" class="userstuff">` around every chapter body so author workskins match 100%.
+  * Applies Standard Ebooks typography (curly quotes, em-dashes, en-dashes, ellipses).
+  * Preserves user annotations (`fetchAnnotations`) in a dedicated `reader-notes.xhtml` Back Matter chapter.
+  * Packages the container with uncompressed `mimetype` at byte 0 via `Zip.zipFiles`.
+* **`ShareEPUBActivity.swift`**: Custom `UIActivity` ("Export as EPUB") integrated into:
+  * `WebViewController.showActivityDialog()` (reader toolbar Share button).
+  * `MainTimelineModernViewController.shareEPUBAction()` (timeline work cell context menu).
+
 ## Converting a backup to EPUBs (`scripts/nectar_backup_to_epub.py`)
 
 A standalone tool (`scripts/nectar_backup_to_epub.py`) converts a Nectar backup
-zip (or raw `DB.sqlite3`) into standard, Calibre/AO3-compliant EPUB files
-organized into a clean directory tree:
+zip (or raw `DB.sqlite3`) into Standard Ebooks-compliant EPUB 3.3 files
+organized into a clean directory tree.
+
+The script's current behavior is documented here and in its `--help` output.
+Machine-specific reference repositories and tooling notes belong in the ignored
+`CLAUDE.local.md`, not in shared project documentation.
 
 ```text
 <output_dir>/
@@ -306,20 +329,22 @@ organized into a clean directory tree:
    (`ContentHTMLCompression.swift`). The script hooks directly into macOS's native
    `/usr/lib/libcompression.dylib` using standard `ctypes`, requiring **zero pip
    dependencies**.
-2. **AO3 / Calibre EPUB format compliance**:
+2. **Author Workskin / Workstyle Fidelity**:
+   - Author `<style>` blocks are extracted into `css/workskin.css` with dark-mode contrast guards.
+   - Chapter bodies retain `<div id="workskin" class="userstuff">` so author CSS applies without selector loss.
+3. **Ambrosia Tag Synonyms & Metatag Resolution (`ao3_tag_seeds.db`)**:
+   - Inward canonicalization maps conversational/non-canonical tags to official AO3 canonical tags.
+   - Expands formal relationships into colloquial portmanteau ship names (e.g. `Stucky`, `Dramione`) for e-reader searchability.
+   - Inherits parent umbrella fandoms from `tag_parent_links`.
+4. **Standard Ebooks & EPUB 3.3 Compliance**:
    - `mimetype`: Uncompressed (`ZIP_STORED`) at byte 0.
-   - `content.opf`: Dublin Core metadata (`dc:title`, `dc:creator`, `dc:subject` for
-     fandoms, tags, characters, relationships), along with Calibre series tags
-     (`<meta name="calibre:series">` and `<meta name="calibre:series_index">`).
-   - `toc.ncx`: Hierarchical Table of Contents mapping to split XHTML chapters.
-   - Content splits:
-     - `split_000.xhtml`: Metadata preface containing AO3's `<dl class="tags">` and stats.
-     - `split_001.xhtml`: Work title, author byline, summary, and work notes.
-     - `split_002.xhtml` ... `split_NNN.xhtml`: Chapters (multi-chapter works are
-       split by `<div class="chapter" id="chapter-N">` for clean pagination).
-     - Afterword / work endnotes if present.
-   - Styles: Shipped with standard AO3 / Calibre styling (`stylesheet.css` and
-     `page_styles.css`) and extracts any custom workskin `<style>` blocks.
+   - `content.opf`: OPF 3.0 metadata (`dc:identifier` canonical AO3 URL, MARC relators `scheme="marc:relators" role="aut"`, typed `dc:subject` tags, Calibre series tags, and loved/starred ratings).
+   - `toc.xhtml`: EPUB 3 Navigation Document with `<nav id="toc" epub:type="toc">` and `<nav id="landmarks" epub:type="landmarks">`.
+   - `toc.ncx`: Backward-compatible NCX for older e-readers.
+   - Standard Ebooks typography engine (smart quotes, em-dashes, en-dashes, ellipses).
+   - Personal reader annotations preserved into `reader-notes.xhtml`.
+5. **Calibre Library Ingestion**:
+   - Supports `--calibre-add` and `--calibre-library <path>` to auto-import newly generated EPUBs into Calibre via `calibredb`.
 3. **Full metadata preservation (beyond default AO3 EPUBs)**:
    - **Extended stats**: Default AO3 EPUB exports omit dynamic stats, but Nectar
      tracks them locally. The script preserves `kudosCount`, `commentCount`,

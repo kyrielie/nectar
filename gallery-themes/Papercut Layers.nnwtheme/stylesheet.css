@@ -57,6 +57,7 @@ p:has(> .versalCap:first-child)::first-letter{font-family:var(--fh);float:left;f
 .t11 #bodyContainer [role="article"] a{background:var(--su);color:var(--nnw-ink);text-decoration:none;padding:0 .35em;box-shadow:2px 2px 0 var(--co);border-radius:3px}
 @media (prefers-color-scheme: dark){
 :root{--nnw-bg:#1b2b33;--nnw-ink:#f3ead8;--nnw-link:#f3ead8;--cr:#2f4650;--sh:rgba(0,0,0,.5);}
+.t11 #bodyContainer [role="article"] a{color:#1b2b33}
 }
 @supports (-webkit-touch-callout: none){
 :root{--gx:20px;--u:calc(1rem / 15)}
