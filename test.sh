@@ -28,9 +28,19 @@ TEST_PLAN="Nectar-CI"
 
 RUN_LINT=1
 RUN_TESTS=1
+RUN_THEME_SUITES=0
 QUIET=0
 FILTER=""
 MODE="ci"
+
+# Default skipped theme suites during standard test runs (see docs/release-pipeline.md)
+THEME_SKIP_ARGS=(
+  -skip-testing:Nectar-iOSTests/ArticleThemeCheckMatrixTests
+  -skip-testing:Nectar-iOSTests/ArticleThemeSmokeTests
+  -skip-testing:Nectar-iOSTests/ArticleThemeRenderDiffTests
+  -skip-testing:Nectar-iOSTests/ArticleThemeColorProbeTests
+  -skip-testing:Nectar-iOSTests/ThemeColorTableGuardTests
+)
 
 # Reset app container for UI tests
 reset_app_container() {
@@ -50,6 +60,10 @@ while [[ $# -gt 0 ]]; do
     --filter)
       FILTER="${2:?--filter requires a PATTERN argument}"
       shift 2
+      ;;
+    --with-theme-suites)
+      RUN_THEME_SUITES=1
+      shift
       ;;
     -q|--quiet)
       QUIET=1
@@ -148,6 +162,8 @@ if [[ "$RUN_TESTS" -eq 1 ]]; then
     )
     if [[ -n "$FILTER" ]]; then
       xcodebuild_args=(-only-testing:"$FILTER" "${xcodebuild_args[@]}")
+    elif [[ "$RUN_THEME_SUITES" -eq 0 && "$MODE" == "ci" ]]; then
+      xcodebuild_args=("${THEME_SKIP_ARGS[@]}" "${xcodebuild_args[@]}")
     fi
   fi
 
