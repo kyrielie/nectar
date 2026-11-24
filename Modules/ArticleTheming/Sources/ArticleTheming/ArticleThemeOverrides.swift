@@ -54,6 +54,10 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 	public var justifyText: Bool?
 	public var hyphenate: Bool?
 
+	/// When true, suppresses author-provided AO3 work skins (`#workskin style`, `#workskin` custom CSS),
+	/// neutralizing custom fonts, colors, and layout rules (matching AO3's native "Hide Creator's Style").
+	public var hideAuthorStyle: Bool?
+
 	public var textColorHex: String?
 	public var textColorDarkHex: String?
 	public var backgroundColorHex: String?
@@ -61,7 +65,7 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 	public var linkColorHex: String?
 	public var linkColorDarkHex: String?
 
-	public init(serifFontFamilyName: String? = nil, sansFontFamilyName: String? = nil, fontSize: Double? = nil, lineHeight: Double? = nil, paragraphSpacing: Double? = nil, paragraphIndent: Double? = nil, marginHorizontal: Double? = nil, marginTop: Double? = nil, justifyText: Bool? = nil, hyphenate: Bool? = nil, textColorHex: String? = nil, textColorDarkHex: String? = nil, backgroundColorHex: String? = nil, backgroundColorDarkHex: String? = nil, linkColorHex: String? = nil, linkColorDarkHex: String? = nil) {
+	public init(serifFontFamilyName: String? = nil, sansFontFamilyName: String? = nil, fontSize: Double? = nil, lineHeight: Double? = nil, paragraphSpacing: Double? = nil, paragraphIndent: Double? = nil, marginHorizontal: Double? = nil, marginTop: Double? = nil, justifyText: Bool? = nil, hyphenate: Bool? = nil, hideAuthorStyle: Bool? = nil, textColorHex: String? = nil, textColorDarkHex: String? = nil, backgroundColorHex: String? = nil, backgroundColorDarkHex: String? = nil, linkColorHex: String? = nil, linkColorDarkHex: String? = nil) {
 		self.serifFontFamilyName = serifFontFamilyName
 		self.sansFontFamilyName = sansFontFamilyName
 		self.fontSize = fontSize
@@ -72,6 +76,7 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		self.marginTop = marginTop
 		self.justifyText = justifyText
 		self.hyphenate = hyphenate
+		self.hideAuthorStyle = hideAuthorStyle
 		self.textColorHex = textColorHex
 		self.textColorDarkHex = textColorDarkHex
 		self.backgroundColorHex = backgroundColorHex
@@ -108,7 +113,7 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		serifFontFamilyName == nil && sansFontFamilyName == nil
 			&& fontSize == nil && lineHeight == nil && paragraphSpacing == nil && paragraphIndent == nil
 			&& marginHorizontal == nil && marginTop == nil
-			&& justifyText == nil && hyphenate == nil
+			&& justifyText == nil && hyphenate == nil && hideAuthorStyle == nil
 			&& textColorHex == nil && textColorDarkHex == nil
 			&& backgroundColorHex == nil && backgroundColorDarkHex == nil
 			&& linkColorHex == nil && linkColorDarkHex == nil
@@ -374,6 +379,12 @@ public struct ArticleThemeOverrides: Codable, Equatable, Sendable {
 		}
 		if !alignmentDeclarations.isEmpty {
 			css += "\(Self.workskinTextBlockSelectors) {\n\t\(alignmentDeclarations.joined(separator: "\n\t"))\n}\n"
+		}
+
+		if hideAuthorStyle == true {
+			css += "#bodyContainer #workskin style {\n\tdisplay: none !important;\n}\n"
+			css += "#bodyContainer #workskin [style] {\n\tall: revert !important;\n}\n"
+			css += "#bodyContainer #workskin, #bodyContainer #workskin * {\n\tfont-family: inherit !important;\n\tfont-size: inherit !important;\n\tline-height: inherit !important;\n\tcolor: inherit !important;\n\tbackground: transparent !important;\n\tbackground-color: transparent !important;\n\tborder: none !important;\n\tbox-shadow: none !important;\n\ttext-shadow: none !important;\n\tletter-spacing: normal !important;\n\tword-spacing: normal !important;\n}\n"
 		}
 
 		if let linkColorHex {

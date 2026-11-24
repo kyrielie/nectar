@@ -873,4 +873,60 @@ import Testing
 		}
 		#expect(content.contains("data-value='ff'>F/F</a>"))
 	}
+
+	// MARK: - Lightweight Metadata Extraction
+
+	@Test func lightweightMetadataSingleChapterExtraction() throws {
+		let html = htmlFixtureString("ao3-work-single-chapter.html")
+		let metadata = try #require(AO3ChapterHTMLExtractor.extractLightweightMetadata(fromWorkPageHTML: html))
+
+		#expect(metadata.title == "[podfic] Shut The God Damn Door")
+		#expect(metadata.authors.count == 1)
+		#expect(metadata.authors.first?.name == "RainScrawl")
+		#expect(metadata.summary?.contains("Author's Summary:") == true)
+		#expect(metadata.summary?.contains("Original Text") == true)
+		#expect(metadata.fandoms == ["Check Please! (Webcomic)"])
+		#expect(metadata.ratings == ["Mature"])
+		#expect(metadata.warnings == ["No Archive Warnings Apply"])
+		#expect(metadata.categories == ["M/M"])
+		#expect(metadata.relationships == ["Kent \"Parse\" Parson/Jack Zimmermann"])
+		#expect(metadata.characters == ["Jack Zimmermann", "Kent \"Parse\" Parson"])
+		#expect(metadata.additionalTags.contains("Podfic"))
+		#expect(metadata.additionalTags.contains("Drug Abuse"))
+		#expect(metadata.language == "English")
+		#expect(metadata.collections?.count == 2)
+		#expect(metadata.chapterCurrent == 1)
+		#expect(metadata.chapterTotal == 1)
+		#expect(metadata.isComplete == true)
+		#expect(metadata.wordCount == 45)
+		#expect(metadata.kudosCount == 7)
+		#expect(metadata.hitCount == 47)
+		#expect(metadata.datePublished != nil)
+	}
+
+	@Test func lightweightMetadataMultiChapterExtraction() throws {
+		let html = htmlFixtureString("ao3-work-multi-chapter.html")
+		let metadata = try #require(AO3ChapterHTMLExtractor.extractLightweightMetadata(fromWorkPageHTML: html))
+
+		#expect(metadata.title == "Y'all")
+		#expect(metadata.authors.count == 1)
+		#expect(metadata.authors.first?.name == "JustLookFrightenedAndScuttle")
+		#expect(metadata.fandoms.contains("Check Please! (Webcomic)"))
+		#expect(metadata.chapterCurrent == 12)
+		#expect(metadata.chapterTotal == 19)
+		#expect(metadata.isComplete == false)
+		#expect(metadata.wordCount == 50038)
+		#expect(metadata.commentCount == 272)
+		#expect(metadata.kudosCount == 113)
+		#expect(metadata.bookmarkCount == 14)
+		#expect(metadata.hitCount == 1776)
+	}
+
+	@Test func lightweightMetadataRejectsGatesAndNonWorkPages() {
+		let gateHTML = htmlFixtureString("ao3-work-adult-content-gate.html")
+		#expect(AO3ChapterHTMLExtractor.extractLightweightMetadata(fromWorkPageHTML: gateHTML) == nil)
+
+		let notWork = "<html><body><p>Not an AO3 work page</p></body></html>"
+		#expect(AO3ChapterHTMLExtractor.extractLightweightMetadata(fromWorkPageHTML: notWork) == nil)
+	}
 }

@@ -1641,7 +1641,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					71E4DF0D7156CA167F27D7F2 = {
 						DevelopmentTeam = S35M3D45Z9;
@@ -1655,7 +1655,11 @@
 					E918341AC3D5C53E25D90D02 = {
 						DevelopmentTeam = S35M3D45Z9;
 						ProvisioningStyle = Automatic;
-						SystemCapabilities = "[\"com.apple.BackgroundModes\": [\"enabled\": true]]";
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = YES;
+							};
+						};
 					};
 				};
 			};

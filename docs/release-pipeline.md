@@ -1,8 +1,49 @@
 # Release pipeline
 
-Releases are cut by running **Release IPA and source** (`.github/workflows/release.yml`) with
-`workflow_dispatch`. It builds an unsigned IPA, attaches it to a GitHub release, and merges a new entry
-into `source.json` on `gh-pages` (the AltStore-style source).
+Releases are built, packaged, and published **directly from the local Apple Silicon machine** using [`scripts/release-local.sh`](../scripts/release-local.sh) (same as Ambrosia's workflow).
+
+> [!IMPORTANT]
+> **Local Machine Release is the Primary & Standard Path.**
+> Due to GitHub Actions macOS runner capacity constraints (queue stalls, 6+ hour timeouts, and runner unreliability), releases are built, packaged, and published locally. Automated test runs on push/PR in GitHub Actions are disabled; `.github/workflows/release.yml` remains available via manual `workflow_dispatch` only as a secondary/backup mechanism.
+
+## 1. Local Machine Release (Primary)
+
+Run directly from the repository root:
+
+```bash
+# Full local release: test -> build archive -> package IPA -> SHA256 -> GitHub release -> update gh-pages source.json
+./scripts/release-local.sh 0.2.3
+
+# Dry-run validation (builds archive, IPA, and checksum without pushing commits, creating GitHub releases, or modifying gh-pages):
+./scripts/release-local.sh 0.2.3 --dry-run
+
+# Skip pre-flight tests (if tests already passed earlier in the session):
+./scripts/release-local.sh 0.2.3 --skip-tests
+
+# Pre-release tag:
+./scripts/release-local.sh 0.2.3 --prerelease --notes "Beta release notes"
+```
+
+Or using the unified suite release helper:
+```bash
+~/.gemini/config/skills/macos-app-release/scripts/release.sh local 0.2.3
+```
+
+### What `release-local.sh` does:
+1. **Identity & Auth Checks:** Aligns active `gh` account and `git` author config to `kyrielie <83477979+kyrielie@users.noreply.github.com>`.
+2. **Pre-flight Tests & Linting:** Runs `xcodegen generate` and `./test.sh -q` (SwiftLint `--strict` + unit tests).
+3. **Archive Build:** Runs `xcodebuild archive` in Release configuration with `MARKETING_VERSION` set to the release version and `CURRENT_PROJECT_VERSION` automatically incremented from the previous AltStore build version.
+4. **IPA Packaging & Checksum:** Extracts the application bundle into `Payload/`, zips it into `dist/Nectar-unsigned.ipa`, and generates `dist/Nectar-unsigned.ipa.sha256`.
+5. **GitHub Release:** Tags the commit (if not already tagged) and creates the GitHub Release with `gh release create`, attaching the IPA and SHA256 checksum.
+6. **AltStore `source.json` Publish:** Clones the `gh-pages` branch, runs `scripts/update_source.py` with `appstore/source.template.json`, syncs `icon.png` and screenshots, and pushes the updated `source.json` to `origin/gh-pages`.
+
+---
+
+## 2. GitHub Actions Release (Secondary / Backup)
+
+Releases can also be cut via **Release IPA and source** (`.github/workflows/release.yml`) with
+`workflow_dispatch`. It builds an unsigned IPA on a GitHub Actions macOS runner, attaches it to a GitHub release, and merges a new entry
+into `source.json` on `gh-pages`.
 
 ## Running it
 

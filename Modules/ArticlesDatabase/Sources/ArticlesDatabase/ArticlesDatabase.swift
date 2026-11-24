@@ -108,9 +108,9 @@ public struct ArticleAttentionInfo: Sendable {
 
 	/// Gates the one-time migration block in `init` below, via `PRAGMA
 	/// Schema version tracking on this database's own "main" schema.
-	/// Version 1 is the pristine public v1.0 baseline containing all modern
-	/// tables, columns, indexes, and FTS search triggers in tableCreationStatements.
-	nonisolated private static let currentSchemaVersion: UInt32 = 1
+	/// Version 1 is the pristine public v1.0 baseline.
+	/// Version 2 upgrades search from FTS4 to FTS5 and stores contentHTML as BLOB.
+	nonisolated private static let currentSchemaVersion: UInt32 = 2
 
 	public init(databaseFilePath: String, accountID: String, retentionStyle: RetentionStyle) {
 		Self.logger.debug("Articles Database init \(accountID, privacy: .public)")
@@ -122,6 +122,9 @@ public struct ArticleAttentionInfo: Sendable {
 		self.retentionStyle = retentionStyle
 		self.accountID = accountID
 
+		queue.runInDatabaseSync { database in
+			database.executeStatements("PRAGMA trusted_schema = ON;")
+		}
 		queue.runCreateStatements(ArticlesDatabase.tableCreationStatements)
 		queue.runInDatabaseSync { database in
 			Self.logger.debug("ArticlesDatabase: checking schema version \(accountID, privacy: .public)")
@@ -131,14 +134,18 @@ public struct ArticleAttentionInfo: Sendable {
 				return
 			}
 
-			// Newly created database: stamp baseline version 1 and return.
+			// Newly created database: stamp baseline version and return.
 			if existingVersion == 0 {
 				database.setUserVersion(Self.currentSchemaVersion)
 				return
 			}
 
-			// Future migrations will be gated here:
-			// if existingVersion < 2 { ... }
+			if existingVersion < 2 {
+				Self.logger.debug("ArticlesDatabase: migrating search table to FTS5")
+				database.executeStatements("DROP TABLE IF EXISTS search;")
+				database.executeStatements("CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(title, body);")
+				database.executeStatements("UPDATE articles SET searchRowID = NULL;")
+			}
 
 			database.setUserVersion(Self.currentSchemaVersion)
 		}
@@ -997,7 +1004,7 @@ public struct ArticleAttentionInfo: Sendable {
 private extension ArticlesDatabase {
 
 	static let tableCreationStatements = """
-	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, additionalTags TEXT, series TEXT, commentCount INTEGER, kudosCount INTEGER, bookmarkCount INTEGER, hitCount INTEGER, isRestricted BOOL, language TEXT, collections TEXT, dateBookmarked DATE, lastPrefaceFetchDate DATE, isAmbrosiaItem BOOL, bookKey TEXT, pendingUpdateContentHTML TEXT, pendingUpdateDetectedAt DATE, wordCountRegressionFlaggedAt DATE, ao3ConfirmedMissingAt DATE);
+	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML BLOB, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, additionalTags TEXT, series TEXT, commentCount INTEGER, kudosCount INTEGER, bookmarkCount INTEGER, hitCount INTEGER, isRestricted BOOL, language TEXT, collections TEXT, dateBookmarked DATE, lastPrefaceFetchDate DATE, isAmbrosiaItem BOOL, bookKey TEXT, pendingUpdateContentHTML BLOB, pendingUpdateDetectedAt DATE, wordCountRegressionFlaggedAt DATE, ao3ConfirmedMissingAt DATE);
 
 	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, loved BOOLEAN NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0, scrollPosition REAL NOT NULL DEFAULT 0, readingProgress REAL, lastOpenedAt DATE);
 
@@ -1015,7 +1022,7 @@ private extension ArticlesDatabase {
 	CREATE INDEX if not EXISTS annotations_articleID_index on annotations(articleID);
 	CREATE INDEX if not EXISTS annotations_bookKey_index on annotations(bookKey);
 
-	CREATE VIRTUAL TABLE if not EXISTS search using fts4(title, body);
+	CREATE VIRTUAL TABLE if not EXISTS search using fts5(title, body);
 
 	CREATE TRIGGER if not EXISTS articles_after_delete_trigger_delete_search_text after delete on articles begin delete from search where rowid = OLD.searchRowID; end;
 	"""

@@ -15,7 +15,7 @@ public enum AO3RateLimit {
 
 	/// When requests to `url`'s host may resume, or nil when no cooldown is
 	/// active.
-	@MainActor static func resumeDate(for url: URL) -> Date? {
+	@MainActor public static func resumeDate(for url: URL) -> Date? {
 		guard let host = url.host()?.lowercased() else {
 			return nil
 		}
@@ -24,7 +24,7 @@ public enum AO3RateLimit {
 
 	/// Records a 429 seen by a transport that does not go through
 	/// Downloader, then returns the resume date it produced.
-	@MainActor static func record(url: URL, response: HTTPURLResponse?) -> Date? {
+	@MainActor public static func record(url: URL, response: HTTPURLResponse?) -> Date? {
 		Downloader.shared.recordRateLimit(url: url, response: response)
 		return resumeDate(for: url)
 	}

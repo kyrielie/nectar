@@ -23,9 +23,16 @@ HTML listing pages are skipped during routine refresh; native AO3 RSS/Atom
 subscriptions still refresh as ordinary metadata feeds. They bypass the
 coordinator, but additional pacing is only an open policy question, not an
 approved implementation requirement. The kudos POST also bypasses the
-coordinator while honoring the shared cooldown. This approval is for planning
-only; implementation is not approved. The working plan is indexed in the
-local proposal index.
+coordinator while honoring the shared cooldown.
+
+Planning has been expanded to address the batch link import gap (`Account.importAO3Links`).
+Ground truth analysis of the OTW Archive backend confirmed that Page 1 / Preface
+metadata requests without `view_full_work=true` are orders of magnitude lighter
+on OTW servers (avoiding MySQL `MEDIUMTEXT` reads and leveraging Memcached fragment
+caching). The dedicated serialized metadata queue (`AO3ImportMetadataQueue`, 3.0-second pacing)
+populates imported work stubs while preserving the invariant that full chapter bodies are never
+downloaded in bulk. Track A implementation and tests are complete. The working plan is indexed in
+`plans/plan-ao3-polite-request-coordinator.md`.
 
 The faceted AO3 search builder remains an open proposal; no decision is needed
 now.
@@ -36,10 +43,10 @@ This is the authoritative classification of the proposals indexed in
 `plans/README.md`. “Unverified” means source inspection found no implementation
 or docs reference; it is not a claim that no partial work exists.
 
-- **Approved for planning, partially implemented:** AO3 request coordination.
-  The approved scope is to audit and plan coverage and correctness; it does not
-  authorize implementation. See the plan status above and
-  `docs/ao3-integration.md`.
+- **Implemented:** Track A: AO3 request coordination & batch import pacing (`AO3ImportMetadataQueue`,
+  `AO3ChapterHTMLExtractor.extractLightweightMetadata`). Batch link import metadata pacing (3.0s delay,
+  1-slot serialized queue, 429 rate-limit cooldown suspension, zero bulk chapter text scraping).
+  See `docs/ao3-integration.md` and `docs/ao3-feeds.md`.
 - **Open proposal; not prioritized:** Faceted AO3 search builder. Existing
   app search results and pagination are in place; the plan's query builder,
   native filter UI, and saved-search behavior are not evidenced in current
@@ -49,6 +56,12 @@ or docs reference; it is not a claim that no partial work exists.
   existing settings behavior, then a product decision on information
   architecture and migration scope. The former implementation-ready proposal
   had stale assumptions and must not be treated as an implementation spec.
+- **Implemented architecture & engineering blueprint:** Storage, parsing, and
+  update optimization. Verified storage inefficiencies addressed: migrated compressed
+  HTML from Base64 `TEXT` to native SQLite `BLOB` (saving 33%) and upgraded to FTS5
+  in `ArticlesDatabase` schema version 2; implemented two-step WIP update detection
+  in `AO3ChapterFetcher` (checking lightweight Page 1 metadata before triggering full downloads)
+  and added the reader "Hide Creator's Style" toggle for neutralizing AO3 workskins.
 - **Unverified proposals:** WIP update checker; mature-content privacy gate;
   native AO3 comments viewer, author profiles, and account hub; native fandom
   catalog; reading queues/collections; recently deleted recovery; user EPUB

@@ -232,4 +232,15 @@ struct ArticleThemeOverridesTests {
 		let bodyIndex = try #require(css.range(of: "body, .articleBody {"))
 		#expect(rootIndex.lowerBound < bodyIndex.lowerBound)
 	}
+
+	@Test func hideAuthorStyleEmitsWorkskinNeutralizationRules() {
+		let overrides = ArticleThemeOverrides(hideAuthorStyle: true)
+		#expect(!overrides.isEmpty)
+		let css = overrides.cssOverrideBlock(themeCSS: nil)
+		#expect(css.contains("#bodyContainer #workskin style {\n\tdisplay: none !important;"))
+		#expect(css.contains("#bodyContainer #workskin [style] {\n\tall: revert !important;"))
+		#expect(css.contains("#bodyContainer #workskin, #bodyContainer #workskin * {"))
+		#expect(css.contains("font-family: inherit !important;"))
+		#expect(css.contains("background: transparent !important;"))
+	}
 }

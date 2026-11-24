@@ -181,63 +181,8 @@ def ensure_xhtml(html_content: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Standard Ebooks Typography Engine
+# Character & String Helpers
 # ---------------------------------------------------------------------------
-
-def apply_standard_ebooks_typography(text: str) -> str:
-    """
-    Applies Standard Ebooks typographic transformations to text:
-    - Curly quotes (“ ” and ‘ ’)
-    - Em-dashes (—) replacing typewriter '--'
-    - En-dashes (–) for number ranges
-    - True ellipses (…) replacing '...'
-    Safely ignores HTML tags and attributes.
-    """
-    if not text:
-        return ""
-
-    tokens = re.split(r'(<[^>]+>)', text)
-    transformed_tokens = []
-
-    for token in tokens:
-        if token.startswith('<') and token.endswith('>'):
-            transformed_tokens.append(token)
-            continue
-
-        # Typography only on text nodes
-        t = token
-
-        # 1. Ellipses
-        t = re.sub(r'\.{3,}', '…', t)
-        t = re.sub(r'\.\s\.\s\.', '…', t)
-
-        # 2. Dashes
-        t = re.sub(r'---', '—', t)
-        t = re.sub(r'--', '—', t)
-        # En-dash for numeric ranges (e.g. 1990-1995 or pp. 10-15)
-        t = re.sub(r'(\b\d+)-(\d+\b)', r'\1–\2', t)
-
-        # 3. Smart Apostrophes & Single Quotes
-        # Contractions and possessives
-        t = re.sub(r"([a-zA-Z0-9])'([a-zA-Z0-9])", r"\1’\2", t)
-        # Decades / leading apostrophes ('90s, 'cause)
-        t = re.sub(r"\b'(\d{2}s?)\b", r"’\1", t)
-        t = re.sub(r"\b'(em|cause|tis|twas)\b", r"’\1", t)
-        # Single quotes around words: 'word' -> ‘word’
-        t = re.sub(r"(^|[\s(\[{])'([^\s])", r"\1‘\2", t)
-        t = re.sub(r"([^\s])'([\s)\]},.;:!?]|$)", r"\1’\2", t)
-
-        # 4. Smart Double Quotes
-        # Opening quotes: preceded by space, opening punctuation, or start of line
-        t = re.sub(r'(^|[\s(\[{>])"([^\s])', r'\1“\2', t)
-        # Closing quotes: followed by space, closing punctuation, or end of line
-        t = re.sub(r'([^\s])"([\s)\]}<,.;:!?]|$)', r'\1”\2', t)
-        # Fallback any remaining unmatched straight quotes
-        t = t.replace('"', '”')
-
-        transformed_tokens.append(t)
-
-    return "".join(transformed_tokens)
 
 
 # ---------------------------------------------------------------------------
@@ -849,7 +794,7 @@ def create_epub(
 
     summary_html = ""
     if summary_raw.strip():
-        clean_summary = apply_standard_ebooks_typography(ensure_xhtml(summary_raw))
+        clean_summary = ensure_xhtml(summary_raw)
         summary_html = f"""
       <div class="meta-section" epub:type="abstract">
         <h3>Summary</h3>
@@ -887,7 +832,7 @@ def create_epub(
     # -----------------------------------------------------------------------
     for idx, ch in enumerate(chapters, start=1):
         ch_filename = f"text/chapter-{idx}.xhtml"
-        formatted_body = apply_standard_ebooks_typography(ensure_xhtml(ch.html_body))
+        formatted_body = ensure_xhtml(ch.html_body)
 
         # CRITICAL: Retain <div id="workskin" class="userstuff"> so author CSS matches!
         ch_xhtml = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -916,7 +861,7 @@ def create_epub(
     # 3. Afterword / Endnotes
     # -----------------------------------------------------------------------
     if afterword and has_story_content(afterword):
-        formatted_afterword = apply_standard_ebooks_typography(ensure_xhtml(afterword))
+        formatted_afterword = ensure_xhtml(afterword)
         afterword_xhtml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="{language}" xml:lang="{language}">
   <head>
@@ -951,8 +896,8 @@ def create_epub(
             created_at = anno.get("createdAt") or ""
             ch_loc = escape_xml(anno.get("chapterTitle") or "Chapter")
 
-            quote_block = f'<blockquote class="annotation-quote">“{apply_standard_ebooks_typography(quote)}”</blockquote>' if quote else ""
-            note_block = f'<p class="annotation-note"><strong>Note:</strong> {apply_standard_ebooks_typography(note)}</p>' if note else ""
+            quote_block = f'<blockquote class="annotation-quote">{quote}</blockquote>' if quote else ""
+            note_block = f'<p class="annotation-note"><strong>Note:</strong> {note}</p>' if note else ""
             date_block = f'<span class="annotation-date">Saved on {created_at}</span>' if created_at else ""
 
             card = f"""
@@ -1074,37 +1019,37 @@ def create_epub(
     # Fandoms + Parent Umbrella Metatags
     for f_item in fandoms_list:
         if f_item:
-            raw_subject_tags.append(f"Fandom -- {f_item}")
+            raw_subject_tags.append(f_item)
             if resolver and resolver.is_available:
                 canon_fan = resolver.canonicalize_tag(f_item)
                 if canon_fan != f_item:
-                    raw_subject_tags.append(f"Fandom -- {canon_fan}")
+                    raw_subject_tags.append(canon_fan)
                 for parent_fan in resolver.parent_fandoms(canon_fan):
-                    raw_subject_tags.append(f"Fandom -- {parent_fan}")
+                    raw_subject_tags.append(parent_fan)
 
     for r_item in metadata.get("ratings") or []:
-        raw_subject_tags.append(f"Rating -- {r_item}")
+        raw_subject_tags.append(r_item)
     for w_item in metadata.get("warnings") or []:
-        raw_subject_tags.append(f"Warning -- {w_item}")
+        raw_subject_tags.append(w_item)
     for c_item in metadata.get("categories") or []:
-        raw_subject_tags.append(f"Category -- {c_item}")
+        raw_subject_tags.append(c_item)
 
     # Relationships + Popular Colloquial Portmanteau Ships (e.g. Stucky, Dramione)
     for rel in metadata.get("relationships") or []:
-        raw_subject_tags.append(f"Relationship -- {rel}")
+        raw_subject_tags.append(rel)
         if resolver and resolver.is_available:
             canon_rel = resolver.canonicalize_tag(rel)
             if canon_rel != rel:
-                raw_subject_tags.append(f"Relationship -- {canon_rel}")
+                raw_subject_tags.append(canon_rel)
             for ship_name in resolver.colloquial_ship_names(canon_rel):
-                raw_subject_tags.append(f"Relationship -- {ship_name}")
+                raw_subject_tags.append(ship_name)
 
     for char in metadata.get("characters") or []:
-        raw_subject_tags.append(f"Character -- {char}")
+        raw_subject_tags.append(char)
         if resolver and resolver.is_available:
             canon_char = resolver.canonicalize_tag(char)
             if canon_char != char:
-                raw_subject_tags.append(f"Character -- {canon_char}")
+                raw_subject_tags.append(canon_char)
 
     # Additional Tags + Inward Canonicalization
     for tag_item in metadata.get("additional_tags") or []:
@@ -1112,12 +1057,12 @@ def create_epub(
         if resolver and resolver.is_available:
             canon_tag = resolver.canonicalize_tag(tag_item)
             if canon_tag != tag_item:
-                raw_subject_tags.append(f"Freeform -- {canon_tag}")
+                raw_subject_tags.append(canon_tag)
 
     for coll in collections:
         c_title = coll.get("name") if isinstance(coll, dict) else str(coll)
         if c_title:
-            raw_subject_tags.append(f"Collection -- {c_title}")
+            raw_subject_tags.append(c_title)
 
     # Deduplicate while preserving order
     seen_tags: Set[str] = set()

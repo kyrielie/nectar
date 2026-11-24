@@ -2,13 +2,12 @@
 //  ContentHTMLCompressionTests.swift
 //  ArticlesDatabaseTests
 //
-//  Phase 3d: pure-function coverage of
-//  ContentHTMLCompression, no database needed. Four cases: (1)
-//  compress/decompress round-trip for ordinary HTML,
-//  (2) nil/empty input passed through unchanged by both functions, (3)
-//  decompress on non-base64 input falls back to the stored string as-is,
-//  (4) decompress on valid base64 that isn't valid LZFSE data also falls
-//  back to the stored string, not a throw/crash.
+//  Coverage of ContentHTMLCompression:
+//  (1) compress/decompress raw Data round-trip for ordinary HTML,
+//  (2) nil/empty input passed through unchanged,
+//  (3) decompressAny handling both Data (BLOB) and String (legacy Base64),
+//  (4) decompress on non-base64 string falls back to stored string as-is,
+//  (5) decompress on valid base64 that isn't valid LZFSE data falls back as-is.
 //
 
 import Testing
@@ -20,57 +19,63 @@ struct ContentHTMLCompressionTests {
 
 	// MARK: - 1. Round-trip
 
-	@Test("compress/decompress round-trips ordinary HTML")
+	@Test("compress/decompress round-trips ordinary HTML with binary Data")
 	func roundTripsOrdinaryHTML() {
 		let html = "<p>Some <strong>content</strong> with unicode: café, emoji: 🎉</p>"
 		let compressed = ContentHTMLCompression.compress(html)
 		#expect(compressed != nil)
-		#expect(compressed != html, "compressed form should differ from the original for non-trivial input")
 		#expect(ContentHTMLCompression.decompress(compressed) == html)
+		#expect(ContentHTMLCompression.decompressAny(compressed) == html)
 	}
 
 	// MARK: - 2. nil/empty passthrough
 
-	@Test("compress passes nil through unchanged")
-	func compressPassesNilThroughUnchanged() {
+	@Test("compress passes nil or empty through as nil")
+	func compressPassesNilOrEmptyThrough() {
 		#expect(ContentHTMLCompression.compress(nil) == nil)
-	}
-
-	@Test("compress passes empty string through unchanged")
-	func compressPassesEmptyStringThroughUnchanged() {
-		#expect(ContentHTMLCompression.compress("") == "")
+		#expect(ContentHTMLCompression.compress("") == nil)
 	}
 
 	@Test("decompress passes nil through unchanged")
 	func decompressPassesNilThroughUnchanged() {
-		#expect(ContentHTMLCompression.decompress(nil) == nil)
+		#expect(ContentHTMLCompression.decompress(nil as Data?) == nil)
+		#expect(ContentHTMLCompression.decompress(nil as String?) == nil)
+		#expect(ContentHTMLCompression.decompressAny(nil) == nil)
+		#expect(ContentHTMLCompression.decompressAny(NSNull()) == nil)
 	}
 
 	@Test("decompress passes empty string through unchanged")
 	func decompressPassesEmptyStringThroughUnchanged() {
 		#expect(ContentHTMLCompression.decompress("") == "")
+		#expect(ContentHTMLCompression.decompress(Data()) == nil)
 	}
 
-	// MARK: - 3. Non-base64 input falls back to the stored string as-is
+	// MARK: - 3. Legacy Base64 backward compatibility
+
+	@Test("decompressAny seamlessly handles legacy Base64 string")
+	func legacyBase64RoundTrip() {
+		let html = "<p>Legacy fic content with chapter text</p>"
+		let base64 = ContentHTMLCompression.compressBase64(html)
+		#expect(base64 != nil)
+		#expect(ContentHTMLCompression.decompress(base64) == html)
+		#expect(ContentHTMLCompression.decompressAny(base64) == html)
+	}
+
+	// MARK: - 4. Non-base64 input falls back to the stored string as-is
 
 	@Test("decompress on a plain non-base64 string falls back to returning it as-is")
 	func decompressNonBase64FallsBackToStoredString() {
-		// Contains characters outside the base64 alphabet (space, !), so
-		// Data(base64Encoded:) reliably returns nil rather than happening
-		// to parse -- this is the "row written before compression landed"
-		// compatibility shim, not a crash or nil.
 		let plainText = "not valid base64 content!"
 		#expect(ContentHTMLCompression.decompress(plainText) == plainText)
+		#expect(ContentHTMLCompression.decompressAny(plainText) == plainText)
 	}
 
-	// MARK: - 4. Valid base64 that isn't valid LZFSE data falls back too
+	// MARK: - 5. Valid base64 that isn't valid LZFSE data falls back too
 
 	@Test("decompress on valid base64 that isn't valid LZFSE data falls back to returning the stored string as-is")
 	func decompressValidBase64InvalidLZFSEFallsBackToStoredString() {
-		// Valid base64 (decodes cleanly to bytes), but those bytes are
-		// plain UTF-8 text, not LZFSE-compressed data -- exercises the
-		// second `guard let ... try?` separately from case 3's decode failure.
 		let storedValue = Data("just plain text, never compressed".utf8).base64EncodedString()
 		#expect(ContentHTMLCompression.decompress(storedValue) == storedValue)
+		#expect(ContentHTMLCompression.decompressAny(storedValue) == storedValue)
 	}
 }

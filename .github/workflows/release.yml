@@ -1,5 +1,12 @@
 name: Release IPA and Publish Source
 
+# ==============================================================================
+# NOTE: Local machine release (./scripts/release-local.sh) is the primary and
+# standard path across the suite due to GitHub Actions macOS runner capacity
+# constraints and timeouts (same as Ambrosia). This workflow remains available
+# via manual workflow_dispatch as a secondary/backup mechanism.
+# ==============================================================================
+
 # Two independent ways in:
 #   - workflow_dispatch: the full build -> attach IPA -> publish source.json
 #     flow for a tag.
@@ -138,7 +145,7 @@ jobs:
 
   build-ipa-release:
     name: Build and Release Unsigned IPA
-    needs: [prepare-tag, ci, create-tag]
+    needs: [prepare-tag, create-tag]
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-26
     outputs:

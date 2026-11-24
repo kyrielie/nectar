@@ -7,39 +7,72 @@
 //  Reuses the same NSData.compressed(using: .lzfse)/decompressed(using: .lzfse)
 //  Foundation API.
 //
-//  articles.contentHTML is a TEXT column (see ArticlesDatabase.swift's
-//  `CREATE TABLE ... articles` statement) and FMDB's row accessors this
-//  codebase uses elsewhere are all String-based (row.swiftString(forColumn:)),
-//  so compressed bytes are base64-encoded into a String rather than switching
-//  the column to BLOB or adding a raw-bytes FMDB call path.
+//  articles.contentHTML and pendingUpdateContentHTML are stored as native
+//  SQLite BLOBs containing raw LZFSE-compressed bytes, avoiding the ~33%
+//  space inflation and string churn of Base64 encoding.
 //
-//  No migration path: this is still in development, so there's
-//  no concern about pre-existing uncompressed rows in a dev database. decompress
-//  still falls back to returning the stored string as-is if it isn't valid
-//  base64/LZFSE, purely so a row written before this landed doesn't crash the
-//  reader mid-development -- not a supported compatibility guarantee.
+//  Backward compatibility:
+//  `decompressAny` seamlessly handles:
+//  1. `Data` (modern LZFSE binary BLOB).
+//  2. `String` (legacy Base64-encoded LZFSE string).
+//  3. Uncompressed fallback (if data/string was stored plain before compression).
 //
 import Foundation
 
 public enum ContentHTMLCompression {
 
-	/// Compresses `html` for storage. Returns nil/empty input unchanged
-	/// (nothing to compress), and falls back to storing the original string
-	/// if LZFSE compression fails for some reason, rather than losing the
-	/// content, as opposed to the wire-transfer route's decompress step,
-	/// which is a hard failure by design.
-	public static func compress(_ html: String?) -> String? {
+	/// Compresses `html` for storage as raw LZFSE binary `Data`.
+	/// Returns nil if input is nil or empty, and falls back to storing
+	/// the UTF-8 bytes of the original string if LZFSE compression fails
+	/// for some reason, rather than losing the content.
+	public static func compress(_ html: String?) -> Data? {
 		guard let html, !html.isEmpty else {
-			return html
+			return nil
 		}
-		let data = Data(html.utf8) as NSData
-		guard let compressed = try? data.compressed(using: .lzfse) else {
-			return html
+		let data = Data(html.utf8)
+		guard let compressed = try? (data as NSData).compressed(using: .lzfse) else {
+			return data
 		}
-		return (compressed as Data).base64EncodedString()
+		return compressed as Data
 	}
 
-	/// Reverses `compress(_:)`. See the type-level doc comment for why a
+	/// Legacy string-returning compressor preserved for callers that specifically
+	/// require a Base64-encoded string representation.
+	public static func compressBase64(_ html: String?) -> String? {
+		guard let data = compress(html) else {
+			return html
+		}
+		return data.base64EncodedString()
+	}
+
+	/// Decompresses any supported storage format:
+	/// 1. `Data` (modern raw LZFSE binary bytes, or uncompressed UTF-8 fallback).
+	/// 2. `String` (legacy Base64-encoded LZFSE string, or legacy plain text).
+	public static func decompressAny(_ stored: Any?) -> String? {
+		guard let stored, !(stored is NSNull) else {
+			return nil
+		}
+		if let data = stored as? Data {
+			return decompress(data)
+		}
+		if let string = stored as? String {
+			return decompress(string)
+		}
+		return nil
+	}
+
+	/// Decompresses raw LZFSE bytes, falling back to UTF-8 decoding if uncompressed.
+	public static func decompress(_ data: Data?) -> String? {
+		guard let data, !data.isEmpty else {
+			return nil
+		}
+		if let decompressed = try? (data as NSData).decompressed(using: .lzfse) {
+			return String(data: decompressed as Data, encoding: .utf8)
+		}
+		return String(data: data, encoding: .utf8)
+	}
+
+	/// Reverses legacy string storage. See the type-level doc comment for why a
 	/// decode/decompress failure falls back to the stored value as-is instead
 	/// of throwing.
 	public static func decompress(_ stored: String?) -> String? {

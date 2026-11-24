@@ -66,12 +66,12 @@ that account's folder. This is the largest and most actively evolved
 database in the app — its schema carries the marks of Nectar's AO3/Ambrosia
 features layered on top of upstream NetNewsWire's original article model.
 
-### Schema (v1.0 Public Baseline)
+### Schema (v2.0 Baseline)
 
 ```sql
 CREATE TABLE if not EXISTS articles (
   articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL,
-  title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT,
+  title TEXT, contentHTML BLOB, contentText TEXT, markdown TEXT,
   url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT,
   datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT,
   wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL,
@@ -79,7 +79,7 @@ CREATE TABLE if not EXISTS articles (
   categories TEXT, additionalTags TEXT, series TEXT, commentCount INTEGER,
   kudosCount INTEGER, bookmarkCount INTEGER, hitCount INTEGER, isRestricted BOOL,
   language TEXT, collections TEXT, dateBookmarked DATE, lastPrefaceFetchDate DATE,
-  isAmbrosiaItem BOOL, bookKey TEXT, pendingUpdateContentHTML TEXT,
+  isAmbrosiaItem BOOL, bookKey TEXT, pendingUpdateContentHTML BLOB,
   pendingUpdateDetectedAt DATE, wordCountRegressionFlaggedAt DATE,
   ao3ConfirmedMissingAt DATE
 );
@@ -109,7 +109,7 @@ CREATE TABLE if not EXISTS annotations (
   originalText TEXT, replacementText TEXT
 );
 
-CREATE VIRTUAL TABLE if not EXISTS search using fts4(title, body);
+CREATE VIRTUAL TABLE if not EXISTS search using fts5(title, body);
 ```
 
 Indexes: `articles(feedID, datePublished, articleID)`,
@@ -118,10 +118,12 @@ Indexes: `articles(feedID, datePublished, articleID)`,
 
 `ArticlesDatabase.init` runs `tableCreationStatements` via
 `runCreateStatements`. On a fresh install (`user_version == 0`), it stamps
-`PRAGMA user_version = 1` and returns immediately. Future migrations are gated
-on `currentSchemaVersion` (version **1** is the canonical public baseline). Because
-all columns, indexes, and triggers are defined directly in the canonical
-schema, app launch performs zero main-thread `ALTER TABLE` probing queries.
+`PRAGMA user_version = 2` and returns immediately. Version **1** was the
+original public baseline; version **2** upgraded `contentHTML` and
+`pendingUpdateContentHTML` to native SQLite `BLOB` (saving ~33% Base64 storage
+inflation) and upgraded `search` from FTS4 to FTS5. For existing version 1 databases,
+migration drops the legacy FTS4 `search` table, recreates it using FTS5, and sets
+`searchRowID = NULL` on articles so `indexUnindexedArticles()` reindexes them cleanly.
 
 ### Columns Inventory
 

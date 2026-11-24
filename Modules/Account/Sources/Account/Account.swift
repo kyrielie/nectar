@@ -756,6 +756,9 @@ public enum FetchType {
 		})
 
 		let articleChanges = await updateAsync(feedID: feed.feedID, parsedItems: parsedItems, deleteOlder: false)
+		if !Platform.isRunningUnitTests {
+			await AO3ImportMetadataQueue.shared.enqueue(workIDs: links.map(\.ao3WorkID), accountID: accountID, feedID: feed.feedID)
+		}
 		return AO3LinkImportResult(recognizedCount: links.count, newCount: articleChanges.new?.count ?? 0, feed: feed)
 	}
 

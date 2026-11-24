@@ -28,6 +28,7 @@ wildcat_settings
 ## Build generated
 build/
 DerivedData/
+dist/
 
 ## Various settings
 *.pbxuser

@@ -29,10 +29,9 @@ extension Article {
 		}
 
 		let title = row.swiftString(forColumn: DatabaseKey.title)
-		// contentHTML is stored LZFSE-compressed + base64-encoded (Phase 3, see
-		// ContentHTMLCompression) -- decompress here, the single choke point
-		// every reader of this column goes through via Article.
-		let contentHTML = ContentHTMLCompression.decompress(row.swiftString(forColumn: DatabaseKey.contentHTML))
+		// contentHTML is stored as raw LZFSE-compressed binary Data (BLOB)
+		// with backward-compatible fallback for legacy Base64 rows.
+		let contentHTML = ContentHTMLCompression.decompressAny(row.object(forColumnName: DatabaseKey.contentHTML))
 		let contentText = row.swiftString(forColumn: DatabaseKey.contentText)
 		let markdown = row.swiftString(forColumn: DatabaseKey.markdown)
 		let url = row.swiftString(forColumn: DatabaseKey.url)
@@ -74,7 +73,7 @@ extension Article {
 
 		// Task 8: pendingUpdateContentHTML gets the same compression
 		// treatment as contentHTML above (see ContentHTMLCompression).
-		let pendingUpdateContentHTML = ContentHTMLCompression.decompress(row.swiftString(forColumn: DatabaseKey.pendingUpdateContentHTML))
+		let pendingUpdateContentHTML = ContentHTMLCompression.decompressAny(row.object(forColumnName: DatabaseKey.pendingUpdateContentHTML))
 		let pendingUpdateDetectedAt = row.date(forColumn: DatabaseKey.pendingUpdateDetectedAt)
 		let wordCountRegressionFlaggedAt = row.date(forColumn: DatabaseKey.wordCountRegressionFlaggedAt)
 		let ao3ConfirmedMissingAt = row.date(forColumn: DatabaseKey.ao3ConfirmedMissingAt)
@@ -189,7 +188,9 @@ extension Article {
 		// separately) -- without this guard, every ordinary refresh after a
 		// successful chapter fetch would silently wipe the cached content.
 		if contentHTML != existingArticle.contentHTML, let contentHTML {
-			d[DatabaseKey.contentHTML] = ContentHTMLCompression.compress(contentHTML) ?? ""
+			if let compressed = ContentHTMLCompression.compress(contentHTML) {
+				d[DatabaseKey.contentHTML] = compressed
+			}
 		}
 		addPossibleStringChangeWithKeyPath(\Article.contentText, existingArticle, DatabaseKey.contentText, &d)
 		addPossibleStringChangeWithKeyPath(\Article.rawLink, existingArticle, DatabaseKey.url, &d)

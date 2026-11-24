@@ -199,6 +199,87 @@ public struct AO3WorkPageMetadata: Sendable {
 	}
 }
 
+/// Lightweight metadata extracted from an AO3 work page (Page 1 / Preface)
+/// without downloading full chapter bodies (`contentHTML` is omitted).
+public struct AO3LightweightMetadata: Sendable, Equatable {
+	public let title: String?
+	public let authors: Set<ParsedAuthor>
+	public let summary: String?
+	public let datePublished: Date?
+	public let dateModified: Date?
+	public let fandoms: [String]
+	public let relationships: [String]
+	public let characters: [String]
+	public let ratings: [String]
+	public let warnings: [String]
+	public let categories: [String]
+	public let additionalTags: [String]
+	public let language: String?
+	public let collections: [ParsedCollectionEntry]?
+	public let chapterCurrent: Int?
+	public let chapterTotal: Int?
+	public let isComplete: Bool?
+	public let commentCount: Int?
+	public let kudosCount: Int?
+	public let bookmarkCount: Int?
+	public let hitCount: Int?
+	public let wordCount: Int?
+	public let isRestricted: Bool?
+	public let seriesEntries: [AO3SeriesSpanResult]
+
+	public init(
+		title: String? = nil,
+		authors: Set<ParsedAuthor> = [],
+		summary: String? = nil,
+		datePublished: Date? = nil,
+		dateModified: Date? = nil,
+		fandoms: [String] = [],
+		relationships: [String] = [],
+		characters: [String] = [],
+		ratings: [String] = [],
+		warnings: [String] = [],
+		categories: [String] = [],
+		additionalTags: [String] = [],
+		language: String? = nil,
+		collections: [ParsedCollectionEntry]? = nil,
+		chapterCurrent: Int? = nil,
+		chapterTotal: Int? = nil,
+		isComplete: Bool? = nil,
+		commentCount: Int? = nil,
+		kudosCount: Int? = nil,
+		bookmarkCount: Int? = nil,
+		hitCount: Int? = nil,
+		wordCount: Int? = nil,
+		isRestricted: Bool? = nil,
+		seriesEntries: [AO3SeriesSpanResult] = []
+	) {
+		self.title = title
+		self.authors = authors
+		self.summary = summary
+		self.datePublished = datePublished
+		self.dateModified = dateModified
+		self.fandoms = fandoms
+		self.relationships = relationships
+		self.characters = characters
+		self.ratings = ratings
+		self.warnings = warnings
+		self.categories = categories
+		self.additionalTags = additionalTags
+		self.language = language
+		self.collections = collections
+		self.chapterCurrent = chapterCurrent
+		self.chapterTotal = chapterTotal
+		self.isComplete = isComplete
+		self.commentCount = commentCount
+		self.kudosCount = kudosCount
+		self.bookmarkCount = bookmarkCount
+		self.hitCount = hitCount
+		self.wordCount = wordCount
+		self.isRestricted = isRestricted
+		self.seriesEntries = seriesEntries
+	}
+}
+
 /// The ways a fetched AO3 work page can come back, distinguished by
 /// document shape alone. HTTP status is handled one layer up, in
 /// `AO3WorkPageClassifier`; whether AO3 really returns 200 for each gate
@@ -353,6 +434,70 @@ public enum AO3ChapterHTMLExtractor {
 			return .permissionDenied
 		}
 		return .unrecognizedPage
+	}
+
+	/// Extracts lightweight preface and work header metadata from an AO3 work page.
+	///
+	/// Designed specifically for Page 1 / Preface fetches without `view_full_work=true`.
+	/// Extracts title, authors, fandoms, relationships, characters, ratings, warnings,
+	/// categories, additionalTags, summary, chapterCurrent, chapterTotal, and isComplete.
+	///
+	/// Chapter bodies (`contentHTML`) are NEVER parsed or stored.
+	public static func extractLightweightMetadata(fromWorkPageHTML html: String) -> AO3LightweightMetadata? {
+		let root = parseHTMLLiteTree(html)
+
+		if isAdultContentGate(root) || isRegistrationRequired(root) || AO3CloudflareChallenge.isChallengePage(html) {
+			return nil
+		}
+
+		guard let header = parseWorkHeader(root: root) else {
+			return nil
+		}
+
+		let preface = firstDescendant(of: root, where: {
+			$0.tag == "div" &&
+			classTokens(of: $0).contains("preface") &&
+			classTokens(of: $0).contains("group") &&
+			!classTokens(of: $0).contains("chapter")
+		})
+
+		var title: String?
+		var isRestricted: Bool?
+		if let preface, let titleHeading = firstDescendant(of: preface, where: { $0.tag == "h2" }) {
+			isRestricted = !descendants(of: titleHeading, where: AO3HTMLHelpers.isRestrictedMarker).isEmpty
+			let text = flattenedText(titleHeading).trimmingCharacters(in: .whitespacesAndNewlines)
+			title = text.isEmpty ? nil : text
+		}
+
+		let authors = preface.map(bylineAuthors) ?? []
+		let summary = preface.flatMap(summaryHTML)
+
+		return AO3LightweightMetadata(
+			title: title,
+			authors: authors,
+			summary: summary,
+			datePublished: header.datePublished,
+			dateModified: header.dateModified,
+			fandoms: header.fandoms,
+			relationships: header.relationships,
+			characters: header.characters,
+			ratings: header.ratings,
+			warnings: header.warnings,
+			categories: header.categories,
+			additionalTags: header.additionalTags,
+			language: header.language,
+			collections: header.collections,
+			chapterCurrent: header.chapterCurrent,
+			chapterTotal: header.chapterTotal,
+			isComplete: header.isComplete,
+			commentCount: header.commentCount,
+			kudosCount: header.kudosCount,
+			bookmarkCount: header.bookmarkCount,
+			hitCount: header.hitCount,
+			wordCount: header.wordCount,
+			isRestricted: isRestricted,
+			seriesEntries: header.seriesEntries
+		)
 	}
 }
 
@@ -737,6 +882,9 @@ struct AO3WorkHeaderExtraction {
 	// dl.stats but stay Int.
 	let datePublished: Date?
 	let dateModified: Date?
+	let chapterCurrent: Int?
+	let chapterTotal: Int?
+	let isComplete: Bool?
 }
 
 /// One `<span class="series">` block's full data: `entry` is the
@@ -748,7 +896,7 @@ struct AO3WorkHeaderExtraction {
 /// and the unlinked "Part N of " prefix text) -- kept alongside `entry`
 /// rather than folded into it, since neither is meaningful outside a
 /// rendered row.
-public struct AO3SeriesSpanResult: Sendable {
+public struct AO3SeriesSpanResult: Sendable, Equatable {
 	public let entry: ParsedSeriesEntry
 	public let href: String?
 	public let prefix: String
@@ -802,6 +950,9 @@ private extension AO3ChapterHTMLExtractor {
 		var collections: [ParsedCollectionEntry] = []
 		var datePublished: Date?
 		var dateModified: Date?
+		var chapterCurrent: Int?
+		var chapterTotal: Int?
+		var isComplete: Bool?
 
 		var pendingDT: HTMLLiteElement?
 		for element in directChildElements(of: metaGroup) {
@@ -935,11 +1086,34 @@ private extension AO3ChapterHTMLExtractor {
 					// labels (same dt/dd class either way -- see this
 					// function's own doc comment) -- either way it's the
 					// work's current dateModified.
-					case "status": dateModified = Self.workPageDate(fromStatValue: statValue)
+					case "status":
+						dateModified = Self.workPageDate(fromStatValue: statValue)
+						if statLabel.lowercased().contains("completed") {
+							isComplete = true
+						} else if statLabel.lowercased().contains("updated") {
+							isComplete = false
+						}
+					case "chapters":
+						let parts = statValue.components(separatedBy: "/")
+						if parts.count == 2 {
+							chapterCurrent = Int(parts[0].trimmingCharacters(in: .whitespacesAndNewlines))
+							let totalString = parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
+							if totalString == "?" {
+								chapterTotal = nil
+								isComplete = false
+							} else if let total = Int(totalString) {
+								chapterTotal = total
+								isComplete = (chapterCurrent == total)
+							}
+						}
 					default: break
 					}
 				}
 			}
+		}
+
+		if isComplete == nil, let chapterCurrent, let chapterTotal {
+			isComplete = (chapterCurrent == chapterTotal)
 		}
 
 		// Words is still part of statsRows' display text regardless (nothing
@@ -973,7 +1147,10 @@ private extension AO3ChapterHTMLExtractor {
 			language: language,
 			collections: collections,
 			datePublished: datePublished,
-			dateModified: dateModified
+			dateModified: dateModified,
+			chapterCurrent: chapterCurrent,
+			chapterTotal: chapterTotal,
+			isComplete: isComplete
 		)
 	}
 

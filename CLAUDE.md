@@ -51,13 +51,27 @@ task**, not this whole index cover-to-cover.
 - **"What differs from upstream NetNewsWire"** → `upstream-drift.md`
 - **A recurring Auto Layout / UIKit console warning** (before re-investigating one from scratch) → `console-warnings.md`
 - **`fastlane snapshot` screenshots, offline UI-test demo data, `-UITestSeedDemoData`, `appstore/screenshots`** → `ui-test-demo-data.md`
-- **Cutting a release: `release.yml`, tag creation, `source.json`, `scripts/update_source.py`, `ci.yml`'s App Store assets check** → `release-pipeline.md`
+- **Cutting a release: `./scripts/release-local.sh`, local testing `./test.sh`, tag creation, `source.json`, `scripts/update_source.py`** → `release-pipeline.md`
 - **Whether iPad is supported, and how far** (supported at functional parity, not layout polish) → `module-layout.md` ("Platform scope")
 - **Minimum OS / iOS 16 support / trait change & empty state shims** → `module-layout.md` ("Minimum OS and compatibility shims"), `upstream-drift.md`
 
 If nothing above fits, grep the codebase before assuming it's
 undocumented — this split is complete as of the date below, but the
 codebase moves faster than docs do. See "Keeping this current" below.
+
+## Local Testing and Release (Primary Workflow)
+
+Like Ambrosia, Nectar uses a **local Apple Silicon machine testing and release workflow** instead of relying on GitHub Actions macOS runners (avoiding runner queue stalls, timeouts, and unreliability):
+
+- **Local test runner:** `./test.sh` (SwiftLint + unit tests). Supports `-q/--quiet`, `--no-lint`, `--lint-only`, `--filter PATTERN`.
+- **Local release:** `./scripts/release-local.sh <version>` (or via `release.sh local <version>` from `macos-app-release`).
+  - Pre-flight test & lint validation
+  - iOS archive build & unsigned `.ipa` packaging (`dist/Nectar-unsigned.ipa` + SHA-256)
+  - GitHub Release creation (`gh release create`)
+  - AltStore `source.json` synchronization on `gh-pages` branch
+  - Supports `--dry-run`, `--skip-tests`, `--prerelease`, and `--notes` flags
+
+Automated test runs on push/PR in GitHub Actions are disabled; `.github/workflows/release.yml` remains available only as a manual `workflow_dispatch` backup.
 
 ## Conventions every doc here follows
 

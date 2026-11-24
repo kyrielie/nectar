@@ -380,10 +380,10 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			return resultSet.mapToSet { (row) -> ArticleSearchInfo? in
 				let articleID = row.swiftString(forColumn: DatabaseKey.articleID)!
 				let title = row.swiftString(forColumn: DatabaseKey.title)
-				// contentHTML is stored compressed (Phase 3) -- this query reads the
+				// contentHTML is stored compressed -- this query reads the
 				// raw articles table directly rather than going through Article, so
 				// it needs its own decompress call rather than inheriting Article's.
-				let contentHTML = ContentHTMLCompression.decompress(row.swiftString(forColumn: DatabaseKey.contentHTML))
+				let contentHTML = ContentHTMLCompression.decompressAny(row.object(forColumnName: DatabaseKey.contentHTML))
 				let contentText = row.swiftString(forColumn: DatabaseKey.contentText)
 				let summary = row.swiftString(forColumn: DatabaseKey.summary)
 				let authorsNames = Self.authorsNames(from: row)
@@ -1205,10 +1205,12 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	func setPendingContentUpdate(_ contentHTML: String, detectedAt: Date, articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
 		queue.runInTransaction { database in
-			let d: DatabaseDictionary = [
-				DatabaseKey.pendingUpdateContentHTML: ContentHTMLCompression.compress(contentHTML) ?? "",
+			var d: DatabaseDictionary = [
 				DatabaseKey.pendingUpdateDetectedAt: detectedAt
 			]
+			if let compressed = ContentHTMLCompression.compress(contentHTML) {
+				d[DatabaseKey.pendingUpdateContentHTML] = compressed
+			}
 			self.updateRowsWithDictionary(d, whereKey: DatabaseKey.articleID, matches: articleID, database: database)
 			self.removeArticleIDsFromCache(Set([articleID]))
 			DispatchQueue.main.async {
@@ -1276,7 +1278,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
-	private func fetchPendingUpdateContentHTML(articleID: String, _ database: FMDatabase) -> String? {
+	private func fetchPendingUpdateContentHTML(articleID: String, _ database: FMDatabase) -> Any? {
 		guard let resultSet = database.executeQuery("select pendingUpdateContentHTML from articles where articleID = ?", withArgumentsIn: [articleID]) else {
 			return nil
 		}
@@ -1287,7 +1289,10 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		// Stays compressed here -- it's written straight back into the
 		// contentHTML column, which is expected to hold the compressed
 		// form (see Article's row init decompressing it on read).
-		return resultSet.swiftString(forColumn: DatabaseKey.pendingUpdateContentHTML)
+		guard let object = resultSet.object(forColumnName: DatabaseKey.pendingUpdateContentHTML), !(object is NSNull) else {
+			return nil
+		}
+		return object
 	}
 
 	// MARK: - Last opened (Last Opened smart feed)

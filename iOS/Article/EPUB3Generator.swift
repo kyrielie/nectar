@@ -86,7 +86,7 @@ public final class EPUB3Generator {
 
 		// 4. Extract Workskin & Chapters
 		let workTitle = article.title ?? "Untitled"
-		let (chapters, workskinCSS, afterwordHTML) = extractWorkskinAndChapters(from: decompressedHTML, workTitle: workTitle)
+		let (chapters, workskinCSS, afterwordHTML, extractedPrefaceHTML) = extractWorkskinAndChapters(from: decompressedHTML, workTitle: workTitle)
 		guard !chapters.isEmpty else {
 			throw EPUBExportError.noContent(NSLocalizedString("Could not extract any chapters from story text.", comment: "Error message"))
 		}
@@ -128,14 +128,20 @@ public final class EPUB3Generator {
 		var splitFiles: [(relPath: String, title: String, props: String?)] = []
 
 		// 8.1 Preface
-		let prefaceHTML = buildPrefaceHTML(article: article, authorStr: authorStr, language: language, hasWorkskin: hasWorkskin)
+		let prefaceHTML = buildPrefaceHTML(
+			article: article,
+			authorStr: authorStr,
+			language: language,
+			hasWorkskin: hasWorkskin,
+			extractedPrefaceHTML: extractedPrefaceHTML
+		)
 		try prefaceHTML.write(to: textDir.appendingPathComponent("preface.xhtml"), atomically: true, encoding: .utf8)
 		splitFiles.append(("text/preface.xhtml", "Preface", nil))
 
 		// 8.2 Chapters with Workskin Wrapper Preserved
 		for (index, ch) in chapters.enumerated() {
 			let filename = "chapter-\(index + 1).xhtml"
-			let formattedBody = applyStandardEbooksTypography(ensureXHTML(ch.bodyHTML))
+			let formattedBody = ensureXHTML(ch.bodyHTML)
 			let workskinLink = hasWorkskin ? "<link rel=\"stylesheet\" type=\"text/css\" href=\"../css/workskin.css\"/>" : ""
 
 			let chapterXHTML = """
@@ -166,7 +172,7 @@ public final class EPUB3Generator {
 
 		// 8.3 Afterword
 		if let afterwordHTML, hasStoryContent(afterwordHTML) {
-			let formattedAfterword = applyStandardEbooksTypography(ensureXHTML(afterwordHTML))
+			let formattedAfterword = ensureXHTML(afterwordHTML)
 			let workskinLink = hasWorkskin ? "<link rel=\"stylesheet\" type=\"text/css\" href=\"../css/workskin.css\"/>" : ""
 			let afterwordXHTML = """
 			<?xml version="1.0" encoding="UTF-8"?>
@@ -243,7 +249,18 @@ public final class EPUB3Generator {
 
 	// MARK: - Workskin & Chapter Parsing
 
-	private static func extractWorkskinAndChapters(from html: String, workTitle: String) -> ([Chapter], String, String?) {
+	private static func extractWorkskinAndChapters(from html: String, workTitle: String) -> ([Chapter], String, String?, String?) {
+		// 0. Extract AO3 Preface block if present
+		var extractedPrefaceHTML: String?
+		let prefacePattern = try? NSRegularExpression(
+			pattern: "(<div[^>]*id=[\"'](?:ao3Preface|ao3SyntheticPreface)[\"'][^>]*>.*?</div>\\s*(?=<div|<!--|\\s*<section|$))",
+			options: [.dotMatchesLineSeparators, .caseInsensitive]
+		)
+		if let match = prefacePattern?.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+		   let range = Range(match.range(at: 1), in: html) {
+			extractedPrefaceHTML = String(html[range])
+		}
+
 		// 1. Extract <style> blocks
 		var workskinRules: [String] = []
 		let stylePattern = try? NSRegularExpression(pattern: "<style[^>]*>(.*?)</style>", options: [.dotMatchesLineSeparators, .caseInsensitive])
@@ -328,7 +345,7 @@ public final class EPUB3Generator {
 		}
 
 		if !chapters.isEmpty {
-			return (chapters, workskinCSS, afterwordHTML)
+			return (chapters, workskinCSS, afterwordHTML, extractedPrefaceHTML)
 		}
 
 		// Fallback single chapter
@@ -340,61 +357,7 @@ public final class EPUB3Generator {
 		}
 		singleBody = singleBody.replacingOccurrences(of: "<style[^>]*>.*?</style>", with: "", options: .regularExpression)
 
-		return ([Chapter(title: workTitle, bodyHTML: singleBody.trimmingCharacters(in: .whitespacesAndNewlines), chapterID: "chapter-1")], workskinCSS, afterwordHTML)
-	}
-
-	// MARK: - Standard Ebooks Typography Engine
-
-	public static func applyStandardEbooksTypography(_ text: String) -> String {
-		guard !text.isEmpty else { return text }
-		// Split by HTML tags
-		let components = text.components(separatedBy: "<")
-		var result = ""
-
-		for (i, comp) in components.enumerated() {
-			if i == 0 && !text.hasPrefix("<") {
-				result += transformTextNode(comp)
-				continue
-			}
-
-			if let closeIndex = comp.firstIndex(of: ">") {
-				let tag = String(comp[..<comp.index(after: closeIndex)])
-				let textNode = String(comp[comp.index(after: closeIndex)...])
-				result += "<" + tag + transformTextNode(textNode)
-			} else {
-				result += "<" + comp
-			}
-		}
-
-		return result
-	}
-
-	private static func transformTextNode(_ raw: String) -> String {
-		guard !raw.isEmpty else { return raw }
-		var t = raw
-
-		// 1. Ellipses
-		t = t.replacingOccurrences(of: "\\.{3,}", with: "…", options: .regularExpression)
-		t = t.replacingOccurrences(of: "\\.\\s\\.\\s\\.", with: "…", options: .regularExpression)
-
-		// 2. Dashes
-		t = t.replacingOccurrences(of: "---", with: "—")
-		t = t.replacingOccurrences(of: "--", with: "—")
-		t = t.replacingOccurrences(of: "(\\b\\d+)-(\\d+\\b)", with: "$1–$2", options: .regularExpression)
-
-		// 3. Smart Apostrophes & Single Quotes
-		t = t.replacingOccurrences(of: "([a-zA-Z0-9])'([a-zA-Z0-9])", with: "$1’$2", options: .regularExpression)
-		t = t.replacingOccurrences(of: "\\b'(\\d{2}s?)\\b", with: "’$1", options: .regularExpression)
-		t = t.replacingOccurrences(of: "\\b'(em|cause|tis|twas)\\b", with: "’$1", options: .regularExpression)
-		t = t.replacingOccurrences(of: "(^|[\\s(\\[{])'([^\\s])", with: "$1‘$2", options: .regularExpression)
-		t = t.replacingOccurrences(of: "([^\\s])'([\\s)\\]},.;:!?]|$)", with: "$1’$2", options: .regularExpression)
-
-		// 4. Smart Double Quotes
-		t = t.replacingOccurrences(of: "(^|[\\s(\\[{])\"([^\\s])", with: "$1“$2", options: .regularExpression)
-		t = t.replacingOccurrences(of: "([^\\s])\"([\\s)\\]},.;:!?]|$)", with: "$1”$2", options: .regularExpression)
-		t = t.replacingOccurrences(of: "\"", with: "”")
-
-		return t
+		return ([Chapter(title: workTitle, bodyHTML: singleBody.trimmingCharacters(in: .whitespacesAndNewlines), chapterID: "chapter-1")], workskinCSS, afterwordHTML, extractedPrefaceHTML)
 	}
 
 	// MARK: - HTML & XML Helpers
@@ -453,38 +416,70 @@ public final class EPUB3Generator {
 
 	// MARK: - Partition Builders
 
-	private static func buildPrefaceHTML(article: Article, authorStr: String, language: String, hasWorkskin: Bool) -> String {
+	private static func ao3TagLink(_ tag: String) -> String {
+		let escaped = escapeXML(tag)
+		let encoded = tag.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? tag
+		return "<a href=\"https://archiveofourown.org/tags/\(encoded)/works\">\(escaped)</a>"
+	}
+
+	private static func buildPrefaceHTML(
+		article: Article,
+		authorStr: String,
+		language: String,
+		hasWorkskin: Bool,
+		extractedPrefaceHTML: String? = nil
+	) -> String {
 		let workTitle = article.title ?? "Untitled"
 		var tagsDL: [String] = []
 
 		if let ratings = article.ratings, !ratings.isEmpty {
-			tagsDL.append("<dt>Rating:</dt><dd>\(escapeXML(ratings.joined(separator: ", ")))</dd>")
+			let links = ratings.map(ao3TagLink).joined(separator: ", ")
+			tagsDL.append("<dt>Rating:</dt><dd>\(links)</dd>")
 		}
 		if let warnings = article.warnings, !warnings.isEmpty {
-			tagsDL.append("<dt>Archive Warning:</dt><dd>\(escapeXML(warnings.joined(separator: ", ")))</dd>")
+			let links = warnings.map(ao3TagLink).joined(separator: ", ")
+			tagsDL.append("<dt>Archive Warning:</dt><dd>\(links)</dd>")
 		}
 		if let categories = article.categories, !categories.isEmpty {
-			tagsDL.append("<dt>Category:</dt><dd>\(escapeXML(categories.joined(separator: ", ")))</dd>")
+			let links = categories.map(ao3TagLink).joined(separator: ", ")
+			tagsDL.append("<dt>Category:</dt><dd>\(links)</dd>")
 		}
 		if let fandoms = article.fandoms, !fandoms.isEmpty {
-			tagsDL.append("<dt>Fandom:</dt><dd>\(escapeXML(fandoms.joined(separator: ", ")))</dd>")
+			let links = fandoms.map(ao3TagLink).joined(separator: ", ")
+			tagsDL.append("<dt>Fandom:</dt><dd>\(links)</dd>")
 		}
 		if let relationships = article.relationships, !relationships.isEmpty {
-			tagsDL.append("<dt>Relationship:</dt><dd>\(escapeXML(relationships.joined(separator: ", ")))</dd>")
+			let links = relationships.map(ao3TagLink).joined(separator: ", ")
+			tagsDL.append("<dt>Relationship:</dt><dd>\(links)</dd>")
 		}
 		if let characters = article.characters, !characters.isEmpty {
-			tagsDL.append("<dt>Characters:</dt><dd>\(escapeXML(characters.joined(separator: ", ")))</dd>")
+			let links = characters.map(ao3TagLink).joined(separator: ", ")
+			tagsDL.append("<dt>Characters:</dt><dd>\(links)</dd>")
 		}
 		if let additionalTags = article.additionalTags, !additionalTags.isEmpty {
-			tagsDL.append("<dt>Additional Tags:</dt><dd>\(escapeXML(additionalTags.joined(separator: ", ")))</dd>")
+			let links = additionalTags.map(ao3TagLink).joined(separator: ", ")
+			tagsDL.append("<dt>Additional Tags:</dt><dd>\(links)</dd>")
 		}
 		if let series = article.series?.first {
 			let sIdx = " #\(series.index)"
-			tagsDL.append("<dt>Series:</dt><dd>Part\(sIdx) of \(escapeXML(series.name))</dd>")
+			let sNameEscaped = escapeXML(series.name)
+			let sLink: String
+			if let ao3ID = series.ao3ID {
+				sLink = "<a href=\"https://archiveofourown.org/series/\(ao3ID)\">\(sNameEscaped)</a>"
+			} else {
+				sLink = sNameEscaped
+			}
+			tagsDL.append("<dt>Series:</dt><dd>Part\(sIdx) of \(sLink)</dd>")
 		}
 		if let collections = article.collections, !collections.isEmpty {
-			let cNames = collections.map(\.name).joined(separator: ", ")
-			tagsDL.append("<dt>Collections:</dt><dd>\(escapeXML(cNames))</dd>")
+			let cLinks = collections.map { col -> String in
+				let nameEscaped = escapeXML(col.name)
+				if let slug = col.slug {
+					return "<a href=\"https://archiveofourown.org/collections/\(slug)\">\(nameEscaped)</a>"
+				}
+				return nameEscaped
+			}.joined(separator: ", ")
+			tagsDL.append("<dt>Collections:</dt><dd>\(cLinks)</dd>")
 		}
 
 		var statsSpans: [String] = []
@@ -517,11 +512,32 @@ public final class EPUB3Generator {
 		}
 
 		let statsHTML = statsSpans.isEmpty ? "" : "<div class=\"stats-block\">\(statsSpans.joined(separator: " &nbsp;•&nbsp; "))</div>"
-		let tagsHTML = tagsDL.isEmpty ? "" : "<dl class=\"tags-dl\">\n\(tagsDL.joined(separator: "\n"))\n</dl>"
+		let tagsHTML: String = {
+			if let extractedPrefaceHTML,
+			   let dlMatch = extractedPrefaceHTML.range(of: "<dl[^>]*class=[\"']tags[\"'][^>]*>.*?</dl>", options: [.regularExpression, .caseInsensitive]) {
+				return ensureXHTML(String(extractedPrefaceHTML[dlMatch]))
+			}
+			return tagsDL.isEmpty ? "" : "<dl class=\"tags-dl\">\n\(tagsDL.joined(separator: "\n"))\n</dl>"
+		}()
+
+		let authorBylineHTML: String = {
+			if let authors = article.authors, !authors.isEmpty {
+				let authorLinks = authors.compactMap { author -> String? in
+					guard let name = author.name, !name.isEmpty else { return nil }
+					let escaped = escapeXML(name)
+					let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+					return "<a rel=\"author\" href=\"https://archiveofourown.org/users/\(encoded)/pseuds/\(encoded)\">\(escaped)</a>"
+				}
+				if !authorLinks.isEmpty {
+					return authorLinks.joined(separator: ", ")
+				}
+			}
+			return escapeXML(authorStr)
+		}()
 
 		var summaryHTML = ""
 		if let summary = article.summary, !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-			let cleanSummary = applyStandardEbooksTypography(ensureXHTML(summary))
+			let cleanSummary = ensureXHTML(summary)
 			summaryHTML = """
 			<div class="meta-section" epub:type="abstract">
 			  <h3>Summary</h3>
@@ -546,7 +562,7 @@ public final class EPUB3Generator {
 		    <section id="preface" epub:type="preface">
 		      <header class="title-header">
 		        <h1 class="fulltitle" epub:type="fulltitle">\(escapeXML(workTitle))</h1>
-		        <p class="byline">by \(escapeXML(authorStr))</p>
+		        <p class="byline">by \(authorBylineHTML)</p>
 		      </header>
 		      \(statsHTML)
 		      \(tagsHTML)
@@ -576,8 +592,8 @@ public final class EPUB3Generator {
 			}
 			let dateStr = formatter.string(from: anno.createdAt)
 
-			let quoteBlock = quote.isEmpty ? "" : "<blockquote class=\"annotation-quote\">“\(applyStandardEbooksTypography(quote))”</blockquote>"
-			let noteBlock = note.isEmpty ? "" : "<p class=\"annotation-note\"><strong>Note:</strong> \(applyStandardEbooksTypography(note))</p>"
+			let quoteBlock = quote.isEmpty ? "" : "<blockquote class=\"annotation-quote\">\(quote)</blockquote>"
+			let noteBlock = note.isEmpty ? "" : "<p class=\"annotation-note\"><strong>Note:</strong> \(note)</p>"
 
 			let card = """
 			<div class="annotation-card" style="border-left-color: \(colorHex);">
@@ -712,28 +728,28 @@ public final class EPUB3Generator {
 
 		var subjectTags: [String] = ["    <dc:subject>Fanworks</dc:subject>"]
 		for f in article.fandoms ?? [] {
-			subjectTags.append("    <dc:subject>Fandom -- \(escapeXML(f))</dc:subject>")
+			subjectTags.append("    <dc:subject>\(escapeXML(f))</dc:subject>")
 		}
 		for r in article.ratings ?? [] {
-			subjectTags.append("    <dc:subject>Rating -- \(escapeXML(r))</dc:subject>")
+			subjectTags.append("    <dc:subject>\(escapeXML(r))</dc:subject>")
 		}
 		for w in article.warnings ?? [] {
-			subjectTags.append("    <dc:subject>Warning -- \(escapeXML(w))</dc:subject>")
+			subjectTags.append("    <dc:subject>\(escapeXML(w))</dc:subject>")
 		}
 		for c in article.categories ?? [] {
-			subjectTags.append("    <dc:subject>Category -- \(escapeXML(c))</dc:subject>")
+			subjectTags.append("    <dc:subject>\(escapeXML(c))</dc:subject>")
 		}
 		for rel in article.relationships ?? [] {
-			subjectTags.append("    <dc:subject>Relationship -- \(escapeXML(rel))</dc:subject>")
+			subjectTags.append("    <dc:subject>\(escapeXML(rel))</dc:subject>")
 		}
 		for ch in article.characters ?? [] {
-			subjectTags.append("    <dc:subject>Character -- \(escapeXML(ch))</dc:subject>")
+			subjectTags.append("    <dc:subject>\(escapeXML(ch))</dc:subject>")
 		}
 		for tag in article.additionalTags ?? [] {
 			subjectTags.append("    <dc:subject>\(escapeXML(tag))</dc:subject>")
 		}
 		for coll in article.collections ?? [] {
-			subjectTags.append("    <dc:subject>Collection -- \(escapeXML(coll.name))</dc:subject>")
+			subjectTags.append("    <dc:subject>\(escapeXML(coll.name))</dc:subject>")
 		}
 
 		var seriesMeta = ""

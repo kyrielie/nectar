@@ -19,7 +19,6 @@ import zipfile
 from pathlib import Path
 
 from nectar_backup_to_epub import (
-    apply_standard_ebooks_typography,
     create_epub,
     extract_workskin_and_chapters,
     process_backup,
@@ -28,33 +27,6 @@ from nectar_backup_to_epub import (
 )
 
 class TestNectarBackupToEPUB(unittest.TestCase):
-
-    def test_standard_ebooks_typography(self):
-        # 1. Quotes
-        raw = '<p>"Hello," she said. \'World\' isn\'t ready for "nested \'quotes\'" yet.</p>'
-        res = apply_standard_ebooks_typography(raw)
-        self.assertIn('“Hello,”', res)
-        self.assertIn('‘World’', res)
-        self.assertIn('isn’t', res)
-
-        # Attributes in HTML tags must NOT be touched
-        raw_tag = '<a href="https://example.com/test?a=1&b=2" class="foo-bar">Click "here"</a>'
-        res_tag = apply_standard_ebooks_typography(raw_tag)
-        self.assertIn('href="https://example.com/test?a=1&b=2"', res_tag)
-        self.assertIn('class="foo-bar"', res_tag)
-        self.assertIn('Click “here”', res_tag)
-
-        # 2. Dashes
-        raw_dashes = "<p>Wait--what? The years 1999-2005 were wild---truly.</p>"
-        res_dashes = apply_standard_ebooks_typography(raw_dashes)
-        self.assertIn('Wait—what?', res_dashes)
-        self.assertIn('1999–2005', res_dashes)
-        self.assertIn('wild—truly.', res_dashes)
-
-        # 3. Ellipses
-        raw_ellipses = "<p>Thinking... Still thinking. . . done.</p>"
-        res_ellipses = apply_standard_ebooks_typography(raw_ellipses)
-        self.assertIn('Thinking… Still thinking… done.', res_ellipses)
 
     def test_workskin_extraction_and_preservation(self):
         fixture_path = Path("Modules/AO3Kit/Tests/AO3KitTests/Resources/ao3-work-workskin.html")
@@ -280,10 +252,9 @@ class TestNectarBackupToEPUB(unittest.TestCase):
                 self.assertIn("Here we are", notes_text)
 
                 ch1_text = zf.read("EPUB/text/chapter-1.xhtml").decode("utf-8")
-                # Typographic transformations applied
-                self.assertIn("“Here we are,”", ch1_text)
-                self.assertIn("Arthur said—smiling.", ch1_text)
-                self.assertIn("1920–1925…", ch1_text)
+                self.assertIn('"Here we are,"', ch1_text)
+                self.assertIn("Arthur said--smiling.", ch1_text)
+                self.assertIn("1920-1925...", ch1_text)
                 # Workskin preserved
                 self.assertIn('<div id="workskin" class="userstuff">', ch1_text)
 
@@ -354,13 +325,13 @@ class TestNectarBackupToEPUB(unittest.TestCase):
                 # 1. Author's original verbatim tag
                 self.assertIn("<dc:subject>no beta we die like men</dc:subject>", opf_text)
                 # 2. Inward canonicalized tag
-                self.assertIn("<dc:subject>Freeform -- Not Beta Read</dc:subject>", opf_text)
+                self.assertIn("<dc:subject>Not Beta Read</dc:subject>", opf_text)
                 # 3. Canonical ship name
-                self.assertIn("<dc:subject>Relationship -- Hermione Granger/Draco Malfoy</dc:subject>", opf_text)
+                self.assertIn("<dc:subject>Hermione Granger/Draco Malfoy</dc:subject>", opf_text)
                 # 4. Portmanteau ship name
-                self.assertIn("<dc:subject>Relationship -- Dramione</dc:subject>", opf_text)
+                self.assertIn("<dc:subject>Dramione</dc:subject>", opf_text)
                 # 5. Parent umbrella fandom
-                self.assertIn("<dc:subject>Fandom -- Marvel Cinematic Universe</dc:subject>", opf_text)
+                self.assertIn("<dc:subject>Marvel Cinematic Universe</dc:subject>", opf_text)
 
 
 if __name__ == "__main__":

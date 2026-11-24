@@ -201,7 +201,7 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 		if !ao3SeriesIDs.isEmpty {
 			AO3SeriesNavigator.invalidateWalk(feedID: article.feedID, ao3SeriesIDs: ao3SeriesIDs)
 		}
-		return downloadIfNeeded(workID: workID, articleID: article.articleID, accountID: article.accountID, feedID: article.feedID, priority: .interactive)
+		return downloadIfNeeded(workID: workID, articleID: article.articleID, accountID: article.accountID, feedID: article.feedID, priority: .interactive, isUpdateCheck: true)
 	}
 
 }
@@ -258,7 +258,7 @@ nonisolated extension AO3ChapterFetcher {
 	/// Returns whether a request actually started: false when the 60-second
 	/// floor swallowed the attempt.
 	@discardableResult
-	private func downloadIfNeeded(workID: String, articleID: String, accountID: String, feedID: String, priority: Priority) -> Bool {
+	private func downloadIfNeeded(workID: String, articleID: String, accountID: String, feedID: String, priority: Priority, isUpdateCheck: Bool = false) -> Bool {
 		let shouldDownload = attemptDates.withLock { dates in
 			let currentDate = Date()
 			if let attemptDate = dates[articleID], attemptDate > currentDate.addingTimeInterval(-Self.secondsBetweenAttempts) {
@@ -269,9 +269,152 @@ nonisolated extension AO3ChapterFetcher {
 		}
 
 		if shouldDownload {
-			download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
+			if isUpdateCheck {
+				downloadWithUpdateGate(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
+			} else {
+				download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
+			}
 		}
 		return shouldDownload
+	}
+
+	/// Two-Step WIP Update Detection:
+	/// Step 1: Fetches Page 1 / Preface metadata (~30 KB) without view_full_work=true.
+	/// Compares chapter count, dateModified, and isComplete against the stored article.
+	/// If nothing has changed, updates metadata and marks the check complete without downloading full work HTML.
+	/// Step 2: If new chapters or modified dates are detected, executes a full monolithic download.
+	internal func downloadWithUpdateGate(workID: String, articleID: String, accountID: String, feedID: String, priority: Priority = .interactive) {
+		guard let page1URL = AO3Link.workURL(id: workID, fullWork: false, adultView: true) else {
+			download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
+			return
+		}
+
+		Task { @MainActor in
+			let activityLog = ActivityLog.shared
+			let kind = ActivityKind.fetchAO3Chapter(workID: workID)
+			let interactive = priority == .interactive
+
+			activityLog.createActivity(owner: .ao3ChapterFetcher, kind: kind, detail: nil)
+			activityLog.didStart(.ao3ChapterFetcher, kind: kind)
+
+			guard let account = AccountManager.shared.existingAccount(accountID: accountID),
+			      let article = (await account.fetchArticlesAsync(.articleIDs([articleID]))).first else {
+				self.download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
+				return
+			}
+
+			// If the work has no stored content yet, skip the gate and do full fetch directly
+			guard article.contentHTML != nil else {
+				self.download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
+				return
+			}
+
+			activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "Checking work header metadata...")
+
+			let fetchResult: AO3WorkPageFetch
+			if AO3SessionStore.isSignedIn {
+				fetchResult = await AO3RetryPolicy.perform(interactive: interactive, url: page1URL) {
+					try await Self.authenticatedFetch(url: page1URL)
+				}
+			} else {
+				fetchResult = await AO3RetryPolicy.perform(interactive: interactive, url: page1URL) {
+					try await Self.anonymousFetch(url: page1URL)
+				}
+			}
+
+			guard case .success = fetchResult.result,
+			      let data = fetchResult.data,
+			      let html = String(data: data, encoding: .utf8),
+			      let metadata = AO3ChapterHTMLExtractor.extractLightweightMetadata(fromWorkPageHTML: html) else {
+				// Fall through to full work download on gate failure, challenge, or unparseable page
+				self.download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
+				return
+			}
+
+			// Compare metadata against existing article:
+			let existingTotal = article.chapterTotal
+			let newTotal = metadata.chapterTotal
+			let existingCurrent = article.chapterCurrent
+			let newCurrent = metadata.chapterCurrent
+
+			let hasNewChapter: Bool = {
+				if let newTotal, let existingTotal, newTotal > existingTotal { return true }
+				if let newCurrent, let existingCurrent, newCurrent > existingCurrent { return true }
+				return false
+			}()
+
+			let hasNewerDate: Bool = {
+				guard let newMod = metadata.dateModified, let existingMod = article.dateModified else { return false }
+				return newMod > existingMod
+			}()
+
+			let completionChanged = (metadata.isComplete != nil && metadata.isComplete != article.isComplete)
+			let wordCountGrew = (metadata.wordCount != nil && article.wordCount != nil && metadata.wordCount! > article.wordCount!)
+
+			if hasNewChapter || hasNewerDate || completionChanged || wordCountGrew {
+				// New content detected -- proceed to Step 2: full work download
+				activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "New chapter/updates detected -- downloading full work...")
+				self.download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
+			} else {
+				// Up to date! Update metadata & stats without downloading chapter bodies
+				let additionalTags: Set<String>? = {
+					if !metadata.additionalTags.isEmpty {
+						return Set(metadata.additionalTags)
+					}
+					if let existing = article.additionalTags {
+						return Set(existing)
+					}
+					return nil
+				}()
+
+				let updatedItem = ParsedItem(
+					syncServiceID: article.articleID,
+					uniqueID: article.uniqueID,
+					feedURL: article.feedID,
+					url: article.rawLink ?? "https://archiveofourown.org/works/\(workID)",
+					externalURL: article.rawExternalLink,
+					title: metadata.title ?? article.title,
+					language: nil,
+					contentHTML: nil, // Retains existing contentHTML
+					contentText: nil,
+					markdown: nil,
+					summary: metadata.summary ?? article.summary,
+					imageURL: article.rawImageLink,
+					bannerImageURL: nil,
+					datePublished: metadata.datePublished ?? article.datePublished,
+					dateModified: metadata.dateModified ?? article.dateModified,
+					authors: nil,
+					tags: additionalTags,
+					attachments: nil,
+					isAmbrosiaItem: article.isAmbrosiaItem,
+					wordCount: metadata.wordCount ?? article.wordCount,
+					chapterCurrent: metadata.chapterCurrent ?? article.chapterCurrent,
+					chapterTotal: metadata.chapterTotal ?? article.chapterTotal,
+					isComplete: metadata.isComplete ?? article.isComplete,
+					fandoms: metadata.fandoms.isEmpty ? article.fandoms : metadata.fandoms,
+					relationships: metadata.relationships.isEmpty ? article.relationships : metadata.relationships,
+					characters: metadata.characters.isEmpty ? article.characters : metadata.characters,
+					ratings: metadata.ratings.isEmpty ? article.ratings : metadata.ratings,
+					warnings: metadata.warnings.isEmpty ? article.warnings : metadata.warnings,
+					categories: metadata.categories.isEmpty ? article.categories : metadata.categories,
+					series: nil,
+					commentCount: metadata.commentCount ?? article.commentCount,
+					kudosCount: metadata.kudosCount ?? article.kudosCount,
+					bookmarkCount: metadata.bookmarkCount ?? article.bookmarkCount,
+					hitCount: metadata.hitCount ?? article.hitCount,
+					isRestricted: metadata.isRestricted ?? article.isRestricted,
+					ao3Language: metadata.language ?? article.language,
+					collections: nil,
+					lastPrefaceFetchDate: Date(),
+					ao3WorkID: workID
+				)
+				_ = await account.updateAsync(feedID: article.feedID, parsedItems: [updatedItem], deleteOlder: false)
+				let currentChapterStr = article.chapterCurrent.map(String.init) ?? "1"
+				let totalChapterStr = article.chapterTotal.map(String.init) ?? "?"
+				activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: "Work is up to date (Ch. \(currentChapterStr)/\(totalChapterStr)) -- no new content", returnedFromCache: fetchResult.returnedFromCache)
+				self.failures.withLock { $0[articleID] = nil }
+			}
+		}
 	}
 
 	/// The shared fetch flow. Signed in: an authenticated attempt first,

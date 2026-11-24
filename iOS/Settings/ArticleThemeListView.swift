@@ -64,6 +64,7 @@ struct ArticleThemeListView: View {
 	@State private var justifyText: Bool
 	@State private var useCustomHyphenate: Bool
 	@State private var hyphenate: Bool
+	@State private var hideAuthorStyle: Bool
 
 	@State private var useCustomTextColor: Bool
 	@State private var textColor: Color
@@ -133,6 +134,7 @@ struct ArticleThemeListView: View {
 
 		_useCustomHyphenate = State(initialValue: overrides.hyphenate != nil)
 		_hyphenate = State(initialValue: overrides.hyphenate ?? false)
+		_hideAuthorStyle = State(initialValue: overrides.hideAuthorStyle ?? false)
 
 		// Seeded from the theme's own colors (not `.primary`/`.accentColor`/`systemBackground`)
 		// so that turning a custom-color toggle on doesn't itself change anything visually --
@@ -518,10 +520,14 @@ struct ArticleThemeListView: View {
 					Text("Hyphenate", comment: "Hyphenate toggle")
 				}
 			}
+
+			Toggle(isOn: $hideAuthorStyle) {
+				Text("Hide Creator's Style", comment: "Hide Creator's Style toggle")
+			}
 		} header: {
 			Text("Typography & Text Layout", comment: "Typography & Text Layout section header")
 		} footer: {
-			Text("Reading Font applies to the work text. Interface Font applies to the byline, dateline, and other chrome. Margin below 20px may run edge-to-edge.", comment: "Typography and Layout section footer")
+			Text("Reading Font applies to the work text. Interface Font applies to the byline, dateline, and other chrome. Margin below 20px may run edge-to-edge. Hide Creator's Style suppresses custom author fonts, colors, and layout skins on AO3 works.", comment: "Typography and Layout section footer")
 		}
 	}
 
@@ -620,6 +626,7 @@ struct ArticleThemeListView: View {
 			marginTop: useCustomMargins ? marginTop : nil,
 			justifyText: useCustomJustifyText ? justifyText : nil,
 			hyphenate: useCustomHyphenate ? hyphenate : nil,
+			hideAuthorStyle: hideAuthorStyle ? true : nil,
 			textColorHex: useCustomTextColor ? textColor.hexString : nil,
 			textColorDarkHex: useCustomTextColor ? textColorDark.hexString : nil,
 			backgroundColorHex: useCustomBackgroundColor ? backgroundColor.hexString : nil,
@@ -669,6 +676,7 @@ struct ArticleThemeListView: View {
 		marginTop = 0
 		justifyText = false
 		hyphenate = false
+		hideAuthorStyle = false
 		textColor = Color(themeColors.textColor)
 		textColorDark = Color(themeColors.textColorDark)
 		backgroundColor = Color(themeColors.backgroundColor)

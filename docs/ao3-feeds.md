@@ -228,6 +228,17 @@ metadata+workskin unit, ready to store/render), `chapters:
 [AO3ExtractedChapter]` (id + title, document order, for table-of-contents
 UI only — chapter content itself lives in `contentHTML`, not per-chapter),
 the four live stat counts (`commentCount`/`kudosCount`/`bookmarkCount`/
+
+### Lightweight metadata extraction (`AO3LightweightMetadata`)
+
+For batch link imports where full chapter prose must never be scraped or downloaded in bulk, `AO3ChapterHTMLExtractor.extractLightweightMetadata(fromWorkPageHTML:)` parses `<dl class="work meta group">` and `<div class="preface group">` on Page 1 / Preface without `view_full_work=true`.
+
+It produces `AO3LightweightMetadata`:
+- Title, authors, fandoms, relationships, characters, rating, archive warnings, categories, additional tags, language, series, collections
+- Summary (from `<div class="summary">`)
+- Chapter counts: `chapterCurrent`, `chapterTotal`, `isComplete`
+- Stat counts: `wordCount`, `commentCount`, `kudosCount`, `bookmarkCount`, `hitCount`, `datePublished`, `dateUpdated`
+- Full chapter prose is omitted (`contentHTML` is not generated or stored).
 `hitCount`, each independently nilable — Comments and Bookmarks rows are
 known to sometimes be absent even on a normal page), a `wordCount` distinct
 from `Article.wordCount` (this one exists purely to feed

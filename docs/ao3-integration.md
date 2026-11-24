@@ -429,6 +429,18 @@ suite drifting out of sync with it.
 The shared AO3 extraction and independent authenticated-request utilities are
 owned by `Modules/AO3Kit`. Account retains persistence-coupled orchestration.
 
+## Batch work import pacing (`AO3ImportMetadataQueue`)
+
+When users paste AO3 links via `Account.importAO3Links(_:destination:)` and `AO3LinkListImportView.swift`, Nectar immediately creates synthetic stubs under `Account.importedLinksFeedURL` (`nectar-import://pasted-ao3-links`) titled `"AO3 Work <ID>"`.
+
+To populate these stubs with rich metadata without stressing OTW servers or violating archive etiquette:
+- **Lightweight Page 1 / Preface Requests**: Requests are made to `https://archiveofourown.org/works/<workID>?view_adult=true` WITHOUT `view_full_work=true`. This avoids multi-chapter MySQL `MEDIUMTEXT` content selects and hits Memcached fragment caches on the OTW backend.
+- **Zero Full-Text Scraping**: Full chapter text is never scraped or downloaded during batch imports (`contentHTML` remains `nil` in the SQLite database).
+- **Serialized 1-Slot Queue with 3.0-Second Pacing**: `AO3ImportMetadataQueue` maintains a serialized FIFO queue with a strict default 3.0-second pause between consecutive requests (`defaultDelayBetweenRequests = 3.0`).
+- **429 Rate Limit Cooldown**: Hooks into shared cooldown state (`AO3RateLimit.activeResumeDate()`). If a 429 response is encountered, `AO3ImportMetadataQueue` records the cooldown and suspends draining until the cooldown has expired.
+- **Progress Reporting**: Posts `AO3ImportMetadataQueue.progressNotification` with `progressCompletedKey` and `progressTotalKey`, powering live progress display and a "Continue in Background" affordance in `AO3LinkListImportView`.
+- **Database Persistence**: Updates the placeholder article record in SQLite with metadata (title, author, fandom, tags, summary, chapter counts, stats) and stamps `lastPrefaceFetchDate = Date()`.
+
 ## Schema 6: confirmed-missing reset
 
 `ArticlesDatabase` schema version 6 runs

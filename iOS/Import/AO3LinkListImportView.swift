@@ -29,6 +29,7 @@ struct AO3LinkListImportView: View {
 	@State private var isImporting = false
 	@State private var resultMessage: String?
 	@State private var importSummary: ImportSummary?
+	@State private var metadataProgress: (completed: Int, total: Int, isDraining: Bool)?
 
 	/// What a successful import reports back on this sheet, in place of closing
 	/// it immediately, so the person sees how many works landed and can jump to them.
@@ -184,10 +185,31 @@ struct AO3LinkListImportView: View {
 							Text(String(format: NSLocalizedString("%d already imported.", comment: "Pasted AO3 link-list import: how many pasted works were imported before"), importSummary.alreadyImportedCount))
 								.foregroundStyle(.secondary)
 						}
+						if let progress = metadataProgress, progress.total > 0 {
+							if progress.isDraining {
+								VStack(alignment: .leading, spacing: 6) {
+									Text(String(format: NSLocalizedString("Fetching metadata: %d of %d…", comment: "Pasted AO3 link-list import: live metadata fetch progress"), progress.completed, progress.total))
+										.font(.subheadline)
+										.foregroundStyle(.secondary)
+									ProgressView(value: Double(progress.completed), total: Double(progress.total))
+								}
+								.padding(.vertical, 4)
+							} else if progress.completed >= progress.total {
+								Text(NSLocalizedString("Metadata fetch complete.", comment: "Pasted AO3 link-list import: metadata fetch finished"))
+									.font(.subheadline)
+									.foregroundStyle(.secondary)
+							}
+						}
 						if let feed = importSummary.feed {
 							Button(NSLocalizedString("Open Imported Links", comment: "Pasted AO3 link-list import: go to the feed the works landed in")) {
 								showImportedFeed(feed)
 							}
+						}
+						if metadataProgress?.isDraining == true {
+							Button(NSLocalizedString("Continue in Background", comment: "Dismiss sheet while metadata fetches in background")) {
+								dismiss()
+							}
+							.foregroundStyle(.secondary)
 						}
 					}
 				} else if let resultMessage {
@@ -222,6 +244,15 @@ struct AO3LinkListImportView: View {
 				if selectedAccount == nil {
 					selectedAccount = accounts.first
 				}
+			}
+			.onReceive(NotificationCenter.default.publisher(for: AO3ImportMetadataQueue.progressNotification)) { notification in
+				guard let userInfo = notification.userInfo,
+				      let completed = userInfo[AO3ImportMetadataQueue.progressCompletedKey] as? Int,
+				      let total = userInfo[AO3ImportMetadataQueue.progressTotalKey] as? Int,
+				      let isDraining = userInfo[AO3ImportMetadataQueue.progressIsDrainingKey] as? Bool else {
+					return
+				}
+				metadataProgress = (completed, total, isDraining)
 			}
 			.onChange(of: pastedText) { _ in
 				// A result describes the text that produced it. Editing or
@@ -361,6 +392,10 @@ struct AO3LinkListImportView: View {
 			} else {
 				resultMessage = nil
 				importSummary = ImportSummary(newCount: result.newCount, alreadyImportedCount: result.recognizedCount - result.newCount, feed: result.feed)
+				let completed = await AO3ImportMetadataQueue.shared.completedCount
+				let total = await AO3ImportMetadataQueue.shared.totalCount
+				let isDraining = await AO3ImportMetadataQueue.shared.isDraining
+				metadataProgress = (completed, total, isDraining)
 			}
 		}
 	}

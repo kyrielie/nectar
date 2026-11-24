@@ -1,69 +1,184 @@
-#!/bin/sh
+#!/usr/bin/env bash
+# ==============================================================================
+# test.sh — Run Nectar's test suite and SwiftLint locally
+#
+# Mirrors the local testing workflow used across the suite (same as Ambrosia).
+#
+# Usage:
+#   ./test.sh                     Run SwiftLint + full unit test suite (Nectar-CI)
+#   ./test.sh --no-lint           Skip SwiftLint, run unit tests only
+#   ./test.sh --lint-only         Run SwiftLint only, skip tests
+#   ./test.sh --filter PATTERN    Run only tests matching PATTERN
+#                                  (e.g. AO3KitTests/AO3LinkTests)
+#   ./test.sh -q | --quiet        Suppress verbose output; print pass/fail summary
+#   ./test.sh performance         Run XCTest measure tests (Nectar-Performance plan)
+#   ./test.sh screenshots         Run screenshot UI tests (resets app container first)
+#   ./test.sh screenshots-debug   Run screenshot UI tests with full log and result bundle
+#   ./test.sh -h | --help         Show this message
+# ==============================================================================
 
-set -e
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")"
 
-# The app-under-test seeds demo data additively (UITestDemoData.seedIfNeeded
-# imports the OPML and never clears the account), and the account folder is
-# loaded in AccountManager.init() before seeding runs. A container left over
-# from an earlier run can therefore be stale or corrupt, which shows up as an
-# empty timeline followed by a crash. Uninstalling the app wipes its container
-# (accounts, databases, annotations) without resetting the whole simulator.
+PROJECT="NetNewsWire.xcodeproj"
+SCHEME="Nectar-iOS"
+DESTINATION="platform=iOS Simulator,name=iPhone 17"
+XCCONFIG=".github/ios-ci-no-signing.xcconfig"
+TEST_PLAN="Nectar-CI"
+
+RUN_LINT=1
+RUN_TESTS=1
+QUIET=0
+FILTER=""
+MODE="ci"
+
+# Reset app container for UI tests
 reset_app_container() {
-  # Fails harmlessly if no simulator is booted or the app is not installed.
   xcrun simctl uninstall booted com.kyrielie.nectar >/dev/null 2>&1 || true
 }
 
-case "${1:-}" in
-  "")
-    xcodebuild -project NetNewsWire.xcodeproj -scheme Nectar-iOS \
-      -testPlan Nectar-CI \
-      -xcconfig .github/ios-ci-no-signing.xcconfig \
-      -destination 'platform=iOS Simulator,name=iPhone 17' \
-      test
-    ;;
-  performance)
-    # The XCTest `measure` tests (RSParser, RSCore). They are skipped in the
-    # Nectar-CI plan and run only from the Nectar-Performance plan, on demand.
-    xcodebuild -project NetNewsWire.xcodeproj -scheme Nectar-iOS \
-      -testPlan Nectar-Performance \
-      -xcconfig .github/ios-ci-no-signing.xcconfig \
-      -destination 'platform=iOS Simulator,name=iPhone 17' \
-      test
-    ;;
-  screenshots)
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --no-lint)
+      RUN_LINT=0
+      shift
+      ;;
+    --lint-only)
+      RUN_TESTS=0
+      shift
+      ;;
+    --filter)
+      FILTER="${2:?--filter requires a PATTERN argument}"
+      shift 2
+      ;;
+    -q|--quiet)
+      QUIET=1
+      shift
+      ;;
+    performance)
+      MODE="performance"
+      TEST_PLAN="Nectar-Performance"
+      shift
+      ;;
+    screenshots)
+      MODE="screenshots"
+      RUN_LINT=0
+      shift
+      ;;
+    screenshots-debug)
+      MODE="screenshots-debug"
+      RUN_LINT=0
+      shift
+      ;;
+    -h|--help)
+      sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      echo "Run './test.sh --help' for usage." >&2
+      exit 1
+      ;;
+  esac
+done
+
+status=0
+
+# Step 1: SwiftLint
+if [[ "$RUN_LINT" -eq 1 ]]; then
+  if command -v swiftlint >/dev/null 2>&1; then
+    echo "==> Running SwiftLint (swiftlint lint --strict)"
+    if ! swiftlint lint --strict; then
+      echo "==> SwiftLint failed" >&2
+      status=1
+    else
+      echo "==> SwiftLint passed"
+    fi
+  else
+    echo "==> SwiftLint not installed, skipping (install with: brew install swiftlint)" >&2
+  fi
+fi
+
+if [[ "$status" -ne 0 ]]; then
+  echo "==> Lint failed. Aborting tests." >&2
+  exit "$status"
+fi
+
+# Step 2: Tests
+if [[ "$RUN_TESTS" -eq 1 ]]; then
+  if [[ "$MODE" == "screenshots" ]]; then
+    echo "==> Running screenshot UI tests (resetting container first)..."
     reset_app_container
-    xcodebuild -project NetNewsWire.xcodeproj -scheme Nectar-iOSUITests \
-      -only-testing:Nectar-iOSUITests/NectarUITests/testTakeScreenshots \
-      -xcconfig .github/ios-ci-no-signing.xcconfig \
-      -destination 'platform=iOS Simulator,name=iPhone 17' \
+    xcodebuild_args=(
+      -project "$PROJECT"
+      -scheme "Nectar-iOSUITests"
+      -only-testing:Nectar-iOSUITests/NectarUITests/testTakeScreenshots
+      -xcconfig "$XCCONFIG"
+      -destination "$DESTINATION"
       test
-    ;;
-  screenshots-debug)
-    # Same test, but with a fixed, freshly-cleared result bundle path and a
-    # full log saved to disk. Afterwards:
-    #   ./results.sh build/ui-test.xcresult
-    #   grep '\[NectarUITest\]' build/ui-test.log
+    )
+  elif [[ "$MODE" == "screenshots-debug" ]]; then
+    echo "==> Running screenshot UI tests with debug log..."
     reset_app_container
     mkdir -p build
     rm -rf build/ui-test.xcresult
-    # No `pipefail` in POSIX sh, and `$?` after a pipe is tee's status, so
-    # write the log via redirection and tail it instead of piping.
     set +e
-    xcodebuild -project NetNewsWire.xcodeproj -scheme Nectar-iOSUITests \
+    xcodebuild -project "$PROJECT" \
+      -scheme "Nectar-iOSUITests" \
       -only-testing:Nectar-iOSUITests/NectarUITests/testTakeScreenshots \
-      -xcconfig .github/ios-ci-no-signing.xcconfig \
-      -destination 'platform=iOS Simulator,name=iPhone 17' \
+      -xcconfig "$XCCONFIG" \
+      -destination "$DESTINATION" \
       -resultBundlePath build/ui-test.xcresult \
       test > build/ui-test.log 2>&1
-    status=$?
+    test_status=$?
     tail -n 40 build/ui-test.log
     echo
     echo "--- [NectarUITest] lines ---"
-    grep '\[NectarUITest\]' build/ui-test.log
-    exit "$status"
-    ;;
-  *)
-    echo "Usage: $0 [performance|screenshots|screenshots-debug]" >&2
-    exit 2
-    ;;
-esac
+    grep '\[NectarUITest\]' build/ui-test.log || true
+    exit "$test_status"
+  else
+    echo "==> Running tests ($TEST_PLAN on $DESTINATION)..."
+    xcodebuild_args=(
+      -project "$PROJECT"
+      -scheme "$SCHEME"
+      -testPlan "$TEST_PLAN"
+      -xcconfig "$XCCONFIG"
+      -destination "$DESTINATION"
+      test
+    )
+    if [[ -n "$FILTER" ]]; then
+      xcodebuild_args=(-only-testing:"$FILTER" "${xcodebuild_args[@]}")
+    fi
+  fi
+
+  set +e
+  if [[ "$QUIET" -eq 1 ]]; then
+    xcodebuild "${xcodebuild_args[@]}" >/tmp/nectar-test-output.log 2>&1
+    test_status=$?
+  elif command -v xcbeautify >/dev/null 2>&1; then
+    xcodebuild "${xcodebuild_args[@]}" 2>&1 | xcbeautify
+    test_status=${PIPESTATUS[0]}
+  else
+    xcodebuild "${xcodebuild_args[@]}"
+    test_status=$?
+  fi
+  set -e
+
+  if [[ "$test_status" -ne 0 ]]; then
+    status=1
+    echo "==> Tests failed (exit $test_status)" >&2
+    if [[ "$QUIET" -eq 1 ]]; then
+      echo "    Full output: /tmp/nectar-test-output.log" >&2
+    fi
+  else
+    echo "==> Tests passed"
+  fi
+fi
+
+if [[ "$status" -eq 0 ]]; then
+  echo "==> All checks passed"
+else
+  echo "==> One or more checks failed" >&2
+fi
+
+exit "$status"
