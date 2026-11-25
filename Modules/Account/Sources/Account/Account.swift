@@ -997,6 +997,17 @@ public enum FetchType {
 		}
 	}
 
+	public func fetchArticlesOrderedAsync(_ fetchType: FetchType) async -> [Article]? {
+		switch fetchType {
+		case .search(let searchString):
+			return await database.fetchArticlesMatchingOrderedAsync(searchString: searchString, feedIDs: flattenedFeedsIDs)
+		case .searchWithArticleIDs(let searchString, let articleIDs):
+			return await database.fetchArticlesMatchingWithArticleIDsOrderedAsync(searchString: searchString, articleIDs: articleIDs)
+		default:
+			return nil
+		}
+	}
+
 	/// Account-wide, no feed/folder scoping -- deliberately not a
 	/// `FetchType` case: every existing case is a feed/folder/status
 	/// view a person can actually navigate to, while this is a narrower,

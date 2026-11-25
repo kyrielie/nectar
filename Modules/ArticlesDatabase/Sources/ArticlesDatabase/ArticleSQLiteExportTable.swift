@@ -86,10 +86,9 @@ enum ArticleSQLiteExportTable {
 
 		var articlesWhereClause = ""
 		var articlesArgs = [Any]()
-		if let feedIDs, !feedIDs.isEmpty {
-			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))!
-			articlesWhereClause = "WHERE feedID IN \(placeholders)"
-			articlesArgs = Array(feedIDs)
+		if let feedIDs, let filter = SQLiteIDList.clause(column: "feedID", strings: feedIDs) {
+			articlesWhereClause = "WHERE \(filter.sql)"
+			articlesArgs = [filter.parameter]
 		}
 
 		let createArticlesSQL = """

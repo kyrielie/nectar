@@ -647,6 +647,7 @@
 			unwrapAnnotation(root, annotation.annotationID);
 		});
 
+		var renderedHighlights = [];
 		annotations.forEach(function (annotation) {
 			var effectiveRoot = document.querySelector(annotation.rootSelector || rootSelector) || root;
 			var index = buildTextIndex(effectiveRoot);
@@ -665,6 +666,7 @@
 				if (editRange) {
 					if (annotation.hasHighlight) {
 						wrapDOMRange(editRange, annotation.annotationID, annotation.color);
+						renderedHighlights.push({ id: annotation.annotationID, start: startOffset, end: endOffset });
 					} else {
 						// No highlight color to draw, but still needs a
 						// real, tappable node -- see wrapEditOnlyDOMRange
@@ -675,6 +677,7 @@
 				}
 			} else {
 				wrapRange(index.entries, startOffset, endOffset, annotation.annotationID, annotation.color);
+				renderedHighlights.push({ id: annotation.annotationID, start: startOffset, end: endOffset });
 			}
 
 			if (resolution.status === "reanchored") {
@@ -690,6 +693,26 @@
 					chapterTitle: nearestChapterTitle(headingIndex, startOffset)
 				});
 			}
+		});
+
+		// Longest-first overlap detection (matches Ambrosia's HighlightBridge):
+		// inner overlapping highlights render as a 2px colored underline instead
+		// of masking the outer highlight's background fill.
+		renderedHighlights.sort(function (a, b) {
+			return (b.end - b.start) - (a.end - a.start);
+		});
+		var placedRanges = [];
+		renderedHighlights.forEach(function (item) {
+			var overlaps = placedRanges.some(function (r) {
+				return item.start < r.end && item.end > r.start;
+			});
+			if (overlaps) {
+				var marks = root.querySelectorAll('mark.nnw-highlight[data-annotation-id="' + item.id + '"]');
+				for (var mi = 0; mi < marks.length; mi++) {
+					marks[mi].setAttribute("data-overlap", "underline");
+				}
+			}
+			placedRanges.push(item);
 		});
 
 		return report;

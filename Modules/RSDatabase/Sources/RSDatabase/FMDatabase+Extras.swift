@@ -7,9 +7,47 @@
 
 import Foundation
 import RSDatabaseObjC
+import SQLite3
 import os
 
+/// Thread-safe cancellation token checked by SQLite's `sqlite3_progress_handler`.
+public final class SQLiteCancellationToken: Sendable {
+	private let cancelled = OSAllocatedUnfairLock(initialState: false)
+
+	public init() {}
+
+	public func cancel() {
+		cancelled.withLock { $0 = true }
+	}
+
+	public var isCancelled: Bool {
+		cancelled.withLock { $0 }
+	}
+}
+
 public extension FMDatabase {
+
+	/// Installs a `sqlite3_progress_handler` for the duration of `block` so
+	/// long-running SQLite queries abort with `SQLITE_INTERRUPT` when `token`
+	/// is cancelled.
+	func withProgressCancellation<T>(_ token: SQLiteCancellationToken?, _ block: () -> T) -> T {
+		guard let token, let rawHandle = sqliteHandle() else {
+			return block()
+		}
+		let handle = OpaquePointer(rawHandle)
+		let pointer = Unmanaged.passUnretained(token).toOpaque()
+		sqlite3_progress_handler(handle, 500, { ctx in
+			guard let ctx else {
+				return 0
+			}
+			let token = Unmanaged<SQLiteCancellationToken>.fromOpaque(ctx).takeUnretainedValue()
+			return token.isCancelled ? 1 : 0
+		}, pointer)
+		defer {
+			sqlite3_progress_handler(handle, 0, nil, nil)
+		}
+		return block()
+	}
 
 	static func openAndSetUpDatabase(path: String) -> FMDatabase {
 		let database = FMDatabase(path: path)!
@@ -19,6 +57,7 @@ public extension FMDatabase {
 		// and produces extra -wal/-shm files that bloat on disk.
 		database.executeStatements("PRAGMA journal_mode = DELETE;")
 		database.executeStatements("PRAGMA synchronous = 1;")
+		database.executeStatements("PRAGMA busy_timeout = 5000;")
 		database.setShouldCacheStatements(true)
 
 		return database

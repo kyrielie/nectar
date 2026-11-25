@@ -170,6 +170,7 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 
 	// MARK: Private Constants
 	private let searchController = UISearchController(searchResultsController: nil)
+	private var searchDebounceTask: Task<Void, Never>?
 	private let keyboardManager = KeyboardManager(type: .timeline)
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "MainTimelineModernViewController")
 
@@ -1579,6 +1580,8 @@ extension MainTimelineModernViewController: UISearchControllerDelegate {
 	}
 
 	func willDismissSearchController(_ searchController: UISearchController) {
+		searchDebounceTask?.cancel()
+		searchDebounceTask = nil
 		coordinator?.endSearching()
 		searchController.searchBar.showsScopeBar = false
 		// Async to avoid an iOS 26 UINavigationBar crash during the search-bar dismissal transition.
@@ -1592,16 +1595,29 @@ extension MainTimelineModernViewController: UISearchControllerDelegate {
 extension MainTimelineModernViewController: UISearchResultsUpdating {
 
 	func updateSearchResults(for searchController: UISearchController) {
-		let searchScope = SearchScope(rawValue: searchController.searchBar.selectedScopeButtonIndex)!
-		searchArticles(searchController.searchBar.text!, searchScope)
+		searchDebounceTask?.cancel()
+		let query = searchController.searchBar.text ?? ""
+		let searchScope = SearchScope(rawValue: searchController.searchBar.selectedScopeButtonIndex) ?? .timeline
+		if query.count < 3 {
+			searchArticles(query, searchScope)
+			return
+		}
+		searchDebounceTask = Task { @MainActor [weak self] in
+			try? await Task.sleep(nanoseconds: 150_000_000)
+			guard !Task.isCancelled, let self else {
+				return
+			}
+			self.searchArticles(query, searchScope)
+		}
 	}
 
 }
 
 extension MainTimelineModernViewController: UISearchBarDelegate {
 	func searchBar(_ searchBar: UISearchBar, selectedScopeButtonIndexDidChange selectedScope: Int) {
-		let searchScope = SearchScope(rawValue: selectedScope)!
-		searchArticles(searchBar.text!, searchScope)
+		searchDebounceTask?.cancel()
+		let searchScope = SearchScope(rawValue: selectedScope) ?? .timeline
+		searchArticles(searchBar.text ?? "", searchScope)
 	}
 }
 

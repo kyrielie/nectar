@@ -117,13 +117,11 @@ private extension AuthorsSchemaMigration {
 	}
 
 	func fetchAuthorsByArticleID(_ articleIDs: Set<String>, database: FMDatabase) -> [String: Set<Author>] {
-		guard !articleIDs.isEmpty,
-		      let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(articleIDs.count)) else {
+		guard let filter = SQLiteIDList.clause(column: "lookup.articleID", strings: articleIDs) else {
 			return [:]
 		}
-		let sql = "select lookup.articleID, authors.authorID, authors.name, authors.url, authors.avatarURL, authors.emailAddress from authorsLookup lookup inner join authors on authors.authorID = lookup.authorID where lookup.articleID in \(placeholders);"
-		let parameters = Array(articleIDs) as [Any]
-		guard let resultSet = database.executeQuery(sql, withArgumentsIn: parameters) else {
+		let sql = "select lookup.articleID, authors.authorID, authors.name, authors.url, authors.avatarURL, authors.emailAddress from authorsLookup lookup inner join authors on authors.authorID = lookup.authorID where \(filter.sql);"
+		guard let resultSet = database.executeQuery(sql, withArgumentsIn: [filter.parameter]) else {
 			return [:]
 		}
 

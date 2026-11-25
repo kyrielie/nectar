@@ -54,6 +54,20 @@ public final class DatabaseQueue: Sendable {
 		}
 	}
 
+	/// Run a DatabaseBlock synchronously and return a `Sendable` result.
+	public func runInDatabaseSyncResult<T: Sendable>(_ databaseBlock: @Sendable (FMDatabase) -> T) -> T {
+		serialDispatchQueue.sync {
+			self.state.withLock { state in
+				precondition(!state.isCallingDatabase)
+				state.isCallingDatabase = true
+				defer { state.isCallingDatabase = false }
+				return autoreleasepool {
+					databaseBlock(state.database)
+				}
+			}
+		}
+	}
+
 	/// Run a DatabaseBlock asynchronously.
 	public func runInDatabase(_ databaseBlock: @escaping DatabaseBlock) {
 		serialDispatchQueue.async {
@@ -141,6 +155,7 @@ private extension DatabaseQueue {
 		// and produces extra -wal/-shm files that bloat on disk.
 		database.executeStatements("PRAGMA journal_mode = DELETE;")
 		database.executeStatements("PRAGMA synchronous = 1;")
+		database.executeStatements("PRAGMA busy_timeout = 5000;")
 		database.setShouldCacheStatements(true)
 	}
 }

@@ -33,6 +33,10 @@ struct SearchTimelineFeedDelegate: SmartFeedDelegate {
 		self.fetchType = .searchWithArticleIDs(searchString, articleIDs)
 	}
 
+	func fetchArticlesOrderedAsync() async -> [Article]? {
+		await AccountManager.shared.fetchArticlesOrderedAsync(fetchType)
+	}
+
 	func fetchUnreadCount(account: Account) async -> Int {
 		// TODO: after 5.0
 		0

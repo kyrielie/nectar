@@ -122,9 +122,6 @@ public struct ArticleAttentionInfo: Sendable {
 		self.retentionStyle = retentionStyle
 		self.accountID = accountID
 
-		queue.runInDatabaseSync { database in
-			database.executeStatements("PRAGMA trusted_schema = ON;")
-		}
 		queue.runCreateStatements(ArticlesDatabase.tableCreationStatements)
 		queue.runInDatabaseSync { database in
 			Self.logger.debug("ArticlesDatabase: checking schema version \(accountID, privacy: .public)")
@@ -654,18 +651,54 @@ public struct ArticleAttentionInfo: Sendable {
 	}
 
 	public func fetchArticlesMatchingAsync(searchString: String, feedIDs: Set<String>) async -> Set<Article> {
-		await withCheckedContinuation { continuation in
-			_fetchArticlesMatchingAsync(searchString: searchString, feedIDs: feedIDs) { articles in
-				continuation.resume(returning: articles)
+		let token = SQLiteCancellationToken()
+		return await withTaskCancellationHandler {
+			await withCheckedContinuation { continuation in
+				_fetchArticlesMatchingAsync(searchString: searchString, feedIDs: feedIDs, cancellationToken: token) { articles in
+					continuation.resume(returning: articles)
+				}
 			}
+		} onCancel: {
+			token.cancel()
 		}
 	}
 
 	public func fetchArticlesMatchingWithArticleIDsAsync(searchString: String, articleIDs: Set<String>) async -> Set<Article> {
-		await withCheckedContinuation { continuation in
-			_fetchArticlesMatchingWithArticleIDsAsync(searchString: searchString, articleIDs: articleIDs) { articles in
-				continuation.resume(returning: articles)
+		let token = SQLiteCancellationToken()
+		return await withTaskCancellationHandler {
+			await withCheckedContinuation { continuation in
+				_fetchArticlesMatchingWithArticleIDsAsync(searchString: searchString, articleIDs: articleIDs, cancellationToken: token) { articles in
+					continuation.resume(returning: articles)
+				}
 			}
+		} onCancel: {
+			token.cancel()
+		}
+	}
+
+	public func fetchArticlesMatchingOrderedAsync(searchString: String, feedIDs: Set<String>) async -> [Article] {
+		let token = SQLiteCancellationToken()
+		return await withTaskCancellationHandler {
+			await withCheckedContinuation { continuation in
+				articlesTable.fetchArticlesMatchingOrderedAsync(searchString, feedIDs, cancellationToken: token) { articles in
+					continuation.resume(returning: articles)
+				}
+			}
+		} onCancel: {
+			token.cancel()
+		}
+	}
+
+	public func fetchArticlesMatchingWithArticleIDsOrderedAsync(searchString: String, articleIDs: Set<String>) async -> [Article] {
+		let token = SQLiteCancellationToken()
+		return await withTaskCancellationHandler {
+			await withCheckedContinuation { continuation in
+				articlesTable.fetchArticlesMatchingWithArticleIDsOrderedAsync(searchString, articleIDs, cancellationToken: token) { articles in
+					continuation.resume(returning: articles)
+				}
+			}
+		} onCancel: {
+			token.cancel()
 		}
 	}
 
@@ -1199,14 +1232,14 @@ private extension ArticlesDatabase {
 		articlesTable.fetchReadArticlesAsync(feedIDs, limit, completion)
 	}
 
-	func _fetchArticlesMatchingAsync(searchString: String, feedIDs: Set<String>, _ completion: @escaping ArticleSetResultBlock) {
+	func _fetchArticlesMatchingAsync(searchString: String, feedIDs: Set<String>, cancellationToken: SQLiteCancellationToken? = nil, _ completion: @escaping ArticleSetResultBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		articlesTable.fetchArticlesMatchingAsync(searchString, feedIDs, completion)
+		articlesTable.fetchArticlesMatchingAsync(searchString, feedIDs, cancellationToken: cancellationToken, completion)
 	}
 
-	func _fetchArticlesMatchingWithArticleIDsAsync(searchString: String, articleIDs: Set<String>, _ completion: @escaping ArticleSetResultBlock) {
+	func _fetchArticlesMatchingWithArticleIDsAsync(searchString: String, articleIDs: Set<String>, cancellationToken: SQLiteCancellationToken? = nil, _ completion: @escaping ArticleSetResultBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		articlesTable.fetchArticlesMatchingWithArticleIDsAsync(searchString, articleIDs, completion)
+		articlesTable.fetchArticlesMatchingWithArticleIDsAsync(searchString, articleIDs, cancellationToken: cancellationToken, completion)
 	}
 
 	func _update(parsedItems: Set<ParsedItem>, feedID: String, deleteOlder: Bool, completion: @escaping UpdateArticlesCompletionBlock) {

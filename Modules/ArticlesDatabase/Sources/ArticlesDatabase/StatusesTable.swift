@@ -364,14 +364,11 @@ private extension StatusesTable {
 	// MARK: - Marking
 
 	func markArticleIDs(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ database: FMDatabase) {
-		guard !articleIDs.isEmpty else {
+		guard let filter = SQLiteIDList.clause(column: DatabaseKey.articleID, strings: articleIDs) else {
 			return
 		}
-		guard let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(articleIDs.count)) else {
-			return
-		}
-		let sql = "update statuses set \(statusKey.rawValue)=? where articleID in \(placeholders) and \(statusKey.rawValue)!=?;"
-		let parameters: [Any] = [flag] + Array(articleIDs) + [flag]
+		let sql = "update statuses set \(statusKey.rawValue)=? where \(filter.sql) and \(statusKey.rawValue)!=?;"
+		let parameters: [Any] = [flag, filter.parameter, flag]
 		database.executeUpdate(sql, withArgumentsIn: parameters)
 	}
 
@@ -379,12 +376,12 @@ private extension StatusesTable {
 
 	/// The statuses whose database rows disagree with them.
 	func staleStatuses(in statuses: [ArticleStatus], _ database: FMDatabase) -> Set<ArticleStatus> {
-		guard let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(statuses.count)) else {
+		let statusesByArticleID = Dictionary(statuses.map { ($0.articleID, $0) }, uniquingKeysWith: { first, _ in first })
+		guard let filter = SQLiteIDList.clause(column: DatabaseKey.articleID, strings: statusesByArticleID.keys) else {
 			return Set<ArticleStatus>()
 		}
-		let statusesByArticleID = Dictionary(statuses.map { ($0.articleID, $0) }, uniquingKeysWith: { first, _ in first })
-		let sql = "select articleID, read, starred from statuses where articleID in \(placeholders);"
-		guard let resultSet = database.executeQuery(sql, withArgumentsIn: statuses.map { $0.articleID }) else {
+		let sql = "select articleID, read, starred from statuses where \(filter.sql);"
+		guard let resultSet = database.executeQuery(sql, withArgumentsIn: [filter.parameter]) else {
 			return Set<ArticleStatus>()
 		}
 

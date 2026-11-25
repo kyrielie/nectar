@@ -27,7 +27,7 @@ enum FeedSettingsRestoreError: Error, CustomStringConvertible {
 }
 
 final class FeedSettingsDatabase: Sendable {
-	enum Column: String {
+	enum Column: String, Sendable {
 		case feedID
 		case homePageURL
 		case iconURL
@@ -50,7 +50,7 @@ final class FeedSettingsDatabase: Sendable {
 		case ao3SearchTotalPages
 	}
 
-	struct Row {
+	struct Row: Sendable {
 		let feedID: String
 		let homePageURL: String?
 		let iconURL: String?
@@ -73,15 +73,14 @@ final class FeedSettingsDatabase: Sendable {
 
 	let databasePath: String
 
-	nonisolated(unsafe) private let database: FMDatabase // Used on serial dispatch queue only
-	private let serialDispatchQueue: DispatchQueue
+	private let queue: DatabaseQueue
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "FeedSettingsDatabase")
 
 	init(databasePath: String) {
 		self.databasePath = databasePath
-		self.serialDispatchQueue = DispatchQueue(label: "FeedSettingsDatabase")
-		self.database = FMDatabase.openAndSetUpDatabase(path: databasePath)
-		serialDispatchQueue.sync { [database] in
+		let queue = DatabaseQueue(databasePath: databasePath)
+		self.queue = queue
+		queue.runInDatabaseSync { database in
 			database.runCreateStatements(Self.tableCreationStatements)
 			if !database.columnExists("lastResponseCode", inTableWithName: "feedSettings") {
 				database.executeStatements("ALTER TABLE feedSettings ADD COLUMN lastResponseCode INTEGER;")
@@ -101,23 +100,18 @@ final class FeedSettingsDatabase: Sendable {
 	}
 
 	func vacuum() async {
-		await withCheckedContinuation { continuation in
-			serialDispatchQueue.async {
-				self.database.vacuum()
-				continuation.resume()
-			}
-		}
+		await queue.vacuum()
 	}
 
 	func vacuumIfNeeded() {
-		serialDispatchQueue.async {
-			self.database.vacuumIfNeeded()
+		queue.runInDatabase { database in
+			database.vacuumIfNeeded()
 		}
 	}
 
 	var isEmpty: Bool {
-		serialDispatchQueue.sync {
-			guard let resultSet = self.database.executeQuery("SELECT 1 FROM feedSettings LIMIT 1;", withArgumentsIn: []) else {
+		queue.runInDatabaseSyncResult { database in
+			guard let resultSet = database.executeQuery("SELECT 1 FROM feedSettings LIMIT 1;", withArgumentsIn: []) else {
 				return true
 			}
 			defer {
@@ -130,8 +124,8 @@ final class FeedSettingsDatabase: Sendable {
 	// MARK: - Feed Existence
 
 	func ensureFeedExists(_ feedURL: String, feedID: String) {
-		serialDispatchQueue.async {
-			self.database.executeUpdate("INSERT OR IGNORE INTO feedSettings (feedURL, feedID) VALUES (?, ?);", withArgumentsIn: [feedURL, feedID])
+		queue.runInDatabase { database in
+			database.executeUpdate("INSERT OR IGNORE INTO feedSettings (feedURL, feedID) VALUES (?, ?);", withArgumentsIn: [feedURL, feedID])
 		}
 	}
 
@@ -141,8 +135,8 @@ final class FeedSettingsDatabase: Sendable {
 	/// address changes doesn't silently lose its settings, the way an unguarded
 	/// `deleteSettingsForFeedsNotIn` cleanup would.
 	func repointFeedURL(from oldFeedURL: String, to newFeedURL: String) {
-		serialDispatchQueue.async {
-			self.database.executeUpdate("UPDATE feedSettings SET feedURL = ? WHERE feedURL = ?;", withArgumentsIn: [newFeedURL, oldFeedURL])
+		queue.runInDatabase { database in
+			database.executeUpdate("UPDATE feedSettings SET feedURL = ? WHERE feedURL = ?;", withArgumentsIn: [newFeedURL, oldFeedURL])
 		}
 	}
 
@@ -155,16 +149,16 @@ final class FeedSettingsDatabase: Sendable {
 			dictionary[column.rawValue] = value
 		}
 		nonisolated(unsafe) let capturedDictionary = dictionary
-		serialDispatchQueue.async {
-			self.database.insertRow(capturedDictionary, insertType: .orReplace, tableName: "feedSettings")
+		queue.runInDatabase { database in
+			database.insertRow(capturedDictionary, insertType: .orReplace, tableName: "feedSettings")
 		}
 	}
 
 	// MARK: - Fetch Rows
 
 	func allRows() -> [String: Row] {
-		serialDispatchQueue.sync {
-			guard let resultSet = self.database.executeQuery("SELECT * FROM feedSettings;", withArgumentsIn: []) else {
+		queue.runInDatabaseSyncResult { database in
+			guard let resultSet = database.executeQuery("SELECT * FROM feedSettings;", withArgumentsIn: []) else {
 				return [:]
 			}
 			defer {
@@ -185,11 +179,11 @@ final class FeedSettingsDatabase: Sendable {
 
 	func setString(_ value: String?, for feedURL: String, column: Column) {
 		let name = column.rawValue
-		serialDispatchQueue.async {
+		queue.runInDatabase { database in
 			if let value {
-				self.database.executeUpdate("UPDATE feedSettings SET \(name) = ? WHERE feedURL = ?;", withArgumentsIn: [value, feedURL])
+				database.executeUpdate("UPDATE feedSettings SET \(name) = ? WHERE feedURL = ?;", withArgumentsIn: [value, feedURL])
 			} else {
-				self.database.executeUpdate("UPDATE feedSettings SET \(name) = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
+				database.executeUpdate("UPDATE feedSettings SET \(name) = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
 			}
 		}
 	}
@@ -198,8 +192,8 @@ final class FeedSettingsDatabase: Sendable {
 
 	func setBool(_ value: Bool, for feedURL: String, column: Column) {
 		let name = column.rawValue
-		serialDispatchQueue.async {
-			self.database.executeUpdate("UPDATE feedSettings SET \(name) = ? WHERE feedURL = ?;", withArgumentsIn: [value, feedURL])
+		queue.runInDatabase { database in
+			database.executeUpdate("UPDATE feedSettings SET \(name) = ? WHERE feedURL = ?;", withArgumentsIn: [value, feedURL])
 		}
 	}
 
@@ -207,11 +201,11 @@ final class FeedSettingsDatabase: Sendable {
 
 	func setInt(_ value: Int?, for feedURL: String, column: Column) {
 		let name = column.rawValue
-		serialDispatchQueue.async {
+		queue.runInDatabase { database in
 			if let value {
-				self.database.executeUpdate("UPDATE feedSettings SET \(name) = ? WHERE feedURL = ?;", withArgumentsIn: [value, feedURL])
+				database.executeUpdate("UPDATE feedSettings SET \(name) = ? WHERE feedURL = ?;", withArgumentsIn: [value, feedURL])
 			} else {
-				self.database.executeUpdate("UPDATE feedSettings SET \(name) = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
+				database.executeUpdate("UPDATE feedSettings SET \(name) = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
 			}
 		}
 	}
@@ -224,14 +218,14 @@ final class FeedSettingsDatabase: Sendable {
 	/// machinery because `Author` itself requires custom encoding.
 	func setSetOfInt(_ value: Set<Int>?, for feedURL: String, column: Column) {
 		let name = column.rawValue
-		serialDispatchQueue.async {
+		queue.runInDatabase { database in
 			if let value {
 				guard let data = try? JSONEncoder().encode(value), let jsonString = String(data: data, encoding: .utf8) else {
 					return
 				}
-				self.database.executeUpdate("UPDATE feedSettings SET \(name) = ? WHERE feedURL = ?;", withArgumentsIn: [jsonString, feedURL])
+				database.executeUpdate("UPDATE feedSettings SET \(name) = ? WHERE feedURL = ?;", withArgumentsIn: [jsonString, feedURL])
 			} else {
-				self.database.executeUpdate("UPDATE feedSettings SET \(name) = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
+				database.executeUpdate("UPDATE feedSettings SET \(name) = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
 			}
 		}
 	}
@@ -240,11 +234,11 @@ final class FeedSettingsDatabase: Sendable {
 
 	func setDate(_ value: Date?, for feedURL: String, column: Column) {
 		let name = column.rawValue
-		serialDispatchQueue.async {
+		queue.runInDatabase { database in
 			if let value {
-				self.database.executeUpdate("UPDATE feedSettings SET \(name) = ? WHERE feedURL = ?;", withArgumentsIn: [value.timeIntervalSinceReferenceDate, feedURL])
+				database.executeUpdate("UPDATE feedSettings SET \(name) = ? WHERE feedURL = ?;", withArgumentsIn: [value.timeIntervalSinceReferenceDate, feedURL])
 			} else {
-				self.database.executeUpdate("UPDATE feedSettings SET \(name) = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
+				database.executeUpdate("UPDATE feedSettings SET \(name) = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
 			}
 		}
 	}
@@ -252,44 +246,44 @@ final class FeedSettingsDatabase: Sendable {
 	// MARK: - Compound Types
 
 	func setConditionalGetInfo(_ info: HTTPConditionalGetInfo?, for feedURL: String) {
-		serialDispatchQueue.async {
+		queue.runInDatabase { database in
 			if let info {
-				self.database.executeUpdate("UPDATE feedSettings SET conditionalGetInfoLastModified = ?, conditionalGetInfoEtag = ? WHERE feedURL = ?;", withArgumentsIn: [info.lastModified as Any, info.etag as Any, feedURL])
+				database.executeUpdate("UPDATE feedSettings SET conditionalGetInfoLastModified = ?, conditionalGetInfoEtag = ? WHERE feedURL = ?;", withArgumentsIn: [info.lastModified as Any, info.etag as Any, feedURL])
 			} else {
-				self.database.executeUpdate("UPDATE feedSettings SET conditionalGetInfoLastModified = NULL, conditionalGetInfoEtag = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
+				database.executeUpdate("UPDATE feedSettings SET conditionalGetInfoLastModified = NULL, conditionalGetInfoEtag = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
 			}
 		}
 	}
 
 	func setCacheControlInfo(_ info: CacheControlInfo?, for feedURL: String) {
-		serialDispatchQueue.async {
+		queue.runInDatabase { database in
 			if let info {
-				self.database.executeUpdate("UPDATE feedSettings SET cacheControlInfoDateCreated = ?, cacheControlInfoMaxAge = ? WHERE feedURL = ?;", withArgumentsIn: [info.dateCreated.timeIntervalSinceReferenceDate, info.maxAge, feedURL])
+				database.executeUpdate("UPDATE feedSettings SET cacheControlInfoDateCreated = ?, cacheControlInfoMaxAge = ? WHERE feedURL = ?;", withArgumentsIn: [info.dateCreated.timeIntervalSinceReferenceDate, info.maxAge, feedURL])
 			} else {
-				self.database.executeUpdate("UPDATE feedSettings SET cacheControlInfoDateCreated = NULL, cacheControlInfoMaxAge = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
+				database.executeUpdate("UPDATE feedSettings SET cacheControlInfoDateCreated = NULL, cacheControlInfoMaxAge = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
 			}
 		}
 	}
 
 	func setAuthors(_ authors: Set<Author>?, for feedURL: String) {
-		serialDispatchQueue.async {
+		queue.runInDatabase { database in
 			if let authors {
 				let jsonString = authors.json()
-				self.database.executeUpdate("UPDATE feedSettings SET authors = ? WHERE feedURL = ?;", withArgumentsIn: [jsonString as Any, feedURL])
+				database.executeUpdate("UPDATE feedSettings SET authors = ? WHERE feedURL = ?;", withArgumentsIn: [jsonString as Any, feedURL])
 			} else {
-				self.database.executeUpdate("UPDATE feedSettings SET authors = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
+				database.executeUpdate("UPDATE feedSettings SET authors = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
 			}
 		}
 	}
 
 	func setFolderRelationship(_ relationship: [String: String]?, for feedURL: String) {
-		serialDispatchQueue.async {
+		queue.runInDatabase { database in
 			if let relationship {
 				if let data = try? JSONSerialization.data(withJSONObject: relationship), let jsonString = String(data: data, encoding: .utf8) {
-					self.database.executeUpdate("UPDATE feedSettings SET folderRelationship = ? WHERE feedURL = ?;", withArgumentsIn: [jsonString, feedURL])
+					database.executeUpdate("UPDATE feedSettings SET folderRelationship = ? WHERE feedURL = ?;", withArgumentsIn: [jsonString, feedURL])
 				}
 			} else {
-				self.database.executeUpdate("UPDATE feedSettings SET folderRelationship = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
+				database.executeUpdate("UPDATE feedSettings SET folderRelationship = NULL WHERE feedURL = ?;", withArgumentsIn: [feedURL])
 			}
 		}
 	}
@@ -297,8 +291,8 @@ final class FeedSettingsDatabase: Sendable {
 	// MARK: - Deletion
 
 	func deleteSettings(for feedURL: String) {
-		serialDispatchQueue.async {
-			self.database.executeUpdate("DELETE FROM feedSettings WHERE feedURL = ?;", withArgumentsIn: [feedURL])
+		queue.runInDatabase { database in
+			database.executeUpdate("DELETE FROM feedSettings WHERE feedURL = ?;", withArgumentsIn: [feedURL])
 		}
 	}
 
@@ -315,23 +309,19 @@ final class FeedSettingsDatabase: Sendable {
 	/// Mirrors `BackupSQLiteImportTable`'s ATTACH/BEGIN/DETACH ordering
 	/// exactly (see that file's extended comment on why DETACH must run only
 	/// after an explicit commit/rollback, not inside a deferred-COMMIT
-	/// block) -- this table doesn't have a `DatabaseQueue` wrapper the way
-	/// `ArticlesDatabase` does, so transaction control and DETACH are done
-	/// directly against `self.database` on `serialDispatchQueue`, the same
-	/// queue every other method on this type already confines its database
-	/// access to.
+	/// block).
 	func mergeFromBackup(atPath backupPath: String) async throws {
 		try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-			serialDispatchQueue.async {
+			queue.runInDatabase { database in
 				let attachedSchemaName = "feedSettings_restore"
 
-				guard self.database.executeUpdate("ATTACH DATABASE ? AS \(attachedSchemaName);", withArgumentsIn: [backupPath]) else {
-					continuation.resume(throwing: FeedSettingsRestoreError.attachFailed(self.database.lastErrorMessage() ?? "unknown error"))
+				guard database.executeUpdate("ATTACH DATABASE ? AS \(attachedSchemaName);", withArgumentsIn: [backupPath]) else {
+					continuation.resume(throwing: FeedSettingsRestoreError.attachFailed(database.lastErrorMessage() ?? "unknown error"))
 					return
 				}
 
 				var mergeError: Error?
-				self.database.beginTransaction()
+				database.beginTransaction()
 				let sql = """
 				INSERT OR IGNORE INTO feedSettings (
 				  feedURL, feedID, homePageURL, iconURL, faviconURL, editedName, contentHash,
@@ -348,16 +338,16 @@ final class FeedSettingsDatabase: Sendable {
 				  b.lastResponseCode, b.ao3SearchLastFetchedPage, b.ao3SearchFetchedPages, b.ao3SearchTotalPages
 				FROM \(attachedSchemaName).feedSettings AS b;
 				"""
-				if self.database.executeUpdate(sql, withArgumentsIn: []) {
-					self.database.commit()
+				if database.executeUpdate(sql, withArgumentsIn: []) {
+					database.commit()
 				} else {
-					mergeError = FeedSettingsRestoreError.mergeFailed(self.database.lastErrorMessage() ?? "unknown error")
-					self.database.rollback()
+					mergeError = FeedSettingsRestoreError.mergeFailed(database.lastErrorMessage() ?? "unknown error")
+					database.rollback()
 				}
 
-				self.database.clearCachedStatements()
-				if !self.database.executeUpdate("DETACH DATABASE \(attachedSchemaName);", withArgumentsIn: []) {
-					Self.logger.error("FeedSettingsDatabase: DETACH DATABASE \(attachedSchemaName, privacy: .public) failed -- \(self.database.lastErrorMessage() ?? "unknown error", privacy: .public)")
+				database.clearCachedStatements()
+				if !database.executeUpdate("DETACH DATABASE \(attachedSchemaName);", withArgumentsIn: []) {
+					Self.logger.error("FeedSettingsDatabase: DETACH DATABASE \(attachedSchemaName, privacy: .public) failed -- \(database.lastErrorMessage() ?? "unknown error", privacy: .public)")
 				}
 
 				if let mergeError {
@@ -372,18 +362,16 @@ final class FeedSettingsDatabase: Sendable {
 	// MARK: - Cleanup on launch
 
 	func deleteSettingsForFeedsNotIn(_ feedURLs: Set<String>) {
-		guard !feedURLs.isEmpty else {
+		guard let filter = SQLiteIDList.clause(column: "feedURL", strings: feedURLs) else {
 			return
 		}
 
-		let feedURLsArray = Array(feedURLs)
-		serialDispatchQueue.async {
-			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedURLsArray.count))!
-			let sql = "DELETE FROM feedSettings WHERE feedURL NOT IN \(placeholders);"
-			self.database.executeUpdate(sql, withArgumentsIn: feedURLsArray)
+		queue.runInDatabase { database in
+			let sql = "DELETE FROM feedSettings WHERE NOT (\(filter.sql));"
+			database.executeUpdate(sql, withArgumentsIn: [filter.parameter])
 
 			#if DEBUG
-			let numberOfRowChanges: Int32 = self.database.changes()
+			let numberOfRowChanges: Int32 = database.changes()
 			if numberOfRowChanges > 0 {
 				Self.logger.info("FeedSettingsDatabase: deleteSettingsForFeedsNotIn: deleted \(numberOfRowChanges) orphaned feed settings")
 			}

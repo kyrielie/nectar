@@ -56,16 +56,21 @@ or docs reference; it is not a claim that no partial work exists.
   existing settings behavior, then a product decision on information
   architecture and migration scope. The former implementation-ready proposal
   had stale assumptions and must not be treated as an implementation spec.
-- **Implemented architecture & engineering blueprint:** Storage, parsing, and
-  update optimization. Verified storage inefficiencies addressed: migrated compressed
-  HTML from Base64 `TEXT` to native SQLite `BLOB` (saving 33%) and upgraded to FTS5
-  in `ArticlesDatabase` schema version 2; implemented two-step WIP update detection
-  in `AO3ChapterFetcher` (checking lightweight Page 1 metadata before triggering full downloads)
-  and added the reader "Hide Creator's Style" toggle for neutralizing AO3 workskins.
+- **Partially implemented architecture & engineering blueprint:** Storage, parsing, and
+  update optimization. Implemented: migrated compressed HTML from Base64 `TEXT` to native
+  SQLite `BLOB` (saving ~33%) and upgraded `search` from FTS4 to FTS5 in `ArticlesDatabase`
+  schema version 2; implemented two-step WIP update detection in `AO3ChapterFetcher`
+  (checking lightweight Page 1 metadata before triggering full downloads); and added the
+  reader "Hide Creator's Style" toggle for neutralizing AO3 workskins. **Remaining from
+  this blueprint:** switching `search` to contentless FTS5 (`content=''`) to eliminate
+  duplicate plain-text storage, and normalized tag/facet tables (`tags`, `article_tags`).
 - **Unverified proposals:** WIP update checker; mature-content privacy gate;
   native AO3 comments viewer, author profiles, and account hub; native fandom
   catalog; reading queues/collections; recently deleted recovery; user EPUB
-  import; custom font import; iCloud folder sync; manual theme presets.
+  import; custom font import; iCloud folder sync; manual theme presets;
+  FTS5 snippets, cancellation & self-healing index; on-device semantic/hybrid
+  search; persistent library search, AO3-style filters & search suggestions;
+  EPUB3 DOM sanitization & in-reader series continuity.
 - **Theme process/design proposals:** theme quality review, theme provenance
   and unification, and theme-management UI mockup. These should be handled as
   discrete design or maintenance projects, not presumed app features.

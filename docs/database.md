@@ -37,7 +37,16 @@ top of that:
   On open, every database gets `PRAGMA journal_mode = DELETE` (not WAL —
   deliberate: every database here is single-connection and fully serialized
   through one queue, so WAL buys nothing and only adds `-wal`/`-shm` files
-  on disk) and `PRAGMA synchronous = 1`, plus statement caching enabled.
+  on disk), `PRAGMA synchronous = 1`, and `PRAGMA busy_timeout = 5000`, plus
+  statement caching enabled. `ArticlesDatabase` leaves `trusted_schema` at
+  SQLite's default (`OFF`) because `AmbrosiaSQLiteImportTable` and
+  `BackupSQLiteImportTable` `ATTACH` external `.sqlite` files on the same
+  connection.
+
+- **`SQLiteIDList`** — encodes arbitrary-length `String` or `Int64` ID sets as
+  a single JSON array parameter for SQLite's `json_each(?)` table-valued
+  function (`<column> IN (SELECT value FROM json_each(?))`), avoiding
+  `SQLITE_MAX_VARIABLE_NUMBER` limits on large `IN (...)` lookups.
 
 - **`RSDatabaseInfoTable`** — a shared one-row-per-key metadata table
   (`RSDatabaseInfo`) that every database using `FMDatabase.vacuumIfNeeded()`
@@ -255,22 +264,34 @@ separate single-column tables (read/starred/loved) plus ad hoc scroll state.
 ### Content compression
 
 `ContentHTMLCompression` (`ContentHTMLCompression.swift`) compresses
-`contentHTML` at rest using `NSData.compressed(using: .lzfse)`, then
-base64-encodes the compressed bytes into the existing `TEXT` column (no
-schema change to `BLOB` needed, since every FMDB row accessor used elsewhere
-is String-based). `compress` degrades gracefully — nil/empty input passes
-through unchanged, and a compression failure falls back to storing the
-original string rather than losing content. `decompress` likewise falls
-back to returning the stored string as-is if it isn't valid base64/LZFSE,
-so a row written before this landed doesn't crash the reader.
+`contentHTML` and `pendingUpdateContentHTML` at rest using
+`NSData.compressed(using: .lzfse)` and stores the raw compressed bytes in
+native SQLite `BLOB` columns (avoiding the ~33% Base64 size inflation).
+`compress` degrades gracefully — nil/empty input passes through as `nil`, and
+a compression failure falls back to storing the UTF-8 `Data` of the original
+string rather than losing content. `decompressAny` handles both modern `Data`
+(`BLOB`) and legacy Base64-encoded `String` rows, falling back to plain UTF-8 /
+uncompressed strings so pre-v2 rows still render without crashing.
 
 ### Full-text search
 
-`search` is an FTS4 virtual table (`title`, `body`), populated and queried
+`search` is an FTS5 virtual table (`title`, `body`), populated and queried
 via `SearchTable.swift`; `articles.searchRowID` links an article row to its
-FTS row. `indexUnindexedArticles()` is kicked off asynchronously right after
-table creation/migration finishes, to backfill any articles that predate
-indexing or were added while search was unavailable.
+FTS row. `search` remains a standard content-storing FTS5 table rather than
+`content=''` contentless because Nectar's iOS 16.0 minimum deployment target
+ships SQLite 3.39.5, which lacks `contentless_delete=1` (added in SQLite 3.43)
+needed by `articles_after_delete_trigger_delete_search_text`.
+`indexUnindexedArticles()` is kicked off asynchronously right after table
+creation/migration finishes, to backfill any articles that predate indexing or
+were added while search was unavailable. Queries in `ArticlesTable.fetchArticlesMatching` sanitize and quote user
+terms (preserving `AND`/`OR` between terms, while quoting `NOT`/`NEAR` and
+punctuation safely), order by `bm25(search) LIMIT 500`, and load matching
+articles via `SQLiteIDList` (`json_each(?)`). Async search paths attach a
+`SQLiteCancellationToken` (`sqlite3_progress_handler`) via
+`withTaskCancellationHandler` so cancelled searches abort mid-scan, and
+`fetchArticlesMatching` self-heals on `SQLITE_CORRUPT`/`SQLITE_NOTADB` by
+recreating `search`, clearing `searchRowID`, and kicking off
+`indexUnindexedArticles()`.
 
 ### Bulk export/import
 
@@ -287,7 +308,7 @@ indexing or were added while search was unavailable.
 - **`ArticlesDatabaseFullSnapshotExportTable`** — `VACUUM INTO ?` against
   the live database, exposed as `ArticlesDatabase.exportFullSnapshot(toPath:)`.
   Unlike `ArticleSQLiteExportTable` above, this is an atomic, consistent,
-  whole-file copy that includes every table -- `bookState` and the FTS4
+  whole-file copy that includes every table -- `bookState` and the FTS5
   `search` table included -- not a per-feed `CREATE TABLE ... AS SELECT`
   subset. Used only by device backup (see `backup-restore.md`); the
   existing per-feed "Export…" feature keeps using
@@ -327,9 +348,8 @@ defines retention).
 |---|---|---|---|
 | `HTMLMetadata.db` | `HTMLMetadata` | `actor` | single `metadata` table; see `metadata-extraction.md`. |
 | `ImageMetadataDatabase` | `Images` | — | favicon/feed-icon URL caching; consumed by `FaviconDownloader`/`FeedIconDownloader`. |
-| `SyncDatabase` | `SyncDatabase` | `actor` | queue of pending read/starred sync operations (`SyncStatus` rows) for account types that need to push local state changes upstream. |
 | `ErrorLogDatabase` | `ErrorLog` | `actor` | one `errors` table (`id`, `date`, `sourceName`, `sourceID`, `operation`, `fileName`, `functionName`, `lineNumber`, `errorMessage`); auto-prunes to the most recent 200 rows on init and subscribes to `.appDidEncounterError` to record entries automatically. Backs the in-app Activity/Error Log UI. |
-| `FeedSettingsDatabase` | `Account` | — | per-feed settings (home page URL, icon/favicon URLs, edited name, conditional-GET/cache-control HTTP caching info, folder relationship, AO3 search pagination cursor, etc.), keyed by `feedID`. |
+| `FeedSettingsDatabase` | `Account` | `DatabaseQueue` | per-feed settings (home page URL, icon/favicon URLs, edited name, conditional-GET/cache-control HTTP caching info, folder relationship, AO3 search pagination cursor, etc.), keyed by `feedID`. |
 | `AccountSettingsDatabase` | `Account` | — | marked `// TODO: Delete this file in 7.2` — a read-only, one-shot credential migration shim (`init?` returns nil if the legacy file doesn't exist) that reads old `accountSettings` rows to migrate `username`/`endpointURL` forward, not a database Nectar continues to write to. |
 
 `AccountSettingsDatabase`, `FeedSettingsDatabase`, and the Ambrosia-specific

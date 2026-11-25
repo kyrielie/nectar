@@ -208,13 +208,12 @@ private extension SearchTable {
 	}
 
 	private func fetchSearchInfos(_ articles: Set<ArticleSearchInfo>, _ database: FMDatabase) -> Set<SearchInfo>? {
-		let searchRowIDs = articles.compactMap { $0.searchRowID }
-		guard !searchRowIDs.isEmpty else {
+		let searchRowIDs = articles.compactMap { $0.searchRowID }.map { Int64($0) }
+		guard let filter = SQLiteIDList.clause(column: "rowid", integers: searchRowIDs) else {
 			return nil
 		}
-		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(searchRowIDs.count))!
-		let sql = "select rowid, title, body from \(name) where rowid in \(placeholders);"
-		guard let resultSet = database.executeQuery(sql, withArgumentsIn: searchRowIDs) else {
+		let sql = "select rowid, title, body from \(name) where \(filter.sql);"
+		guard let resultSet = database.executeQuery(sql, withArgumentsIn: [filter.parameter]) else {
 			return nil
 		}
 		return resultSet.mapToSet { SearchInfo(row: $0) }

@@ -333,7 +333,7 @@ mark.nnw-highlight {
 	   always carries an explicit data-annotation-color, so the bare
 	   selector below only matters as a safety net if that attribute is
 	   ever missing. */
-	background-color: var(--nnw-highlight-yellow, #FFCC00);
+	background-color: color-mix(in srgb, var(--nnw-highlight-yellow, #FFCC00) 72%, transparent);
 	color: inherit;
 	border-radius: 0.15em;
 	/* Without box-decoration-break: clone (below), a <mark> that wraps
@@ -385,19 +385,39 @@ mark.nnw-highlight {
 	cursor: pointer;
 }
 mark.nnw-highlight[data-annotation-color="yellow"] {
-	background-color: var(--nnw-highlight-yellow, #FFCC00);
+	background-color: color-mix(in srgb, var(--nnw-highlight-yellow, #FFCC00) 72%, transparent);
 }
 mark.nnw-highlight[data-annotation-color="red"] {
-	background-color: var(--nnw-highlight-red, #FF3B30);
+	background-color: color-mix(in srgb, var(--nnw-highlight-red, #FF3B30) 72%, transparent);
 }
 mark.nnw-highlight[data-annotation-color="green"] {
-	background-color: var(--nnw-highlight-green, #34C759);
+	background-color: color-mix(in srgb, var(--nnw-highlight-green, #34C759) 72%, transparent);
 }
 mark.nnw-highlight[data-annotation-color="blue"] {
-	background-color: var(--nnw-highlight-blue, #007AFF);
+	background-color: color-mix(in srgb, var(--nnw-highlight-blue, #007AFF) 72%, transparent);
 }
 mark.nnw-highlight[data-annotation-color="purple"] {
-	background-color: var(--nnw-highlight-purple, #AF52DE);
+	background-color: color-mix(in srgb, var(--nnw-highlight-purple, #AF52DE) 72%, transparent);
+}
+mark.nnw-highlight[data-overlap="underline"] {
+	background-color: transparent;
+	padding: 0;
+	text-decoration: underline;
+	text-decoration-thickness: 2px;
+	text-underline-offset: 2px;
+	text-decoration-color: var(--nnw-highlight-yellow, #FFCC00);
+}
+mark.nnw-highlight[data-overlap="underline"][data-annotation-color="red"] {
+	text-decoration-color: var(--nnw-highlight-red, #FF3B30);
+}
+mark.nnw-highlight[data-overlap="underline"][data-annotation-color="green"] {
+	text-decoration-color: var(--nnw-highlight-green, #34C759);
+}
+mark.nnw-highlight[data-overlap="underline"][data-annotation-color="blue"] {
+	text-decoration-color: var(--nnw-highlight-blue, #007AFF);
+}
+mark.nnw-highlight[data-overlap="underline"][data-annotation-color="purple"] {
+	text-decoration-color: var(--nnw-highlight-purple, #AF52DE);
 }
 
 /* WebViewController.applyHighlightPaletteColors() sets a "-dark"-suffixed
@@ -409,22 +429,38 @@ mark.nnw-highlight[data-annotation-color="purple"] {
    of which @media block references it, not two. */
 @media (prefers-color-scheme: dark) {
 	mark.nnw-highlight {
-		background-color: var(--nnw-highlight-yellow-dark, #FFD60A);
+		background-color: color-mix(in srgb, var(--nnw-highlight-yellow-dark, #FFD60A) 82%, transparent);
 	}
 	mark.nnw-highlight[data-annotation-color="yellow"] {
-		background-color: var(--nnw-highlight-yellow-dark, #FFD60A);
+		background-color: color-mix(in srgb, var(--nnw-highlight-yellow-dark, #FFD60A) 82%, transparent);
 	}
 	mark.nnw-highlight[data-annotation-color="red"] {
-		background-color: var(--nnw-highlight-red-dark, #FF453A);
+		background-color: color-mix(in srgb, var(--nnw-highlight-red-dark, #FF453A) 82%, transparent);
 	}
 	mark.nnw-highlight[data-annotation-color="green"] {
-		background-color: var(--nnw-highlight-green-dark, #30D158);
+		background-color: color-mix(in srgb, var(--nnw-highlight-green-dark, #30D158) 82%, transparent);
 	}
 	mark.nnw-highlight[data-annotation-color="blue"] {
-		background-color: var(--nnw-highlight-blue-dark, #0A84FF);
+		background-color: color-mix(in srgb, var(--nnw-highlight-blue-dark, #0A84FF) 82%, transparent);
 	}
 	mark.nnw-highlight[data-annotation-color="purple"] {
-		background-color: var(--nnw-highlight-purple-dark, #BF5AF2);
+		background-color: color-mix(in srgb, var(--nnw-highlight-purple-dark, #BF5AF2) 82%, transparent);
+	}
+	mark.nnw-highlight[data-overlap="underline"] {
+		background-color: transparent;
+		text-decoration-color: var(--nnw-highlight-yellow-dark, #FFD60A);
+	}
+	mark.nnw-highlight[data-overlap="underline"][data-annotation-color="red"] {
+		text-decoration-color: var(--nnw-highlight-red-dark, #FF453A);
+	}
+	mark.nnw-highlight[data-overlap="underline"][data-annotation-color="green"] {
+		text-decoration-color: var(--nnw-highlight-green-dark, #30D158);
+	}
+	mark.nnw-highlight[data-overlap="underline"][data-annotation-color="blue"] {
+		text-decoration-color: var(--nnw-highlight-blue-dark, #0A84FF);
+	}
+	mark.nnw-highlight[data-overlap="underline"][data-annotation-color="purple"] {
+		text-decoration-color: var(--nnw-highlight-purple-dark, #BF5AF2);
 	}
 }
 

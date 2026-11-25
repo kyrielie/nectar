@@ -275,15 +275,9 @@ enum AmbrosiaSQLiteImportTable {
 		incomingIDsResultSet.close()
 
 		var existingIDsBeforeImport = Set<String>()
-		if !incomingIDs.isEmpty {
-			// AmbrosiaSQLiteImportTable is a plain enum, not a DatabaseTable
-			// conformer, so the selectRowsWhere(key:inValues:in:) helper other
-			// tables get via that protocol isn't directly callable here --
-			// this is the same query inlined by hand, matching how ArticlesTable
-			// builds its own "articleID in (...)" queries elsewhere.
-			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(incomingIDs.count))!
-			let sql = "SELECT articleID FROM articles WHERE articleID IN \(placeholders);"
-			guard let existingIDsResultSet = database.executeQuery(sql, withArgumentsIn: Array(incomingIDs)) else {
+		if let idFilter = SQLiteIDList.clause(column: "articleID", strings: incomingIDs) {
+			let sql = "SELECT articleID FROM articles WHERE \(idFilter.sql);"
+			guard let existingIDsResultSet = database.executeQuery(sql, withArgumentsIn: [idFilter.parameter]) else {
 				throw AmbrosiaSQLiteImportError.importFailed("existing id read: \(database.lastErrorMessage() ?? "unknown error")")
 			}
 			while existingIDsResultSet.next() {

@@ -416,6 +416,30 @@ import ActivityLog
 		return allFetchedArticles
 	}
 
+	public func fetchArticlesOrderedAsync(_ fetchType: FetchType) async -> [Article]? {
+		precondition(Thread.isMainThread)
+
+		switch fetchType {
+		case .search, .searchWithArticleIDs:
+			break
+		default:
+			return nil
+		}
+
+		guard activeAccounts.count > 0 else {
+			return []
+		}
+
+		var orderedArticles = [Article]()
+		for account in activeAccounts {
+			if let articles = await account.fetchArticlesOrderedAsync(fetchType) {
+				orderedArticles.append(contentsOf: articles)
+			}
+		}
+
+		return orderedArticles
+	}
+
 	/// Fetch a single article (synchronously) by accountID and articleID.
 	public func fetchArticle(accountID: String, articleID: String) -> Article? {
 		precondition(Thread.isMainThread)

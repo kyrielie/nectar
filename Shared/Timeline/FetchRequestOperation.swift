@@ -28,9 +28,16 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 	let id: Int
 	let hidingReadArticlesState: HidingReadArticlesState
 	let resultBlock: FetchRequestOperationResultBlock
-	var isCanceled = false
+	var isCanceled = false {
+		didSet {
+			if isCanceled {
+				runningTask?.cancel()
+			}
+		}
+	}
 	var isFinished = false
 	private let fetchers: [ArticleFetcher]
+	private var runningTask: Task<Void, Never>?
 
 	init(id: Int, hidingReadArticlesState: HidingReadArticlesState, fetchers: [ArticleFetcher], resultBlock: @escaping FetchRequestOperationResultBlock) {
 		precondition(Thread.isMainThread)
@@ -44,7 +51,8 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 		precondition(Thread.isMainThread)
 		precondition(!isFinished)
 
-		Task { @MainActor in
+		runningTask = Task { @MainActor in
+			defer { runningTask = nil }
 			var didCallCompletion = false
 
 			func callCompletionIfNeeded() {

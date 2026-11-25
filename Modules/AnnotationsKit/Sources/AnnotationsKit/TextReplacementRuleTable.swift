@@ -166,8 +166,8 @@ public enum TextReplacementRuleEngine {
 					continue
 				}
 				let fullRange = NSRange(location: 0, length: nsText.length)
-				regex.enumerateMatches(in: text, options: [], range: fullRange) { result, _, _ in
-					guard let result, let range = result.range.toOptionalRangeIfValid() else { return }
+				regex.enumerateMatches(in: text, options: [.withTransparentBounds], range: fullRange) { result, _, _ in
+					guard let result, let range = result.range.toOptionalRangeIfValid(), range.length > 0 else { return }
 					guard !claimedRanges.contains(where: { NSIntersectionRange($0, range).length > 0 }) else { return }
 					claimedRanges.append(range)
 					let matchedText = nsText.substring(with: range)

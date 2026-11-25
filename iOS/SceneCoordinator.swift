@@ -2487,6 +2487,19 @@ private extension SceneCoordinator {
 			sortedArticles = Array(unsortedArticles).sorted {
 				($0.status.lastOpenedAt ?? .distantPast) > ($1.status.lastOpenedAt ?? .distantPast)
 			}
+		} else if let smartFeed = timelineFeed as? SmartFeed, smartFeed.forcesSearchRelevanceSort, !smartFeed.orderedSearchBookKeys.isEmpty {
+			var rankByBookKey = [String: Int](minimumCapacity: smartFeed.orderedSearchBookKeys.count)
+			for (index, bookKey) in smartFeed.orderedSearchBookKeys.enumerated() where rankByBookKey[bookKey] == nil {
+				rankByBookKey[bookKey] = index
+			}
+			sortedArticles = Array(unsortedArticles).sorted {
+				let lhsRank = rankByBookKey[$0.bookKey] ?? .max
+				let rhsRank = rankByBookKey[$1.bookKey] ?? .max
+				if lhsRank != rhsRank {
+					return lhsRank < rhsRank
+				}
+				return $0.articleID < $1.articleID
+			}
 		} else {
 			sortedArticles = Array(unsortedArticles).sorted(by: sortField, sortDirection: sortDirection, groupByFeed: groupByFeed)
 		}

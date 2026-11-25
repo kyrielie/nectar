@@ -29,6 +29,12 @@ import Images
 		delegate is LastOpenedFeedDelegate
 	}
 
+	public var forcesSearchRelevanceSort: Bool {
+		delegate is SearchFeedDelegate || delegate is SearchTimelineFeedDelegate
+	}
+
+	private(set) var orderedSearchBookKeys = [String]()
+
 	var sidebarItemID: SidebarItemIdentifier? {
 		delegate.sidebarItemID
 	}
@@ -104,6 +110,13 @@ extension SmartFeed: ArticleFetcher {
 	}
 
 	func fetchArticlesAsync() async -> Set<Article> {
+		if let ordered = await delegate.fetchArticlesOrderedAsync() {
+			orderedSearchBookKeys = ordered.map(\.bookKey)
+			let (deduplicated, feedIDsByBookKey) = SmartFeedArticleGrouping.deduplicated(Set(ordered))
+			bookKeyIndex.update(feedIDsByBookKey)
+			return deduplicated
+		}
+		orderedSearchBookKeys = []
 		let (deduplicated, feedIDsByBookKey) = SmartFeedArticleGrouping.deduplicated(await delegate.fetchArticlesAsync())
 		bookKeyIndex.update(feedIDsByBookKey)
 		return deduplicated

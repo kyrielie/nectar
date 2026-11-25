@@ -15,9 +15,14 @@ import RSCore
 @MainActor protocol SmartFeedDelegate: SidebarItemIdentifiable, DisplayNameProvider, ArticleFetcher, SmallIconProvider {
 	var fetchType: FetchType { get }
 	func fetchUnreadCount(account: Account) async -> Int
+	func fetchArticlesOrderedAsync() async -> [Article]?
 }
 
 @MainActor extension SmartFeedDelegate {
+
+	func fetchArticlesOrderedAsync() async -> [Article]? {
+		nil
+	}
 
 	func fetchArticles() -> Set<Article> {
 		AccountManager.shared.fetchArticles(fetchType)
