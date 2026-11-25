@@ -23,6 +23,14 @@ import Images
 class TimelineCustomizerCollectionViewController: UICollectionViewController, SettingsPaletteBackgroundHosting {
 
 	var paletteBackgroundView: UIView { collectionView }
+
+	init() {
+		super.init(collectionViewLayout: UICollectionViewFlowLayout())
+	}
+
+	required init?(coder: NSCoder) {
+		super.init(coder: coder)
+	}
 	/// Static rather than merely internal: this fixture article carries no
 	/// instance state, and BadgeColorPalettePreviewCell (see
 	/// docs/app-chrome-palette.md, "Badge Colors") needs to reach it without
@@ -131,6 +139,8 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController, Se
 			withReuseIdentifier: TimelineHeaderView.reuseIdentifier
 		)
 
+		collectionView.register(TimelineCustomizerCell.self, forCellWithReuseIdentifier: "NumberOfLinesSelector")
+		collectionView.register(TimelineCustomizerCell.self, forCellWithReuseIdentifier: "TagDisplayModeSelector")
 		collectionView.register(MainTimelineCell.self, forCellWithReuseIdentifier: MainTimelineCell.reuseIdentifier)
 		collectionView.register(StatsVisibilityCell.self, forCellWithReuseIdentifier: StatsVisibilityCell.reuseIdentifier)
 

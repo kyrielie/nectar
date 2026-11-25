@@ -1,23 +1,21 @@
 # Settings screen structure
 
-This covers `SettingsViewController`/`Settings.storyboard` specifically —
+This covers `SettingsView`/`SettingsModel` (`iOS/Settings/`) specifically —
 the app-wide Settings screen. The per-feed **feed inspector**
 (`FeedInspectorViewController`/`Inspector.storyboard`, `iOS/Inspector/`)
 is a separate screen entirely; its AO3-search-specific "AO3 Pages" row is
 covered in `ao3-arbitrary-page-fetch.md`, not here.
 
-`SettingsViewController` (`iOS/Settings/`) is a `UITableViewController`
-driven by `Settings.storyboard`'s static cells, sectioned by the nested
-`SettingsViewController.Section: Int` (8 sections, in table order):
-`.feeds`, `.timeline`, `.articles`, `.appearance`, `.troubleshooting`,
-`.help`, `.ao3Account`, `.backup`. Most sections have a corresponding
-`*Row: Int` enum (`FeedsRow`, `TimelineRow`, `ArticlesRow`,
-`AppearanceRow`, `TroubleshootingRow`, `HelpRow`, `BackupRow`) whose
-`.allCases.count` (where declared `CaseIterable`) or manual row count
-drives `numberOfRowsInSection` against the storyboard's static cells —
-adding a row means adding both the enum case and the matching storyboard
-cell in lockstep. `.ao3Account` has no row enum: it's a single row that
-pushes `AO3AccountSettingsView` directly (see below).
+`SettingsView` (`iOS/Settings/SettingsView.swift`) is a SwiftUI
+`NavigationStack`-based `List` presented inside `SettingsHostingController`
+with `SurfacePaletteAware` applied at the root. It replaces the former
+`SettingsViewController` and `Settings.storyboard` (retired), using a typed
+`SettingsDestination` enum for navigation across 8 sections (`.ao3Account`,
+`.feeds`/Library, `.timeline`, `.articles`/Works, `.appearance`,
+`.troubleshooting`, `.help`, `.backup`) plus the bottom build-version footer.
+Specialized UIKit screens (`TimelineCustomizerCollectionViewController`,
+`ToolbarsCustomizerViewController`, `ManageStorageCollectionViewController`)
+are instantiated in code and pushed via `UIViewControllerRepresentable`.
 
 ## Row inventory by section
 
@@ -60,9 +58,8 @@ pushes `AO3AccountSettingsView` directly (see below).
   reading mode lives on the pushed Full Screen Reading screen instead of
   mixed into this list.
 - **`.appearance`** (`AppearanceRow`): color palette (pushes
-  `ColorPaletteTableViewController`, which also owns the
-  `useTintedNavigationBar` switch — see `app-chrome-palette.md`), accent
-  color.
+  `ColorPaletteSettingsView` — see `app-chrome-palette.md`), accent
+  color (pushes `AccentColorSettingsView`).
 - **`.troubleshooting`** (`TroubleshootingRow`): error log, activity log,
   account stats, "dinosaurs" (easter egg / debug row — not investigated
   further here), manage storage.
@@ -141,16 +138,14 @@ repainting.
 
 ## Full Screen Reading screen
 
-`FullScreenReadingViewController` is a static-cell `UITableViewController`,
-pushed from `.articles`'s Full Screen Reading row, grouping every setting
-that only does anything once you're actually in fullscreen reading mode:
-three bare (no header) sections — Gestures (enable full screen articles,
-back-swipe, paging-swipe, long-press context menu, show article
-scrollbar), Top Toolbar (pushes
-`ToolbarsCustomizerViewController`, below — the row is still keyed by a
-`TopToolbarRow` enum with a single `.toolbars` case, a naming leftover
-from when this section held two rows for two separate screens), and a
-third section holding Page Counter and Hide Notch in Full Screen.
+`FullScreenReadingView` (`iOS/Settings/FullScreenReadingView.swift`, backed
+by `FullScreenReadingModel`) is a SwiftUI `Form`, pushed from Works's
+"Toolbars, Gestures & Layout" row, grouping every setting that only does
+anything once you're actually in fullscreen reading mode: three sections —
+Gestures (enable full screen works, swipe back, paging swipe, long-press
+context menu, work scrollbar picker), Toolbars (pushes
+`ToolbarsCustomizerViewController` via `ToolbarsCustomizerRepresentable`),
+and a third section holding Page Counter and Hide Notch in Full Screen.
 
 The Gestures section's Long-Press Context Menu switch
 (`AppDefaults.articleFullscreenContextMenuEnabled`, default on) controls

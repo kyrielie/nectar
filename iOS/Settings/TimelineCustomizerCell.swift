@@ -18,6 +18,25 @@ final class TimelineCustomizerCell: UICollectionViewCell {
 
 	private var segmentedControl: UISegmentedControl?
 
+	override init(frame: CGRect) {
+		super.init(frame: frame)
+		let tickSlider = TickMarkSlider(frame: .zero)
+		tickSlider.translatesAutoresizingMaskIntoConstraints = false
+		tickSlider.addTarget(self, action: #selector(sliderValueChanges(_:)), for: .valueChanged)
+		contentView.addSubview(tickSlider)
+		NSLayoutConstraint.activate([
+			tickSlider.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+			tickSlider.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+			tickSlider.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
+			tickSlider.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -10)
+		])
+		self.slider = tickSlider
+	}
+
+	required init?(coder: NSCoder) {
+		super.init(coder: coder)
+	}
+
 	var sliderConfiguration: SliderConfiguration! {
 		didSet {
 			// Settings.storyboard binds the slider's thumbTintColor to the static

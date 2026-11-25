@@ -3,40 +3,14 @@ import ReadingTime
 import Account
 
 struct ReadingTimeSettingsView: View {
-	@State private var enabled = AppDefaults.shared.readingTimeEnabled
-	@State private var dailyLimitEnabled = AppDefaults.shared.readingTimeDailyLimitEnabled
-	@State private var indicatorEnabled = AppDefaults.shared.readingTimeIndicatorDisplayMode != .off
-	@State private var bedtimeEnabled = AppDefaults.shared.readingTimeBedtimeEnabled
-	@State private var start = Self.minutesDate(AppDefaults.shared.readingTimeBedtimeStartMinutesFromMidnight)
-	@State private var end = Self.minutesDate(AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight)
-	@State private var limits = AppDefaults.shared.readingTimeDailyLimitMinutesByWeekday
-	@State private var pendingConfirmation: PendingConfirmation?
-	@State private var takeABreakMode = AppDefaults.shared.readingTimeTakeABreakMode
-	@State private var breakReadingMinutes = AppDefaults.shared.readingTimeBreakReadingMinutes
-	@State private var breakEnforcedMinutes = AppDefaults.shared.readingTimeBreakEnforcedMinutes
-	// Sourced from ReadingTimeTracker.shared.activeReasons, kept in sync via
-	// the same notifications the enforcement overlay reacts to, so the
-	// banner below doesn't go stale while this screen is on screen.
-	@State private var activeLockoutReasons: Set<ReadingTimeTracker.Reason> = ReadingTimeTracker.shared.activeReasons
-	// 0 = the current Sunday-start calendar week; increasing goes further
-	// into the past. See weeklySummarySection/weekStart below.
+	@StateObject private var model = ReadingTimeSettingsModel()
 	@State private var weeksBack = 0
-
-	private let weekdays = Calendar.current.weekdaySymbols
-
-	private struct PendingConfirmation: Identifiable {
-		enum Kind { case readingTimeEnable, bedtimeSpan }
-		let id = UUID()
-		let kind: Kind
-		let message: String
-		let revert: () -> Void
-	}
 
 	var body: some View {
 		Form {
-			weeklySummarySection
+			ReadingTimeWeeklySummarySection(weeksBack: $weeksBack)
 
-			if let status = ReadingTimeTracker.lockoutStatus(for: activeLockoutReasons, bedtimeEndMinutesFromMidnight: AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight) {
+			if let status = ReadingTimeTracker.lockoutStatus(for: model.activeLockoutReasons, bedtimeEndMinutesFromMidnight: AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight) {
 				Section {
 					Label(status.message, systemImage: status.systemImageName)
 						.foregroundStyle(.secondary)
@@ -44,73 +18,33 @@ struct ReadingTimeSettingsView: View {
 			}
 
 			Section {
-				Toggle("Enable Reading Time", isOn: $enabled)
-					.onChange(of: enabled) { value in
-						AppDefaults.shared.readingTimeEnabled = value
-					}
-			} footer: { Text("When enabled, reading is blocked immediately once today's limit or bedtime window is reached. Configure your limits, bedtime, and break reminders below.") }
-
-			Section("Daily Limits") {
-				Toggle("Enable Daily Limit", isOn: $dailyLimitEnabled)
-					.onChange(of: dailyLimitEnabled) { value in AppDefaults.shared.readingTimeDailyLimitEnabled = value }
-				ForEach(1...7, id: \.self) { weekday in
-					NavigationLink {
-						DailyLimitDetailView(
-							weekdayName: weekdays[weekday - 1],
-							minutes: Binding(
-								get: { limits[weekday, default: 120] },
-								set: { newValue in
-									limits[weekday] = newValue
-									AppDefaults.shared.setReadingTimeDailyLimitMinutes(newValue, for: weekday)
-								}
-							)
-						)
-					} label: {
-						HStack {
-							Text(weekdays[weekday - 1])
-							Spacer()
-							Text(durationString(limits[weekday, default: 120])).foregroundStyle(.secondary)
-						}
-					}
-				}
+				Toggle("Enable Reading Time", isOn: $model.enabled)
+			} footer: {
+				Text("When enabled, reading is blocked immediately once today's limit or bedtime window is reached. Configure your limits, bedtime, and break reminders below.")
 			}
-			.disabled(!enabled)
-			.opacity(enabled ? 1 : 0.4)
 
-			Section("Bedtime") {
-				Toggle("Enable Bedtime", isOn: $bedtimeEnabled)
-					.onChange(of: bedtimeEnabled) { value in AppDefaults.shared.readingTimeBedtimeEnabled = value }
-				DatePicker("Starts", selection: $start, displayedComponents: .hourAndMinute)
-					.onChange(of: start) { value in updateBedtimeStart(value) }
-				DatePicker("Ends", selection: $end, displayedComponents: .hourAndMinute)
-					.onChange(of: end) { value in updateBedtimeEnd(value) }
-			}
-			.disabled(!enabled)
-			.opacity(enabled ? 1 : 0.4)
+			ReadingTimeDailyLimitsSection(model: model)
+				.disabled(!model.enabled)
+				.opacity(model.enabled ? 1 : 0.4)
 
-			takeABreakSection
-				.disabled(!enabled)
-				.opacity(enabled ? 1 : 0.4)
+			ReadingTimeBedtimeSection(model: model)
+				.disabled(!model.enabled)
+				.opacity(model.enabled ? 1 : 0.4)
+
+			ReadingTimeTakeABreakSection(model: model)
+				.disabled(!model.enabled)
+				.opacity(model.enabled ? 1 : 0.4)
 
 			Section {
-				Toggle("Show indicator while reading", isOn: $indicatorEnabled)
-					.onChange(of: indicatorEnabled) { value in
-						AppDefaults.shared.readingTimeIndicatorDisplayMode = value ? .pie : .off
-					}
+				Toggle("Show indicator while reading", isOn: $model.indicatorEnabled)
 			} footer: {
 				Text("Shows a small pie indicator of today's remaining reading time in fullscreen reading, independent of the Page Counter setting.")
 			}
 		}
 		.navigationTitle("Reading Time")
 		.navigationBarTitleDisplayMode(.inline)
-		.onAppear { activeLockoutReasons = ReadingTimeTracker.shared.activeReasons }
-		.onReceive(NotificationCenter.default.publisher(for: .readingTimeLimitReached)) { _ in
-			activeLockoutReasons = ReadingTimeTracker.shared.activeReasons
-		}
-		.onReceive(NotificationCenter.default.publisher(for: .readingTimeEnforcementDidClear)) { _ in
-			activeLockoutReasons = []
-		}
-		.alert(item: $pendingConfirmation) { confirmation in
+		.onAppear { model.refreshLockoutReasons() }
+		.alert(item: $model.pendingConfirmation) { confirmation in
 			Alert(
 				title: Text("Confirm Reading Time setting"),
 				message: Text(confirmation.message),
@@ -119,37 +53,93 @@ struct ReadingTimeSettingsView: View {
 			)
 		}
 	}
+}
 
-	/// Pulled out of `body` as its own property -- like `fandomBreakdown`/
-	/// `fandomPieChart` in ReadingStatsView, a Section this size (picker +
-	/// two conditional NavigationLinks + a switch in the footer) inline in
-	/// `body` alongside the other five sections pushed the whole `body`
-	/// getter over Xcode's per-expression type-check budget. No behavior
-	/// change from having this be a separate property.
-	private var takeABreakSection: some View {
+private struct ReadingTimeDailyLimitsSection: View {
+	@ObservedObject var model: ReadingTimeSettingsModel
+	private let weekdays = Calendar.current.weekdaySymbols
+
+	var body: some View {
+		Section("Daily Limits") {
+			Toggle("Enable Daily Limit", isOn: $model.dailyLimitEnabled)
+			ForEach(1...7, id: \.self) { weekday in
+				NavigationLink {
+					DailyLimitDetailView(
+						weekdayName: weekdays[weekday - 1],
+						minutes: Binding(
+							get: { model.limits[weekday, default: 120] },
+							set: { model.setDailyLimitMinutes($0, for: weekday) }
+						)
+					)
+				} label: {
+					HStack {
+						Text(weekdays[weekday - 1])
+						Spacer()
+						Text(durationString(model.limits[weekday, default: 120]))
+							.foregroundStyle(.secondary)
+					}
+				}
+			}
+		}
+	}
+}
+
+private struct ReadingTimeBedtimeSection: View {
+	@ObservedObject var model: ReadingTimeSettingsModel
+
+	var body: some View {
+		Section("Bedtime") {
+			Toggle("Enable Bedtime", isOn: $model.bedtimeEnabled)
+			DatePicker(
+				"Starts",
+				selection: Binding(
+					get: { model.start },
+					set: { newValue in
+						model.start = newValue
+						model.updateBedtimeStart(newValue)
+					}
+				),
+				displayedComponents: .hourAndMinute
+			)
+			DatePicker(
+				"Ends",
+				selection: Binding(
+					get: { model.end },
+					set: { newValue in
+						model.end = newValue
+						model.updateBedtimeEnd(newValue)
+					}
+				),
+				displayedComponents: .hourAndMinute
+			)
+		}
+	}
+}
+
+private struct ReadingTimeTakeABreakSection: View {
+	@ObservedObject var model: ReadingTimeSettingsModel
+
+	var body: some View {
 		Section {
-			Picker("Mode", selection: $takeABreakMode) {
+			Picker("Mode", selection: $model.takeABreakMode) {
 				Text("Off").tag(TakeABreakMode.off)
 				Text("Reminder").tag(TakeABreakMode.reminder)
 				Text("Enforced").tag(TakeABreakMode.enforced)
 			}
-			.onChange(of: takeABreakMode) { value in AppDefaults.shared.readingTimeTakeABreakMode = value }
 
-			if takeABreakMode != .off {
+			if model.takeABreakMode != .off {
 				takeABreakTimerRow(
 					title: "Reading Time",
 					footer: "How long to read before a break is triggered.",
-					minutes: $breakReadingMinutes,
-					store: { AppDefaults.shared.readingTimeBreakReadingMinutes = $0 }
+					minutes: $model.breakReadingMinutes
 				)
 			}
 
-			if takeABreakMode == .enforced {
+			if model.takeABreakMode == .enforced {
 				takeABreakTimerRow(
 					title: "Break Time",
 					footer: "How long reading is blocked for once a break is triggered.",
-					minutes: $breakEnforcedMinutes,
-					store: { AppDefaults.shared.readingTimeBreakEnforcedMinutes = $0 }
+					minutes: $model.breakEnforcedMinutes
 				)
 			}
 		} header: {
@@ -161,89 +151,32 @@ struct ReadingTimeSettingsView: View {
 
 	@ViewBuilder
 	private var takeABreakFooterText: some View {
-		switch takeABreakMode {
+		switch model.takeABreakMode {
 		case .off:
 			Text("No break reminders while reading.")
 		case .reminder:
-			Text("Shows a dismissible reminder every \(durationString(breakReadingMinutes)) of continuous reading.")
+			Text("Shows a dismissible reminder every \(durationString(model.breakReadingMinutes)) of continuous reading.")
 		case .enforced:
-			Text("Blocks reading for \(durationString(breakEnforcedMinutes)) every \(durationString(breakReadingMinutes)) of continuous reading.")
+			Text("Blocks reading for \(durationString(model.breakEnforcedMinutes)) every \(durationString(model.breakReadingMinutes)) of continuous reading.")
 		}
 	}
 
-	/// Shared row for both Take a Break timer settings -- same
-	/// NavigationLink-to-CountDownTimerSettingView shape, differing only
-	/// in title/footer copy and which AppDefaults property they write to.
-	private func takeABreakTimerRow(title: String, footer: String, minutes: Binding<Int>, store: @escaping (Int) -> Void) -> some View {
+	private func takeABreakTimerRow(title: String, footer: String, minutes: Binding<Int>) -> some View {
 		NavigationLink {
-			CountDownTimerSettingView(
-				title: title,
-				footer: footer,
-				minutes: Binding(
-					get: { minutes.wrappedValue },
-					set: { newValue in
-						minutes.wrappedValue = newValue
-						store(newValue)
-					}
-				)
-			)
+			CountDownTimerSettingView(title: title, footer: footer, minutes: minutes)
 		} label: {
 			HStack {
 				Text(title)
 				Spacer()
-				Text(durationString(minutes.wrappedValue)).foregroundStyle(.secondary)
+				Text(durationString(minutes.wrappedValue))
+					.foregroundStyle(.secondary)
 			}
 		}
 	}
+}
 
-	private func updateBedtimeStart(_ value: Date) {
-		let newStart = minutes(value)
-		let oldStart = minutes(start)
-		let span = ReadingTimeCalendar.bedtimeWindowSpanMinutes(startMinutes: newStart, endMinutes: minutes(end))
-		AppDefaults.shared.readingTimeBedtimeStartMinutesFromMidnight = newStart
-		if span > ReadingTimeCalendar.maxBedtimeWindowSpanMinutes {
-			// AppDefaults' setter already clamped `end`; re-read the stored value.
-			let clampedEnd = AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight
-			end = Self.minutesDate(clampedEnd)
-			pendingConfirmation = PendingConfirmation(
-				kind: .bedtimeSpan,
-				message: "Bedtime can't be longer than 12 hours, so the end time was moved to \(Self.timeString(end)). Reading will be blocked for the full 12 hours.",
-				revert: {
-					start = Self.minutesDate(oldStart)
-					AppDefaults.shared.readingTimeBedtimeStartMinutesFromMidnight = oldStart
-				}
-			)
-		}
-	}
-
-	private func updateBedtimeEnd(_ value: Date) {
-		let newEnd = minutes(value)
-		let oldEnd = minutes(end)
-		let span = ReadingTimeCalendar.bedtimeWindowSpanMinutes(startMinutes: minutes(start), endMinutes: newEnd)
-		AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight = newEnd
-		if span > ReadingTimeCalendar.maxBedtimeWindowSpanMinutes {
-			let clampedStart = AppDefaults.shared.readingTimeBedtimeStartMinutesFromMidnight
-			start = Self.minutesDate(clampedStart)
-			pendingConfirmation = PendingConfirmation(
-				kind: .bedtimeSpan,
-				message: "Bedtime can't be longer than 12 hours, so the start time was moved to \(Self.timeString(start)). Reading will be blocked for the full 12 hours.",
-				revert: {
-					end = Self.minutesDate(oldEnd)
-					AppDefaults.shared.readingTimeBedtimeEndMinutesFromMidnight = oldEnd
-				}
-			)
-		}
-	}
-
-	private func minutes(_ date: Date) -> Int { let c = Calendar.current.dateComponents([.hour, .minute], from: date); return (c.hour ?? 0) * 60 + (c.minute ?? 0) }
-	private static func minutesDate(_ value: Int) -> Date { Calendar.current.date(from: DateComponents(hour: value / 60, minute: value % 60)) ?? Date() }
-	private static func timeString(_ date: Date) -> String {
-		let formatter = DateFormatter()
-		formatter.timeStyle = .short
-		return formatter.string(from: date)
-	}
-
-	// MARK: Weekly summary
+private struct ReadingTimeWeeklySummarySection: View {
+	@Binding var weeksBack: Int
 
 	private struct DailyUsage: Identifiable {
 		let id: String
@@ -253,19 +186,12 @@ struct ReadingTimeSettingsView: View {
 		let isToday: Bool
 	}
 
-	/// Sunday-start regardless of device locale, per explicit request --
-	/// not Calendar.current, whose firstWeekday follows the user's locale.
 	private static var sundayCalendar: Calendar = {
 		var calendar = Calendar(identifier: .gregorian)
 		calendar.firstWeekday = 1
 		return calendar
 	}()
 
-	/// How many weeks back "Previous" will go. Bounded by how far back
-	/// readingTimeDailyUsageHistory actually retains data (35 days / 5
-	/// weeks including the current one -- see AppDefaults'
-	/// readingTimeDailyUsageHistory), so the navigator never lands on a
-	/// week that's guaranteed to show as empty.
 	private static let maxWeeksBack = 4
 
 	private var weekStart: Date {
@@ -283,7 +209,13 @@ struct ReadingTimeSettingsView: View {
 			guard let day = calendar.date(byAdding: .day, value: offset, to: start) else { return nil }
 			let key = Self.dateKeyFormatter.string(from: day)
 			let weekday = calendar.component(.weekday, from: day)
-			return DailyUsage(id: key, label: Self.dayLetterFormatter.string(from: day), minutesUsed: history[key] ?? 0, limitMinutes: AppDefaults.shared.readingTimeDailyLimitMinutes(for: weekday), isToday: calendar.isDate(day, inSameDayAs: today))
+			return DailyUsage(
+				id: key,
+				label: Self.dayLetterFormatter.string(from: day),
+				minutesUsed: history[key] ?? 0,
+				limitMinutes: AppDefaults.shared.readingTimeDailyLimitMinutes(for: weekday),
+				isToday: calendar.isDate(day, inSameDayAs: today)
+			)
 		}
 	}
 
@@ -297,7 +229,7 @@ struct ReadingTimeSettingsView: View {
 		return "Week of \(startString)–\(endString)"
 	}
 
-	private var weeklySummarySection: some View {
+	var body: some View {
 		Section {
 			HStack {
 				Button {
@@ -332,12 +264,6 @@ struct ReadingTimeSettingsView: View {
 		}
 	}
 
-	/// Bar height is minutes used; the thin line across each bar marks
-	/// that day's configured limit, so going over reads immediately as
-	/// "bar taller than its own line" rather than requiring a lookup
-	/// against a list below. Both bar height and line position share one
-	/// scale (maxValue below) so the line's vertical position is
-	/// comparable across days even as each day's own limit changes.
 	private var weeklyUsageBarChart: some View {
 		let days = weeklyUsage
 		let maxValue = max(days.map { max($0.minutesUsed, $0.limitMinutes) }.max() ?? 1, 1)
@@ -395,12 +321,7 @@ struct ReadingTimeSettingsView: View {
 }
 
 /// "Xh Ym" duration formatting shared between the daily-limits row labels
-/// in ReadingTimeSettingsView and DailyLimitDetailView's footer, so the
-/// two can't drift out of sync with each other's wording -- the same
-/// reasoning that motivated ReadingTimeTracker.lockoutStatus(for:
-/// bedtimeEndMinutesFromMidnight:), though that one is currently only
-/// consumed here, not by ReadingTimeEnforcementOverlay -- see
-/// lockoutStatus's own doc comment.
+/// in ReadingTimeSettingsView and DailyLimitDetailView's footer.
 private func durationString(_ minutes: Int) -> String {
 	let hours = minutes / 60
 	let mins = minutes % 60
@@ -409,12 +330,6 @@ private func durationString(_ minutes: Int) -> String {
 	return "\(hours)h \(mins)m"
 }
 
-/// Pushed from ReadingTimeSettingsView's "Take a Break" section for either
-/// of its two timer settings (reading time, enforced break time). Same
-/// countDownTimer-wheel-on-its-own-screen shape as DailyLimitDetailView
-/// below, minus that view's daily-limit-specific "strict limit" confirm
-/// dialog -- neither break timer has an equivalent "going under 2 hours
-/// blocks reading" threshold to warn about.
 private struct CountDownTimerSettingView: View {
 	let title: String
 	let footer: String
@@ -435,8 +350,6 @@ private struct CountDownTimerSettingView: View {
 	}
 }
 
-/// Pushed per weekday from ReadingTimeSettingsView's "Daily limits"
-/// section -- the countDownTimer wheel (see CountDownTimerPicker) is too
 /// Decides when lowering a daily limit needs the "this is a strict limit"
 /// confirmation. Pure so it can be tested without a view.
 enum StrictLimitConfirmation {
@@ -449,19 +362,10 @@ enum StrictLimitConfirmation {
 	}
 }
 
-/// Pushed per weekday from ReadingTimeSettingsView's "Daily limits"
-/// section -- the countDownTimer wheel (see CountDownTimerPicker) is too
-/// tall to sit inline in a Form row alongside six other weekdays, so each
-/// weekday gets its own screen, matching how Settings → Reading Time →
-/// App Limits → Add Limit is its own pushed screen in iOS Reading Time.
 private struct DailyLimitDetailView: View {
 	let weekdayName: String
 	@Binding var minutes: Int
 	@State private var pendingConfirmation: PendingConfirmation?
-
-	/// The value `minutes` had before the latest change. `onChange` on iOS 16 only
-	/// reports the new value, so the old one is tracked here. Nil until the
-	/// view appears.
 	@State private var previousMinutes: Int?
 
 	private struct PendingConfirmation: Identifiable {

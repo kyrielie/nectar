@@ -1668,12 +1668,11 @@ struct SidebarItemNode: Hashable, Sendable {
 	}
 
 	func showSettings(scrollToArticlesSection: Bool = false) {
-		let settingsNavController = UIStoryboard.settings.instantiateInitialViewController() as! UINavigationController
-		let settingsViewController = settingsNavController.topViewController as! SettingsViewController
-		settingsViewController.scrollToArticlesSection = scrollToArticlesSection
-		settingsNavController.modalPresentationStyle = .formSheet
-		settingsViewController.presentingParentController = rootSplitViewController
-		rootSplitViewController.present(settingsNavController, animated: true)
+		let settingsController = SettingsView.makeHostingController(
+			presentingParentController: rootSplitViewController,
+			scrollToArticlesSection: scrollToArticlesSection
+		)
+		rootSplitViewController.present(settingsController, animated: true)
 	}
 
 	func showCurrentActivity() {
@@ -1891,10 +1890,10 @@ struct SidebarItemNode: Hashable, Sendable {
 		if presentedController.isKind(of: SFSafariViewController.self) {
 			presentedController.dismiss(animated: true, completion: nil)
 		}
-		guard let settings = presentedController.children.first as? SettingsViewController else {
+		guard presentedController is SettingsHostingController else {
 			return
 		}
-		settings.dismiss(animated: true, completion: nil)
+		presentedController.dismiss(animated: true, completion: nil)
 	}
 
 }

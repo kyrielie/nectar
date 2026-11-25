@@ -57,6 +57,14 @@ class ToolbarsCustomizerViewController: UICollectionViewController, SettingsPale
 
 	var paletteBackgroundView: UIView { collectionView }
 
+	init() {
+		super.init(collectionViewLayout: UICollectionViewFlowLayout())
+	}
+
+	required init?(coder: NSCoder) {
+		super.init(coder: coder)
+	}
+
 	// internal, not private: read by +Drag.swift/+Drop.swift.
 	var previewSection: Int { 0 }
 	// internal, not private: read by +Drag.swift/+Drop.swift to restrict
