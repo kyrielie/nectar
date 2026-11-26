@@ -67,6 +67,15 @@ import Images
 struct AccentColorSettingsView: View {
 
 	@StateObject private var model = AccentColorSettingsModel()
+	@Environment(\.surfacePaletteObserver) private var surfaceObserver
+
+	private var cellBackground: Color {
+		surfaceObserver?.settingsCellBackground ?? Color(uiColor: .secondarySystemGroupedBackground)
+	}
+
+	private var accentTint: Color {
+		surfaceObserver?.accentColor ?? .accentColor
+	}
 
 	var body: some View {
 		Form {
@@ -83,7 +92,7 @@ struct AccentColorSettingsView: View {
 							if model.accentColor == accent {
 								Image(systemName: "checkmark")
 									.font(.body.weight(.semibold))
-									.foregroundStyle(Color.accentColor)
+									.foregroundStyle(accentTint)
 							}
 						}
 						.contentShape(Rectangle())
@@ -94,6 +103,7 @@ struct AccentColorSettingsView: View {
 			} header: {
 				Text("Accent Color", comment: "Accent color section header")
 			}
+			.listRowBackground(cellBackground)
 
 			Section {
 				ForEach(BadgeColorPalette.allCases, id: \.self) { palette in
@@ -107,7 +117,7 @@ struct AccentColorSettingsView: View {
 							if model.badgeColorMode == palette {
 								Image(systemName: "checkmark")
 									.font(.body.weight(.semibold))
-									.foregroundStyle(Color.accentColor)
+									.foregroundStyle(accentTint)
 							}
 						}
 						.contentShape(Rectangle())
@@ -120,6 +130,7 @@ struct AccentColorSettingsView: View {
 			} footer: {
 				Text("Badges appear in the timeline when Tag Display is set to Badges in Timeline Layout. Accent palette badges follow your Accent Color choice above.", comment: "Badge color palette section footer")
 			}
+			.listRowBackground(cellBackground)
 
 			Section {
 				BadgeColorPalettePreviewRepresentable(
@@ -130,7 +141,9 @@ struct AccentColorSettingsView: View {
 			} header: {
 				Text("Preview", comment: "Badge color palette preview section header")
 			}
+			.listRowBackground(cellBackground)
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle(Text("Accent Color", comment: "Accent Color navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
 	}
@@ -165,55 +178,31 @@ private struct BadgeColorPalettePreviewRepresentable: UIViewRepresentable {
 	let accentColor: AccentColor
 	let badgeColorMode: BadgeColorPalette
 
-	func makeCoordinator() -> Coordinator {
-		Coordinator()
+	func makeUIView(context: Context) -> TimelinePreviewContainerView {
+		let containerView = TimelinePreviewContainerView()
+		containerView.update(
+			numberOfLines: AppDefaults.shared.timelineNumberOfLines,
+			tagDisplayMode: .badges,
+			statsVisible: AppDefaults.shared.statsVisible,
+			accentColor: accentColor,
+			badgeColorMode: badgeColorMode
+		)
+		return containerView
 	}
 
-	func makeUIView(context: Context) -> UICollectionView {
-		var config = UICollectionLayoutListConfiguration(appearance: .insetGrouped)
-		config.showsSeparators = false
-		let layout = UICollectionViewCompositionalLayout.list(using: config)
-
-		let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-		collectionView.isScrollEnabled = false
-		collectionView.backgroundColor = .clear
-		collectionView.dataSource = context.coordinator
-		collectionView.register(MainTimelineCell.self, forCellWithReuseIdentifier: MainTimelineCell.reuseIdentifier)
-		return collectionView
+	func updateUIView(_ containerView: TimelinePreviewContainerView, context: Context) {
+		containerView.update(
+			numberOfLines: AppDefaults.shared.timelineNumberOfLines,
+			tagDisplayMode: .badges,
+			statsVisible: AppDefaults.shared.statsVisible,
+			accentColor: accentColor,
+			badgeColorMode: badgeColorMode
+		)
 	}
 
-	func updateUIView(_ collectionView: UICollectionView, context: Context) {
-		collectionView.reloadData()
-	}
-
-	func sizeThatFits(_ proposal: ProposedViewSize, uiView collectionView: UICollectionView, context: Context) -> CGSize? {
+	func sizeThatFits(_ proposal: ProposedViewSize, uiView containerView: TimelinePreviewContainerView, context: Context) -> CGSize? {
 		let width = proposal.width ?? 320
-		collectionView.frame.size.width = width
-		collectionView.layoutIfNeeded()
-		let height = max(collectionView.collectionViewLayout.collectionViewContentSize.height, 88)
+		let height = containerView.preferredHeight(forWidth: width)
 		return CGSize(width: width, height: height)
-	}
-
-	final class Coordinator: NSObject, UICollectionViewDataSource {
-		func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-			1
-		}
-
-		func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath) as! MainTimelineCell
-			cell.cellData = MainTimelineCellData(
-				article: TimelineCustomizerCollectionViewController.previewArticle,
-				showFeedName: .byline,
-				feedName: "The Fellowship of the Ring",
-				byline: "J. R. R. Tolkien",
-				iconImage: IconImage(Assets.Images.nnwFeedIcon),
-				showIcon: false,
-				numberOfLines: AppDefaults.shared.timelineNumberOfLines,
-				iconSize: AppDefaults.shared.timelineIconSize,
-				tagDisplayMode: .badges
-			)
-			cell.isPreview = true
-			return cell
-		}
 	}
 }

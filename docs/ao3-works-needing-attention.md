@@ -54,13 +54,12 @@ precedence:
 - **Retry Now** (not shown for a pending update). Clears
   `ao3ConfirmedMissingAt` and `wordCountRegressionFlaggedAt`, fetches the
   `Article`, and calls `AO3ChapterFetcher.shared.checkForUpdates(for:)`. Its
-  `Bool` selects the message shown afterwards. `false` is not only the 60
-  second per-article floor: `checkForUpdates` also returns `false` for an
-  Ambrosia work with updates turned off, an anthology bookKey, or an
-  unresolved pending update, so the message says "may have already checked"
-  rather than asserting the floor. Both flags are cleared before the call,
-  so a throttled retry leaves the work unflagged and the row gone after the
-  reload. The list is reloaded after every retry.
+  `Bool` selects the message shown afterwards (`false` occurs for an Ambrosia
+  work with updates turned off, an anthology bookKey, or an unresolved pending
+  update; explicit manual checks bypass the 60-second automatic-fetch floor).
+  Both flags are cleared before the call, so a rejected retry leaves the work
+  unflagged and the row gone after the reload. The list is reloaded after every
+  retry.
 - **Review Update** (pending update only). Dismisses Settings and calls
   `SceneCoordinator.selectArticleDirectly(_:account:)`
   (`SettingsViewController.openArticleFromSettings(articleID:accountID:)`,

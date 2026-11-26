@@ -718,6 +718,10 @@ extension MainTimelineModernViewController: UICollectionViewDelegate {
 				menuElements.append(UIMenu(title: "", options: .displayInline, children: [action]))
 			}
 
+			if let action = self.checkForUpdatesAction(article) {
+				menuElements.append(UIMenu(title: "", options: .displayInline, children: [action]))
+			}
+
 			var shareActions = [UIAction]()
 			if let action = self.shareEPUBAction(article, indexPath: firstIndex) {
 				shareActions.append(action)
@@ -1886,6 +1890,20 @@ extension MainTimelineModernViewController {
 			self?.showBrowserForArticle(article)
 		}
 		return action
+	}
+
+	func checkForUpdatesAction(_ article: Article) -> UIAction? {
+		guard AO3FetchPolicy.canCheckForUpdates(for: article) else {
+			return nil
+		}
+		guard AO3FetchPolicy.isNetworkRequestAllowed(for: article) else {
+			let title = NSLocalizedString("Check for Updates (Enable AO3 Updates in Settings)", comment: "Command, disabled: Ambrosia article with the AO3 network toggle off")
+			return UIAction(title: title, image: Assets.Images.checkForUpdates, attributes: .disabled) { _ in }
+		}
+		let title = NSLocalizedString("Check for Updates", comment: "Command")
+		return UIAction(title: title, image: Assets.Images.checkForUpdates) { _ in
+			AO3ChapterFetcher.shared.checkForUpdates(for: article)
+		}
 	}
 
 	func openInBrowserAlertAction(_ article: Article, completion: @escaping (Bool) -> Void) -> UIAlertAction? {

@@ -173,7 +173,9 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// regardless of whether the article "looks" settled.
 	/// Returns whether a request started: false when the article is not an
 	/// individually refreshable AO3 work, a pending update is unresolved,
-	/// the network gate refused, or the 60-second floor swallowed it.
+	/// or the network gate refused. Explicit manual update checks bypass
+	/// the 60-second automatic-fetch floor so a user can retry immediately
+	/// after an outage or error.
 	@discardableResult
 	public func checkForUpdates(for article: Article) -> Bool {
 		guard let workID = AO3FetchPolicy.workID(fromBookKey: article.bookKey) else {
@@ -256,12 +258,13 @@ extension AO3ChapterFetcher {
 nonisolated extension AO3ChapterFetcher {
 
 	/// Returns whether a request actually started: false when the 60-second
-	/// floor swallowed the attempt.
+	/// floor swallowed an automatic attempt. Manual update checks bypass
+	/// the floor so users can immediately retry after a network or AO3 outage.
 	@discardableResult
 	private func downloadIfNeeded(workID: String, articleID: String, accountID: String, feedID: String, priority: Priority, isUpdateCheck: Bool = false) -> Bool {
 		let shouldDownload = attemptDates.withLock { dates in
 			let currentDate = Date()
-			if let attemptDate = dates[articleID], attemptDate > currentDate.addingTimeInterval(-Self.secondsBetweenAttempts) {
+			if !isUpdateCheck, let attemptDate = dates[articleID], attemptDate > currentDate.addingTimeInterval(-Self.secondsBetweenAttempts) {
 				return false
 			}
 			dates[articleID] = currentDate

@@ -19,6 +19,7 @@ import Combine
 import UIKit
 import AO3Kit
 import RSWeb
+import Account
 
 @MainActor final class AO3SettingsModel: ObservableObject {
 
@@ -26,6 +27,34 @@ import RSWeb
 	@Published private(set) var sessionEnded: (date: Date, reason: AO3SessionEndReason)?
 	@Published private(set) var rateLimitResumeDate: Date?
 	@Published private(set) var challengeCapturedAt: Date?
+
+	@Published var refetchInterval: AO3PrefaceRefetchInterval {
+		didSet {
+			guard oldValue != refetchInterval else { return }
+			AO3PrefaceRefetchPreference.current = refetchInterval
+		}
+	}
+
+	@Published var isKudosOnLikeEnabled: Bool {
+		didSet {
+			guard oldValue != isKudosOnLikeEnabled else { return }
+			AO3KudosOnLikePreference.isEnabled = isKudosOnLikeEnabled
+		}
+	}
+
+	@Published var isAmbrosiaUpdatesEnabled: Bool {
+		didSet {
+			guard oldValue != isAmbrosiaUpdatesEnabled else { return }
+			AmbrosiaAO3NetworkPreference.updatesEnabled = isAmbrosiaUpdatesEnabled
+		}
+	}
+
+	@Published var isPrefetchNewWorksEnabled: Bool {
+		didSet {
+			guard oldValue != isPrefetchNewWorksEnabled else { return }
+			AO3PrefetchNewWorksPreference.isEnabled = isPrefetchNewWorksEnabled
+		}
+	}
 
 	private let isSignedInProvider: @MainActor () -> Bool
 	private let sessionEndedProvider: @MainActor () -> (date: Date, reason: AO3SessionEndReason)?
@@ -61,6 +90,10 @@ import RSWeb
 		self.sessionEnded = sessionEnded()
 		self.rateLimitResumeDate = nil
 		self.challengeCapturedAt = challengeCapturedAt()
+		self.refetchInterval = AO3PrefaceRefetchPreference.current
+		self.isKudosOnLikeEnabled = AO3KudosOnLikePreference.isEnabled
+		self.isAmbrosiaUpdatesEnabled = AmbrosiaAO3NetworkPreference.updatesEnabled
+		self.isPrefetchNewWorksEnabled = AO3PrefetchNewWorksPreference.isEnabled
 
 		let names: [Notification.Name] = [.ao3SessionDidChange, .hostRateLimitDidChange, UIApplication.didBecomeActiveNotification]
 		observers = names.map { name in

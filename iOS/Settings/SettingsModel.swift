@@ -37,20 +37,6 @@ import AO3Kit
 		}
 	}
 
-	@Published var timelineGroupByFeed: Bool {
-		didSet {
-			guard oldValue != timelineGroupByFeed else { return }
-			AppDefaults.shared.timelineGroupByFeed = timelineGroupByFeed
-		}
-	}
-
-	@Published var refreshClearsReadArticles: Bool {
-		didSet {
-			guard oldValue != refreshClearsReadArticles else { return }
-			AppDefaults.shared.refreshClearsReadArticles = refreshClearsReadArticles
-		}
-	}
-
 	@Published var showLastUpdatedLabel: Bool {
 		didSet {
 			guard oldValue != showLastUpdatedLabel else { return }
@@ -80,36 +66,32 @@ import AO3Kit
 	}
 
 	@Published private(set) var isAO3SignedIn: Bool
+	@Published private(set) var ao3HasSessionEnded: Bool
+	@Published private(set) var ao3HasActiveRateLimit: Bool
 	@Published private(set) var currentThemeName: String
 	@Published private(set) var colorPaletteDescription: String
 	@Published private(set) var accentColorDescription: String
-	@Published private(set) var isReadArticlesFiltered: Bool
 
-	private weak var presentingParentController: UIViewController?
 	nonisolated(unsafe) private var observers = [NSObjectProtocol]()
 
-	init(
-		presentingParentController: UIViewController? = nil,
-		notificationCenter: NotificationCenter = .default
-	) {
-		self.presentingParentController = presentingParentController
+	init(notificationCenter: NotificationCenter = .default) {
 		self.feedTransferFormat = AmbrosiaTransferFormatPreference.current
 		self.timelineSortField = AppDefaults.shared.timelineSortField
 		self.timelineSortDirection = AppDefaults.shared.timelineSortDirection
-		self.timelineGroupByFeed = AppDefaults.shared.timelineGroupByFeed
-		self.refreshClearsReadArticles = AppDefaults.shared.refreshClearsReadArticles
 		self.showLastUpdatedLabel = AppDefaults.shared.showLastUpdatedLabel
 		self.openLinksInNectar = !AppDefaults.shared.useSystemBrowser
 		self.disableArticleLinks = AppDefaults.shared.disableArticleLinks
 		self.showFeedNameInReaderView = AppDefaults.shared.showFeedNameInReaderView
 		self.isAO3SignedIn = AO3SessionStore.isSignedIn
+		self.ao3HasSessionEnded = !AO3SessionStore.isSignedIn && AO3SessionStore.lastEnded != nil
+		self.ao3HasActiveRateLimit = AO3RateLimit.activeResumeDate() != nil
 		self.currentThemeName = ArticleThemesManager.shared.currentTheme.name
 		self.colorPaletteDescription = String(describing: AppDefaults.userInterfaceColorPalette)
 		self.accentColorDescription = AppDefaults.shared.accentColor.description
-		self.isReadArticlesFiltered = (presentingParentController as? RootSplitViewController)?.coordinator.isReadArticlesFiltered ?? false
 
 		let names: [Notification.Name] = [
 			.ao3SessionDidChange,
+			.hostRateLimitDidChange,
 			.CurrentArticleThemeDidChangeNotification,
 			.ArticleThemeNamesDidChangeNotification,
 			.accentColorDidChange,
@@ -132,7 +114,13 @@ import AO3Kit
 	}
 
 	var ao3StatusText: String {
-		isAO3SignedIn
+		if ao3HasActiveRateLimit {
+			return NSLocalizedString("Rate Limited", comment: "AO3 status: rate limited")
+		}
+		if ao3HasSessionEnded {
+			return NSLocalizedString("Session Expired", comment: "AO3 status: session expired")
+		}
+		return isAO3SignedIn
 			? NSLocalizedString("Signed In", comment: "AO3 status: signed in")
 			: NSLocalizedString("Not Signed In", comment: "AO3 status: not signed in")
 	}
@@ -141,18 +129,6 @@ import AO3Kit
 		feedTransferFormat == .sqlite
 			? NSLocalizedString("SQLite", comment: "Feed transfer format")
 			: NSLocalizedString("JSON", comment: "Feed transfer format")
-	}
-
-	var isGroupByFeedEnabled: Bool {
-		timelineSortField == .date
-	}
-
-	var groupByFeedDisabledReason: String? {
-		isGroupByFeedEnabled ? nil : NSLocalizedString("Only applies when sorted by Date", comment: "Group by Feed inapplicable reason")
-	}
-
-	var clearReadArticlesReason: String? {
-		isReadArticlesFiltered ? nil : NSLocalizedString("Only applies when the Read Works filter is on", comment: "Clear read articles inapplicable reason")
 	}
 
 	var sortDirectionOptions: [(direction: ComparisonResult, label: String)] {
@@ -172,9 +148,10 @@ import AO3Kit
 			feedTransferFormat = latestTransfer
 		}
 		isAO3SignedIn = AO3SessionStore.isSignedIn
+		ao3HasSessionEnded = !AO3SessionStore.isSignedIn && AO3SessionStore.lastEnded != nil
+		ao3HasActiveRateLimit = AO3RateLimit.activeResumeDate() != nil
 		currentThemeName = ArticleThemesManager.shared.currentTheme.name
 		colorPaletteDescription = String(describing: AppDefaults.userInterfaceColorPalette)
 		accentColorDescription = AppDefaults.shared.accentColor.description
-		isReadArticlesFiltered = (presentingParentController as? RootSplitViewController)?.coordinator.isReadArticlesFiltered ?? false
 	}
 }

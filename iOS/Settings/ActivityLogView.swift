@@ -17,35 +17,15 @@ struct ActivityLogView: View {
 	@State private var plainText = ""
 
 	var body: some View {
-		VStack(spacing: 0) {
-			if isEmpty {
-				EmptyStateView(
-					title: Text(verbatim: NSLocalizedString("No Activity Logged", comment: "Activity log empty state")),
-					systemImage: "checkmark.circle"
-				)
-				.frame(maxWidth: .infinity, maxHeight: .infinity)
-			} else {
-				privacyWarning
-				Divider()
-				ScrollView {
-					Text(attributedText)
-						.font(.system(.body, design: .monospaced))
-						.textSelection(.enabled)
-						.frame(maxWidth: .infinity, alignment: .leading)
-						.padding()
-				}
-			}
-			Divider()
-			helpFooter
-		}
-		.navigationTitle(NSLocalizedString("Activity Log", comment: "Activity Log screen title"))
-		.toolbar {
-			ToolbarItem(placement: .topBarTrailing) {
-				Button("Copy Contents") {
-					UIPasteboard.general.string = plainText
-				}
-				.disabled(isEmpty)
-			}
+		LogViewerContainer(
+			isEmpty: isEmpty,
+			emptyTitle: NSLocalizedString("No Activity Logged", comment: "Activity log empty state"),
+			privacyWarningText: NSLocalizedString("Activity may contain feed URLs and other information you may not want to share publicly.", comment: "Activity log privacy warning"),
+			helpFooterText: NSLocalizedString("A history of what the app has done over the web — feed refreshes, status syncs, favicon lookups, and more — with the result of each. Keeps the most recent 500 entries and clears when the app relaunches.", comment: "Activity Log explainer"),
+			navigationTitleText: NSLocalizedString("Activity Log", comment: "Activity Log screen title"),
+			plainText: plainText
+		) {
+			Text(attributedText)
 		}
 		.task {
 			reload()
@@ -53,22 +33,6 @@ struct ActivityLogView: View {
 		.onReceive(NotificationCenter.default.publisher(for: .activityDidChange)) { _ in
 			reload()
 		}
-	}
-
-	private var privacyWarning: some View {
-		Text("Activity may contain feed URLs and other information you may not want to share publicly.", comment: "Activity log privacy warning")
-			.font(.footnote)
-			.foregroundStyle(.secondary)
-			.padding()
-	}
-
-	private var helpFooter: some View {
-		Text("A history of what the app has done over the web — feed refreshes, status syncs, favicon lookups, and more — with the result of each. Keeps the most recent 500 entries and clears when the app relaunches.", comment: "Activity Log explainer")
-			.font(.footnote)
-			.foregroundStyle(.secondary)
-			.frame(maxWidth: .infinity, alignment: .leading)
-			.padding(.horizontal)
-			.padding(.vertical, 12)
 	}
 }
 

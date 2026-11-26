@@ -64,6 +64,15 @@ import HexColor
 struct ColorPaletteSettingsView: View {
 
 	@StateObject private var model = ColorPaletteSettingsModel()
+	@Environment(\.surfacePaletteObserver) private var surfaceObserver
+	@Environment(\.colorScheme) private var colorScheme
+
+	private var cellBackground: Color {
+		_ = model.surfaceTint
+		_ = model.userInterfaceColorPalette
+		let traits = UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light)
+		return surfaceObserver?.settingsCellBackground ?? Color(uiColor: Assets.Colors.settingsCellBackground(for: traits))
+	}
 
 	var body: some View {
 		Form {
@@ -77,6 +86,7 @@ struct ColorPaletteSettingsView: View {
 					}
 				}
 			}
+			.listRowBackground(cellBackground)
 
 			Section {
 				ForEach(ToolbarStyle.allCases, id: \.self) { style in
@@ -90,6 +100,7 @@ struct ColorPaletteSettingsView: View {
 			} footer: {
 				Text("Default: the top navigation bar and bottom toolbar use plain system appearance. Blend: both bars match the current work's background color. Tinted: both bars pick up the Surface Palette's tint color.", comment: "Toolbar style picker footer")
 			}
+			.listRowBackground(cellBackground)
 
 			Section {
 				ForEach(SurfacePalette.allCases, id: \.self) { palette in
@@ -103,13 +114,16 @@ struct ColorPaletteSettingsView: View {
 			} header: {
 				Text("Surface Palette", comment: "Surface palette section header")
 			}
+			.listRowBackground(cellBackground)
 
 			Section {
 				SurfacePalettePreviewView(surfaceTint: model.surfaceTint, toolbarStyle: model.toolbarStyle)
 			} header: {
 				Text("Preview", comment: "Surface palette preview section header")
 			}
+			.listRowBackground(cellBackground)
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle(Text("Color Palette", comment: "Color Palette navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
 	}
@@ -213,7 +227,7 @@ private struct SurfaceSwatchItem: View {
 			ZStack {
 				RoundedRectangle(cornerRadius: 8)
 					.fill(background)
-					.frame(width: 80, height: 44)
+					.frame(maxWidth: .infinity, minHeight: 44, maxHeight: 44)
 					.overlay(
 						RoundedRectangle(cornerRadius: 8)
 							.stroke(Color(uiColor: .separator), lineWidth: 1)

@@ -34,17 +34,33 @@ struct ArticleThemeListView: View {
 				model: model,
 				previewColorScheme: $previewColorScheme
 			)
-			ArticleThemeTypographySection(model: model)
-			ArticleThemeColorsSection(model: model)
 			Section {
-				Button(role: .destructive) {
-					isResetAlertPresented = true
+				NavigationLink {
+					ArticleThemeOverridesView(model: model, isResetAlertPresented: $isResetAlertPresented)
 				} label: {
-					Text("Reset to Theme Default", comment: "Reset to Theme Default button")
+					LabeledContent {
+						Text(overrideSummaryText)
+							.foregroundStyle(.secondary)
+					} label: {
+						Label(NSLocalizedString("Customize Theme", comment: "Customize Theme overrides row"), systemImage: "slider.horizontal.3")
+					}
+				}
+			} footer: {
+				Text("Override fonts, spacing, margins, creator styles, and colors for the active theme.", comment: "Customize Theme row footer")
+			}
+
+			if model.activeOverrideCount > 0 {
+				Section {
+					Button(role: .destructive) {
+						isResetAlertPresented = true
+					} label: {
+						Text("Reset to Theme Default", comment: "Reset to Theme Default button")
+					}
 				}
 			}
 		}
 		.navigationTitle(Text("Theme", comment: "Theme navigation title"))
+		.navigationBarTitleDisplayMode(.inline)
 		.toolbar {
 			ToolbarItem(placement: .primaryAction) {
 				Button {
@@ -85,6 +101,39 @@ struct ArticleThemeListView: View {
 			Text("This will discard all custom font, layout, and color overrides for “\(model.currentTheme.name)”.", comment: "Reset Theme Overrides message")
 		}
 	}
+
+	private var overrideSummaryText: String {
+		let count = model.activeOverrideCount
+		if count == 0 {
+			return NSLocalizedString("None", comment: "No theme overrides active")
+		} else if count == 1 {
+			return NSLocalizedString("1 Active", comment: "One theme override active")
+		} else {
+			let format = NSLocalizedString("%d Active", comment: "Multiple theme overrides active")
+			return String(format: format, count)
+		}
+	}
+}
+
+private struct ArticleThemeOverridesView: View {
+	@ObservedObject var model: ArticleThemeSettingsModel
+	@Binding var isResetAlertPresented: Bool
+
+	var body: some View {
+		Form {
+			ArticleThemeTypographySection(model: model)
+			ArticleThemeColorsSection(model: model)
+			Section {
+				Button(role: .destructive) {
+					isResetAlertPresented = true
+				} label: {
+					Text("Reset to Theme Default", comment: "Reset to Theme Default button")
+				}
+			}
+		}
+		.navigationTitle(Text("Customize Theme", comment: "Customize Theme navigation title"))
+		.navigationBarTitleDisplayMode(.inline)
+	}
 }
 
 private struct ArticleThemeSelectionSection: View {
@@ -96,11 +145,11 @@ private struct ArticleThemeSelectionSection: View {
 			NavigationLink {
 				ArticleThemePickerView()
 			} label: {
-				HStack {
-					Text("Theme", comment: "Theme picker label")
-					Spacer()
+				LabeledContent {
 					Text(model.currentTheme.name)
 						.foregroundStyle(.secondary)
+				} label: {
+					Text("Theme", comment: "Theme picker label")
 				}
 			}
 

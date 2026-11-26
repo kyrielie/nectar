@@ -83,6 +83,7 @@ struct AboutView: View {
 			.scenePadding(.horizontal)
 		}
 		.navigationTitle(Text(verbatim: "About Nectar"))
+		.navigationBarTitleDisplayMode(.inline)
     }
 }
 

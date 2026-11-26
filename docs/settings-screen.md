@@ -7,15 +7,16 @@ is a separate screen entirely; its AO3-search-specific "AO3 Pages" row is
 covered in `ao3-arbitrary-page-fetch.md`, not here.
 
 `SettingsView` (`iOS/Settings/SettingsView.swift`) is a SwiftUI
-`NavigationStack`-based `List` presented inside `SettingsHostingController`
+`NavigationStack`-based `Form` presented inside `SettingsHostingController`
 with `SurfacePaletteAware` applied at the root. It replaces the former
 `SettingsViewController` and `Settings.storyboard` (retired), using a typed
-`SettingsDestination` enum for navigation across 8 sections (`.ao3Account`,
-`.feeds`/Library, `.timeline`, `.articles`/Works, `.appearance`,
-`.troubleshooting`, `.help`, `.backup`) plus the bottom build-version footer.
-Specialized UIKit screens (`TimelineCustomizerCollectionViewController`,
-`ToolbarsCustomizerViewController`, `ManageStorageCollectionViewController`)
-are instantiated in code and pushed via `UIViewControllerRepresentable`.
+`SettingsDestination` enum for navigation across 9 sections ordered by
+usage frequency (`.timeline`, **Reading Activity**, `.articles`/Reader,
+`.appearance`, `.ao3Account`, `.backup` / Storage & Backup, `.feeds`/Import &
+Export, `.troubleshooting`, `.help`) plus `.searchable` (backed by
+`SettingsSearchIndex`) and a selectable build-version footer.
+`ManageStorageCollectionViewController` is instantiated in code and pushed via
+`UIViewControllerRepresentable`.
 
 ## Row inventory by section
 
@@ -31,10 +32,19 @@ are instantiated in code and pushed via `UIViewControllerRepresentable`.
   explanation lives in the picker's own action-sheet message rather than
   the section footer (the footer already covers what exporting includes,
   and the two settings are otherwise unrelated).
-- **`.timeline`** (`TimelineRow`): sort field, sort direction, group by
-  feed, "refresh clears read articles," Timeline Layout (pushes
-  `TimelineCustomizerCollectionViewController`, below), show-last-updated
-  label.
+- **`.timeline`** (`TimelineRow`): sort field, sort direction, Timeline Layout
+  (pushes `TimelineCustomizerView`, below), show-last-updated label.
+  Upstream's "Group by Shelf" toggle (`AppDefaults.Key.timelineGroupByFeed`,
+  default `false`) is hidden from Settings because the timeline renders as a
+  flat list without shelf headers, making alphabetical shelf clustering look
+  like broken date sorting. Upstream's "Clear Read Works on Refresh" toggle
+  (`AppDefaults.Key.refreshClearsReadArticles`) is also intentionally hidden
+  from Settings and defaulted to `true` in `AppDefaults.registerDefaults()`:
+  because Nectar marks works read manually or at 90% completion rather than
+  on open (and users rarely manually refresh), exposing a per-refresh
+  read-clearing toggle was confusing; when Hide Read is active, manual
+  refreshes clear read rows automatically via
+  `SceneCoordinator.cleanUp(conditional: true)`.
 - **`.articles`** (`ArticlesRow`, 9 cases): theme picker, "open links in
   Nectar," disable article links, feed-name-in-reader, **Full Screen
   Reading** — a disclosure row pushing `FullScreenReadingViewController`
@@ -118,34 +128,23 @@ Two storage tiers exist beyond `Settings.storyboard`'s rows:
 
 ## Timeline Layout screen
 
-`TimelineCustomizerCollectionViewController` is a 4-section
-`UICollectionViewCompositionalLayout` list. Corrected here from a stale
-description (this doc previously said icon size (0), number of lines (1),
-no-icon preview (2), icon preview (3) — that predates
-surface-palette-and-badge-colors-plan section 3.4, which fixed the section
-layout to what's below and moved Badge Colors off this screen entirely,
-onto `AccentColorTableViewController`): Number of Lines (0), Tag Display
-(1), Stats Visibility (2), Preview (3). Section 0/1 are slider rows
-(`TimelineCustomizerCell`/`TickMarkSlider`, dequeued from storyboard
-prototype cells); section 2 is a `StatsVisibilityCell` (a plain
-`UISwitch` row, registered in code, no storyboard prototype); section 3
-renders a live `MainTimelineCell` built from a hardcoded `previewArticle`.
-All four reload on `UserDefaults.didChangeNotification`-equivalent
-per-setting notifications (`.timelineNumberOfLinesDidChange`,
-`.timelineTagDisplayModeDidChange`, `.statsVisibilityDidChange`), plus
-`.accentColorDidChange`/`.surfaceTintDidChange` for live palette/tint
-repainting.
+`TimelineCustomizerView` (`iOS/Settings/TimelineCustomizerView.swift`, backed
+by `TimelineCustomizerModel`) is a SwiftUI `Form` with a `Stepper` for Title &
+Summary Lines (1–6, with a footer explaining it caps combined title and summary
+lines), a segmented `Picker` for Tag Display, a `Toggle` for Show Stats, and
+a synchronous live `MainTimelineCell` preview (`TimelinePreviewRepresentable`
+hosting `TimelinePreviewContainerView`).
 
 ## Full Screen Reading screen
 
 `FullScreenReadingView` (`iOS/Settings/FullScreenReadingView.swift`, backed
 by `FullScreenReadingModel`) is a SwiftUI `Form`, pushed from Works's
-"Toolbars, Gestures & Layout" row, grouping every setting that only does
-anything once you're actually in fullscreen reading mode: three sections —
+"Full Screen Reading" row, grouping every setting that only does
+anything once you're actually in fullscreen reading mode: two sections —
 Gestures (enable full screen works, swipe back, paging swipe, long-press
-context menu, work scrollbar picker), Toolbars (pushes
-`ToolbarsCustomizerViewController` via `ToolbarsCustomizerRepresentable`),
-and a third section holding Page Counter and Hide Notch in Full Screen.
+context menu, work scrollbar picker) and a second section holding
+Page Counter and Hide Notch in Full Screen. (Toolbars is accessed directly
+from the main Works section.)
 
 The Gestures section's Long-Press Context Menu switch
 (`AppDefaults.articleFullscreenContextMenuEnabled`, default on) controls
@@ -213,28 +212,26 @@ independent `UIBarButtonItem` instance in `ArticleViewController` (see
 same function inline on both bars at once renders correctly on both,
 not just whichever bar happened to build its items last.
 
-- **Preview (0)**: one `ToolbarPreviewCell`, wrapping a real
-  `UINavigationBar` for `.top` or a real `UIToolbar` for `.bottom`
-  (only one is visible at a time, toggled by `configure(bar:)`), built
-  with the same icons, order, and flexibleSpace-separated layout (bottom
-  only) as `ArticleViewController.toolbarItems(for:overflowItem:)` /
-  `displayOrder(for:)`. Synthetic rather than an embedded, real
-  `ArticleViewController`, for the same reasoning the two prior preview
-  cells documented: that controller needs a live `Article`,
-  `SceneCoordinator`, and WebView machinery this screen has no reason to
-  stand up. Both `ToolbarPreviewCell.configure(bar:)` and
-  `ArticleViewController.displayOrder(for:)` now read the *same*
-  `AppDefaults.toolbarFunctionOrder(for:)` call rather than two
-  independently-hardcoded literal arrays, so the preview can no longer
-  drift from the real reader's order the way the two separate copies
-  risked before persisted ordering existed. When that bar's overflow
-  switch (`AppDefaults.isToolbarOverflowMenuEnabled(on:)`) is on and at
-  least one function is overflow-flagged there, `configure(bar:)` adds a
-  single target-less command-glyph (⌘) item alongside the per-function
-  icon list — mirroring `ArticleViewController`'s own additive overflow
-  rendering. On `.bottom` it's appended *after* the icon list, same as
-  `ArticleViewController.toolbarItems(for:overflowItem:)`. On `.top` it's
-  *inserted at the front* of the array instead, because
+- **Preview**: `ToolbarPreviewView` (pure SwiftUI in `ToolbarsSettingsView.swift`,
+  replacing the legacy `ToolbarPreviewCell` `UICollectionViewListCell` wrapper
+  whose live `UINavigationBar`/`UIToolbar` triggered an iOS 26
+  `ToolbarModel.ToolbarMetrics` observation feedback loop inside SwiftUI `Form`).
+  Draws the exact same icons, order, and layout (right-aligned on `.top`,
+  evenly spaced on `.bottom`) as `ArticleViewController.toolbarItems(for:overflowItem:)`
+  / `displayOrder(for:)`, reading `AppDefaults.toolbarFunctionOrder(for:)`.
+  When that bar's overflow switch (`AppDefaults.isToolbarOverflowMenuEnabled(on:)`)
+  is on and at least one function is overflow-flagged there, `ToolbarPreviewView`
+  adds a single command-glyph (⌘) item alongside the bar icons (at the
+  leading edge on `.top` and trailing edge on `.bottom`).
+- **Buttons grouped by placement**: `ToolbarsSettingsView` partitions
+  `orderedFunctions` into **On Bar (`X of Y slots`)** (drag-to-reorder),
+  **In Overflow Menu** (shown when Overflow Menu is enabled, drag-to-reorder),
+  and **Available** (not reorderable, `.moveDisabled(true)`), with a placement
+  menu (`Bar`, `Overflow`, `Off`) on each row. Reordering within **On Bar** or
+  **In Overflow Menu** updates those items' relative slots inside
+  `AppDefaults.toolbarFunctionOrder(for:)`.
+
+(Legacy detail from the prior UIKit preview: on `.top` the overflow icon sits at the front because
   `UINavigationItem.rightBarButtonItems` renders index 0 closest to the
   trailing screen edge and each later element further left — the
   opposite of `UIToolbar.toolbarItems`, which lays its array out

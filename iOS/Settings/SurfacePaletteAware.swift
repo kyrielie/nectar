@@ -3,12 +3,8 @@
 //  NetNewsWire-iOS
 //
 //  See docs/app-chrome-palette.md ("Badge Colors"). SwiftUI counterpart to
-//  SettingsPaletteBackgroundHosting: that protocol assigns .backgroundColor
-//  on a UIView outlet, which is structurally inapplicable to a SwiftUI
-//  View. This gives the six UIHostingController-wrapped settings screens
-//  (AboutView, AO3AccountSettingsView, ErrorLogView, AccountStatsView,
-//  ActivityLogView, ArticleThemeListView) the same live palette/accent
-//  tracking every UIKit settings screen already has.
+//  SettingsPaletteBackgroundHosting: applies `settingsBackground`,
+//  `settingsCellBackground`, and `accentColor` to SwiftUI Settings screens.
 //
 
 import SwiftUI
@@ -20,16 +16,14 @@ final class SurfacePaletteObserver: ObservableObject {
 	@Published var settingsCellBackground: Color
 	@Published var accentColor: Color
 
-	// nonisolated(unsafe) because deinit for a @MainActor class runs
-	// nonisolated -- these tokens are opaque, write-once-in-init,
-	// read-once-in-deinit, and NotificationCenter.removeObserver is safe
-	// to call off the main actor.
 	private nonisolated(unsafe) var accentObserver: NSObjectProtocol?
 	private nonisolated(unsafe) var surfaceObserver: NSObjectProtocol?
+	private var latestTraitCollection: UITraitCollection
 
 	/// Takes an explicit trait collection rather than reading
 	/// UITraitCollection.current -- see refresh(for:) below for why.
 	init(traitCollection: UITraitCollection) {
+		latestTraitCollection = traitCollection
 		settingsBackground = Color(Assets.Colors.settingsBackground(for: traitCollection))
 		settingsCellBackground = Color(Assets.Colors.settingsCellBackground(for: traitCollection))
 		accentColor = Color(Assets.Colors.primaryAccent)
@@ -41,7 +35,8 @@ final class SurfacePaletteObserver: ObservableObject {
 		}
 		surfaceObserver = NotificationCenter.default.addObserver(forName: .surfaceTintDidChange, object: nil, queue: .main) { [weak self] _ in
 			Task { @MainActor in
-				self?.refresh(for: traitCollection)
+				guard let self else { return }
+				self.refresh(for: self.latestTraitCollection)
 			}
 		}
 	}
@@ -50,6 +45,7 @@ final class SurfacePaletteObserver: ObservableObject {
 	/// handler when userInterfaceStyle changes, since light/dark HexSet
 	/// selection depends on it.
 	func refresh(for traitCollection: UITraitCollection) {
+		latestTraitCollection = traitCollection
 		settingsBackground = Color(Assets.Colors.settingsBackground(for: traitCollection))
 		settingsCellBackground = Color(Assets.Colors.settingsCellBackground(for: traitCollection))
 	}
@@ -60,12 +56,49 @@ final class SurfacePaletteObserver: ObservableObject {
 	}
 }
 
+private struct SurfacePaletteObserverKey: EnvironmentKey {
+	static let defaultValue: SurfacePaletteObserver? = nil
+}
+
+extension EnvironmentValues {
+	var surfacePaletteObserver: SurfacePaletteObserver? {
+		get { self[SurfacePaletteObserverKey.self] }
+		set { self[SurfacePaletteObserverKey.self] = newValue }
+	}
+}
+
 struct SurfacePaletteAware: ViewModifier {
 	@ObservedObject var observer: SurfacePaletteObserver
+
 	func body(content: Content) -> some View {
 		content
 			.scrollContentBackground(.hidden)
-			.background(observer.settingsBackground)
+			.background(observer.settingsBackground.ignoresSafeArea())
+			.tint(observer.accentColor)
+			.environment(\.surfacePaletteObserver, observer)
+	}
+}
+
+struct SurfacePaletteListContainer: ViewModifier {
+	@Environment(\.surfacePaletteObserver) private var observer
+
+	func body(content: Content) -> some View {
+		if let observer {
+			ObservedSurfacePaletteListContainer(observer: observer, content: content)
+		} else {
+			content
+		}
+	}
+}
+
+private struct ObservedSurfacePaletteListContainer<Content: View>: View {
+	@ObservedObject var observer: SurfacePaletteObserver
+	let content: Content
+
+	var body: some View {
+		content
+			.scrollContentBackground(.hidden)
+			.background(observer.settingsBackground.ignoresSafeArea())
 			.tint(observer.accentColor)
 	}
 }
@@ -73,5 +106,9 @@ struct SurfacePaletteAware: ViewModifier {
 extension View {
 	func surfacePaletteAware(observer: SurfacePaletteObserver) -> some View {
 		modifier(SurfacePaletteAware(observer: observer))
+	}
+
+	func surfacePaletteListBackground() -> some View {
+		modifier(SurfacePaletteListContainer())
 	}
 }

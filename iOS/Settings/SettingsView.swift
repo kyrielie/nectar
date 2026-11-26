@@ -18,6 +18,7 @@ enum SettingsDestination: Hashable {
 	case ao3IgnoreList
 	case timelineLayout
 	case articleTheme
+	case toolbars
 	case fullScreenReading
 	case annotations
 	case textReplacement
@@ -276,7 +277,7 @@ struct SettingsView: View {
 
 	static func makeHostingController(presentingParentController: UIViewController?, scrollToArticlesSection: Bool = false) -> SettingsHostingController {
 		let actions = SettingsActionCoordinator(presentingParentController: presentingParentController)
-		let model = SettingsModel(presentingParentController: presentingParentController)
+		let model = SettingsModel()
 		let hostingController = SettingsHostingController(rootView: AnyView(EmptyView()))
 		actions.hostingController = hostingController
 		let observer = SurfacePaletteObserver(traitCollection: hostingController.traitCollection)
@@ -303,31 +304,52 @@ struct SettingsView: View {
 	let scrollToArticlesSection: Bool
 	let onDismiss: () -> Void
 
+	@Environment(\.surfacePaletteObserver) private var paletteObserver
 	@State private var path: [SettingsDestination] = []
 	@State private var didScrollToArticles = false
+	@State private var searchText = ""
+
+	private var cellBackground: Color? {
+		paletteObserver?.settingsCellBackground
+	}
 
 	var body: some View {
 		NavigationStack(path: $path) {
 			ScrollViewReader { proxy in
 				List {
-					ao3Section
-					librarySection
-					timelineSection
-					worksSection
-						.id("articles")
-					appearanceSection
-					troubleshootingSection
-					helpSection
-					backupSection
-					buildFooterSection
+					Group {
+						if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+							timelineSection
+							readingActivitySection
+							readerSection
+								.id("articles")
+							appearanceSection
+							ao3Section
+							storageAndBackupSection
+							importExportSection
+							troubleshootingSection
+							helpSection
+							buildFooterSection
+						} else {
+							searchResultsSection
+						}
+					}
+					.listRowBackground(cellBackground)
+				}
+				.listStyle(.insetGrouped)
+				.surfacePaletteListBackground()
+				.searchable(text: $searchText, prompt: Text("Search Settings", comment: "Search Settings prompt"))
+				.overlay {
+					if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+					   SettingsSearchIndex.results(for: searchText).isEmpty {
+						EmptyStateView.search(text: searchText)
+					}
 				}
 				.navigationTitle(Text("Settings", comment: "Settings navigation title"))
 				.navigationBarTitleDisplayMode(.inline)
 				.toolbar {
 					ToolbarItem(placement: .confirmationAction) {
-						Button(NSLocalizedString("Done", comment: "Done button")) {
-							onDismiss()
-						}
+						doneButton
 					}
 				}
 				.onAppear {
@@ -405,152 +427,286 @@ struct SettingsView: View {
 
 	// MARK: - Sections
 
-	private var ao3Section: some View {
-		Section {
-			NavigationLink(value: SettingsDestination.ao3Account) {
-				DetailRow(
-					title: NSLocalizedString("Archive of Our Own Account", comment: "AO3 account row"),
-					detail: model.ao3StatusText
-				)
+	@ViewBuilder
+	private var doneButton: some View {
+		if #available(iOS 26, *) {
+			Button(NSLocalizedString("Done", comment: "Done button"), systemImage: "checkmark") {
+				onDismiss()
 			}
-		} header: {
-			Text("Archive of Our Own", comment: "AO3 section header")
-		} footer: {
-			Text("Sign in to read works that are restricted to registered AO3 users. Nectar never sees your password -- only the resulting session.", comment: "AO3 section footer")
+		} else {
+			Button(NSLocalizedString("Done", comment: "Done button")) {
+				onDismiss()
+			}
 		}
 	}
 
-	private var librarySection: some View {
+	private var searchResultsSection: some View {
+		let results = SettingsSearchIndex.results(for: searchText)
+		return Section {
+			ForEach(results) { item in
+				NavigationLink(value: item.destination) {
+					Label {
+						VStack(alignment: .leading, spacing: 2) {
+							Text(item.title)
+								.foregroundStyle(.primary)
+							HStack(spacing: 4) {
+								ForEach(Array(item.breadcrumb.enumerated()), id: \.offset) { index, crumb in
+									if index > 0 {
+										Image(systemName: "arrow.forward")
+											.font(.caption2)
+									}
+									Text(crumb)
+								}
+							}
+							.font(.footnote)
+							.foregroundStyle(.secondary)
+						}
+					} icon: {
+						SettingsIconBadge(systemImage: item.systemImage, color: item.badgeColor)
+					}
+				}
+			}
+		}
+	}
+
+	private var ao3Section: some View {
+		Section {
+			NavigationLink(value: SettingsDestination.ao3Account) {
+				LabeledContent {
+					Text(model.ao3StatusText)
+						.foregroundStyle(model.ao3HasSessionEnded || model.ao3HasActiveRateLimit ? Color.orange : Color.secondary)
+				} label: {
+					Label {
+						Text(NSLocalizedString("Archive of Our Own Account", comment: "AO3 account row"))
+					} icon: {
+						SettingsIconBadge(systemImage: "person.crop.circle.fill", color: .red)
+					}
+				}
+			}
+		} header: {
+			Text("Archive of Our Own", comment: "AO3 section header")
+		}
+	}
+
+	private var importExportSection: some View {
 		Section {
 			Button {
 				actions.importOPML()
 			} label: {
-				Text("Import OPML File", comment: "Import OPML File")
-					.foregroundStyle(.primary)
+				Label {
+					Text("Import OPML File", comment: "Import OPML File")
+						.foregroundStyle(.primary)
+				} icon: {
+					SettingsIconBadge(systemImage: "square.and.arrow.down.fill", color: .blue)
+				}
 			}
 
 			Button {
 				actions.beginExportOPML()
 			} label: {
-				Text("Export OPML File", comment: "Export OPML File")
-					.foregroundStyle(.primary)
+				Label {
+					Text("Export OPML File", comment: "Export OPML File")
+						.foregroundStyle(.primary)
+				} icon: {
+					SettingsIconBadge(systemImage: "square.and.arrow.up.fill", color: .teal)
+				}
 			}
 
 			Button {
 				actions.beginExportArticles()
 			} label: {
-				Text("Export Library", comment: "Export Library")
-					.foregroundStyle(.primary)
+				Label {
+					Text("Export Library", comment: "Export Library")
+						.foregroundStyle(.primary)
+				} icon: {
+					SettingsIconBadge(systemImage: "tray.and.arrow.up.fill", color: .indigo)
+				}
 			}
 
 			Button {
 				actions.isTransferFormatDialogPresented = true
 			} label: {
-				DetailRow(
-					title: NSLocalizedString("Transfer Format", comment: "Transfer Format"),
-					detail: model.feedTransferFormatText
-				)
+				LabeledContent {
+					Text(model.feedTransferFormatText)
+						.foregroundStyle(.secondary)
+				} label: {
+					Label {
+						Text(NSLocalizedString("Transfer Format", comment: "Transfer Format"))
+							.foregroundStyle(.primary)
+					} icon: {
+						SettingsIconBadge(systemImage: "arrow.left.arrow.right", color: .purple)
+					}
+				}
 			}
 		} header: {
-			Text("Library", comment: "Library section header")
-		} footer: {
-			Text("Exporting includes everything in your library.", comment: "Library section footer")
+			Text("Import & Export", comment: "Import & Export section header")
 		}
 	}
 
 	private var timelineSection: some View {
 		Section {
-			Picker(NSLocalizedString("Sort By", comment: "Sort By"), selection: $model.timelineSortField) {
+			Picker(selection: $model.timelineSortField) {
 				ForEach(ArticleSorter.SortField.allCases, id: \.self) { field in
 					Text(field.displayName).tag(field)
 				}
+			} label: {
+				Label {
+					Text(NSLocalizedString("Sort By", comment: "Sort By"))
+				} icon: {
+					SettingsIconBadge(systemImage: "arrow.up.arrow.down", color: .blue)
+				}
 			}
 
-			Picker(NSLocalizedString("Order", comment: "Order"), selection: $model.timelineSortDirection) {
+			Picker(selection: $model.timelineSortDirection) {
 				ForEach(model.sortDirectionOptions, id: \.direction) { option in
 					Text(option.label).tag(option.direction)
 				}
-			}
-
-			Toggle(isOn: $model.timelineGroupByFeed) {
-				VStack(alignment: .leading, spacing: 2) {
-					Text("Group by Shelf", comment: "Group by Shelf")
-					if let reason = model.groupByFeedDisabledReason {
-						Text(reason)
-							.font(.footnote)
-							.foregroundStyle(.secondary)
-					}
-				}
-			}
-			.disabled(!model.isGroupByFeedEnabled)
-
-			Toggle(isOn: $model.refreshClearsReadArticles) {
-				VStack(alignment: .leading, spacing: 2) {
-					Text("Clear Read Works on Refresh", comment: "Clear Read Works on Refresh")
-					if let reason = model.clearReadArticlesReason {
-						Text(reason)
-							.font(.footnote)
-							.foregroundStyle(.secondary)
-					}
+			} label: {
+				Label {
+					Text(NSLocalizedString("Order", comment: "Order"))
+				} icon: {
+					SettingsIconBadge(systemImage: "line.3.horizontal.decrease", color: .cyan)
 				}
 			}
 
 			NavigationLink(value: SettingsDestination.timelineLayout) {
-				Text("Timeline Layout", comment: "Timeline Layout")
+				Label {
+					Text("Timeline Layout", comment: "Timeline Layout")
+				} icon: {
+					SettingsIconBadge(systemImage: "list.bullet.rectangle.fill", color: .indigo)
+				}
 			}
 
-			Toggle(NSLocalizedString("Show Last Updated Label", comment: "Show Last Updated Label"), isOn: $model.showLastUpdatedLabel)
+			Toggle(isOn: $model.showLastUpdatedLabel) {
+				Label {
+					Text(NSLocalizedString("Show Last Updated Label", comment: "Show Last Updated Label"))
+				} icon: {
+					SettingsIconBadge(systemImage: "clock.fill", color: .teal)
+				}
+			}
 		} header: {
 			Text("Timeline", comment: "Timeline section header")
 		}
 	}
 
-	private var worksSection: some View {
+	private var readingActivitySection: some View {
 		Section {
-			NavigationLink(value: SettingsDestination.articleTheme) {
-				DetailRow(
-					title: NSLocalizedString("Theme", comment: "Theme"),
-					detail: model.currentThemeName
-				)
-			}
-
-			Toggle(NSLocalizedString("Open Links in Nectar", comment: "Open Links in Nectar"), isOn: $model.openLinksInNectar)
-			Toggle(NSLocalizedString("Disable Links in Works", comment: "Disable Links in Works"), isOn: $model.disableArticleLinks)
-			Toggle(NSLocalizedString("Show Shelf Name in Reader View", comment: "Show Shelf Name in Reader View"), isOn: $model.showFeedNameInReaderView)
-
-			NavigationLink(value: SettingsDestination.fullScreenReading) {
-				Text("Toolbars, Gestures & Layout", comment: "Toolbars, Gestures & Layout")
-			}
-			NavigationLink(value: SettingsDestination.annotations) {
-				Text("Highlights & Notes", comment: "Highlights & Notes")
-			}
-			NavigationLink(value: SettingsDestination.textReplacement) {
-				Text("Text Replacement", comment: "Text Replacement")
-			}
 			NavigationLink(value: SettingsDestination.readingTime) {
-				Text("Reading Time", comment: "Reading Time")
+				Label {
+					Text("Reading Time", comment: "Reading Time")
+				} icon: {
+					SettingsIconBadge(systemImage: "hourglass", color: .cyan)
+				}
 			}
 			NavigationLink(value: SettingsDestination.readingStats) {
-				Text("Reading Stats", comment: "Reading Stats")
+				Label {
+					Text("Reading Stats", comment: "Reading Stats")
+				} icon: {
+					SettingsIconBadge(systemImage: "chart.bar.fill", color: .indigo)
+				}
+			}
+			NavigationLink(value: SettingsDestination.annotations) {
+				Label {
+					Text("Highlights & Notes", comment: "Highlights & Notes")
+				} icon: {
+					SettingsIconBadge(systemImage: "highlighter", color: .orange)
+				}
 			}
 		} header: {
-			Text("Works", comment: "Works section header")
+			Text("Reading Activity", comment: "Reading Activity section header")
+		}
+	}
+
+	private var readerSection: some View {
+		Section {
+			NavigationLink(value: SettingsDestination.articleTheme) {
+				LabeledContent {
+					Text(model.currentThemeName)
+						.foregroundStyle(.secondary)
+				} label: {
+					Label {
+						Text(NSLocalizedString("Theme", comment: "Theme"))
+					} icon: {
+						SettingsIconBadge(systemImage: "doc.richtext.fill", color: .purple)
+					}
+				}
+			}
+
+			NavigationLink(value: SettingsDestination.toolbars) {
+				Label {
+					Text("Toolbars", comment: "Toolbars")
+				} icon: {
+					SettingsIconBadge(systemImage: "menubar.rectangle", color: .indigo)
+				}
+			}
+			NavigationLink(value: SettingsDestination.fullScreenReading) {
+				Label {
+					Text("Full Screen Reading", comment: "Full Screen Reading")
+				} icon: {
+					SettingsIconBadge(systemImage: "arrow.up.left.and.arrow.down.right", color: .green)
+				}
+			}
+			NavigationLink(value: SettingsDestination.textReplacement) {
+				Label {
+					Text("Text Replacement", comment: "Text Replacement")
+				} icon: {
+					SettingsIconBadge(systemImage: "textformat.abc", color: .pink)
+				}
+			}
+
+			Toggle(isOn: $model.openLinksInNectar) {
+				Label {
+					Text(NSLocalizedString("Open Links in Nectar", comment: "Open Links in Nectar"))
+				} icon: {
+					SettingsIconBadge(systemImage: "safari.fill", color: .blue)
+				}
+			}
+
+			Toggle(isOn: $model.disableArticleLinks) {
+				Label {
+					Text(NSLocalizedString("Disable Links in Works", comment: "Disable Links in Works"))
+				} icon: {
+					SettingsIconBadge(systemImage: "link.badge.plus", color: .red)
+				}
+			}
+
+			Toggle(isOn: $model.showFeedNameInReaderView) {
+				Label {
+					Text(NSLocalizedString("Show Shelf Name in Reader View", comment: "Show Shelf Name in Reader View"))
+				} icon: {
+					SettingsIconBadge(systemImage: "tag.fill", color: .teal)
+				}
+			}
+		} header: {
+			Text("Reader", comment: "Reader section header")
 		}
 	}
 
 	private var appearanceSection: some View {
 		Section {
 			NavigationLink(value: SettingsDestination.colorPalette) {
-				DetailRow(
-					title: NSLocalizedString("Color Palette", comment: "Color Palette"),
-					detail: model.colorPaletteDescription
-				)
+				LabeledContent {
+					Text(model.colorPaletteDescription)
+						.foregroundStyle(.secondary)
+				} label: {
+					Label {
+						Text(NSLocalizedString("Color Palette", comment: "Color Palette"))
+					} icon: {
+						SettingsIconBadge(systemImage: "paintpalette.fill", color: .pink)
+					}
+				}
 			}
 			NavigationLink(value: SettingsDestination.accentColor) {
-				DetailRow(
-					title: NSLocalizedString("Accent Color", comment: "Accent Color"),
-					detail: model.accentColorDescription
-				)
+				LabeledContent {
+					Text(model.accentColorDescription)
+						.foregroundStyle(.secondary)
+				} label: {
+					Label {
+						Text(NSLocalizedString("Accent Color", comment: "Accent Color"))
+					} icon: {
+						SettingsIconBadge(systemImage: "drop.halffull", color: .blue)
+					}
+				}
 			}
 		} header: {
 			Text("Appearance", comment: "Appearance section header")
@@ -560,19 +716,32 @@ struct SettingsView: View {
 	private var troubleshootingSection: some View {
 		Section {
 			NavigationLink(value: SettingsDestination.errorLog) {
-				Text("Error Log", comment: "Error Log")
+				Label {
+					Text("Error Log", comment: "Error Log")
+				} icon: {
+					SettingsIconBadge(systemImage: "exclamationmark.bubble.fill", color: .red)
+				}
 			}
 			NavigationLink(value: SettingsDestination.activityLog) {
-				Text("Activity Log", comment: "Activity Log")
+				Label {
+					Text("Activity Log", comment: "Activity Log")
+				} icon: {
+					SettingsIconBadge(systemImage: "clock.arrow.circlepath", color: .orange)
+				}
 			}
 			NavigationLink(value: SettingsDestination.accountStats) {
-				Text("Account Stats", comment: "Account Stats")
+				Label {
+					Text("Library Stats", comment: "Library Stats")
+				} icon: {
+					SettingsIconBadge(systemImage: "internaldrive.fill", color: .gray)
+				}
 			}
 			NavigationLink(value: SettingsDestination.dinosaurs) {
-				Text("Dinosaurs", comment: "Dinosaurs")
-			}
-			NavigationLink(value: SettingsDestination.manageStorage) {
-				Text("Manage Storage", comment: "Manage Storage")
+				Label {
+					Text("Dinosaurs", comment: "Dinosaurs")
+				} icon: {
+					SettingsIconBadge(systemImage: "fossil.shell.fill", color: .green)
+				}
 			}
 		} header: {
 			Text("Troubleshooting", comment: "Troubleshooting section header")
@@ -582,37 +751,58 @@ struct SettingsView: View {
 	private var helpSection: some View {
 		Section {
 			NavigationLink(value: SettingsDestination.about) {
-				Text("About Nectar", comment: "About Nectar")
+				Label {
+					Text("About Nectar", comment: "About Nectar")
+				} icon: {
+					SettingsIconBadge(systemImage: "info.circle.fill", color: .gray)
+				}
 			}
 			Button {
 				actions.presentGuide()
 			} label: {
-				Text("Guide", comment: "Guide")
-					.foregroundStyle(.primary)
+				Label {
+					Text("Guide", comment: "Guide")
+						.foregroundStyle(.primary)
+				} icon: {
+					SettingsIconBadge(systemImage: "book.fill", color: .blue)
+				}
 			}
 		} header: {
 			Text("Help", comment: "Help section header")
 		}
 	}
 
-	private var backupSection: some View {
+	private var storageAndBackupSection: some View {
 		Section {
+			NavigationLink(value: SettingsDestination.manageStorage) {
+				Label {
+					Text("Manage Storage", comment: "Manage Storage")
+				} icon: {
+					SettingsIconBadge(systemImage: "externaldrive.fill.badge.minus", color: .gray)
+				}
+			}
 			Button {
 				actions.exportBackup()
 			} label: {
-				Text("Backup", comment: "Backup")
-					.foregroundStyle(.primary)
+				Label {
+					Text("Backup", comment: "Backup")
+						.foregroundStyle(.primary)
+				} icon: {
+					SettingsIconBadge(systemImage: "externaldrive.fill.badge.plus", color: .blue)
+				}
 			}
 			Button {
 				actions.restoreBackup()
 			} label: {
-				Text("Restore from Backup…", comment: "Restore from Backup…")
-					.foregroundStyle(.primary)
+				Label {
+					Text("Restore from Backup…", comment: "Restore from Backup…")
+						.foregroundStyle(.primary)
+				} icon: {
+					SettingsIconBadge(systemImage: "arrow.counterclockwise", color: .green)
+				}
 			}
 		} header: {
-			Text("Backup", comment: "Backup section header")
-		} footer: {
-			Text("Restoring never deletes or overwrites your existing shelves, works, or annotations -- it only adds what's missing. Settings are only replaced if you opt in during restore. AO3 sign-in isn't included; you'll need to sign in again after restoring.", comment: "Backup section footer")
+			Text("Storage & Backup", comment: "Storage & Backup section header")
 		}
 	}
 
@@ -622,6 +812,7 @@ struct SettingsView: View {
 			Text(model.buildVersionText)
 				.font(.caption2)
 				.foregroundStyle(.secondary)
+				.textSelection(.enabled)
 		}
 	}
 
@@ -642,11 +833,11 @@ struct SettingsView: View {
 		case .ao3IgnoreList:
 			AO3IgnoreListView()
 		case .timelineLayout:
-			TimelineCustomizerRepresentable()
-				.navigationTitle(Text("Timeline Layout", comment: "Timeline Layout"))
-				.navigationBarTitleDisplayMode(.inline)
+			TimelineCustomizerView()
 		case .articleTheme:
 			ArticleThemeListView()
+		case .toolbars:
+			ToolbarsSettingsView()
 		case .fullScreenReading:
 			FullScreenReadingView()
 		case .annotations:
@@ -692,27 +883,20 @@ struct SettingsView: View {
 	}
 }
 
-private struct DetailRow: View {
-	let title: String
-	let detail: String
+private struct SettingsIconBadge: View {
+	let systemImage: String
+	let color: Color
 
 	var body: some View {
-		HStack {
-			Text(title)
-				.foregroundStyle(.primary)
-			Spacer()
-			Text(detail)
-				.foregroundStyle(.secondary)
-		}
+		Image(systemName: systemImage)
+			.resizable()
+			.renderingMode(.template)
+			.foregroundStyle(.white)
+			.scaledToFit()
+			.padding(5.5)
+			.frame(width: 29, height: 29)
+			.background(color, in: RoundedRectangle(cornerRadius: 6.5, style: .continuous))
 	}
-}
-
-private struct TimelineCustomizerRepresentable: UIViewControllerRepresentable {
-	func makeUIViewController(context: Context) -> TimelineCustomizerCollectionViewController {
-		TimelineCustomizerCollectionViewController()
-	}
-
-	func updateUIViewController(_ uiViewController: TimelineCustomizerCollectionViewController, context: Context) {}
 }
 
 private struct ManageStorageRepresentable: UIViewControllerRepresentable {

@@ -58,8 +58,6 @@ import SwiftUI
 		}
 	}
 
-	@Published private(set) var toolbarsSummary = ""
-
 	init() {
 		let defaults = AppDefaults.shared
 		self.articleFullscreenAvailable = defaults.articleFullscreenAvailable
@@ -69,7 +67,6 @@ import SwiftUI
 		self.articleScrollbarVisibility = defaults.articleScrollbarVisibility
 		self.pageCounterDisplayMode = defaults.pageCounterDisplayMode
 		self.hideNotchInFullScreen = defaults.hideNotchInFullScreen
-		refreshToolbarsSummary()
 	}
 
 	var isHideNotchDisabled: Bool {
@@ -78,19 +75,6 @@ import SwiftUI
 
 	var effectiveHideNotch: Bool {
 		isHideNotchDisabled ? true : hideNotchInFullScreen
-	}
-
-	func refreshToolbarsSummary() {
-		let defaults = AppDefaults.shared
-		let enabledCount = ToolbarFunction.allCases.filter {
-			defaults.isToolbarFunctionEnabled($0, on: .top) || defaults.isToolbarFunctionEnabled($0, on: .bottom)
-		}.count
-		if enabledCount == 0 {
-			toolbarsSummary = NSLocalizedString("Off", comment: "Toolbars: no buttons shown")
-		} else {
-			let format = NSLocalizedString("%d Shown", comment: "Toolbars: number of buttons shown")
-			toolbarsSummary = String(format: format, enabledCount)
-		}
 	}
 }
 
@@ -129,21 +113,6 @@ struct FullScreenReadingView: View {
 			}
 
 			Section {
-				NavigationLink {
-					ToolbarsCustomizerRepresentable()
-						.navigationTitle("Toolbars")
-						.navigationBarTitleDisplayMode(.inline)
-				} label: {
-					HStack {
-						Text("Toolbars")
-						Spacer()
-						Text(model.toolbarsSummary)
-							.foregroundStyle(.secondary)
-					}
-				}
-			}
-
-			Section {
 				Picker("Page Counter", selection: $model.pageCounterDisplayMode) {
 					Text("Off").tag(PageCounterDisplayMode.off)
 					Text("Percentage").tag(PageCounterDisplayMode.percentage)
@@ -164,9 +133,6 @@ struct FullScreenReadingView: View {
 		}
 		.navigationTitle("Reading Gestures & Layout")
 		.navigationBarTitleDisplayMode(.inline)
-		.onAppear {
-			model.refreshToolbarsSummary()
-		}
 	}
 }
 
@@ -185,12 +151,4 @@ private struct ToggleRow: View {
 			}
 		}
 	}
-}
-
-struct ToolbarsCustomizerRepresentable: UIViewControllerRepresentable {
-	func makeUIViewController(context: Context) -> ToolbarsCustomizerViewController {
-		ToolbarsCustomizerViewController()
-	}
-
-	func updateUIViewController(_ uiViewController: ToolbarsCustomizerViewController, context: Context) {}
 }

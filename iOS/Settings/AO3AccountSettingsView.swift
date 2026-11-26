@@ -1,15 +1,11 @@
-import AO3Kit
 //
 //  AO3AccountSettingsView.swift
 //  NetNewsWire-iOS
 //
 //  Nectar AO3 direct-reading support, Workstream 3 ("optional AO3 login").
 //
-//  Pushed from SettingsViewController's new "Archive of Our Own" row,
-//  following the same UIHostingController-push pattern as AboutView and
-//  AccountStatsView elsewhere in this file's section.
-//
 
+import AO3Kit
 import SwiftUI
 import UIKit
 import Account
@@ -20,21 +16,12 @@ struct AO3AccountSettingsView: View {
 	@State private var isShowingLogin = false
 	@State private var isShowingSignOutConfirmation = false
 	@State private var isShowingChallengeSolver = false
-	@State private var refetchInterval = AO3PrefaceRefetchPreference.current
-	@State private var isKudosOnLikeEnabled = AO3KudosOnLikePreference.isEnabled
-	@State private var isAmbrosiaUpdatesEnabled = AmbrosiaAO3NetworkPreference.updatesEnabled
-	@State private var isPrefetchNewWorksEnabled = AO3PrefetchNewWorksPreference.isEnabled
 
-	/// Pushes the Works Needing Attention screen. A closure, because this
-	/// view is hosted in a UIHostingController pushed on Settings'
-	/// UINavigationController, so the push belongs to SettingsViewController.
 	var onShowWorksNeedingAttention: () -> Void = {}
-
-	/// Pushes the ignore list manager, same reason as above.
 	var onShowIgnoreList: () -> Void = {}
 
 	var body: some View {
-		List {
+		Form {
 			if let sessionEnded = model.sessionEnded, !model.isSignedIn {
 				Section {
 					Text(sessionEndedText(date: sessionEnded.date))
@@ -48,14 +35,18 @@ struct AO3AccountSettingsView: View {
 			}
 
 			Section {
-				HStack {
+				LabeledContent {
+					if model.isSignedIn {
+						Label(NSLocalizedString("Signed In", comment: "AO3 signed-in status"), systemImage: "checkmark.circle.fill")
+							.foregroundStyle(.green)
+					} else {
+						Text(NSLocalizedString("Not Signed In", comment: "AO3 signed-out status"))
+							.foregroundStyle(.secondary)
+					}
+				} label: {
 					Text(NSLocalizedString("Status", comment: "AO3 sign-in status row label"))
-					Spacer()
-					Text(model.isSignedIn
-						 ? NSLocalizedString("Signed In", comment: "AO3 signed-in status")
-						 : NSLocalizedString("Not Signed In", comment: "AO3 signed-out status"))
-						.foregroundStyle(.secondary)
 				}
+
 				if model.isSignedIn {
 					Button(role: .destructive) {
 						isShowingSignOutConfirmation = true
@@ -78,22 +69,13 @@ struct AO3AccountSettingsView: View {
 			}
 
 			Section {
-				Toggle(NSLocalizedString("Fetch AO3 Updates for Library Works", comment: "Ambrosia AO3 updates toggle label"), isOn: $isAmbrosiaUpdatesEnabled)
-					.onChange(of: isAmbrosiaUpdatesEnabled) { newValue in
-						AmbrosiaAO3NetworkPreference.updatesEnabled = newValue
-					}
-				Picker(NSLocalizedString("Check for Updates", comment: "AO3 preface refetch cadence picker label"), selection: $refetchInterval) {
+				Toggle(NSLocalizedString("Fetch AO3 Updates for Library Works", comment: "Ambrosia AO3 updates toggle label"), isOn: $model.isAmbrosiaUpdatesEnabled)
+				Picker(NSLocalizedString("Check for Updates", comment: "AO3 preface refetch cadence picker label"), selection: $model.refetchInterval) {
 					ForEach(AO3PrefaceRefetchInterval.allCases, id: \.self) { interval in
 						Text(interval.description).tag(interval)
 					}
 				}
-				.onChange(of: refetchInterval) { newValue in
-					AO3PrefaceRefetchPreference.current = newValue
-				}
-				Toggle(NSLocalizedString("Fetch New Works Immediately", comment: "AO3 prefetch-on-arrival toggle label"), isOn: $isPrefetchNewWorksEnabled)
-					.onChange(of: isPrefetchNewWorksEnabled) { newValue in
-						AO3PrefetchNewWorksPreference.isEnabled = newValue
-					}
+				Toggle(NSLocalizedString("Fetch New Works Immediately", comment: "AO3 prefetch-on-arrival toggle label"), isOn: $model.isPrefetchNewWorksEnabled)
 			} header: {
 				Text(NSLocalizedString("Updates", comment: "AO3 settings: updates section header"))
 			} footer: {
@@ -101,10 +83,7 @@ struct AO3AccountSettingsView: View {
 			}
 
 			Section {
-				Toggle(NSLocalizedString("Leave Kudos When You Love a Work", comment: "AO3 kudos-on-like toggle label"), isOn: $isKudosOnLikeEnabled)
-					.onChange(of: isKudosOnLikeEnabled) { newValue in
-						AO3KudosOnLikePreference.isEnabled = newValue
-					}
+				Toggle(NSLocalizedString("Leave Kudos When You Love a Work", comment: "AO3 kudos-on-like toggle label"), isOn: $model.isKudosOnLikeEnabled)
 			} header: {
 				Text(NSLocalizedString("Kudos on AO3", comment: "AO3 settings: kudos section header"))
 			} footer: {
@@ -143,11 +122,11 @@ struct AO3AccountSettingsView: View {
 			}
 
 			Section {
-				HStack {
-					Text(NSLocalizedString("Browser Verification", comment: "AO3 Cloudflare challenge status row label"))
-					Spacer()
+				LabeledContent {
 					Text(challengeStatusText)
 						.foregroundStyle(.secondary)
+				} label: {
+					Text(NSLocalizedString("Browser Verification", comment: "AO3 Cloudflare challenge status row label"))
 				}
 				Button {
 					isShowingChallengeSolver = true
@@ -162,12 +141,8 @@ struct AO3AccountSettingsView: View {
 			}
 		}
 		.navigationTitle(Text(verbatim: "Archive of Our Own"))
+		.navigationBarTitleDisplayMode(.inline)
 		.sheet(isPresented: $isShowingLogin, onDismiss: {
-			// Covers both outcomes of the login sheet (signed in, or
-			// cancelled) -- re-reading the store rather than trusting a
-			// flag threaded back through the sheet keeps this in sync even
-			// if AO3SessionStore changed for some other reason while the
-			// sheet was up.
 			model.refresh()
 		}, content: {
 			AO3LoginRepresentable()
@@ -187,8 +162,6 @@ struct AO3AccountSettingsView: View {
 			Button(NSLocalizedString("Cancel", comment: "Cancel button"), role: .cancel) {}
 		}
 		.sheet(isPresented: $isShowingChallengeSolver, onDismiss: {
-			// Covers both outcomes (cleared, or cancelled), same reasoning
-			// as the login sheet's onDismiss above.
 			model.refresh()
 		}, content: {
 			AO3ChallengeSolverRepresentable()
@@ -211,12 +184,6 @@ struct AO3AccountSettingsView: View {
 		return String(format: format, resumeDate.formatted(date: .omitted, time: .shortened))
 	}
 
-	/// "Not yet verified" / "Verified just now" / "Verified 12 minutes ago"
-	/// -- doesn't distinguish a stale (past AO3ChallengeSessionStore's
-	/// freshness window) cookie from no cookie at all, since both need the
-	/// same action from the person here; the freshness window itself is an
-	/// internal implementation detail, not something worth surfacing as a
-	/// countdown.
 	private var challengeStatusText: String {
 		guard let challengeCapturedAt = model.challengeCapturedAt else {
 			return NSLocalizedString("Not Verified", comment: "AO3 Cloudflare challenge status: never verified")

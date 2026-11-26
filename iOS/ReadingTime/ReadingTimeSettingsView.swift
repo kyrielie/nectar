@@ -72,12 +72,7 @@ private struct ReadingTimeDailyLimitsSection: View {
 						)
 					)
 				} label: {
-					HStack {
-						Text(weekdays[weekday - 1])
-						Spacer()
-						Text(durationString(model.limits[weekday, default: 120]))
-							.foregroundStyle(.secondary)
-					}
+					LabeledContent(weekdays[weekday - 1], value: durationString(model.limits[weekday, default: 120]))
 				}
 			}
 		}
@@ -165,12 +160,7 @@ private struct ReadingTimeTakeABreakSection: View {
 		NavigationLink {
 			CountDownTimerSettingView(title: title, footer: footer, minutes: minutes)
 		} label: {
-			HStack {
-				Text(title)
-				Spacer()
-				Text(durationString(minutes.wrappedValue))
-					.foregroundStyle(.secondary)
-			}
+			LabeledContent(title, value: durationString(minutes.wrappedValue))
 		}
 	}
 }

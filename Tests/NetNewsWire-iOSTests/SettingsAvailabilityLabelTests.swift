@@ -13,28 +13,6 @@ import Account
 @Suite struct SettingsAvailabilityLabelTests {
 
 	@MainActor
-	@Test func groupByFeedIsDisabledWithReasonWhenNotSortedByDate() {
-		defer { AppDefaults.shared.timelineSortField = .date }
-
-		AppDefaults.shared.timelineSortField = .title
-		let model = SettingsModel()
-
-		#expect(model.isGroupByFeedEnabled == false)
-		#expect(model.groupByFeedDisabledReason != nil)
-	}
-
-	@MainActor
-	@Test func groupByFeedIsEnabledWithNoReasonWhenSortedByDate() {
-		defer { AppDefaults.shared.timelineSortField = .date }
-
-		AppDefaults.shared.timelineSortField = .date
-		let model = SettingsModel()
-
-		#expect(model.isGroupByFeedEnabled)
-		#expect(model.groupByFeedDisabledReason == nil)
-	}
-
-	@MainActor
 	@Test func feedTransferFormatTextReflectsCurrentPreference() {
 		defer { AmbrosiaTransferFormatPreference.current = .json }
 
@@ -47,11 +25,5 @@ import Account
 		model.refresh()
 
 		#expect(model.feedTransferFormatText == "JSON")
-	}
-
-	@MainActor
-	@Test func clearReadArticlesReasonShowsWhenNoParentControllerIsSet() {
-		let model = SettingsModel()
-		#expect(model.clearReadArticlesReason != nil)
 	}
 }

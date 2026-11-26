@@ -452,4 +452,10 @@ Restoring an older backup can reintroduce stale flags.
 
 The reader's Check for Updates menu item becomes "Review Pending Update"
 when a fetched update is waiting (`pendingUpdateContentHTML != nil`), since
-re-checking is blocked in that state.
+re-checking is blocked in that state. Check for Updates is also available in
+the timeline long-press context menu (`MainTimelineModernViewController.checkForUpdatesAction(_:)`)
+for single AO3 works (`AO3FetchPolicy.canCheckForUpdates(for:)`, including AO3
+RSS feeds, search results, series stubs, and Ambrosia works when AO3 network
+updates are enabled). Manual `AO3ChapterFetcher.shared.checkForUpdates(for:)`
+calls bypass the 60-second automatic-fetch cooldown so users can immediately
+retry fetching stub or errored works after an internet or AO3 outage.

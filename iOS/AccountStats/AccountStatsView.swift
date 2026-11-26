@@ -63,7 +63,8 @@ struct AccountStatsView: View {
 				helpFooter
 			}
 		}
-		.navigationTitle(NSLocalizedString("Account Stats", comment: "Account Stats screen title"))
+		.navigationTitle(NSLocalizedString("Library Stats", comment: "Library Stats screen title"))
+		.navigationBarTitleDisplayMode(.inline)
 		.toolbar {
 			ToolbarItem(placement: .topBarTrailing) {
 				Button {

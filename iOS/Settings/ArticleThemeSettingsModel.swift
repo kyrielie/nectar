@@ -171,6 +171,24 @@ import HexColor
 		)
 	}
 
+	var activeOverrideCount: Int {
+		[
+			useCustomSerifFont,
+			useCustomSansFont,
+			useCustomFontSize,
+			useCustomLineHeight,
+			useCustomParagraphSpacing,
+			useCustomParagraphIndent,
+			useCustomMargins,
+			useCustomJustifyText,
+			useCustomHyphenate,
+			hideAuthorStyle,
+			useCustomTextColor,
+			useCustomBackgroundColor,
+			useCustomLinkColor
+		].filter { $0 }.count
+	}
+
 	var previewCSS: String {
 		let themeCSS = currentTheme.css ?? ""
 		let overrideCSS = liveOverrides.cssOverrideBlock(themeCSS: themeCSS)

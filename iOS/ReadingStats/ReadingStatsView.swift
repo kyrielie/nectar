@@ -109,12 +109,7 @@ struct ReadingStatsView: View {
 			}
 
 			Section("All time") {
-				HStack {
-					Text("Total words read")
-					Spacer()
-					Text("\(model.allTimeWords)")
-						.foregroundStyle(.secondary)
-				}
+				LabeledContent("Total words read", value: "\(model.allTimeWords)")
 			}
 
 			Section {

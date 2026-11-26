@@ -18,35 +18,15 @@ struct ErrorLogView: View {
 	private static let maxEntries = 200
 
 	var body: some View {
-		VStack(spacing: 0) {
-			if entries.isEmpty {
-				EmptyStateView(
-					title: Text(verbatim: NSLocalizedString("No Errors Logged", comment: "Error log empty state")),
-					systemImage: "checkmark.circle"
-				)
-				.frame(maxWidth: .infinity, maxHeight: .infinity)
-			} else {
-				privacyWarning
-				Divider()
-				ScrollView {
-					Text(buildAttributedString(entries))
-						.font(.system(.body, design: .monospaced))
-						.textSelection(.enabled)
-						.frame(maxWidth: .infinity, alignment: .leading)
-						.padding()
-				}
-			}
-			Divider()
-			helpFooter
-		}
-		.navigationTitle("Error Log")
-		.toolbar {
-			ToolbarItem(placement: .topBarTrailing) {
-				Button("Copy Contents") {
-					UIPasteboard.general.string = plainText
-				}
-				.disabled(entries.isEmpty)
-			}
+		LogViewerContainer(
+			isEmpty: entries.isEmpty,
+			emptyTitle: NSLocalizedString("No Errors Logged", comment: "Error log empty state"),
+			privacyWarningText: NSLocalizedString("Errors may contain feed URLs and other information you may not want to share publicly.", comment: "Error log privacy warning"),
+			helpFooterText: NSLocalizedString("Recent errors from syncing, feed downloads, keychain access, and other operations, with the account, operation, and error message for each.", comment: "Error Log explainer"),
+			navigationTitleText: NSLocalizedString("Error Log", comment: "Error Log screen title"),
+			plainText: plainText
+		) {
+			Text(buildAttributedString(entries))
 		}
 		.task {
 			let allEntries = await AccountManager.shared.errorLogDatabase.allEntries()
@@ -63,22 +43,6 @@ struct ErrorLogView: View {
 			}
 			plainText = buildPlainText(entries)
 		}
-	}
-
-	private var privacyWarning: some View {
-		Text("Errors may contain feed URLs and other information you may not want to share publicly.")
-			.font(.footnote)
-			.foregroundStyle(.secondary)
-			.padding()
-	}
-
-	private var helpFooter: some View {
-		Text("Recent errors from syncing, feed downloads, keychain access, and other operations, with the account, operation, and error message for each.", comment: "Error Log explainer")
-			.font(.footnote)
-			.foregroundStyle(.secondary)
-			.frame(maxWidth: .infinity, alignment: .leading)
-			.padding(.horizontal)
-			.padding(.vertical, 12)
 	}
 }
 

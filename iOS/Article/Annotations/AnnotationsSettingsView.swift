@@ -78,7 +78,7 @@ struct AnnotationsSettingsView: View {
 	}
 
 	var body: some View {
-		List {
+		Form {
 			if let primaryAccount {
 				Section {
 					NavigationLink {

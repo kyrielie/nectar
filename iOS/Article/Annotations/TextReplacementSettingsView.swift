@@ -30,42 +30,42 @@ import Account
 import Articles
 import AnnotationsKit
 
+@MainActor private final class TextReplacementSettingsModel: ObservableObject {
+	@Published var readerInsertTable: TextReplacementRuleTable {
+		didSet {
+			AppDefaults.shared.textReplacementReaderInsertTable = readerInsertTable
+		}
+	}
+	@Published var customTable: TextReplacementRuleTable {
+		didSet {
+			AppDefaults.shared.textReplacementCustomTable = customTable
+		}
+	}
+	@Published var editHistoryCount: Int?
+
+	init() {
+		self.readerInsertTable = AppDefaults.shared.textReplacementReaderInsertTable
+		self.customTable = AppDefaults.shared.textReplacementCustomTable
+	}
+}
+
 struct TextReplacementSettingsView: View {
 
-	/// Navigates to the article/chapter containing this annotation and
-	/// scrolls to/flashes its highlight -- same shape as
-	/// AnnotationsSettingsView's onNavigateToAnnotation, reused for the
-	/// Edit History row's AnnotationsListView.
 	var onNavigateToAnnotation: (_ annotation: Annotation, _ account: Account) -> Void
-
-	/// The work currently open behind Settings (via SceneCoordinator.
-	/// currentArticleViewController), if any -- resolved by
-	/// SettingsViewController at push time, the same way
-	/// navigateToAnnotationFromSettings resolves the current article for
-	/// a different purpose. nil when Settings was opened with no article
-	/// on screen (e.g. compact-width, still on the timeline); the
-	/// per-work override link is hidden in that case, per this screen's
-	/// contextual-surfacing decision -- see
-	/// TextReplacementPerWorkOverrideView's own header comment.
 	var currentWork: (bookKey: String, title: String)?
 
 	@AppStorage(AppDefaults.Key.textReplacementApplyAutomatically) private var applyAutomatically = true
 	@AppStorage(AppDefaults.Key.textReplacementTypoFixesEnabled) private var typoFixesEnabled = true
 	@AppStorage(AppDefaults.Key.textReplacementQuoteConversionEnabled) private var quoteConversionEnabled = false
 
-	@State private var readerInsertTable = AppDefaults.shared.textReplacementReaderInsertTable
-	@State private var customTable = AppDefaults.shared.textReplacementCustomTable
-	@State private var editHistoryCount: Int?
+	@StateObject private var model = TextReplacementSettingsModel()
 
-	/// AnnotationsListView needs a single Account -- same reasoning
-	/// AnnotationsSettingsView's own primaryAccount uses (Nectar's usual
-	/// shape is one local account; see docs/ambrosia-feed.md).
 	private var primaryAccount: Account? {
 		AccountManager.shared.sortedAccounts.first
 	}
 
 	var body: some View {
-		List {
+		Form {
 			Section {
 				Toggle(isOn: $applyAutomatically) {
 					Text("Apply Automatically on Open", comment: "Text replacement settings: master toggle label")
@@ -75,7 +75,7 @@ struct TextReplacementSettingsView: View {
 			}
 
 			Section {
-				ruleRows($readerInsertTable)
+				ruleRows($model.readerInsertTable)
 				if let currentWork {
 					NavigationLink {
 						TextReplacementPerWorkOverrideView(bookKey: currentWork.bookKey, workTitle: currentWork.title)
@@ -103,8 +103,8 @@ struct TextReplacementSettingsView: View {
 			}
 
 			Section {
-				ruleRows($customTable)
-				addRuleRow($customTable)
+				ruleRows($model.customTable)
+				addRuleRow($model.customTable)
 			} header: {
 				Text("Custom Rules", comment: "Text replacement settings: custom rules section header")
 			} footer: {
@@ -118,13 +118,13 @@ struct TextReplacementSettingsView: View {
 							onNavigateToAnnotation(annotation, primaryAccount)
 						}
 					} label: {
-						HStack {
-							Text("Edit History", comment: "Text replacement settings: edit history row label")
-							Spacer()
-							if let editHistoryCount {
+						LabeledContent {
+							if let editHistoryCount = model.editHistoryCount {
 								Text("\(editHistoryCount)", comment: "Text replacement settings: edit history count")
 									.foregroundStyle(.secondary)
 							}
+						} label: {
+							Text("Edit History", comment: "Text replacement settings: edit history row label")
 						}
 					}
 				}
@@ -134,16 +134,10 @@ struct TextReplacementSettingsView: View {
 		}
 		.navigationTitle(Text("Text Replacement", comment: "Text replacement settings navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
-		.onChange(of: readerInsertTable) { _ in
-			AppDefaults.shared.textReplacementReaderInsertTable = readerInsertTable
-		}
-		.onChange(of: customTable) { _ in
-			AppDefaults.shared.textReplacementCustomTable = customTable
-		}
 		.task {
 			guard let primaryAccount else { return }
 			let all = await primaryAccount.fetchAllAnnotations()
-			editHistoryCount = all.filter { $0.originalText != nil }.count
+			model.editHistoryCount = all.filter { $0.originalText != nil }.count
 		}
 	}
 

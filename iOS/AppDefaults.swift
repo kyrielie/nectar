@@ -1629,7 +1629,7 @@ final class AppDefaults: Sendable {
 	@MainActor static func registerDefaults() {
 		let defaults: [String: Any] = [Key.userInterfaceColorPalette: UserInterfaceColorPalette.automatic.rawValue,
 										Key.timelineGroupByFeed: false,
-										Key.refreshClearsReadArticles: false,
+										Key.refreshClearsReadArticles: true,
 										Key.timelineNumberOfLines: 3,
 										Key.timelineIconDimension: IconSize.medium.rawValue,
 										Key.timelineTagDisplayMode: TagDisplayMode.badges.rawValue,
