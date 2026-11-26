@@ -45,6 +45,10 @@ struct SearchFeedDelegate: SmartFeedDelegate {
 		await AccountManager.shared.fetchArticlesOrderedAsync(fetchType)
 	}
 
+	func fetchArticleSearchMatchesOrderedAsync() async -> [ArticleSearchMatch]? {
+		await AccountManager.shared.fetchArticleSearchMatchesOrderedAsync(fetchType)
+	}
+
 	func fetchUnreadCount(account: Account) async -> Int {
 		// TODO: after 5.0
 		0

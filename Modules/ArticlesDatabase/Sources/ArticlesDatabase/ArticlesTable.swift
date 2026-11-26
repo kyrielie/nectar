@@ -395,6 +395,28 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
+	func fetchArticleSearchMatchesOrderedAsync(_ searchString: String, _ feedIDs: Set<String>, cancellationToken: SQLiteCancellationToken? = nil, _ completion: @escaping @Sendable ([ArticleSearchMatch]) -> Void) {
+		queue.runInDatabase { database in
+			let matches = database.withProgressCancellation(cancellationToken) {
+				self.fetchArticleSearchMatchesOrdered(searchString, feedIDs: feedIDs, database)
+			}
+			DispatchQueue.main.async {
+				completion(matches)
+			}
+		}
+	}
+
+	func fetchArticleSearchMatchesWithArticleIDsOrderedAsync(_ searchString: String, _ articleIDs: Set<String>, cancellationToken: SQLiteCancellationToken? = nil, _ completion: @escaping @Sendable ([ArticleSearchMatch]) -> Void) {
+		queue.runInDatabase { database in
+			let matches = database.withProgressCancellation(cancellationToken) {
+				self.fetchArticleSearchMatchesWithArticleIDsOrdered(searchString, articleIDs: articleIDs, database)
+			}
+			DispatchQueue.main.async {
+				completion(matches)
+			}
+		}
+	}
+
 	// MARK: - Fetching Articles for Indexer
 
 	func fetchArticleSearchInfos(_ articleIDs: Set<String>, in database: FMDatabase) -> Set<ArticleSearchInfo>? {
@@ -1948,16 +1970,37 @@ nonisolated private extension ArticlesTable {
 	}
 
 	func fetchArticlesMatchingOrdered(_ searchString: String, filterClause: (sql: String, parameter: String)? = nil, _ database: FMDatabase) -> [Article] {
+		fetchArticleSearchMatchesOrdered(searchString, filterClause: filterClause, includeSnippets: false, database).map(\.article)
+	}
+
+	func fetchArticleSearchMatchesOrdered(_ searchString: String, feedIDs: Set<String>, _ database: FMDatabase) -> [ArticleSearchMatch] {
+		guard let feedFilter = SQLiteIDList.clause(column: "articles.feedID", strings: feedIDs) else {
+			return []
+		}
+		return fetchArticleSearchMatchesOrdered(searchString, filterClause: feedFilter, includeSnippets: true, database)
+	}
+
+	func fetchArticleSearchMatchesWithArticleIDsOrdered(_ searchString: String, articleIDs: Set<String>, _ database: FMDatabase) -> [ArticleSearchMatch] {
+		guard let articleFilter = SQLiteIDList.clause(column: "articles.articleID", strings: articleIDs) else {
+			return []
+		}
+		return fetchArticleSearchMatchesOrdered(searchString, filterClause: articleFilter, includeSnippets: true, database)
+	}
+
+	private func fetchArticleSearchMatchesOrdered(_ searchString: String, filterClause: (sql: String, parameter: String)? = nil, includeSnippets: Bool, _ database: FMDatabase) -> [ArticleSearchMatch] {
 		guard let sqlSearchString = sqliteSearchString(with: searchString) else {
 			return []
 		}
+		let selectColumns = includeSnippets
+			? "articles.articleID, snippet(search, 1, char(30), char(31), '…', 24), snippet(search, 0, char(30), char(31), '…', 24)"
+			: "articles.articleID"
 		let sql: String
 		let searchParameters: [AnyObject]
 		if let filterClause {
-			sql = "select articles.articleID from search join articles on articles.searchRowID = search.rowid where search match ? and \(filterClause.sql) order by bm25(search) limit 500;"
+			sql = "select \(selectColumns) from search join articles on articles.searchRowID = search.rowid where search match ? and \(filterClause.sql) order by bm25(search) limit 500;"
 			searchParameters = [sqlSearchString as AnyObject, filterClause.parameter as AnyObject]
 		} else {
-			sql = "select articles.articleID from search join articles on articles.searchRowID = search.rowid where search match ? order by bm25(search) limit 500;"
+			sql = "select \(selectColumns) from search join articles on articles.searchRowID = search.rowid where search match ? order by bm25(search) limit 500;"
 			searchParameters = [sqlSearchString as AnyObject]
 		}
 		guard let resultSet = database.executeQuery(sql, withArgumentsIn: searchParameters) else {
@@ -1968,19 +2011,55 @@ nonisolated private extension ArticlesTable {
 			}
 			return []
 		}
-		var orderedArticleIDs = [String]()
+		var orderedRows = [(articleID: String, snippet: String?)]()
 		while resultSet.next() {
-			if let articleID = resultSet.string(forColumnIndex: 0) {
-				orderedArticleIDs.append(articleID)
+			guard let articleID = resultSet.string(forColumnIndex: 0) else {
+				continue
 			}
+			let snippet: String?
+			if includeSnippets {
+				snippet = Self.preferredSnippet(
+					bodySnippet: resultSet.string(forColumnIndex: 1),
+					titleSnippet: resultSet.string(forColumnIndex: 2)
+				)
+			} else {
+				snippet = nil
+			}
+			orderedRows.append((articleID: articleID, snippet: snippet))
 		}
 		resultSet.close()
-		guard let articleIDFilter = SQLiteIDList.clause(column: "articleID", strings: Set(orderedArticleIDs)) else {
+		guard let articleIDFilter = SQLiteIDList.clause(column: "articleID", strings: Set(orderedRows.map(\.articleID))) else {
 			return []
 		}
 		let fetchedArticles = fetchArticlesWithWhereClause(database, whereClause: articleIDFilter.sql, parameters: [articleIDFilter.parameter as AnyObject])
 		let articlesByID = Dictionary(uniqueKeysWithValues: fetchedArticles.map { ($0.articleID, $0) })
-		return orderedArticleIDs.compactMap { articlesByID[$0] }
+		return orderedRows.compactMap { row in
+			guard let article = articlesByID[row.articleID] else {
+				return nil
+			}
+			return ArticleSearchMatch(article: article, snippet: row.snippet)
+		}
+	}
+
+	private static func preferredSnippet(bodySnippet: String?, titleSnippet: String?) -> String? {
+		if let body = normalizedSnippet(bodySnippet), body.contains(ArticleSearchMatch.matchStartDelimiter) {
+			return body
+		}
+		if let title = normalizedSnippet(titleSnippet), title.contains(ArticleSearchMatch.matchStartDelimiter) {
+			return title
+		}
+		return nil
+	}
+
+	private static func normalizedSnippet(_ raw: String?) -> String? {
+		guard let raw else {
+			return nil
+		}
+		let collapsed = raw
+			.components(separatedBy: .whitespacesAndNewlines)
+			.filter { !$0.isEmpty }
+			.joined(separator: " ")
+		return collapsed.isEmpty ? nil : collapsed
 	}
 
 	func sqliteSearchString(with searchString: String) -> String? {

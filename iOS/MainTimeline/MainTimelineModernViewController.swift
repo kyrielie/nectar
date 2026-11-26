@@ -1058,7 +1058,8 @@ private extension MainTimelineModernViewController {
 		let iconImage = iconImageFor(article)
 		let showFeedNames = coordinator?.showFeedNames ?? ShowFeedName.none
 		let showIcon = showIcons && iconImage != nil
-		let cellData = MainTimelineCellData(article: article, showFeedName: showFeedNames, feedName: ArticleFeedNaming.displayName(for: article, timelineFeed: coordinator?.timelineFeed), byline: article.byline(), iconImage: iconImage, showIcon: showIcon, numberOfLines: numberOfTextLines, iconSize: iconSize, tagDisplayMode: tagDisplayMode)
+		let searchSnippet = (coordinator?.timelineFeed as? SmartFeed)?.searchSnippetsByBookKey[article.bookKey]
+		let cellData = MainTimelineCellData(article: article, showFeedName: showFeedNames, feedName: ArticleFeedNaming.displayName(for: article, timelineFeed: coordinator?.timelineFeed), byline: article.byline(), iconImage: iconImage, showIcon: showIcon, numberOfLines: numberOfTextLines, iconSize: iconSize, tagDisplayMode: tagDisplayMode, searchSnippet: searchSnippet)
 		return cellData
 	}
 

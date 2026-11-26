@@ -96,7 +96,7 @@ Automated test runs on push/PR in GitHub Actions are disabled; `.github/workflow
   add bulk AO3 scraping to background refresh cycles (see `refresh-throttling.md`
   and `ao3-direct-feed-ingestion.md`).
 - **Plans are local working material.** Keep active plans in the
-  gitignored `plans/` directory and completed plans in `plans/finished/`.
+  gitignored `plans/` directory and completed plans in `docs/plans/finished/`.
   Put durable behavior and decisions in the tracked topic docs; don't cite
   ignored plan files from tracked source or documentation.
 

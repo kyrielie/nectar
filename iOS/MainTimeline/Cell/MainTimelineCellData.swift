@@ -8,6 +8,7 @@
 
 import UIKit
 import Articles
+import ArticlesDatabase
 import Images
 
 /// Which controlled vocabulary a `.badges`-mode pill's text came from, for
@@ -32,6 +33,7 @@ enum BadgeCategory: Sendable {
 	let title: String
 	let attributedTitle: NSAttributedString
 	let summary: String
+	let attributedSummary: NSAttributedString?
 	let dateString: String
 	let feedName: String
 	let byline: String
@@ -165,18 +167,26 @@ enum BadgeCategory: Sendable {
 		return badges
 	}
 
-	init(article: Article, showFeedName: ShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool, numberOfLines: Int, iconSize: IconSize, tagDisplayMode: TagDisplayMode) {
+	init(article: Article, showFeedName: ShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool, numberOfLines: Int, iconSize: IconSize, tagDisplayMode: TagDisplayMode, searchSnippet: String? = nil) {
 
 		self.accountID = article.accountID
 		self.articleID = article.articleID
 		self.title = ArticleStringFormatter.shared.truncatedTitle(article)
 		self.attributedTitle = ArticleStringFormatter.shared.attributedTruncatedTitle(article)
 
-		let truncatedSummary = ArticleStringFormatter.shared.truncatedSummary(article)
-		if self.title.isEmpty && truncatedSummary.isEmpty {
-			self.summary = Self.noText
+		if let searchSnippet, !searchSnippet.isEmpty {
+			let baseColor: UIColor = self.title.isEmpty ? .label : .secondaryLabel
+			let parsed = Self.parseSearchSnippet(searchSnippet, baseFont: MainTimelineDefaultCellLayout.summaryFont, baseColor: baseColor)
+			self.summary = parsed.plainText
+			self.attributedSummary = parsed.attributedText
 		} else {
-			self.summary = truncatedSummary
+			let truncatedSummary = ArticleStringFormatter.shared.truncatedSummary(article)
+			if self.title.isEmpty && truncatedSummary.isEmpty {
+				self.summary = Self.noText
+			} else {
+				self.summary = truncatedSummary
+			}
+			self.attributedSummary = nil
 		}
 
 		self.dateString = ArticleStringFormatter.shared.dateString(article.logicalDatePublished)
@@ -256,12 +266,56 @@ enum BadgeCategory: Sendable {
 
 	}
 
+	private static func parseSearchSnippet(_ snippet: String, baseFont: UIFont, baseColor: UIColor) -> (plainText: String, attributedText: NSAttributedString) {
+		let startDelimiter = ArticleSearchMatch.matchStartDelimiter
+		let endDelimiter = ArticleSearchMatch.matchEndDelimiter
+		let highlightFont = UIFont.systemFont(ofSize: baseFont.pointSize, weight: .semibold)
+
+		let attributed = NSMutableAttributedString()
+		var plainText = ""
+		var cursor = snippet.startIndex
+
+		while cursor < snippet.endIndex {
+			if let startRange = snippet.range(of: startDelimiter, range: cursor..<snippet.endIndex) {
+				let prefix = String(snippet[cursor..<startRange.lowerBound])
+				if !prefix.isEmpty {
+					plainText.append(prefix)
+					attributed.append(NSAttributedString(string: prefix, attributes: [.font: baseFont, .foregroundColor: baseColor]))
+				}
+				let afterStart = startRange.upperBound
+				if let endRange = snippet.range(of: endDelimiter, range: afterStart..<snippet.endIndex) {
+					let highlighted = String(snippet[afterStart..<endRange.lowerBound])
+					if !highlighted.isEmpty {
+						plainText.append(highlighted)
+						attributed.append(NSAttributedString(string: highlighted, attributes: [.font: highlightFont, .foregroundColor: UIColor.label]))
+					}
+					cursor = endRange.upperBound
+				} else {
+					let rest = String(snippet[afterStart..<snippet.endIndex])
+					plainText.append(rest)
+					attributed.append(NSAttributedString(string: rest, attributes: [.font: baseFont, .foregroundColor: baseColor]))
+					cursor = snippet.endIndex
+				}
+			} else {
+				let tail = String(snippet[cursor..<snippet.endIndex]).replacingOccurrences(of: endDelimiter, with: "")
+				if !tail.isEmpty {
+					plainText.append(tail)
+					attributed.append(NSAttributedString(string: tail, attributes: [.font: baseFont, .foregroundColor: baseColor]))
+				}
+				cursor = snippet.endIndex
+			}
+		}
+
+		return (plainText, attributed)
+	}
+
 	init() { // Empty
 		self.accountID = ""
 		self.articleID = ""
 		self.title = ""
 		self.attributedTitle = NSAttributedString()
 		self.summary = ""
+		self.attributedSummary = nil
 		self.dateString = ""
 		self.feedName = ""
 		self.byline = ""

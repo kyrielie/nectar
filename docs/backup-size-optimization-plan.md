@@ -4,11 +4,11 @@ A roadmap for reducing the storage footprint and transfer duration of Nectar's f
 device backup archives (`.zip`). 
 
 > [!NOTE]
-> **Status: Deferred (Future Planning).**
-> This plan captures the design, findings, and migration steps for when backup file
-> size becomes an operational concern (e.g. large libraries of 5,000+ works causing
-> AirDrop or iCloud backup timeouts). It is not currently scheduled for immediate
-> implementation.
+> **Status: Partially Implemented (Phases 1 & 2 Complete; Phase 3 Open).**
+> Phase 1 (`stripSearchIndexFromSnapshot` in `ArticlesDatabaseFullSnapshotExport.swift`)
+> and Phase 2 (migrating `contentHTML` from Base64 `TEXT` to native SQLite `BLOB` in
+> `ArticlesDatabase` schema version 2) are implemented. Phase 3 (`FeedSettings.db`
+> stale cache pruning) remains open.
 
 ---
 
@@ -89,11 +89,11 @@ LZFSE compressed bytes (`ContentHTMLCompression.swift`). Base64 adds a mandatory
 ---
 
 ### Phase 3: Prune Stale Network Caches in `FeedSettings.db`
-*(Low ROI, Low Risk)*
+*(Low ROI, Low Risk — `FeedSettings.db` stores URLs and HTTP headers, not favicon blobs)*
 
 #### Execution Steps:
-1. Prior to bundling `FeedSettings.db`, purge stale HTTP Conditional-GET headers (`etag`, `lastModified`) and cached favicon blobs for feeds deleted or inactive for $>90$ days.
-2. Compact `FeedSettings.db` via `VACUUM`.
+1. Export `FeedSettings.db` to the temporary backup directory via `VACUUM INTO` instead of a raw file copy.
+2. On the exported copy only, delete orphaned rows whose `feedID` is no longer in the account's active feeds, clear stale HTTP Conditional-GET / Cache-Control columns (`conditionalGetInfoLastModified`, `conditionalGetInfoEtag`, `conditionalGetInfoDate`, `cacheControlInfoDateCreated`, `cacheControlInfoMaxAge`, `lastResponseCode`) for feeds inactive $>90$ days, and run `VACUUM`.
 
 ---
 

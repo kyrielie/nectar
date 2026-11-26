@@ -242,4 +242,45 @@ struct SearchTableAndDatabaseTests {
 		let scopedMatches = await db.fetchArticlesMatchingWithArticleIDsOrderedAsync(searchString: "Nebula", articleIDs: scopedArticleIDs)
 		#expect(scopedMatches.map(\.uniqueID) == ["rank-body"])
 	}
+
+	@Test("returns focused FTS5 snippets with body and title fallback")
+	func searchSnippetsIncludeDelimitedBodyAndTitleFallback() async throws {
+		let db = TestFixtures.makeDatabase()
+
+		let bodyItem = TestFixtures.makeParsedItem(
+			uniqueID: "snippet-body",
+			feedURL: Self.feedURL,
+			title: "Quiet Harbor",
+			contentHTML: "<p>Morning mist lingered over the docks while the lantern beside the chronometer hummed softly.</p>"
+		)
+		let titleOnlyItem = TestFixtures.makeParsedItem(
+			uniqueID: "snippet-title",
+			feedURL: Self.feedURL,
+			title: "Chronometer",
+			contentHTML: "<p>An unrelated passage about salt and tide.</p>"
+		)
+
+		_ = await db.updateAsync(parsedItems: [bodyItem, titleOnlyItem], feedID: Self.feedID, deleteOlder: false)
+
+		let matches = await db.fetchArticleSearchMatchesOrderedAsync(searchString: "chronometer", feedIDs: [Self.feedID])
+		#expect(matches.map(\.article.uniqueID) == ["snippet-title", "snippet-body"])
+
+		let expectedDelimiters = "\(ArticleSearchMatch.matchStartDelimiter)chronometer\(ArticleSearchMatch.matchEndDelimiter)"
+		let expectedTitleDelimiters = "\(ArticleSearchMatch.matchStartDelimiter)Chronometer\(ArticleSearchMatch.matchEndDelimiter)"
+
+		let bodyMatch = try #require(matches.first { $0.article.uniqueID == "snippet-body" })
+		let bodySnippet = try #require(bodyMatch.snippet)
+		#expect(bodySnippet.localizedCaseInsensitiveContains(expectedDelimiters))
+		#expect(bodySnippet.contains("lantern"))
+
+		let titleMatch = try #require(matches.first { $0.article.uniqueID == "snippet-title" })
+		let titleSnippet = try #require(titleMatch.snippet)
+		#expect(titleSnippet.contains(expectedTitleDelimiters))
+
+		let scopedMatches = await db.fetchArticleSearchMatchesWithArticleIDsOrderedAsync(
+			searchString: "chronometer",
+			articleIDs: [bodyMatch.article.articleID]
+		)
+		#expect(scopedMatches.map(\.article.uniqueID) == ["snippet-body"])
+	}
 }

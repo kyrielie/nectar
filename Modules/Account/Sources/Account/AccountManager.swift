@@ -440,6 +440,30 @@ import ActivityLog
 		return orderedArticles
 	}
 
+	public func fetchArticleSearchMatchesOrderedAsync(_ fetchType: FetchType) async -> [ArticleSearchMatch]? {
+		precondition(Thread.isMainThread)
+
+		switch fetchType {
+		case .search, .searchWithArticleIDs:
+			break
+		default:
+			return nil
+		}
+
+		guard activeAccounts.count > 0 else {
+			return []
+		}
+
+		var orderedMatches = [ArticleSearchMatch]()
+		for account in activeAccounts {
+			if let matches = await account.fetchArticleSearchMatchesOrderedAsync(fetchType) {
+				orderedMatches.append(contentsOf: matches)
+			}
+		}
+
+		return orderedMatches
+	}
+
 	/// Fetch a single article (synchronously) by accountID and articleID.
 	public func fetchArticle(accountID: String, articleID: String) -> Article? {
 		precondition(Thread.isMainThread)

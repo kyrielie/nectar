@@ -16,11 +16,16 @@ import RSCore
 	var fetchType: FetchType { get }
 	func fetchUnreadCount(account: Account) async -> Int
 	func fetchArticlesOrderedAsync() async -> [Article]?
+	func fetchArticleSearchMatchesOrderedAsync() async -> [ArticleSearchMatch]?
 }
 
 @MainActor extension SmartFeedDelegate {
 
 	func fetchArticlesOrderedAsync() async -> [Article]? {
+		nil
+	}
+
+	func fetchArticleSearchMatchesOrderedAsync() async -> [ArticleSearchMatch]? {
 		nil
 	}
 

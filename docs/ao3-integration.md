@@ -117,16 +117,28 @@ authenticated requests queue the way `Downloader`'s do, and under unit
 tests it routes through `TestingURLProtocol` as `Downloader` does.
 
 It does share `Downloader`'s per-host rate-limit cooldown, through
-`AO3RateLimit`: while a cooldown is active the request is not sent, and a
+`AO3RateLimit` (and `DownloadSession` also synchronizes 429 cooldowns with
+`Downloader.shared` so RSS/Atom refreshes and on-demand AO3 requests share the
+same cooldown state): while a cooldown is active the request is not sent, and a
 429 received here starts the same cooldown (`Downloader.recordRateLimit`).
 `fetch` returns `AO3AuthenticatedFetchResult` (`.noSession`,
 `.rateLimited(until:)`, `.response`), and a rate limit is never folded
 into the anonymous fallback, since that would hit the same host and the
 same limit. `AO3KudosFetcher` checks and records the same cooldown for its
-POST, and the list-view kudos CSRF fetch now goes through `Downloader`
-(cache vetoed) instead of a private session. A multi-select love now runs
-its CSRF fetches one at a time with `secondsBetweenAO3PagedRequests`
-between them, rather than all at once.
+POST and runs through `AO3RequestCoordinator` with `.uncoalescedUnpaced` so
+POST concurrency is still bounded alongside active AO3 workers, while the
+list-view kudos CSRF fetch goes through `Downloader` (cache vetoed).
+A multi-select love now runs its CSRF fetches one at a time with
+`secondsBetweenAO3PagedRequests` between them, rather than all at once.
+
+All HTML AO3 fetchers (`AO3AuthenticatedFetcher`, `AO3SearchResultsFetcher`,
+`AO3ChapterFetcher.anonymousFetch`, `AO3SeriesNavigator`, and `AO3KudosFetcher`)
+route through `AO3RequestCoordinator.shared.execute(key:policy:operation:)`.
+`AO3RequestKey` partitions in-flight coalescing by `(url, method, sessionScope)`
+(`.guest`, `.authenticated`, or `.clearanceCookie`) so guest and signed-in
+responses never collide, `RequestCoalescer` retains in-flight tasks until
+completion even if an earlier waiter cancels, and `AO3Pacer` enforces monotonic
+pacing using `ContinuousClock`.
 
 The anonymous `Downloader.shared` path is the **fallback**. Both attempts
 are classified by `AO3WorkPageClassifier` and, for an interactive fetch,

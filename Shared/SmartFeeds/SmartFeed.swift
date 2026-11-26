@@ -34,6 +34,7 @@ import Images
 	}
 
 	private(set) var orderedSearchBookKeys = [String]()
+	private(set) var searchSnippetsByBookKey = [String: String]()
 
 	var sidebarItemID: SidebarItemIdentifier? {
 		delegate.sidebarItemID
@@ -110,6 +111,21 @@ extension SmartFeed: ArticleFetcher {
 	}
 
 	func fetchArticlesAsync() async -> Set<Article> {
+		if let matches = await delegate.fetchArticleSearchMatchesOrderedAsync() {
+			let ordered = matches.map(\.article)
+			orderedSearchBookKeys = ordered.map(\.bookKey)
+			var snippets = [String: String]()
+			for match in matches {
+				if let snippet = match.snippet, snippets[match.article.bookKey] == nil {
+					snippets[match.article.bookKey] = snippet
+				}
+			}
+			searchSnippetsByBookKey = snippets
+			let (deduplicated, feedIDsByBookKey) = SmartFeedArticleGrouping.deduplicated(Set(ordered))
+			bookKeyIndex.update(feedIDsByBookKey)
+			return deduplicated
+		}
+		searchSnippetsByBookKey = [:]
 		if let ordered = await delegate.fetchArticlesOrderedAsync() {
 			orderedSearchBookKeys = ordered.map(\.bookKey)
 			let (deduplicated, feedIDsByBookKey) = SmartFeedArticleGrouping.deduplicated(Set(ordered))

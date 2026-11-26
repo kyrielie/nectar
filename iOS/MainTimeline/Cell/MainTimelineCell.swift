@@ -270,7 +270,11 @@ private extension MainTimelineCell {
 		titleView.attributedText = cellData.attributedTitle.applyingBaseFont(MainTimelineDefaultCellLayout.titleFont)
 
 		summaryView.font = MainTimelineDefaultCellLayout.summaryFont
-		summaryView.text = cellData.summary
+		if let attributedSummary = cellData.attributedSummary {
+			summaryView.attributedText = attributedSummary
+		} else {
+			summaryView.text = cellData.summary
+		}
 
 		updateMetadataLines()
 		updateMetadataBadges()
@@ -331,7 +335,9 @@ private extension MainTimelineCell {
 
 	func updateColors() {
 		titleView.textColor = .label
-		summaryView.textColor = cellData.title.isEmpty ? .label : .secondaryLabel
+		if cellData.attributedSummary == nil {
+			summaryView.textColor = cellData.title.isEmpty ? .label : .secondaryLabel
+		}
 		for label in metadataLineViews {
 			label.textColor = .secondaryLabel
 		}

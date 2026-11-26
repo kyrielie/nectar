@@ -56,11 +56,14 @@ chosen.
 
 1. For each `AccountManager.shared.accounts`: copy `Subscriptions.opml`
    and `FeedSettings.db` as-is; write `DB.sqlite3` via
-   `account.exportFullSnapshot(toPath:)` (`ArticlesDatabaseFullSnapshotExportTable`'s
+   `account.exportFullSnapshot(toPath:)` (`ArticlesDatabaseFullSnapshotExport`'s
    `VACUUM INTO`, see `database.md`) — atomic, consistent, and the only
-   export path that includes `bookState` and the FTS `search` table (see
-   `backup-size-optimization-plan.md` for deferred optimization planning around
-   stripping this search index to halve archive size).
+   export path that includes `bookState`. After `VACUUM INTO`,
+   `stripSearchIndexFromSnapshot(atPath:)` drops the FTS5 `search` table, clears
+   `articles.searchRowID`, and runs `VACUUM` on the exported copy to cut archive
+   size; on restore/reopen, `ArticlesDatabase` recreates `search` and
+   `SearchTable` re-indexes articles automatically (see
+   `backup-size-optimization-plan.md`).
 2. Copy the custom-installed `Themes` folder
    (`ArticleThemesManager.shared.folderPath`) into `Themes/` —
    unconditional, not gated by `includeSettings`: a custom theme file is

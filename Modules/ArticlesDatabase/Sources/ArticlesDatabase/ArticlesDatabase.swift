@@ -19,6 +19,19 @@ import Articles
 
 public typealias UnreadCountDictionary = [String: Int] // feedID: unreadCount
 
+public struct ArticleSearchMatch: Sendable, Hashable {
+	public static let matchStartDelimiter = "\u{001E}"
+	public static let matchEndDelimiter = "\u{001F}"
+
+	public let article: Article
+	public let snippet: String?
+
+	public init(article: Article, snippet: String?) {
+		self.article = article
+		self.snippet = snippet
+	}
+}
+
 public struct ArticleChanges: Sendable {
 	public let new: Set<Article>?
 	public let updated: Set<Article>?
@@ -697,6 +710,32 @@ public struct ArticleAttentionInfo: Sendable {
 			await withCheckedContinuation { continuation in
 				articlesTable.fetchArticlesMatchingWithArticleIDsOrderedAsync(searchString, articleIDs, cancellationToken: token) { articles in
 					continuation.resume(returning: articles)
+				}
+			}
+		} onCancel: {
+			token.cancel()
+		}
+	}
+
+	public func fetchArticleSearchMatchesOrderedAsync(searchString: String, feedIDs: Set<String>) async -> [ArticleSearchMatch] {
+		let token = SQLiteCancellationToken()
+		return await withTaskCancellationHandler {
+			await withCheckedContinuation { continuation in
+				articlesTable.fetchArticleSearchMatchesOrderedAsync(searchString, feedIDs, cancellationToken: token) { matches in
+					continuation.resume(returning: matches)
+				}
+			}
+		} onCancel: {
+			token.cancel()
+		}
+	}
+
+	public func fetchArticleSearchMatchesWithArticleIDsOrderedAsync(searchString: String, articleIDs: Set<String>) async -> [ArticleSearchMatch] {
+		let token = SQLiteCancellationToken()
+		return await withTaskCancellationHandler {
+			await withCheckedContinuation { continuation in
+				articlesTable.fetchArticleSearchMatchesWithArticleIDsOrderedAsync(searchString, articleIDs, cancellationToken: token) { matches in
+					continuation.resume(returning: matches)
 				}
 			}
 		} onCancel: {
