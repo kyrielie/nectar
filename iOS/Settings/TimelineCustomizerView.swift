@@ -83,11 +83,6 @@ import Images
 struct TimelineCustomizerView: View {
 
 	@StateObject private var model = TimelineCustomizerModel()
-	@Environment(\.surfacePaletteObserver) private var surfaceObserver
-
-	private var cellBackground: Color {
-		surfaceObserver?.settingsCellBackground ?? Color(uiColor: .secondarySystemGroupedBackground)
-	}
 
 	var body: some View {
 
@@ -102,7 +97,7 @@ struct TimelineCustomizerView: View {
 			} footer: {
 				Text("Maximum combined lines for the work title and summary. Longer titles leave fewer lines for the summary.", comment: "Timeline layout: number of lines footer")
 			}
-			.listRowBackground(cellBackground)
+			.surfacePaletteRowBackground()
 
 			Section {
 				Picker(NSLocalizedString("Tag Display", comment: "Timeline layout: tag display"), selection: $model.tagDisplayMode) {
@@ -115,14 +110,14 @@ struct TimelineCustomizerView: View {
 			} header: {
 				Text("Tag Display", comment: "Timeline layout: tag display section header")
 			}
-			.listRowBackground(cellBackground)
+			.surfacePaletteRowBackground()
 
 			Section {
 				Toggle(NSLocalizedString("Show Stats", comment: "Stats visibility toggle"), isOn: $model.statsVisible)
 			} footer: {
 				Text("Shows word count, completion status, and work tags in the timeline.", comment: "Timeline layout: show stats footer")
 			}
-			.listRowBackground(cellBackground)
+			.surfacePaletteRowBackground()
 
 			Section {
 				TimelinePreviewRepresentable(
@@ -134,7 +129,7 @@ struct TimelineCustomizerView: View {
 			} header: {
 				Text("Preview", comment: "Timeline layout: preview section header")
 			}
-			.listRowBackground(cellBackground)
+			.surfacePaletteRowBackground()
 		}
 		.surfacePaletteListBackground()
 		.navigationTitle(Text("Timeline Layout", comment: "Timeline Layout"))

@@ -19,7 +19,6 @@ struct ArticleThemeListView: View {
 
 	@StateObject private var model = ArticleThemeSettingsModel()
 
-	@State private var isImporterPresented = false
 	@State private var isDeleteCurrentThemeAlertPresented = false
 	@State private var isResetAlertPresented = false
 	@State private var previewColorScheme: ColorScheme = .light
@@ -61,20 +60,6 @@ struct ArticleThemeListView: View {
 		}
 		.navigationTitle(Text("Theme", comment: "Theme navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
-		.toolbar {
-			ToolbarItem(placement: .primaryAction) {
-				Button {
-					isImporterPresented = true
-				} label: {
-					Image(systemName: "plus")
-				}
-				.accessibilityLabel(Text("Import Theme", comment: "Import Theme"))
-			}
-		}
-		.fileImporter(isPresented: $isImporterPresented, allowedContentTypes: [UTType.netNewsWireTheme]) { result in
-			guard case .success(let url) = result else { return }
-			model.importTheme(url: url)
-		}
 		.alert(Text("Delete Theme?", comment: "Delete Theme"), isPresented: $isDeleteCurrentThemeAlertPresented) {
 			Button(role: .cancel) { } label: {
 				Text("Cancel", comment: "Cancel button")
@@ -98,7 +83,7 @@ struct ArticleThemeListView: View {
 				Text("Reset", comment: "Reset button")
 			}
 		} message: {
-			Text("This will discard all custom font, layout, and color overrides for “\(model.currentTheme.name)”.", comment: "Reset Theme Overrides message")
+			Text("This will discard all custom font, layout, and color overrides.", comment: "Reset Theme Overrides message")
 		}
 	}
 
@@ -123,11 +108,13 @@ private struct ArticleThemeOverridesView: View {
 		Form {
 			ArticleThemeTypographySection(model: model)
 			ArticleThemeColorsSection(model: model)
-			Section {
-				Button(role: .destructive) {
-					isResetAlertPresented = true
-				} label: {
-					Text("Reset to Theme Default", comment: "Reset to Theme Default button")
+			if model.activeOverrideCount > 0 {
+				Section {
+					Button(role: .destructive) {
+						isResetAlertPresented = true
+					} label: {
+						Text("Reset to Theme Default", comment: "Reset to Theme Default button")
+					}
 				}
 			}
 		}

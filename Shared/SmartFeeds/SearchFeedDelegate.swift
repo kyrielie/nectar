@@ -16,7 +16,8 @@ import Images
 struct SearchFeedDelegate: SmartFeedDelegate {
 
 	var sidebarItemID: SidebarItemIdentifier? {
-		return SidebarItemIdentifier.smartFeed(String(describing: SearchFeedDelegate.self))
+		let identifier = isTimelineScoped ? "SearchTimelineFeedDelegate" : String(describing: SearchFeedDelegate.self)
+		return SidebarItemIdentifier.smartFeed(identifier)
 	}
 
 	var nameForDisplay: String {
@@ -26,11 +27,18 @@ struct SearchFeedDelegate: SmartFeedDelegate {
 	let nameForDisplayPrefix = NSLocalizedString("Search: ", comment: "Search smart feed title prefix")
 	let searchString: String
 	let fetchType: FetchType
+	let isTimelineScoped: Bool
 	var smallIcon: IconImage? = Assets.Images.searchFeed
 
-	init(searchString: String) {
+	init(searchString: String, articleIDs: Set<String>? = nil) {
 		self.searchString = searchString
-		self.fetchType = .search(searchString)
+		if let articleIDs {
+			self.fetchType = .searchWithArticleIDs(searchString, articleIDs)
+			self.isTimelineScoped = true
+		} else {
+			self.fetchType = .search(searchString)
+			self.isTimelineScoped = false
+		}
 	}
 
 	func fetchArticlesOrderedAsync() async -> [Article]? {

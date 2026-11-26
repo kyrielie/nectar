@@ -309,10 +309,6 @@ struct SettingsView: View {
 	@State private var didScrollToArticles = false
 	@State private var searchText = ""
 
-	private var cellBackground: Color? {
-		paletteObserver?.settingsCellBackground
-	}
-
 	var body: some View {
 		NavigationStack(path: $path) {
 			ScrollViewReader { proxy in
@@ -334,7 +330,7 @@ struct SettingsView: View {
 							searchResultsSection
 						}
 					}
-					.listRowBackground(cellBackground)
+					.surfacePaletteRowBackground()
 				}
 				.listStyle(.insetGrouped)
 				.surfacePaletteListBackground()

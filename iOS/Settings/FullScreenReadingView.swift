@@ -131,7 +131,8 @@ struct FullScreenReadingView: View {
 				Text("Hide Notch turns on automatically, and can't be turned off, while Page Counter is on.")
 			}
 		}
-		.navigationTitle("Reading Gestures & Layout")
+		.surfacePaletteListBackground()
+		.navigationTitle("Full Screen Reading")
 		.navigationBarTitleDisplayMode(.inline)
 	}
 }

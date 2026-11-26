@@ -2,10 +2,9 @@
 //  AO3SettingsModel.swift
 //  NetNewsWire-iOS
 //
-//  Observable state behind the AO3 settings screen: sign-in, whether the
-//  session ended on its own, an active AO3 rate limit, and the browser
-//  verification time. It owns no preference values; those stay in
-//  `AO3AccountSettingsView` as `@State`.
+//  Observable state and preference bindings behind the AO3 settings screen:
+//  sign-in, whether the session ended on its own, an active AO3 rate limit,
+//  browser verification time, and AO3 sync/prefetch preferences.
 //
 //  Every source is an injected closure so tests need no Keychain or
 //  network. The model refreshes on `.ao3SessionDidChange`,

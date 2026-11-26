@@ -238,22 +238,6 @@ import HexColor
 		ArticleThemesManager.shared.deleteTheme(themeName: currentTheme.name)
 	}
 
-	func importTheme(url: URL) {
-		guard let controller = UIApplication.shared.firstKeyWindow?.topViewController else { return }
-
-		if url.startAccessingSecurityScopedResource() {
-			defer {
-				url.stopAccessingSecurityScopedResource()
-			}
-
-			do {
-				try ArticleThemeImporter.importTheme(controller: controller, url: url)
-			} catch {
-				NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
-			}
-		}
-	}
-
 	private func refreshThemeMetadata() {
 		let theme = ArticleThemesManager.shared.currentTheme
 		currentTheme = theme
@@ -280,14 +264,5 @@ private extension Color {
 
 	var cssHexString: String {
 		UIColor(self).cssHexString
-	}
-}
-
-private extension UIApplication {
-	var firstKeyWindow: UIWindow? {
-		connectedScenes
-			.compactMap { $0 as? UIWindowScene }
-			.flatMap { $0.windows }
-			.first { $0.isKeyWindow }
 	}
 }

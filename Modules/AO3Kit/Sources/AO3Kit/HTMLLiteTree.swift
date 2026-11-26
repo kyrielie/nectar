@@ -134,11 +134,11 @@ func serializeHTMLLiteNodes(_ nodes: [HTMLLiteNode]) -> String {
 private func serializeHTMLLiteNode(_ node: HTMLLiteNode, into s: inout String) {
 	switch node {
 	case .text(let text):
-		s += escapeHTMLLiteText(text)
+		s += AO3HTMLHelpers.escapeHTMLText(text)
 	case .element(let element):
 		s += "<\(element.tag)"
 		for (name, value) in element.attributes {
-			s += " \(name)=\"\(escapeHTMLLiteAttribute(value))\""
+			s += " \(name)=\"\(AO3HTMLHelpers.escapeHTMLAttribute(value))\""
 		}
 		if element.selfClosing {
 			s += "/>"
@@ -163,17 +163,6 @@ private func serializeHTMLLiteNode(_ node: HTMLLiteNode, into s: inout String) {
 		}
 		s += "</\(element.tag)>"
 	}
-}
-
-private func escapeHTMLLiteText(_ s: String) -> String {
-	s.replacingOccurrences(of: "&", with: "&amp;")
-		.replacingOccurrences(of: "<", with: "&lt;")
-		.replacingOccurrences(of: ">", with: "&gt;")
-}
-
-private func escapeHTMLLiteAttribute(_ s: String) -> String {
-	s.replacingOccurrences(of: "&", with: "&amp;")
-		.replacingOccurrences(of: "\"", with: "&quot;")
 }
 
 // MARK: - Tree builder

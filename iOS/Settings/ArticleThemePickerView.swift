@@ -83,7 +83,7 @@ struct ArticleThemePickerView: View {
 		}
 		.fileImporter(isPresented: $isImporterPresented, allowedContentTypes: [UTType.netNewsWireTheme]) { result in
 			guard case .success(let url) = result else { return }
-			importTheme(url: url)
+			ArticleThemeImporter.importThemeFromPicker(url: url)
 		}
 		.onReceive(NotificationCenter.default.publisher(for: .ArticleThemeNamesDidChangeNotification)) { _ in
 			refreshToggle.toggle()
@@ -151,32 +151,5 @@ struct ArticleThemePickerView: View {
 			return true
 		}
 		return name.localizedCaseInsensitiveContains(searchText)
-	}
-
-	// MARK: - Import
-
-	private func importTheme(url: URL) {
-		guard let controller = UIApplication.shared.firstKeyWindow?.topViewController else { return }
-
-		if url.startAccessingSecurityScopedResource() {
-			defer {
-				url.stopAccessingSecurityScopedResource()
-			}
-
-			do {
-				try ArticleThemeImporter.importTheme(controller: controller, url: url)
-			} catch {
-				NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
-			}
-		}
-	}
-}
-
-private extension UIApplication {
-	var firstKeyWindow: UIWindow? {
-		connectedScenes
-			.compactMap { $0 as? UIWindowScene }
-			.flatMap { $0.windows }
-			.first { $0.isKeyWindow }
 	}
 }

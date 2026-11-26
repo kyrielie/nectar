@@ -352,20 +352,13 @@ final class AppDefaults: Sendable {
 		static let articleFullscreenContextMenuEnabled = "articleFullscreenContextMenuEnabled"
 		static let articlePagingSwipeEnabled = "articlePagingSwipeEnabled"
 		static let showFeedNameInReaderView = "showFeedNameInReaderView"
-		static let articleToolbarShowTheme = "articleToolbarShowTheme"
-		static let articleToolbarShowTableOfContents = "articleToolbarShowTableOfContents"
-		static let articleToolbarShowFind = "articleToolbarShowFind"
-		static let articleToolbarShowPrevNext = "articleToolbarShowPrevNext"
 		// MARK: - Toolbar customization
 		/// Unified toolbar-customization keys. One Bool per (ToolbarFunction,
 		/// ToolbarBar, inline-or-overflow) triple -- see
 		/// isToolbarFunctionEnabled(_:on:)/setToolbarFunctionEnabled(_:on:_:)
 		/// and isToolbarFunctionInOverflow(_:on:)/setToolbarFunctionInOverflow(_:on:_:)
 		/// for the dispatch. Named toolbarFn{Function}{Bar}/
-		/// toolbarFn{Function}{Bar}Overflow rather than reusing the legacy
-		/// articleToolbarShow*/bottomToolbarShow* names, since those names
-		/// are retained above as migration-source-only keys and must keep
-		/// their old on-disk values untouched until migration reads them.
+		/// toolbarFn{Function}{Bar}Overflow.
 		static let toolbarFnThemeTop = "toolbarFnThemeTop"
 		static let toolbarFnThemeTopOverflow = "toolbarFnThemeTopOverflow"
 		static let toolbarFnThemeBottom = "toolbarFnThemeBottom"
@@ -568,10 +561,6 @@ final class AppDefaults: Sendable {
 		Key.articleFullscreenContextMenuEnabled,
 		Key.articlePagingSwipeEnabled,
 		Key.showFeedNameInReaderView,
-		Key.articleToolbarShowTheme,
-		Key.articleToolbarShowTableOfContents,
-		Key.articleToolbarShowFind,
-		Key.articleToolbarShowPrevNext,
 		// Unified toolbar-customization keys (see ToolbarFunction). These
 		// are the keys the new Toolbars settings screen actually writes
 		// to going forward.
@@ -824,51 +813,6 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			AppDefaults.setBool(for: Key.showFeedNameInReaderView, newValue)
-		}
-	}
-
-	/// Whether the theme button appears in the article reader's top
-	/// toolbar. Defaults to true, matching the button's former
-	/// unconditional presence before this became a setting.
-	var articleToolbarShowTheme: Bool {
-		get {
-			return AppDefaults.bool(for: Key.articleToolbarShowTheme)
-		}
-		set {
-			AppDefaults.setBool(for: Key.articleToolbarShowTheme, newValue)
-		}
-	}
-
-	/// Whether the table-of-contents button appears in the article
-	/// reader's top toolbar. Defaults to true.
-	var articleToolbarShowTableOfContents: Bool {
-		get {
-			return AppDefaults.bool(for: Key.articleToolbarShowTableOfContents)
-		}
-		set {
-			AppDefaults.setBool(for: Key.articleToolbarShowTableOfContents, newValue)
-		}
-	}
-
-	/// Whether the find-in-article button appears in the article reader's
-	/// top toolbar. Defaults to true.
-	var articleToolbarShowFind: Bool {
-		get {
-			return AppDefaults.bool(for: Key.articleToolbarShowFind)
-		}
-		set {
-			AppDefaults.setBool(for: Key.articleToolbarShowFind, newValue)
-		}
-	}
-
-	/// Whether the previous/next article buttons appear in the article
-	/// reader's top toolbar. Defaults to false.
-	var articleToolbarShowPrevNext: Bool {
-		get {
-			return AppDefaults.bool(for: Key.articleToolbarShowPrevNext)
-		}
-		set {
-			AppDefaults.setBool(for: Key.articleToolbarShowPrevNext, newValue)
 		}
 	}
 
@@ -1643,21 +1587,25 @@ final class AppDefaults: Sendable {
 										Key.articleFullscreenContextMenuEnabled: true,
 									Key.articlePagingSwipeEnabled: true,
 										Key.showFeedNameInReaderView: false,
-									Key.articleToolbarShowTheme: true,
-									Key.articleToolbarShowTableOfContents: true,
-									Key.articleToolbarShowFind: true,
-									Key.articleToolbarShowPrevNext: false,
 									// Fresh-install defaults for the unified model. Top bar:
-									// theme/tableOfContents/find on, prevNext/lock off. Bottom
-									// bar: all five on ("existing always-on bottom bar" -- see
-									// ToolbarFunction's own doc comment).
-									// Every function defaults off on the bar it doesn't belong to
-									// pre-unification (e.g. .read on .top, .theme on .bottom) --
-									// AppDefaults.bool(for:)'s implicit-false fallback covers those,
-									// so only the "on" cases need an explicit entry here.
+									// theme/tableOfContents/find inline (3 of 4 slots) plus the
+									// overflow menu (1 slot) pre-populated with checkForUpdates,
+									// annotations, lock, scrollToTop, scrollToBottom, and settings.
+									// Bottom bar: all five native actions inline (5 of 5 slots),
+									// overflow menu off.
+									// Every other function/bar placement defaults off via
+									// AppDefaults.bool(for:)'s implicit-false fallback, so only
+									// the "on" cases need an explicit entry here.
+									Key.toolbarTopUseOverflowMenu: true,
 									Key.toolbarFnThemeTop: true,
 									Key.toolbarFnTableOfContentsTop: true,
 									Key.toolbarFnFindTop: true,
+									Key.toolbarFnCheckForUpdatesTopOverflow: true,
+									Key.toolbarFnAnnotationsTopOverflow: true,
+									Key.toolbarFnLockTopOverflow: true,
+									Key.toolbarFnScrollToTopTopOverflow: true,
+									Key.toolbarFnScrollToBottomTopOverflow: true,
+									Key.toolbarFnSettingsTopOverflow: true,
 									Key.toolbarFnReadBottom: true,
 									Key.toolbarFnStarBottom: true,
 									Key.toolbarFnHeartBottom: true,

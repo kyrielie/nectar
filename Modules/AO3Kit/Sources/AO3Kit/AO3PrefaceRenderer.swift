@@ -227,14 +227,11 @@ public enum AO3PrefaceRenderer {
 	}
 
 	static func escape(_ string: String) -> String {
-		string
-			.replacingOccurrences(of: "&", with: "&amp;")
-			.replacingOccurrences(of: "<", with: "&lt;")
-			.replacingOccurrences(of: ">", with: "&gt;")
+		AO3HTMLHelpers.escapeHTMLText(string)
 	}
 
 	private static func escapeAttribute(_ string: String) -> String {
-		escape(string).replacingOccurrences(of: "'", with: "&#39;")
+		AO3HTMLHelpers.escapeHTMLAttribute(string)
 	}
 
 	// MARK: - Inline series navigation footer (Phase 3b)

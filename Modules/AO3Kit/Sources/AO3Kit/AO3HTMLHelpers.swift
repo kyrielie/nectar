@@ -130,4 +130,19 @@ enum AO3HTMLHelpers {
 	static func isServiceUnavailablePage(foldedHTML: String) -> Bool {
 		foldedHTML.contains(serviceUnavailableHeading) || foldedHTML.contains(betaBannerCopy)
 	}
+
+	// MARK: - Escaping
+
+	static func escapeHTMLText(_ string: String) -> String {
+		string
+			.replacingOccurrences(of: "&", with: "&amp;")
+			.replacingOccurrences(of: "<", with: "&lt;")
+			.replacingOccurrences(of: ">", with: "&gt;")
+	}
+
+	static func escapeHTMLAttribute(_ string: String) -> String {
+		escapeHTMLText(string)
+			.replacingOccurrences(of: "\"", with: "&quot;")
+			.replacingOccurrences(of: "'", with: "&#39;")
+	}
 }

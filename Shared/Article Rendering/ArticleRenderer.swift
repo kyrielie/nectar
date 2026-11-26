@@ -147,10 +147,7 @@ import ArticleTheming
 			// guess or dig through the Activity Log. Escaped defensively even
 			// though every current message is one of this app's own fixed
 			// strings, not fetched/user content.
-			let escapedMessage = failureMessage
-				.replacingOccurrences(of: "&", with: "&amp;")
-				.replacingOccurrences(of: "<", with: "&lt;")
-				.replacingOccurrences(of: ">", with: "&gt;")
+			let escapedMessage = failureMessage.escapingSpecialXMLCharacters
 			let notice = String(format: NSLocalizedString("Full text unavailable: %@", comment: "Inline notice in the reader when AO3 full text could not be loaded; the placeholder is the reason"), escapedMessage)
 			bodyPrefix += "<p class='ao3ChapterFetchNotice'>\(notice)</p>"
 		}

@@ -103,6 +103,51 @@ private struct ObservedSurfacePaletteListContainer<Content: View>: View {
 	}
 }
 
+private struct ObservedSurfacePaletteRowBackground: ViewModifier {
+	@ObservedObject var observer: SurfacePaletteObserver
+
+	func body(content: Content) -> some View {
+		content.listRowBackground(observer.settingsCellBackground)
+	}
+}
+
+struct SurfacePaletteRowBackground: ViewModifier {
+	@Environment(\.surfacePaletteObserver) private var observer
+
+	func body(content: Content) -> some View {
+		if let observer {
+			content.modifier(ObservedSurfacePaletteRowBackground(observer: observer))
+		} else {
+			content
+		}
+	}
+}
+
+struct SettingsSelectionRow: View {
+	let title: String
+	let isSelected: Bool
+	var tint: Color = .accentColor
+	let action: () -> Void
+
+	var body: some View {
+		Button(action: action) {
+			HStack {
+				Text(title)
+					.foregroundStyle(.primary)
+				Spacer()
+				if isSelected {
+					Image(systemName: "checkmark")
+						.font(.body.weight(.semibold))
+						.foregroundStyle(tint)
+				}
+			}
+			.contentShape(Rectangle())
+		}
+		.buttonStyle(.plain)
+		.accessibilityAddTraits(isSelected ? .isSelected : [])
+	}
+}
+
 extension View {
 	func surfacePaletteAware(observer: SurfacePaletteObserver) -> some View {
 		modifier(SurfacePaletteAware(observer: observer))
@@ -110,5 +155,9 @@ extension View {
 
 	func surfacePaletteListBackground() -> some View {
 		modifier(SurfacePaletteListContainer())
+	}
+
+	func surfacePaletteRowBackground() -> some View {
+		modifier(SurfacePaletteRowBackground())
 	}
 }

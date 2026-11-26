@@ -64,21 +64,12 @@ import HexColor
 struct ColorPaletteSettingsView: View {
 
 	@StateObject private var model = ColorPaletteSettingsModel()
-	@Environment(\.surfacePaletteObserver) private var surfaceObserver
-	@Environment(\.colorScheme) private var colorScheme
-
-	private var cellBackground: Color {
-		_ = model.surfaceTint
-		_ = model.userInterfaceColorPalette
-		let traits = UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light)
-		return surfaceObserver?.settingsCellBackground ?? Color(uiColor: Assets.Colors.settingsCellBackground(for: traits))
-	}
 
 	var body: some View {
 		Form {
 			Section {
 				ForEach(UserInterfaceColorPalette.allCases, id: \.self) { palette in
-					SelectionRow(
+					SettingsSelectionRow(
 						title: String(describing: palette),
 						isSelected: model.userInterfaceColorPalette == palette
 					) {
@@ -86,11 +77,11 @@ struct ColorPaletteSettingsView: View {
 					}
 				}
 			}
-			.listRowBackground(cellBackground)
+			.surfacePaletteRowBackground()
 
 			Section {
 				ForEach(ToolbarStyle.allCases, id: \.self) { style in
-					SelectionRow(
+					SettingsSelectionRow(
 						title: style.description,
 						isSelected: model.toolbarStyle == style
 					) {
@@ -100,11 +91,11 @@ struct ColorPaletteSettingsView: View {
 			} footer: {
 				Text("Default: the top navigation bar and bottom toolbar use plain system appearance. Blend: both bars match the current work's background color. Tinted: both bars pick up the Surface Palette's tint color.", comment: "Toolbar style picker footer")
 			}
-			.listRowBackground(cellBackground)
+			.surfacePaletteRowBackground()
 
 			Section {
 				ForEach(SurfacePalette.allCases, id: \.self) { palette in
-					SelectionRow(
+					SettingsSelectionRow(
 						title: palette.description,
 						isSelected: model.surfaceTint == palette
 					) {
@@ -114,42 +105,18 @@ struct ColorPaletteSettingsView: View {
 			} header: {
 				Text("Surface Palette", comment: "Surface palette section header")
 			}
-			.listRowBackground(cellBackground)
+			.surfacePaletteRowBackground()
 
 			Section {
 				SurfacePalettePreviewView(surfaceTint: model.surfaceTint, toolbarStyle: model.toolbarStyle)
 			} header: {
 				Text("Preview", comment: "Surface palette preview section header")
 			}
-			.listRowBackground(cellBackground)
+			.surfacePaletteRowBackground()
 		}
 		.surfacePaletteListBackground()
 		.navigationTitle(Text("Color Palette", comment: "Color Palette navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
-	}
-}
-
-private struct SelectionRow: View {
-	let title: String
-	let isSelected: Bool
-	let action: () -> Void
-
-	var body: some View {
-		Button(action: action) {
-			HStack {
-				Text(title)
-					.foregroundStyle(.primary)
-				Spacer()
-				if isSelected {
-					Image(systemName: "checkmark")
-						.font(.body.weight(.semibold))
-						.foregroundStyle(Color.accentColor)
-				}
-			}
-			.contentShape(Rectangle())
-		}
-		.buttonStyle(.plain)
-		.accessibilityAddTraits(isSelected ? .isSelected : [])
 	}
 }
 

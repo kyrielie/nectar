@@ -30,7 +30,7 @@ import Images
 	}
 
 	public var forcesSearchRelevanceSort: Bool {
-		delegate is SearchFeedDelegate || delegate is SearchTimelineFeedDelegate
+		delegate is SearchFeedDelegate
 	}
 
 	private(set) var orderedSearchBookKeys = [String]()

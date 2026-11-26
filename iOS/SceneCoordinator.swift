@@ -1350,7 +1350,7 @@ struct SidebarItemNode: Hashable, Sendable {
 			case .global:
 				setTimelineFeed(SmartFeed(delegate: SearchFeedDelegate(searchString: searchString)), animated: true)
 			case .timeline:
-				setTimelineFeed(SmartFeed(delegate: SearchTimelineFeedDelegate(searchString: searchString, articleIDs: savedSearchArticleIDs!)), animated: true)
+				setTimelineFeed(SmartFeed(delegate: SearchFeedDelegate(searchString: searchString, articleIDs: savedSearchArticleIDs!)), animated: true)
 			}
 
 			lastSearchString = searchString

@@ -8,6 +8,7 @@
 
 import Foundation
 import UIKit
+import RSCore
 import Articles
 import Account
 import AnnotationsKit
@@ -386,8 +387,7 @@ public final class EPUB3Generator {
 	}
 
 	private static func hasStoryContent(_ html: String) -> Bool {
-		let textOnly = html.replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
-			.trimmingCharacters(in: .whitespacesAndNewlines)
+		let textOnly = html.strippingHTML().trimmingCharacters(in: .whitespacesAndNewlines)
 		return textOnly.count >= 80
 	}
 

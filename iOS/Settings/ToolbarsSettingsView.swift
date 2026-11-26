@@ -167,12 +167,7 @@ import UIKit
 struct ToolbarsSettingsView: View {
 
 	@StateObject private var model = ToolbarsSettingsModel()
-	@Environment(\.surfacePaletteObserver) private var surfaceObserver
 	@State private var isResetAlertPresented = false
-
-	private var cellBackground: Color {
-		surfaceObserver?.settingsCellBackground ?? Color(uiColor: .secondarySystemGroupedBackground)
-	}
 
 	var body: some View {
 		Form {
@@ -188,7 +183,7 @@ struct ToolbarsSettingsView: View {
 					availableSection
 				}
 			}
-			.listRowBackground(cellBackground)
+			.surfacePaletteRowBackground()
 		}
 		.surfacePaletteListBackground()
 		.environment(\.editMode, .constant(.active))

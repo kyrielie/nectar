@@ -14,9 +14,7 @@ import UIKit
 import Account
 import ArticlesDatabase
 
-final class ManageStorageCollectionViewController: UICollectionViewController, SettingsPaletteBackgroundHosting {
-
-	var paletteBackgroundView: UIView { collectionView }
+final class ManageStorageCollectionViewController: UICollectionViewController {
 
 	private enum Item: Hashable {
 		case summary
@@ -49,18 +47,18 @@ final class ManageStorageCollectionViewController: UICollectionViewController, S
 
 		configureCollectionView()
 		configureDataSource()
-		configureSettingsPaletteBackground()
+		applySettingsPaletteBackground()
 
-		// SettingsPaletteBackgroundHosting's applySettingsCellBackground(to:)
-		// is typed to UITableViewCell, so it can't reach this screen's plain
-		// UICollectionViewListCells -- refreshPaletteCellBackgrounds() below
-		// reloads instead, forcing collectionView(_:willDisplay:forItemAt:)
-		// to run again with the live color. Covers both a palette switch
-		// (via the observer below) and a light/dark trait change (via
-		// configureSettingsPaletteBackground()'s own trait-change handler).
+		observeTraits([.userInterfaceStyle]) { (self: ManageStorageCollectionViewController, previousTraitCollection: UITraitCollection) in
+			guard self.traitCollection.userInterfaceStyle != previousTraitCollection.userInterfaceStyle else { return }
+			self.applySettingsPaletteBackground()
+			self.collectionView.reloadData()
+		}
+
 		NotificationCenter.default.addObserver(forName: .surfaceTintDidChange, object: nil, queue: .main) { [weak self] _ in
 			Task { @MainActor in
-				self?.refreshPaletteCellBackgrounds()
+				self?.applySettingsPaletteBackground()
+				self?.collectionView.reloadData()
 			}
 		}
 
@@ -70,20 +68,12 @@ final class ManageStorageCollectionViewController: UICollectionViewController, S
 		}
 	}
 
-	// SettingsPaletteBackgroundHosting -- also called on a light/dark trait
-	// change now, not just a palette switch; see SettingsBackgroundPalette.swift.
-	func refreshPaletteCellBackgrounds() {
-		collectionView.reloadData()
+	private func applySettingsPaletteBackground() {
+		collectionView.backgroundColor = Assets.Colors.settingsBackground(for: traitCollection)
 	}
 
 	// MARK: - Cell background
 
-	/// UICollectionViewListCells built via CellRegistration never get a
-	/// palette-aware background on their own -- unlike a UITableViewCell,
-	/// there's no SettingsPaletteBackgroundHosting helper for them.
-	/// Applying Assets.Colors.settingsCellBackground(for:) here on
-	/// willDisplay matches SettingsViewController/AccentColorTableViewController's
-	/// UITableViewCell equivalent (applySettingsCellBackground(to:)).
 	override func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
 		var backgroundConfig = cell.backgroundConfiguration ?? UIBackgroundConfiguration.listGroupedCell()
 		backgroundConfig.backgroundColor = Assets.Colors.settingsCellBackground(for: traitCollection)
@@ -139,7 +129,7 @@ final class ManageStorageCollectionViewController: UICollectionViewController, S
 				return
 			}
 			var content = UIListContentConfiguration.groupedFooter()
-			content.text = NSLocalizedString("Clearing content here frees space inside the database file, but the file itself won't shrink until it's compacted -- so the size shown in Account Statistics won't drop right away.", comment: "Manage Storage VACUUM explanation")
+			content.text = NSLocalizedString("Clearing content here frees space inside the database file, but the file itself won't shrink until it's compacted -- so the size shown in Library Stats won't drop right away.", comment: "Manage Storage VACUUM explanation")
 			supplementaryView.contentConfiguration = content
 		}
 

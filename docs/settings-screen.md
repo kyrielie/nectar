@@ -456,13 +456,11 @@ pre-drop order until some unrelated reload happened to touch it later.
 A trailing "Reset" button, scoped to whichever bar the segmented control
 currently has active — this screen already frames everything
 per-`activeBar`, so "Reset" reads as "reset the bar I'm looking at," not
-both at once (flagged as a judgment call worth confirming with product,
-since a person could just as reasonably expect "Reset" to mean
-everything). Matches the one existing reset affordance in Settings
-(`ArticleThemeListView.resetToThemeDefaults()`): resets immediately, no
-confirmation alert — though a toolbar reset arguably loses more (a
-custom order plus placements) than that screen's theme-color reset does,
-so this convention match is also worth a second opinion.
+both at once.
+
+Shipped defaults (`AppDefaults.registerDefaults()`):
+- **Top bar (4 of 4 slots):** `theme`, `tableOfContents`, `find` inline (3 slots) plus `toolbarTopUseOverflowMenu = true` (1 slot) with `checkForUpdates`, `annotations`, `lock`, `scrollToTop`, `scrollToBottom`, and `settings` in the overflow menu.
+- **Bottom bar (5 of 5 slots):** `read`, `star`, `heart`, `nextUnread`, `action` inline, `toolbarBottomUseOverflowMenu = false`.
 `AppDefaults.resetToolbarDefaults(for:)` removes (not overwrites) that
 bar's on-disk keys — every `toolbarFunctionKeys[fn][bar]` inline/overflow
 pair for all 13 functions, that bar's `toolbarTopUseOverflowMenu`/

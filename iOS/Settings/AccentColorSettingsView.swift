@@ -69,10 +69,6 @@ struct AccentColorSettingsView: View {
 	@StateObject private var model = AccentColorSettingsModel()
 	@Environment(\.surfacePaletteObserver) private var surfaceObserver
 
-	private var cellBackground: Color {
-		surfaceObserver?.settingsCellBackground ?? Color(uiColor: .secondarySystemGroupedBackground)
-	}
-
 	private var accentTint: Color {
 		surfaceObserver?.accentColor ?? .accentColor
 	}
@@ -103,34 +99,24 @@ struct AccentColorSettingsView: View {
 			} header: {
 				Text("Accent Color", comment: "Accent color section header")
 			}
-			.listRowBackground(cellBackground)
+			.surfacePaletteRowBackground()
 
 			Section {
 				ForEach(BadgeColorPalette.allCases, id: \.self) { palette in
-					Button {
+					SettingsSelectionRow(
+						title: palette.description,
+						isSelected: model.badgeColorMode == palette,
+						tint: accentTint
+					) {
 						model.badgeColorMode = palette
-					} label: {
-						HStack {
-							Text(palette.description)
-								.foregroundStyle(.primary)
-							Spacer()
-							if model.badgeColorMode == palette {
-								Image(systemName: "checkmark")
-									.font(.body.weight(.semibold))
-									.foregroundStyle(accentTint)
-							}
-						}
-						.contentShape(Rectangle())
 					}
-					.buttonStyle(.plain)
-					.accessibilityAddTraits(model.badgeColorMode == palette ? .isSelected : [])
 				}
 			} header: {
 				Text("Badge Colors", comment: "Badge color palette section header")
 			} footer: {
 				Text("Badges appear in the timeline when Tag Display is set to Badges in Timeline Layout. Accent palette badges follow your Accent Color choice above.", comment: "Badge color palette section footer")
 			}
-			.listRowBackground(cellBackground)
+			.surfacePaletteRowBackground()
 
 			Section {
 				BadgeColorPalettePreviewRepresentable(
@@ -141,7 +127,7 @@ struct AccentColorSettingsView: View {
 			} header: {
 				Text("Preview", comment: "Badge color palette preview section header")
 			}
-			.listRowBackground(cellBackground)
+			.surfacePaletteRowBackground()
 		}
 		.surfacePaletteListBackground()
 		.navigationTitle(Text("Accent Color", comment: "Accent Color navigation title"))

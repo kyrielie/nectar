@@ -11,6 +11,22 @@ import ArticleTheming
 
 @MainActor struct ArticleThemeImporter {
 
+	static func importThemeFromPicker(url: URL) {
+		guard let controller = UIApplication.shared.firstKeyWindow?.topViewController else { return }
+
+		if url.startAccessingSecurityScopedResource() {
+			defer {
+				url.stopAccessingSecurityScopedResource()
+			}
+
+			do {
+				try importTheme(controller: controller, url: url)
+			} catch {
+				NotificationCenter.default.post(name: .didFailToImportThemeWithError, object: nil, userInfo: ["error": error])
+			}
+		}
+	}
+
 	static func importTheme(controller: UIViewController, url: URL) throws {
 		// Reject symlinks, subfolders and unexpected files before reading anything.
 		let hasAccess = url.startAccessingSecurityScopedResource()
@@ -112,5 +128,14 @@ private extension ArticleThemeImporter {
 		alertController.addAction(UIAlertAction(title: doneTitle, style: .default))
 
 		controller.present(alertController, animated: true)
+	}
+}
+
+private extension UIApplication {
+	var firstKeyWindow: UIWindow? {
+		connectedScenes
+			.compactMap { $0 as? UIWindowScene }
+			.flatMap { $0.windows }
+			.first { $0.isKeyWindow }
 	}
 }
