@@ -1232,7 +1232,9 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				let d: DatabaseDictionary = [DatabaseKey.contentHTML: pendingHTML]
 				self.updateRowsWithDictionary(d, whereKey: DatabaseKey.articleID, matches: articleID, database: database)
 			}
-			database.executeUpdate("update articles set pendingUpdateContentHTML = NULL, pendingUpdateDetectedAt = NULL, wordCountRegressionFlaggedAt = NULL where articleID = ?", withArgumentsIn: [articleID])
+			if !database.executeUpdate("update articles set pendingUpdateContentHTML = NULL, pendingUpdateDetectedAt = NULL, wordCountRegressionFlaggedAt = NULL where articleID = ?", withArgumentsIn: [articleID]) {
+				Self.logger.error("ArticlesTable: resolvePendingContentUpdate failed for articleID \(articleID, privacy: .public) -- \(database.lastErrorMessage(), privacy: .public)")
+			}
 			self.removeArticleIDsFromCache(Set([articleID]))
 			DispatchQueue.main.async {
 				completion()
@@ -1261,7 +1263,9 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	func clearAO3ConfirmedMissing(articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
 		queue.runInTransaction { database in
-			database.executeUpdate("update articles set ao3ConfirmedMissingAt = NULL where articleID = ?", withArgumentsIn: [articleID])
+			if !database.executeUpdate("update articles set ao3ConfirmedMissingAt = NULL where articleID = ?", withArgumentsIn: [articleID]) {
+				Self.logger.error("ArticlesTable: clearAO3ConfirmedMissing failed for articleID \(articleID, privacy: .public) -- \(database.lastErrorMessage(), privacy: .public)")
+			}
 			self.removeArticleIDsFromCache(Set([articleID]))
 			DispatchQueue.main.async {
 				completion()
@@ -1271,7 +1275,9 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	func clearWordCountRegressionFlag(articleID: String, _ completion: @escaping DatabaseCompletionBlock) {
 		queue.runInTransaction { database in
-			database.executeUpdate("update articles set wordCountRegressionFlaggedAt = NULL where articleID = ?", withArgumentsIn: [articleID])
+			if !database.executeUpdate("update articles set wordCountRegressionFlaggedAt = NULL where articleID = ?", withArgumentsIn: [articleID]) {
+				Self.logger.error("ArticlesTable: clearWordCountRegressionFlag failed for articleID \(articleID, privacy: .public) -- \(database.lastErrorMessage(), privacy: .public)")
+			}
 			self.removeArticleIDsFromCache(Set([articleID]))
 			DispatchQueue.main.async {
 				completion()
@@ -1620,7 +1626,9 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			func deleteOldArticles(cutoffDate: Date) {
 				let sql = "delete from articles where articleID in (select articleID from articles natural join statuses where dateArrived<? and read=1 and starred=0 and loved=0);"
 				let parameters = [cutoffDate] as [Any]
-				database.executeUpdate(sql, withArgumentsIn: parameters)
+				if !database.executeUpdate(sql, withArgumentsIn: parameters) {
+					Self.logger.error("ArticlesTable: deleteOldArticles failed -- \(database.lastErrorMessage(), privacy: .public)")
+				}
 			}
 
 			let startTime = Date()
@@ -1656,7 +1664,9 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			}
 
 			let parameters = [cutoffDate] as [Any]
-			database.executeUpdate(sql, withArgumentsIn: parameters)
+			if !database.executeUpdate(sql, withArgumentsIn: parameters) {
+				Self.logger.error("ArticlesTable: deleteOldStatuses failed -- \(database.lastErrorMessage(), privacy: .public)")
+			}
 		}
 	}
 
@@ -1928,6 +1938,15 @@ nonisolated private extension ArticlesTable {
 		Set(fetchArticlesMatchingOrdered(searchString, filterClause: nil, database))
 	}
 
+	func resetCorruptSearchIndex(in database: FMDatabase) {
+		database.executeStatements("DROP TABLE IF EXISTS search;")
+		database.executeStatements(ArticlesDatabase.searchTableCreationStatement)
+		database.executeStatements("UPDATE articles SET searchRowID = NULL;")
+		DispatchQueue.main.async {
+			self.indexUnindexedArticles()
+		}
+	}
+
 	func fetchArticlesMatchingOrdered(_ searchString: String, filterClause: (sql: String, parameter: String)? = nil, _ database: FMDatabase) -> [Article] {
 		guard let sqlSearchString = sqliteSearchString(with: searchString) else {
 			return []
@@ -1945,12 +1964,7 @@ nonisolated private extension ArticlesTable {
 			let baseErrorCode = database.lastErrorCode() & 0xFF
 			if baseErrorCode == 11 || baseErrorCode == 26 { // SQLITE_CORRUPT || SQLITE_NOTADB
 				Self.logger.error("ArticlesTable: FTS5 search index corrupted (code=\(baseErrorCode, privacy: .public)); resetting search table")
-				database.executeStatements("DROP TABLE IF EXISTS search;")
-				database.executeStatements("CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(title, body);")
-				database.executeStatements("UPDATE articles SET searchRowID = NULL;")
-				DispatchQueue.main.async {
-					self.indexUnindexedArticles()
-				}
+				resetCorruptSearchIndex(in: database)
 			}
 			return []
 		}
@@ -2353,6 +2367,9 @@ nonisolated private extension ArticlesTable {
 		}
 
 		updateRowsWithDictionary(changesDictionary, whereKey: DatabaseKey.articleID, matches: updatedArticle.articleID, database: database)
+		if database.hadError() {
+			Self.logger.error("ArticlesTable: saveUpdatedArticle failed for articleID \(updatedArticle.articleID, privacy: .public) -- \(database.lastErrorMessage(), privacy: .public)")
+		}
 
 		// The cached Article for this articleID holds immutable (`let`) values —
 		// wordCount, isComplete, chapterCurrent/Total, etc. — taken from whenever

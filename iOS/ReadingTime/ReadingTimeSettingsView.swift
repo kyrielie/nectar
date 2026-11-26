@@ -41,6 +41,7 @@ struct ReadingTimeSettingsView: View {
 				Text("Shows a small pie indicator of today's remaining reading time in fullscreen reading, independent of the Page Counter setting.")
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle("Reading Time")
 		.navigationBarTitleDisplayMode(.inline)
 		.onAppear { model.refreshLockoutReasons() }
@@ -335,6 +336,7 @@ private struct CountDownTimerSettingView: View {
 				Text(footer)
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle(title)
 		.navigationBarTitleDisplayMode(.inline)
 	}
@@ -355,14 +357,8 @@ enum StrictLimitConfirmation {
 private struct DailyLimitDetailView: View {
 	let weekdayName: String
 	@Binding var minutes: Int
-	@State private var pendingConfirmation: PendingConfirmation?
+	@State private var pendingConfirmation: ReadingTimeSettingsModel.PendingConfirmation?
 	@State private var previousMinutes: Int?
-
-	private struct PendingConfirmation: Identifiable {
-		let id = UUID()
-		let message: String
-		let revert: () -> Void
-	}
 
 	var body: some View {
 		Form {
@@ -373,7 +369,8 @@ private struct DailyLimitDetailView: View {
 						let oldValue = previousMinutes ?? newValue
 						previousMinutes = newValue
 						if StrictLimitConfirmation.needsConfirmation(from: oldValue, to: newValue) {
-							pendingConfirmation = PendingConfirmation(
+							pendingConfirmation = ReadingTimeSettingsModel.PendingConfirmation(
+								kind: .dailyLimit,
 								message: "\(weekdayName) is set to \(durationString(newValue)). This is a strict limit — reading will be blocked once it's reached.",
 								revert: { minutes = oldValue }
 							)
@@ -385,6 +382,7 @@ private struct DailyLimitDetailView: View {
 				Text("Reading is blocked for the rest of \(weekdayName) once this limit is reached.")
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle(weekdayName)
 		.navigationBarTitleDisplayMode(.inline)
 		.alert(item: $pendingConfirmation) { confirmation in

@@ -110,7 +110,7 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   which is `AppDefaults`) -- see `ArticleThemeNameStoring` for the
   protocol seam `AppDefaults` conforms to, injected by `AppDelegate.swift`
   before `ArticleThemesManager.start()` is called. Depends on `RSCore`,
-  `HexColor`, and `Zip`.
+  `HexColor`, and `ZIPFoundation`.
 - **Modules/AppChrome** — the four public palette value types,
   `BadgeColorPalette`, `AccentColor`, `HighlightPalette` and
   `SurfacePalette`, with their `HexSet` / `IconHexSet` shapes
@@ -124,7 +124,7 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
   reads settings through. The app side of that protocol is
   `iOS/Backup/BackupSettingsStore.swift` (`extension AppDefaults:
   BackupSettingsStoring`). Depends on `Account`, `ArticleTheming` and the
-  `Zip` package. See `backup-restore.md`.
+  `ZIPFoundation` package. See `backup-restore.md`.
 - **Modules/ReadingStats, Modules/ReadingTime** — only the pure calendar
   and value types so far: `ReadingStatsCalendar.swift` (including the
   persisted `ReadingStatsDailyEntry`) and `ReadingTimeCalendar` (usage-day
@@ -152,12 +152,13 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
     tracking, read-marking; the per-sample progress math itself lives in
     `Shared/ReadingProgress`), `ArticleViewController`.
   - `iOS/AppDefaults.swift`: the settings singleton. Feature-owned settings
-    are split into `extension AppDefaults` files next to the feature
-    (`iOS/ReadingTime/AppDefaults+ReadingTime.swift`,
-    `iOS/ReadingStats/AppDefaults+ReadingStats.swift`); see
-    `settings-screen.md`. Other groups (reader, toolbar, annotations, text
-    replacement) are still in the main file under `// MARK:` banners and are
-    the next candidates to move.
+    are split into `extension AppDefaults` files:
+    `iOS/ReadingTime/AppDefaults+ReadingTime.swift`,
+    `iOS/ReadingStats/AppDefaults+ReadingStats.swift`,
+    `iOS/AppDefaults+Annotations.swift`,
+    `iOS/AppDefaults+Toolbars.swift`,
+    `iOS/AppDefaults+ArticleDisplay.swift`, and
+    `iOS/AppDefaults+TextReplacement.swift`; see `settings-screen.md`.
   - `iOS/Settings` — `SettingsViewController` (app settings list) and
     `TimelineCustomizerCollectionViewController` (Timeline Layout screen:
     icon size, line count, and a live `MainTimelineCell` preview). See
@@ -167,6 +168,11 @@ SPM packages live under `Modules/`. The ones with app-specific relevance:
 
 Note: several `#if os(macOS)` branches survive from the upstream NetNewsWire
 codebase but nothing macOS is currently built or shipped for Nectar.
+
+## Concurrency boundaries
+
+- **Swift 6 strictness in core packages:** `RSParser` uses `.swiftLanguageMode(.v6)` with `NonisolatedNonsendingByDefault` and `InferIsolatedConformances`; `AO3Kit`, `ArticleTheming`, and `BackupRestore` enable those same upcoming concurrency features.
+- **Legacy UIKit / app target (`iOS/`, `Shared/`):** Most app-target coordinators (`SceneCoordinator`, `WebViewController`, `MainTimelineModernViewController`) remain `@MainActor` UIKit classes or carryover `DispatchQueue` / `@unchecked Sendable` types from upstream NetNewsWire. New asynchronous state or networking in `AO3Kit`/`Account` should prefer actors and `async/await` rather than adding new `DispatchQueue` state locks.
 
 ## Platform scope
 

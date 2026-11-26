@@ -254,6 +254,37 @@ a.footnote {
 .ao3SeriesPrefaceEntry {
 	margin-right: 0.5em;
 }
+
+/* AO3 stub status / error banner and inline Fetch/Retry button -- kept in
+   core.css alongside the preface rules so custom themes style it too. */
+.ao3ChapterFetchNotice {
+	margin: 0 0 1em 0;
+	padding: 0.65em 0.85em;
+	border-left: 3px solid var(--ao3-notice-border-color, rgba(0, 0, 0, 0.3));
+	background: var(--ao3-notice-background-color, rgba(0, 0, 0, 0.05));
+	font-size: 0.9em;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.6em;
+}
+.ao3ChapterFetchNotice p {
+	margin: 0;
+	font-style: italic;
+	flex: 1 1 12em;
+}
+.ao3ChapterFetchButton {
+	display: inline-block;
+	padding: 0.3em 0.75em;
+	border-radius: 6px;
+	border: 1px solid var(--ao3-notice-border-color, rgba(0, 0, 0, 0.25));
+	font-style: normal;
+	font-weight: 600;
+	font-size: 0.92em;
+	text-decoration: none;
+	white-space: nowrap;
+}
 /* No white-space: nowrap here (unlike .ao3SeriesFooterLinks below): the
    preface row sits in the narrow 1fr value column of the dl.tags grid
    (now full-width via dt/dd.wide, but still only as wide as the preface

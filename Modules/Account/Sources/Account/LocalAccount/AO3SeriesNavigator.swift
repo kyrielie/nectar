@@ -600,9 +600,11 @@ private extension AO3SeriesNavigator {
 
 		let downloadResponse: DownloadResponse
 		do {
-			downloadResponse = try await AO3RequestCoordinator.shared.withSlot {
-				try await AO3Pacer.shared.pace()
-				return try await Downloader.shared.download(url)
+			downloadResponse = try await AO3RequestCoordinator.shared.execute(
+				key: AO3RequestKey(url: url, method: .get, sessionScope: .guest),
+				policy: .defaultPaced
+			) {
+				try await Downloader.shared.download(url)
 			}
 		} catch {
 			return .failure(.network(error.localizedDescription))

@@ -392,6 +392,9 @@ private extension DownloadSession {
 		}
 
 		retryAfterMessages[message.host] = message
+		if let url = dataTask.currentRequest?.url ?? dataTask.originalRequest?.url {
+			Downloader.shared.recordRateLimit(url: url, response: response as? HTTPURLResponse)
+		}
 		cancelAndRemoveTasksWithHost(message.host)
 	}
 
@@ -407,16 +410,8 @@ private extension DownloadSession {
 			return nil
 		}
 
-		let parsedRetryAfter: TimeInterval? = {
-			if let retryAfterValue = httpResponse.value(forHTTPHeaderField: HTTPResponseHeader.retryAfter),
-			   let parsed = TimeInterval(retryAfterValue),
-			   parsed > 0 {
-				return parsed
-			}
-			return nil
-		}()
-		let retryAfter = parsedRetryAfter ?? Self.defaultRetryAfter
-
+		let retryAfterValue = httpResponse.value(forHTTPHeaderField: HTTPResponseHeader.retryAfter)
+		let retryAfter = Downloader.clampedRetryAfter(headerValue: retryAfterValue)
 		return HTTPResponse429(url: url, retryAfter: retryAfter)
 	}
 
@@ -445,10 +440,13 @@ private extension DownloadSession {
 		}
 	}
 
-	func requestShouldBeDroppedDueToActive429(_ url: URL) -> Bool {
+	@MainActor func requestShouldBeDroppedDueToActive429(_ url: URL) -> Bool {
 
 		guard let host = url.host() else {
 			return false
+		}
+		if Downloader.shared.cooldownResumeDate(forHost: host.lowercased()) != nil {
+			return true
 		}
 		guard let retryAfterMessage = retryAfterMessages[host] else {
 			return false

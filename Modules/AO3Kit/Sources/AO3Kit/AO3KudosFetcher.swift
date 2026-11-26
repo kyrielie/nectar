@@ -61,10 +61,15 @@ public enum AO3KudosFetcher {
 
 		logger.debug("Requesting AO3: POST \(AO3KudosRequest.url.absoluteString, privacy: .public) for workID=\(workID, privacy: .public) authenticated=\(cookieHeaderValue != nil, privacy: .public)")
 
-		let session = makeSession()
-		defer { session.invalidateAndCancel() }
-
-		let (data, response) = try await session.data(for: request)
+		let sessionScope: AO3SessionScope = cookieHeaderValue != nil ? .authenticated : .guest
+		let (data, response) = try await AO3RequestCoordinator.shared.execute(
+			key: AO3RequestKey(url: AO3KudosRequest.url, method: .post, sessionScope: sessionScope),
+			policy: .uncoalescedUnpaced
+		) {
+			let session = makeSession()
+			defer { session.invalidateAndCancel() }
+			return try await session.data(for: request)
+		}
 		guard let httpResponse = response as? HTTPURLResponse else {
 			throw URLError(.badServerResponse)
 		}

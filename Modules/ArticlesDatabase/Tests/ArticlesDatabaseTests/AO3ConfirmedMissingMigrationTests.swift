@@ -115,4 +115,77 @@ struct AO3ConfirmedMissingMigrationTests {
 			Issue.record("search table not found in sqlite_master")
 		}
 	}
+
+	@Test("reopening a v2 database missing isRestricted, language, and collections adds them cleanly")
+	func repairsMissingAO3ColumnsInV2Database() async throws {
+		let path = makeTemporaryPath()
+		defer { try? FileManager.default.removeItem(atPath: path) }
+
+		let articleID = Article.calculatedArticleID(feedID: Self.feedID, uniqueID: "stub-1")
+		do {
+			let db = open(path)
+			let stub = TestFixtures.makeParsedItem(uniqueID: "stub-1", feedURL: Self.feedURL, contentHTML: nil)
+			_ = await db.updateAsync(parsedItems: [stub], feedID: Self.feedID, deleteOlder: false)
+		}
+
+		// Simulate an older v2 database created before isRestricted/language/collections existed.
+		do {
+			let database = try #require(FMDatabase(path: path))
+			try #require(database.open())
+			database.executeStatements("ALTER TABLE articles DROP COLUMN isRestricted;")
+			database.executeStatements("ALTER TABLE articles DROP COLUMN language;")
+			database.executeStatements("ALTER TABLE articles DROP COLUMN collections;")
+			database.close()
+		}
+
+		let repaired = open(path)
+		let fullWork = TestFixtures.makeParsedItem(
+			uniqueID: "stub-1",
+			feedURL: Self.feedURL,
+			contentHTML: "<p>Full chapter text</p>",
+			isRestricted: false,
+			ao3Language: "English",
+			collections: [ParsedCollectionEntry(name: "Test Collection", slug: "test_collection")]
+		)
+		_ = await repaired.updateAsync(parsedItems: [fullWork], feedID: Self.feedID, deleteOlder: false)
+
+		let stored = try #require(await repaired.fetchArticlesAsync(articleIDs: [articleID]).first)
+		#expect(stored.contentHTML == "<p>Full chapter text</p>")
+		#expect(stored.isRestricted == false)
+		#expect(stored.language == "English")
+		#expect(stored.collections == [ArticleCollectionEntry(name: "Test Collection", slug: "test_collection")])
+	}
+
+	@Test("migrating a database missing bookKey creates bookKey indexes after adding columns")
+	func createsBookKeyIndexesAfterAddingMissingColumns() async throws {
+		let path = makeTemporaryPath()
+		defer { try? FileManager.default.removeItem(atPath: path) }
+
+		do {
+			let database = try #require(FMDatabase(path: path))
+			try #require(database.open())
+			database.executeStatements("CREATE TABLE articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL);")
+			database.executeStatements("CREATE TABLE annotations (annotationID TEXT NOT NULL PRIMARY KEY, articleID TEXT NOT NULL);")
+			database.setUserVersion(2)
+			database.close()
+		}
+
+		_ = open(path)
+
+		let database = try #require(FMDatabase(path: path))
+		try #require(database.open())
+		defer { database.close() }
+		let indexNames = Set(["articles_bookKey_index", "annotations_bookKey_index"])
+		guard let rs = database.executeQuery("SELECT name FROM sqlite_master WHERE type='index';", withArgumentsIn: []) else {
+			Issue.record("Failed to query sqlite_master for indexes")
+			return
+		}
+		var found = Set<String>()
+		while rs.next() {
+			if let name = rs.string(forColumn: "name") {
+				found.insert(name)
+			}
+		}
+		#expect(indexNames.isSubset(of: found))
+	}
 }

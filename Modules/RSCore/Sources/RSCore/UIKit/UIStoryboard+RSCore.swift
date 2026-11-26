@@ -32,8 +32,7 @@ extension UIStoryboard {
 	public func instantiateController<T>(ofType type: T.Type = T.self) -> T where T: UIViewController {
 		let storyboardId = String(describing: type)
 		guard let viewController = instantiateViewController(withIdentifier: storyboardId) as? T else {
-			print("Unable to load view with Scene Identifier: \(storyboardId)")
-			fatalError()
+			fatalError("Unable to load view with Scene Identifier: \(storyboardId)")
 		}
 
 		return viewController

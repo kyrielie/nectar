@@ -58,6 +58,7 @@ struct ArticleThemeListView: View {
 				}
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle(Text("Theme", comment: "Theme navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
 		.alert(Text("Delete Theme?", comment: "Delete Theme"), isPresented: $isDeleteCurrentThemeAlertPresented) {

@@ -14,7 +14,7 @@ let package = Package(
 		.package(path: "../RSCore"),
 		.package(path: "../HexColor"),
 		.package(path: "../AppChrome"),
-		.package(url: "https://github.com/marmelroy/Zip.git", revision: "bca30f6d6c7d37cbc4aa8f6b0002e281dcc36195")
+		.package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.20")
 	],
 	targets: [
 		.target(
@@ -23,7 +23,7 @@ let package = Package(
 				"RSCore",
 				"HexColor",
 				"AppChrome",
-				"Zip"
+				"ZIPFoundation"
 			],
 			swiftSettings: [
 				.enableUpcomingFeature("NonisolatedNonsendingByDefault"),

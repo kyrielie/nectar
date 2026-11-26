@@ -1,12 +1,22 @@
 {
-  "originHash" : "00e72bf36f87b6bc2a40ab785e7180c3f1aff8e15e5de51e8327046234eadd4d",
+  "originHash" : "08b945773c35c9c30cdfdf45d0814b73f1949c3bdce6cbd9032b8fda2532a3e9",
   "pins" : [
     {
-      "identity" : "zip",
+      "identity" : "swiftsoup",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/marmelroy/Zip.git",
+      "location" : "https://github.com/scinfu/SwiftSoup.git",
       "state" : {
-        "revision" : "bca30f6d6c7d37cbc4aa8f6b0002e281dcc36195"
+        "revision" : "8397a860c6955924b584c50c5265c6aac0970015",
+        "version" : "2.14.4"
+      }
+    },
+    {
+      "identity" : "zipfoundation",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/weichsel/ZIPFoundation.git",
+      "state" : {
+        "revision" : "e7048f0569f0ba37df26f8357f560b9d25e9a284",
+        "version" : "0.9.21"
       }
     }
   ],

@@ -237,6 +237,18 @@ public extension Notification.Name {
 		postDidChangeNotification()
 	}
 
+	/// Sets transient progress text on the running activity with `id`.
+	/// Does nothing if no running activity matches.
+	public func updateProgress(id: Int, message: String) {
+
+		guard let activity = findRunningActivity(id: id) else {
+			return
+		}
+
+		activity.updateProgress(message)
+		postDidChangeNotification()
+	}
+
 	// MARK: - Queries
 
 	public func pendingActivities(for owner: ActivityOwner) -> [Activity] {

@@ -760,9 +760,9 @@ struct AnnotationsListView: View {
 				let rows = sortedAnnotations.map {
 					Row(
 						annotation: $0,
-						articleAuthors: authorsByArticleID[$0.articleID] ?? nil,
+						articleAuthors: authorsByArticleID[$0.articleID].flatMap { $0 },
 						articleTitle: titlesByArticleID[$0.articleID] ?? NSLocalizedString("Untitled", comment: "Fallback article title"),
-						articleLink: linksByArticleID[$0.articleID] ?? nil
+						articleLink: linksByArticleID[$0.articleID].flatMap { $0 }
 					)
 				}
 				return AnnotationGroup(key: key, heading: heading, rows: rows)
@@ -790,7 +790,7 @@ struct AnnotationsListView: View {
 			let anyRow = orderedGroups.lazy.flatMap(\.rows).first
 			let title = anyRow.map { titlesByArticleID[$0.annotation.articleID] ?? NSLocalizedString("Untitled", comment: "Fallback article title") }
 				?? NSLocalizedString("Untitled", comment: "Fallback article title")
-			let authors = anyRow.flatMap { authorsByArticleID[$0.annotation.articleID] ?? nil }
+			let authors = anyRow.flatMap { authorsByArticleID[$0.annotation.articleID].flatMap { $0 } }
 			return BookSection(bookOrArticleID: bookOrArticleID, title: title, authors: authors, chapterGroups: orderedGroups)
 		}
 

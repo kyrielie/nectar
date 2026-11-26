@@ -111,8 +111,8 @@ struct ArticlesDatabaseFullSnapshotExportTests {
 		#expect(articlesCount.intWithCountResult() == 1)
 	}
 
-	@Test("exportFullSnapshot's copy of the FTS `search` table survives VACUUM INTO and is queryable")
-	func fullTextSearchSurvivesVacuumInto() async throws {
+	@Test("exportFullSnapshot strips the FTS `search` table and resets searchRowID, and reopen rebuilds it")
+	func stripsSearchIndexFromSnapshotAndRebuildsOnReopen() async throws {
 		let db = TestFixtures.makeDatabase()
 		_ = await db.updateAsync(parsedItems: [TestFixtures.makeParsedItem(uniqueID: "u1", feedURL: "https://example.com/feed-a", title: "Distinctive Searchable Title")], feedID: "feed-a", deleteOlder: false)
 		let articleID = Article.calculatedArticleID(feedID: "feed-a", uniqueID: "u1")
@@ -123,21 +123,32 @@ struct ArticlesDatabaseFullSnapshotExportTests {
 		defer { try? FileManager.default.removeItem(atPath: destinationPath) }
 		try db.exportFullSnapshot(toPath: destinationPath)
 
-		guard let snapshot = FMDatabase(path: destinationPath), snapshot.open() else {
-			Issue.record("could not open exported snapshot")
-			return
-		}
-		defer { snapshot.close() }
+		do {
+			guard let snapshot = FMDatabase(path: destinationPath), snapshot.open() else {
+				Issue.record("could not open exported snapshot")
+				return
+			}
+			defer { snapshot.close() }
 
-		// A real FTS4 MATCH query, not just "does the table exist" --
-		// this is the actual risk the plan flags: a virtual table can
-		// survive a naive file copy in name only.
-		guard let resultSet = snapshot.executeQuery("SELECT rowid FROM search WHERE search MATCH 'Distinctive';", withArgumentsIn: []) else {
-			Issue.record("FTS MATCH query failed against the exported snapshot")
-			return
+			// `search` must be stripped from the backup snapshot copy.
+			if let tableCheck = snapshot.executeQuery("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'search';", withArgumentsIn: []) {
+				defer { tableCheck.close() }
+				#expect(!tableCheck.next())
+			}
+
+			// `searchRowID` must be NULL so reopened/restored articles re-index cleanly.
+			if let rowIDCheck = snapshot.executeQuery("SELECT searchRowID FROM articles WHERE articleID = ?;", withArgumentsIn: [articleID]) {
+				defer { rowIDCheck.close() }
+				#expect(rowIDCheck.next())
+				#expect(rowIDCheck.columnIsNull("searchRowID"))
+			}
 		}
-		defer { resultSet.close() }
-		#expect(resultSet.next())
+
+		// Reopening the stripped snapshot in ArticlesDatabase recreates `search` and re-indexes.
+		let reopened = ArticlesDatabase(databaseFilePath: destinationPath, accountID: "OnMyMac", retentionStyle: .feedBased)
+		await waitForIndexing(reopened, articleID: articleID)
+		let matches = await reopened.fetchArticlesMatchingOrderedAsync(searchString: "Distinctive", feedIDs: ["feed-a"])
+		#expect(matches.map(\.articleID) == [articleID])
 	}
 
 	// MARK: - destinationPath already existing fails, doesn't silently overwrite

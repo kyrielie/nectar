@@ -13,7 +13,9 @@ import Articles
 import Account
 import AnnotationsKit
 import ArticlesDatabase
-import Zip
+import AO3Kit
+import SwiftSoup
+import ZIPFoundation
 
 public enum EPUBExportError: LocalizedError {
 	case noContent(String)
@@ -238,41 +240,61 @@ public final class EPUB3Generator {
 		let finalEPUBURL = exportsDir.appendingPathComponent(finalFileName)
 		try? FileManager.default.removeItem(at: finalEPUBURL)
 
-		let rootEntries = [
-			mimetypeURL,
-			metaInfDir,
-			epubDir
-		]
-
-		try Zip.zipFiles(paths: rootEntries, zipFilePath: finalEPUBURL, password: nil, progress: nil)
+		try packageEPUB(from: epubPayloadDir, to: finalEPUBURL)
 		return finalEPUBURL
+	}
+
+	/// Packages an EPUB 3.3 payload directory into an archive where `mimetype`
+	/// is the first entry and stored uncompressed (`.none`), followed by
+	/// `META-INF/` and `EPUB/` entries compressed with `.deflate`.
+	private static func packageEPUB(from payloadDir: URL, to destinationURL: URL) throws {
+		let archive = try Archive(url: destinationURL, accessMode: .create)
+		try archive.addEntry(with: "mimetype", relativeTo: payloadDir, compressionMethod: .none)
+
+		let fileManager = FileManager.default
+		for subdir in ["META-INF", "EPUB"] {
+			let subdirURL = payloadDir.appendingPathComponent(subdir, isDirectory: true)
+			guard let enumerator = fileManager.enumerator(
+				at: subdirURL,
+				includingPropertiesForKeys: [.isDirectoryKey],
+				options: [.skipsHiddenFiles]
+			) else {
+				continue
+			}
+
+			var filePaths: [String] = []
+			for case let fileURL as URL in enumerator {
+				let values = try fileURL.resourceValues(forKeys: [.isDirectoryKey])
+				if values.isDirectory == true { continue }
+				let relPath = fileURL.path.replacingOccurrences(of: payloadDir.path + "/", with: "")
+				filePaths.append(relPath)
+			}
+
+			for relPath in filePaths.sorted() {
+				try archive.addEntry(with: relPath, relativeTo: payloadDir, compressionMethod: .deflate)
+			}
+		}
 	}
 
 	// MARK: - Workskin & Chapter Parsing
 
 	private static func extractWorkskinAndChapters(from html: String, workTitle: String) -> ([Chapter], String, String?, String?) {
-		// 0. Extract AO3 Preface block if present
-		var extractedPrefaceHTML: String?
-		let prefacePattern = try? NSRegularExpression(
-			pattern: "(<div[^>]*id=[\"'](?:ao3Preface|ao3SyntheticPreface)[\"'][^>]*>.*?</div>\\s*(?=<div|<!--|\\s*<section|$))",
-			options: [.dotMatchesLineSeparators, .caseInsensitive]
-		)
-		if let match = prefacePattern?.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-		   let range = Range(match.range(at: 1), in: html) {
-			extractedPrefaceHTML = String(html[range])
+		guard let doc = try? SwiftSoup.parse(html) else {
+			return ([Chapter(title: workTitle, bodyHTML: html.trimmingCharacters(in: .whitespacesAndNewlines), chapterID: "chapter-1")], "", nil, nil)
 		}
 
-		// 1. Extract <style> blocks
+		// 0. Extract AO3 Preface block if present
+		let extractedPrefaceHTML: String? = try? doc.select("#ao3Preface, #ao3SyntheticPreface").first()?.outerHtml()
+
+		// 1. Extract <style> blocks and remove them from the DOM
 		var workskinRules: [String] = []
-		let stylePattern = try? NSRegularExpression(pattern: "<style[^>]*>(.*?)</style>", options: [.dotMatchesLineSeparators, .caseInsensitive])
-		if let matches = stylePattern?.matches(in: html, range: NSRange(html.startIndex..., in: html)) {
-			for match in matches {
-				if let range = Range(match.range(at: 1), in: html) {
-					let rule = String(html[range]).trimmingCharacters(in: .whitespacesAndNewlines)
-					if !rule.isEmpty {
-						workskinRules.append(rule)
-					}
+		if let styleElements = try? doc.select("style") {
+			for styleEl in styleElements.array() {
+				let rule = styleEl.data().trimmingCharacters(in: .whitespacesAndNewlines)
+				if !rule.isEmpty {
+					workskinRules.append(rule)
 				}
+				try? styleEl.remove()
 			}
 		}
 
@@ -304,44 +326,26 @@ public final class EPUB3Generator {
 		}
 
 		// 2. Extract Afterword
-		var afterwordHTML: String?
-		let afterwordPattern = try? NSRegularExpression(
-			pattern: "(<div[^>]*id=[\"']afterword[\"'][^>]*>.*?</div>\\s*</body>|</div>\\s*</div>\\s*</body>\\s*</html>)",
-			options: [.dotMatchesLineSeparators, .caseInsensitive]
-		)
-		if let match = afterwordPattern?.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-		   let range = Range(match.range(at: 1), in: html) {
-			afterwordHTML = String(html[range])
-		}
+		let afterwordHTML: String? = try? doc.select("#afterword").first()?.outerHtml()
 
 		// 3. Extract Chapters
-		let chapterRegex = try? NSRegularExpression(
-			pattern: "<div[^>]*class=[\"'][^\"']*?\\bchapter\\b[^\"']*?[\"'][^>]*id=[\"']chapter-(\\d+)[\"'][^>]*>(.*?)(?=<div[^>]*class=[\"'][^\"']*?\\bchapter\\b[^\"']*?[\"'][^>]*id=[\"']chapter-\\d+[\"']|<div[^>]*id=[\"']afterword[\"']|<!-- afterword -->|</body>|$)",
-			options: [.dotMatchesLineSeparators, .caseInsensitive]
-		)
-
 		var chapters: [Chapter] = []
-		if let matches = chapterRegex?.matches(in: html, range: NSRange(html.startIndex..., in: html)), !matches.isEmpty {
-			for match in matches {
-				guard let numRange = Range(match.range(at: 1), in: html),
-					  let bodyRange = Range(match.range(at: 2), in: html) else { continue }
-				let chNum = String(html[numRange])
-				var chBody = String(html[bodyRange])
+		if let chapterElements = try? doc.select("div.chapter[id^=chapter-]") {
+			for (index, chapterEl) in chapterElements.array().enumerated() {
+				let chapterID = chapterEl.id().isEmpty ? "chapter-\(index + 1)" : chapterEl.id()
+				let chNum = chapterID.hasPrefix("chapter-") ? String(chapterID.dropFirst("chapter-".count)) : "\(index + 1)"
 
-				// Extract chapter title if present
 				var chTitle = "Chapter \(chNum)"
-				let titleRegex = try? NSRegularExpression(pattern: "<h3[^>]*class=[\"'][^\"']*title[^\"']*[\"'][^>]*>(.*?)</h3>", options: [.dotMatchesLineSeparators, .caseInsensitive])
-				if let titleMatch = titleRegex?.firstMatch(in: chBody, range: NSRange(chBody.startIndex..., in: chBody)),
-				   let tRange = Range(titleMatch.range(at: 1), in: chBody) {
-					let rawTitle = String(chBody[tRange]).replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines)
+				if let titleEl = try? chapterEl.select("h3.title").first() {
+					let rawTitle = ((try? titleEl.text()) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
 					if !rawTitle.isEmpty {
 						chTitle = rawTitle
 					}
-					// Strip h3 heading from body
-					chBody = chBody.replacingOccurrences(of: "<h3[^>]*class=[\"'][^\"']*title[^\"']*[\"'][^>]*>.*?</h3>", with: "", options: .regularExpression)
+					try? titleEl.remove()
 				}
 
-				chapters.append(Chapter(title: chTitle, bodyHTML: chBody.trimmingCharacters(in: .whitespacesAndNewlines), chapterID: "chapter-\(chNum)"))
+				let chBody = ((try? chapterEl.html()) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+				chapters.append(Chapter(title: chTitle, bodyHTML: chBody, chapterID: chapterID))
 			}
 		}
 
@@ -350,40 +354,29 @@ public final class EPUB3Generator {
 		}
 
 		// Fallback single chapter
-		var singleBody = html
-		let singleRegex = try? NSRegularExpression(pattern: "<div[^>]*id=[\"']chapters[\"'][^>]*>(.*?)(?:<div[^>]*id=[\"']afterword[\"']|</body>|$)", options: [.dotMatchesLineSeparators, .caseInsensitive])
-		if let match = singleRegex?.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
-		   let range = Range(match.range(at: 1), in: html) {
-			singleBody = String(html[range])
-		}
-		singleBody = singleBody.replacingOccurrences(of: "<style[^>]*>.*?</style>", with: "", options: .regularExpression)
+		_ = try? doc.select("#afterword").remove()
+		let container = (try? doc.select("#chapters").first()) ?? doc.body()
+		let singleBody = ((try? container?.html()) ?? html).trimmingCharacters(in: .whitespacesAndNewlines)
 
-		return ([Chapter(title: workTitle, bodyHTML: singleBody.trimmingCharacters(in: .whitespacesAndNewlines), chapterID: "chapter-1")], workskinCSS, afterwordHTML, extractedPrefaceHTML)
+		return ([Chapter(title: workTitle, bodyHTML: singleBody, chapterID: "chapter-1")], workskinCSS, afterwordHTML, extractedPrefaceHTML)
 	}
 
 	// MARK: - HTML & XML Helpers
 
 	public static func escapeXML(_ s: String) -> String {
-		var escaped = s
-		escaped = escaped.replacingOccurrences(of: "&", with: "&amp;")
-		escaped = escaped.replacingOccurrences(of: "<", with: "&lt;")
-		escaped = escaped.replacingOccurrences(of: ">", with: "&gt;")
-		escaped = escaped.replacingOccurrences(of: "\"", with: "&quot;")
-		escaped = escaped.replacingOccurrences(of: "'", with: "&apos;")
-		return escaped
+		s.escapingSpecialXMLCharacters
 	}
 
 	public static func ensureXHTML(_ html: String) -> String {
 		guard !html.isEmpty else { return html }
-		var res = html
-
-		let voidTags = ["br", "hr", "img", "meta", "link", "col", "base", "input"]
-		for tag in voidTags {
-			res = res.replacingOccurrences(of: "<(\(tag)\\b[^>/]*)(?<!/)>", with: "<$1/>", options: [.regularExpression, .caseInsensitive])
+		guard let doc = try? SwiftSoup.parseBodyFragment(html) else {
+			return html
 		}
-
-		res = res.replacingOccurrences(of: "&(?!(?:[a-zA-Z]+|#\\d+|#x[0-9a-fA-F]+);)", with: "&amp;", options: .regularExpression)
-		return res
+		doc.outputSettings()
+			.syntax(syntax: .xml)
+			.escapeMode(.xhtml)
+			.prettyPrint(pretty: false)
+		return (try? doc.body()?.html()) ?? html
 	}
 
 	private static func hasStoryContent(_ html: String) -> Bool {
@@ -419,7 +412,7 @@ public final class EPUB3Generator {
 	private static func ao3TagLink(_ tag: String) -> String {
 		let escaped = escapeXML(tag)
 		let encoded = tag.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? tag
-		return "<a href=\"https://archiveofourown.org/tags/\(encoded)/works\">\(escaped)</a>"
+		return "<a href=\"https://\(AO3Link.canonicalHost)/tags/\(encoded)/works\">\(escaped)</a>"
 	}
 
 	private static func buildPrefaceHTML(
@@ -465,7 +458,7 @@ public final class EPUB3Generator {
 			let sNameEscaped = escapeXML(series.name)
 			let sLink: String
 			if let ao3ID = series.ao3ID {
-				sLink = "<a href=\"https://archiveofourown.org/series/\(ao3ID)\">\(sNameEscaped)</a>"
+				sLink = "<a href=\"https://\(AO3Link.canonicalHost)/series/\(ao3ID)\">\(sNameEscaped)</a>"
 			} else {
 				sLink = sNameEscaped
 			}
@@ -475,7 +468,7 @@ public final class EPUB3Generator {
 			let cLinks = collections.map { col -> String in
 				let nameEscaped = escapeXML(col.name)
 				if let slug = col.slug {
-					return "<a href=\"https://archiveofourown.org/collections/\(slug)\">\(nameEscaped)</a>"
+					return "<a href=\"https://\(AO3Link.canonicalHost)/collections/\(slug)\">\(nameEscaped)</a>"
 				}
 				return nameEscaped
 			}.joined(separator: ", ")
@@ -514,8 +507,10 @@ public final class EPUB3Generator {
 		let statsHTML = statsSpans.isEmpty ? "" : "<div class=\"stats-block\">\(statsSpans.joined(separator: " &nbsp;•&nbsp; "))</div>"
 		let tagsHTML: String = {
 			if let extractedPrefaceHTML,
-			   let dlMatch = extractedPrefaceHTML.range(of: "<dl[^>]*class=[\"']tags[\"'][^>]*>.*?</dl>", options: [.regularExpression, .caseInsensitive]) {
-				return ensureXHTML(String(extractedPrefaceHTML[dlMatch]))
+			   let doc = try? SwiftSoup.parseBodyFragment(extractedPrefaceHTML),
+			   let dlElement = try? doc.select("dl.tags").first(),
+			   let dlHTML = try? dlElement.outerHtml() {
+				return ensureXHTML(dlHTML)
 			}
 			return tagsDL.isEmpty ? "" : "<dl class=\"tags-dl\">\n\(tagsDL.joined(separator: "\n"))\n</dl>"
 		}()
@@ -526,7 +521,7 @@ public final class EPUB3Generator {
 					guard let name = author.name, !name.isEmpty else { return nil }
 					let escaped = escapeXML(name)
 					let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
-					return "<a rel=\"author\" href=\"https://archiveofourown.org/users/\(encoded)/pseuds/\(encoded)\">\(escaped)</a>"
+					return "<a rel=\"author\" href=\"https://\(AO3Link.canonicalHost)/users/\(encoded)/pseuds/\(encoded)\">\(escaped)</a>"
 				}
 				if !authorLinks.isEmpty {
 					return authorLinks.joined(separator: ", ")
@@ -721,7 +716,7 @@ public final class EPUB3Generator {
 		var spineItems: [String] = []
 		for item in splitFiles {
 			let itemID = item.relPath.replacingOccurrences(of: "text/", with: "").replacingOccurrences(of: ".xhtml", with: "")
-			let propAttr = item.props != nil ? " properties=\"\(item.props!)\"" : ""
+			let propAttr = item.props.map { " properties=\"\($0)\"" } ?? ""
 			manifestItems.append("    <item id=\"\(itemID)\" href=\"\(item.relPath)\" media-type=\"application/xhtml+xml\"\(propAttr)/>")
 			spineItems.append("    <itemref idref=\"\(itemID)\"/>")
 		}
@@ -779,7 +774,7 @@ public final class EPUB3Generator {
 		let isoFormatter = ISO8601DateFormatter()
 		let modTimestamp = isoFormatter.string(from: article.dateModified ?? Date())
 
-		let summaryText = escapeXML(article.summary?.replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines) ?? "")
+		let summaryText = escapeXML(article.summary?.strippingHTML().trimmingCharacters(in: .whitespacesAndNewlines) ?? "")
 
 		return """
 		<?xml version="1.0" encoding="UTF-8"?>
@@ -791,7 +786,7 @@ public final class EPUB3Generator {
 		    <meta refines="#author_1" property="role" scheme="marc:relators">aut</meta>
 		    <meta refines="#author_1" property="file-as">\(escapeXML(authorStr))</meta>
 		    <dc:publisher id="publisher">Archive of Our Own</dc:publisher>
-		    <link refines="#publisher" rel="record" href="https://archiveofourown.org/"/>
+		    <link refines="#publisher" rel="record" href="https://\(AO3Link.canonicalHost)/"/>
 		    <dc:language>\(language)</dc:language>
 		    <dc:date>\(datePub)</dc:date>
 		    <meta property="dcterms:modified">\(modTimestamp)</meta>

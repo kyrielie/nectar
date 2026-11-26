@@ -2,16 +2,17 @@
 //  ArticlesDatabaseFullSnapshotExport.swift
 //  ArticlesDatabase
 //
-//  Backup/restore plan, "Suggested build order" step 1:
+//  Backup/restore plan, "Suggested build order" step 1 + Backup Size Optimization Phase 1:
 //  ArticlesDatabase.exportFullSnapshot(toPath:), an atomic, consistent
 //  full-database copy via `VACUUM INTO ?` -- deliberately not
 //  ArticleSQLiteExportTable's ATTACH + CREATE TABLE AS SELECT idiom,
-//  which is a partial (articles/statuses/annotations only, no bookState,
-//  no search) copy meant for the existing per-feed "Export..." feature.
-//  This is the whole database, byte-for-byte consistent as of the moment
-//  VACUUM INTO runs, including bookState and the FTS `search` virtual
-//  table -- see ArticlesDatabaseFullSnapshotExportTests for the round-trip
-//  proof that FTS specifically survives this.
+//  which is a partial (articles/statuses/annotations only, no bookState)
+//  copy meant for the existing per-feed "Export..." feature.
+//  After `VACUUM INTO` produces the isolated snapshot file, the `search`
+//  FTS5 virtual table is dropped from the copy, `searchRowID` is reset
+//  to NULL, and the copy is `VACUUM`ed so backup archives exclude
+//  redundant FTS shadow tables; restore/reopen rebuilds `search`
+//  automatically via `ArticlesDatabase.init` and `indexUnindexedArticles()`.
 //
 //  `VACUUM INTO` cannot run inside an explicit transaction (SQLite
 //  rejects it), so this goes through `runInDatabaseSync`, not
@@ -68,6 +69,27 @@ enum ArticlesDatabaseFullSnapshotExportTable {
 		if let exportError {
 			Self.logger.error("ArticlesDatabaseFullSnapshotExportTable: export failed: \(String(describing: exportError), privacy: .public)")
 			throw exportError
+		}
+
+		try stripSearchIndexFromSnapshot(atPath: destinationPath)
+	}
+
+	private static func stripSearchIndexFromSnapshot(atPath path: String) throws {
+		guard let snapshot = FMDatabase(path: path), snapshot.open() else {
+			try? FileManager.default.removeItem(atPath: path)
+			throw ArticlesDatabaseFullSnapshotExportError.vacuumIntoFailed("could not open exported snapshot to compact search index")
+		}
+		defer { snapshot.close() }
+
+		let statements = """
+		DROP TABLE IF EXISTS search;
+		UPDATE articles SET searchRowID = NULL;
+		VACUUM;
+		"""
+		guard snapshot.executeStatements(statements) else {
+			let detail = snapshot.lastErrorMessage() ?? "unknown error"
+			try? FileManager.default.removeItem(atPath: path)
+			throw ArticlesDatabaseFullSnapshotExportError.vacuumIntoFailed("failed stripping search index from snapshot (\(detail))")
 		}
 	}
 }

@@ -377,7 +377,7 @@
     "Clear Content" : {
       "comment" : "Clear Content button"
     },
-    "Clearing content here frees space inside the database file, but the file itself won't shrink until it's compacted -- so the size shown in Account Statistics won't drop right away." : {
+    "Clearing content here frees space inside the database file, but the file itself won't shrink until it's compacted -- so the size shown in Library Stats won't drop right away." : {
       "comment" : "Manage Storage VACUUM explanation"
     },
     "Close" : {
@@ -716,6 +716,9 @@
     "Fetch AO3 Updates for Library Works" : {
       "comment" : "Ambrosia AO3 updates toggle label"
     },
+    "Fetch Full Work" : {
+      "comment" : "Button in stub notice to manually fetch full AO3 work"
+    },
     "Fetch New Works Immediately" : {
       "comment" : "AO3 prefetch-on-arrival toggle label"
     },
@@ -733,6 +736,9 @@
     },
     "Fetching" : {
       "comment" : "Fetching"
+    },
+    "Fetching full work from AO3…" : {
+      "comment" : "Inline notice while AO3 full text is being downloaded"
     },
     "Fetching metadata: %d of %d…" : {
       "comment" : "Pasted AO3 link-list import: live metadata fetch progress",
@@ -793,8 +799,17 @@
     "Full Screen Reading" : {
       "comment" : "Full Screen Reading"
     },
+    "Full text not fetched: AO3 network requests are disabled for Ambrosia items in Settings." : {
+      "comment" : "Inline notice when Ambrosia network updates are disabled"
+    },
     "Full text unavailable: %@" : {
       "comment" : "Inline notice in the reader when AO3 full text could not be loaded; the placeholder is the reason"
+    },
+    "Full text unavailable: AO3 previously reported this work as missing or inaccessible." : {
+      "comment" : "Inline notice when AO3 previously returned 404/410 for a stub"
+    },
+    "Full text unavailable: combined series works cannot be fetched from a single AO3 page." : {
+      "comment" : "Inline notice for anthology/combined-series stubs"
     },
     "Get Info" : {
       "comment" : "Get Info"
@@ -908,7 +923,7 @@
       "comment" : "Import OPML File"
     },
     "Import Theme" : {
-      "comment" : "Import Theme\nImport Theme toolbar button"
+      "comment" : "Import Theme toolbar button"
     },
     "Imported %d works." : {
       "comment" : "Pasted AO3 link-list import: several works added"
@@ -1025,9 +1040,6 @@
     },
     "Load more results" : {
       "comment" : "AO3 load more results button"
-    },
-    "Local accounts do not sync your library across devices." : {
-      "comment" : "Local"
     },
     "Lock Gestures" : {
       "comment" : "Lock Gestures\nOverflow menu: lock gestures\nToolbar function: lock gestures"
@@ -1440,9 +1452,6 @@
     "Reading Font applies to the work text. Interface Font applies to the byline, dateline, and other chrome. Margin below 20px may run edge-to-edge. Hide Creator's Style suppresses custom author fonts, colors, and layout skins on AO3 works." : {
       "comment" : "Typography and Layout section footer"
     },
-    "Reading Gestures & Layout" : {
-
-    },
     "Reading is blocked for the rest of %@ once this limit is reached." : {
 
     },
@@ -1549,7 +1558,7 @@
       "comment" : "Restore summary — accounts restored"
     },
     "Retry" : {
-      "comment" : "Works Needing Attention: retry alert title"
+      "comment" : "Button in stub notice to retry fetching full AO3 work\nWorks Needing Attention: retry alert title"
     },
     "Retry Now" : {
       "comment" : "Works Needing Attention: check AO3 for this work again"
@@ -1676,6 +1685,9 @@
     },
     "Show Website" : {
       "comment" : "Show Website"
+    },
+    "Showing feed summary stub. Full work text has not been fetched yet." : {
+      "comment" : "Inline notice when an AO3 stub is waiting to be fetched"
     },
     "Shows a dismissible reminder every %@ of continuous reading." : {
 
@@ -1834,7 +1846,7 @@
     "This URL is longer than %@ characters. AO3 may ignore the search’s filters and show its unfiltered “Latest Works” listing instead. If that happens, the shelf won’t be added." : {
       "comment" : "AO3 long filter URL warning message"
     },
-    "This will discard all custom font, layout, and color overrides for “%@”." : {
+    "This will discard all custom font, layout, and color overrides." : {
       "comment" : "Reset Theme Overrides message"
     },
     "This will restore the default buttons and order for this bar." : {

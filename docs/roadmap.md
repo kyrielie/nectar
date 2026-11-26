@@ -11,8 +11,11 @@ implemented.
 
 Nectar is an iOS reading and library app forked from NetNewsWire. Its current
 implemented foundations include JSON Feed/Ambrosia ingestion, SQLite-backed
-storage and search, AO3 feed and on-demand work fetching, reading progress and
-statistics, annotations, theme customization, backup/restore, and EPUB export.
+storage and FTS5 search (with cooperative `sqlite3_progress_handler` cancellation
+and corrupt-index recovery), AO3 feed and on-demand work fetching (including
+inline stub/error notices and schema self-healing), reading progress and
+statistics, annotations, theme customization, SwiftUI Settings, backup/restore,
+and `ZIPFoundation`/`SwiftSoup`-backed EPUB3 export.
 Use `CLAUDE.md` to route changes to the relevant technical documentation.
 
 ## Next initiative
@@ -46,31 +49,38 @@ or docs reference; it is not a claim that no partial work exists.
 - **Implemented:** Track A: AO3 request coordination & batch import pacing (`AO3ImportMetadataQueue`,
   `AO3ChapterHTMLExtractor.extractLightweightMetadata`). Batch link import metadata pacing (3.0s delay,
   1-slot serialized queue, 429 rate-limit cooldown suspension, zero bulk chapter text scraping).
-  See `docs/ao3-integration.md` and `docs/ao3-feeds.md`.
+  See `docs/ao3-integration.md` and `docs/ao3-feeds.md`. Phases 1–5 of the coordinator
+  blueprint (`ContinuousClock` pacing, waiter cancellation fix, `AO3RequestKey` coalescing,
+  caller/`AO3KudosFetcher` consolidation, and `DownloadSession` 429 sync) remain open.
+- **Implemented:** SwiftUI Settings redesign & polish (`SettingsView`, `SettingsModel`,
+  `SettingsHostingController`, `SurfacePaletteAware`, `SettingsSearchIndex`, and retired
+  `Settings.storyboard`). See `docs/settings-screen.md`.
+- **Implemented:** Architecture, dependency & code-quality modernization (`ZIPFoundation`
+  0.9.20 with uncompressed EPUB3 `mimetype`, `SwiftSoup` 2.13.6 DOM parsing in `EPUB3Generator`,
+  `.swiftlint.yml` `force_try`/`force_cast` enforcement, `AppDefaults` feature extensions,
+  `NSOutlineView+RSTree` dead-code removal, and `docs/epub-export.md`).
 - **Open proposal; not prioritized:** Faceted AO3 search builder. Existing
   app search results and pagination are in place; the plan's query builder,
   native filter UI, and saved-search behavior are not evidenced in current
   source.
-- **Exploratory proposal; no implementation approved:** Settings redesign.
-  The next proposed step is a reviewable SwiftUI root/navigation spike using
-  existing settings behavior, then a product decision on information
-  architecture and migration scope. The former implementation-ready proposal
-  had stale assumptions and must not be treated as an implementation spec.
-- **Partially implemented architecture & engineering blueprint:** Storage, parsing, and
+- **Partially implemented:** Storage, parsing, and
   update optimization. Implemented: migrated compressed HTML from Base64 `TEXT` to native
-  SQLite `BLOB` (saving ~33%) and upgraded `search` from FTS4 to FTS5 in `ArticlesDatabase`
-  schema version 2; implemented two-step WIP update detection in `AO3ChapterFetcher`
-  (checking lightweight Page 1 metadata before triggering full downloads); and added the
-  reader "Hide Creator's Style" toggle for neutralizing AO3 workskins. **Remaining from
-  this blueprint:** switching `search` to contentless FTS5 (`content=''`) to eliminate
-  duplicate plain-text storage, and normalized tag/facet tables (`tags`, `article_tags`).
+  SQLite `BLOB` (saving ~33%) and upgraded `search` from FTS4 to standard FTS5 in `ArticlesDatabase`
+  schema version 2 (Option A approved: keep standard FTS5 rather than `content=''`); implemented
+  two-step WIP update detection in `AO3ChapterFetcher`; and added the reader "Hide Creator's Style"
+  toggle. **Remaining from this blueprint:** normalized tag/facet tables (`tags`, `article_tags`)
+  and sharing FTS5 table SQL / corrupt-index recovery across unordered search.
+- **Partially implemented:** FTS5 snippets, cancellation & self-healing index.
+  Implemented: `SQLiteCancellationToken` (`sqlite3_progress_handler`) cooperative search
+  cancellation and `SQLITE_CORRUPT`/`SQLITE_NOTADB` self-healing index recovery in
+  `ArticlesTable` and `SearchTableAndDatabaseTests`. **Remaining:** FTS5 `snippet()`
+  passage excerpts.
 - **Unverified proposals:** WIP update checker; mature-content privacy gate;
   native AO3 comments viewer, author profiles, and account hub; native fandom
   catalog; reading queues/collections; recently deleted recovery; user EPUB
   import; custom font import; iCloud folder sync; manual theme presets;
-  FTS5 snippets, cancellation & self-healing index; on-device semantic/hybrid
-  search; persistent library search, AO3-style filters & search suggestions;
-  EPUB3 DOM sanitization & in-reader series continuity.
+  on-device semantic/hybrid search; persistent library search, AO3-style filters &
+  search suggestions; EPUB3 DOM sanitization & in-reader series continuity.
 - **Theme process/design proposals:** theme quality review, theme provenance
   and unification, and theme-management UI mockup. These should be handled as
   discrete design or maintenance projects, not presumed app features.

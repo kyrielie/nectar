@@ -115,7 +115,10 @@ public enum AO3AuthenticatedFetcher {
 
 		logger.debug("Requesting AO3: GET \(url.absoluteString, privacy: .public) (authenticated)")
 
-		let (data, httpResponse) = try await AO3RequestCoordinator.shared.execute(url: url) {
+		let (data, httpResponse) = try await AO3RequestCoordinator.shared.execute(
+			key: AO3RequestKey(url: url, method: .get, sessionScope: .authenticated),
+			policy: .defaultPaced
+		) {
 			let (d, r) = try await session.data(for: urlRequest)
 			guard let hr = r as? HTTPURLResponse else {
 				throw URLError(.badServerResponse)

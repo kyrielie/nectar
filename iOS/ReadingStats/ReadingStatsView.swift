@@ -120,6 +120,7 @@ struct ReadingStatsView: View {
 				Text("Permanently deletes all recorded reading history, per-work progress, and the all-time word count. This can't be undone.")
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle("Reading Stats")
 		.navigationBarTitleDisplayMode(.inline)
 		.onAppear { model.reload() }

@@ -19,7 +19,7 @@
 import Foundation
 import os
 import Account
-import Zip
+import ZIPFoundation
 import ArticleTheming
 
 public protocol BackupSettingsStoring: AnyObject {
@@ -211,18 +211,6 @@ public enum BackupManager {
 		let manifestData = try encoder.encode(manifest)
 		try manifestData.write(to: workingDirectory.appendingPathComponent("manifest.json"))
 
-		// Zip. `Zip.zipFiles(paths:)` archives each given URL at its own
-		// basename; for a directory, `ZipUtilities.expandDirectoryFilePath`
-		// walks its contents and -- verified against the actual pinned Zip
-		// source (project.yml's revision pin), not assumed -- always
-		// prefixes entries with that directory's own name
-		// (`includeRootDirectory` is `true` and not configurable in this
-		// version). Passing `workingDirectory` itself would therefore nest
-		// everything under an extra "NectarBackup-<uuid>/" folder inside
-		// the zip. Passing its *contents* individually instead keeps
-		// manifest.json/Accounts/Themes/Settings.plist at the zip's own
-		// root, matching the plan's file layout.
-		let topLevelEntries = try FileManager.default.contentsOfDirectory(at: workingDirectory, includingPropertiesForKeys: nil)
 		let exportsFolder = FileManager.default.temporaryDirectory.appendingPathComponent("NectarBackupExport-\(UUID().uuidString)", isDirectory: true)
 		try FileManager.default.createDirectory(at: exportsFolder, withIntermediateDirectories: true)
 		let dateFormatter = DateFormatter()
@@ -231,7 +219,9 @@ public enum BackupManager {
 		let zipDestination = exportsFolder.appendingPathComponent(zipFilename)
 
 		do {
-			try Zip.zipFiles(paths: topLevelEntries, zipFilePath: zipDestination, password: nil, progress: nil)
+			// `shouldKeepParent: false` places manifest.json/Accounts/Themes/Settings.plist
+			// directly at the archive root, matching the backup layout contract.
+			try FileManager.default.zipItem(at: workingDirectory, to: zipDestination, shouldKeepParent: false)
 		} catch {
 			try? FileManager.default.removeItem(at: workingDirectory)
 			throw BackupManagerError.zipFailed(error.localizedDescription)
@@ -261,7 +251,7 @@ public enum BackupManager {
 		defer { try? FileManager.default.removeItem(at: peekDirectory) }
 
 		do {
-			try Zip.unzipFile(zipURL, destination: peekDirectory, overwrite: true, password: nil, progress: nil, fileOutputHandler: nil)
+			try FileManager.default.unzipItem(at: zipURL, to: peekDirectory)
 		} catch {
 			throw BackupManagerError.unzipFailed(error.localizedDescription)
 		}
@@ -299,7 +289,7 @@ public enum BackupManager {
 		defer { try? FileManager.default.removeItem(at: workingDirectory) }
 
 		do {
-			try Zip.unzipFile(zipURL, destination: workingDirectory, overwrite: true, password: nil, progress: nil, fileOutputHandler: nil)
+			try FileManager.default.unzipItem(at: zipURL, to: workingDirectory)
 		} catch {
 			throw BackupManagerError.unzipFailed(error.localizedDescription)
 		}

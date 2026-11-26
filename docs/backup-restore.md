@@ -291,13 +291,12 @@ Standard Ebooks Manual of Style and AO3 specifications:
 2. **Desktop Archive Exporter (`scripts/nectar_backup_to_epub.py`)**: Full backup conversion and Calibre library ingestion.
 
 ### In-App Native Swift Exporter (`iOS/Article/`)
-* **`EPUB3Generator.swift`**: Pure Swift generator producing valid EPUB 3.3 archives.
+* **`EPUB3Generator.swift`** (see `epub-export.md` for full pipeline details): Pure Swift generator producing valid EPUB 3.3 archives.
   * Decompresses stored `contentHTML` via `ContentHTMLCompression.decompress`.
-  * Extracts author `<style>` blocks into `css/workskin.css` and injects dark-mode contrast guards.
+  * Extracts author `<style>` blocks into `css/workskin.css` and injects dark-mode contrast guards via `SwiftSoup`.
   * Retains `<div id="workskin" class="userstuff">` around every chapter body so author workskins match 100%.
-  * Applies Standard Ebooks typography (curly quotes, em-dashes, en-dashes, ellipses).
   * Preserves user annotations (`fetchAnnotations`) in a dedicated `reader-notes.xhtml` Back Matter chapter.
-  * Packages the container with uncompressed `mimetype` at byte 0 via `Zip.zipFiles`.
+  * Packages the container with `mimetype` first and uncompressed (`.none`) via `ZIPFoundation`.
 * **`ShareEPUBActivity.swift`**: Custom `UIActivity` ("Export as EPUB") integrated into:
   * `WebViewController.showActivityDialog()` (reader toolbar Share button).
   * `MainTimelineModernViewController.shareEPUBAction()` (timeline work cell context menu).

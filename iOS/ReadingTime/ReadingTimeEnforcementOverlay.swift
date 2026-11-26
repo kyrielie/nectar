@@ -73,7 +73,7 @@ final class ReadingTimeEnforcementOverlay: UIView {
 	private func apply(reasons: Set<ReadingTimeTracker.Reason>, bedtimeEndMinutesFromMidnight: Int) {
 		let status = ReadingTimeTracker.lockoutStatus(for: reasons, bedtimeEndMinutesFromMidnight: bedtimeEndMinutesFromMidnight)
 		message.text = status?.message ?? "Reading Time limit reached"
-		iconView.image = status.map { UIImage(systemName: $0.systemImageName) } ?? nil
+		iconView.image = status.flatMap { UIImage(systemName: $0.systemImageName) }
 		accessibilityLabel = message.text
 	}
 

@@ -126,6 +126,8 @@ public struct ArticleAttentionInfo: Sendable {
 		queue.runInDatabaseSync { database in
 			Self.logger.debug("ArticlesDatabase: checking schema version \(accountID, privacy: .public)")
 
+			Self.ensureAllColumns(in: database)
+
 			let existingVersion = database.userVersion()
 			guard existingVersion < Self.currentSchemaVersion else {
 				return
@@ -140,7 +142,7 @@ public struct ArticleAttentionInfo: Sendable {
 			if existingVersion < 2 {
 				Self.logger.debug("ArticlesDatabase: migrating search table to FTS5")
 				database.executeStatements("DROP TABLE IF EXISTS search;")
-				database.executeStatements("CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(title, body);")
+				database.executeStatements(Self.searchTableCreationStatement)
 				database.executeStatements("UPDATE articles SET searchRowID = NULL;")
 			}
 
@@ -1032,9 +1034,83 @@ public struct ArticleAttentionInfo: Sendable {
 	}
 }
 
+extension ArticlesDatabase {
+
+	nonisolated static let searchTableCreationStatement = "CREATE VIRTUAL TABLE if not EXISTS search using fts5(title, body);"
+}
+
 // MARK: - Private
 
 private extension ArticlesDatabase {
+
+	nonisolated static func ensureAllColumns(in database: FMDatabase) {
+		ensureColumns([
+			("title", "TEXT"), ("contentHTML", "BLOB"), ("contentText", "TEXT"), ("markdown", "TEXT"),
+			("url", "TEXT"), ("externalURL", "TEXT"), ("summary", "TEXT"), ("imageURL", "TEXT"),
+			("bannerImageURL", "TEXT"), ("datePublished", "DATE"), ("dateModified", "DATE"),
+			("searchRowID", "INTEGER"), ("authors", "TEXT"), ("wordCount", "INTEGER"),
+			("chapterCurrent", "INTEGER"), ("chapterTotal", "INTEGER"), ("isComplete", "BOOL"),
+			("fandoms", "TEXT"), ("relationships", "TEXT"), ("characters", "TEXT"),
+			("ratings", "TEXT"), ("warnings", "TEXT"), ("categories", "TEXT"),
+			("additionalTags", "TEXT"), ("series", "TEXT"), ("commentCount", "INTEGER"),
+			("kudosCount", "INTEGER"), ("bookmarkCount", "INTEGER"), ("hitCount", "INTEGER"),
+			("isRestricted", "BOOL"), ("language", "TEXT"), ("collections", "TEXT"),
+			("dateBookmarked", "DATE"), ("lastPrefaceFetchDate", "DATE"), ("isAmbrosiaItem", "BOOL"),
+			("bookKey", "TEXT"), ("pendingUpdateContentHTML", "BLOB"), ("pendingUpdateDetectedAt", "DATE"),
+			("wordCountRegressionFlaggedAt", "DATE"), ("ao3ConfirmedMissingAt", "DATE")
+		], in: "articles", database: database)
+
+		ensureColumns([
+			("read", "BOOL NOT NULL DEFAULT 0"), ("starred", "BOOL NOT NULL DEFAULT 0"),
+			("loved", "BOOLEAN NOT NULL DEFAULT 0"), ("dateArrived", "DATE NOT NULL DEFAULT 0"),
+			("scrollPosition", "REAL NOT NULL DEFAULT 0"), ("readingProgress", "REAL"),
+			("lastOpenedAt", "DATE")
+		], in: "statuses", database: database)
+
+		ensureColumns([
+			("read", "BOOL NOT NULL DEFAULT 0"), ("starred", "BOOL NOT NULL DEFAULT 0"),
+			("loved", "BOOL NOT NULL DEFAULT 0"), ("scrollPosition", "REAL NOT NULL DEFAULT 0"),
+			("readingProgress", "REAL"), ("lastOpenedAt", "DATE"),
+			("updatedAt", "DATE NOT NULL DEFAULT 0"), ("kudosAttemptedAt", "DATE"),
+			("kudosAttemptedAuthenticated", "BOOL NOT NULL DEFAULT 0")
+		], in: "bookState", database: database)
+
+		ensureColumns([
+			("bookKey", "TEXT"), ("quoteExact", "TEXT NOT NULL DEFAULT ''"),
+			("quotePrefix", "TEXT NOT NULL DEFAULT ''"), ("quoteSuffix", "TEXT NOT NULL DEFAULT ''"),
+			("rootSelector", "TEXT NOT NULL DEFAULT '.articleBody'"),
+			("startOffset", "INTEGER NOT NULL DEFAULT 0"), ("endOffset", "INTEGER NOT NULL DEFAULT 0"),
+			("color", "TEXT NOT NULL DEFAULT 'yellow'"), ("note", "TEXT"),
+			("createdAt", "DATE NOT NULL DEFAULT 0"), ("updatedAt", "DATE NOT NULL DEFAULT 0"),
+			("orphanedAt", "DATE"), ("lastReanchoredAt", "DATE"), ("chapterTitle", "TEXT"),
+			("hasHighlight", "BOOL NOT NULL DEFAULT 1"), ("originalText", "TEXT"),
+			("replacementText", "TEXT")
+		], in: "annotations", database: database)
+
+		// Ensure indexes on columns that may have just been added above.
+		database.executeStatements("""
+			CREATE INDEX if not EXISTS articles_bookKey_index on articles(bookKey);
+			CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);
+			CREATE INDEX if not EXISTS annotations_bookKey_index on annotations(bookKey);
+			""")
+	}
+
+	nonisolated static func ensureColumns(_ columns: [(name: String, definition: String)], in table: String, database: FMDatabase) {
+		guard let resultSet = database.executeQuery("PRAGMA table_info(\(table));", withArgumentsIn: []) else {
+			return
+		}
+		var existing = Set<String>()
+		while resultSet.next() {
+			if let name = resultSet.string(forColumn: "name") {
+				existing.insert(name.lowercased())
+			}
+		}
+		resultSet.close()
+		for column in columns where !existing.contains(column.name.lowercased()) {
+			logger.notice("ArticlesDatabase: adding missing column \(table, privacy: .public).\(column.name, privacy: .public)")
+			database.executeStatements("ALTER TABLE \(table) ADD COLUMN \(column.name) \(column.definition);")
+		}
+	}
 
 	static let tableCreationStatements = """
 	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML BLOB, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT, wordCount INTEGER, chapterCurrent INTEGER, chapterTotal INTEGER, isComplete BOOL, fandoms TEXT, relationships TEXT, characters TEXT, ratings TEXT, warnings TEXT, categories TEXT, additionalTags TEXT, series TEXT, commentCount INTEGER, kudosCount INTEGER, bookmarkCount INTEGER, hitCount INTEGER, isRestricted BOOL, language TEXT, collections TEXT, dateBookmarked DATE, lastPrefaceFetchDate DATE, isAmbrosiaItem BOOL, bookKey TEXT, pendingUpdateContentHTML BLOB, pendingUpdateDetectedAt DATE, wordCountRegressionFlaggedAt DATE, ao3ConfirmedMissingAt DATE);
@@ -1055,7 +1131,7 @@ private extension ArticlesDatabase {
 	CREATE INDEX if not EXISTS annotations_articleID_index on annotations(articleID);
 	CREATE INDEX if not EXISTS annotations_bookKey_index on annotations(bookKey);
 
-	CREATE VIRTUAL TABLE if not EXISTS search using fts5(title, body);
+	\(searchTableCreationStatement)
 
 	CREATE TRIGGER if not EXISTS articles_after_delete_trigger_delete_search_text after delete on articles begin delete from search where rowid = OLD.searchRowID; end;
 	"""

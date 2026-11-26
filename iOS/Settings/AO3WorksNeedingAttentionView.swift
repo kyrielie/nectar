@@ -58,6 +58,7 @@ struct AO3WorksNeedingAttentionView: View {
 				}
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle(Text(NSLocalizedString("Works Needing Attention", comment: "AO3 settings: works needing attention screen title")))
 		.navigationBarTitleDisplayMode(.inline)
 		.task {

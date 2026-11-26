@@ -15,56 +15,112 @@ import RSCore
 
 // MARK: - AO3 Pacer Actor
 
-/// Enforces a minimum time delta between consecutive request start times.
+/// Enforces a minimum monotonic time delta between consecutive request start times.
 public actor AO3Pacer {
 	public static let shared = AO3Pacer()
 
-	private var nextAllowedRequestAt: Date = .distantPast
-	public var minRequestInterval: TimeInterval
+	private var nextAllowedRequestAt: ContinuousClock.Instant?
+	public var minRequestInterval: Duration
 
-	public init(minRequestInterval: TimeInterval? = nil) {
+	public init(minRequestInterval: Duration? = nil) {
 		if let minRequestInterval {
 			self.minRequestInterval = minRequestInterval
 		} else {
-			self.minRequestInterval = Platform.isRunningUnitTests ? 0.0 : 0.6
+			self.minRequestInterval = Platform.isRunningUnitTests ? .zero : .milliseconds(600)
 		}
+	}
+
+	public init(minRequestInterval: TimeInterval) {
+		self.minRequestInterval = .seconds(minRequestInterval)
 	}
 
 	/// Pure computation extracted for testability without Task.sleep side-effects.
 	public static func paceStep(
-		now: Date,
-		nextAllowed: Date,
-		minInterval: TimeInterval
-	) -> (wait: TimeInterval, nextAllowed: Date) {
-		let wait = max(0, nextAllowed.timeIntervalSince(now))
-		let next = max(now, nextAllowed).addingTimeInterval(minInterval)
+		now: ContinuousClock.Instant,
+		nextAllowed: ContinuousClock.Instant?,
+		minInterval: Duration
+	) -> (wait: Duration, nextAllowed: ContinuousClock.Instant) {
+		let baseline = nextAllowed ?? now
+		let wait = now < baseline ? (baseline - now) : .zero
+		let anchor = max(now, baseline)
+		let next = anchor.advanced(by: minInterval)
 		return (wait, next)
 	}
 
 	/// Waits until the pacing interval has elapsed before allowing execution.
 	public func pace() async throws {
 		let step = Self.paceStep(
-			now: Date(),
+			now: ContinuousClock.now,
 			nextAllowed: nextAllowedRequestAt,
 			minInterval: minRequestInterval
 		)
 		nextAllowedRequestAt = step.nextAllowed
-		if step.wait > 0 {
-			try await Task.sleep(nanoseconds: UInt64(step.wait * 1_000_000_000))
+		if step.wait > .zero {
+			try await Task.sleep(for: step.wait)
 		}
 	}
 
 	/// Resets the pacer deadline (useful for test suites).
 	public func reset() {
-		nextAllowedRequestAt = .distantPast
+		nextAllowedRequestAt = nil
 	}
+}
+
+// MARK: - Request Identity & Policy
+
+public enum AO3HTTPMethod: String, Hashable, Sendable {
+	case get = "GET"
+	case post = "POST"
+}
+
+public enum AO3SessionScope: Hashable, Sendable {
+	case guest
+	case authenticated
+	case clearanceCookie
+}
+
+public struct AO3RequestKey: Hashable, Sendable {
+	public let url: URL
+	public let method: AO3HTTPMethod
+	public let sessionScope: AO3SessionScope
+
+	public init(
+		url: URL,
+		method: AO3HTTPMethod = .get,
+		sessionScope: AO3SessionScope = .guest
+	) {
+		self.url = url
+		self.method = method
+		self.sessionScope = sessionScope
+	}
+}
+
+public struct AO3ExecutionPolicy: Sendable {
+	public let coalesce: Bool
+	public let pace: Bool
+
+	public init(coalesce: Bool = true, pace: Bool = true) {
+		self.coalesce = coalesce
+		self.pace = pace
+	}
+
+	public static let defaultPaced = AO3ExecutionPolicy(coalesce: true, pace: true)
+	public static let uncoalescedPaced = AO3ExecutionPolicy(coalesce: false, pace: true)
+	public static let uncoalescedUnpaced = AO3ExecutionPolicy(coalesce: false, pace: false)
 }
 
 // MARK: - Request Coalescer Actor
 
 /// Deduplicates simultaneous in-flight operations keyed by a Hashable identifier.
+/// Retains the in-flight entry until the underlying task finishes or all joined callers cancel.
 public actor RequestCoalescer<Key: Hashable & Sendable, Value: Sendable> {
-	private var inFlight: [Key: Task<Value, Error>] = [:]
+	private struct Entry {
+		let id: UUID
+		let task: Task<Value, Error>
+		var waiters: Int
+	}
+
+	private var inFlight: [Key: Entry] = [:]
 
 	public init() {}
 
@@ -72,17 +128,52 @@ public actor RequestCoalescer<Key: Hashable & Sendable, Value: Sendable> {
 		_ key: Key,
 		_ operation: @Sendable @escaping () async throws -> Value
 	) async throws -> Value {
-		if let existing = inFlight[key] {
-			return try await existing.value
+		let entryID: UUID
+		let task: Task<Value, Error>
+
+		if var existing = inFlight[key] {
+			existing.waiters += 1
+			inFlight[key] = existing
+			entryID = existing.id
+			task = existing.task
+		} else {
+			let newID = UUID()
+			let newTask = Task {
+				try await operation()
+			}
+			inFlight[key] = Entry(id: newID, task: newTask, waiters: 1)
+			entryID = newID
+			task = newTask
 		}
-		let task = Task {
-			try await operation()
+
+		return try await withTaskCancellationHandler {
+			defer {
+				releaseWaiter(key: key, entryID: entryID, cancelled: false)
+			}
+			return try await task.value
+		} onCancel: {
+			Task {
+				await releaseWaiter(key: key, entryID: entryID, cancelled: true)
+			}
 		}
-		inFlight[key] = task
-		defer {
+	}
+
+	private func releaseWaiter(key: Key, entryID: UUID, cancelled: Bool) {
+		guard var entry = inFlight[key], entry.id == entryID else {
+			return
+		}
+		if !cancelled {
+			// Underlying task completed normally (or threw): remove the completed entry.
 			inFlight[key] = nil
+			return
 		}
-		return try await task.value
+		entry.waiters = max(0, entry.waiters - 1)
+		if entry.waiters == 0 {
+			entry.task.cancel()
+			inFlight[key] = nil
+		} else {
+			inFlight[key] = entry
+		}
 	}
 
 	public var activeCount: Int {
@@ -96,11 +187,26 @@ public actor RequestCoalescer<Key: Hashable & Sendable, Value: Sendable> {
 public actor AO3RequestCoordinator {
 	public static let shared = AO3RequestCoordinator(limit: 3)
 
+	private struct CoalescedBox: @unchecked Sendable {
+		let value: Any
+	}
+
+	private final class WaiterRecord {
+		let id: UUID
+		var isCancelled = false
+		let continuation: CheckedContinuation<Bool, Never>
+
+		init(id: UUID, continuation: CheckedContinuation<Bool, Never>) {
+			self.id = id
+			self.continuation = continuation
+		}
+	}
+
 	public let limit: Int
 	private var available: Int
-	private var waiters: [(id: UUID, continuation: CheckedContinuation<Bool, Never>)] = []
+	private var waiters: [WaiterRecord] = []
 	private let pacer: AO3Pacer
-	private let coalescer = RequestCoalescer<URL, (Data, HTTPURLResponse)>()
+	private let coalescer = RequestCoalescer<AO3RequestKey, CoalescedBox>()
 
 	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.kyrielie.nectar", category: "AO3RequestCoordinator")
 
@@ -117,6 +223,7 @@ public actor AO3RequestCoordinator {
 			throw CancellationError()
 		}
 		do {
+			try Task.checkCancellation()
 			let result = try await operation()
 			release()
 			return result
@@ -126,25 +233,52 @@ public actor AO3RequestCoordinator {
 		}
 	}
 
-	/// Coalesces identical in-flight URL requests, bounds concurrency, paces requests,
-	/// and executes the given network operation.
+	/// Typed execution entry point with scoped coalescing, slot bounding, and optional pacing.
+	/// Non-idempotent HTTP methods (e.g. POST) are never coalesced.
+	public func execute<T: Sendable>(
+		key: AO3RequestKey,
+		policy: AO3ExecutionPolicy = .defaultPaced,
+		operation: @Sendable @escaping () async throws -> T
+	) async throws -> T {
+		let runInSlot: @Sendable () async throws -> T = {
+			try await self.withSlot {
+				if policy.pace {
+					try await self.pacer.pace()
+				}
+				let result = try await operation()
+				if let (_, response) = result as? (Data, HTTPURLResponse), response.statusCode == 429 {
+					Self.logger.warning("AO3RequestCoordinator received 429 for \(key.url.absoluteString, privacy: .public)")
+					await MainActor.run {
+						_ = AO3RateLimit.record(url: key.url, response: response)
+					}
+				}
+				return result
+			}
+		}
+
+		if policy.coalesce && key.method == .get {
+			let boxed = try await coalescer.shared(key) {
+				let value = try await runInSlot()
+				return CoalescedBox(value: value)
+			}
+			guard let typed = boxed.value as? T else {
+				throw CancellationError()
+			}
+			return typed
+		}
+		return try await runInSlot()
+	}
+
+	/// Convenience overload for legacy URL-only callers (defaults to GET + authenticated scope).
 	public func execute(
 		url: URL,
 		operation: @Sendable @escaping () async throws -> (Data, HTTPURLResponse)
 	) async throws -> (Data, HTTPURLResponse) {
-		try await coalescer.shared(url) {
-			try await self.withSlot {
-				try await self.pacer.pace()
-				let (data, response) = try await operation()
-				if response.statusCode == 429 {
-					Self.logger.warning("AO3RequestCoordinator received 429 for \(url.absoluteString, privacy: .public)")
-					await MainActor.run {
-						_ = AO3RateLimit.record(url: url, response: response)
-					}
-				}
-				return (data, response)
-			}
-		}
+		try await execute(
+			key: AO3RequestKey(url: url, method: .get, sessionScope: .authenticated),
+			policy: .defaultPaced,
+			operation: operation
+		)
 	}
 
 	private func acquire() async -> Bool {
@@ -159,7 +293,8 @@ public actor AO3RequestCoordinator {
 		let waiterID = UUID()
 		return await withTaskCancellationHandler {
 			await withCheckedContinuation { continuation in
-				waiters.append((waiterID, continuation))
+				let record = WaiterRecord(id: waiterID, continuation: continuation)
+				waiters.append(record)
 			}
 		} onCancel: {
 			Task { [weak self] in
@@ -171,11 +306,9 @@ public actor AO3RequestCoordinator {
 	private func release() {
 		while !waiters.isEmpty {
 			let next = waiters.removeFirst()
-			if !Task.isCancelled {
+			if !next.isCancelled {
 				next.continuation.resume(returning: true)
 				return
-			} else {
-				next.continuation.resume(returning: false)
 			}
 		}
 		available = min(limit, available + 1)
@@ -184,6 +317,7 @@ public actor AO3RequestCoordinator {
 	private func cancelWaiter(id: UUID) {
 		if let index = waiters.firstIndex(where: { $0.id == id }) {
 			let waiter = waiters.remove(at: index)
+			waiter.isCancelled = true
 			waiter.continuation.resume(returning: false)
 		}
 	}

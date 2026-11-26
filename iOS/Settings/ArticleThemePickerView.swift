@@ -68,6 +68,7 @@ struct ArticleThemePickerView: View {
 				EmptyStateView.search(text: searchText)
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle(Text("Choose Theme", comment: "Choose Theme navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
 		.searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: Text("Search Themes", comment: "Search Themes prompt"))

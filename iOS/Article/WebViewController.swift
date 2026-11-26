@@ -40,6 +40,7 @@ final class WebViewController: UIViewController {
 	// (`nectar-series:<direction>?ao3id=...&workurl=...`), handled in
 	// decidePolicyFor navigationAction. See docs/ao3-feeds.md.
 	private static let nectarSeriesScheme = "nectar-series"
+	private static let nectarAO3FetchScheme = "nectar-ao3-fetch"
 
 	var topShowBarsView: UIView!
 	var bottomShowBarsView: UIView!
@@ -185,6 +186,7 @@ final class WebViewController: UIViewController {
 		NotificationCenter.default.addObserver(self, selector: #selector(currentArticleThemeDidChangeNotification(_:)), name: .CurrentArticleThemeDidChangeNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(articleThemeOverridesDidChangeNotification(_:)), name: .articleThemeOverridesDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(handleSceneDidEnterBackground(_:)), name: UIScene.didEnterBackgroundNotification, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidStart(_:)), name: .ao3ChapterFetchDidStart, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidComplete(_:)), name: .ao3ChapterFetchDidComplete, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(ao3ChapterFetchDidFail(_:)), name: .ao3ChapterFetchDidFail, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(statusesDidChange(_:)), name: .StatusesDidChange, object: nil)
@@ -315,10 +317,13 @@ final class WebViewController: UIViewController {
 			guard let refetchedArticle = refetchedArticles.first, self.article?.articleID == fetchedArticleID else {
 				return
 			}
+			let alreadyRenderedSameContent = self.article?.contentHTML == refetchedArticle.contentHTML && refetchedArticle.contentHTML != nil
 			self.article = refetchedArticle
-			// Provisional until scrollRestoreComplete confirms the new content settled.
-			self.isContentProvisional = true
-			self.loadWebView(reason: "ao3ChapterFetchDidComplete(\(fetchedArticleID))")
+			if !alreadyRenderedSameContent {
+				// Provisional until scrollRestoreComplete confirms the new content settled.
+				self.isContentProvisional = true
+				self.loadWebView(reason: "ao3ChapterFetchDidComplete(\(fetchedArticleID))")
+			}
 			// Also fires when the result was a regression stashed as a pending update;
 			// offer the review prompt in that case.
 			self.presentPendingContentUpdateAlertIfNeeded()
@@ -375,6 +380,14 @@ final class WebViewController: UIViewController {
 			// it only changes via a chapter fetch, which re-renders.
 			webView?.evaluateJavaScript("setNectarState({starred: \(article.status.starred), loved: \(article.status.loved)})")
 		}
+	}
+
+	@objc func ao3ChapterFetchDidStart(_ note: Notification) {
+		guard let fetchedArticleID = note.userInfo?[AO3ChapterFetchUserInfoKey.articleID] as? String,
+		      let article, article.articleID == fetchedArticleID, article.contentHTML == nil else {
+			return
+		}
+		loadWebView(reason: "ao3ChapterFetchDidStart(\(fetchedArticleID))")
 	}
 
 	@objc func ao3ChapterFetchDidFail(_ note: Notification) {
@@ -596,6 +609,14 @@ extension WebViewController: WKNavigationDelegate {
 				decisionHandler(.cancel)
 				if let url {
 					handleNectarSeriesLink(url)
+				}
+				return
+			}
+
+			if url?.scheme == Self.nectarAO3FetchScheme {
+				decisionHandler(.cancel)
+				if let article {
+					AO3ChapterFetcher.shared.checkForUpdates(for: article)
 				}
 				return
 			}

@@ -22,7 +22,7 @@
 
 import Testing
 import Foundation
-import Zip
+import ZIPFoundation
 @testable import BackupRestore
 
 @Suite("BackupManager manifest handling")
@@ -42,7 +42,23 @@ struct BackupManagerTests {
 		let exportsFolder = FileManager.default.temporaryDirectory.appendingPathComponent("BackupManagerTests-zip-\(UUID().uuidString)", isDirectory: true)
 		try FileManager.default.createDirectory(at: exportsFolder, withIntermediateDirectories: true)
 		let zipURL = exportsFolder.appendingPathComponent("test-backup.zip")
-		try Zip.zipFiles(paths: rootEntries, zipFilePath: zipURL, password: nil, progress: nil)
+		let archive = try Archive(url: zipURL, accessMode: .create)
+		for entry in rootEntries {
+			let base = entry.deletingLastPathComponent()
+			var isDirectory: ObjCBool = false
+			if FileManager.default.fileExists(atPath: entry.path, isDirectory: &isDirectory), isDirectory.boolValue {
+				if let enumerator = FileManager.default.enumerator(at: entry, includingPropertiesForKeys: [.isDirectoryKey]) {
+					for case let fileURL as URL in enumerator {
+						let values = try fileURL.resourceValues(forKeys: [.isDirectoryKey])
+						if values.isDirectory == true { continue }
+						let relPath = fileURL.path.replacingOccurrences(of: base.path + "/", with: "")
+						try archive.addEntry(with: relPath, relativeTo: base, compressionMethod: .deflate)
+					}
+				}
+			} else {
+				try archive.addEntry(with: entry.lastPathComponent, relativeTo: base, compressionMethod: .deflate)
+			}
+		}
 		return zipURL
 	}
 

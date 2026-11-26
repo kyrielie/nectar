@@ -13,7 +13,7 @@ import ReadingTime
 @MainActor final class ReadingTimeSettingsModel: ObservableObject {
 
 	struct PendingConfirmation: Identifiable {
-		enum Kind { case readingTimeEnable, bedtimeSpan }
+		enum Kind { case readingTimeEnable, bedtimeSpan, dailyLimit }
 		let id = UUID()
 		let kind: Kind
 		let message: String

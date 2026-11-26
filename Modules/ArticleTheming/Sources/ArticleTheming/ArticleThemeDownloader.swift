@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import Zip
+import ZIPFoundation
 
 public final class ArticleThemeDownloader: Sendable {
 	public static let shared = ArticleThemeDownloader()
@@ -131,7 +131,7 @@ public final class ArticleThemeDownloader: Sendable {
 			try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
 
 			do {
-				try Zip.unzipFile(zipURL, destination: destination, overwrite: true, password: nil, progress: nil, fileOutputHandler: nil)
+				try fileManager.unzipItem(at: zipURL, to: destination)
 			} catch {
 				throw ArticleThemeDownloaderError.invalidArchive("The archive could not be extracted.")
 			}

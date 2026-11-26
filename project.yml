@@ -80,9 +80,12 @@ packages:
     path: Modules/ReadingStats
   ReadingTime:
     path: Modules/ReadingTime
-  Zip:
-    url: https://github.com/marmelroy/Zip.git
-    revision: bca30f6d6c7d37cbc4aa8f6b0002e281dcc36195
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation.git
+    from: 0.9.20
+  SwiftSoup:
+    url: https://github.com/scinfu/SwiftSoup.git
+    from: 2.13.6
 
 targets:
   Nectar-iOS:
@@ -109,7 +112,8 @@ targets:
         embed: true
       - package: ArticlesDatabase
         embed: true
-      - package: Zip
+      - package: ZIPFoundation
+      - package: SwiftSoup
       - package: RSWeb
         embed: true
       - package: HTMLMetadata

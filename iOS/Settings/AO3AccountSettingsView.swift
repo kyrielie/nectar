@@ -140,6 +140,7 @@ struct AO3AccountSettingsView: View {
 				Text(NSLocalizedString("Use this if AO3 shows a Cloudflare challenge. Not tied to your account.", comment: "AO3 Cloudflare challenge section footer"))
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle(Text(verbatim: "Archive of Our Own"))
 		.navigationBarTitleDisplayMode(.inline)
 		.sheet(isPresented: $isShowingLogin, onDismiss: {

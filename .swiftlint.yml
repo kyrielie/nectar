@@ -45,6 +45,10 @@ file_length:
 type_body_length:
   warning: 1400
 
+opt_in_rules:
+  - fatal_error_message
+  - redundant_nil_coalescing
+
 disabled_rules:
   - todo
   - for_where

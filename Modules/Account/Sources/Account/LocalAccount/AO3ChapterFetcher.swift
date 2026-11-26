@@ -58,7 +58,7 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 
 	public static let shared = AO3ChapterFetcher()
 
-	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "AO3ChapterFetcher")
+	private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Nectar", category: "AO3ChapterFetcher")
 
 	// Was a flat 3-hour anti-hammering floor on retry attempts. Lowered to 1
 	// minute once AO3PrefaceRefetchPreference's .always cadence existed --
@@ -90,6 +90,14 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// text isn't loading (see `lastFetchFailureMessage(forArticleID:)`)
 	/// instead of the failure being visible only in the Activity Log.
 	private let failures = OSAllocatedUnfairLock(initialState: [String: AO3FetchFailure]())
+
+	/// Article IDs with a fetch currently in progress (update gate or full download).
+	private let inFlightArticleIDs = OSAllocatedUnfairLock(initialState: Set<String>())
+
+	/// True while a chapter fetch or update check is actively running for `articleID`.
+	public func isFetching(articleID: String) -> Bool {
+		inFlightArticleIDs.withLock { $0.contains(articleID) }
+	}
 
 	/// The reason the most recent fetch attempt for this article failed, if
 	/// any -- `nil` if the article has never had a failed fetch, or if its
@@ -142,15 +150,19 @@ nonisolated public final class AO3ChapterFetcher: Sendable {
 	/// Log rather than silently doing nothing forever.
 	public func fetchIfNeeded(for article: Article, priority: Priority = .interactive) {
 		guard let workID = AO3FetchPolicy.workID(fromBookKey: article.bookKey) else {
+			Self.logger.debug("fetchIfNeeded: skipped articleID=\(article.articleID, privacy: .public) bookKey=\(article.bookKey, privacy: .public) -- no ao3WorkID")
 			noteAnthologyUnsupportedIfNeeded(for: article)
 			return
 		}
 		guard AO3FetchPolicy.isStale(article) else {
+			Self.logger.debug("fetchIfNeeded: skipped articleID=\(article.articleID, privacy: .public) workID=\(workID, privacy: .public) -- not stale (hasContent=\(article.contentHTML != nil), pendingUpdate=\(article.pendingUpdateContentHTML != nil), regressionFlagged=\(article.wordCountRegressionFlaggedAt != nil), confirmedMissing=\(article.ao3ConfirmedMissingAt != nil), lastPrefaceFetch=\(article.lastPrefaceFetchDate?.description ?? "nil", privacy: .public))")
 			return
 		}
 		guard AO3FetchPolicy.isNetworkRequestAllowed(for: article) else {
+			Self.logger.debug("fetchIfNeeded: skipped articleID=\(article.articleID, privacy: .public) workID=\(workID, privacy: .public) -- network disallowed (isAmbrosia=\(article.isAmbrosiaItem))")
 			return
 		}
+		Self.logger.debug("fetchIfNeeded: requesting articleID=\(article.articleID, privacy: .public) workID=\(workID, privacy: .public) priority=\(String(describing: priority), privacy: .public)")
 		downloadIfNeeded(workID: workID, articleID: article.articleID, accountID: article.accountID, feedID: article.feedID, priority: priority)
 	}
 
@@ -246,9 +258,9 @@ extension AO3ChapterFetcher {
 		Task { @MainActor in
 			let activityLog = ActivityLog.shared
 			let kind = ActivityKind.skipAO3SeriesFetch(bookKey: bookKey)
-			activityLog.createActivity(owner: .ao3ChapterFetcher, kind: kind, detail: nil)
-			activityLog.didStart(.ao3ChapterFetcher, kind: kind)
-			self.fail(articleID: articleID, kind: kind, activityLog: activityLog, failure: .anthologyNotRefreshable)
+			let activityID = activityLog.createActivity(owner: .ao3ChapterFetcher, kind: kind, detail: nil)
+			activityLog.didStart(id: activityID)
+			self.fail(articleID: articleID, activityID: activityID, activityLog: activityLog, failure: .anthologyNotRefreshable)
 		}
 	}
 }
@@ -272,11 +284,15 @@ nonisolated extension AO3ChapterFetcher {
 		}
 
 		if shouldDownload {
+			inFlightArticleIDs.withLock { _ = $0.insert(articleID) }
+			postNotification(name: .ao3ChapterFetchDidStart, articleID: articleID)
 			if isUpdateCheck {
 				downloadWithUpdateGate(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
 			} else {
 				download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
 			}
+		} else {
+			Self.logger.debug("downloadIfNeeded: throttled by 60s floor for articleID=\(articleID, privacy: .public) workID=\(workID, privacy: .public)")
 		}
 		return shouldDownload
 	}
@@ -297,22 +313,22 @@ nonisolated extension AO3ChapterFetcher {
 			let kind = ActivityKind.fetchAO3Chapter(workID: workID)
 			let interactive = priority == .interactive
 
-			activityLog.createActivity(owner: .ao3ChapterFetcher, kind: kind, detail: nil)
-			activityLog.didStart(.ao3ChapterFetcher, kind: kind)
+			let activityID = activityLog.createActivity(owner: .ao3ChapterFetcher, kind: kind, detail: nil)
+			activityLog.didStart(id: activityID)
 
 			guard let account = AccountManager.shared.existingAccount(accountID: accountID),
 			      let article = (await account.fetchArticlesAsync(.articleIDs([articleID]))).first else {
-				self.download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
+				await self.performDownload(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority, activityLog: activityLog, activityID: activityID)
 				return
 			}
 
 			// If the work has no stored content yet, skip the gate and do full fetch directly
 			guard article.contentHTML != nil else {
-				self.download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
+				await self.performDownload(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority, activityLog: activityLog, activityID: activityID)
 				return
 			}
 
-			activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "Checking work header metadata...")
+			activityLog.updateProgress(id: activityID, message: "Checking work header metadata...")
 
 			let fetchResult: AO3WorkPageFetch
 			if AO3SessionStore.isSignedIn {
@@ -330,7 +346,7 @@ nonisolated extension AO3ChapterFetcher {
 			      let html = String(data: data, encoding: .utf8),
 			      let metadata = AO3ChapterHTMLExtractor.extractLightweightMetadata(fromWorkPageHTML: html) else {
 				// Fall through to full work download on gate failure, challenge, or unparseable page
-				self.download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
+				await self.performDownload(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority, activityLog: activityLog, activityID: activityID)
 				return
 			}
 
@@ -356,8 +372,8 @@ nonisolated extension AO3ChapterFetcher {
 
 			if hasNewChapter || hasNewerDate || completionChanged || wordCountGrew {
 				// New content detected -- proceed to Step 2: full work download
-				activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "New chapter/updates detected -- downloading full work...")
-				self.download(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority)
+				activityLog.updateProgress(id: activityID, message: "New chapter/updates detected -- downloading full work...")
+				await self.performDownload(workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority, activityLog: activityLog, activityID: activityID)
 			} else {
 				// Up to date! Update metadata & stats without downloading chapter bodies
 				let additionalTags: Set<String>? = {
@@ -414,7 +430,8 @@ nonisolated extension AO3ChapterFetcher {
 				_ = await account.updateAsync(feedID: article.feedID, parsedItems: [updatedItem], deleteOlder: false)
 				let currentChapterStr = article.chapterCurrent.map(String.init) ?? "1"
 				let totalChapterStr = article.chapterTotal.map(String.init) ?? "?"
-				activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: "Work is up to date (Ch. \(currentChapterStr)/\(totalChapterStr)) -- no new content", returnedFromCache: fetchResult.returnedFromCache)
+				activityLog.didComplete(id: activityID, message: "Work is up to date (Ch. \(currentChapterStr)/\(totalChapterStr)) -- no new content", returnedFromCache: fetchResult.returnedFromCache)
+				inFlightArticleIDs.withLock { _ = $0.remove(articleID) }
 				self.failures.withLock { $0[articleID] = nil }
 			}
 		}
@@ -430,89 +447,99 @@ nonisolated extension AO3ChapterFetcher {
 	/// when signed in. Each attempt gets one retry when interactive.
 	internal func download(workID: String, articleID: String, accountID: String, feedID: String, priority: Priority = .interactive) {
 		guard let url = AO3Link.workURL(id: workID, fullWork: true, adultView: true) else {
+			inFlightArticleIDs.withLock { _ = $0.remove(articleID) }
 			return
 		}
 
 		Task { @MainActor in
 			let activityLog = ActivityLog.shared
 			let kind = ActivityKind.fetchAO3Chapter(workID: workID)
-			let interactive = priority == .interactive
+			let activityID = activityLog.createActivity(owner: .ao3ChapterFetcher, kind: kind, detail: nil)
+			activityLog.didStart(id: activityID)
+			await self.performDownload(url: url, workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, priority: priority, activityLog: activityLog, activityID: activityID)
+		}
+	}
 
-			activityLog.createActivity(owner: .ao3ChapterFetcher, kind: kind, detail: nil)
-			activityLog.didStart(.ao3ChapterFetcher, kind: kind)
+	@MainActor
+	private func performDownload(url: URL? = nil, workID: String, articleID: String, accountID: String, feedID: String, priority: Priority, activityLog: ActivityLog, activityID: Int) async {
+		guard let url = url ?? AO3Link.workURL(id: workID, fullWork: true, adultView: true) else {
+			fail(articleID: articleID, activityID: activityID, activityLog: activityLog, failure: .unrecognizedPage)
+			return
+		}
 
-			let signedIn = AO3SessionStore.isSignedIn
-			// True once an authenticated request actually went out. A
-			// signed-in fetch that found no session to send (concurrent
-			// sign-out) made no attempt, so it cannot be required to
-			// confirm a missing work.
-			var authenticatedAttemptMade = signedIn
-			var authenticatedAttemptSawMissing = false
+		let interactive = priority == .interactive
+		let signedIn = AO3SessionStore.isSignedIn
+		Self.logger.debug("performDownload: starting articleID=\(articleID, privacy: .public) workID=\(workID, privacy: .public) signedIn=\(signedIn) interactive=\(interactive)")
+		// True once an authenticated request actually went out. A
+		// signed-in fetch that found no session to send (concurrent
+		// sign-out) made no attempt, so it cannot be required to
+		// confirm a missing work.
+		var authenticatedAttemptMade = signedIn
+		var authenticatedAttemptSawMissing = false
 
-			if signedIn {
-				let attempt = await AO3RetryPolicy.perform(interactive: interactive, url: url) {
-					try await Self.authenticatedFetch(url: url)
-				}
-				switch attempt.result {
-				case .success(let extraction):
-					await self.finishSuccessfulFetch(extraction: extraction, workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, activityLog: activityLog, kind: kind, dataSizeMessage: ActivityLog.dataSizeMessage(attempt.data ?? Data()), returnedFromCache: false)
-					return
-				case .failure(let failure):
-					switch failure {
-					case .registrationRequired:
-						// The stored session itself is what AO3 rejected,
-						// which is distinct from never having signed in.
-						// Ending it makes the next fetch and the Settings
-						// sign-in row reflect reality, and records why.
-						AO3SessionStore.endSession(reason: .rejectedByAO3)
-						fail(articleID: articleID, kind: kind, activityLog: activityLog, failure: .sessionEnded)
-						return
-					case .rateLimited, .challenge, .serviceUnavailable, .hiddenUntilRevealed, .permissionDenied, .adultGate:
-						// Terminal: an anonymous request would meet the
-						// same limit, challenge or wall.
-						fail(articleID: articleID, kind: kind, activityLog: activityLog, failure: failure)
-						return
-					case .workMissing:
-						// Not enough alone to confirm the work is gone;
-						// remembered for the dual-confirmation rule below.
-						authenticatedAttemptSawMissing = true
-						activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 authenticated fetch found nothing -- retrying anonymously before confirming missing")
-					case .signInRequired:
-						// The session was cleared between the isSignedIn
-						// check and the request.
-						authenticatedAttemptMade = false
-						activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 authenticated fetch reported no session unexpectedly -- retrying anonymously")
-					default:
-						// Network error, unexpected HTTP status or an
-						// unrecognized page: not a login problem, so the
-						// session is left alone.
-						activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 authenticated fetch failed (\(failure.localizedMessage)) -- retrying anonymously")
-					}
-				}
+		if signedIn {
+			let attempt = await AO3RetryPolicy.perform(interactive: interactive, url: url) {
+				try await Self.authenticatedFetch(url: url)
 			}
-
-			let anonymous = await AO3RetryPolicy.perform(interactive: interactive, url: url) {
-				try await Self.anonymousFetch(url: url)
-			}
-			switch anonymous.result {
+			switch attempt.result {
 			case .success(let extraction):
-				await self.finishSuccessfulFetch(extraction: extraction, workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, activityLog: activityLog, kind: kind, dataSizeMessage: ActivityLog.dataSizeMessage(anonymous.data ?? Data()), returnedFromCache: anonymous.returnedFromCache)
+				await self.finishSuccessfulFetch(extraction: extraction, workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, activityLog: activityLog, activityID: activityID, dataSizeMessage: ActivityLog.dataSizeMessage(attempt.data ?? Data()), returnedFromCache: false)
+				return
 			case .failure(let failure):
-				// Only positive evidence (HTTP 404/410 or AO3's explicit
-				// not-found copy) sets ao3ConfirmedMissingAt, and when an
-				// authenticated attempt was made it must have seen the same
-				// evidence. Every other failure is transient.
-				if failure.evidencesMissing, !authenticatedAttemptMade || authenticatedAttemptSawMissing,
-				   let account = AccountManager.shared.existingAccount(accountID: accountID) {
-					await account.setAO3ConfirmedMissingAsync(forArticleID: articleID)
+				switch failure {
+				case .registrationRequired:
+					// The stored session itself is what AO3 rejected,
+					// which is distinct from never having signed in.
+					// Ending it makes the next fetch and the Settings
+					// sign-in row reflect reality, and records why.
+					AO3SessionStore.endSession(reason: .rejectedByAO3)
+					fail(articleID: articleID, activityID: activityID, activityLog: activityLog, failure: .sessionEnded)
+					return
+				case .rateLimited, .challenge, .serviceUnavailable, .hiddenUntilRevealed, .permissionDenied, .adultGate:
+					// Terminal: an anonymous request would meet the
+					// same limit, challenge or wall.
+					fail(articleID: articleID, activityID: activityID, activityLog: activityLog, failure: failure)
+					return
+				case .workMissing:
+					// Not enough alone to confirm the work is gone;
+					// remembered for the dual-confirmation rule below.
+					authenticatedAttemptSawMissing = true
+					activityLog.updateProgress(id: activityID, message: "AO3 authenticated fetch found nothing -- retrying anonymously before confirming missing")
+				case .signInRequired:
+					// The session was cleared between the isSignedIn
+					// check and the request.
+					authenticatedAttemptMade = false
+					activityLog.updateProgress(id: activityID, message: "AO3 authenticated fetch reported no session unexpectedly -- retrying anonymously")
+				default:
+					// Network error, unexpected HTTP status or an
+					// unrecognized page: not a login problem, so the
+					// session is left alone.
+					activityLog.updateProgress(id: activityID, message: "AO3 authenticated fetch failed (\(failure.localizedMessage)) -- retrying anonymously")
 				}
-				if failure == .unrecognizedPage {
-					// Logged on its own so real deleted-work page shapes
-					// can be learned from the Activity Log.
-					activityLog.updateProgress(.ao3ChapterFetcher, kind: kind, message: "AO3 returned a page Nectar does not recognize -- not treating the work as missing")
-				}
-				fail(articleID: articleID, kind: kind, activityLog: activityLog, failure: failure)
 			}
+		}
+
+		let anonymous = await AO3RetryPolicy.perform(interactive: interactive, url: url) {
+			try await Self.anonymousFetch(url: url)
+		}
+		switch anonymous.result {
+		case .success(let extraction):
+			await self.finishSuccessfulFetch(extraction: extraction, workID: workID, articleID: articleID, accountID: accountID, feedID: feedID, activityLog: activityLog, activityID: activityID, dataSizeMessage: ActivityLog.dataSizeMessage(anonymous.data ?? Data()), returnedFromCache: anonymous.returnedFromCache)
+		case .failure(let failure):
+			// Only positive evidence (HTTP 404/410 or AO3's explicit
+			// not-found copy) sets ao3ConfirmedMissingAt, and when an
+			// authenticated attempt was made it must have seen the same
+			// evidence. Every other failure is transient.
+			if failure.evidencesMissing, !authenticatedAttemptMade || authenticatedAttemptSawMissing,
+			   let account = AccountManager.shared.existingAccount(accountID: accountID) {
+				await account.setAO3ConfirmedMissingAsync(forArticleID: articleID)
+			}
+			if failure == .unrecognizedPage {
+				// Logged on its own so real deleted-work page shapes
+				// can be learned from the Activity Log.
+				activityLog.updateProgress(id: activityID, message: "AO3 returned a page Nectar does not recognize -- not treating the work as missing")
+			}
+			fail(articleID: articleID, activityID: activityID, activityLog: activityLog, failure: failure)
 		}
 	}
 
@@ -531,9 +558,11 @@ nonisolated extension AO3ChapterFetcher {
 	/// interstitial body (Cloudflare challenge, AO3's 503 page) is vetoed from
 	/// its cache so a transient block is never replayed.
 	private static func anonymousFetch(url: URL) async throws -> AO3WorkPageFetch {
-		let downloadResponse = try await AO3RequestCoordinator.shared.withSlot {
-			try await AO3Pacer.shared.pace()
-			return try await Downloader.shared.download(url, shouldCache: { data, _ in
+		let downloadResponse = try await AO3RequestCoordinator.shared.execute(
+			key: AO3RequestKey(url: url, method: .get, sessionScope: .guest),
+			policy: .defaultPaced
+		) {
+			try await Downloader.shared.download(url, shouldCache: { data, _ in
 				guard let data, let html = String(data: data, encoding: .utf8) else {
 					return true
 				}
@@ -555,14 +584,14 @@ nonisolated extension AO3ChapterFetcher {
 	/// (`Downloader.shared` vs. `AO3AuthenticatedFetcher`, the latter never
 	/// cached).
 	@MainActor
-	private func finishSuccessfulFetch(extraction: AO3ChapterExtractionResult, workID: String, articleID: String, accountID: String, feedID: String, activityLog: ActivityLog, kind: ActivityKind, dataSizeMessage: String, returnedFromCache: Bool) async {
+	private func finishSuccessfulFetch(extraction: AO3ChapterExtractionResult, workID: String, articleID: String, accountID: String, feedID: String, activityLog: ActivityLog, activityID: Int, dataSizeMessage: String, returnedFromCache: Bool) async {
 		guard let account = AccountManager.shared.existingAccount(accountID: accountID) else {
-			fail(articleID: articleID, kind: kind, activityLog: activityLog, failure: .accountMissing)
+			fail(articleID: articleID, activityID: activityID, activityLog: activityLog, failure: .accountMissing)
 			return
 		}
 		let existingArticles = await account.fetchArticlesAsync(.articleIDs([articleID]))
 		guard let existingArticle = existingArticles.first else {
-			fail(articleID: articleID, kind: kind, activityLog: activityLog, failure: .articleMissing)
+			fail(articleID: articleID, activityID: activityID, activityLog: activityLog, failure: .articleMissing)
 			return
 		}
 
@@ -582,7 +611,8 @@ nonisolated extension AO3ChapterFetcher {
 		// new fetch as a pending update for the reader to review.
 		if let regressionDescription = AO3FetchPolicy.detectRegression(existingArticle: existingArticle, extraction: extraction) {
 			await account.setPendingContentUpdateAsync(extraction.contentHTML, forArticleID: articleID)
-			activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: "Possible content regression detected (\(regressionDescription)) -- kept existing content, flagged for review", returnedFromCache: returnedFromCache)
+			activityLog.didComplete(id: activityID, message: "Possible content regression detected (\(regressionDescription)) -- kept existing content, flagged for review", returnedFromCache: returnedFromCache)
+			inFlightArticleIDs.withLock { _ = $0.remove(articleID) }
 			failures.withLock { $0[articleID] = nil }
 			postNotification(name: .ao3ChapterFetchDidComplete, articleID: articleID)
 			// The CSRF token this fetch obtained is still good for a
@@ -596,7 +626,10 @@ nonisolated extension AO3ChapterFetcher {
 		let parsedItem = AO3FetchPolicy.rebuildParsedItem(from: existingArticle, workID: workID, extraction: extraction, applyStatsUpdate: applyStatsUpdate)
 		_ = await account.updateAsync(feedID: feedID, parsedItems: [parsedItem], deleteOlder: false)
 
-		activityLog.didComplete(.ao3ChapterFetcher, kind: kind, message: dataSizeMessage, returnedFromCache: returnedFromCache)
+		Self.logger.debug("finishSuccessfulFetch: persisted articleID=\(articleID, privacy: .public) workID=\(workID, privacy: .public) chapters=\(extraction.chapters.count) contentHTMLLength=\(extraction.contentHTML.count) returnedFromCache=\(returnedFromCache)")
+
+		activityLog.didComplete(id: activityID, message: dataSizeMessage, returnedFromCache: returnedFromCache)
+		inFlightArticleIDs.withLock { _ = $0.remove(articleID) }
 		failures.withLock { $0[articleID] = nil }
 		// A successful fetch means the work is reachable again --
 		// either it was a false-positive gate/404, or the author
@@ -631,10 +664,12 @@ nonisolated extension AO3ChapterFetcher {
 	/// is the failure's localized text) so an already-visible article view can
 	/// react immediately rather than waiting for the next fetch attempt.
 	@MainActor
-	private func fail(articleID: String, kind: ActivityKind, activityLog: ActivityLog, failure: AO3FetchFailure) {
+	private func fail(articleID: String, activityID: Int, activityLog: ActivityLog, failure: AO3FetchFailure) {
 		let message = failure.localizedMessage
+		Self.logger.error("fail: articleID=\(articleID, privacy: .public) failure=\(String(describing: failure), privacy: .public) message=\(message, privacy: .public)")
 		let loggedError = NSError(domain: "Nectar", code: -1, userInfo: [NSLocalizedDescriptionKey: message])
-		activityLog.didFail(.ao3ChapterFetcher, kind: kind, error: loggedError)
+		activityLog.didFail(id: activityID, error: loggedError)
+		inFlightArticleIDs.withLock { _ = $0.remove(articleID) }
 		failures.withLock { $0[articleID] = failure }
 		postNotification(name: .ao3ChapterFetchDidFail, articleID: articleID, message: message)
 	}

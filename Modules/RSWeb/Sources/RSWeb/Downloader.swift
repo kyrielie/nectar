@@ -252,7 +252,7 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 	}
 }
 
-private extension Downloader {
+extension Downloader {
 
 	// Not actor-isolated -- called from the dataTask completion handler,
 	// which doesn't run on the main actor. Reads only its arguments, so

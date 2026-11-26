@@ -9,6 +9,11 @@ import Foundation
 
 public extension Notification.Name {
 
+	/// Posted when AO3ChapterFetcher begins a fetch (automatic or manual) for
+	/// an article. Posted on the main thread so reader views showing a stub
+	/// can immediately reflect the active fetch state.
+	nonisolated static let ao3ChapterFetchDidStart = Notification.Name("ao3ChapterFetchDidStart")
+
 	/// Posted when AO3ChapterFetcher successfully persists newly fetched
 	/// chapter content for an article. Posted on the main thread. Mirrors
 	/// HTMLMetadata's `.htmlMetadataAvailable` notification pattern.

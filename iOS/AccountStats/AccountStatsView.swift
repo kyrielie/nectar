@@ -63,6 +63,7 @@ struct AccountStatsView: View {
 				helpFooter
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle(NSLocalizedString("Library Stats", comment: "Library Stats screen title"))
 		.navigationBarTitleDisplayMode(.inline)
 		.toolbar {

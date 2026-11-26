@@ -132,6 +132,7 @@ struct TextReplacementSettingsView: View {
 				Text("Edit History", comment: "Text replacement settings: edit history section header")
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle(Text("Text Replacement", comment: "Text replacement settings navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
 		.task {

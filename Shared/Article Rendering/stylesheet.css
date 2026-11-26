@@ -37,19 +37,7 @@ a:hover {
 	cursor: default;
 }
 
-/* AO3 direct-reading support -- shown inline, above the feed-derived
-   summary, when the on-demand chapter fetch didn't persist new content.
-   Deliberately not .systemMessage: that class is absolutely positioned for
-   full-page placeholder states (loading, no selection), which would
-   misplace this notice inside real article body content. */
-.ao3ChapterFetchNotice {
-	margin: 0 0 1em 0;
-	padding: 0.6em 0.8em;
-	border-left: 3px solid var(--ao3-notice-border-color, rgba(0, 0, 0, 0.3));
-	background: var(--ao3-notice-background-color, rgba(0, 0, 0, 0.05));
-	font-size: 0.9em;
-	font-style: italic;
-}
+/* .ao3ChapterFetchNotice moved to core.css so custom themes also style it. */
 
 /* AO3 preface rules (#ao3SyntheticPreface/#ao3Preface, dl.tags, dt, dd)
    moved to core.css in full -- core.css loads for every theme, custom or

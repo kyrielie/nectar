@@ -140,6 +140,7 @@ struct AnnotationsSettingsView: View {
 				Text("Export", comment: "Annotations settings: export section header")
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle(Text("Highlights & Notes", comment: "Annotations settings navigation title"))
 		.navigationBarTitleDisplayMode(.inline)
 	}

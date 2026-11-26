@@ -98,6 +98,7 @@ struct DinosaursView: View {
 				helpFooter
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle("🦖 Dinosaurs")
 		.navigationBarTitleDisplayMode(.inline)
 		.task {

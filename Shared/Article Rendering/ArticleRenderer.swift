@@ -138,18 +138,10 @@ import ArticleTheming
 			bodySuffix += footerHTML
 		}
 
-		if let article, article.contentHTML == nil,
-		   let failureMessage = AO3ChapterFetcher.shared.lastFetchFailureMessage(forArticleID: article.articleID) {
-			// contentHTML is nil (full chapter text never landed) and the
-			// most recent fetch attempt for this article is known to have
-			// failed -- surface why inline, above the feed-derived summary
-			// article.body falls back to, rather than leaving the person to
-			// guess or dig through the Activity Log. Escaped defensively even
-			// though every current message is one of this app's own fixed
-			// strings, not fetched/user content.
-			let escapedMessage = failureMessage.escapingSpecialXMLCharacters
-			let notice = String(format: NSLocalizedString("Full text unavailable: %@", comment: "Inline notice in the reader when AO3 full text could not be loaded; the placeholder is the reason"), escapedMessage)
-			bodyPrefix += "<p class='ao3ChapterFetchNotice'>\(notice)</p>"
+		if let article, let stubNotice = Self.ao3StubNoticeHTML(for: article) {
+			// contentHTML is nil on an AO3 stub -- surface whether a fetch is
+			// in flight, why it failed, or offer a manual Fetch/Retry button.
+			bodyPrefix += stubNotice
 		}
 		self.body = Self.stripFakeParagraphIndents(bodyPrefix + (article?.body ?? "") + bodySuffix)
 		self.baseURL = article?.baseURL?.absoluteString
@@ -609,6 +601,55 @@ extension ArticleRenderer {
 			ParsedSeriesEntry(name: entry.name, index: entry.index, ao3ID: entry.ao3ID, previousWorkURL: entry.previousWorkURL, nextWorkURL: entry.nextWorkURL)
 		}
 		return AO3PrefaceRenderer.seriesFooterHTML(entries: entries)
+	}
+
+	/// Inline status/error notice and optional manual Fetch/Retry button for
+	/// an AO3 stub (`contentHTML == nil`). Returns `nil` when full content is
+	/// already stored or when the article is not an AO3 work/anthology stub.
+	nonisolated static func ao3StubNoticeHTML(
+		for article: Article,
+		isFetching: Bool? = nil,
+		lastFailureMessage: String? = nil
+	) -> String? {
+		guard article.contentHTML == nil else {
+			return nil
+		}
+		let isSingleAO3Work = AO3FetchPolicy.workID(fromBookKey: article.bookKey) != nil
+		let isAnthology = article.bookKey.hasPrefix(BookKeyPrefix.ao3Series) || article.bookKey.hasPrefix(BookKeyPrefix.calibreSeries)
+		guard isSingleAO3Work || isAnthology else {
+			return nil
+		}
+
+		let message: String
+		let action: (href: String, label: String)?
+		let canFetchManually = AO3FetchPolicy.canCheckForUpdates(for: article) && AO3FetchPolicy.isNetworkRequestAllowed(for: article)
+
+		if isFetching ?? AO3ChapterFetcher.shared.isFetching(articleID: article.articleID) {
+			message = NSLocalizedString("Fetching full work from AO3…", comment: "Inline notice while AO3 full text is being downloaded")
+			action = nil
+		} else if let failure = lastFailureMessage ?? AO3ChapterFetcher.shared.lastFetchFailureMessage(forArticleID: article.articleID) {
+			message = String(format: NSLocalizedString("Full text unavailable: %@", comment: "Inline notice in the reader when AO3 full text could not be loaded; the placeholder is the reason"), failure)
+			action = canFetchManually ? ("nectar-ao3-fetch://retry", NSLocalizedString("Retry", comment: "Button in stub notice to retry fetching full AO3 work")) : nil
+		} else if article.ao3ConfirmedMissingAt != nil {
+			message = NSLocalizedString("Full text unavailable: AO3 previously reported this work as missing or inaccessible.", comment: "Inline notice when AO3 previously returned 404/410 for a stub")
+			action = canFetchManually ? ("nectar-ao3-fetch://retry", NSLocalizedString("Retry", comment: "Button in stub notice to retry fetching full AO3 work")) : nil
+		} else if !AO3FetchPolicy.isNetworkRequestAllowed(for: article) {
+			message = NSLocalizedString("Full text not fetched: AO3 network requests are disabled for Ambrosia items in Settings.", comment: "Inline notice when Ambrosia network updates are disabled")
+			action = nil
+		} else if !isSingleAO3Work {
+			message = NSLocalizedString("Full text unavailable: combined series works cannot be fetched from a single AO3 page.", comment: "Inline notice for anthology/combined-series stubs")
+			action = nil
+		} else {
+			message = NSLocalizedString("Showing feed summary stub. Full work text has not been fetched yet.", comment: "Inline notice when an AO3 stub is waiting to be fetched")
+			action = canFetchManually ? ("nectar-ao3-fetch://fetch", NSLocalizedString("Fetch Full Work", comment: "Button in stub notice to manually fetch full AO3 work")) : nil
+		}
+
+		let escapedMessage = message.escapingSpecialXMLCharacters
+		if let action {
+			let escapedLabel = action.label.escapingSpecialXMLCharacters
+			return "<div class='ao3ChapterFetchNotice'><p>\(escapedMessage)</p><a class='ao3ChapterFetchButton' href='\(action.href)'>\(escapedLabel)</a></div>"
+		}
+		return "<div class='ao3ChapterFetchNotice'><p>\(escapedMessage)</p></div>"
 	}
 }
 

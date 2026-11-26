@@ -81,6 +81,7 @@ struct AO3IgnoreListView: View {
 				Text(NSLocalizedString("Rules apply to new feed items only. Works already in your library stay, and removing a rule does not bring back items that were skipped while it was active.", comment: "AO3 ignore list: footer explaining rules are not retroactive"))
 			}
 		}
+		.surfacePaletteListBackground()
 		.navigationTitle(Text(NSLocalizedString("Ignored Works and Authors", comment: "AO3 settings: ignore list row title")))
 		.navigationBarTitleDisplayMode(.inline)
 		.onAppear {

@@ -52,6 +52,9 @@ task**, not this whole index cover-to-cover.
 - **A recurring Auto Layout / UIKit console warning** (before re-investigating one from scratch) → `console-warnings.md`
 - **`fastlane snapshot` screenshots, offline UI-test demo data, `-UITestSeedDemoData`, `appstore/screenshots`** → `ui-test-demo-data.md`
 - **Cutting a release: `./scripts/release-local.sh`, local testing `./test.sh`, tag creation, `source.json`, `scripts/update_source.py`** → `release-pipeline.md`
+- **EPUB 3.3 export (`EPUB3Generator`, `ShareEPUBActivity`, `SwiftSoup`/`ZIPFoundation` packaging)** → `epub-export.md`
+- **Project roadmap, proposal inventory, and active/unverified initiatives** → `roadmap.md`
+- **AltStore / IPA sideloading instructions for users** → `sideloading-guide.md`
 - **Whether iPad is supported, and how far** (supported at functional parity, not layout polish) → `module-layout.md` ("Platform scope")
 - **Minimum OS / iOS 16 support / trait change & empty state shims** → `module-layout.md` ("Minimum OS and compatibility shims"), `upstream-drift.md`
 
@@ -140,6 +143,7 @@ it's trusted by default. Specifically:
 | `ReadingStatsTracker`, `ReadingStatsView`, how completed works are counted | `reading-stats.md` |
 | Any new or renamed user-facing string, or a decision about which vocabulary (UI vs. code) a screen should use | `terminology.md` |
 | `BackupManager`, `BackupRestoreCoordinator`, `BackupIgnoreList`, `BackupIgnoreListStore`, `IgnoreList.json`, the backup zip's file layout, `scripts/nectar_backup_to_epub.py`, backup size optimization planning | `backup-restore.md`, `backup-size-optimization-plan.md` |
+| `EPUB3Generator`, `ShareEPUBActivity` | `epub-export.md` |
 | `GuideOverlayView`, `GuideContent`, `HelpRow.guide` | `guide.md` |
 | `HTMLMetadata`/favicon extraction | `metadata-extraction.md` |
 | `AnnotationsTable`, `Annotation`, `AnnotationsKit`, `annotations.js`, the `textWasSelected`/`annotationWasTapped` message-handler cases, `AnnotationCSVExporter`, the `annotations` table in `ArticleSQLiteExportTable` | `annotations.md` |
