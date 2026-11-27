@@ -30,7 +30,15 @@ import Images
 	}
 
 	public var forcesSearchRelevanceSort: Bool {
-		delegate is SearchFeedDelegate
+		delegate is SearchFeedDelegate || delegate is LibrarySearchFeedDelegate
+	}
+
+	var savedSearchID: UUID? {
+		(delegate as? LibrarySearchFeedDelegate)?.savedSearchID
+	}
+
+	var librarySearchState: LibrarySearchState? {
+		(delegate as? LibrarySearchFeedDelegate)?.state
 	}
 
 	private(set) var orderedSearchBookKeys = [String]()

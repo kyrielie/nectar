@@ -384,9 +384,9 @@ struct BackupSQLiteImportTableTests {
 		// Rebuild the older shape. Relies on SQLite ALTER TABLE DROP COLUMN (3.35+).
 		let raw = try #require(FMDatabase(path: backupPath))
 		try #require(raw.open())
-		raw.executeStatements("ALTER TABLE articles DROP COLUMN isRestricted;")
-		raw.executeStatements("ALTER TABLE articles DROP COLUMN language;")
-		raw.executeStatements("ALTER TABLE articles DROP COLUMN collections;")
+		try #require(raw.executeStatements("ALTER TABLE articles DROP COLUMN isRestricted;"), "\(raw.lastErrorMessage())")
+		try #require(raw.executeStatements("ALTER TABLE articles DROP COLUMN language;"), "\(raw.lastErrorMessage())")
+		try #require(raw.executeStatements("ALTER TABLE articles DROP COLUMN collections;"), "\(raw.lastErrorMessage())")
 		raw.close()
 
 		try localDB.importBackupSnapshot(backupDatabasePath: backupPath)

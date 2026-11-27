@@ -40,6 +40,7 @@ task**, not this whole index cover-to-cover.
 - **Theme mockups, review page, title check, mockup-to-bundle conversion history** → `theme-mockups.md`
 - **The theme gallery (`gallery/`), its build pipeline, or the install deep link** → `theme-gallery.md`
 - **Landing page (`landing/`), its `site.json` config and optional sections** → `landing-page.md`
+- **Full-text / faceted library search, saved searches, or normalized tags** → `database.md`
 - **Database schema / SQLite storage layer** → `database.md`
 - **Settings screen, any toggle, or "does setting X exist"** → `settings-screen.md` (main screen) **and** `ao3-authenticated-reading.md` (the separate AO3 account screen — easy to miss)
 - **Reading Time limits / bedtime lockout / enforcement overlay** → `reading-time.md`
@@ -136,7 +137,8 @@ it's trusted by default. Specifically:
 | Theme mockups (fixed page layout, sample text, review page, title check), mockup-to-bundle conversion, `buildscripts/theme-mockups/` (not in this checkout) | `theme-mockups.md` |
 | `gallery/build.py` (zip naming, bundle checks, `--check-release-identity`), `gallery/test_build.py`, `gallery/test_upstream_pins.py`, `gallery/index.template.html`, `BUNDLED`/`BUNDLED_ID_PREFIXES`, `.github/workflows/gallery.yml`, the `theme-gallery` and `upstream-compat` jobs in `.github/workflows/ci.yml`, `gallery/upstream-compatible.txt`, `gallery/upstream_compat.py`, `gallery/test_upstream_compat.py` | `theme-gallery.md` |
 | `landing/` (`build.py`, `template.html`, `site.json`), the optional-section rules, `gallery.yml` (publishes landing page and gallery) | `landing-page.md` |
-| `ArticlesDatabase` schema/tables not covered by a more specific doc above | `database.md` |
+| `ArticlesDatabase` schema/tables not covered by a more specific doc above, `ArticleTagIndexer`, `ArticlesTable+LibrarySearch`, `LibrarySearchState` | `database.md` |
+| `SavedSearchStore`, `SavedSearchesController`, `LibrarySearchFeedDelegate`, `LibrarySearchSheetView` | `database.md` (and `settings-screen.md` if defaults change) |
 | Any row/case in `SettingsViewController`'s `*Row` enums, `Settings.storyboard`, `AppDefaults`, or an `AppDefaults+<Feature>.swift` extension file | `settings-screen.md` |
 | `.swiftlint.yml`'s `file_length`/`type_body_length` thresholds, or adding a large new file/type to `iOS/` | `module-layout.md` |
 | `ReadingTimeTracker`, `ReadingTimeEnforcementOverlay`, `ReadingTimeSettingsView` | `reading-time.md` |

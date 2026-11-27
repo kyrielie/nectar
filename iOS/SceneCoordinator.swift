@@ -11,6 +11,7 @@ import os
 import UserNotifications
 import Account
 import Articles
+import ArticlesDatabase
 import RSCore
 import RSTree
 import SafariServices
@@ -405,6 +406,7 @@ struct SidebarItemNode: Hashable, Sendable {
 		NotificationCenter.default.addObserver(self, selector: #selector(themeDownloadDidFail(_:)), name: .didFailToImportThemeWithError, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(updateNavigationBarSubtitles(_:)), name: .progressInfoDidChange, object: CombinedRefreshProgress.shared)
 		NotificationCenter.default.addObserver(self, selector: #selector(updateNavigationBarSubtitles(_:)), name: .AccountLibraryReachabilityDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(savedSearchesDidChange(_:)), name: .SavedSearchesDidChange, object: nil)
 
 		NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
 			Task { @MainActor in
@@ -1333,6 +1335,48 @@ struct SidebarItemNode: Hashable, Sendable {
 		mainTimelineViewController?.focus()
 	}
 
+	@objc func savedSearchesDidChange(_ note: Notification) {
+		queueRebuildBackingStores()
+	}
+
+	func presentLibrarySearch(initialState: LibrarySearchState = LibrarySearchState(), editingSavedSearch: SavedSearch? = nil) {
+		guard let presenter = rootSplitViewController?.presentedViewController ?? rootSplitViewController else { return }
+		let view = LibrarySearchSheetView(
+			initialState: initialState,
+			editingSavedSearch: editingSavedSearch,
+			onSearch: { [weak self, weak presenter] state in
+				presenter?.dismiss(animated: true)
+				guard let self else { return }
+				self.currentFeedIndexPath = nil
+				self.mainFeedCollectionViewController.updateFeedSelection(animations: [])
+				self.activityManager.invalidateSelecting()
+				self.rootSplitViewController.show(.supplementary)
+				self.setTimelineFeed(SmartFeed(delegate: LibrarySearchFeedDelegate(state: state)), animated: true)
+			},
+			onSave: { [weak self, weak presenter] savedSearch in
+				SavedSearchStore.shared.save(savedSearch)
+				self?.markExpanded(SavedSearchesController.shared)
+				presenter?.dismiss(animated: true)
+				guard let self else { return }
+				self.rebuildBackingStores()
+				let savedItemID = SidebarItemIdentifier.smartFeed("\(LibrarySearchFeedDelegate.savedSearchPrefix)\(savedSearch.id.uuidString)")
+				if let node = self.nodeFor(sidebarItemID: savedItemID),
+				   let indexPath = self.indexPathFor(node) {
+					self.selectSidebarItem(indexPath: indexPath)
+				} else {
+					self.rootSplitViewController.show(.supplementary)
+					self.setTimelineFeed(SmartFeed(delegate: LibrarySearchFeedDelegate(savedSearch: savedSearch)), animated: true)
+				}
+			},
+			onCancel: { [weak presenter] in
+				presenter?.dismiss(animated: true)
+			}
+		)
+		let hostingController = UIHostingController(rootView: view)
+		hostingController.sheetPresentationController?.prefersGrabberVisible = true
+		presenter.present(hostingController, animated: true)
+	}
+
 	func searchArticles(_ searchString: String, _ searchScope: SearchScope) {
 
 		guard isSearching else {
@@ -2108,7 +2152,14 @@ private extension SceneCoordinator {
 
 		for i in 0..<treeController.rootNode.numberOfChildNodes {
 			let sectionNode = treeController.rootNode.childAtIndex(i)!
-			let sectionID = (sectionNode.representedObject as? Account)?.accountID ?? ""
+			let sectionID: String
+			if let account = sectionNode.representedObject as? Account {
+				sectionID = account.accountID
+			} else if sectionNode.representedObject is SavedSearchesController {
+				sectionID = SavedSearchesController.sectionID
+			} else {
+				sectionID = ""
+			}
 
 			snapshot.appendSections([sectionID])
 
@@ -2681,9 +2732,13 @@ private extension SceneCoordinator {
 		switch sidebarItemID {
 
 		case .smartFeed:
-			guard let smartFeed = SmartFeedsController.shared.find(by: sidebarItemID) else { return }
+			guard let smartFeed = SmartFeedsController.shared.find(by: sidebarItemID) ?? SavedSearchesController.shared.find(by: sidebarItemID) else { return }
 
-			markExpanded(SmartFeedsController.shared)
+			if (smartFeed as? SmartFeed)?.savedSearchID != nil {
+				markExpanded(SavedSearchesController.shared)
+			} else {
+				markExpanded(SmartFeedsController.shared)
+			}
 			rebuildBackingStores(initialLoad: true, completion: {
 				self.treeControllerDelegate.resetFilterExceptions()
 				if let indexPath = self.indexPathFor(smartFeed) {

@@ -464,6 +464,69 @@ import ActivityLog
 		return orderedMatches
 	}
 
+	public func fetchArticleSearchMatchesAsync(for state: LibrarySearchState) async -> [ArticleSearchMatch] {
+		precondition(Thread.isMainThread)
+		guard activeAccounts.count > 0 else {
+			return []
+		}
+		var allMatches = [ArticleSearchMatch]()
+		for account in activeAccounts {
+			let matches = await account.fetchArticleSearchMatchesAsync(for: state)
+			allMatches.append(contentsOf: matches)
+		}
+		return allMatches
+	}
+
+	public func fetchTagSuggestionsAsync(
+		category: ArticleTagCategory?,
+		prefix: String,
+		limit: Int = 25,
+		scopedFandoms: Set<String> = []
+	) async -> [TagSuggestion] {
+		precondition(Thread.isMainThread)
+		guard activeAccounts.count > 0 else {
+			return []
+		}
+		var countsByKey = [String: (name: String, category: ArticleTagCategory, count: Int)]()
+		for account in activeAccounts {
+			let suggestions = await account.fetchTagSuggestionsAsync(
+				category: category,
+				prefix: prefix,
+				limit: limit,
+				scopedFandoms: scopedFandoms
+			)
+			for suggestion in suggestions {
+				let key = "\(suggestion.category.rawValue)\u{0000}\(suggestion.name)"
+				if let existing = countsByKey[key] {
+					countsByKey[key] = (existing.name, existing.category, existing.count + suggestion.articleCount)
+				} else {
+					countsByKey[key] = (suggestion.name, suggestion.category, suggestion.articleCount)
+				}
+			}
+		}
+		return countsByKey.values
+			.map { TagSuggestion(name: $0.name, category: $0.category, articleCount: $0.count) }
+			.sorted {
+				if $0.articleCount != $1.articleCount {
+					return $0.articleCount > $1.articleCount
+				}
+				return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+			}
+			.prefix(limit)
+			.map { $0 }
+	}
+
+	public func fetchAvailableLanguagesAsync() async -> [String] {
+		precondition(Thread.isMainThread)
+		var languages = Set<String>()
+		for account in activeAccounts {
+			for language in await account.fetchAvailableLanguagesAsync() {
+				languages.insert(language)
+			}
+		}
+		return languages.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+	}
+
 	/// Fetch a single article (synchronously) by accountID and articleID.
 	public func fetchArticle(accountID: String, articleID: String) -> Article? {
 		precondition(Thread.isMainThread)

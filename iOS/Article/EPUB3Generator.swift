@@ -398,13 +398,61 @@ public final class EPUB3Generator {
 	private static func normalizeLanguage(_ lang: String?) -> String {
 		guard let lang, !lang.isEmpty else { return "en" }
 		let lower = lang.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-		if lower.contains("english") { return "en" }
-		if lower.contains("spanish") || lower.contains("español") { return "es" }
-		if lower.contains("french") || lower.contains("français") { return "fr" }
-		if lower.contains("german") || lower.contains("deutsch") { return "de" }
-		if lower.contains("chinese") { return "zh" }
-		if lower.contains("japanese") { return "ja" }
-		return lower.count <= 8 ? lower : "en"
+		guard !lower.isEmpty else { return "en" }
+
+		// AO3 short-code overrides where AO3's legacy code differs from BCP 47
+		// (matches Ambrosia's AO3LanguageMap).
+		switch lower {
+		case "div": return "dv"
+		case "sla": return "cu"
+		case "sun": return "su"
+		case "tir": return "ti"
+		case "qnv": return "art-x-navi"
+		default: break
+		}
+
+		// Map AO3 display names (otwarchive Language.name) to BCP 47 tags.
+		let displayNamePrefixes: [(prefix: String, tag: String)] = [
+			("english", "en"),
+			("spanish", "es"), ("español", "es"),
+			("french", "fr"), ("français", "fr"),
+			("german", "de"), ("deutsch", "de"),
+			("italian", "it"), ("italiano", "it"),
+			("portuguese", "pt"), ("português", "pt"),
+			("russian", "ru"), ("русский", "ru"),
+			("japanese", "ja"), ("日本語", "ja"),
+			("chinese", "zh"), ("中文", "zh"),
+			("korean", "ko"), ("한국어", "ko"),
+			("arabic", "ar"), ("العربية", "ar"),
+			("czech", "cs"), ("čeština", "cs"),
+			("dutch", "nl"), ("nederlands", "nl"),
+			("polish", "pl"), ("polski", "pl"),
+			("finnish", "fi"), ("suomi", "fi"),
+			("swedish", "sv"), ("svenska", "sv"),
+			("danish", "da"), ("dansk", "da"),
+			("norwegian", "nb"), ("norsk", "nb"),
+			("turkish", "tr"), ("türkçe", "tr"),
+			("vietnamese", "vi"), ("tiếng việt", "vi"),
+			("indonesian", "id"), ("bahasa indonesia", "id"),
+			("malay", "ms"), ("bahasa melayu", "ms"),
+			("ukrainian", "uk"), ("українська", "uk"),
+			("hebrew", "he"), ("עברית", "he"),
+			("greek", "el"), ("ελληνικά", "el"),
+			("hungarian", "hu"), ("magyar", "hu"),
+			("romanian", "ro"), ("română", "ro"),
+			("catalan", "ca"), ("català", "ca"),
+			("thai", "th"), ("ไทย", "th"),
+			("hindi", "hi"), ("हिन्दी", "hi")
+		]
+		for entry in displayNamePrefixes where lower.hasPrefix(entry.prefix) {
+			return entry.tag
+		}
+
+		// Accept already-normalized 2-3 letter ISO 639 codes or BCP 47 subtags (e.g. "en", "en-us").
+		if lower.count <= 3 || (lower.contains("-") && lower.count <= 8) {
+			return lower
+		}
+		return "en"
 	}
 
 	// MARK: - Partition Builders

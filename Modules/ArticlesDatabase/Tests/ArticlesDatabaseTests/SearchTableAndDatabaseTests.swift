@@ -178,32 +178,41 @@ struct SearchTableAndDatabaseTests {
 	@Test("aborts search cleanly when SQLiteCancellationToken is pre-cancelled")
 	func abortsCancelledSearchCleanly() async {
 		let db = TestFixtures.makeDatabase()
-		let item = TestFixtures.makeParsedItem(
-			uniqueID: "cancel-1",
-			feedURL: Self.feedURL,
-			title: "Cancellable Work",
-			contentHTML: "<p>Searchable text for cancellation check.</p>"
-		)
-		_ = await db.updateAsync(parsedItems: [item], feedID: Self.feedID, deleteOlder: false)
+		// Insert enough rows that SQLite executes >500 VM instructions (the
+		// sqlite3_progress_handler check interval in FMDatabase+Extras.swift)
+		// before completing the FTS5 scan.
+		let items = Set((0..<250).map { index in
+			TestFixtures.makeParsedItem(
+				uniqueID: "cancel-\(index)",
+				feedURL: Self.feedURL,
+				title: "Cancellable Work \(index)",
+				contentHTML: "<p>Searchable text for cancellation check \(index).</p>"
+			)
+		})
+		_ = await db.updateAsync(parsedItems: items, feedID: Self.feedID, deleteOlder: false)
 
 		let token = SQLiteCancellationToken()
 		token.cancel()
 		#expect(token.isCancelled)
 
-		let count = db.queue.runInDatabaseSyncResult { database in
+		let (count, lastErrorCode) = db.queue.runInDatabaseSyncResult { database in
 			database.withProgressCancellation(token) {
 				guard let rs = database.executeQuery("SELECT rowid FROM search WHERE search MATCH ?;", withArgumentsIn: ["\"Cancellable\"*"]) else {
-					return 0
+					return (0, database.lastErrorCode())
 				}
 				var rows = 0
 				while rs.next() {
 					rows += 1
 				}
+				let err = database.lastErrorCode()
 				rs.close()
-				return rows
+				return (rows, err)
 			}
 		}
-		#expect(count == 0)
+		// SQLite's progress handler fires every 500 VM instructions, so a pre-cancelled
+		// scan aborts mid-iteration with SQLITE_INTERRUPT (9) before reaching all 250 rows.
+		#expect(count < 250)
+		#expect(lastErrorCode == 9)
 	}
 
 	@Test("preserves bm25 relevance ordering and filters feedIDs/articleIDs in SQL")

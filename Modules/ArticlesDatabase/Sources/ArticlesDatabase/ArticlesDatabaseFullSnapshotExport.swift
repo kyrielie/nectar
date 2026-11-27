@@ -82,7 +82,11 @@ enum ArticlesDatabaseFullSnapshotExportTable {
 		defer { snapshot.close() }
 
 		let statements = """
+		DROP TRIGGER IF EXISTS articles_after_delete_trigger_delete_search_text;
+		DROP TRIGGER IF EXISTS articles_after_delete_trigger_delete_article_tags;
 		DROP TABLE IF EXISTS search;
+		DROP TABLE IF EXISTS article_tags;
+		DROP TABLE IF EXISTS tags;
 		UPDATE articles SET searchRowID = NULL;
 		VACUUM;
 		"""

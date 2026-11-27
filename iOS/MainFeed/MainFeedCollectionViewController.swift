@@ -18,6 +18,7 @@ import HTMLMetadata
 import Account
 import ActivityLog
 import Articles
+import ArticlesDatabase
 import Images
 
 private let reuseIdentifier = "FeedCell"
@@ -93,6 +94,7 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		// pushed screen's back-button label from this screen's navigationItem.
 		navigationItem.backButtonDisplayMode = .minimal
 		registerForNotifications()
+		configureSearchButton()
 		configureCurrentActivityButton()
 		configureCollectionView()
 		configureDiffableDataSource()
@@ -100,6 +102,22 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 		collectionView.dropDelegate = self
 		becomeFirstResponder()
     }
+
+	private func configureSearchButton() {
+		let searchButton = UIBarButtonItem(
+			image: UIImage(systemName: "magnifyingglass"),
+			style: .plain,
+			target: self,
+			action: #selector(openLibrarySearch(_:))
+		)
+		searchButton.accessibilityLabel = NSLocalizedString("Search Library", comment: "Search Library")
+		searchButton.accessibilityIdentifier = "librarySearchButton"
+		navigationItem.leftBarButtonItem = searchButton
+	}
+
+	@objc func openLibrarySearch(_ sender: Any?) {
+		coordinator.presentLibrarySearch()
+	}
 
 	func configureCurrentActivityButton() {
 		// Stable handle on the gear button for NectarUITests (the sidebar has no
@@ -419,6 +437,15 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 				headerView.headerTitle.text = SmartFeedsController.shared.nameForDisplay
 				headerView.unreadCount = 0
 				headerView.setDisclosure(isExpanded: self.coordinator.isExpanded(SmartFeedsController.shared), animated: false)
+				return headerView
+			}
+
+			// Saved searches section
+			if sectionID == SavedSearchesController.sectionID {
+				headerView.sectionHeaderType = .savedSearches
+				headerView.headerTitle.text = SavedSearchesController.shared.nameForDisplay
+				headerView.unreadCount = 0
+				headerView.setDisclosure(isExpanded: self.coordinator.isExpanded(SavedSearchesController.shared), animated: false)
 				return headerView
 			}
 
@@ -1132,6 +1159,11 @@ final class MainFeedCollectionViewController: UICollectionViewController, Undoab
 				return
 			}
 			containerID = id
+		case .savedSearches:
+			guard let id = SavedSearchesController.shared.containerID else {
+				return
+			}
+			containerID = id
 		case .account(let accountID):
 			guard let account = AccountManager.shared.existingAccount(accountID: accountID),
 				  let id = account.containerID else {
@@ -1295,6 +1327,23 @@ extension MainFeedCollectionViewController {
 	}
 
 	func makePseudoFeedContextMenu(indexPath: IndexPath) -> UIContextMenuConfiguration? {
+		if let smartFeed = dataSource.itemIdentifier(for: indexPath)?.node.representedObject as? SmartFeed,
+		   let savedSearchID = smartFeed.savedSearchID,
+		   let savedSearch = SavedSearchStore.shared.savedSearch(id: savedSearchID) {
+			return UIContextMenuConfiguration(identifier: MainFeedRowIdentifier(indexPath: indexPath), previewProvider: nil, actionProvider: { [weak self] _ in
+				let editAction = UIAction(title: NSLocalizedString("Edit Filters…", comment: "Edit Saved Search"), image: UIImage(systemName: "slider.horizontal.3")) { _ in
+					self?.coordinator.presentLibrarySearch(editingSavedSearch: savedSearch)
+				}
+				let renameAction = UIAction(title: NSLocalizedString("Rename…", comment: "Rename Saved Search"), image: UIImage(systemName: "pencil")) { _ in
+					self?.presentRenameSavedSearchAlert(savedSearch)
+				}
+				let deleteAction = UIAction(title: NSLocalizedString("Delete", comment: "Delete Saved Search"), image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
+					SavedSearchStore.shared.delete(id: savedSearch.id)
+				}
+				return UIMenu(title: "", children: [editAction, renameAction, deleteAction])
+			})
+		}
+
 		guard let markAllAction = self.markAllAsReadAction(indexPath: indexPath) else {
 			return nil
 		}
@@ -1302,6 +1351,23 @@ extension MainFeedCollectionViewController {
 		return UIContextMenuConfiguration(identifier: MainFeedRowIdentifier(indexPath: indexPath), previewProvider: nil, actionProvider: { _ in
 			return UIMenu(title: "", children: [markAllAction])
 		})
+	}
+
+	private func presentRenameSavedSearchAlert(_ savedSearch: SavedSearch) {
+		let alert = UIAlertController(
+			title: NSLocalizedString("Rename Saved Search", comment: "Rename Saved Search"),
+			message: nil,
+			preferredStyle: .alert
+		)
+		alert.addTextField { textField in
+			textField.text = savedSearch.name
+		}
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Rename", comment: "Rename"), style: .default) { _ in
+			let newName = alert.textFields?.first?.text ?? ""
+			SavedSearchStore.shared.rename(id: savedSearch.id, to: newName)
+		})
+		alert.addAction(UIAlertAction(title: NSLocalizedString("Cancel", comment: "Cancel"), style: .cancel))
+		present(alert, animated: true)
 	}
 
 	func homePageAction(indexPath: IndexPath) -> UIAction? {

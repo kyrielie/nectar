@@ -1839,7 +1839,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 // MARK: - Private
 
-nonisolated private extension ArticlesTable {
+nonisolated extension ArticlesTable {
 
 	// MARK: - Fetching
 
@@ -2041,7 +2041,7 @@ nonisolated private extension ArticlesTable {
 		}
 	}
 
-	private static func preferredSnippet(bodySnippet: String?, titleSnippet: String?) -> String? {
+	static func preferredSnippet(bodySnippet: String?, titleSnippet: String?) -> String? {
 		if let body = normalizedSnippet(bodySnippet), body.contains(ArticleSearchMatch.matchStartDelimiter) {
 			return body
 		}
@@ -2389,14 +2389,15 @@ nonisolated private extension ArticlesTable {
 		// whether every row that should have landed on disk actually did.
 		var failedArticleIDs = [String]()
 		var totalChanges = 0
-		for dictionary in articles.databaseDictionaries() {
+		for article in articles {
+			let dictionary = article.databaseDictionary()
 			let didSucceed = database.rs_insertRow(with: dictionary, insertType: .orReplace, tableName: self.name)
 			if didSucceed {
 				totalChanges += Int(database.changes())
+				ArticleTagIndexer.syncTags(for: article, in: database)
 			} else {
-				let articleID = dictionary[DatabaseKey.articleID] as? String ?? "?"
-				failedArticleIDs.append(articleID)
-				Self.logger.warning("ArticlesTable: saveNewArticles insert failed for articleID \(articleID, privacy: .public) -- \(database.lastErrorMessage(), privacy: .public)")
+				failedArticleIDs.append(article.articleID)
+				Self.logger.warning("ArticlesTable: saveNewArticles insert failed for articleID \(article.articleID, privacy: .public) -- \(database.lastErrorMessage(), privacy: .public)")
 			}
 		}
 		Self.logger.info("ArticlesTable: saveNewArticles attempted=\(articles.count, privacy: .public) totalChanges=\(totalChanges, privacy: .public) failed=\(failedArticleIDs.count, privacy: .public)")
@@ -2448,6 +2449,15 @@ nonisolated private extension ArticlesTable {
 		updateRowsWithDictionary(changesDictionary, whereKey: DatabaseKey.articleID, matches: updatedArticle.articleID, database: database)
 		if database.hadError() {
 			Self.logger.error("ArticlesTable: saveUpdatedArticle failed for articleID \(updatedArticle.articleID, privacy: .public) -- \(database.lastErrorMessage(), privacy: .public)")
+		} else {
+			let tagKeys: Set<String> = [
+				DatabaseKey.fandoms, DatabaseKey.relationships, DatabaseKey.characters,
+				DatabaseKey.additionalTags, DatabaseKey.ratings, DatabaseKey.warnings,
+				DatabaseKey.categories, DatabaseKey.authors
+			]
+			if !Set(changesDictionary.keys).isDisjoint(with: tagKeys) {
+				ArticleTagIndexer.syncTags(for: updatedArticle, in: database)
+			}
 		}
 
 		// The cached Article for this articleID holds immutable (`let`) values —

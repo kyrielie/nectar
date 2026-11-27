@@ -34,13 +34,13 @@ struct AO3ConfirmedMissingMigrationTests {
 		return database.userVersion()
 	}
 
-	@Test("a fresh database initializes at version 2 with complete schema")
-	func initializesAtVersion2() async throws {
+	@Test("a fresh database initializes at version 3 with complete schema")
+	func initializesAtVersion3() async throws {
 		let path = makeTemporaryPath()
 		defer { try? FileManager.default.removeItem(atPath: path) }
 
 		let db = open(path)
-		#expect(try readUserVersion(path: path) == 2)
+		#expect(try readUserVersion(path: path) == 3)
 
 		let articleID = Article.calculatedArticleID(feedID: Self.feedID, uniqueID: "u1")
 		let item = TestFixtures.makeParsedItem(
@@ -58,7 +58,7 @@ struct AO3ConfirmedMissingMigrationTests {
 		#expect(stored.language == "English")
 	}
 
-	@Test("a database reopens cleanly and preserves flags at version 2")
+	@Test("a database reopens cleanly and preserves flags at version 3")
 	func reopensPreservingData() async throws {
 		let path = makeTemporaryPath()
 		defer { try? FileManager.default.removeItem(atPath: path) }
@@ -76,11 +76,11 @@ struct AO3ConfirmedMissingMigrationTests {
 		let reopened = open(path)
 		let article = try #require(await reopened.fetchArticlesAsync(articleIDs: [articleID]).first)
 		#expect(article.ao3ConfirmedMissingAt != nil)
-		#expect(try readUserVersion(path: path) == 2)
+		#expect(try readUserVersion(path: path) == 3)
 	}
 
-	@Test("migrating a v1 database to v2 upgrades search table to FTS5")
-	func migratesV1ToV2() async throws {
+	@Test("migrating a v1 database to v3 upgrades search table to FTS5")
+	func migratesV1ToV3() async throws {
 		let path = makeTemporaryPath()
 		defer { try? FileManager.default.removeItem(atPath: path) }
 
@@ -96,9 +96,9 @@ struct AO3ConfirmedMissingMigrationTests {
 			database.close()
 		}
 
-		// Open with ArticlesDatabase (runs v1 -> v2 migration):
+		// Open with ArticlesDatabase (runs v1 -> v3 migration):
 		_ = open(path)
-		#expect(try readUserVersion(path: path) == 2)
+		#expect(try readUserVersion(path: path) == 3)
 
 		// Verify search table is now FTS5:
 		let database = try #require(FMDatabase(path: path))

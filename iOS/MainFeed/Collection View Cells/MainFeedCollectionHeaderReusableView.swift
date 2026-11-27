@@ -15,6 +15,7 @@ import Account
 
 enum SectionHeaderType {
 	case smartFeeds
+	case savedSearches
 	case account(String) // accountID
 }
 

@@ -1019,6 +1019,29 @@ public enum FetchType {
 		}
 	}
 
+	public func fetchArticleSearchMatchesAsync(for state: LibrarySearchState) async -> [ArticleSearchMatch] {
+		await database.fetchArticleSearchMatchesAsync(for: state, feedIDs: flattenedFeedsIDs)
+	}
+
+	public func fetchTagSuggestionsAsync(
+		category: ArticleTagCategory?,
+		prefix: String,
+		limit: Int = 25,
+		scopedFandoms: Set<String> = []
+	) async -> [TagSuggestion] {
+		await database.fetchTagSuggestionsAsync(
+			category: category,
+			prefix: prefix,
+			limit: limit,
+			feedIDs: flattenedFeedsIDs,
+			scopedFandoms: scopedFandoms
+		)
+	}
+
+	public func fetchAvailableLanguagesAsync() async -> [String] {
+		await database.fetchAvailableLanguagesAsync(feedIDs: flattenedFeedsIDs)
+	}
+
 	/// Account-wide, no feed/folder scoping -- deliberately not a
 	/// `FetchType` case: every existing case is a feed/folder/status
 	/// view a person can actually navigate to, while this is a narrower,

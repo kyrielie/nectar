@@ -127,12 +127,16 @@ Indexes: `articles(feedID, datePublished, articleID)`,
 
 `ArticlesDatabase.init` runs `tableCreationStatements` via
 `runCreateStatements`. On a fresh install (`user_version == 0`), it stamps
-`PRAGMA user_version = 2` and returns immediately. Version **1** was the
+`PRAGMA user_version = 3` and returns immediately. Version **1** was the
 original public baseline; version **2** upgraded `contentHTML` and
 `pendingUpdateContentHTML` to native SQLite `BLOB` (saving ~33% Base64 storage
-inflation) and upgraded `search` from FTS4 to FTS5. For existing version 1 databases,
+inflation) and upgraded `search` from FTS4 to FTS5. Version **3** added
+normalized `tags` and `article_tags` tables (`ArticleTagIndexer`) for faceted
+local library search and tag autocomplete. For existing version 1 databases,
 migration drops the legacy FTS4 `search` table, recreates it using FTS5, and sets
-`searchRowID = NULL` on articles so `indexUnindexedArticles()` reindexes them cleanly.
+`searchRowID = NULL` on articles so `indexUnindexedArticles()` reindexes them cleanly;
+for existing version 2 databases, migration backfills `tags` and `article_tags`
+inside a single transaction via `ArticleTagIndexer.backfillAllArticles(in:)`.
 
 ### Columns Inventory
 
@@ -292,6 +296,19 @@ articles via `SQLiteIDList` (`json_each(?)`). Async search paths attach a
 `fetchArticlesMatching` self-heals on `SQLITE_CORRUPT`/`SQLITE_NOTADB` by
 recreating `search`, clearing `searchRowID`, and kicking off
 `indexUnindexedArticles()`.
+
+### Normalized tags & faceted library search
+
+`ArticleTagIndexer.swift` maintains normalized `tags(tagID, name, category)` and
+`article_tags(articleID, tagID)` tables (plus an `AFTER DELETE ON articles`
+trigger) synced on `saveNewArticles` and tag-touching `saveUpdatedArticle`
+updates. `ArticlesTable+LibrarySearch.swift` compiles `LibrarySearchState`
+queries (combining optional FTS5 `search` matches with tag include/exclude
+clauses, completion/crossover/language/word-count filters, and custom sort
+orders) and powers fandom-scoped tag prefix autocomplete (`fetchTagSuggestions`)
+and language discovery (`fetchAvailableLanguages`). Note that SQLite's
+`lower()` folds ASCII only, so language filtering relies on exact display names
+sourced from `articles.language` (`ParsedItem.ao3Language`).
 
 ### Bulk export/import
 

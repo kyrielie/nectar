@@ -33,6 +33,9 @@ import Account
 		if node.representedObject is SmartFeedsController {
 			return childNodesForSmartFeeds(node)
 		}
+		if node.representedObject is SavedSearchesController {
+			return childNodesForSavedSearches(node)
+		}
 
 		return nil
 	}
@@ -48,6 +51,13 @@ private extension SidebarTreeControllerDelegate {
 		smartFeedsNode.isGroupItem = true
 		topLevelNodes.append(smartFeedsNode)
 
+		if !SavedSearchStore.shared.savedSearches.isEmpty {
+			let savedSearchesNode = rootNode.existingOrNewChildNode(with: SavedSearchesController.shared)
+			savedSearchesNode.canHaveChildNodes = true
+			savedSearchesNode.isGroupItem = true
+			topLevelNodes.append(savedSearchesNode)
+		}
+
 		topLevelNodes.append(contentsOf: sortedAccountNodes(rootNode))
 
 		return topLevelNodes
@@ -57,6 +67,12 @@ private extension SidebarTreeControllerDelegate {
 		return SmartFeedsController.shared.smartFeeds.compactMap { (feed) -> Node? in
 			// All Smart Feeds should remain visible despite the Hide Read Feeds setting
 			return parentNode.existingOrNewChildNode(with: feed as AnyObject)
+		}
+	}
+
+	func childNodesForSavedSearches(_ parentNode: Node) -> [Node] {
+		SavedSearchesController.shared.savedSearchFeeds.map {
+			parentNode.existingOrNewChildNode(with: $0 as AnyObject)
 		}
 	}
 

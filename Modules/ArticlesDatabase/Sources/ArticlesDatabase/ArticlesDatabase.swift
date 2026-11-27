@@ -123,7 +123,8 @@ public struct ArticleAttentionInfo: Sendable {
 	/// Schema version tracking on this database's own "main" schema.
 	/// Version 1 is the pristine public v1.0 baseline.
 	/// Version 2 upgrades search from FTS4 to FTS5 and stores contentHTML as BLOB.
-	nonisolated private static let currentSchemaVersion: UInt32 = 2
+	/// Version 3 adds normalized `tags` and `article_tags` tables and backfills them.
+	nonisolated private static let currentSchemaVersion: UInt32 = 3
 
 	public init(databaseFilePath: String, accountID: String, retentionStyle: RetentionStyle) {
 		Self.logger.debug("Articles Database init \(accountID, privacy: .public)")
@@ -157,6 +158,11 @@ public struct ArticleAttentionInfo: Sendable {
 				database.executeStatements("DROP TABLE IF EXISTS search;")
 				database.executeStatements(Self.searchTableCreationStatement)
 				database.executeStatements("UPDATE articles SET searchRowID = NULL;")
+			}
+
+			if existingVersion < 3 && Self.isTableEmpty("tags", in: database) && !Self.isTableEmpty("articles", in: database) {
+				Self.logger.debug("ArticlesDatabase: backfilling normalized tags")
+				ArticleTagIndexer.backfillAllArticles(in: database)
 			}
 
 			database.setUserVersion(Self.currentSchemaVersion)
@@ -743,6 +749,47 @@ public struct ArticleAttentionInfo: Sendable {
 		}
 	}
 
+	public func fetchArticleSearchMatchesAsync(for state: LibrarySearchState, feedIDs: Set<String>) async -> [ArticleSearchMatch] {
+		let token = SQLiteCancellationToken()
+		return await withTaskCancellationHandler {
+			await withCheckedContinuation { continuation in
+				articlesTable.fetchArticleSearchMatchesAsync(for: state, feedIDs: feedIDs, cancellationToken: token) { matches in
+					continuation.resume(returning: matches)
+				}
+			}
+		} onCancel: {
+			token.cancel()
+		}
+	}
+
+	public func fetchTagSuggestionsAsync(
+		category: ArticleTagCategory?,
+		prefix: String,
+		limit: Int = 25,
+		feedIDs: Set<String>,
+		scopedFandoms: Set<String> = []
+	) async -> [TagSuggestion] {
+		await withCheckedContinuation { continuation in
+			articlesTable.fetchTagSuggestionsAsync(
+				category: category,
+				prefix: prefix,
+				limit: limit,
+				feedIDs: feedIDs,
+				scopedFandoms: scopedFandoms
+			) { suggestions in
+				continuation.resume(returning: suggestions)
+			}
+		}
+	}
+
+	public func fetchAvailableLanguagesAsync(feedIDs: Set<String>) async -> [String] {
+		await withCheckedContinuation { continuation in
+			articlesTable.fetchAvailableLanguagesAsync(feedIDs: feedIDs) { languages in
+				continuation.resume(returning: languages)
+			}
+		}
+	}
+
 	// MARK: - Unread Counts
 
 	/// Fetch all non-zero unread counts.
@@ -1126,12 +1173,24 @@ private extension ArticlesDatabase {
 			("replacementText", "TEXT")
 		], in: "annotations", database: database)
 
-		// Ensure indexes on columns that may have just been added above.
+		// Ensure indexes and normalized tag tables exist.
 		database.executeStatements("""
 			CREATE INDEX if not EXISTS articles_bookKey_index on articles(bookKey);
 			CREATE INDEX if not EXISTS articles_searchRowID on articles(searchRowID);
 			CREATE INDEX if not EXISTS annotations_bookKey_index on annotations(bookKey);
 			""")
+		database.executeStatements(ArticleTagIndexer.tableCreationStatements)
+		if isTableEmpty("tags", in: database) && !isTableEmpty("articles", in: database) {
+			ArticleTagIndexer.backfillAllArticles(in: database)
+		}
+	}
+
+	nonisolated static func isTableEmpty(_ table: String, in database: FMDatabase) -> Bool {
+		guard let resultSet = database.executeQuery("SELECT 1 FROM \(table) LIMIT 1;", withArgumentsIn: []) else {
+			return true
+		}
+		defer { resultSet.close() }
+		return !resultSet.next()
 	}
 
 	nonisolated static func ensureColumns(_ columns: [(name: String, definition: String)], in table: String, database: FMDatabase) {

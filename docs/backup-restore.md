@@ -59,10 +59,12 @@ chosen.
    `account.exportFullSnapshot(toPath:)` (`ArticlesDatabaseFullSnapshotExport`'s
    `VACUUM INTO`, see `database.md`) — atomic, consistent, and the only
    export path that includes `bookState`. After `VACUUM INTO`,
-   `stripSearchIndexFromSnapshot(atPath:)` drops the FTS5 `search` table, clears
-   `articles.searchRowID`, and runs `VACUUM` on the exported copy to cut archive
-   size; on restore/reopen, `ArticlesDatabase` recreates `search` and
-   `SearchTable` re-indexes articles automatically (see
+   `stripSearchIndexFromSnapshot(atPath:)` drops the FTS5 `search` table and
+   the normalized `article_tags`/`tags` tables, clears `articles.searchRowID`,
+   and runs `VACUUM` on the exported copy to cut archive size; on
+   restore/reopen, `ArticlesDatabase` recreates `search` and
+   `tags`/`article_tags`, `SearchTable` re-indexes articles automatically, and
+   `ArticleTagIndexer` backfills normalized tags (see
    `backup-size-optimization-plan.md`).
 2. Copy the custom-installed `Themes` folder
    (`ArticleThemesManager.shared.folderPath`) into `Themes/` —

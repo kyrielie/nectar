@@ -7,6 +7,9 @@
     " → " : {
 
     },
+    "–" : {
+
+    },
     "“%@” has separate light and dark mode colors and follows your system appearance setting." : {
       "comment" : "Theme appearance footer, light+dark theme"
     },
@@ -199,6 +202,9 @@
     "Always" : {
       "comment" : "Article scrollbar: always"
     },
+    "Any" : {
+
+    },
     "AO3" : {
       "comment" : "AO3 in-app browser fallback title"
     },
@@ -240,6 +246,9 @@
     },
     "Apply Automatically on Open" : {
       "comment" : "Text replacement settings: master toggle label"
+    },
+    "Apply Filters" : {
+
     },
     "Archive of Our Own" : {
       "comment" : "AO3 section header"
@@ -299,6 +308,9 @@
       "comment" : "Toolbar bar picker\nToolbar placement: inline on bar"
     },
     "Bedtime" : {
+
+    },
+    "Best Match" : {
 
     },
     "Blend" : {
@@ -410,8 +422,14 @@
     "Complete" : {
       "comment" : "Completion status"
     },
+    "Complete Only" : {
+
+    },
     "Completed" : {
       "comment" : "Completed"
+    },
+    "Completion" : {
+
     },
     "Confirm daily limit" : {
 
@@ -460,6 +478,12 @@
     },
     "Couldn't relocate this highlight" : {
       "comment" : "Annotation row: orphaned highlight caption"
+    },
+    "Crossovers" : {
+
+    },
+    "Crossovers Only" : {
+
     },
     "CSV" : {
       "comment" : "Export format"
@@ -527,6 +551,12 @@
     "Date Created" : {
       "comment" : "Annotations list: sort order option, most recent first"
     },
+    "Date Published" : {
+
+    },
+    "Date Updated" : {
+
+    },
     "Days" : {
 
     },
@@ -540,7 +570,7 @@
       "comment" : "Toolbar style picker footer"
     },
     "Delete" : {
-      "comment" : "Delete button"
+      "comment" : "Delete Saved Search\nDelete button"
     },
     "Delete all reading stats?" : {
 
@@ -614,8 +644,17 @@
     "Each color has a separate light and dark mode value." : {
       "comment" : "Colors section footer explaining light/dark pairing"
     },
+    "Edit Filters…" : {
+      "comment" : "Edit Saved Search"
+    },
     "Edit History" : {
       "comment" : "Text replacement settings: edit history row label\nText replacement settings: edit history section header"
+    },
+    "Edit Saved Search" : {
+
+    },
+    "Edit Search Filters" : {
+      "comment" : "Edit Search Filters"
     },
     "Edit text" : {
       "comment" : "Annotation editor: edit-text field placeholder"
@@ -679,6 +718,9 @@
     },
     "Every Hour" : {
       "comment" : "Every Hour"
+    },
+    "Exclude" : {
+
     },
     "Expand" : {
       "comment" : "Expand"
@@ -757,11 +799,17 @@
     "Fewest Words First" : {
       "comment" : "Ascending sort direction — word count"
     },
+    "Filter %@" : {
+
+    },
     "Filter Read Shelves" : {
       "comment" : "Filter Read Feeds"
     },
     "Filter Read Works" : {
       "comment" : "Filter Read Articles"
+    },
+    "Filtered Library" : {
+      "comment" : "Filtered library search title"
     },
     "Find" : {
       "comment" : "Text replacement rule: input field placeholder"
@@ -789,6 +837,9 @@
     },
     "Folders" : {
       "comment" : "Folders"
+    },
+    "From" : {
+
     },
     "from cache" : {
       "comment" : "Activity log — appended when a download was served from cache instead of the network"
@@ -937,6 +988,9 @@
     "In Overflow Menu" : {
       "comment" : "Toolbars overflow section header"
     },
+    "Include" : {
+
+    },
     "Install Theme" : {
       "comment" : "Install Theme"
     },
@@ -983,6 +1037,9 @@
     },
     "Kudos on AO3" : {
       "comment" : "AO3 settings: kudos section header"
+    },
+    "Language" : {
+
     },
     "Last 7 days" : {
 
@@ -1236,6 +1293,9 @@
     },
     "No ignored works or authors." : {
       "comment" : "AO3 ignore list: empty state"
+    },
+    "No matching %@" : {
+
     },
     "No more results" : {
       "comment" : "AO3 load more: no more results"
@@ -1510,10 +1570,16 @@
       "comment" : "Accessibility announcement"
     },
     "Rename" : {
-      "comment" : "Command"
+      "comment" : "Command\nRename"
     },
     "Rename “%@”" : {
       "comment" : "Rename feed"
+    },
+    "Rename Saved Search" : {
+      "comment" : "Rename Saved Search"
+    },
+    "Rename…" : {
+      "comment" : "Rename Saved Search"
     },
     "Replace With" : {
       "comment" : "Text replacement rule: output field placeholder"
@@ -1526,6 +1592,9 @@
     },
     "Reset" : {
       "comment" : "Reset button\nToolbars screen: reset active bar to defaults"
+    },
+    "Reset Filters" : {
+
     },
     "Reset Theme Overrides?" : {
       "comment" : "Reset Theme Overrides"
@@ -1581,6 +1650,18 @@
     "Save" : {
       "comment" : "Save button"
     },
+    "Save Search" : {
+
+    },
+    "Save Search…" : {
+
+    },
+    "Saved searches" : {
+      "comment" : "Saved Searches shelf section title"
+    },
+    "Saved searches appear in the Saved Searches shelf on the main menu." : {
+
+    },
     "Scope" : {
       "comment" : "Annotations list: tab picker accessibility label"
     },
@@ -1602,8 +1683,14 @@
     "Search Highlights" : {
       "comment" : "Annotations list: search field prompt"
     },
+    "Search Library" : {
+      "comment" : "Search Library"
+    },
     "Search Settings" : {
       "comment" : "Search Settings prompt"
+    },
+    "Search Text" : {
+
     },
     "Search Themes" : {
       "comment" : "Search Themes prompt"
@@ -1628,6 +1715,9 @@
     },
     "Select text in a work to highlight it." : {
       "comment" : "Annotations list empty state message"
+    },
+    "Selected" : {
+
     },
     "Selected - Filter Read Shelves" : {
       "comment" : "Selected - Filter Read Feeds"
@@ -1716,6 +1806,9 @@
     "Signed In" : {
       "comment" : "AO3 signed-in status\nAO3 status: signed in"
     },
+    "Single Fandom" : {
+
+    },
     "Single Palette" : {
       "comment" : "Single palette theme badge"
     },
@@ -1761,11 +1854,20 @@
     "Tag Display" : {
       "comment" : "Timeline layout: tag display\nTimeline layout: tag display section header"
     },
+    "Tags & Authors" : {
+
+    },
     "Take a Break" : {
 
     },
     "tap" : {
       "comment" : "Guide overlay: advance hint, more pages remain"
+    },
+    "Tap a tag chip to cycle include, exclude, and clear." : {
+
+    },
+    "Tap a tag once to include it, twice to exclude it, and a third time to clear it." : {
+
     },
     "Text Color" : {
       "comment" : "Text Color (light) picker label"
@@ -1879,6 +1981,12 @@
     "Title & Summary Lines" : {
       "comment" : "Timeline layout: number of lines"
     },
+    "Title, text, or keywords (3+ chars)" : {
+
+    },
+    "To" : {
+
+    },
     "Toggle Loved Status" : {
       "comment" : "Toggle Loved Status"
     },
@@ -1948,6 +2056,12 @@
     "Untitled" : {
       "comment" : "Article title\nFallback article title\nFeed name"
     },
+    "Update Saved Search" : {
+
+    },
+    "Update Saved Search…" : {
+
+    },
     "Updated %@" : {
       "comment" : "Updated"
     },
@@ -1999,6 +2113,9 @@
     "WIP" : {
       "comment" : "Completion status"
     },
+    "WIP Only" : {
+
+    },
     "word" : {
 
     },
@@ -2009,6 +2126,9 @@
 
     },
     "Words" : {
+
+    },
+    "Work Details" : {
 
     },
     "Work Scrollbar" : {

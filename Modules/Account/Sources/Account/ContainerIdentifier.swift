@@ -14,6 +14,7 @@ import Foundation
 
 public enum ContainerIdentifier: Hashable, Equatable, Sendable {
 	case smartFeedController
+	case savedSearchesController
 	case account(String) // accountID
 	case folder(String, [String]) // accountID, path (ancestor names, immediate folder last)
 
@@ -35,6 +36,10 @@ public enum ContainerIdentifier: Hashable, Equatable, Sendable {
 			return [
 				"type": "smartFeedController"
 			]
+		case .savedSearchesController:
+			return [
+				"type": "savedSearchesController"
+			]
 		case .account(let accountID):
 			return [
 				"type": "account",
@@ -55,6 +60,8 @@ public enum ContainerIdentifier: Hashable, Equatable, Sendable {
 		switch type {
 		case "smartFeedController":
 			self = ContainerIdentifier.smartFeedController
+		case "savedSearchesController":
+			self = ContainerIdentifier.savedSearchesController
 		case "account":
 			guard let accountID = userInfo["accountID"] as? String else { return nil }
 			self = ContainerIdentifier.account(accountID)
@@ -83,6 +90,8 @@ extension ContainerIdentifier: Encodable {
 		switch self {
 		case .smartFeedController:
 			try container.encode("smartFeedController", forKey: .type)
+		case .savedSearchesController:
+			try container.encode("savedSearchesController", forKey: .type)
 		case .account(let accountID):
 			try container.encode("account", forKey: .type)
 			try container.encode(accountID, forKey: .accountID)
@@ -103,6 +112,8 @@ extension ContainerIdentifier: Decodable {
 		switch type {
 		case "smartFeedController":
 			self = .smartFeedController
+		case "savedSearchesController":
+			self = .savedSearchesController
 		case "account":
 			let accountID =  try container.decode(String.self, forKey: .accountID)
 			self = .account(accountID)

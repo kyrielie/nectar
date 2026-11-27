@@ -31,6 +31,12 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 	private var tagDisplayMode = TagDisplayMode.compact
 	private lazy var feedTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(showFeedInspector(_:)))
 	private lazy var filterButton = UIBarButtonItem(image: Assets.Images.filter, style: .plain, target: self, action: #selector(toggleFilter(_:)))
+	private lazy var librarySearchFilterButton = UIBarButtonItem(
+		image: UIImage(systemName: "slider.horizontal.3"),
+		style: .plain,
+		target: self,
+		action: #selector(editLibrarySearchFilters(_:))
+	)
 	private lazy var nextUnreadButton = UIBarButtonItem(image: Assets.Images.nextUnread, style: .plain, target: self, action: #selector(nextUnread(_:)))
 	// Nonzero starting frame, not .zero -- see MainFeedCollectionViewController's
 	// refreshProgressView for why: as a UIBarButtonItem customView, .zero
@@ -517,6 +523,15 @@ final class MainTimelineModernViewController: UIViewController, UndoableCommandR
 	@IBAction func toggleFilter(_ sender: Any) {
 		assert(coordinator != nil)
 		coordinator?.toggleReadArticlesFilter()
+	}
+
+	@objc private func editLibrarySearchFilters(_ sender: Any) {
+		guard let smartFeed = coordinator?.timelineFeed as? SmartFeed,
+			  let state = smartFeed.librarySearchState else {
+			return
+		}
+		let editingSavedSearch = smartFeed.savedSearchID.flatMap { SavedSearchStore.shared.savedSearch(id: $0) }
+		coordinator?.presentLibrarySearch(initialState: state, editingSavedSearch: editingSavedSearch)
 	}
 
 	private func markAllAsReadInTimeline() {
@@ -1098,8 +1113,20 @@ private extension MainTimelineModernViewController {
 	}
 
 	func resetUI(resetScroll: Bool) {
+		let smartFeed = coordinator?.timelineFeed as? SmartFeed
+		let isLibrarySearch = smartFeed?.librarySearchState != nil
 		let shouldShowFilterButton = coordinator?.shouldShowFilterButton() ?? false
-		navigationItem.rightBarButtonItem = shouldShowFilterButton ? filterButton : nil
+
+		var rightItems = [UIBarButtonItem]()
+		if shouldShowFilterButton {
+			rightItems.append(filterButton)
+		}
+		if isLibrarySearch {
+			librarySearchFilterButton.tintColor = Assets.Colors.primaryAccent
+			librarySearchFilterButton.accLabelText = NSLocalizedString("Edit Search Filters", comment: "Edit Search Filters")
+			rightItems.append(librarySearchFilterButton)
+		}
+		navigationItem.rightBarButtonItems = rightItems.isEmpty ? nil : rightItems
 
 		if isReadArticlesFiltered {
 			filterButton.tintColor = Assets.Colors.primaryAccent
@@ -1517,6 +1544,9 @@ private extension MainTimelineModernViewController {
 		// accent color until the filter was next toggled.
 		if isReadArticlesFiltered {
 			filterButton.tintColor = Assets.Colors.primaryAccent
+		}
+		if (coordinator?.timelineFeed as? SmartFeed)?.librarySearchState != nil {
+			librarySearchFilterButton.tintColor = Assets.Colors.primaryAccent
 		}
 	}
 
