@@ -348,6 +348,7 @@ final class AppDefaults: Sendable {
 		/// Backs AnnotationsListView.SortOrder -- see that type's doc
 		/// comment (Part 11, "Title by Author" grouping + sort orders).
 		static let annotationsSortOrder = "annotationsSortOrder"
+		static let includeAnnotationsInEPUBExport = "includeAnnotationsInEPUBExport"
 		static let toolbarStyle = "toolbarStyle"
 		static let statsVisible = "statsVisible"
 		static let timelineSortDirection = "timelineSortDirection"
@@ -601,6 +602,7 @@ final class AppDefaults: Sendable {
 		Key.defaultAnnotationColor,
 		Key.annotationCreationMethod,
 		Key.annotationsSortOrder,
+		Key.includeAnnotationsInEPUBExport,
 		Key.textReplacementApplyAutomatically,
 		Key.textReplacementTypoFixesEnabled,
 		Key.textReplacementQuoteConversionEnabled,
@@ -824,6 +826,15 @@ final class AppDefaults: Sendable {
 		}
 		set {
 			AppDefaults.setBool(for: Key.showFeedNameInReaderView, newValue)
+		}
+	}
+
+	var includeAnnotationsInEPUBExport: Bool {
+		get {
+			AppDefaults.bool(for: Key.includeAnnotationsInEPUBExport)
+		}
+		set {
+			AppDefaults.setBool(for: Key.includeAnnotationsInEPUBExport, newValue)
 		}
 	}
 

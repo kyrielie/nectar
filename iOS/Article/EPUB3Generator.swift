@@ -51,7 +51,11 @@ public final class EPUB3Generator {
 
 	// MARK: - Public Export API
 
-	public static func generateEPUB(for article: Article, account: Account?) async throws -> URL {
+	public static func generateEPUB(
+		for article: Article,
+		account: Account?,
+		includeAnnotations: Bool? = nil
+	) async throws -> URL {
 		// 1. Decompress Story Content
 		guard let storedHTML = article.contentHTML, !storedHTML.isEmpty else {
 			throw EPUBExportError.noContent(
@@ -66,10 +70,11 @@ public final class EPUB3Generator {
 			)
 		}
 
-		// 2. Fetch User Annotations
+		// 2. Fetch User Annotations (opt-in only; off by default for privacy)
+		let shouldIncludeAnnotations = includeAnnotations ?? AppDefaults.shared.includeAnnotationsInEPUBExport
 		var annotations: [Annotation] = []
-		if let account {
-			annotations = await account.fetchAnnotations(forArticleID: article.articleID)
+		if shouldIncludeAnnotations, let account {
+			annotations = await account.fetchAnnotations(forBookKey: article.bookKey)
 		}
 
 		// 3. Prepare Work Directory
@@ -457,13 +462,15 @@ public final class EPUB3Generator {
 
 	// MARK: - Partition Builders
 
-	private static func ao3TagLink(_ tag: String) -> String {
+	static func ao3TagLink(_ tag: String) -> String {
 		let escaped = escapeXML(tag)
-		let encoded = tag.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? tag
-		return "<a href=\"https://\(AO3Link.canonicalHost)/tags/\(encoded)/works\">\(escaped)</a>"
+		guard let urlString = AO3Link.tagURL(for: tag)?.absoluteString else {
+			return escaped
+		}
+		return "<a href=\"\(escapeXML(urlString))\">\(escaped)</a>"
 	}
 
-	private static func buildPrefaceHTML(
+	static func buildPrefaceHTML(
 		article: Article,
 		authorStr: String,
 		language: String,
@@ -501,16 +508,21 @@ public final class EPUB3Generator {
 			let links = additionalTags.map(ao3TagLink).joined(separator: ", ")
 			tagsDL.append("<dt>Additional Tags:</dt><dd>\(links)</dd>")
 		}
-		if let series = article.series?.first {
-			let sIdx = " #\(series.index)"
-			let sNameEscaped = escapeXML(series.name)
-			let sLink: String
-			if let ao3ID = series.ao3ID {
-				sLink = "<a href=\"https://\(AO3Link.canonicalHost)/series/\(ao3ID)\">\(sNameEscaped)</a>"
-			} else {
-				sLink = sNameEscaped
-			}
-			tagsDL.append("<dt>Series:</dt><dd>Part\(sIdx) of \(sLink)</dd>")
+		if let seriesEntries = article.series, !seriesEntries.isEmpty {
+			let sLinks = seriesEntries.map { series -> String in
+				let sNameEscaped = escapeXML(series.name)
+				let sLink: String
+				if let ao3ID = series.ao3ID {
+					sLink = "<a href=\"https://\(AO3Link.canonicalHost)/series/\(ao3ID)\">\(sNameEscaped)</a>"
+				} else {
+					sLink = sNameEscaped
+				}
+				return "Part \(series.index) of \(sLink)"
+			}.joined(separator: ", ")
+			tagsDL.append("<dt>Series:</dt><dd>\(sLinks)</dd>")
+		}
+		if let langDisplay = article.language, !langDisplay.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+			tagsDL.append("<dt>Language:</dt><dd>\(escapeXML(langDisplay))</dd>")
 		}
 		if let collections = article.collections, !collections.isEmpty {
 			let cLinks = collections.map { col -> String in
@@ -536,8 +548,9 @@ public final class EPUB3Generator {
 		if let wc = article.wordCount {
 			statsSpans.append("Words: \(NumberFormatter.localizedString(from: NSNumber(value: wc), number: .decimal))")
 		}
-		if let chCurr = article.chapterCurrent, let chTot = article.chapterTotal {
-			statsSpans.append("Chapters: \(chCurr)/\(chTot)")
+		if let chCurr = article.chapterCurrent {
+			let chTotStr = article.chapterTotal.map(String.init) ?? "?"
+			statsSpans.append("Chapters: \(chCurr)/\(chTotStr)")
 		}
 		if let kudos = article.kudosCount {
 			statsSpans.append("Kudos: \(NumberFormatter.localizedString(from: NSNumber(value: kudos), number: .decimal))")
@@ -552,15 +565,36 @@ public final class EPUB3Generator {
 			statsSpans.append("🔒 Restricted")
 		}
 
-		let statsHTML = statsSpans.isEmpty ? "" : "<div class=\"stats-block\">\(statsSpans.joined(separator: " &nbsp;•&nbsp; "))</div>"
+		let statsText = statsSpans.joined(separator: " &nbsp;•&nbsp; ")
+		if !statsSpans.isEmpty {
+			tagsDL.append("<dt>Stats:</dt><dd>\(statsText)</dd>")
+		}
+		let statsHTML = statsSpans.isEmpty ? "" : "<div class=\"stats-block\">\(statsText)</div>"
 		let tagsHTML: String = {
 			if let extractedPrefaceHTML,
 			   let doc = try? SwiftSoup.parseBodyFragment(extractedPrefaceHTML),
-			   let dlElement = try? doc.select("dl.tags").first(),
-			   let dlHTML = try? dlElement.outerHtml() {
-				return ensureXHTML(dlHTML)
+			   let dlElement = try? doc.select("dl.tags").first() {
+				_ = try? dlElement.addClass("tags-dl")
+				if let dlHTML = try? dlElement.outerHtml() {
+					return ensureXHTML(dlHTML)
+				}
 			}
-			return tagsDL.isEmpty ? "" : "<dl class=\"tags-dl\">\n\(tagsDL.joined(separator: "\n"))\n</dl>"
+			return tagsDL.isEmpty ? "" : "<dl class=\"tags tags-dl\">\n\(tagsDL.joined(separator: "\n"))\n</dl>"
+		}()
+
+		let canonicalWorkMessageHTML: String = {
+			let workURL: URL? = {
+				if let workID = AO3Link.workID(fromBookKey: article.bookKey) {
+					return AO3Link.workURL(id: workID)
+				}
+				if let preferred = article.preferredURL, AO3Link.isAO3Host(preferred) {
+					return preferred
+				}
+				return nil
+			}()
+			guard let urlString = workURL?.absoluteString else { return "" }
+			let escapedURL = escapeXML(urlString)
+			return "<p class=\"message\">Posted originally on the Archive of Our Own at <a href=\"\(escapedURL)\">\(escapedURL)</a>.</p>"
 		}()
 
 		let authorBylineHTML: String = {
@@ -604,6 +638,7 @@ public final class EPUB3Generator {
 		  <body epub:type="frontmatter">
 		    <section id="preface" epub:type="preface">
 		      <header class="title-header">
+		        \(canonicalWorkMessageHTML)
 		        <h1 class="fulltitle" epub:type="fulltitle">\(escapeXML(workTitle))</h1>
 		        <p class="byline">by \(authorBylineHTML)</p>
 		      </header>

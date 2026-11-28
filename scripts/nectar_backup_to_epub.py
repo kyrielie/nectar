@@ -682,6 +682,13 @@ class TagSynonymResolver:
 # EPUB 3.3 Assembler Engine
 # ---------------------------------------------------------------------------
 
+def ao3_tag_link(tag: str) -> str:
+    escaped_label = escape_xml(tag)
+    ao3_escaped = tag.strip().replace("/", "*s*").replace("&", "*a*").replace(".", "*d*")
+    encoded = urllib.parse.quote(ao3_escaped, safe="-._~!*()'")
+    return f'<a href="https://archiveofourown.org/tags/{encoded}/works">{escaped_label}</a>'
+
+
 def create_epub(
     output_path: Path,
     metadata: Dict[str, Any],
@@ -747,25 +754,60 @@ def create_epub(
     
     # Categorized metadata tags
     if metadata.get("ratings"):
-        tags_dl_items.append(f"<dt>Rating:</dt><dd>{escape_xml(', '.join(metadata['ratings']))}</dd>")
+        links = ", ".join(ao3_tag_link(t) for t in metadata["ratings"])
+        tags_dl_items.append(f"<dt>Rating:</dt><dd>{links}</dd>")
     if metadata.get("warnings"):
-        tags_dl_items.append(f"<dt>Archive Warning:</dt><dd>{escape_xml(', '.join(metadata['warnings']))}</dd>")
+        links = ", ".join(ao3_tag_link(t) for t in metadata["warnings"])
+        tags_dl_items.append(f"<dt>Archive Warning:</dt><dd>{links}</dd>")
     if metadata.get("categories"):
-        tags_dl_items.append(f"<dt>Category:</dt><dd>{escape_xml(', '.join(metadata['categories']))}</dd>")
+        links = ", ".join(ao3_tag_link(t) for t in metadata["categories"])
+        tags_dl_items.append(f"<dt>Category:</dt><dd>{links}</dd>")
     if metadata.get("fandoms"):
-        tags_dl_items.append(f"<dt>Fandom:</dt><dd>{escape_xml(', '.join(metadata['fandoms']))}</dd>")
+        links = ", ".join(ao3_tag_link(t) for t in metadata["fandoms"])
+        tags_dl_items.append(f"<dt>Fandom:</dt><dd>{links}</dd>")
     if metadata.get("relationships"):
-        tags_dl_items.append(f"<dt>Relationship:</dt><dd>{escape_xml(', '.join(metadata['relationships']))}</dd>")
+        links = ", ".join(ao3_tag_link(t) for t in metadata["relationships"])
+        tags_dl_items.append(f"<dt>Relationship:</dt><dd>{links}</dd>")
     if metadata.get("characters"):
-        tags_dl_items.append(f"<dt>Characters:</dt><dd>{escape_xml(', '.join(metadata['characters']))}</dd>")
+        links = ", ".join(ao3_tag_link(t) for t in metadata["characters"])
+        tags_dl_items.append(f"<dt>Characters:</dt><dd>{links}</dd>")
     if metadata.get("additional_tags"):
-        tags_dl_items.append(f"<dt>Additional Tags:</dt><dd>{escape_xml(', '.join(metadata['additional_tags']))}</dd>")
-    if series_name:
-        s_idx = f" #{series_index}" if series_index is not None else ""
-        tags_dl_items.append(f"<dt>Series:</dt><dd>Part {s_idx} of {escape_xml(series_name)}</dd>")
+        links = ", ".join(ao3_tag_link(t) for t in metadata["additional_tags"])
+        tags_dl_items.append(f"<dt>Additional Tags:</dt><dd>{links}</dd>")
+    series_entries = metadata.get("series_list") or []
+    if series_entries:
+        s_parts = []
+        for s_entry in series_entries:
+            if not isinstance(s_entry, dict):
+                continue
+            s_name = s_entry.get("name") or ""
+            s_idx = s_entry.get("index")
+            s_id = s_entry.get("ao3ID")
+            s_name_esc = escape_xml(s_name)
+            s_link = f'<a href="https://archiveofourown.org/series/{escape_xml(str(s_id))}">{s_name_esc}</a>' if s_id else s_name_esc
+            s_parts.append(f"Part {s_idx} of {s_link}" if s_idx is not None else s_link)
+        if s_parts:
+            tags_dl_items.append(f"<dt>Series:</dt><dd>{', '.join(s_parts)}</dd>")
+    elif series_name:
+        s_prefix = f"Part {series_index} of " if series_index is not None else ""
+        tags_dl_items.append(f"<dt>Series:</dt><dd>{s_prefix}{escape_xml(series_name)}</dd>")
+    lang_display = metadata.get("language")
+    if lang_display:
+        tags_dl_items.append(f"<dt>Language:</dt><dd>{escape_xml(str(lang_display))}</dd>")
     if collections:
-        c_names = [c.get("name") if isinstance(c, dict) else str(c) for c in collections]
-        tags_dl_items.append(f"<dt>Collections:</dt><dd>{escape_xml(', '.join(c_names))}</dd>")
+        c_links = []
+        for c in collections:
+            if isinstance(c, dict):
+                c_name = c.get("name") or ""
+                c_slug = c.get("slug")
+                c_esc = escape_xml(c_name)
+                if c_slug:
+                    c_links.append(f'<a href="https://archiveofourown.org/collections/{urllib.parse.quote(str(c_slug), safe="-._~")}">{c_esc}</a>')
+                else:
+                    c_links.append(c_esc)
+            else:
+                c_links.append(escape_xml(str(c)))
+        tags_dl_items.append(f"<dt>Collections:</dt><dd>{', '.join(c_links)}</dd>")
 
     # Extended Stats Line
     stats_spans = []
@@ -789,8 +831,27 @@ def create_epub(
     if is_restricted:
         stats_spans.append("🔒 Restricted")
 
-    stats_block_html = f'<div class="stats-block">{" &nbsp;•&nbsp; ".join(stats_spans)}</div>' if stats_spans else ""
-    tags_dl_html = f'<dl class="tags-dl">\n{"".join(tags_dl_items)}\n</dl>' if tags_dl_items else ""
+    stats_text = " &nbsp;•&nbsp; ".join(stats_spans)
+    if stats_spans:
+        tags_dl_items.append(f"<dt>Stats:</dt><dd>{stats_text}</dd>")
+    stats_block_html = f'<div class="stats-block">{stats_text}</div>' if stats_spans else ""
+    tags_dl_html = f'<dl class="tags tags-dl">\n{"".join(tags_dl_items)}\n</dl>' if tags_dl_items else ""
+
+    if authors_list and authors_list != ["Anonymous"]:
+        author_links = []
+        for a in authors_list:
+            a_esc = escape_xml(a)
+            a_enc = urllib.parse.quote(a, safe="-._~")
+            author_links.append(f'<a rel="author" href="https://archiveofourown.org/users/{a_enc}/pseuds/{a_enc}">{a_esc}</a>')
+        author_byline_html = ", ".join(author_links)
+    else:
+        author_byline_html = escape_xml(author_str)
+
+    canonical_work_msg = ""
+    if work_url and "archiveofourown.org/works/" in work_url:
+        clean_work_url = work_url.split("?")[0]
+        clean_work_url_esc = escape_xml(clean_work_url)
+        canonical_work_msg = f'<p class="message">Posted originally on the Archive of Our Own at <a href="{clean_work_url_esc}">{clean_work_url_esc}</a>.</p>'
 
     summary_html = ""
     if summary_raw.strip():
@@ -815,8 +876,9 @@ def create_epub(
   <body epub:type="frontmatter">
     <section id="preface" epub:type="preface">
       <header class="title-header">
+        {canonical_work_msg}
         <h1 class="fulltitle" epub:type="fulltitle">{escape_xml(work_title)}</h1>
-        <p class="byline">by {escape_xml(author_str)}</p>
+        <p class="byline">by {author_byline_html}</p>
       </header>
       {stats_block_html}
       {tags_dl_html}
@@ -1267,7 +1329,7 @@ def process_backup(
     fetch_missing: bool = False,
     ao3_cookie: Optional[str] = None,
     rate_limit_delay: float = 5.0,
-    include_annotations: bool = True,
+    include_annotations: bool = False,
     calibre_add: bool = False,
     calibre_library: Optional[str] = None,
     tag_seeds_db: Optional[Path] = None
@@ -1443,6 +1505,7 @@ def process_backup(
                 "fandoms": fandoms,
                 "series_name": series_name,
                 "series_index": series_index,
+                "series_list": series_list,
                 "ratings": ratings,
                 "warnings": warnings,
                 "categories": categories,
@@ -1565,9 +1628,14 @@ def main():
         help="Delay in seconds between AO3 downloads (default: 5.0 seconds)"
     )
     parser.add_argument(
+        "--include-annotations",
+        action="store_true",
+        help="Include personal highlights and notes taken in Nectar in the exported EPUB (off by default)"
+    )
+    parser.add_argument(
         "--no-annotations",
         action="store_true",
-        help="Exclude personal highlights and notes taken in Nectar from the exported EPUB"
+        help="Deprecated no-op (annotations are now excluded by default unless --include-annotations is passed)"
     )
     parser.add_argument(
         "--calibre-add",
@@ -1601,7 +1669,7 @@ def main():
         fetch_missing=args.fetch_missing,
         ao3_cookie=args.ao3_cookie,
         rate_limit_delay=args.rate_limit_delay,
-        include_annotations=not args.no_annotations,
+        include_annotations=args.include_annotations and not args.no_annotations,
         calibre_add=calibre_add_enabled,
         calibre_library=args.calibre_library,
         tag_seeds_db=args.tag_seeds_db

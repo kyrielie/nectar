@@ -48,6 +48,7 @@ struct AnnotationsSettingsView: View {
 
 	@AppStorage(AppDefaults.Key.annotationCreationMethod) private var creationMethodRawValue = AnnotationCreationMethod.popup.rawValue
 	@AppStorage(AppDefaults.Key.highlightPalette) private var highlightPaletteRawValue = HighlightPalette.default.rawValue
+	@AppStorage(AppDefaults.Key.includeAnnotationsInEPUBExport) private var includeAnnotationsInEPUBExport = false
 	@Environment(\.colorScheme) private var colorScheme
 	@State private var defaultColor: Annotation.Color = AppDefaults.shared.defaultAnnotationColor
 
@@ -130,6 +131,9 @@ struct AnnotationsSettingsView: View {
 			}
 
 			Section {
+				Toggle(isOn: $includeAnnotationsInEPUBExport) {
+					Text("Include Highlights & Notes in EPUB Exports", comment: "Annotations settings: EPUB export annotations toggle")
+				}
 				ExportRow(title: NSLocalizedString("Export as CSV…", comment: "Annotations settings: CSV export row")) { sourceView, sourceRect in
 					onExportCSV(sourceView, sourceRect)
 				}
@@ -138,6 +142,8 @@ struct AnnotationsSettingsView: View {
 				}
 			} header: {
 				Text("Export", comment: "Annotations settings: export section header")
+			} footer: {
+				Text("Personal highlights and notes are private and excluded from exported EPUB files unless you enable this option.", comment: "Annotations settings: EPUB export annotations footer")
 			}
 		}
 		.surfacePaletteListBackground()

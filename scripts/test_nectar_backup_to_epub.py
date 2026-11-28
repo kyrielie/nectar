@@ -258,6 +258,102 @@ class TestNectarBackupToEPUB(unittest.TestCase):
                 # Workskin preserved
                 self.assertIn('<div id="workskin" class="userstuff">', ch1_text)
 
+                preface_text = zf.read("EPUB/text/preface.xhtml").decode("utf-8")
+                self.assertIn('<dl class="tags tags-dl">', preface_text)
+                self.assertIn('<dt>Stats:</dt><dd>', preface_text)
+                self.assertIn('Part 1 of Don&#x27;t Panic', preface_text)
+                self.assertIn('<a rel="author" href="https://archiveofourown.org/users/Douglas%20Adams/pseuds/Douglas%20Adams">Douglas Adams</a>', preface_text)
+                self.assertIn('Posted originally on the Archive of Our Own at <a href="https://archiveofourown.org/works/', preface_text)
+
+    def test_annotations_excluded_by_default_and_ao3_tag_escaping(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "backup.sqlite"
+            output_dir = Path(tmpdir) / "epubs"
+            conn = sqlite3.connect(db_path)
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE articles (
+                    articleID TEXT PRIMARY KEY,
+                    feedID TEXT,
+                    uniqueID TEXT,
+                    title TEXT,
+                    contentHTML BLOB,
+                    summary TEXT,
+                    url TEXT,
+                    datePublished DATE,
+                    dateModified DATE,
+                    dateBookmarked DATE,
+                    authors TEXT,
+                    wordCount INTEGER,
+                    chapterCurrent INTEGER,
+                    chapterTotal INTEGER,
+                    isComplete INTEGER,
+                    fandoms TEXT,
+                    relationships TEXT,
+                    characters TEXT,
+                    ratings TEXT,
+                    warnings TEXT,
+                    categories TEXT,
+                    additionalTags TEXT,
+                    series TEXT,
+                    collections TEXT,
+                    language TEXT,
+                    commentCount INTEGER,
+                    kudosCount INTEGER,
+                    bookmarkCount INTEGER,
+                    hitCount INTEGER,
+                    isRestricted INTEGER,
+                    bookKey TEXT
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE annotations (
+                    annotationID TEXT PRIMARY KEY,
+                    articleID TEXT,
+                    bookKey TEXT,
+                    quoteExact TEXT,
+                    note TEXT,
+                    color TEXT,
+                    createdAt DATE,
+                    chapterTitle TEXT
+                )
+            """)
+            cur.execute("""
+                INSERT INTO articles VALUES (
+                    'art1', 'feed1', 'u1', 'Ship Fic',
+                    '<div id="chapters"><div class="chapter" id="chapter-1"><h3 class="title">Chapter 1</h3><p>This is a full chapter body with enough story content to pass the non-stub check.</p></div></div>',
+                    'Summary', 'https://archiveofourown.org/works/999',
+                    '2024-01-01', '2024-01-02', NULL,
+                    '[{"name": "Writer"}]', 1000, 1, NULL, 0,
+                    '["Fandom"]', '["A/B & C"]', '[]', '["Teen And Up Audiences"]',
+                    '[]', '["M/M"]', '["Dr. Who"]',
+                    '[{"name": "First Series", "index": 1, "ao3ID": "10"}, {"name": "Second Series", "index": 3, "ao3ID": "20"}]',
+                    '[]', 'English', 0, 5, 1, 20, 0, 'ao3-work:999'
+                )
+            """)
+            cur.execute("""
+                INSERT INTO annotations VALUES (
+                    'anno1', 'art1', 'ao3-work:999', 'Body text', 'Private note', '#FFD60A', '2024-01-02', 'Chapter 1'
+                )
+            """)
+            conn.commit()
+            conn.close()
+
+            process_backup(input_path=db_path, output_dir=output_dir)
+
+            expected_epub = output_dir / "Fandom" / "Writer" / "First Series" / "01 - Ship Fic.epub"
+            self.assertTrue(expected_epub.exists())
+            with zipfile.ZipFile(expected_epub, 'r') as zf:
+                namelist = zf.namelist()
+                self.assertNotIn("EPUB/text/reader-notes.xhtml", namelist)
+                self.assertNotIn("EPUB/css/annotations.css", namelist)
+                preface_text = zf.read("EPUB/text/preface.xhtml").decode("utf-8")
+                self.assertIn("https://archiveofourown.org/tags/A*s*B%20*a*%20C/works", preface_text)
+                self.assertIn("https://archiveofourown.org/tags/Dr*d*%20Who/works", preface_text)
+                self.assertIn("<dt>Language:</dt><dd>English</dd>", preface_text)
+                self.assertIn("Part 1 of", preface_text)
+                self.assertIn("Part 3 of", preface_text)
+
     def test_tag_synonym_resolver_and_enrichment(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             seeds_db = Path(tmpdir) / "ao3_tag_seeds.db"

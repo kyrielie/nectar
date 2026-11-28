@@ -68,6 +68,7 @@
 		2F95B2C3908359089B9F5437 /* AppChrome in Frameworks */ = {isa = PBXBuildFile; productRef = A39F672357FE566C305023F2 /* AppChrome */; };
 		2FB28D8027B22088DE73028F /* AO3Kit in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 3413F673D6B01678FC7C2C80 /* AO3Kit */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		3017012F80100953303E528F /* FolderTreeControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F38D77657ECF9BB2FF29DD /* FolderTreeControllerDelegate.swift */; };
+		31211590D0D1197D50E8F3E8 /* EPUB3GeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A2087D3EA2E094F342BF575 /* EPUB3GeneratorTests.swift */; };
 		324EECDB5F721498701CB6DB /* TraitChangeObserving.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2C4B0743CD7B3BC1293004 /* TraitChangeObserving.swift */; };
 		327E5443D552FC5EBD79FF7B /* ArticleLogicalDatePublishedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DD2BC954F0CC18E69FE0F7B /* ArticleLogicalDatePublishedTests.swift */; };
 		3285C1FDAE9B53072301A90A /* PreloadedWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1750E93026BC13F09F692030 /* PreloadedWebView.swift */; };
@@ -478,6 +479,7 @@
 		28A83DF957C40DAB5A5C9BE7 /* AO3SeriesTimelineViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3SeriesTimelineViewModelTests.swift; sourceTree = "<group>"; };
 		28B8C62B8D992405EA625769 /* Inspector.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = Inspector.storyboard; sourceTree = "<group>"; };
 		2958B2416F45CCEE57580A8E /* NetNewsWire_project_debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = NetNewsWire_project_debug.xcconfig; sourceTree = "<group>"; };
+		2A2087D3EA2E094F342BF575 /* EPUB3GeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EPUB3GeneratorTests.swift; sourceTree = "<group>"; };
 		2A2CEA9E5E12154C49D84EF1 /* SidebarTreeControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarTreeControllerDelegate.swift; sourceTree = "<group>"; };
 		2B6F80F308FFAE5A5C483EB2 /* AO3IgnoreListBackupStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AO3IgnoreListBackupStoreTests.swift; sourceTree = "<group>"; };
 		2BACB78843185C6313A6FCBB /* ArticleThemeCheckMatrixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticleThemeCheckMatrixTests.swift; sourceTree = "<group>"; };
@@ -1037,6 +1039,7 @@
 				6C7B99107A73BC3141F4F0B9 /* CSSImportExtractorTests.swift */,
 				08ECF89D2F1500BB8712779B /* DinosaursViewModelObservationTests.swift */,
 				372E41EF541CC97BB5968EC6 /* EmptyStateViewTests.swift */,
+				2A2087D3EA2E094F342BF575 /* EPUB3GeneratorTests.swift */,
 				DDABFCF418644BD0EA2B1098 /* ForegroundTickerTests.swift */,
 				0F15597A347547A2DFAE19C6 /* FullScreenReadingHideNotchTests.swift */,
 				691A6BC8CA240C669B1D6B90 /* HighlightPaletteAppDefaultsTests.swift */,
@@ -2031,6 +2034,7 @@
 				874C3DE4544F6828594EE0FF /* CSSImportExtractorTests.swift in Sources */,
 				D04AD69BF7079B6525C0DC2B /* CopyHighlightTextTests.swift in Sources */,
 				ACA2C79937CDF5FC9F1FB1AD /* DinosaursViewModelObservationTests.swift in Sources */,
+				31211590D0D1197D50E8F3E8 /* EPUB3GeneratorTests.swift in Sources */,
 				4C775F6AD9C45DC69EF48D07 /* EmptyStateViewTests.swift in Sources */,
 				D82F33802AD45108427485D4 /* ForegroundTickerTests.swift in Sources */,
 				CEE0E5B31C0643495F161BBE /* FullScreenReadingHideNotchTests.swift in Sources */,
