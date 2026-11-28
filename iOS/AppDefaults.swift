@@ -170,6 +170,9 @@ enum ToolbarFunction: String, CaseIterable, Sendable {
 	/// default position at the end of each bar's order and is off everywhere
 	/// until the person places it.
 	case ignore
+	/// Quick modal sheet with full AO3/article metadata, reading progress,
+	/// annotation count, series memberships, and EPUB export.
+	case workInfo
 }
 
 /// Single source of truth for each function's display name and icon --
@@ -221,6 +224,8 @@ extension ToolbarFunction {
 			return NSLocalizedString("Reading Stats", comment: "Toolbar function: reading stats")
 		case .ignore:
 			return NSLocalizedString("Ignore Work or Author", comment: "Toolbar function: hide future feed items for the open AO3 work or its author")
+		case .workInfo:
+			return NSLocalizedString("Work Info", comment: "Toolbar function: show full metadata and actions for the current work")
 		}
 	}
 
@@ -264,6 +269,7 @@ extension ToolbarFunction {
 		case .readingTimeRemaining: return UIImage(systemName: "timer")
 		case .readingStats: return UIImage(systemName: "chart.bar")
 		case .ignore: return UIImage(systemName: "eye.slash")
+		case .workInfo: return UIImage(systemName: "info.circle")
 		}
 	}
 }
@@ -435,6 +441,10 @@ final class AppDefaults: Sendable {
 		static let toolbarFnIgnoreTopOverflow = "toolbarFnIgnoreTopOverflow"
 		static let toolbarFnIgnoreBottom = "toolbarFnIgnoreBottom"
 		static let toolbarFnIgnoreBottomOverflow = "toolbarFnIgnoreBottomOverflow"
+		static let toolbarFnWorkInfoTop = "toolbarFnWorkInfoTop"
+		static let toolbarFnWorkInfoTopOverflow = "toolbarFnWorkInfoTopOverflow"
+		static let toolbarFnWorkInfoBottom = "toolbarFnWorkInfoBottom"
+		static let toolbarFnWorkInfoBottomOverflow = "toolbarFnWorkInfoBottomOverflow"
 		/// Whether each bar collapses its overflow-flagged functions into
 		/// a single trailing menu icon. Two independent switches (top and
 		/// bottom no longer share one Bool) -- replaces the pre-unification
@@ -583,6 +593,7 @@ final class AppDefaults: Sendable {
 		Key.toolbarFnReadingTimeRemainingTop, Key.toolbarFnReadingTimeRemainingTopOverflow, Key.toolbarFnReadingTimeRemainingBottom, Key.toolbarFnReadingTimeRemainingBottomOverflow,
 		Key.toolbarFnReadingStatsTop, Key.toolbarFnReadingStatsTopOverflow, Key.toolbarFnReadingStatsBottom, Key.toolbarFnReadingStatsBottomOverflow,
 		Key.toolbarFnIgnoreTop, Key.toolbarFnIgnoreTopOverflow, Key.toolbarFnIgnoreBottom, Key.toolbarFnIgnoreBottomOverflow,
+		Key.toolbarFnWorkInfoTop, Key.toolbarFnWorkInfoTopOverflow, Key.toolbarFnWorkInfoBottom, Key.toolbarFnWorkInfoBottomOverflow,
 		Key.toolbarTopUseOverflowMenu,
 		Key.toolbarBottomUseOverflowMenu,
 		Key.toolbarTopFunctionOrder,

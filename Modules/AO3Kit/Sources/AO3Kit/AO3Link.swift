@@ -208,6 +208,32 @@ public enum AO3Link {
 		return canonicalURL(path: "/series/\(id)", queryItems: queryItems)
 	}
 
+	/// `https://archiveofourown.org/tags/<encoded>/works`, encoding AO3's
+	/// reserved tag characters (`/ -> *s*`, `& -> *a*`, `. -> *d*`) before
+	/// percent-encoding the path segment. Nil when `tag` is empty after trimming.
+	public static func tagURL(for tag: String) -> URL? {
+		let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+		guard !trimmed.isEmpty else {
+			return nil
+		}
+		var escaped = trimmed.replacingOccurrences(of: "/", with: "*s*")
+		escaped = escaped.replacingOccurrences(of: "&", with: "*a*")
+		escaped = escaped.replacingOccurrences(of: ".", with: "*d*")
+		let encoded = escaped.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? escaped
+		return URL(string: "\(baseURLString)/tags/\(encoded)/works")
+	}
+
+	/// `https://archiveofourown.org/collections/<slug>`. Nil when `slug` is
+	/// empty after trimming.
+	public static func collectionURL(slug: String) -> URL? {
+		let trimmed = slug.trimmingCharacters(in: .whitespacesAndNewlines)
+		guard !trimmed.isEmpty else {
+			return nil
+		}
+		let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? trimmed
+		return URL(string: "\(baseURLString)/collections/\(encoded)")
+	}
+
 	/// AO3's `.js` (XHR) kudos endpoint.
 	public static let kudosURL = URL(string: "https://archiveofourown.org/kudos.js")!
 

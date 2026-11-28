@@ -397,7 +397,7 @@ extension AO3SearchResultsExtractor {
 
 // MARK: - Date
 
-private extension AO3SearchResultsExtractor {
+extension AO3SearchResultsExtractor {
 
 	/// `dd MMM yyyy`, e.g. "28 Dec 2022" -- fixed `en_US_POSIX` locale
 	/// since AO3 renders this in fixed English month abbreviations

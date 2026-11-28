@@ -41,12 +41,32 @@ import Testing
 		}
 	}
 
-	@Test func ignoreFunctionIsLastInTheDefaultOrderOfBothBars() {
+	@Test func workInfoFunctionIsLastInTheDefaultOrderOfBothBars() {
 		// New cases take the tail of the default order, so adding one does not
 		// move any function the person has already seen in a fixed position.
 		for bar in [ToolbarBar.top, ToolbarBar.bottom] {
-			#expect(AppDefaults.defaultToolbarFunctionOrder(for: bar).last == .ignore)
+			#expect(AppDefaults.defaultToolbarFunctionOrder(for: bar).last == .workInfo)
 		}
+	}
+
+	@Test func workInfoFunctionKeysAreBackedUp() {
+		let keys = [
+			AppDefaults.Key.toolbarFnWorkInfoTop,
+			AppDefaults.Key.toolbarFnWorkInfoTopOverflow,
+			AppDefaults.Key.toolbarFnWorkInfoBottom,
+			AppDefaults.Key.toolbarFnWorkInfoBottomOverflow
+		]
+		for key in keys {
+			#expect(AppDefaults.backupEligibleKeys.contains(key))
+		}
+	}
+
+	@Test func workInfoFunctionPersistedStringsAreFrozen() {
+		#expect(ToolbarFunction.workInfo.rawValue == "workInfo")
+		#expect(AppDefaults.Key.toolbarFnWorkInfoTop == "toolbarFnWorkInfoTop")
+		#expect(AppDefaults.Key.toolbarFnWorkInfoTopOverflow == "toolbarFnWorkInfoTopOverflow")
+		#expect(AppDefaults.Key.toolbarFnWorkInfoBottom == "toolbarFnWorkInfoBottom")
+		#expect(AppDefaults.Key.toolbarFnWorkInfoBottomOverflow == "toolbarFnWorkInfoBottomOverflow")
 	}
 
 	@Test func ignoreFunctionKeysAreBackedUp() {

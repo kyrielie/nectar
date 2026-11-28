@@ -1910,6 +1910,20 @@ struct SidebarItemNode: Hashable, Sendable {
 		queueFetchAndMergeArticles()
 	}
 
+	func openAO3SeriesTimeline(for entry: ArticleSeriesEntry, article: Article) async {
+		guard let account = article.account else { return }
+		if let ao3ID = entry.ao3ID, !ao3ID.isEmpty {
+			_ = await AO3SeriesNavigator.stubImportSeries(
+				ao3SeriesID: ao3ID,
+				seriesName: entry.name,
+				feedID: article.feedID,
+				account: account
+			)
+		}
+		let smartFeed = SmartFeed(delegate: AO3SeriesFeedDelegate(seriesEntry: entry, account: account, preferredFeedID: article.feedID))
+		setTimelineFeed(smartFeed, animated: true)
+	}
+
 	func importTheme(filename: String) {
 		do {
 			try ArticleThemeImporter.importTheme(controller: rootSplitViewController, url: URL(fileURLWithPath: filename))

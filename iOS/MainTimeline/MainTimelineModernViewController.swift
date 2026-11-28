@@ -8,6 +8,8 @@ import AO3Kit
 //
 
 import UIKit
+import SwiftUI
+import SafariServices
 import os
 import WebKit
 import RSCore
@@ -735,6 +737,10 @@ extension MainTimelineModernViewController: UICollectionViewDelegate {
 
 			if let action = self.checkForUpdatesAction(article) {
 				menuElements.append(UIMenu(title: "", options: .displayInline, children: [action]))
+			}
+
+			if let seriesMenu = self.viewSeriesMenuElement(article) {
+				menuElements.append(UIMenu(title: "", options: .displayInline, children: [seriesMenu]))
 			}
 
 			var shareActions = [UIAction]()
@@ -1934,6 +1940,33 @@ extension MainTimelineModernViewController {
 		let title = NSLocalizedString("Check for Updates", comment: "Command")
 		return UIAction(title: title, image: Assets.Images.checkForUpdates) { _ in
 			AO3ChapterFetcher.shared.checkForUpdates(for: article)
+		}
+	}
+
+	func viewSeriesMenuElement(_ article: Article) -> UIMenuElement? {
+		guard let series = article.series, !series.isEmpty else {
+			return nil
+		}
+		let icon = UIImage(systemName: "books.vertical")
+		if series.count == 1, let entry = series.first {
+			let title = NSLocalizedString("View Series", comment: "Context menu: open ephemeral series timeline")
+			return UIAction(title: title, image: icon) { [weak self] _ in
+				self?.presentSeriesTimeline(for: entry, article: article)
+			}
+		}
+		let children = series.map { entry in
+			let itemTitle = String(format: NSLocalizedString("%@ (Part %d)", comment: "Series submenu item"), entry.name, entry.index)
+			return UIAction(title: itemTitle) { [weak self] _ in
+				self?.presentSeriesTimeline(for: entry, article: article)
+			}
+		}
+		let title = NSLocalizedString("View Series", comment: "Context menu: open ephemeral series timeline submenu")
+		return UIMenu(title: title, image: icon, children: children)
+	}
+
+	private func presentSeriesTimeline(for entry: ArticleSeriesEntry, article: Article) {
+		Task { @MainActor [weak self] in
+			await self?.coordinator?.openAO3SeriesTimeline(for: entry, article: article)
 		}
 	}
 

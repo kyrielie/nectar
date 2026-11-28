@@ -37,7 +37,8 @@ extension AppDefaults {
 		.scrollToBottom: [.top: (Key.toolbarFnScrollToBottomTop, Key.toolbarFnScrollToBottomTopOverflow), .bottom: (Key.toolbarFnScrollToBottomBottom, Key.toolbarFnScrollToBottomBottomOverflow)],
 		.readingTimeRemaining: [.top: (Key.toolbarFnReadingTimeRemainingTop, Key.toolbarFnReadingTimeRemainingTopOverflow), .bottom: (Key.toolbarFnReadingTimeRemainingBottom, Key.toolbarFnReadingTimeRemainingBottomOverflow)],
 		.readingStats: [.top: (Key.toolbarFnReadingStatsTop, Key.toolbarFnReadingStatsTopOverflow), .bottom: (Key.toolbarFnReadingStatsBottom, Key.toolbarFnReadingStatsBottomOverflow)],
-		.ignore: [.top: (Key.toolbarFnIgnoreTop, Key.toolbarFnIgnoreTopOverflow), .bottom: (Key.toolbarFnIgnoreBottom, Key.toolbarFnIgnoreBottomOverflow)]
+		.ignore: [.top: (Key.toolbarFnIgnoreTop, Key.toolbarFnIgnoreTopOverflow), .bottom: (Key.toolbarFnIgnoreBottom, Key.toolbarFnIgnoreBottomOverflow)],
+		.workInfo: [.top: (Key.toolbarFnWorkInfoTop, Key.toolbarFnWorkInfoTopOverflow), .bottom: (Key.toolbarFnWorkInfoBottom, Key.toolbarFnWorkInfoBottomOverflow)]
 	]
 
 	private func toolbarKeys(_ function: ToolbarFunction, _ bar: ToolbarBar) -> (inline: String, overflow: String) {

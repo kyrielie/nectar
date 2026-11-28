@@ -166,8 +166,10 @@ Used for two purposes:
    Work links but no "first work in series" link anywhere — reaching work
    #1 requires fetching the series-listing page itself).
 2. (Inline-series-navigation phase) `workPermalinks(fromSeriesListingHTML:)`
-   extracts every work row on one page plus whether another page exists,
-   for `AO3SeriesNavigator`'s bounded multi-page walk (see
+   extracts every work row on one page (metadata including authors,
+   chapters, completion, updated date, and `Part N` index) plus whether another
+   page exists, for `AO3SeriesNavigator`'s bounded multi-page walk and the
+   ephemeral series timeline (`AO3SeriesTimelineSheet`, see
    `ao3-integration.md`). This extractor is deliberately page-scoped — it
    parses whatever single page it's handed and does not itself walk
    pagination.

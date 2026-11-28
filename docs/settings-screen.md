@@ -194,7 +194,7 @@ The unification is driven by `ToolbarFunction`, a
 `String`-rawValue `CaseIterable` enum (originally `theme`/`tableOfContents`/
 `find`/`prevNext`/`lock`/`annotations`/`settings`/`checkForUpdates`/`read`/
 `star`/`heart`/`nextUnread`/`action`, since extended with the scroll
-functions, `readingTimeRemaining`, `readingStats` and `ignore`; the enum
+functions, `readingTimeRemaining`, `readingStats`, `ignore` and `workInfo`; the enum
 in `AppDefaults.swift` is the source of truth for the current list) that replaces the formerly-disjoint
 `ArticleToolbarToggle` (top-only, first 8 cases) and `BottomToolbarToggle`
 (bottom-only, last 5 cases). The `String` rawValue lets a person's chosen

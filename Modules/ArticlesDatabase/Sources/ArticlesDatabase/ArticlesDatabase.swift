@@ -623,6 +623,15 @@ public struct ArticleAttentionInfo: Sendable {
 		}
 	}
 
+	/// Fetches all local articles whose `series` JSON array includes an entry with `ao3ID == ao3SeriesID`.
+	public func fetchArticlesAsync(ao3SeriesID: String) async -> Set<Article> {
+		await withCheckedContinuation { continuation in
+			articlesTable.fetchArticlesAsync(ao3SeriesID: ao3SeriesID) { articles in
+				continuation.resume(returning: articles)
+			}
+		}
+	}
+
 	public func fetchUnreadArticlesAsync(feedIDs: Set<String>, limit: Int? = nil) async -> Set<Article> {
 		await withCheckedContinuation { continuation in
 			_fetchUnreadArticlesAsync(feedIDs: feedIDs, limit: limit) { articles in

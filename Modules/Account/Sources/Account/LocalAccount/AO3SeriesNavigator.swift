@@ -561,6 +561,75 @@ private extension AO3SeriesNavigator {
 		return .networkError(NSLocalizedString("Couldn't load the series page", comment: "AO3 series navigation error"))
 	}
 
+	public enum AO3SeriesListingPageOutcome: Sendable {
+		case success(entries: [AO3SeriesListingExtractor.WorkListingEntry], hasNextPage: Bool, totalPages: Int?)
+		case rateLimited(until: Date?)
+		case challenge
+		case failure(String)
+	}
+
+	/// Public on-demand series-listing fetch for the ephemeral series timeline
+	/// and sequel checker. Reuses `fetchListingPage` (authenticated-first with
+	/// anonymous fallback, `AO3RequestCoordinator` pacing, and Cloudflare
+	/// challenge detection) without creating feed subscriptions or DB stubs.
+	public static func fetchSeriesListingPage(ao3SeriesID: String, page: Int) async -> AO3SeriesListingPageOutcome {
+		switch await fetchListingPage(ao3SeriesID: ao3SeriesID, page: page) {
+		case .html(let html):
+			let parsed = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
+			return .success(entries: parsed.permalinks, hasNextPage: parsed.hasNextPage, totalPages: parsed.totalPages)
+		case .failure(let failure):
+			switch failure {
+			case .rateLimited(let until):
+				return .rateLimited(until: until)
+			case .challenge:
+				return .challenge
+			default:
+				return .failure(failure.localizedMessage)
+			}
+		}
+	}
+
+	/// Fetches page 1 of `/series/<ao3SeriesID>` on demand and stub-imports any
+	/// works not yet present in `account` under `feedID` (matching the
+	/// stub-then-fetch model of `openSeriesWork`). Returns `true` if the live
+	/// series page was fetched, or `false` when offline / rate-limited /
+	/// challenged so callers can still display locally available works.
+	@discardableResult
+	public static func stubImportSeries(ao3SeriesID: String, seriesName: String, feedID: String, account: Account) async -> Bool {
+		let result = await fetchListingPage(ao3SeriesID: ao3SeriesID, page: 1)
+		guard case .html(let html) = result else {
+			return false
+		}
+		let (works, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
+		guard !works.isEmpty else {
+			return true
+		}
+		let bookKeys = Set(works.compactMap { AO3Link.workBookKey(forWorkID: $0.workID) })
+		let existing = await account.fetchArticlesAsync(bookKeys: bookKeys)
+		var existingWorkIDs = Set<String>()
+		for article in existing {
+			if let workID = AO3Link.workID(fromBookKey: article.bookKey) {
+				existingWorkIDs.insert(workID)
+			}
+		}
+		let newEntries = works.enumerated().compactMap { offset, entry -> (AO3SeriesListingExtractor.WorkListingEntry, Int)? in
+			guard !existingWorkIDs.contains(entry.workID) else { return nil }
+			return (entry, entry.partIndex ?? (offset + 1))
+		}
+		guard !newEntries.isEmpty else {
+			return true
+		}
+		let stubs = Set(newEntries.map { entry, partIndex in
+			placeholderStub(
+				from: entry,
+				feedID: feedID,
+				series: [ParsedSeriesEntry(name: seriesName, index: partIndex, ao3ID: ao3SeriesID)]
+			)
+		})
+		_ = await account.updateAsync(feedID: feedID, parsedItems: stubs, deleteOlder: false)
+		return true
+	}
+
 	static func fetchListingPage(ao3SeriesID: String, page: Int) async -> AO3ListingPageResult {
 		guard let url = AO3Link.seriesURL(id: ao3SeriesID, page: page) else {
 			return .failure(.unrecognizedPage)
@@ -727,8 +796,11 @@ private extension AO3SeriesNavigator {
 	/// call site (search-results feed import) with its own established
 	/// identity scheme; reusing its row-metadata helpers here doesn't
 	/// mean reusing that convention too.
-	static func placeholderStub(from entry: AO3SeriesListingExtractor.WorkListingEntry, feedID: String) -> ParsedItem {
-		ParsedItem(
+	static func placeholderStub(from entry: AO3SeriesListingExtractor.WorkListingEntry, feedID: String, series: [ParsedSeriesEntry]? = nil) -> ParsedItem {
+		let parsedAuthors: Set<ParsedAuthor>? = entry.authors.isEmpty ? nil : Set(entry.authors.map {
+			ParsedAuthor(name: $0, url: nil, avatarURL: nil, emailAddress: nil)
+		})
+		return ParsedItem(
 			syncServiceID: nil,
 			uniqueID: entry.workID,
 			feedURL: feedID,
@@ -743,17 +815,21 @@ private extension AO3SeriesNavigator {
 			imageURL: nil,
 			bannerImageURL: nil,
 			datePublished: nil,
-			dateModified: nil,
-			authors: nil,
+			dateModified: entry.dateModified,
+			authors: parsedAuthors,
 			tags: entry.freeformTags.isEmpty ? nil : Set(entry.freeformTags),
 			attachments: nil,
 			wordCount: entry.wordCount,
+			chapterCurrent: entry.chapterCurrent,
+			chapterTotal: entry.chapterTotal,
+			isComplete: entry.isComplete,
 			fandoms: entry.fandoms.isEmpty ? nil : entry.fandoms,
 			relationships: entry.relationships.isEmpty ? nil : entry.relationships,
 			characters: entry.characters.isEmpty ? nil : entry.characters,
 			ratings: entry.ratings.isEmpty ? nil : entry.ratings,
 			warnings: entry.warnings.isEmpty ? nil : entry.warnings,
 			categories: entry.categories.isEmpty ? nil : entry.categories,
+			series: series,
 			isRestricted: entry.isRestricted,
 			ao3Language: entry.language,
 			ao3WorkID: entry.workID

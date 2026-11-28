@@ -139,6 +139,10 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		fetchArticlesAsync({ self.fetchArticles(bookKeys: bookKeys, $0) }, completion)
 	}
 
+	func fetchArticlesAsync(ao3SeriesID: String, _ completion: @escaping ArticleSetResultBlock) {
+		fetchArticlesAsync({ self.fetchArticles(ao3SeriesID: ao3SeriesID, $0) }, completion)
+	}
+
 	// MARK: - Fetching Unread Articles
 
 	func fetchUnreadArticles(_ feedIDs: Set<String>, _ limit: Int?) -> Set<Article> {
@@ -2207,6 +2211,18 @@ nonisolated extension ArticlesTable {
 			return Set<Article>()
 		}
 		return fetchArticlesWithWhereClause(database, whereClause: filter.sql, parameters: [filter.parameter as AnyObject])
+	}
+
+	func fetchArticles(ao3SeriesID: String, _ database: FMDatabase) -> Set<Article> {
+		let trimmed = ao3SeriesID.trimmingCharacters(in: .whitespacesAndNewlines)
+		guard !trimmed.isEmpty else {
+			return Set<Article>()
+		}
+		let pattern = "%\"ao3ID\":\"\(trimmed)\"%"
+		let candidates = fetchArticlesWithWhereClause(database, whereClause: "\(DatabaseKey.series) LIKE ?", parameters: [pattern as AnyObject])
+		return candidates.filter { article in
+			article.series?.contains(where: { $0.ao3ID == trimmed }) == true
+		}
 	}
 
 	func fetchArticlesSince(_ feedIDs: Set<String>, _ cutoffDate: Date, _ limit: Int?, _ database: FMDatabase) -> Set<Article> {

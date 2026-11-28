@@ -92,10 +92,18 @@ public enum AO3SeriesListingExtractor {
 				return nil
 			}
 			let title = flattenedText(titleAnchor)
+			let authors = descendants(of: headingH4, where: { $0.tag == "a" && $0.attributes["rel"] == "author" })
+				.map { flattenedText($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+				.filter { !$0.isEmpty }
+			let (chapterCurrent, chapterTotal) = AO3SearchResultsExtractor.chapterCounts(fromLI: li)
+			let isComplete = AO3SearchResultsExtractor.completionState(fromLI: li, chapterCurrent: chapterCurrent, chapterTotal: chapterTotal)
+			let dateModified = AO3SearchResultsExtractor.datetime(fromLI: li)
+			let partIndex = partIndex(in: li)
 			return WorkListingEntry(
 				workID: workID,
 				permalink: permalink,
 				title: title,
+				authors: authors,
 				summary: AO3SearchResultsExtractor.summaryHTML(fromLI: li),
 				fandoms: AO3SearchResultsExtractor.tagTexts(in: li, tag: "h5", classToken: "fandoms"),
 				relationships: AO3SearchResultsExtractor.tagTexts(in: li, tag: "li", classToken: "relationships"),
@@ -105,6 +113,11 @@ public enum AO3SeriesListingExtractor {
 				ratings: AO3SearchResultsExtractor.symbolTexts(in: li, classToken: "rating"),
 				categories: AO3SearchResultsExtractor.symbolTexts(in: li, classToken: "category"),
 				wordCount: AO3SearchResultsExtractor.intValue(fromDD: li, classToken: "words"),
+				chapterCurrent: chapterCurrent,
+				chapterTotal: chapterTotal,
+				isComplete: isComplete,
+				dateModified: dateModified,
+				partIndex: partIndex,
 				isRestricted: !descendants(of: headingH4, where: AO3HTMLHelpers.isRestrictedMarker).isEmpty,
 				language: AO3SearchResultsExtractor.stringValue(fromDD: li, classToken: "language")
 			)
@@ -128,6 +141,7 @@ public enum AO3SeriesListingExtractor {
 		public let workID: String
 		public let permalink: String
 		public let title: String
+		public let authors: [String]
 		public let summary: String?
 		public let fandoms: [String]
 		public let relationships: [String]
@@ -137,6 +151,12 @@ public enum AO3SeriesListingExtractor {
 		public let ratings: [String]
 		public let categories: [String]
 		public let wordCount: Int?
+		public let chapterCurrent: Int?
+		public let chapterTotal: Int?
+		public let isComplete: Bool?
+		public let dateModified: Date?
+		/// 1-based "Part N" index when the row's `ul.series` block carries it; nil otherwise.
+		public let partIndex: Int?
 		/// AO3 archive lock read from the row's `h4.heading`. Always non-nil
 		/// for a parsed row; nil only for hand-built entries with no lock data.
 		public let isRestricted: Bool?
@@ -144,10 +164,11 @@ public enum AO3SeriesListingExtractor {
 		/// row has none or for hand-built entries.
 		public let language: String?
 
-		public init(workID: String, permalink: String, title: String, summary: String? = nil, fandoms: [String] = [], relationships: [String] = [], characters: [String] = [], freeformTags: [String] = [], warnings: [String] = [], ratings: [String] = [], categories: [String] = [], wordCount: Int? = nil, isRestricted: Bool? = nil, language: String? = nil) {
+		public init(workID: String, permalink: String, title: String, authors: [String] = [], summary: String? = nil, fandoms: [String] = [], relationships: [String] = [], characters: [String] = [], freeformTags: [String] = [], warnings: [String] = [], ratings: [String] = [], categories: [String] = [], wordCount: Int? = nil, chapterCurrent: Int? = nil, chapterTotal: Int? = nil, isComplete: Bool? = nil, dateModified: Date? = nil, partIndex: Int? = nil, isRestricted: Bool? = nil, language: String? = nil) {
 			self.workID = workID
 			self.permalink = permalink
 			self.title = title
+			self.authors = authors
 			self.summary = summary
 			self.fandoms = fandoms
 			self.relationships = relationships
@@ -157,6 +178,11 @@ public enum AO3SeriesListingExtractor {
 			self.ratings = ratings
 			self.categories = categories
 			self.wordCount = wordCount
+			self.chapterCurrent = chapterCurrent
+			self.chapterTotal = chapterTotal
+			self.isComplete = isComplete
+			self.dateModified = dateModified
+			self.partIndex = partIndex
 			self.isRestricted = isRestricted
 			self.language = language
 		}
@@ -177,5 +203,18 @@ private extension AO3SeriesListingExtractor {
 
 	static func classTokens(of element: HTMLLiteElement) -> [String] {
 		AO3HTMLHelpers.classTokens(of: element)
+	}
+
+	static func partIndex(in li: HTMLLiteElement) -> Int? {
+		guard let seriesUL = firstDescendant(of: li, where: { $0.tag == "ul" && classTokens(of: $0).contains("series") }),
+		      let firstLI = firstDescendant(of: seriesUL, where: { $0.tag == "li" }) else {
+			return nil
+		}
+		let text = flattenedText(firstLI)
+		guard let range = text.range(of: #"Part\s+(\d+)\s+of\b"#, options: .regularExpression) else {
+			return nil
+		}
+		let digits = text[range].filter(\.isNumber)
+		return digits.isEmpty ? nil : Int(digits)
 	}
 }

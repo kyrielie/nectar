@@ -373,4 +373,16 @@ private func url(_ string: String) -> URL {
 		#expect(bookKey == "ao3-work:12345")
 		#expect(bookKey.flatMap(AO3Link.workID(fromBookKey:)) == "12345")
 	}
+
+	@Test func tagURLencodesAO3SpecialCharacters() {
+		#expect(AO3Link.tagURL(for: "A/B")?.absoluteString == "https://archiveofourown.org/tags/A*s*B/works")
+		#expect(AO3Link.tagURL(for: "A & B")?.absoluteString == "https://archiveofourown.org/tags/A%20*a*%20B/works")
+		#expect(AO3Link.tagURL(for: "Dr. Who")?.absoluteString == "https://archiveofourown.org/tags/Dr*d*%20Who/works")
+		#expect(AO3Link.tagURL(for: "   ") == nil)
+	}
+
+	@Test func collectionURLBuildsExpectedPath() {
+		#expect(AO3Link.collectionURL(slug: "my_collection")?.absoluteString == "https://archiveofourown.org/collections/my_collection")
+		#expect(AO3Link.collectionURL(slug: "") == nil)
+	}
 }

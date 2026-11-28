@@ -1056,6 +1056,10 @@ public enum FetchType {
 		await database.fetchArticlesAsync(bookKeys: bookKeys)
 	}
 
+	public func fetchArticlesAsync(ao3SeriesID: String) async -> Set<Article> {
+		await database.fetchArticlesAsync(ao3SeriesID: ao3SeriesID)
+	}
+
 	public func fetchUnreadCountForStarredArticlesAsync() async -> Int {
 		await database.fetchUnreadCountForStarredArticlesAsync(feedIDs: flattenedFeedsIDs)
 	}

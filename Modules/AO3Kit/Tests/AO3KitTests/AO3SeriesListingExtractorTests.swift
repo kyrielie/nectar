@@ -198,4 +198,35 @@ import Testing
 		let entry = AO3SeriesListingExtractor.WorkListingEntry(workID: "1", permalink: "https://archiveofourown.org/works/1", title: "T")
 		#expect(entry.isRestricted == nil)
 	}
+
+	@Test func extractsAuthorsChaptersCompletionAndPartIndex() {
+		let html = """
+		<html><body>
+		<ul class="series work index group">
+		<li id="work_42" class="work blurb group work-42 user-1" role="article">
+			<div class="header module">
+				<h4 class="heading">
+					<a href="/works/42">Part Two Title</a> by <a rel="author" href="/users/alice/pseuds/alice">alice</a>
+				</h4>
+				<ul class="series">
+					<li>Part <strong>2</strong> of <a href="/series/99">My Series</a></li>
+				</ul>
+			</div>
+			<dl class="stats">
+				<dd class="words">4,500</dd>
+				<dd class="chapters">3/3</dd>
+			</dl>
+		</li>
+		</ul>
+		</body></html>
+		"""
+		let (works, _, _) = AO3SeriesListingExtractor.workPermalinks(fromSeriesListingHTML: html)
+		#expect(works.count == 1)
+		#expect(works.first?.authors == ["alice"])
+		#expect(works.first?.wordCount == 4500)
+		#expect(works.first?.chapterCurrent == 3)
+		#expect(works.first?.chapterTotal == 3)
+		#expect(works.first?.isComplete == true)
+		#expect(works.first?.partIndex == 2)
+	}
 }

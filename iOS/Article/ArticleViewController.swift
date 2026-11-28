@@ -89,6 +89,11 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	// Tapping shows a menu of ArticleIgnoreActions for the current article. The
 	// menu and isEnabled are set per article by updateIgnoreItems(), not here.
 	private lazy var ignoreBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "eye.slash"), menu: nil)
+	private lazy var workInfoBarButtonItem: UIBarButtonItem = {
+		let item = UIBarButtonItem(image: UIImage(systemName: "info.circle"), style: .plain, target: self, action: #selector(showWorkInfo(_:)))
+		item.accLabelText = ToolbarFunction.workInfo.title
+		return item
+	}()
 	// Optional collapsed-toolbar mode, independently per bar
 	// (AppDefaults.toolbarTopUseOverflowMenu/toolbarBottomUseOverflowMenu).
 	// Menu is rebuilt in place by rebuildOverflowMenu(for:) rather than
@@ -164,6 +169,11 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 	private lazy var readingTimeRemainingBottomBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "timer"), style: .plain, target: nil, action: nil)
 	private lazy var readingStatsBottomBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "chart.bar"), style: .plain, target: self, action: #selector(showReadingStatsFromToolbar(_:)))
 	private lazy var ignoreBottomBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "eye.slash"), menu: nil)
+	private lazy var workInfoBottomBarButtonItem: UIBarButtonItem = {
+		let item = UIBarButtonItem(image: UIImage(systemName: "info.circle"), style: .plain, target: self, action: #selector(showWorkInfo(_:)))
+		item.accLabelText = ToolbarFunction.workInfo.title
+		return item
+	}()
 
 	/// The live UIBarButtonItem instance(s) `function` contributes on
 	/// `bar` specifically -- see the "Cross-bar duplicate support"
@@ -211,6 +221,8 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		case (.readingStats, .bottom): return [readingStatsBottomBarButtonItem]
 		case (.ignore, .top): return [ignoreBarButtonItem]
 		case (.ignore, .bottom): return [ignoreBottomBarButtonItem]
+		case (.workInfo, .top): return [workInfoBarButtonItem]
+		case (.workInfo, .bottom): return [workInfoBottomBarButtonItem]
 		}
 	}
 
@@ -603,6 +615,7 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 		}
 
 		updateIgnoreItems()
+		allBarButtonItemInstances(for: .workInfo).forEach { $0.isEnabled = true }
 		rebuildOverflowMenu(for: .top)
 		rebuildOverflowMenu(for: .bottom)
 	}
@@ -870,6 +883,11 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 			// Empty (nothing added to the menu) unless the open article is a
 			// single AO3 work; same rule as the reader's context menu.
 			return ArticleIgnoreActions.actions(for: article, presenter: self)
+		case .workInfo:
+			let enabled = article != nil
+			return [UIAction(title: function.title, image: function.icon, attributes: enabled ? [] : .disabled) { [weak self] _ in
+				self?.showWorkInfo(self as Any)
+			}]
 		}
 	}
 
@@ -1149,6 +1167,34 @@ final class ArticleViewController: UIViewController, SurfacePaletteNavigationBar
 
 	@objc private func showReadingStatsFromToolbar(_ sender: Any) {
 		coordinator.showReadingStats()
+	}
+
+	@objc private func showWorkInfo(_ sender: Any) {
+		guard let article else { return }
+		let hostingController = UIHostingController(
+			rootView: AO3WorkInfoSheet(
+				article: article,
+				coordinator: coordinator,
+				onOpenURL: { [weak self] url in
+					guard let self else { return }
+					self.dismiss(animated: true) {
+						if AO3Link.isAO3Host(url) {
+							let ao3VC = AO3AuthenticatedWebViewController(url: url)
+							let nav = UINavigationController(rootViewController: ao3VC)
+							self.present(nav, animated: true)
+						} else if let safariVC = SFSafariViewController.safeSafariViewController(url) {
+							self.present(safariVC, animated: true)
+						}
+					}
+				}
+			)
+		)
+		hostingController.modalPresentationStyle = UIModalPresentationStyle.pageSheet
+		if let sheet = hostingController.sheetPresentationController {
+			sheet.detents = [UISheetPresentationController.Detent.large()]
+			sheet.prefersGrabberVisible = true
+		}
+		present(hostingController, animated: true)
 	}
 
 	@objc func showTableOfContents(_ sender: Any) {
